@@ -27,8 +27,8 @@ internal static partial class DocxInlineCompositionTests
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var source = ReadMutation("Composition/composed-picture-navigation-report", mode, false, false);
             var parent = ReadMutation("Composition/composed-inline-frame-report", mode, false, false);
-            var pages = renderer.RenderBlankPages(source, null, default).ToArray();
-            var before = renderer.RenderBlankPages(parent, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            var before = renderer.RenderPagesAsync(parent, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(row.GetProperty("WordPages").GetInt32(), pages.Length);
             TestAssert.Equal(before.Length, pages.Length);
             var targets = row.GetProperty("TargetUris").EnumerateArray().Select(item => item.GetString()!).ToHashSet(StringComparer.Ordinal);
@@ -67,13 +67,13 @@ internal static partial class DocxInlineCompositionTests
             var source = AddStaticPictureTargets(DocxTests.ReadDocx(path, mode), raster);
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final ?
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(source, null, default).Single();
+            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             TestAssert.True(page.Images.Count > 0, $"{fixture}/{mode}: a clipped picture is still decoded and emitted; navigation must respect its clip.");
             var links = page.Annotations.Where(link => link.Uri == "https://example.invalid/static-picture").ToArray();
             TestAssert.Equal(fixture.Contains("fixed", StringComparison.Ordinal) ? 0 : 1, links.Length);
             foreach (var link in links) CheckPictureLinkDraw(page, link);
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, cancellation.Token).ToArray());
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, cancellation.Token).ToBlockingEnumerable().ToArray());
         }
     }
 

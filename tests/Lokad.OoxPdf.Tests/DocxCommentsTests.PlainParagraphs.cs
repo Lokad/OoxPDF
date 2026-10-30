@@ -46,7 +46,7 @@ internal static partial class DocxCommentsTests
                 CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
             var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            var page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             var actual = ReadEmbeddedGlyphTextShows(page)
                 .Where(show => Regex.IsMatch(show.Text, @"^Paragraph\s+[0-9]+\."))
                 .OrderBy(show => int.Parse(Regex.Match(show.Text, @"^Paragraph\s+([0-9]+)\.").Groups[1].Value))

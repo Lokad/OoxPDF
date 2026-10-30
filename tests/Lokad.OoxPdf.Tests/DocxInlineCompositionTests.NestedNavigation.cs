@@ -45,11 +45,11 @@ internal static partial class DocxInlineCompositionTests
             var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var baseline = renderer.RenderBlankPages(ReadMutation("CompositionProbes/mixed-nested-cell-inside", mode, false, false), null, default).Single();
+            var baseline = renderer.RenderPagesAsync(ReadMutation("CompositionProbes/mixed-nested-cell-inside", mode, false, false), null, default).ToBlockingEnumerable().Single();
             foreach (bool transformed in new[] { false, true })
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var page = renderer.RenderBlankPages(ReadMutation("CompositionProbes/" + id, mode, transformed, transformed), diagnostics.Add, default).Single();
+                var page = renderer.RenderPagesAsync(ReadMutation("CompositionProbes/" + id, mode, transformed, transformed), diagnostics.Add, default).ToBlockingEnumerable().Single();
                 string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
                 TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
                 foreach (string prose in new[] { "Public outer head", "Public outer tail", "Following prose." }) TestAssert.Contains(prose, text);

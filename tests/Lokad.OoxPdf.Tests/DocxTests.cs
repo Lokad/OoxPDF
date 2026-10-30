@@ -15,7 +15,7 @@ internal static class DocxTests
     internal static void AssertSimpleMarkupTableRowChangeBarRendered(DocxDocument document, DocxTable table, string flowName)
     {
         string content = string.Concat(new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Select(page => page.Content));
         string color = FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(table.Rows.Single().Revisions), "rg");
         TestAssert.True(content.Contains(color, StringComparison.Ordinal), "Simple-markup should draw a row revision color for " + flowName + ".");
@@ -50,7 +50,7 @@ internal static class DocxTests
     internal static void AssertSimpleMarkupCommentMarkerRendered(DocxDocument document, string flowName)
     {
         DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(CountOccurrences(page.Content, "1 0.753 0 rg") >= 1, "Comment markers should use the expected marker fill color for " + flowName + ".");
         TestAssert.True(CountOccurrences(page.Content, "0.851 0.592 0 RG") >= 1, "Comment markers should use the expected marker outline color for " + flowName + ".");
@@ -77,7 +77,7 @@ internal static class DocxTests
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         if (!expectedVisible)
         {

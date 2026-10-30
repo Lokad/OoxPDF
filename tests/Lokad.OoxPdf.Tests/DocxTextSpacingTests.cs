@@ -412,7 +412,7 @@ internal static class DocxTextSpacingTests
         DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
 
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None), CancellationToken.None)
+            .Create(document, DocxFontPlanTextMeasurer.CreateAsync(plan, null, CancellationToken.None).GetAwaiter().GetResult(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
@@ -1516,7 +1516,7 @@ internal static class DocxTextSpacingTests
 
         var resolver = new HheaLineHeightFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0]
@@ -1582,7 +1582,7 @@ internal static class DocxTextSpacingTests
             var renderer = new DocxRenderer(new WindowsExtentsFontResolver(useTypographicMetrics, gap),
                 OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines.Single().Segments.First();
-            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+            PdfLinkDestination destination = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single().Destination
                 ?? throw new InvalidOperationException("The target must resolve.");
             double typographicAscent = fontSize * (800d + gap) / 1000d;
             double baselineInset = useTypographicMetrics ? typographicAscent : 0.94d * fontSize;
@@ -1621,7 +1621,7 @@ internal static class DocxTextSpacingTests
             TestAssert.True(scale < 1d, "The regression must exercise review print scaling.");
             DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines
                 .Single(line => line.SourceBlockIndex == 0).Segments.First();
-            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+            PdfLinkDestination destination = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single().Destination
                 ?? throw new InvalidOperationException("The scaled target must resolve.");
             double inset = fontSize * (800d + gap) / 1000d;
             double expectedBaseline = document.PageHeightPoints / 2d + (document.PageHeightPoints - document.MarginTopPoints - inset - document.PageHeightPoints / 2d) * scale;
@@ -1655,7 +1655,7 @@ internal static class DocxTextSpacingTests
 
         var resolver = new WindowsExtentsFontResolver(patchTypographicSelection: true);
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("WinFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("WinFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0]
@@ -1690,7 +1690,7 @@ internal static class DocxTextSpacingTests
 
         var resolver = new WindowsExtentsFontResolver(patchTypographicSelection: false);
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("WinFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("WinFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0]
@@ -1801,7 +1801,7 @@ internal static class DocxTextSpacingTests
 
         var resolver = new HheaLineHeightFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0]
@@ -1839,7 +1839,7 @@ internal static class DocxTextSpacingTests
 
         var resolver = new HheaLineHeightFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         double baselineY = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.Single().BaselineY;

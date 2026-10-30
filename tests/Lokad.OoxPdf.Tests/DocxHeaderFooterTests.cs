@@ -335,7 +335,7 @@ internal static class DocxHeaderFooterTests
             [],
             [headerTable]);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(DocxTests.CountPdfTextShows(page.Content) >= 1, "Static header body elements should pass the renderer's empty-document guard instead of producing a blank page.");
     }
@@ -388,7 +388,7 @@ internal static class DocxHeaderFooterTests
             [],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(1, page.Images.Count);
         TestAssert.Contains("/Im1 Do", page.Content);
@@ -1909,7 +1909,7 @@ internal static class DocxHeaderFooterTests
         DocxDocument document = new(200d, 200d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)], [body], []);
         var resolver = new StaticHheaFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("HheaFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxTextLineLayout[] staticLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0].StaticTextLines.ToArray();

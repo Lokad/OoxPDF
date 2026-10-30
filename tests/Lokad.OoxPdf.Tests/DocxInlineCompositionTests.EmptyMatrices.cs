@@ -56,7 +56,7 @@ internal static partial class DocxInlineCompositionTests
                 "Actual empty slots remain valid source structure.");
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(source, diagnostics.Add, default).Single();
+                .RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
             TestAssert.True(page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
                 "Metric-only grids publish no placeholder glyph, mathematical subset or dummy source run.");
             TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == "/word/document.xml"),

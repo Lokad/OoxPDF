@@ -126,7 +126,7 @@ internal static class DocxImageRecoveryTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var document = DocxTests.ReadDocx(path, mode);
         var pages = new DocxRenderer(new TestFaceFontResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
         return (pages, diagnostics);
     }
 

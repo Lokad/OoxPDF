@@ -31,7 +31,7 @@ internal static partial class DocxInlineCompositionTests
                     partOverride: row.TryGetProperty("MetadataMutationPart", out var part) ? part.GetString()! : "word/footer1.xml");
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Source formulas survive ordinary note continuation.");
                 double scale = final ? 1d : DocxRenderer.ResolveWordCompatiblePrintScale(document,
                     DocxMarkupContext.FromMode(mode, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));

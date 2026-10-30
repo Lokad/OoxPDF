@@ -128,7 +128,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(owner.Equations.All(e => e.Revision is null), "Revising adjacent text cannot change equation ownership.");
                 var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                     ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                    .RenderBlankPages(source, null, default).Single();
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
                 var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
                 var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
                 TestAssert.Equal(18, math.Length);

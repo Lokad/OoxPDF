@@ -24,7 +24,10 @@ planes are admitted for their invocation; recolor reuses privately owned pixels.
 Embedded-font ToUnicode streams are measured and emitted with one fixed 4 KB
 formatting span, without a copied mapping list or a full text/encoded payload.
 Its scopes share the caller's root; they create no private allowance. Caller-owned
-buffers are not charged twice. Models, font source/cache and parsed maps,
+buffers are not charged twice. Font leases fund acquisition and copy overlap;
+explicit longer-lived cache budgets keep storage admitted through eviction or
+shutdown until the final reader releases it. Governed operations without a cache
+budget acquire private programs. Models, local-discovery metadata, parsed maps and
 other PDF resources remain pending, so
 this is partial coverage. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.

@@ -21,7 +21,7 @@ internal static partial class DocxInlineCompositionTests
         var expected = row.GetProperty("Bars").EnumerateArray().Where(bar => bar.GetProperty("PageNumber").GetInt32() == 2)
             .OrderBy(bar => bar.GetProperty("Y").GetDouble()).ElementAt(1);
         var pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToArray();
+            .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToBlockingEnumerable().ToArray();
         var bands = Regex.Matches(pages[1].Content, @"(?m)^(?<x>-?[\d.]+) (?<y>-?[\d.]+) (?<width>[\d.]+) (?<height>[\d.]+) re f\r?$")
             .Cast<Match>().Where(match => Number(match, "width") < 2d && Number(match, "height") > 5d &&
                 Number(match, "x") is >= 20d and <= 40d).OrderBy(match => Number(match, "y")).ToArray();

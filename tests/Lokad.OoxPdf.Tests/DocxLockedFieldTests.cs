@@ -86,7 +86,7 @@ internal static class DocxLockedFieldTests
     {
         var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
             : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
-        var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry).RenderBlankPages(document, null, default);
+        var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry).RenderPagesAsync(document, null, default).ToBlockingEnumerable();
         return string.Join(" ", pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)).Select(show => show.Text));
     }
 

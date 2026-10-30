@@ -18,7 +18,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var source = DocxTests.ReadDocx(path, mode);
             var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
             var shows = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)).ToArray();
             foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
@@ -44,8 +44,8 @@ internal static partial class DocxInlineCompositionTests
                 string.Concat(changed.Paragraphs[1].Runs.Select(run => run.Text)), "The neighboring text must actually change.");
             var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.RenderBlankPages(source, null, default).ToArray();
-            var after = renderer.RenderBlankPages(changed, null, default).ToArray();
+            var before = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(changed, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(before.Length, after.Length);
             var expected = before.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true))
                 .Where(show => show.Text.StartsWith("Public minimum ", StringComparison.Ordinal)).Select(show => (show.Text, show.X, show.Y)).ToArray();

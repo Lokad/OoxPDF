@@ -136,7 +136,7 @@ internal static class DocxElevenPointBodyTests
             TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).Where(r => r.Text.Length != 0).All(r => r.FontSize == 11), "Known paragraph font inheritance resolves logical 11pt.");
             var layout = Layout(source);
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, layout, out var adjusted), "Inherited source size qualifies the complete frame.");
-            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(notes ? 4 : 0, pages.Sum(p => p.Annotations.Count));
             if (notes)
             {
@@ -162,7 +162,7 @@ internal static class DocxElevenPointBodyTests
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
     private static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)

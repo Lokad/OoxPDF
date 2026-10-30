@@ -80,7 +80,7 @@ internal static partial class DocxInlineCompositionTests
                     partOverride: row.GetProperty("MathPart").GetString());
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 var shows = pages.SelectMany((page, pageIndex) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                     usePageCoordinates: true).Select(show => (Page: page, PageIndex: pageIndex, Show: show))).ToArray();
                 var math = shows.Where(item => !string.IsNullOrWhiteSpace(item.Show.Text) &&

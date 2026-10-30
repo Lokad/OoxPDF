@@ -37,7 +37,7 @@ internal static class DocxHyperlinksTests
             double scale = scaled ? DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(mode, geometry)) : 1d;
             DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines
                 .Single(line => line.SourceBlockIndex == 0).Segments.First();
-            PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+            PdfLinkAnnotation annotation = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
             TestAssert.True(Math.Abs(annotation.X - (glyph.X - 2.25d * scale)) < 0.000001d,
                 "Word body link padding is a fixed design distance, independent of glyph size.");
             TestAssert.True(Math.Abs(annotation.Y + annotation.Height - (glyph.BaselineY + 19.2d * scale)) < 0.000001d,
@@ -62,7 +62,7 @@ internal static class DocxHyperlinksTests
                 Hyperlinks = [new DocxHyperlinkSpan(null, null, null, null, "https://example.invalid/auto-box", "External", null, 1, 1, 1, 1, 4)]
             };
             DocxDocument isolated = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
-            PdfLinkAnnotation isolatedBox = renderer.RenderBlankPages(isolated, null, CancellationToken.None).Single().Annotations.Single();
+            PdfLinkAnnotation isolatedBox = renderer.RenderPagesAsync(isolated, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
             foreach (double after in new[] { 0d, 8d })
             foreach (double nextFontSize in new[] { 12d, 24d })
             foreach (bool breakOnly in new[] { false, true })
@@ -77,7 +77,7 @@ internal static class DocxHyperlinksTests
                     ? new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", following)
                     : new DocxParagraphElement(following));
                 DocxDocument document = DocxTests.CreateLayoutTestDocument(elements, []);
-                PdfLinkAnnotation box = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Annotations.Single();
+                PdfLinkAnnotation box = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().First().Annotations.Single();
                 DocxTextEmissionSegmentSnapshot glyph = renderer.InspectTextEmission(document).Lines
                     .Single(line => line.SourceBlockIndex == 0 && line.SourceLineIndex == 0).Segments
                     .Single(segment => segment.TextLength == 4 && !segment.IsTerminalLineSpace);
@@ -101,7 +101,7 @@ internal static class DocxHyperlinksTests
         };
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxDocument isolated = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
-        PdfLinkAnnotation expected = renderer.RenderBlankPages(isolated, null, CancellationToken.None).Single().Annotations.Single();
+        PdfLinkAnnotation expected = renderer.RenderPagesAsync(isolated, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
         foreach (double tableFontSize in new[] { 8d, 12d, 24d })
         {
             DocxParagraph cellParagraph = paragraph with
@@ -113,7 +113,7 @@ internal static class DocxHyperlinksTests
             var table = new DocxTable(null, [100d], [new DocxTableRow([cell], null)]);
             DocxDocument document = DocxTests.CreateLayoutTestDocument(
                 [new DocxParagraphElement(paragraph), new DocxTableElement(table)], [table]);
-            PdfLinkAnnotation actual = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+            PdfLinkAnnotation actual = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
             TestAssert.True(Math.Abs(actual.Y - expected.Y) < 0.000001d && Math.Abs(actual.Height - expected.Height) < 0.000001d,
                 "A table glyph's ascent must not clip the preceding body's paragraph slot or trailing spacing.");
         }
@@ -148,7 +148,7 @@ internal static class DocxHyperlinksTests
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/docx", annotation.Uri);
@@ -191,7 +191,7 @@ internal static class DocxHyperlinksTests
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/source-run", annotation.Uri);
@@ -253,7 +253,7 @@ internal static class DocxHyperlinksTests
             .Lines
             .SelectMany(line => line.Segments)
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
 
         double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
             DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
@@ -319,7 +319,7 @@ internal static class DocxHyperlinksTests
             .Single(line => line.StoryKind == "TextBox" && line.ContainerStoryKind == "Body")
             .Segments
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.X - (linkSegment.X - (2.2d * 10d / 11d))) < 0.001d,
@@ -392,7 +392,7 @@ internal static class DocxHyperlinksTests
             .Single(line => line.IsStaticStory && line.StoryKind == "TextBox" && line.ContainerStoryKind == "Header")
             .Segments
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.X - (linkSegment.X - (2.2d * 10d / 11d))) < 0.001d,
@@ -416,7 +416,7 @@ internal static class DocxHyperlinksTests
         };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(0, page.Annotations.Count);
     }
@@ -441,7 +441,7 @@ internal static class DocxHyperlinksTests
             };
             DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(link), new DocxParagraphElement(target)], []);
             var renderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+            PdfLinkDestination destination = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single().Destination
                 ?? throw new InvalidOperationException("The internal link must resolve.");
             TestAssert.True(Math.Abs(destination.Left.GetValueOrDefault(double.NaN) - (document.MarginLeftPoints - 3d)) < 0.000001d,
                 "Word places the bookmark viewport at the column origin, with three points of context, independently of paragraph indentation/alignment.");
@@ -463,7 +463,7 @@ internal static class DocxHyperlinksTests
                 new DocxParagraphElement(target with { Alignment = DocxTextAlignment.Right, Indent = DocxParagraphIndent.Empty with { LeftPoints = 36d } }),
                 new DocxSectionBreakElement(DocxPageSettings.Empty, DocxSectionBreakType.NextPage, "2", "1", "720", [])], [], []);
         var plainRenderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        PdfLinkDestination columnDestination = plainRenderer.RenderBlankPages(columns, null, CancellationToken.None).Single().Annotations.Single().Destination
+        PdfLinkDestination columnDestination = plainRenderer.RenderPagesAsync(columns, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single().Destination
             ?? throw new InvalidOperationException("The column target must resolve.");
         TestAssert.True(Math.Abs(columnDestination.Left.GetValueOrDefault(double.NaN) - 321d) < 0.000001d,
             "An aligned target in the second column must use that column's origin rather than the page margin.");
@@ -480,7 +480,7 @@ internal static class DocxHyperlinksTests
                 })]
         };
         var reviewRenderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        PdfPage[] mirroredPages = reviewRenderer.RenderBlankPages(mirrored, null, CancellationToken.None).ToArray();
+        PdfPage[] mirroredPages = reviewRenderer.RenderPagesAsync(mirrored, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         PdfLinkDestination mirroredDestination = mirroredPages[0].Annotations.Single().Destination
             ?? throw new InvalidOperationException("The mirrored target must resolve.");
         double scale = DocxRenderer.ResolveWordCompatiblePrintScale(mirrored,
@@ -532,7 +532,7 @@ internal static class DocxHyperlinksTests
             var renderer = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             DocxTextEmissionSegmentSnapshot targetSegment = renderer.InspectTextEmission(document).Lines.SelectMany(line => line.Segments)
                 .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == "Destination".Length);
-            PdfLinkDestination destination = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single().Destination
+            PdfLinkDestination destination = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single().Destination
                 ?? throw new InvalidOperationException("The internal link must resolve.");
             TestAssert.True(Math.Abs(destination.Left.GetValueOrDefault(double.NaN) - (targetSegment.X - 3d)) < 0.000001d,
                 "Reader bookmarks must resolve at the target run, including nested links and paragraphs merged across a deleted mark.");
@@ -575,7 +575,7 @@ internal static class DocxHyperlinksTests
             [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal DOCX links should not be emitted as URI actions.");
@@ -644,7 +644,7 @@ internal static class DocxHyperlinksTests
             [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to a PDF page destination.");
@@ -705,7 +705,7 @@ internal static class DocxHyperlinksTests
             [new DocxParagraphElement(linkParagraph), new DocxParagraphElement(targetParagraph)],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Destination is { PageIndex: 0 }, "Internal links should resolve to a PDF page destination.");
@@ -767,7 +767,7 @@ internal static class DocxHyperlinksTests
                 RelatedStories = [footnoteStory]
             };
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/footnote", annotation.Uri);
@@ -829,7 +829,7 @@ internal static class DocxHyperlinksTests
                 RelatedStories = [endnoteStory]
             };
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/endnote", annotation.Uri);
@@ -898,7 +898,7 @@ internal static class DocxHyperlinksTests
                 RelatedStories = [footnoteStory]
             };
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal placed-footnote links should not be emitted as URI actions.");
@@ -968,7 +968,7 @@ internal static class DocxHyperlinksTests
                 RelatedStories = [endnoteStory]
             };
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal placed-endnote links should not be emitted as URI actions.");
@@ -1020,7 +1020,7 @@ internal static class DocxHyperlinksTests
             [],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/textbox", annotation.Uri);
@@ -1078,7 +1078,7 @@ internal static class DocxHyperlinksTests
             [body],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/static-textbox", annotation.Uri);
@@ -1133,7 +1133,7 @@ internal static class DocxHyperlinksTests
             [],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal floating text-box links should not be emitted as URI actions.");
@@ -1197,7 +1197,7 @@ internal static class DocxHyperlinksTests
             [linkParagraph],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal static floating text-box links should not be emitted as URI actions.");
@@ -1260,7 +1260,7 @@ internal static class DocxHyperlinksTests
             [target],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal static-story links should not be emitted as URI actions.");
@@ -1295,7 +1295,7 @@ internal static class DocxHyperlinksTests
     {
         DocxParagraph paragraph = CreateCoveringLinkParagraph(startRun, runCount);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxParagraphElement(paragraph)], []);
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         return page.Annotations.ToList();
     }
 

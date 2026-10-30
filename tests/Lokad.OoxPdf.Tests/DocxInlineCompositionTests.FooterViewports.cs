@@ -28,7 +28,7 @@ internal static partial class DocxInlineCompositionTests
                 partOverride: row.GetProperty("MathPart").GetString());
             var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
             string content = string.Concat(shows.Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
             foreach (var text in row.GetProperty("ExpectedText").EnumerateArray())
@@ -47,7 +47,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(found, id + ": the painted outline retains Word's independent body-frame viewport.");
             using var cancelled = new CancellationTokenSource();
             cancelled.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(document, null, cancelled.Token).ToArray());
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null, cancelled.Token).ToBlockingEnumerable().ToArray());
         }
     }
 }

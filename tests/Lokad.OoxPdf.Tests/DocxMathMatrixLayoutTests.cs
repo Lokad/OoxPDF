@@ -67,7 +67,7 @@ internal static class DocxMathMatrixLayoutTests
             "The existing function gap translates a complete matrix while surrounding context owns the effective control size.");
         var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(box, graphics, 20d, 80d, CancellationToken.None);
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(300d, 200d, graphics.ToString(), [resource])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([new PdfPage(300d, 200d, graphics.ToString(), [resource])]), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length > 0, "Both invisible owners use metrics without adding unused PDF font resources.");
         TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var absent, out _,
             resolveControlMetrics: control => ReferenceEquals(control, matrix) ? null : outerFont) && absent is null,
@@ -105,7 +105,7 @@ internal static class DocxMathMatrixLayoutTests
             "Separate control metrics and painted font resources survive the same bounded argument box.");
         var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(fenced, graphics, 20d, 80d, CancellationToken.None);
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(300d, 200d, graphics.ToString(), [marks, painted])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([new PdfPage(300d, 200d, graphics.ToString(), [marks, painted])]), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         TestAssert.True(output.Length > 0, "The inner metric font needs no PDF resource or unused subset.");
         TestAssert.True(!DocxMathLayout.TryMeasure(equation, _ => painted, CancellationToken.None, out var absent, out _,
             resolveControlFont: _ => marks, resolveControlMetrics: _ => null) && absent is null,
@@ -403,7 +403,7 @@ internal static class DocxMathMatrixLayoutTests
                 "Internal control frames, source paint and occupied outer ink retain distinct ownership, without implicit delimiters.");
             var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(measured, graphics, 20d, 80d, CancellationToken.None);
             using var output = new MemoryStream();
-            PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(250d, 200d, graphics.ToString(), [first, rest])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+            PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([new PdfPage(250d, 200d, graphics.ToString(), [first, rest])]), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Length > 0, "Only painted cell resources are required; the metric font needs no empty subset.");
         }
     }

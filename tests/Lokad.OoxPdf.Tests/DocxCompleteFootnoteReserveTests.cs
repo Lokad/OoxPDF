@@ -22,7 +22,7 @@ internal static class DocxCompleteFootnoteReserveTests
             TestAssert.Equal(NotePlacements(before), NotePlacements(after));
             TestAssert.Equal("105", source.Paragraphs.First(p => p.InlineReferences.Count != 0).InlineReferences[0].DisplayText);
             var pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, CancellationToken.None).ToArray();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
             for (int i = 0; i < pages.Length; i++)
             {

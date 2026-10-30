@@ -39,7 +39,7 @@ internal static partial class DocxInlineCompositionTests
                 var source = ReadMutation("Composition/composed-nested-navigation-report", mode, transformed, transformed);
                 TestAssert.Equal(8, source.EquationParts.Sum(part => part.SourceCount));
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+                var pages = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 TestAssert.True(pages.Length >= 2, "The report exercises an actual page boundary and repeated static stories.");
                 if (resolver is null) TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
                 TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),

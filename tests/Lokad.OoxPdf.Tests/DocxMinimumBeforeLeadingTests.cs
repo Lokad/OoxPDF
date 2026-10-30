@@ -47,12 +47,12 @@ internal static class DocxMinimumBeforeLeadingTests
                 Spacing(paragraphs[1]).SetAttributeValue(Word + "after", currentAfter * 20);
             });
             var links = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(source, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
+                .RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
             TestAssert.Equal(4, links.Length);
             Near(20 + 8 - predecessorAfter + currentAfter, links[0].Height,
                 "The predecessor owns its after-spacing; the real note link covers only remaining before-gap and current after-spacing.");
             var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(source, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
+                .RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
             Near(20, preserve[0].Height, "Preserve retains its original minimum-slot hit area.");
             TestAssert.Equal(4, links.Select(a => a.Destination).Distinct().Count());
         }
@@ -71,7 +71,7 @@ internal static class DocxMinimumBeforeLeadingTests
         });
         TestAssert.True(source.Paragraphs.All(p => p.SpacingBeforePoints == 8 && p.Spacing.BeforeValue == "160"),
             "The inherited raw before token and effective points remain coherent.");
-        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, CancellationToken.None).ToArray();
+        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         var first = pages[0].Annotations.First();
         Near(32, first.Height, "The first marked minimum slot owns its before-gap and after-spacing.");
         Near(720, first.Y + first.Height, "Its actual hit area reaches the authored page body top.");
@@ -112,8 +112,8 @@ internal static class DocxMinimumBeforeLeadingTests
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
+            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
     private static DocxDocument Read(int before, int after, Action<XDocument, XDocument>? modify = null)

@@ -26,8 +26,8 @@ internal static partial class DocxInlineCompositionTests
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var source = ReadMutation("InlineBoxMath/" + row.GetProperty("Id").GetString(), mode, false, false);
             var parent = ReadMutation("InlineBoxMath/" + Path.GetFileNameWithoutExtension(row.GetProperty("SourceInput").GetString()), mode, false, false);
-            var page = renderer.RenderBlankPages(source, null, default).Single();
-            var before = renderer.RenderBlankPages(parent, null, default).Single();
+            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            var before = renderer.RenderPagesAsync(parent, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(before.Content, page.Content);
             TestAssert.Equal(before.Images.Count, page.Images.Count);
             var image = page.Images.Single();
@@ -69,11 +69,11 @@ internal static partial class DocxInlineCompositionTests
                 });
             var renderer = new DocxRenderer(new MapFontResolver([], "Courier"), OoxPdfDocxMarkupMode.Final,
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var page = renderer.RenderBlankPages(source, null, default).Single();
+            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(1, page.Images.Count);
             TestAssert.Equal(0, page.Annotations.Count(link => link.IsUri));
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, cancellation.Token).ToArray());
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, cancellation.Token).ToBlockingEnumerable().ToArray());
         }
     }
 
@@ -90,7 +90,7 @@ internal static partial class DocxInlineCompositionTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var renderer = new DocxRenderer(new MapFontResolver([], "Courier"), OoxPdfDocxMarkupMode.Final,
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        var page = renderer.RenderBlankPages(document, diagnostics.Add, default).Single();
+        var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
         TestAssert.Equal(0, page.Images.Count);
         TestAssert.Equal(0, page.Annotations.Count(link => link.IsUri));
         TestAssert.Equal(1, diagnostics.Count(diagnostic => diagnostic.Id == "IMAGE_UNSUPPORTED_FORMAT"));
@@ -104,7 +104,7 @@ internal static partial class DocxInlineCompositionTests
                 properties.Elements(w + "trHeight").Remove();
                 properties.Add(new XElement(w + "trHeight", new XAttribute(w + "val", "20"), new XAttribute(w + "hRule", "exact")));
             });
-        var clippedPage = renderer.RenderBlankPages(clipped, null, default).Single();
+        var clippedPage = renderer.RenderPagesAsync(clipped, null, default).ToBlockingEnumerable().Single();
         TestAssert.Equal(1, clippedPage.Images.Count);
         TestAssert.Equal(0, clippedPage.Annotations.Count(link => link.IsUri));
     }

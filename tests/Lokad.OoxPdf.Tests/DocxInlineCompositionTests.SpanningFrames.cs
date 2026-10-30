@@ -55,7 +55,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             var layout = renderer.InspectLayout(source);
             TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"), "Continuation keeps supported child mathematics.");
             bool checkInsets = row.TryGetProperty("WordCellFills", out var cellFills);
@@ -140,7 +140,7 @@ internal static partial class DocxInlineCompositionTests
             foreach (var expected in row.GetProperty("ExpectedText").EnumerateArray()) TestAssert.Contains(expected.GetString()!, painted);
             using var canceled = new CancellationTokenSource();
             canceled.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, canceled.Token).ToArray());
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, canceled.Token).ToBlockingEnumerable().ToArray());
         }
 
         static void CheckOrigin(double x, double y, double size, JsonElement expected) =>

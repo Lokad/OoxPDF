@@ -30,8 +30,8 @@ internal static partial class DocxInlineCompositionTests
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(
-                        ReadMutation("CompositionProbes/" + id, mode, transformed, transformed), diagnostics.Add, default).Single();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(
+                        ReadMutation("CompositionProbes/" + id, mode, transformed, transformed), diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                     "The complete supported root and child survive when ready-made variants are too small.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();

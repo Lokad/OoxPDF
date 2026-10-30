@@ -752,7 +752,7 @@ internal static class DocxTablesMarkupTests
         TestAssert.True(layout.Pages.Any(page => page.PlacedFootnoteStoryCount == 1), "Footnote placement should still resolve the filtered inline reference source index.");
         TestAssert.True(layout.Pages.Any(page => page.PlacedEndnoteStoryCount == 1), "Endnote placement should still resolve the filtered inline reference source index.");
 
-        PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        PdfPage[] pages = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.True(pages.SelectMany(page => page.Annotations).Any(annotation => annotation.Uri == "https://example.invalid/source-index"), "External hyperlink annotations should still be emitted after revision filtering.");
         TestAssert.True(pages.SelectMany(page => page.Annotations).Any(annotation => annotation.Destination is { PageIndex: 0 }), "Internal hyperlink destinations should still resolve from filtered bookmark anchors.");
 
@@ -1319,7 +1319,7 @@ internal static class DocxTablesMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -1334,7 +1334,7 @@ internal static class DocxTablesMarkupTests
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
 
         DocxLayoutSnapshot layout = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectLayout(document);
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(layout.Pages.SelectMany(page => page.Items).Any(item => item.Kind == "TableRow" && item.RevisionCount != 0), "Simple-markup layout should treat structural table-row revisions as changed items.");
         TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Tables.Single().Rows.Single().Revisions), "rg"), page.Content);

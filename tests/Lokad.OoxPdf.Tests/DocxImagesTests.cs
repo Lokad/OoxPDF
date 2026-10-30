@@ -20,7 +20,7 @@ internal static class DocxImagesTests
             string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", $"docx-{kind}-{story}.docx"));
             DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, null, CancellationToken.None).Single();
+                .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             double[] baselines = Regex.Matches(page.Content, @"[-\d.]+ 0 0 [-\d.]+ [-\d.]+ ([-\d.]+) Tm")
                 .Select(match => double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
             double baseline = story == "header" ? baselines.Max() : baselines.Min();
@@ -42,7 +42,7 @@ internal static class DocxImagesTests
             string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name + ".docx"));
             DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, null, CancellationToken.None).Single();
+                .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             Match viewport = Regex.Match(page.Content, @"[-\d.]+ ([-\d.]+) 144 17.6 re\s+W\s+n");
             TestAssert.True(viewport.Success, "Declared22pt line must clip the72pt picture to its resolved baseline frame.");
             double bottom = double.Parse(viewport.Groups[1].Value, CultureInfo.InvariantCulture);
@@ -58,7 +58,7 @@ internal static class DocxImagesTests
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-static-footer-body-flow.docx"));
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
         PdfPage[] pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, null, CancellationToken.None).ToArray();
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.True(pages.Length > 1, "Dense body must paginate around the footer picture.");
         foreach (PdfPage page in pages)
         {
@@ -96,7 +96,7 @@ internal static class DocxImagesTests
         TestAssert.Equal(2, images.Length);
         TestAssert.Equal(images[0].PartName, images[1].PartName);
         PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, null, CancellationToken.None).Single();
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Equal(0, page.Images.Count);
         TestAssert.Equal(2, Regex.Matches(page.Content, "0 0.667 0.4 rg").Count);
         TestAssert.Equal(2, Regex.Matches(DocxPageFootnoteNumberingTests.DecodeText(page), "Before").Count);
@@ -114,7 +114,7 @@ internal static class DocxImagesTests
             TestAssert.Equal(144d, image.WidthPoints); TestAssert.Equal(72d, image.HeightPoints);
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+                .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Equal(0, page.Images.Count);
             TestAssert.Contains("0 0.667 0.4 rg", page.Content);
             TestAssert.Contains("Before", DocxPageFootnoteNumberingTests.DecodeText(page));
@@ -150,7 +150,7 @@ internal static class DocxImagesTests
             {
                 var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);var diagnostics = new List<OoxPdfDiagnostic>();
                 PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+                    .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
                 TestAssert.Equal(1, page.Images.Count);
                 if (!missing)
                     TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.PageIndex == 1 && d.SlideIndex is null && d.Fallback == "RasterImage"), "Malformed SVG diagnoses the authored raster fallback on the document page: " + string.Join(';', diagnostics.Select(d => d.ToString())));
@@ -167,10 +167,10 @@ internal static class DocxImagesTests
             var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
             TestAssert.Equal("image/svg+xml", document.FloatingDrawings.Single().Image!.ContentType);
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Equal(0, page.Images.Count);TestAssert.Contains("0 0.667 0.4 rg", page.Content);
             using var cancellation = new CancellationTokenSource();cancellation.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(document, null, cancellation.Token).ToArray());
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null, cancellation.Token).ToBlockingEnumerable().ToArray());
         }
         finally { File.Delete(input); }
     }
@@ -185,7 +185,7 @@ internal static class DocxImagesTests
         {
             var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray());
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray());
         }
         finally { File.Delete(input); }
     }
@@ -198,7 +198,7 @@ internal static class DocxImagesTests
             var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
             TestAssert.True(document.Paragraphs.Single().Images.Single().RasterFallback is null, "Native-only SVG must not invent a raster preview.");
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, null, CancellationToken.None).Single();
+                .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Equal(0, page.Images.Count);
             TestAssert.True(Regex.IsMatch(page.Content, @"144 72 re\s+W\s+n"), "Authored SVG viewport must clip overflowing paint.");
             TestAssert.Contains("Before", DocxPageFootnoteNumberingTests.DecodeText(page));
@@ -233,7 +233,7 @@ internal static class DocxImagesTests
             {
                 DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
                 PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(document, null, CancellationToken.None).Single();
+                    .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
                 TestAssert.Equal(1, page.Images.Count);
                 TestAssert.Contains(mappedWidth + " 0 0 72 ", page.Content);
                 TestAssert.True(Regex.IsMatch(page.Content, @"144 72 re\s+W\s+n"), "Expected the original authored viewport to clip the cropped fallback.");
@@ -254,7 +254,7 @@ internal static class DocxImagesTests
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
                 PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+                    .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
                 TestAssert.Equal(1, page.Images.Count);
                 TestAssert.Contains("144 0 0 72 ", page.Content);
                 TestAssert.Equal(1, diagnostics.Count(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_IMAGE_CROP" && diagnostic.Fallback == "UncroppedImage"));
@@ -294,7 +294,7 @@ internal static class DocxImagesTests
             {
                 DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
                 PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(document, null, CancellationToken.None).Single();
+                    .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
                 TestAssert.Equal(native ? 0 : 1, page.Images.Count);
                 string mirror = attributes.Contains("flipH", StringComparison.Ordinal) ? "-1 0 0 1 " : "1 0 0 -1 ";
                 TestAssert.Contains(mirror, page.Content);
@@ -315,7 +315,7 @@ internal static class DocxImagesTests
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), diagnostics.Add, CancellationToken.None).Single();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Equal(1, page.Images.Count);
             TestAssert.Contains("-1 0 0 -1 ", page.Content); TestAssert.Contains("144 0 0 72 ", page.Content);
             TestAssert.Equal(1, diagnostics.Count(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_IMAGE_CROP"));
@@ -351,7 +351,7 @@ internal static class DocxImagesTests
             TestAssert.Equal(72d, document.Paragraphs.Single().Images.Single().HeightPoints);
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+                .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("0 -1 1 0 ", page.Content);
             Match lineClip = Regex.Match(page.Content, @"[-0-9.]+ [-0-9.]+ [-0-9.]+ ([-0-9.]+) re\s+W\s+n");
             TestAssert.True(lineClip.Success && double.Parse(lineClip.Groups[1].Value, CultureInfo.InvariantCulture) >= 72d,
@@ -373,7 +373,7 @@ internal static class DocxImagesTests
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), diagnostics.Add, CancellationToken.None).Single();
+                    .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
                 TestAssert.Equal(1, page.Images.Count);
                 TestAssert.Contains("-1 0 0 1 ", page.Content);
                 TestAssert.Contains("144 0 0 72 ", page.Content);
@@ -428,7 +428,7 @@ internal static class DocxImagesTests
         };
         document = document with { BodyElements = document.BodyElements.Select(item => ReferenceEquals(item, element) ? new DocxTableElement(table) : item).ToArray() };
         PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, null, CancellationToken.None).Single();
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         MatchCollection clips = Regex.Matches(page.Content, @"[-0-9.]+ ([-0-9.]+) [-0-9.]+ ([-0-9.]+) re\s+W\s+n");
         TestAssert.True(clips.Count >= 2, "Expected cell and picture clipping operations.");
         TestAssert.Equal(clips[0].Groups[1].Value, clips[1].Groups[1].Value);
@@ -866,7 +866,7 @@ internal static class DocxImagesTests
         DocxFloatingDrawingLayout placedDrawing = placedStory.FloatingDrawings.Single();
         TestAssert.True(placedDrawing.PlacedX >= document.MarginLeftPoints, "Placed footnote floating drawings should be translated from note-local coordinates into the page margin frame.");
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(1, page.Images.Count);
         TestAssert.Contains("/Im1 Do", page.Content);

@@ -87,7 +87,7 @@ internal static class DocxMixedWrappedFootnoteTests
         foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
         {
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            var pages = renderer.RenderBlankPages(source, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             string text = string.Join('|', pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             TestAssert.Contains("09 Public destination", text);

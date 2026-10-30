@@ -120,7 +120,7 @@ internal static partial class DocxMathNaryTests
                 resolveControlFont: _ => missing) && absent is null, "A missing selected variant CID cannot publish a partial body or operator.");
             var graphics = new PdfGraphicsBuilder(); DocxMathBoxPainter.Paint(measured, graphics, 20d, 50d, CancellationToken.None);
             using var output = new MemoryStream();
-            PdfDocumentWriter.WriteStagedAsync(output, [new PdfPage(200d, 150d, graphics.ToString(), [parent, text])], new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+            PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([new PdfPage(200d, 150d, graphics.ToString(), [parent, text])]), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Length > 0, "Native operator and child resources remain valid PDF content.");
         }
     }

@@ -68,7 +68,7 @@ internal static partial class DocxInlineCompositionTests
                 });
                 var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
-                var page = new DocxRenderer(resolver, mode, geometry).RenderBlankPages(document, null, default).Single();
+                var page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
                 content ??= page.Content;
                 TestAssert.Equal(content, page.Content);
             }

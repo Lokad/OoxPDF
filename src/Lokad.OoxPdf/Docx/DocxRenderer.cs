@@ -136,7 +136,7 @@ internal sealed partial class DocxRenderer
 
     // R06.3: yields pages progressively so the writer can spill content and retain
     // only descriptors; callers must drain inside the conversion budget scope.
-    public IEnumerable<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
+    public async IAsyncEnumerable<PdfPage> RenderPagesAsync(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!HasRenderableContent())
@@ -148,7 +148,7 @@ internal sealed partial class DocxRenderer
             yield break;
         }
 
-        foreach (PdfPage page in RenderParagraphs(document, fontResolver, ResolveEffectiveMarkupContext(document, cancellationToken), diagnosticSink, cancellationToken))
+        await foreach (PdfPage page in RenderParagraphsAsync(document, fontResolver, ResolveEffectiveMarkupContext(document, cancellationToken), diagnosticSink, cancellationToken))
         {
             yield return page;
         }
@@ -174,7 +174,7 @@ internal sealed partial class DocxRenderer
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         OoxPdfDocxMarkupGeometryMode effectiveGeometryMode = ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext);
-        var prepared = PreparePageNumberedLayout(document, fontResolver, effectiveMarkupContext, effectiveGeometryMode, null, CancellationToken.None);
+        var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, effectiveMarkupContext, effectiveGeometryMode, null, CancellationToken.None).GetAwaiter().GetResult();
         document = prepared.Document;
         DocxLayout layout = prepared.Layout;
         return DocxLayoutSnapshot.FromLayout(layout, document.MarkupMode, effectiveGeometryMode);
@@ -183,14 +183,14 @@ internal sealed partial class DocxRenderer
     internal IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> InspectMarkupBalloons(DocxDocument document)
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        var prepared = PreparePageNumberedLayout(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None);
+        var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None).GetAwaiter().GetResult();
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
         bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         if (UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext) && HasWordCompatibleBalloonContent(document, effectiveMarkupContext))
         {
-            effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, effectiveMarkupContext, CancellationToken.None) };
+            effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFace = ResolveBalloonTitleFaceAsync(fontResolver, effectiveMarkupContext, CancellationToken.None).GetAwaiter().GetResult() };
         }
         (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource) = EnsureMarkupBalloonTextResources(layout, fontResources, effectiveMarkupContext, CancellationToken.None);
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
@@ -221,7 +221,7 @@ internal sealed partial class DocxRenderer
         if (DocxPageFootnoteNumbering.IsEligibleDocument(document))
         {
             var context = ResolveEffectiveMarkupContext(document);
-            var prepared = PreparePageNumberedLayout(document, fontResolver, context, ResolveEffectiveMarkupGeometryMode(context), null, CancellationToken.None);
+            var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, context, ResolveEffectiveMarkupGeometryMode(context), null, CancellationToken.None).GetAwaiter().GetResult();
             return DocxFontPlanSnapshot.FromPlan(prepared.FontResources.Plan);
         }
         return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, CancellationToken.None,
@@ -231,7 +231,7 @@ internal sealed partial class DocxRenderer
     internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
-        var prepared = PreparePageNumberedLayout(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None);
+        var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None).GetAwaiter().GetResult();
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
@@ -341,7 +341,7 @@ internal sealed partial class DocxRenderer
         return DocxStructureSnapshot.FromDocument(document);
     }
 
-    private static (DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout) PreparePageNumberedLayout(
+    private static async ValueTask<(DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout)> PreparePageNumberedLayoutAsync(
         DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken)
     {
@@ -351,8 +351,8 @@ internal sealed partial class DocxRenderer
         // retry can retain unchanged preparation. Ownership ends with
         // this conversion; nothing is shared across converters or resolvers.
         var fontCache = new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>();
-        var first = PrepareNoteAdjustedLayout(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken,
-            fontCache);
+        var first = await PrepareNoteAdjustedLayoutAsync(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken,
+            fontCache).ConfigureAwait(false);
         if (first.FontResources.DeferredPageCountEquations.Count != 0 ||
             (DocxFieldText.GetDependencies(document.BodyElements, cancellationToken) & DocxCounterDependencies.PageCount) != 0)
         {
@@ -366,8 +366,8 @@ internal sealed partial class DocxRenderer
             // Recompute note-dependent purposes too: accepting a stable count
             // must not leave numbering or kerning derived from the omitted math.
             int expectedPageCount = first.Layout.Pages.Count;
-            var retry = PrepareNoteAdjustedLayout(document, resolver, context, geometry, retryMessages is null ? null : retryMessages.Add,
-                cancellationToken, fontCache, expectedPageCount, reusableFonts);
+            var retry = await PrepareNoteAdjustedLayoutAsync(document, resolver, context, geometry, retryMessages is null ? null : retryMessages.Add,
+                cancellationToken, fontCache, expectedPageCount, reusableFonts).ConfigureAwait(false);
             if (retry.Layout.Pages.Count != expectedPageCount)
             {
                 // Restored deferred content can change pagination. Confirm that
@@ -377,8 +377,8 @@ internal sealed partial class DocxRenderer
                 cancellationToken.ThrowIfCancellationRequested();
                 expectedPageCount = retry.Layout.Pages.Count;
                 retryMessages = diagnostics is null ? null : [];
-                retry = PrepareNoteAdjustedLayout(document, resolver, context, geometry,
-                    retryMessages is null ? null : retryMessages.Add, cancellationToken, fontCache, expectedPageCount);
+                retry = await PrepareNoteAdjustedLayoutAsync(document, resolver, context, geometry,
+                    retryMessages is null ? null : retryMessages.Add, cancellationToken, fontCache, expectedPageCount).ConfigureAwait(false);
             }
             if (retry.Layout.Pages.Count == expectedPageCount)
             {
@@ -395,14 +395,14 @@ internal sealed partial class DocxRenderer
         return first;
     }
 
-    private static (DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout) PrepareNoteAdjustedLayout(
+    private static async ValueTask<(DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout)> PrepareNoteAdjustedLayoutAsync(
         DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache, int? pageCount = null,
         DocxFontResources? initialFonts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var fonts = initialFonts ?? PrepareFontResourcesCore(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
+        var fonts = initialFonts ?? await PrepareFontResourcesCoreAsync(document, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache).ConfigureAwait(false);
         var first = CreatePlainFootnoteTextLayout(document, fonts, context, geometry, cancellationToken, pageCount);
         DocxDocument adjusted = document;
         IReadOnlyDictionary<string, int> originalPages = new Dictionary<string, int>();
@@ -434,7 +434,7 @@ internal sealed partial class DocxRenderer
                 DocxWrappedCalibriKerning.TryCreateDocument(document, first, out adjusted, out originalPages,
                     DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences)))
         {
-            var adjustedFonts = PrepareFontResourcesCore(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
+            var adjustedFonts = await PrepareFontResourcesCoreAsync(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache).ConfigureAwait(false);
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken, pageCount);
             bool wrappedCalibri = !DocxPlainBodyFrame.HasSingleLineParagraphs(first) &&
                 DocxWrappedFootnoteFrame.IsEligible(adjusted, DocxWrappedCalibriPolicy.NormalizedThresholds, DocxFootnoteOwnerScope.AllSourceReferences);
@@ -467,7 +467,7 @@ internal sealed partial class DocxRenderer
         // Corrected labels need their own glyph subset and measured advances.
         // One bounded retry is accepted only when body and complete note pages
         // remain stable; otherwise the original resources/layout retain fallback.
-        var numberedFonts = PrepareFontResourcesCore(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache);
+        var numberedFonts = await PrepareFontResourcesCoreAsync(numbered, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache).ConfigureAwait(false);
         var final = CreatePlainFootnoteTextLayout(numbered, numberedFonts, context, geometry, cancellationToken, pageCount);
         return final.Pages.Count == first.Pages.Count && DocxPageFootnoteNumbering.HasStableNumberingPages(numbered, final, pages,
             allowWrappedBody: context.WordCompatiblePrintScale == 1d,
@@ -1082,15 +1082,15 @@ internal sealed partial class DocxRenderer
         return drawingsByType.Values.Any(HasRenderableDrawings);
     }
 
-    private static IEnumerable<PdfPage> RenderParagraphs(
+    private static async IAsyncEnumerable<PdfPage> RenderParagraphsAsync(
         DocxDocument document,
         IFontResolver fontResolver,
         DocxMarkupContext markupContext,
         Action<OoxPdfDiagnostic>? diagnosticSink,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var prepared = PreparePageNumberedLayout(document, fontResolver, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), diagnosticSink, cancellationToken);
+        var prepared = await PreparePageNumberedLayoutAsync(document, fontResolver, markupContext, ResolveEffectiveMarkupGeometryMode(markupContext), diagnosticSink, cancellationToken).ConfigureAwait(false);
         document = prepared.Document;
         DocxFontResources fontResources = prepared.FontResources;
         DocxLayout layout = prepared.Layout;
@@ -1117,7 +1117,7 @@ internal sealed partial class DocxRenderer
         // the face rides the markup context into the balloon text subset below.
         if (UsesWordCompatibleAllMarkupTextProfile(markupContext) && HasWordCompatibleBalloonContent(document, markupContext))
         {
-            markupContext = markupContext with { BalloonTitleFaceResolution = ResolveBalloonTitleFace(fontResolver, markupContext, cancellationToken) };
+            markupContext = markupContext with { BalloonTitleFace = await ResolveBalloonTitleFaceAsync(fontResolver, markupContext, cancellationToken).ConfigureAwait(false) };
         }
         bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource) = EnsureMarkupBalloonTextResources(layout, fontResources, markupContext, cancellationToken);

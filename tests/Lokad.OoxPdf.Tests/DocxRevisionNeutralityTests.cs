@@ -51,7 +51,7 @@ internal static class DocxRevisionNeutralityTests
             var document = ReadSource(row, mode);
             var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).Single();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var key = (row.GetProperty("Pair").GetString()!, modeName);
             if (row.GetProperty("Variant").GetString() == "control") controls.Add(key, page.Content);
             else TestAssert.Equal(controls[key], page.Content);

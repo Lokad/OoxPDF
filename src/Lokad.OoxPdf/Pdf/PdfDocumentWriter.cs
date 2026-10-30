@@ -44,7 +44,7 @@ internal sealed class PdfDocumentWriter
     // stays byte-identical while stageable payload retention follows the window.
     public static async ValueTask<long> WriteStagedAsync(
         Stream stream,
-        IEnumerable<PdfPage> pages,
+        IAsyncEnumerable<PdfPage> pages,
         OoxConversionLimits limits,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
@@ -67,7 +67,7 @@ internal sealed class PdfDocumentWriter
     // a staged document (descriptors plus store) to the caller, so the stream path can snapshot and report
     // between production and emission. The caller must dispose the document.
     public static async ValueTask<PdfStagedDocument> ProduceStagedPagesAsync(
-        IEnumerable<PdfPage> pages,
+        IAsyncEnumerable<PdfPage> pages,
         OoxConversionLimits limits,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         CancellationToken cancellationToken,
@@ -107,7 +107,7 @@ internal sealed class PdfDocumentWriter
                 return descriptor;
             }
             int pageIndex = 0;
-            foreach (PdfPage page in pages)
+            await foreach (PdfPage page in pages.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!double.IsFinite(page.Width) || !double.IsFinite(page.Height) || page.Width <= 0 || page.Height <= 0)

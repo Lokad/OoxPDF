@@ -26,8 +26,8 @@ internal static partial class DocxInlineCompositionTests
             var wrapped = ReadMutation("InlineBoxMath/" + item.GetProperty("Id").GetString(), mode, false, false);
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final ?
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.RenderBlankPages(parent, null, default).ToArray();
-            var after = renderer.RenderBlankPages(wrapped, null, default).ToArray();
+            var before = renderer.RenderPagesAsync(parent, null, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(wrapped, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(before.Length, after.Length);
             for (int index = 0; index < before.Length; index++)
             {
@@ -55,8 +55,8 @@ internal static partial class DocxInlineCompositionTests
                 paragraph.Add(MetadataWrapper(w, "customXml", MetadataWrapper(w, "smartTag", children)));
             }, sourcePart);
             var renderer = new DocxRenderer(resolver, mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            TestAssert.Equal(renderer.RenderBlankPages(before, null, default).Single().Content,
-                renderer.RenderBlankPages(after, null, default).Single().Content);
+            TestAssert.Equal(renderer.RenderPagesAsync(before, null, default).ToBlockingEnumerable().Single().Content,
+                renderer.RenderPagesAsync(after, null, default).ToBlockingEnumerable().Single().Content);
         }
     }
 

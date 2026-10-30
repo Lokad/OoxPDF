@@ -40,8 +40,8 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
-            var after = renderer.RenderBlankPages(transformed, diagnostics.Add, default).ToArray();
+            var before = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(transformed, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.True(before.Length > 1, "The compound paragraph crosses a physical page boundary.");
             TestAssert.Equal(before.Length, after.Length);
             for (int index = 0; index < before.Length; index++)

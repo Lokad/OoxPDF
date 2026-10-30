@@ -123,7 +123,7 @@ internal static class DocxNominalGlyphAdvanceTests
             TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(adjusted, after, owners), "Every complete note retains its owner page.");
             var a = Lines(before);var z = Lines(after);TestAssert.Equal(a.Length, z.Length);
             for (int i = 0; i < a.Length; i++) { Near(a[i].BaselineY, z[i].BaselineY, "Logical glyph correction retains layout baselines.");TestAssert.Equal(a[i].LineHeight,z[i].LineHeight); }
-            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
             for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual link destinations remain on the owned page.");
         }
@@ -143,7 +143,7 @@ internal static class DocxNominalGlyphAdvanceTests
     internal static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
     internal static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)

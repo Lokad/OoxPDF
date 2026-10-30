@@ -44,7 +44,7 @@ internal static partial class DocxInlineCompositionTests
                 var owners = document.HeaderParagraphsByType.Values.Concat(document.FooterParagraphsByType.Values)
                     .SelectMany(p => p).SelectMany(p => p.Runs).ToArray();
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
                 string prose = string.Concat(shows.Select(s => s.Text));
                 foreach (int line in new[] { 1, 2, 3 })

@@ -17,7 +17,7 @@ internal static class DocxSectionNavigationTests
         foreach (string id in new[] { "single-title", "two-title", "two-default", "bookmark-before", "bookmark-after", "bookmark-empty" })
         {
             var document = DocxTests.ReadDocx(Case(id), mode);
-            PdfPage[] pages = Renderer(mode).RenderBlankPages(document, null, default).ToArray();
+            PdfPage[] pages = Renderer(mode).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(id == "single-title" ? 1 : 2, pages.Length);
             if (id.StartsWith("bookmark-", StringComparison.Ordinal))
             {
@@ -51,7 +51,7 @@ internal static class DocxSectionNavigationTests
         }, path => {
             var document = DocxTests.ReadDocx(path, mode);
             var renderer = Renderer(mode);
-            PdfPage[] pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            PdfPage[] pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(4, pages.Length);
             TestAssert.Contains("SECOND SECTION FIRST", Text(pages[1]));
             TestAssert.Contains("FOOTER FIRST", Text(pages[1]));
@@ -69,7 +69,7 @@ internal static class DocxSectionNavigationTests
             xml.Root!.Element(W+"body")!.Element(W+"sectPr")!.Elements(W+"headerReference")
                 .Where(e => (string?)e.Attribute(W+"type") == "first").Remove();
         }, path => {
-            PdfPage[] pages = Renderer(mode).RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
+            PdfPage[] pages = Renderer(mode).RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             TestAssert.Contains("FIRST SECTION DEFAULT", Text(pages[0]));
             TestAssert.True(!Text(pages[1]).Contains("SECOND SECTION"), "An undefined first variant must not select the default header.");
@@ -101,7 +101,7 @@ internal static class DocxSectionNavigationTests
     public static void DocxParagraphEndBookmarksPreserveMissingTargetFallback()
     {
         WithMutation("bookmark-after", (_, xml) => xml.Descendants(W+"bookmarkStart").Remove(), path => {
-            PdfPage[] pages = Renderer(OoxPdfDocxMarkupMode.Final).RenderBlankPages(DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.Final), null, default).ToArray();
+            PdfPage[] pages = Renderer(OoxPdfDocxMarkupMode.Final).RenderPagesAsync(DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.Final), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(0, pages.Sum(page => page.Annotations.Count));
             TestAssert.Contains("TARGET PARAGRAPH", Text(pages[1]));
         });
@@ -111,7 +111,7 @@ internal static class DocxSectionNavigationTests
     {
         var document = DocxTests.ReadDocx(path, mode);
         var renderer = Renderer(mode);
-        PdfPage[] pages = renderer.RenderBlankPages(document, null, default).ToArray();
+        PdfPage[] pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
         if (expectMultiplePages) TestAssert.True(pages.Length > 2, "The target must wrap across pages.");
         PdfLinkDestination destination = pages[0].Annotations.Single().Destination!.Value;
         TestAssert.Equal(pages.Length-1, destination.PageIndex);

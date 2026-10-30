@@ -23,7 +23,7 @@ internal static partial class DocxCommentsTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             TestAssert.Equal(1, row.GetProperty("OfficeView").GetProperty("RevisionsMode").GetInt32());
             var pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToArray();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToBlockingEnumerable().ToArray();
             string content = string.Join("\n", pages.Select(page => page.Content));
             var fill = ReadRgb("FillRgb");
             TestAssert.Contains(DocxTests.FormatPdfRgb(fill, "rg"), content);

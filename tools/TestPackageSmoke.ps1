@@ -315,15 +315,18 @@ sealed class SmokeBudget : IMemoryBudget
     }
 }
 
-sealed class SmokeFontResolver(string path) : IFontResolver
+sealed class SmokeFontResolver(string path) : IFontResolver, IFontProgramSource
 {
     private readonly IFontProgramSource source = new MemoryFontProgramSource("smoke-font", File.ReadAllBytes(path));
+    public string StableId => source.StableId;
+    public ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default) =>
+        source.AcquireAsync(operationBudget, ct);
 
     public FontFaceResolution Resolve(FontRequest request) => new(
         request.FamilyName,
         "Smoke font",
         new FontStyleKey(false, false, 400, 0, false),
-        source,
+        this,
         IsFallback: true);
 }
 '@
@@ -363,6 +366,7 @@ Write-Host "Package smoke test passed through the packed library."
     AsyncOnlyOutputChecked = $true
     ExplicitTemporaryStorageChecked = $true
     TemporaryStorageCleanupChecked = $true
+    FontLeaseContractChecked = $true
     LocalDocumentationLinksChecked = $localDocumentationLinks
     Package = $package.FullName
     PackageVersion = $version

@@ -108,7 +108,7 @@ internal static partial class DocxInlineCompositionTests
             var lines = TestAssert.NotNull(box.TextLines);
             TestAssert.Equal(1, lines.Count);
             TestAssert.Equal("Before inline  after equation. 1".Length, lines.Sum(line => line.TextLength));
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             TestAssert.Equal(1, shows.Count(show => show.Text.Trim() == "1"));
             TestAssert.True(page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),

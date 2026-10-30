@@ -58,7 +58,7 @@ internal static class DocxOrdinaryKerningTests
         var emission = word.InspectTextEmission(source);
         TestAssert.True(emission.Lines.SelectMany(l => l.Segments).All(s => s.GlyphAdvanceSignature.KerningUnits == 0), "Actual Word-compatible emission uses nominal advances.");
         TestAssert.True(emission.Lines.SelectMany(l => l.Segments).All(s => Math.Abs(s.AdvanceProfile.KerningAdjustmentTotal) < .00001d), "Measured and emitted pair positioning agree.");
-        TestAssert.Equal(0, word.RenderBlankPages(source, null, CancellationToken.None).Sum(p => p.Annotations.Count));
+        TestAssert.Equal(0, word.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().Sum(p => p.Annotations.Count));
         var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(source);
         TestAssert.True(preserve.Lines.SelectMany(l => l.Segments).All(s => s.GlyphAdvanceSignature.KerningUnits == 0),
             "Preserve and Word-compatible painting share the authored minimum, independent of layout admission.");
@@ -91,7 +91,7 @@ internal static class DocxOrdinaryKerningTests
 
     private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode geometry) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
     private static DocxFontPlanTextMeasurer Measurer(DocxDocument document, TestFaceFontResolver resolver) =>
-        new(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
     private static DocxLayout Layout(DocxDocument document) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
         .Create(document, Measurer(document, new TestFaceFontResolver()), CancellationToken.None);
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";

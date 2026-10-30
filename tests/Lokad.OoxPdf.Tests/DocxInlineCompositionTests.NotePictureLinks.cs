@@ -33,7 +33,7 @@ internal static partial class DocxInlineCompositionTests
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             var links = pages.SelectMany(page => page.Annotations).Where(link =>
                 link.Uri?.StartsWith("https://example.invalid/composed-picture/", StringComparison.Ordinal) == true).ToArray();
             TestAssert.Equal(0, links.Count(link => link.Uri!.Contains("/endnotes/", StringComparison.Ordinal)));
@@ -42,7 +42,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Picture navigation fallbacks preserve neighboring supported equations.");
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, cancellation.Token).ToArray());
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, cancellation.Token).ToBlockingEnumerable().ToArray());
         }
     }
 }

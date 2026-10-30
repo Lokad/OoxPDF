@@ -158,7 +158,7 @@ internal static class DocxHiddenPictureTests
     }
 
     private static PdfPage[] Render(DocxDocument document, OoxPdfDocxMarkupMode mode) => new DocxRenderer(
-        new PortableRenderingTests.PinnedResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).ToArray();
+        new PortableRenderingTests.PinnedResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
     private static void WithDocument(Dictionary<string, byte[]> parts, OoxPdfDocxMarkupMode mode, Action<DocxDocument> check)
     {
         using var stream = TestFixtures.CreateZipPackage(parts);

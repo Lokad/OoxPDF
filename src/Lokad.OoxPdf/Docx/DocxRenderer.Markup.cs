@@ -204,7 +204,7 @@ internal sealed partial class DocxRenderer
         IReadOnlySet<int> titleCodepoints,
         CancellationToken cancellationToken)
     {
-        if (markupContext.BalloonTitleFaceResolution is not { } resolution || titleCodepoints.Count == 0)
+        if (markupContext.BalloonTitleFace is not { } titleFace || titleCodepoints.Count == 0)
         {
             return null;
         }
@@ -214,11 +214,10 @@ internal sealed partial class DocxRenderer
             return null;
         }
 
-        OpenTypeFont? titleFont = LoadFont(resolution, new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>(), cancellationToken);
-        if (titleFont is null || !titleFont.HasTrueTypeOutlines)
-        {
-            return null;
-        }
+        // The preflight already acquired and validated this parsed face. Reuse
+        // it for title coverage instead of loading/copying the same program twice.
+        FontFaceResolution resolution = titleFace.Resolution;
+        OpenTypeFont titleFont = titleFace.Font;
 
         var glyphs = new HashSet<int>();
         foreach (int codePoint in titleCodepoints)
@@ -279,7 +278,7 @@ internal sealed partial class DocxRenderer
     // fallback/unresolvable result keeps the label face everywhere (including off-Windows). A
     // Segoe UI Semibold (600) is also rejected: server SKUs may ship the family without its
     // Bold face, and narrower semibold advances would silently under-wrap titles.
-    internal static FontFaceResolution? ResolveBalloonTitleFace(IFontResolver fontResolver, DocxMarkupContext markupContext, CancellationToken cancellationToken)
+    internal static async ValueTask<(FontFaceResolution Resolution, OpenTypeFont Font)?> ResolveBalloonTitleFaceAsync(IFontResolver fontResolver, DocxMarkupContext markupContext, CancellationToken cancellationToken)
     {
         if (!UsesWordCompatibleAllMarkupTextProfile(markupContext))
         {
@@ -294,8 +293,8 @@ internal sealed partial class DocxRenderer
 
         // The face file itself must load with embeddable outlines: server SKUs can carry
         // an unloadable Segoe UI Bold stub that still resolves bold.
-        OpenTypeFont? titleFont = LoadFont(resolved, new Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>(), cancellationToken);
-        return titleFont is not null && titleFont.HasTrueTypeOutlines ? resolved : null;
+        OpenTypeFont? titleFont = await FontProgramLoader.LoadAsync(resolved, cancellationToken).ConfigureAwait(false);
+        return titleFont is not null && titleFont.HasTrueTypeOutlines ? (resolved, titleFont) : null;
     }
 
     private static DocxRunFontResource? ResolveMarkupLabelFontResource(DocxFontResources fontResources)

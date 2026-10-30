@@ -80,7 +80,7 @@ internal static partial class DocxInlineCompositionTests
             var source = DocxTests.ReadDocx(input, mode);
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(source, null, default).ToArray();
+                .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(row.GetProperty("ExpectedPages").GetInt32(), pages.Length);
             var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Select(show => (Page: index + 1, Show: show))).ToArray();

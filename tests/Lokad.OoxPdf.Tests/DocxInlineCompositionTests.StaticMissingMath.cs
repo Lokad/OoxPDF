@@ -25,7 +25,7 @@ internal static partial class DocxInlineCompositionTests
             var owners = paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             TestAssert.Equal("1.,2.,3.", string.Join(',', shows.Where(show => show.Text.Trim() is "1." or "2." or "3.")
                 .Select(show => show.Text.Trim()).Distinct()));

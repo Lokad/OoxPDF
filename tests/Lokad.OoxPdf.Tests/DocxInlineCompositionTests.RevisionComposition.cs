@@ -27,7 +27,7 @@ internal static partial class DocxInlineCompositionTests
             bool review = row.GetProperty("Mode").GetString() == "all-word-compatible";
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var pages = new DocxRenderer(resolver, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
-                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().ToArray();
             if (compareWordFrame) TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
             var actual = new StringBuilder();
             int redMath = 0, totalBars = 0;

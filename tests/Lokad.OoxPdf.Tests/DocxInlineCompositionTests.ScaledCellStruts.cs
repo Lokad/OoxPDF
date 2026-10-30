@@ -55,7 +55,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(NestedMathCasePath(id + ".docx"), mode), null, default).Single();
+            var page = renderer.RenderPagesAsync(DocxTests.ReadDocx(NestedMathCasePath(id + ".docx"), mode), null, default).ToBlockingEnumerable().Single();
             string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
             foreach (string prose in new[] { "Public cell before note", "and after note.", "Public review anchor", "Public note target." })
                 TestAssert.Contains(prose, text);

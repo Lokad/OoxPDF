@@ -1476,7 +1476,7 @@ internal static class DocxRevisionsTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .ToArray();
 
         PdfLinkAnnotation[] externalLinks = pages

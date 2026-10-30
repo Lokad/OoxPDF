@@ -156,7 +156,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     private readonly Dictionary<(string StableId, int FaceIndex, string? PrimaryFamily, bool Bold, bool Italic), IReadOnlyList<OpenTypeFont?>> candidateChains = new();
     private readonly Dictionary<DocxTextRun, DocxResolvedRunTypeface> runsByReference = new(ReferenceEqualityComparer.Instance);
 
-    public DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken, IFontResolver? fontResolver = null, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>? sharedFonts = null, bool resolveSourceAdvances = false)
+    private DocxFontPlanTextMeasurer(DocxFontPlan plan, FontFaceResolution? fallbackResolution, CancellationToken cancellationToken, IFontResolver? fontResolver = null, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>? sharedFonts = null, bool resolveSourceAdvances = false)
     {
         runs = plan.Runs;
         foreach (DocxResolvedRunTypeface resolved in plan.Runs)
@@ -168,6 +168,29 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         this.fontResolver = fontResolver;
         this.resolveSourceAdvances = resolveSourceAdvances;
         fonts = sharedFonts ?? new();
+    }
+
+    // Acquisition is separate from synchronous fragment measurement. A complete
+    // primary run avoids loading any fallback programs, as in resource preparation.
+    public static async ValueTask<DocxFontPlanTextMeasurer> CreateAsync(DocxFontPlan plan,
+        FontFaceResolution? fallbackResolution, CancellationToken cancellationToken,
+        IFontResolver? fontResolver = null,
+        Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>? sharedFonts = null,
+        bool resolveSourceAdvances = false)
+    {
+        var result = new DocxFontPlanTextMeasurer(plan, fallbackResolution, cancellationToken,
+            fontResolver, sharedFonts, resolveSourceAdvances);
+        foreach (var run in plan.Runs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if ((run.Resolution ?? fallbackResolution) is not { } resolution) continue;
+            OpenTypeFont? font = await result.PrepareFontAsync(resolution).ConfigureAwait(false);
+            if (font is not null && !FontCoverageFallback.IsFullyCovered(run.Run.Text, font, cancellationToken))
+                _ = await result.PrepareCandidateFontsAsync(run.Run, run, resolution, font).ConfigureAwait(false);
+        }
+        if (fallbackResolution is not null)
+            _ = await result.PrepareFontAsync(fallbackResolution).ConfigureAwait(false);
+        return result;
     }
 
     public bool TryGetUnderlineRuleMetrics(DocxTextRun? run, out double positionEm, out double thicknessEm)
@@ -413,7 +436,17 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
         return font is null ? 0d : DocxLineMetrics.MeasureTypographicBaselineInset(font, fontSize);
     }
 
-    private IReadOnlyList<OpenTypeFont?> ResolveCandidateFonts(DocxTextRun? run, DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)
+    private IReadOnlyList<OpenTypeFont?> ResolveCandidateFonts(DocxTextRun? run,
+        DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var key = (resolution.Source.StableId, resolution.FontFaceIndex, resolved?.ResolvedFamily,
+            run is not null && run.Bold, run is not null && run.Italic);
+        return candidateChains.TryGetValue(key, out var chain) ? chain
+            : throw new InvalidOperationException("Fallback fonts must be prepared before text measurement.");
+    }
+
+    private async ValueTask<IReadOnlyList<OpenTypeFont?>> PrepareCandidateFontsAsync(DocxTextRun? run, DocxResolvedRunTypeface? resolved, FontFaceResolution resolution, OpenTypeFont primary)
     {
         bool bold = run is not null && run.Bold;
         bool italic = run is not null && run.Italic;
@@ -434,7 +467,7 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             foreach (FontFaceResolution candidate in DocxFontFallbackRules.ResolveCandidateResolutions(fontResolver, run, primaryFamily, resolution, fallbackResolution))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                OpenTypeFont? candidateFont = candidates.Count == 0 ? primary : LoadFont(candidate);
+                OpenTypeFont? candidateFont = candidates.Count == 0 ? primary : await PrepareFontAsync(candidate).ConfigureAwait(false);
                 if (candidateFont is not null && !candidates.Contains(candidateFont))
                 {
                     candidates.Add(candidateFont);
@@ -494,10 +527,18 @@ internal sealed class DocxFontPlanTextMeasurer : IDocxTextMeasurer, IDocxLineMet
             return cached;
         }
 
-        OpenTypeFont? loaded = FontProgramLoader.Load(resolution, cancellationToken);
-        fonts[key] = loaded;
-        return loaded;
+        throw new InvalidOperationException("Fonts must be prepared before text measurement.");
     }
+    private async ValueTask<OpenTypeFont?> PrepareFontAsync(FontFaceResolution resolution)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var key = (resolution.Source.StableId, resolution.FontFaceIndex);
+        if (fonts.TryGetValue(key, out var font)) return font;
+        font = await FontProgramLoader.LoadAsync(resolution, cancellationToken).ConfigureAwait(false);
+        fonts[key] = font;
+        return font;
+    }
+
 }
 
 internal sealed record DocxFontPlanSnapshot(

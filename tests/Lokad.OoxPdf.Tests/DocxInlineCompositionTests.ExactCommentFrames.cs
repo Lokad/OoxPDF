@@ -31,7 +31,7 @@ internal static partial class DocxInlineCompositionTests
             var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
             var pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             var selected = pages.SelectMany(page => Regex.Matches(page.Content,
                 @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
                 .Cast<Match>().Select(match => (Page: page, X: Value(match, "x"), Width: Value(match, "w"), Height: Value(match, "h"))))
@@ -79,7 +79,7 @@ internal static partial class DocxInlineCompositionTests
                 double sourceHeight = paragraph.LineSpacingPoints!.Value;
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                    .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                    .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 var fills = pages.SelectMany((page, index) => Regex.Matches(page.Content,
                     @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
                     .Cast<Match>().Select(match => (Page: index + 1, X: Value(match, "x"), Bottom: Value(match, "y"), Height: Value(match, "h"))))

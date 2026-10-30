@@ -64,7 +64,7 @@ internal static partial class DocxInlineCompositionTests
                     });
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(document, diagnostics.Add, default).Single();
+                    .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)) &&
                     Regex.IsMatch(page.Content, @"(?m)^0 g\r?\n[-\d.]+ [-\d.]+ [\d.]+ [\d.]+ re f\r?$") &&
                     !diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == "/word/document.xml"),

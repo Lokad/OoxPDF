@@ -33,7 +33,7 @@ internal static partial class DocxInlineCompositionTests
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed, partOverride: "word/footnotes.xml");
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                     .Select(show => (Page: index + 1, Show: show, IsMath: page.Fonts.Any(resource =>
                         resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(resource.Font, show.Font))))).ToArray();

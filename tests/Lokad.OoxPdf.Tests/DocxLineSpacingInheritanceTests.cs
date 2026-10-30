@@ -93,7 +93,7 @@ internal static class DocxLineSpacingInheritanceTests
         TestAssert.True(DocxBlockTraversal.EnumerateBodyParagraphs(document).All(p => p.LineSpacingPoints is null), "Body overrides use automatic metrics.");
         TestAssert.True(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs).All(p => p.LineSpacingPoints is null), "Notes and separator overrides also clear the inherited point height.");
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        var pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        var pages = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
         TestAssert.Equal(4, pages.SelectMany(p => p.Annotations).Select(a => a.Destination).Distinct().Count());
         for (int i = 0; i < pages.Length; i++)

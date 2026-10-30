@@ -31,7 +31,7 @@ internal static partial class DocxInlineCompositionTests
                 .SelectMany(value => value).ToArray();
             var owners = paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).Single();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var summaries = shows.Where(show => show.Text.StartsWith("Summary: ", StringComparison.Ordinal)).ToArray();
             var relationshipRows = shows.Where(show => show.Text.StartsWith("The two relationships ", StringComparison.Ordinal)).ToArray();

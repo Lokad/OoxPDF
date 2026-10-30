@@ -31,7 +31,7 @@ internal static partial class DocxInlineCompositionTests
                 var source = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, diagnostics.Add, default).Single();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Authored controls retain supported fraction content.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
                 var lines = shows.GroupBy(show => show.Y).Select(group =>

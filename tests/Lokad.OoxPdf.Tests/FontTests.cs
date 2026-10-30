@@ -187,13 +187,13 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
-        ushort glyph = font.MapCodePoint('é');
+        ushort glyph = font.MapCodePoint('Ã©');
         if (glyph == 0)
         {
             TestAssert.Skip("Environmental precondition not met: (glyph == 0)");
         }
 
-        TestAssert.True(font.TryReadGlyphOutline(glyph, out var outline), "Expected a readable TrueType outline for Arial 'é'.");
+        TestAssert.True(font.TryReadGlyphOutline(glyph, out var outline), "Expected a readable TrueType outline for Arial 'Ã©'.");
         if (!outline.IsCompound)
         {
             TestAssert.Skip("Environmental precondition not met: (!outline.IsCompound)");
@@ -277,14 +277,14 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
-        ushort glyph = font.MapCodePoint('é');
+        ushort glyph = font.MapCodePoint('Ã©');
         if (glyph == 0 || !font.TryReadGlyphOutline(glyph, out var outline) || !outline.IsCompound)
         {
             TestAssert.Skip("Environmental precondition not met: (glyph == 0 || !font.TryReadGlyphOutline(glyph, out var outline) || !outline.IsCompound)");
         }
 
         var graphics = new PdfGraphicsBuilder();
-        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 14d, 0d), "Expected PDF glyph path conversion for compound Arial 'é'.");
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 14d, 0d), "Expected PDF glyph path conversion for compound Arial 'Ã©'.");
         string pdf = graphics.ToString();
 
         TestAssert.True(pdf.Split(" m", StringSplitOptions.None).Length > 2, "Expected multiple contour starts for compound glyph path.");
@@ -321,7 +321,7 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(cambria));
-        AssertNoKerning(font, 'D', 'é');
+        AssertNoKerning(font, 'D', 'Ã©');
     }
 
     public static void OpenTypeParserReadsGposExtensionKerning()
@@ -336,7 +336,7 @@ internal static class FontTests
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(cambria));
         TestAssert.True(
             HasAnyKerning(font, "Lokad en quelques mots") ||
-            HasAnyKerning(font, "Dépendance à l'offre") ||
+            HasAnyKerning(font, "DÃ©pendance Ã  l'offre") ||
             HasAnyKerning(font, "Large Global Supply Network") ||
             HasAnyKerning(font, "The scale and growth"),
             "Expected at least one Cambria extension GPOS kerning pair in the typography probe words.");
@@ -583,7 +583,7 @@ internal static class FontTests
         DocxDocument document = DocxTests.CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
         DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         DocxTextRun planRun = plan.Runs.Single(candidate => candidate.Run.Text == "ACB").Run;
-        var measurer = new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, null, CancellationToken.None, resolver).GetAwaiter().GetResult();
         double actual = measurer.MeasureText(planRun, "ACB", 9d);
         OpenTypeFont primary = OpenTypeFont.Load(primaryBytes);
         OpenTypeFont fallback = OpenTypeFont.Load(fallbackBytes);
@@ -674,7 +674,7 @@ internal static class FontTests
         }
 
         string text = "a" + (char)0xF0B7 + "b";
-        var measurer = new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, null, CancellationToken.None, resolver).GetAwaiter().GetResult();
         double actual = measurer.MeasureText(resolved.Run, text, 9d);
         double expected =
             primaryFont.GetAdvanceWidth(primaryFont.MapCodePoint(97)) * 9d / primaryFont.UnitsPerEm +
@@ -890,7 +890,7 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
-        ushort originalGlyph = font.MapCodePoint('é');
+        ushort originalGlyph = font.MapCodePoint('Ã©');
         if (originalGlyph == 0 ||
             !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) ||
             !originalOutline.IsCompound)
@@ -898,9 +898,9 @@ internal static class FontTests
             TestAssert.Skip("Environmental precondition not met: (originalGlyph == 0 || !font.TryReadGlyphOutline(originalGlyph, out OpenTypeFont.OpenTypeGlyphOutline originalOutline) || !originalOutline.IsCompound)");
         }
 
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "é".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Ã©".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
         OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
-        ushort subsetGlyph = subset.MapCodePoint('é');
+        ushort subsetGlyph = subset.MapCodePoint('Ã©');
 
         TestAssert.True(embedded.UsesSubsetFontProgram, "Expected compound glyph fixture to use a subset font program.");
         TestAssert.True(subsetGlyph != 0, "Expected the subset cmap to map the compound glyph.");

@@ -22,7 +22,7 @@ internal static partial class DocxInlineCompositionTests
             string id = row.GetProperty("Id").GetString()!;
             var document = ReadMutation("CompositionProbes/" + id, OoxPdfDocxMarkupMode.AllMarkup, false, false);
             var page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup,
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             string label = row.GetProperty("Kind").GetString() == "ins" ? "Inserted Cells" : "Deleted Cells";
             var title = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Single(show => show.Text.Contains(label, StringComparison.Ordinal));

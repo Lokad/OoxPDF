@@ -32,7 +32,7 @@ internal static partial class DocxInlineCompositionTests
                     partOverride: id.Contains("footer", StringComparison.Ordinal) ? "word/footer1.xml" : "word/footnotes.xml");
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 TestAssert.True(pages.Length > 0, "The complete source report remains renderable.");
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Footer availability must retain every supported formula and source story.");
                 var showsByPage = pages.Select(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray()).ToArray();

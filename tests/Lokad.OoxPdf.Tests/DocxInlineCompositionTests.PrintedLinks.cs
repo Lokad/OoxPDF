@@ -28,7 +28,7 @@ internal static partial class DocxInlineCompositionTests
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).Single();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Linked mixed content retains its source formula.");
                 var links = page.Annotations.Where(link => link.IsDestination).OrderByDescending(link => link.Y + link.Height).ToArray();
                 TestAssert.True(links.Length > 0, "Supported source links produce clickable rectangles with either font resolver.");

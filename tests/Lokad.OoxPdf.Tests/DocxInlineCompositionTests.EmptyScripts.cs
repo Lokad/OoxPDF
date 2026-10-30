@@ -57,7 +57,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(source, diagnostics.Add, default).Single();
+                .RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
             TestAssert.True(page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
                 "Empty scripts use only metric owners, without placeholder glyphs, dummy source runs or math subsets.");
             TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == "/word/document.xml"),

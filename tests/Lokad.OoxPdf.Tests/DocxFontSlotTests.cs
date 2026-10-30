@@ -59,8 +59,8 @@ internal static class DocxFontSlotTests
             string Paragraph(IEnumerable<string> texts) => "<w:p>" + string.Concat(texts.Select(text => "<w:r>" + Properties + "<w:t xml:space=\"preserve\">" + SecurityElement.Escape(text) + "</w:t></w:r>")) + "</w:p>";
             DocxDocument joined = Read(Paragraph([string.Concat(pieces)]), container);
             DocxDocument split = Read(Paragraph(pieces), container);
-            PdfPage a = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(joined, null, default).Single();
-            PdfPage b = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(split, null, default).Single();
+            PdfPage a = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(joined, null, default).ToBlockingEnumerable().Single();
+            PdfPage b = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(split, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(a.Content, b.Content);
             TestAssert.True(a.Fonts.Any(font => font.Font.Font.FamilyName == "Slot A") &&
                 a.Fonts.Any(font => font.Font.Font.FamilyName == "Slot H") &&

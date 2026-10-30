@@ -22,7 +22,7 @@ internal static class DocxMarkupTests
             string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ReviewBodyFrames", name + ".docx"));
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(4, pages.Length);
             TestAssert.Equal(200, Regex.Matches(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), "AAA").Count);
         }
@@ -54,7 +54,7 @@ internal static class DocxMarkupTests
         var rows = renderer.InspectLayout(document).Pages.SelectMany(page => page.TableRows).ToArray();
         TestAssert.True(rows.Length == 2 && rows.All(row => row.Cells[1].TextLineCount >= 2),
             "A valid first cell cannot bypass widow protection in the next cell.");
-        string painted = string.Concat(renderer.RenderBlankPages(document, null, default).Select(DocxPageFootnoteNumberingTests.DecodeText));
+        string painted = string.Concat(renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Select(DocxPageFootnoteNumberingTests.DecodeText));
         TestAssert.Equal(76, Regex.Matches(painted, "AAA").Count);
         TestAssert.Equal(76, Regex.Matches(painted, "DDD").Count);
     }
@@ -84,7 +84,7 @@ internal static class DocxMarkupTests
             };
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             int painted = Regex.Matches(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), "AAA").Count;
             TestAssert.True(painted == words, $"Fragmented content must survive explicit widow={widow}, unsupportedMath={unsupportedMath}: expected {words} words, painted {painted}.");
             var layout = renderer.InspectLayout(document);
@@ -201,7 +201,7 @@ internal static class DocxMarkupTests
             DocxTextEmissionSegmentSnapshot[] emitted = renderer.InspectTextEmission(document).Lines.SelectMany(line => line.Segments).ToArray();
             DocxTextEmissionSegmentSnapshot segment = emitted.Single(segment => !segment.IsTerminalLineSpace &&
                 Math.Abs(segment.FontSize - cellSize * scale) < 0.000001d);
-            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+            string content = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Content;
             TestAssert.Contains(" " + segment.BaselineY.ToString("0.###", CultureInfo.InvariantCulture) + " Tm", content);
         }
     }
@@ -603,7 +603,7 @@ internal static class DocxMarkupTests
             DocxTextEmissionSegmentSnapshot segment = renderer.InspectTextEmission(document).Lines
                 .Where(line => !line.IsStaticStory).SelectMany(line => line.Segments)
                 .Single(segment => !segment.IsTerminalLineSpace);
-            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+            string content = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Content;
             string textOperation = Regex.Matches(content, @"BT(?<body>.*?)ET", RegexOptions.Singleline)
                 .Select(match => match.Groups["body"].Value)
                 .Single(body => Regex.Matches(body, "<41> Tj").Count == 3);
@@ -657,7 +657,7 @@ internal static class DocxMarkupTests
                 .Single(segment => segment.IsTerminalLineSpace);
             TestAssert.True(Math.Abs(terminal.PdfFontSize - expected) < 0.000001d,
                 $"Resolved paragraph mark {markSize}pt should retain its size at emission. Expected {expected}, actual {terminal.PdfFontSize}.");
-            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+            string content = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Content;
             TestAssert.Contains(" " + expected.ToString("0.###", CultureInfo.InvariantCulture) + " Tf", content);
         }
     }
@@ -693,7 +693,7 @@ internal static class DocxMarkupTests
                 double expected = roundedNominal * (geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ? scale : 1d);
                 TestAssert.True(Math.Abs(segment.PdfFontSize - expected) < 0.000001d,
                     $"Nominal {nominalSize}pt should round before print scaling. Expected {expected}, actual {segment.PdfFontSize}.");
-                string content = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Content;
+                string content = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Content;
                 string emittedSize = expected.ToString("0.###", CultureInfo.InvariantCulture);
                 TestAssert.Contains(" " + emittedSize + " Tf", content);
             }
@@ -708,8 +708,8 @@ internal static class DocxMarkupTests
         var finalRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         var allRenderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        PdfPage finalPage = finalRenderer.RenderBlankPages(finalDocument, null, CancellationToken.None).Single();
-        PdfPage allPage = allRenderer.RenderBlankPages(allDocument, null, CancellationToken.None).Single();
+        PdfPage finalPage = finalRenderer.RenderPagesAsync(finalDocument, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        PdfPage allPage = allRenderer.RenderPagesAsync(allDocument, null, CancellationToken.None).ToBlockingEnumerable().Single();
         DocxLayoutPageSnapshot finalLayoutPage = finalRenderer.InspectLayout(finalDocument).Pages.Single();
         DocxLayoutPageSnapshot allLayoutPage = allRenderer.InspectLayout(allDocument).Pages.Single();
 
@@ -915,8 +915,8 @@ internal static class DocxMarkupTests
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin);
 
-        PdfPage preservePage = preserveRenderer.RenderBlankPages(allDocument, null, CancellationToken.None).Single();
-        PdfPage reservePage = reserveRenderer.RenderBlankPages(allDocument, null, CancellationToken.None).Single();
+        PdfPage preservePage = preserveRenderer.RenderPagesAsync(allDocument, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        PdfPage reservePage = reserveRenderer.RenderPagesAsync(allDocument, null, CancellationToken.None).ToBlockingEnumerable().Single();
         DocxLayoutSnapshot preserveLayout = preserveRenderer.InspectLayout(allDocument);
         DocxLayoutSnapshot reserveLayout = reserveRenderer.InspectLayout(allDocument);
         DocxLayoutPageSnapshot preserveLayoutPage = preserveLayout.Pages.Single();
@@ -1843,7 +1843,7 @@ internal static class DocxMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.True(!page.Content.Contains("0.949 g", StringComparison.Ordinal),
@@ -1865,7 +1865,7 @@ internal static class DocxMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .ToArray();
 
         TestAssert.True(pages.Length >= 2, "The mirrored-margin fixture should render odd and even review pages.");
@@ -1892,7 +1892,7 @@ internal static class DocxMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 rg", page.Content);
@@ -1992,7 +1992,7 @@ internal static class DocxMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
@@ -2040,7 +2040,7 @@ internal static class DocxMarkupTests
                 fontResolver: new TestFaceFontResolver(),
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         // 9pt balloon design over this document lane-fit scale (612/(72+333+266.5)).
@@ -2108,7 +2108,7 @@ internal static class DocxMarkupTests
 
         DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Revision");
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(1, placement.WordCompatibleBodySummaryPartCount);
         // 9pt balloon design over this document lane-fit scale (612/(72+333+266.5)).
@@ -2130,7 +2130,7 @@ internal static class DocxMarkupTests
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -2156,7 +2156,7 @@ internal static class DocxMarkupTests
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -2219,7 +2219,7 @@ internal static class DocxMarkupTests
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(
             layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
@@ -2265,7 +2265,7 @@ internal static class DocxMarkupTests
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(
             layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
@@ -2297,7 +2297,7 @@ internal static class DocxMarkupTests
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -2330,7 +2330,7 @@ internal static class DocxMarkupTests
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
@@ -2342,7 +2342,7 @@ internal static class DocxMarkupTests
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.SimpleMarkup);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Contains("1 0.753 0 rg", page.Content);
         TestAssert.Contains("0.851 0.592 0 RG", page.Content);

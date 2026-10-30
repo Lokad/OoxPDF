@@ -74,7 +74,7 @@ internal static partial class DocxInlineCompositionTests
             var owners = paragraphs.SelectMany(p => p.Runs).ToArray();
             var page = new DocxRenderer(resolver, final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup,
                 final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).Single();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
             var numbers = shows.Where(show => Regex.IsMatch(show.Text.Trim(), @"^\d+[.)]$")).ToArray();
             var expectedParagraphs = row.GetProperty("Paragraphs").EnumerateArray().ToArray();

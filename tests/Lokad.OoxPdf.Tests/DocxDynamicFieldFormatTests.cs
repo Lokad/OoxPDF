@@ -58,7 +58,7 @@ internal static class DocxDynamicFieldFormatTests
                 bool final = row.GetProperty("Mode").GetString() == "final-preserve";
                 var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
                 var geometry = final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
-                var pages = new DocxRenderer(resolver, mode, geometry).RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+                var pages = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().ToArray();
                 foreach (var expected in row.GetProperty("WordFieldGlyphs").EnumerateArray())
                 {
                     var page = pages[expected.GetProperty("Page").GetInt32() - 1];

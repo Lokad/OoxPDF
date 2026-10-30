@@ -54,7 +54,7 @@ internal static class DocxMinimumBodyLineLeadingTests
         double excess = original.LineHeight!.Value - original.SingleLineHeight!.Value;
         TestAssert.True(Math.Abs(Baseline(preserve) - original.BaselineY) < .00001d, "Preserve output retains the original body baseline.");
         TestAssert.True(Math.Abs(Baseline(preserve) - Baseline(word) - excess) < .00001d, "The emitted baseline follows the same minimum-height layout rule.");
-        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
         TestAssert.Equal(4, pages.SelectMany(p => p.Annotations).Select(a => a.Destination).Distinct().Count());
         for (int i = 0; i < pages.Length; i++)
@@ -67,8 +67,8 @@ internal static class DocxMinimumBodyLineLeadingTests
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
+            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";

@@ -26,7 +26,7 @@ internal static class DocxRevisionBarTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             TestAssert.Equal(1, row.GetProperty("OfficeView").GetProperty("RevisionsMode").GetInt32());
             var pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToArray();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToBlockingEnumerable().ToArray();
             var page = pages[row.GetProperty("PageNumber").GetInt32() - 1];
             double x = row.GetProperty("X").GetDouble();
             double width = row.GetProperty("Width").GetDouble();

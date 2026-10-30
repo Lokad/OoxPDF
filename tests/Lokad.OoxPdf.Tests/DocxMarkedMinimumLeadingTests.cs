@@ -33,14 +33,14 @@ internal static class DocxMarkedMinimumLeadingTests
     {
         var baseline = Read(); var spaced = Read(xml => Body(xml)[1].Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "after", "160"));
         var renderer = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        var a = renderer.RenderBlankPages(baseline, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
-        var z = renderer.RenderBlankPages(spaced, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
+        var a = renderer.RenderPagesAsync(baseline, null, CancellationToken.None).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
+        var z = renderer.RenderPagesAsync(spaced, null, CancellationToken.None).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
         TestAssert.Equal(4, a.Length); TestAssert.Equal(4, z.Length);
         Near(20, a[0].Height, "A marked minimum paragraph owns its complete 20pt slot.");
         Near(28, z[0].Height, "Its real note annotation includes eight-point after-spacing.");
         Near(a[0].Y + a[0].Height, z[0].Y + z[0].Height, "After-spacing expands downward from the same slot top.");
         TestAssert.Equal(a[0].Destination, z[0].Destination);
-        var p = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(spaced, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
+        var p = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(spaced, null, CancellationToken.None).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
         Near(20, p[0].Height, "Preserve retains the original minimum-slot annotation behavior.");
     }
 
@@ -55,7 +55,7 @@ internal static class DocxMarkedMinimumLeadingTests
         TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, before, out var after), "Two-page owners qualify without repagination.");
         TestAssert.True(DocxPageFootnoteNumbering.HasStableCompleteNoteOwners(source, before, after), "Every complete actual note owner retains its page.");
         TestAssert.True(before.Pages.Zip(after.Pages).All(pair => ReferenceEquals(pair.First.PlacedRelatedStories, pair.Second.PlacedRelatedStories)), "Note regions and destinations retain their original placement.");
-        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, CancellationToken.None).ToArray();
+        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.True(pages.Length > 1, "The synthetic font witness spans multiple actual owner pages.");
         TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
         TestAssert.Equal(4, pages.SelectMany(p => p.Annotations).Select(a => a.Destination).Distinct().Count());
@@ -90,7 +90,7 @@ internal static class DocxMarkedMinimumLeadingTests
 
     private static DocxRenderer Renderer(OoxPdfDocxMarkupGeometryMode mode) => new(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode);
     private static void Near(double expected, double actual, string message) => TestAssert.True(Math.Abs(expected - actual) < .00001d, message);
-    private static DocxLayout Layout(DocxDocument document) { var resolver = new TestFaceFontResolver(); var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver); return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None); }
+    private static DocxLayout Layout(DocxDocument document) { var resolver = new TestFaceFontResolver(); var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult(); return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None); }
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static XElement[] Body(XDocument xml) => xml.Root!.Element(Word + "body")!.Elements(Word + "p").ToArray();
     private static DocxDocument Read(Action<XDocument>? modify = null)

@@ -55,7 +55,7 @@ internal static partial class DocxCommentsTests
             var runs = paragraph.Runs.ToArray();
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = ReadEmbeddedGlyphTextShows(page).ToArray();
             string text = string.Concat(shows.Select(show => show.Text));
             foreach (var expected in row.GetProperty("ExpectedText").EnumerateArray())

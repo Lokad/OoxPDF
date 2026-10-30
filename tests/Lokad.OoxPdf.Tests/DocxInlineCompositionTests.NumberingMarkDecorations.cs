@@ -49,7 +49,7 @@ internal static partial class DocxInlineCompositionTests
                     "Authored first-run blue/double underline must stay on its source.");
             if (!render) continue;
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var paint = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true)
                 .First(show => show.Text.Trim() == "1.");
             TestAssert.True(paint.Y > 0d && paint.Y < page.Height, "The decorated marker must remain visible: " + id);

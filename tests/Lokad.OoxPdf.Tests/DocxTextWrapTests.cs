@@ -829,7 +829,7 @@ internal static class DocxTextWrapTests
                 Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(input))));
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).Single();
+            var page = renderer.RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().Single();
             var lines = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).GroupBy(show => show.Y)
                 .OrderByDescending(group => group.Key).Select(group =>
                     (Baseline: group.Key, Text: string.Concat(group.Select(show => show.Text)).Trim())).ToArray();

@@ -745,7 +745,7 @@ internal static class OoxResourceGuaranteeTests
     {
         // R06.3: staged emission still rejects empty documents like the writer always has.
         using var output = new MemoryStream();
-        TestAssert.Throws<ArgumentException>(() => PdfDocumentWriter.WriteStagedAsync(output, Array.Empty<PdfPage>(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
+        TestAssert.Throws<ArgumentException>(() => PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(Array.Empty<PdfPage>()), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
     }
 
     public static void PageContentStagingRoundTripsAndCleansTemp()
@@ -790,7 +790,7 @@ internal static class OoxResourceGuaranteeTests
             GC.Collect();
             long before = GC.GetAllocatedBytesForCurrentThread();
             using var output = new DiscardingWriteStream();
-            PdfDocumentWriter.WriteStagedAsync(output, pages, limits, diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+            PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), limits, diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             TestAssert.True(output.TotalWritten >= size, "Emission must write the page payload.");
             TestAssert.True(allocated <= 393216L, string.Format("Staged emission scratch must stay flat, allocated {0} bytes for a {1}-byte page.", allocated, size));
@@ -1305,13 +1305,13 @@ internal static class OoxResourceGuaranteeTests
         var package = OoxPackage.Open(source, default);
         DocxDocument document = new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final);
         var pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.Final,
-            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).ToList();
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToList();
         TestAssert.Equal(6, pages.Count);
         var images = pages.SelectMany(page => page.Images).Select(image => image.Image).ToArray();
         TestAssert.Equal(6, images.Length);
         TestAssert.True(images.All(image => ReferenceEquals(images[0], image)), "Repeated headers reuse the same image resource.");
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStagedAsync(output, pages, new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         string pdf = Encoding.Latin1.GetString(output.ToArray());
         TestAssert.Equal(1, System.Text.RegularExpressions.Regex.Matches(pdf, @"/Subtype /Image\b").Count);
     }

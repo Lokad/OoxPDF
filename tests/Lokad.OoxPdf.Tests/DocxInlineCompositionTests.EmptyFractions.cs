@@ -46,7 +46,7 @@ internal static partial class DocxInlineCompositionTests
             string id = row.GetProperty("Id").GetString()!;
             string input = Path.Combine(folder, id + ".docx");
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-            var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), null, default).Single();
+            var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var fonts = page.Fonts.Where(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(f => f.Font).ToHashSet();
             TestAssert.Equal(14, shows.Count(show => fonts.Contains(show.Font)));
@@ -76,7 +76,7 @@ internal static partial class DocxInlineCompositionTests
                 var body = xml.Root!.Element(w + "body")!;
                 body.ReplaceNodes(new XElement(body.Element(w + "p")!), new XElement(body.Element(w + "sectPr")!));
             });
-        var only = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(structural, null, default).Single();
+        var only = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(structural, null, default).ToBlockingEnumerable().Single();
         TestAssert.True(only.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
             "Metric-only fraction placeholders create no mathematical PDF font resource.");
         TestAssert.True(Regex.IsMatch(only.Content, @"[-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ re f"),

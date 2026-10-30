@@ -52,7 +52,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(row.TryGetProperty("DisplayEquationCount", out var displays) ? displays.GetInt32() : 1,
                     equations.Count(e => e.Display));
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).Single();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                     "Supported integral source survives its display placement and limit location.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();

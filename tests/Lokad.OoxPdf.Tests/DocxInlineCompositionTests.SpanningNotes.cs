@@ -43,7 +43,7 @@ internal static partial class DocxInlineCompositionTests
                 run.Remove(); paragraph.Add(run);
             });
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        var text = renderer.RenderBlankPages(source, null, default)
+        var text = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable()
             .Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text))).ToArray();
         int marker = Array.FindIndex(text, value => value.Contains("Right source row 107.", StringComparison.Ordinal));
         int target = Array.FindIndex(text, value => value.Contains("Right final-page note:", StringComparison.Ordinal));
@@ -66,7 +66,7 @@ internal static partial class DocxInlineCompositionTests
             var source = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
             var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(source, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var text = pages.Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text))).ToArray();
             string all = string.Concat(text);
             if (resolver is null) TestAssert.Equal(row.GetProperty("WordPages").GetInt32(), pages.Length);
@@ -107,7 +107,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("WordNotes").GetArrayLength(), pages.Sum(page => page.Annotations.Count));
             using var cancelled = new CancellationTokenSource();
             cancelled.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, cancelled.Token).ToArray());
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, cancelled.Token).ToBlockingEnumerable().ToArray());
         }
     }
 }

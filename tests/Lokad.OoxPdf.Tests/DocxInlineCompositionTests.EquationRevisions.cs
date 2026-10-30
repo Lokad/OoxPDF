@@ -91,7 +91,7 @@ internal static partial class DocxInlineCompositionTests
                     }, partOverride: part);
                 var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                     ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                    .RenderBlankPages(source, null, default).Single();
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
                 var fonts = page.Fonts.Where(f => f.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(f => f.Font).ToHashSet();
                 var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
                 TestAssert.Equal(expectedGlyphs, math.Length);

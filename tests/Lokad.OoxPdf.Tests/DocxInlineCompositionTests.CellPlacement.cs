@@ -26,7 +26,7 @@ internal static partial class DocxInlineCompositionTests
                 "cell-structure-placement-" + shape + "-" + kind);
             var document = ReadMutation(input, OoxPdfDocxMarkupMode.AllMarkup, false, false);
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
             string label = kind == "ins" ? "Inserted Cells" : "Deleted Cells";
             var title = shows.Single(show => show.Text.Contains(label, StringComparison.Ordinal));

@@ -22,7 +22,7 @@ internal static partial class DocxInlineCompositionTests
             var root = renderer.InspectLayout(source).Pages.Single().TableRows.Single();
             TestAssert.True(Math.Abs(root.Height - row.GetProperty("RootRowHeight").GetDouble()) < .5d,
                 $"The complete nested row consumes independent Word's printed height: {id}/{mode}.");
-            var page = renderer.RenderBlankPages(source, null, default).Single();
+            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             var following = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Single(show => show.Text == "Following prose.");
             TestAssert.True(Math.Abs(following.Y - row.GetProperty("FollowingY").GetDouble()) < .5d,

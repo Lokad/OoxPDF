@@ -41,7 +41,7 @@ internal static class DocxContextualMinimumLeadingTests
                 TestAssert.True(ReferenceEquals(before[i].Segments, after[i].Segments), "Horizontal glyph plans retain identity.");
             }
             foreach (var mode in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
-                TestAssert.Equal(0, Renderer(mode).RenderBlankPages(source, null, CancellationToken.None).Sum(p => p.Annotations.Count));
+                TestAssert.Equal(0, Renderer(mode).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().Sum(p => p.Annotations.Count));
         }
     }
 
@@ -66,12 +66,12 @@ internal static class DocxContextualMinimumLeadingTests
             var original = Layout(source);
             TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var adjusted), "Complete contextual note owners admit the baseline correction.");
             TestAssert.True(DocxPageFootnoteNumbering.HasStableCompleteNoteOwners(source, original, adjusted), "Every actual source marker and complete note retains its page.");
-            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             var links = pages.SelectMany(p => p.Annotations).ToArray();
             TestAssert.Equal(4, links.Length);
             Near(spec.Height, links[0].Height, "The actual link owns the minimum slot and only the remaining contextual gaps.");
             TestAssert.Equal(4, links.Select(a => a.Destination).Distinct().Count());
-            var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(source, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
+            var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
             Near(20, preserve[0].Height, "Preserve keeps its original slot hit area.");
         }
     }
@@ -125,7 +125,7 @@ internal static class DocxContextualMinimumLeadingTests
             var preserve = Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(source).Lines.First(l => l.StoryKind == "Body" && l.SourceBlockIndex == first.SourceBlockIndex);
             var word = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).InspectTextEmission(source).Lines.First(l => l.StoryKind == "Body" && l.SourceBlockIndex == first.SourceBlockIndex);
             Near(first.LineHeight!.Value - first.SingleLineHeight!.Value, preserve.Segments.First().BaselineY - word.Segments.First().BaselineY, "Actual requested Word emission changes while Preserve keeps the original baseline.");
-            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(notes ? 4 : 0, pages.Sum(p => p.Annotations.Count));
             if (notes)
             {
@@ -151,7 +151,7 @@ internal static class DocxContextualMinimumLeadingTests
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
     private static DocxDocument Read(bool notes, Action<XDocument, XDocument>? modify = null, bool removeStyles = false)

@@ -498,7 +498,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         {
             DocxDocument renderDocument = new DocxReader().Read(renderPackage, diagnosticSink: null, CancellationToken.None, markupMode);
             renderScope = "exclusive: layout and emission from prebuilt package and document";
-            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: probeFont, markupMode, geometryMode).RenderBlankPages(renderDocument, diagnosticSink: null, CancellationToken.None).ToList(), renderScope);
+            (pages, renderMetrics) = MeasureStep(() => new DocxRenderer(fontResolver: probeFont, markupMode, geometryMode).RenderPagesAsync(renderDocument, diagnosticSink: null, CancellationToken.None).ToBlockingEnumerable().ToList(), renderScope);
         }
         else
         {
@@ -557,7 +557,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
     (byte[] stagedBytes, object writeMetrics) = MeasureStep(() =>
     {
         using var output = new MemoryStream();
-        Lokad.OoxPdf.Pdf.PdfDocumentWriter.WriteStagedAsync(output, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, creationDate: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        Lokad.OoxPdf.Pdf.PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, creationDate: null, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         return output.ToArray();
     }, "exclusive: PDF serialization of prebuilt pages into a memory buffer");
     string stagedSha = Convert.ToHexString(SHA256.HashData(stagedBytes)).ToLowerInvariant();

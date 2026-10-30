@@ -14,7 +14,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static DocxFontResources PrepareFontResourcesCore(DocxDocument document, IFontResolver fontResolver,
+    private static async ValueTask<DocxFontResources> PrepareFontResourcesCoreAsync(DocxDocument document, IFontResolver fontResolver,
         Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken, bool includeReviewAutofitMarks, int? pageCount,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache)
     {
@@ -23,7 +23,7 @@ internal sealed partial class DocxRenderer
         var resources = new List<PdfFontResource>();
         var runResources = new Dictionary<DocxTextRun, DocxRunFontResource>();
         var reportedUnembeddableFaces = new HashSet<(string StableId, int FaceIndex)>();
-        plan = SubstituteUnembeddableFonts(plan, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
+        plan = await SubstituteUnembeddableFontsAsync(plan, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken).ConfigureAwait(false);
         // Five-paragraph mixed terminals previously retained no marks. Give their
         // newly retained marks separate subsets and names, so a rejected fitting
         // path cannot change body subsets or renumber surviving fallback fonts.
@@ -42,20 +42,24 @@ internal sealed partial class DocxRenderer
             }
         }
         DocxFontPlan bodyPlan = separateMarks.Count == 0 ? plan : new(plan.Runs.Where(run => !separateMarks.Contains(run.Run)).ToArray());
-        PrepareResolvedRunFontResources(bodyPlan, resources, runResources, fontCache, cancellationToken);
-        DocxRunFontResource? fallback = PrepareFallbackFontResource(bodyPlan, fontResolver, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
-        IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = PreparePerCharacterFallbackResources(bodyPlan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken);
+        await PrepareResolvedRunFontResourcesAsync(bodyPlan, resources, runResources, fontCache, cancellationToken).ConfigureAwait(false);
+        DocxRunFontResource? fallback = await PrepareFallbackFontResourceAsync(bodyPlan, fontResolver, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken).ConfigureAwait(false);
+        IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains = await PreparePerCharacterFallbackResourcesAsync(bodyPlan, fontResolver, fallback?.Resolution, resources, runResources, fontCache, diagnosticSink, reportedUnembeddableFaces, cancellationToken).ConfigureAwait(false);
         if (separateMarks.Count != 0)
         {
             var markResources = new List<PdfFontResource>();
-            PrepareResolvedRunFontResources(new(plan.Runs.Where(run => separateMarks.Contains(run.Run)).ToArray()),
-                markResources, runResources, fontCache, cancellationToken, resourcePrefix: "M");
+            await PrepareResolvedRunFontResourcesAsync(new(plan.Runs.Where(run => separateMarks.Contains(run.Run)).ToArray()),
+                markResources, runResources, fontCache, cancellationToken, resourcePrefix: "M").ConfigureAwait(false);
             resources.AddRange(markResources);
         }
-        IDocxTextMeasurer? innerMeasurer = plan.Runs.Any(run => LoadFont(run.Resolution, fontCache, cancellationToken) is not null) || fallback is not null
-            ? new DocxFontPlanTextMeasurer(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache, resolveSourceAdvances: true)
+        bool hasFont = fallback is not null;
+        if (!hasFont)
+            foreach (var run in plan.Runs)
+                if (await LoadFontAsync(run.Resolution, fontCache, cancellationToken).ConfigureAwait(false) is not null) { hasFont = true; break; }
+        IDocxTextMeasurer? innerMeasurer = hasFont
+            ? await DocxFontPlanTextMeasurer.CreateAsync(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache, resolveSourceAdvances: true).ConfigureAwait(false)
             : null;
-        ReportMissingGlyphs(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken);
+        await ReportMissingGlyphsAsync(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken).ConfigureAwait(false);
         Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(bodyPlan, runResources, diagnosticSink, cancellationToken);
         List<PdfFallbackFontResource> fallbackFontResources = fallbackFaces.Values
             .DistinctBy(face => face.Font.ResourceKey, StringComparer.Ordinal)
@@ -70,7 +74,7 @@ internal sealed partial class DocxRenderer
         ReportComplexScriptApproximation(plan, diagnosticSink, cancellationToken);
 
         var deferredPageCountEquations = new List<DocxEquation>();
-        var mathEquations = PrepareMathEquations(document, fontResolver, fontCache, resources, cancellationToken, pageCount, deferredPageCountEquations);
+        var mathEquations = await PrepareMathEquationsAsync(document, fontResolver, fontCache, resources, cancellationToken, pageCount, deferredPageCountEquations).ConfigureAwait(false);
         return new DocxFontResources(plan, measurer, resources, runResources, fallback, fallbackChains, fallbackFaces, fallbackFontResources)
         {
             MathEquations = mathEquations,
@@ -83,7 +87,7 @@ internal sealed partial class DocxRenderer
     // measurement or emission so both paths share the document fallback face (F03:
     // measured and emitted glyphs use the same face) and report each substituted
     // typeface once through the diagnostic sink.
-    private static DocxFontPlan SubstituteUnembeddableFonts(
+    private static async ValueTask<DocxFontPlan> SubstituteUnembeddableFontsAsync(
         DocxFontPlan plan,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -96,7 +100,7 @@ internal sealed partial class DocxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             DocxResolvedRunTypeface run = plan.Runs[i];
             if (run.Resolution is not { } resolution ||
-                LoadFont(resolution, fontCache, cancellationToken) is not { } font ||
+                await LoadFontAsync(resolution, fontCache, cancellationToken).ConfigureAwait(false) is not { } font ||
                 font.HasTrueTypeOutlines)
             {
                 if (remapped is not null)
@@ -199,7 +203,7 @@ internal sealed partial class DocxRenderer
     // RV01: codepoints no usable face covers are substituted with question mark at
     // emission; report them once per family (union across runs, sorted, capped) so the
     // substitution is diagnosed, never silent.
-    private static void ReportMissingGlyphs(
+    private static async ValueTask ReportMissingGlyphsAsync(
         DocxFontPlan plan,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains,
@@ -221,7 +225,7 @@ internal sealed partial class DocxRenderer
             // missed by every candidate count. Layout constructs never reach glyphs.
             IReadOnlyList<OpenTypeFont> coverageFonts = fallbackChains.TryGetValue(resolved.Run, out IReadOnlyList<DocxFallbackFontEntry>? chain)
                 ? chain.Select(entry => entry.Font).ToArray()
-                : (LoadFont(resource.Resolution, fontCache, cancellationToken) is { } primaryFont ? new[] { primaryFont } : Array.Empty<OpenTypeFont>());
+                : (await LoadFontAsync(resource.Resolution, fontCache, cancellationToken).ConfigureAwait(false) is { } primaryFont ? new[] { primaryFont } : Array.Empty<OpenTypeFont>());
             if (coverageFonts.Count == 0)
             {
                 continue;
@@ -343,7 +347,7 @@ internal sealed partial class DocxRenderer
         return faces;
     }
 
-    private static void PrepareResolvedRunFontResources(
+    private static async ValueTask PrepareResolvedRunFontResourcesAsync(
         DocxFontPlan plan,
         List<PdfFontResource> resources,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
@@ -355,7 +359,7 @@ internal sealed partial class DocxRenderer
         foreach (DocxResolvedRunTypeface run in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (run.Resolution is not { } resolution || LoadFont(resolution, fontCache, cancellationToken) is null)
+            if (run.Resolution is not { } resolution || await LoadFontAsync(resolution, fontCache, cancellationToken).ConfigureAwait(false) is null)
             {
                 continue;
             }
@@ -366,7 +370,7 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             FontFaceResolution resolution = group.First().Resolution;
-            OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
+            OpenTypeFont? font = await LoadFontAsync(resolution, fontCache, cancellationToken).ConfigureAwait(false);
             if (font is null)
             {
                 continue;
@@ -390,7 +394,7 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static DocxRunFontResource? PrepareFallbackFontResource(
+    private static async ValueTask<DocxRunFontResource?> PrepareFallbackFontResourceAsync(
         DocxFontPlan plan,
         IFontResolver fontResolver,
         List<PdfFontResource> resources,
@@ -400,8 +404,8 @@ internal sealed partial class DocxRenderer
         HashSet<(string StableId, int FaceIndex)> reported,
         CancellationToken cancellationToken)
     {
-        FontFaceResolution resolution = ResolveDocumentBaseFont(plan, fontResolver, fontCache, cancellationToken);
-        OpenTypeFont? font = LoadFont(resolution, fontCache, cancellationToken);
+        FontFaceResolution resolution = await ResolveDocumentBaseFontAsync(plan, fontResolver, fontCache, cancellationToken).ConfigureAwait(false);
+        OpenTypeFont? font = await LoadFontAsync(resolution, fontCache, cancellationToken).ConfigureAwait(false);
         if (font is null)
         {
             return null;
@@ -440,7 +444,7 @@ internal sealed partial class DocxRenderer
         return runResource;
     }
 
-    private static IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> PreparePerCharacterFallbackResources(
+    private static async ValueTask<IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>>> PreparePerCharacterFallbackResourcesAsync(
         DocxFontPlan plan,
         IFontResolver fontResolver,
         FontFaceResolution? documentFallback,
@@ -469,7 +473,7 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            OpenTypeFont? primaryFont = LoadFont(primaryResource.Resolution, fontCache, cancellationToken);
+            OpenTypeFont? primaryFont = await LoadFontAsync(primaryResource.Resolution, fontCache, cancellationToken).ConfigureAwait(false);
             if (primaryFont is null)
             {
                 continue;
@@ -487,7 +491,7 @@ internal sealed partial class DocxRenderer
             foreach (FontFaceResolution candidate in DocxFontFallbackRules.ResolveCandidateResolutions(fontResolver, resolved.Run, resolved.ResolvedFamily, primaryResource.Resolution, documentFallback))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                OpenTypeFont? candidateFont = fonts.Count == 0 ? primaryFont : LoadFont(candidate, fontCache, cancellationToken);
+                OpenTypeFont? candidateFont = fonts.Count == 0 ? primaryFont : await LoadFontAsync(candidate, fontCache, cancellationToken).ConfigureAwait(false);
                 if (candidateFont is null || fonts.Contains(candidateFont))
                 {
                     continue;
@@ -640,7 +644,7 @@ internal sealed partial class DocxRenderer
         return glyphs.ToArray();
     }
 
-    private static FontFaceResolution ResolveDocumentBaseFont(
+    private static async ValueTask<FontFaceResolution> ResolveDocumentBaseFontAsync(
         DocxFontPlan plan,
         IFontResolver fontResolver,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
@@ -649,7 +653,7 @@ internal sealed partial class DocxRenderer
         foreach (DocxResolvedRunTypeface run in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (run.Resolution is { } fontResolution && LoadFont(fontResolution, fontCache, cancellationToken) is not null)
+            if (run.Resolution is { } fontResolution && await LoadFontAsync(fontResolution, fontCache, cancellationToken).ConfigureAwait(false) is not null)
             {
                 return fontResolution;
             }
@@ -658,7 +662,7 @@ internal sealed partial class DocxRenderer
         return DocxFontFallbackRules.ResolveDefaultDocumentTypeface(fontResolver, false, false);
     }
 
-    private static OpenTypeFont? LoadFont(
+    private static async ValueTask<OpenTypeFont?> LoadFontAsync(
         FontFaceResolution? resolution,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         CancellationToken cancellationToken)
@@ -675,7 +679,7 @@ internal sealed partial class DocxRenderer
             return cached;
         }
 
-        cached = FontProgramLoader.Load(resolution, cancellationToken);
+        cached = await FontProgramLoader.LoadAsync(resolution, cancellationToken).ConfigureAwait(false);
         fontCache[key] = cached;
         return cached;
     }

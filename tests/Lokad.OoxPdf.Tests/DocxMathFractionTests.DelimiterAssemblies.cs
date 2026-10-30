@@ -31,8 +31,8 @@ internal static partial class DocxMathFractionTests
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var page = new DocxRenderer(new RadicalFontResolver(bytes), mode,
                     mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                        OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(
-                            DocxTests.ReadDocx(path, mode), diagnostics.Add, default).Single();
+                        OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(
+                            DocxTests.ReadDocx(path, mode), diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                     "Shared physical pieces preserve both logical operators and authored glyph identity.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => page.Fonts.Any(resource =>
@@ -96,7 +96,7 @@ internal static partial class DocxMathFractionTests
             PdfContentValidator.ValidatePage(page, 0, default);
             TestAssert.Equal("(A)", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text)));
             using var output = new MemoryStream();
-            PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+            PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Length > 0, "Complete delimiter assemblies write as one logical scalar per mark.");
             bool complete = DocxMathLayout.TryMeasure(equation, _ => missing, default, out var absent, out _, resolveControlFont: _ => missing);
             TestAssert.True(grow ? !complete && absent is null : complete,

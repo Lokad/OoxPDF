@@ -58,7 +58,7 @@ internal static partial class DocxPageFootnoteNumberingTests
             double baselineSize = owners.Where(run => run.VerticalAlignment == DocxRunVerticalAlignment.Baseline && run.Text.Length != 0).Min(run => run.FontSize);
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(source, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             for (int index = 0; index < pages.Length; index++)
             {

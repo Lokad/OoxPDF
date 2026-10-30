@@ -89,7 +89,7 @@ internal static partial class DocxInlineCompositionTests
                         paragraph.Add(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "902")));
                     });
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
                 var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                     usePageCoordinates: true).Select(show => (Page: index + 1, show.Text, show.X, show.Y))).ToArray();
                 string visible = Compact(string.Concat(shows.Select(show => show.Text)));

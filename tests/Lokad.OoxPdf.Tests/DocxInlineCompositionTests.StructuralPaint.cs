@@ -45,7 +45,7 @@ internal static partial class DocxInlineCompositionTests
             var document = ReadMutation("CompositionProbes/math-source-" + role + "-empty", OoxPdfDocxMarkupMode.Final, false, false);
             using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, null, cancelled.Token).ToList());
+                .RenderPagesAsync(document, null, cancelled.Token).ToBlockingEnumerable().ToList());
         }
     }
 }

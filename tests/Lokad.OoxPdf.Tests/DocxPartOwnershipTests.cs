@@ -26,7 +26,7 @@ internal static class DocxPartOwnershipTests
             }
             var pages = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(id.EndsWith("settings", StringComparison.Ordinal) ? 2 : 1, pages.Length);
             if (pages.Length == 2)
             {

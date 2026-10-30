@@ -50,7 +50,7 @@ internal static partial class DocxInlineCompositionTests
                     partOverride: container == "header" ? "word/headerPartial.xml" : null);
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, diagnostics.Add, default).Single();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 var unsupported = diagnostics.Where(d => d.Id == "DOCX_UNSUPPORTED_EQUATION").ToArray();
                 TestAssert.Equal(row.GetProperty("UnsupportedDiagnostics").GetInt32(), unsupported.Length);
                 TestAssert.True(unsupported.All(d => d.PartName == (container == "header" ? "/word/headerPartial.xml" : "/word/document.xml")),

@@ -575,7 +575,7 @@ internal static class DocxTablesTests
             [new DocxTableRow([new DocxTableCell(string.Empty, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty)], 24d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/cell", annotation.Uri);
@@ -626,7 +626,7 @@ internal static class DocxTablesTests
                 """
         });
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         System.Collections.Generic.List<PdfLinkAnnotation> all = page.Annotations.ToList();
         TestAssert.True(all.Any(annotation => annotation.Uri == "https://example.invalid/table"), "annots=" + System.String.Join(";", all.Select(annotation => (annotation.Uri ?? "null") + "@" + annotation.X)));
         PdfLinkAnnotation annotation = all.Single(annotation => annotation.Uri == "https://example.invalid/table");
@@ -691,7 +691,7 @@ internal static class DocxTablesTests
             .Lines
             .SelectMany(line => line.Segments)
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderBlankPages(document, null, CancellationToken.None).Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.X - (linkSegment.X - (2.2d * 10d / 11d))) < 0.001d,
@@ -744,7 +744,7 @@ internal static class DocxTablesTests
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
-        PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        PdfPage[] pages = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
 
         // RV06 cellbreak probe: run breaks flow through without fragmenting rows.
@@ -797,7 +797,7 @@ internal static class DocxTablesTests
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.True(annotation.Uri is null, "Internal table-cell links should not be emitted as URI actions.");
@@ -1069,7 +1069,7 @@ internal static class DocxTablesTests
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(1, layout.FloatingDrawings.Single().TextBoxTableRowCount);
         TestAssert.Contains(DocxTests.FormatPdfRgb(((byte)0, (byte)176, (byte)240), "rg"), page.Content);
@@ -1102,7 +1102,7 @@ internal static class DocxTablesTests
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(1, layout.StaticFloatingDrawings.Single().TextBoxTableRowCount);
         TestAssert.Contains(DocxTests.FormatPdfRgb(((byte)146, (byte)208, (byte)80), "rg"), page.Content);
@@ -1159,7 +1159,7 @@ internal static class DocxTablesTests
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
             .Single(story => story.StoryLayout.Story.Id == "51");
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(1, placedStory.FloatingDrawings.Single().TextBoxLayout!.TableRows.Count);
         TestAssert.Contains(DocxTests.FormatPdfRgb(((byte)255, (byte)192, (byte)0), "rg"), page.Content);

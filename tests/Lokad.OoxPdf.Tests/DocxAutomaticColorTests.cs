@@ -45,7 +45,7 @@ internal static class DocxAutomaticColorTests
                 var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                     mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var found = new Dictionary<string, string>(StringComparer.Ordinal);
-                foreach (var page in renderer.RenderBlankPages(document, null, default))
+                foreach (var page in renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable())
                 foreach (Match block in Regex.Matches(page.Content, @"(?s)BT\s+(.*?)\s+ET"))
                 {
                     var fragment = new PdfPage(page.Width, page.Height, block.Value, page.Fonts);

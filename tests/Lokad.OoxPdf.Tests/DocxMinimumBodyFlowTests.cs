@@ -27,7 +27,7 @@ internal static class DocxMinimumBodyFlowTests
         TestAssert.True(ReferenceEquals(before.RelatedStories, after.RelatedStories), "Global note regions retain their layout identity.");
         for (int i = 0; i < before.Pages.Count; i++)
             TestAssert.True(ReferenceEquals(before.Pages[i].PlacedRelatedStories, after.Pages[i].PlacedRelatedStories), "Placed note regions retain page geometry.");
-        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        var pages = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
         TestAssert.Equal(4, pages.SelectMany(p => p.Annotations).Select(a => a.Destination).Distinct().Count());
         for (int i = 0; i < pages.Length; i++)
@@ -47,7 +47,7 @@ internal static class DocxMinimumBodyFlowTests
         double Baseline(DocxTextEmissionSnapshot snapshot) => snapshot.Lines.Single(l => l.StoryKind == "Body" && l.SourceBlockIndex == 0).Segments.First().BaselineY;
         TestAssert.Equal(Minimum(before)[0].BaselineY, Baseline(Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectTextEmission(document)));
         TestAssert.Equal(Minimum(after)[0].BaselineY, Baseline(Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).InspectTextEmission(document)));
-        TestAssert.Equal(0, Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Sum(p => p.Annotations.Count));
+        TestAssert.Equal(0, Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Sum(p => p.Annotations.Count));
     }
 
     public static void DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback()
@@ -90,8 +90,8 @@ internal static class DocxMinimumBodyFlowTests
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
+            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
     private static readonly XNamespace Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";

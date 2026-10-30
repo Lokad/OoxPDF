@@ -45,7 +45,7 @@ internal static partial class DocxInlineCompositionTests
                     "The source inherits document settings rather than carrying a rewritten node placement.");
                 TestAssert.Equal(location, document.Settings.MathLimitSettings.IntegralValue);
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var page = renderer.RenderBlankPages(document, diagnostics.Add, default).Single();
+                var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Inherited limits remain supported.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
                 var math = shows.Where(show => page.Fonts.Any(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)
@@ -90,7 +90,7 @@ internal static partial class DocxInlineCompositionTests
                 new XElement(m + "intLim", new XAttribute(m + "val", "future")))), default);
             var invalidDocument = source with { Settings = source.Settings with { MathLimitSettings = malformed } };
             var invalidDiagnostics = new List<OoxPdfDiagnostic>();
-            var invalidPage = renderer.RenderBlankPages(invalidDocument, invalidDiagnostics.Add, default).Single();
+            var invalidPage = renderer.RenderPagesAsync(invalidDocument, invalidDiagnostics.Add, default).ToBlockingEnumerable().Single();
             TestAssert.True(invalidDiagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
                 "A malformed used document default retains an explicit fallback in every container.");
             TestAssert.True(!invalidPage.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
@@ -102,7 +102,7 @@ internal static partial class DocxInlineCompositionTests
                     new XAttribute(mathNamespace + "val", location))), part);
             var explicitDocument = explicitSource with { Settings = explicitSource.Settings with { MathLimitSettings = malformed } };
             var explicitDiagnostics = new List<OoxPdfDiagnostic>();
-            var explicitPage = renderer.RenderBlankPages(explicitDocument, explicitDiagnostics.Add, default).Single();
+            var explicitPage = renderer.RenderPagesAsync(explicitDocument, explicitDiagnostics.Add, default).ToBlockingEnumerable().Single();
             TestAssert.True(explicitDiagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Explicit placement overrides a malformed default.");
             TestAssert.True(originalContent == explicitPage.Content,
                 "Explicit node placement takes precedence and matches inherited geometry, including with malformed defaults.");
@@ -112,7 +112,7 @@ internal static partial class DocxInlineCompositionTests
                 new XElement(m + "intLim", new XAttribute(m + "val", location)))), default);
             var unusedDocument = source with { Settings = source.Settings with { MathLimitSettings = unusedMalformed } };
             var unusedDiagnostics = new List<OoxPdfDiagnostic>();
-            var unusedPage = renderer.RenderBlankPages(unusedDocument, unusedDiagnostics.Add, default).Single();
+            var unusedPage = renderer.RenderPagesAsync(unusedDocument, unusedDiagnostics.Add, default).ToBlockingEnumerable().Single();
             TestAssert.True(unusedDiagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Only the used default participates in eligibility.");
             TestAssert.True(originalContent == unusedPage.Content, "An unused malformed default cannot suppress a supported integral.");
         }

@@ -29,7 +29,7 @@ internal static partial class DocxInlineCompositionTests
             var source = DocxTests.ReadDocx(input, mode);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, diagnostics.Add, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             var byPage = pages.Select(page => Regex.Replace(DocxPageFootnoteNumberingTests.DecodeText(page), @"\s+", " ").Trim()).ToArray();
             foreach (var text in row.GetProperty("ExpectedText").EnumerateArray())
                 TestAssert.Contains(text.GetString()!, string.Join(" ", byPage));

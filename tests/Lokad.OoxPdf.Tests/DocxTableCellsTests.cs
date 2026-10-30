@@ -868,7 +868,7 @@ internal static class DocxTableCellsTests
         DocxDocument document = ReadDoubleBandFixture("8");
         var renderer = MarginClipRenderer();
         TestAssert.Contains("73.44 540 465.12 171.12 re W n",
-            renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content);
+            renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().First().Content);
         using var json = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(renderer.InspectLayout(document)));
         var clip = json.RootElement.GetProperty("Pages")[0].GetProperty("TableRows")[0].GetProperty("Cells")[0].GetProperty("ContentClip");
         TestAssert.True(clip.ValueKind == System.Text.Json.JsonValueKind.Object && clip.GetProperty("Admitted").GetBoolean(),
@@ -978,7 +978,7 @@ internal static class DocxTableCellsTests
                 "The source snapshot must expose the admitted automatic content mask.");
             string rectangle = string.Join(" ", new[] { "X", "Y", "Width", "Height" }
                 .Select(name => PdfDocumentWriter.FormatNumber(clip.GetProperty(name).GetDouble())));
-            string content = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content;
+            string content = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().First().Content;
             TestAssert.Contains(rectangle + " re W n", content);
             TestAssert.True(clip.GetProperty("Admitted").GetBoolean(), "Snapshot must record automatic mask admission.");
         }
@@ -1110,7 +1110,7 @@ internal static class DocxTableCellsTests
     {
         DocxDocument document = ReadMarginClipFixture("center");
         var renderer = MarginClipRenderer();
-        string content = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content;
+        string content = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().First().Content;
         // Word's 1pt borders quantize to 0.96pt in our existing border geometry.
         TestAssert.Contains("72.48 540 467.04 173.04 re W n", content);
         TestAssert.True(!content.Contains("72 527.04 468 192.96 re W n", StringComparison.Ordinal),
@@ -1128,7 +1128,7 @@ internal static class DocxTableCellsTests
     {
         DocxDocument document = ReadMarginClipFixture("bottom");
         var renderer = MarginClipRenderer();
-        string content = renderer.RenderBlankPages(document, null, CancellationToken.None).First().Content;
+        string content = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().First().Content;
         foreach (string rectangle in new[] {
             "72.48 540 233.04 173.04", "306.48 540 233.04 173.04",
             "72.48 348 233.04 173.04", "306.48 348 233.04 173.04" })
@@ -1162,7 +1162,7 @@ internal static class DocxTableCellsTests
                 FallbackTables = [table] };
             var renderer = MarginClipRenderer();
             var snapshot = renderer.InspectLayout(document);
-            string content = string.Concat(renderer.RenderBlankPages(document, null, CancellationToken.None).Select(page => page.Content));
+            string content = string.Concat(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Select(page => page.Content));
             TestAssert.True(snapshot.Pages.Sum(page => page.TableRows.Count) > 0, "Fallback controls must contain rendered table cells.");
             foreach (var cell in snapshot.Pages.SelectMany(page => page.TableRows).SelectMany(row => row.Cells))
             {
@@ -4413,7 +4413,7 @@ internal static class DocxTableCellsTests
             [],
             [table]);
 
-        List<PdfPage> pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).ToList();
+        List<PdfPage> pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToList();
 
         TestAssert.Equal(2, pages.Count);
         TestAssert.DoesNotContain("10.48 10 59.52 0.48 re f", pages[0].Content);

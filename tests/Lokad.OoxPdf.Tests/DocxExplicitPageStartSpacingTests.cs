@@ -96,7 +96,7 @@ internal static class DocxExplicitPageStartSpacingTests
         {
             Lokad.OoxPdf.Pdf.PdfLinkAnnotation[] Links(int before) =>
                 new DocxRenderer(new TestFaceFontResolver(),OoxPdfDocxMarkupMode.AllMarkup,geometry)
-                    .RenderBlankPages(ReadWrapped(later,runBreak,before,0),null,default).SelectMany(p => p.Annotations).ToArray();
+                    .RenderPagesAsync(ReadWrapped(later,runBreak,before,0),null,default).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
             var plain=Links(0);var spaced=Links(4);TestAssert.Equal(4,plain.Length);TestAssert.Equal(4,spaced.Length);
             for(int i=0;i<4;i++)
             {

@@ -23,7 +23,7 @@ internal static partial class DocxInlineCompositionTests
             var owners = document.Paragraphs.SelectMany(p => p.Runs).ToArray();
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var lines = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).GroupBy(show => show.Y)
                 .OrderByDescending(group => group.Key).Select(group =>
                     (Baseline: group.Key, Text: string.Concat(group.Select(show => show.Text)).Trim())).ToArray();
@@ -53,13 +53,13 @@ internal static partial class DocxInlineCompositionTests
         var run = document.Paragraphs[0].Runs[0];
         var resolver = new TestFaceFontResolver();
         var plan = DocxFontPlan.Create(document, resolver, default);
-        var measurer = new DocxFontPlanTextMeasurer(plan, resolver.Resolve(new FontRequest("Calibri", false, false)), default,
-            resolver, resolveSourceAdvances: true);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, resolver.Resolve(new FontRequest("Calibri", false, false)), default,
+            resolver, resolveSourceAdvances: true).GetAwaiter().GetResult();
         double nominal = measurer.MeasureText(run, "AB", 12d);
         var met = run with { KerningMinimumHalfPointsValue = "16" };
         var metPlan = new DocxFontPlan(plan.Runs.Select(item => ReferenceEquals(item.Run, run) ? item with { Run = met } : item).ToArray());
-        var metMeasurer = new DocxFontPlanTextMeasurer(metPlan, resolver.Resolve(new FontRequest("Calibri", false, false)), default,
-            resolver, resolveSourceAdvances: true);
+        var metMeasurer = DocxFontPlanTextMeasurer.CreateAsync(metPlan, resolver.Resolve(new FontRequest("Calibri", false, false)), default,
+            resolver, resolveSourceAdvances: true).GetAwaiter().GetResult();
         TestAssert.True(Math.Abs(nominal - metMeasurer.MeasureText(met, "AB", 12d) - .6d) < .00001d,
             "The real synthetic -50-unit pair follows the source threshold in measurement.");
         foreach (var source in new[] { run, met })

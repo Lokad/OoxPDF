@@ -13,11 +13,11 @@ internal static partial class OoxMemoryAdmissionTests
             var limits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = window };
             var date = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
             using var baseline = new MemoryStream();
-            PdfDocumentWriter.WriteStagedAsync(baseline, pages, limits, null, default, date, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+            PdfDocumentWriter.WriteStagedAsync(baseline, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), limits, null, default, date, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             var pool = new TestMemoryBudget();
             using (var conversion = OoxConversionBudget.BeginScope(null, pool))
             {
-                var staged = PdfDocumentWriter.ProduceStagedPagesAsync(pages, limits, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+                var staged = PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), limits, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                 long expected = PdfPageContentStaging.ChunkByteCount + (window == 0 ? 0L : pages.Sum(page => (long)page.Content.Length));
                 TestAssert.Equal(expected, pool.Reserved);
                 byte[] scratch = staged.Staging.Scratch;
@@ -121,7 +121,7 @@ internal static partial class OoxMemoryAdmissionTests
                 if (failure == "observer") throw new InvalidOperationException("observer failed");
             }
             using var output = new MemoryStream();
-            void Write() => PdfDocumentWriter.WriteStagedAsync(output, Pages(),
+            void Write() => PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(Pages()),
                 new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 0 }, Observe, cancellation.Token, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             if (failure == "cancellation")
                 TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(Write).CancellationToken);
@@ -134,8 +134,7 @@ internal static partial class OoxMemoryAdmissionTests
         var refusingPool = new TestMemoryBudget(PdfPageContentStaging.ChunkByteCount - 1);
         using var refusingConversion = OoxConversionBudget.BeginScope(null, refusingPool);
         using var destination = new MemoryStream();
-        var refusal = TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(destination,
-            [new PdfPage(612, 792, "q\nQ\n")], new(), null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
+        var refusal = TestAssert.Throws<OoxPdfLimitExceededException>(() => PdfDocumentWriter.WriteStagedAsync(destination, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([new PdfPage(612, 792, "q\nQ\n")]), new(), null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
         TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, refusal.Kind);
         TestAssert.Equal(0L, refusingPool.Reserved);
         TestAssert.Equal(0L, destination.Length);

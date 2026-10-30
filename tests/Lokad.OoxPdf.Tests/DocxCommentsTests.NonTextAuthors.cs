@@ -64,7 +64,7 @@ internal static partial class DocxCommentsTests
                 var images = owners.SelectMany(paragraph => paragraph.Images).ToArray();
                 var pages = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                     ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                    .RenderBlankPages(source, null, default).ToArray();
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(1, pages.Length);
                 string content = pages[0].Content;
                 string text = DocxPageFootnoteNumberingTests.DecodeText(pages[0]);

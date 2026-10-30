@@ -15,7 +15,8 @@ namespace Lokad.OoxPdf;
 /// <list type="bullet">
 /// <item>Synchronous and asynchronous overloads perform the same conversion. The Async
 /// variants await bounded package input, staged/output I/O and owned storage disposal.
-/// Font acquisition and CPU rendering currently remain synchronous. Synchronous convenience
+/// DOCX awaits font acquisition; PPTX acquisition and initial local discovery remain
+/// synchronous. CPU rendering remains synchronous. Synchronous convenience
 /// methods block on the same pipeline; matching inputs produce identical PDFs.</item>
 /// <item>File paths are resolved against the working directory at invocation,
 /// before asynchronous reads or host callbacks can change that directory.</item>
@@ -303,14 +304,14 @@ public static class OoxPdfConverter
         }
     }
 
-    private static IEnumerable<PdfPage> RenderPages(OoxPackage package, OoxPdfInputKind inputKind, OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
+    private static IAsyncEnumerable<PdfPage> RenderPages(OoxPackage package, OoxPdfInputKind inputKind, OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         return inputKind switch
         {
-            OoxPdfInputKind.Pptx => new PptxRenderer(options.FontResolver).RenderPages(new PptxReader().Read(package, cancellationToken, diagnosticSink), package, diagnosticSink, cancellationToken),
-            OoxPdfInputKind.Docx => new DocxRenderer(options.FontResolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderBlankPages(new DocxReader().Read(package, diagnosticSink, cancellationToken, options.DocxMarkupMode), diagnosticSink, cancellationToken),
+            OoxPdfInputKind.Pptx => new PptxRenderer(options.FontResolver).RenderPages(new PptxReader().Read(package, cancellationToken, diagnosticSink), package, diagnosticSink, cancellationToken).ToAsyncEnumerable(),
+            OoxPdfInputKind.Docx => new DocxRenderer(options.FontResolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderPagesAsync(new DocxReader().Read(package, diagnosticSink, cancellationToken, options.DocxMarkupMode), diagnosticSink, cancellationToken),
             _ => throw new NotSupportedException($"Unsupported input kind '{inputKind}'.")
         };
     }

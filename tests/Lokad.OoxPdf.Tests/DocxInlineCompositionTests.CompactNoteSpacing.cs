@@ -18,7 +18,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
             var source = DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.Final);
             var pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(source, null, default).ToArray();
+                .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
             var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Select(show => (Page: index + 1, Show: show))).ToArray();

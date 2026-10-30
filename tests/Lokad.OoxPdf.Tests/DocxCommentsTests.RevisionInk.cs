@@ -24,7 +24,7 @@ internal static partial class DocxCommentsTests
         {
             var source = ReadNonTextAuthorSource(row, OoxPdfDocxMarkupMode.AllMarkup);
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(source, null, default).Single();
+                .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             var ink = ReadNonTextAuthorRgb(row, "FillRgb");
             string expected = DocxTests.FormatPdfRgb(ink, "rg");
             string target = row.GetProperty("TargetWord").GetString()!;

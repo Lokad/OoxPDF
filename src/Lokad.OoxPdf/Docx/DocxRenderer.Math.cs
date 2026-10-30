@@ -115,7 +115,7 @@ internal sealed partial class DocxRenderer
             ? (color, revision.Kind == DocxRevisionKind.Deletion) : (glyph.Color ?? automaticColor, false);
     };
 
-    private static IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> PrepareMathEquations(
+    private static async ValueTask<IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>> PrepareMathEquationsAsync(
         DocxDocument document, IFontResolver resolver, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
         List<PdfFontResource> resources, CancellationToken token, int? pageCount, List<DocxEquation> deferredPageCountEquations)
     {
@@ -176,10 +176,10 @@ internal sealed partial class DocxRenderer
                     {
                         token.ThrowIfCancellationRequested();
                         var face = resolver.Resolve(new FontRequest(control.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
-                        metricFonts.Add(control, LoadFont(face, fontCache, token));
+                        metricFonts.Add(control, await LoadFontAsync(face, fontCache, token).ConfigureAwait(false));
                     }
                     var metricFont = metricControls.Count == 1 ? metricFonts[metricControls[0]] :
-                        LoadFont(resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math")), fontCache, token);
+                        await LoadFontAsync(resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math")), fontCache, token).ConfigureAwait(false);
                     if (DocxMathLayout.TryMeasure(equation, _ => null, token, out var emptyBox, out _, metricFont,
                         resolveControlMetrics: control => metricFonts.GetValueOrDefault(control)) &&
                         emptyBox is not null && TryPrepareMathParagraph(paragraph, equation, sourceEquation, emptyBox, token, out var emptyLayout))
@@ -191,23 +191,23 @@ internal sealed partial class DocxRenderer
                 if (DocxMathLayout.NeedsParentFractionMetrics(equation, mathRuns, token))
                 {
                     FontFaceResolution parent = resolver.Resolve(new FontRequest(document.Settings.MathFontFamily ?? "Cambria Math"));
-                    parentMetrics = LoadFont(parent, fontCache, token);
+                    parentMetrics = await LoadFontAsync(parent, fontCache, token).ConfigureAwait(false);
                     if (parentMetrics is null || !parentMetrics.TryGetMathConstants(out _)) { continue; }
                 }
                 bool valid = true;
                 // Empty neighbors have no literal source to discover their font.
                 // Use the same conversion-owned cache; no unused PDF subset.
                 foreach (var control in metricControls)
-                    if (!TryPrepareControl(control)) { valid = false; break; }
+                    if (!await TryPrepareControlAsync(control).ConfigureAwait(false)) { valid = false; break; }
                 if (!valid) continue;
                 if (mathRuns.Count == 0 &&
-                    (DocxMathLayout.GetStandaloneControl(equation, token) is not { } controlOwner || !TryPrepareControl(controlOwner)))
+                    (DocxMathLayout.GetStandaloneControl(equation, token) is not { } controlOwner || !await TryPrepareControlAsync(controlOwner).ConfigureAwait(false)))
                     continue;
                 foreach (DocxMathRunSource source in mathRuns)
                 {
                     token.ThrowIfCancellationRequested();
                     foreach (IDocxMathControl control in source.ControlOwners)
-                        if (!TryPrepareControl(control)) { valid = false; break; }
+                        if (!await TryPrepareControlAsync(control).ConfigureAwait(false)) { valid = false; break; }
                     if (!valid) { break; }
                     DocxMathRun run = source.Run;
                     if (run.Text.Text.Length == 0) continue;
@@ -221,7 +221,7 @@ internal sealed partial class DocxRenderer
                     if (run.NormalText && !resolution.HasMathTable &&
                         (request.Bold != resolution.Bold || request.Italic != resolution.Italic))
                         { valid = false; break; }
-                    OpenTypeFont? font = LoadFont(resolution, fontCache, token);
+                    OpenTypeFont? font = await LoadFontAsync(resolution, fontCache, token).ConfigureAwait(false);
                     if (font is null || !font.HasTrueTypeOutlines) { valid = false; break; }
                     var key = (resolution.Source.StableId, resolution.FontFaceIndex);
                     if (!groups.TryGetValue(key, out var group)) { group = (font, new Dictionary<ushort, int>()); groups.Add(key, group); }
@@ -238,14 +238,14 @@ internal sealed partial class DocxRenderer
                 }
                 if (valid) { candidates.Add((paragraph, equation, sourceEquation, parentMetrics, controlOwners ?? [])); }
 
-                bool TryPrepareControl(IDocxMathControl control)
+                async ValueTask<bool> TryPrepareControlAsync(IDocxMathControl control)
                 {
                     token.ThrowIfCancellationRequested();
                     IReadOnlyList<int> controlPoints = DocxMathLayout.GetControlCodePoints(control);
                     if (!controlKeys.TryGetValue(control, out var controlKey))
                     {
                         FontFaceResolution controlFace = resolver.Resolve(new FontRequest(control.ControlFontFamily ?? document.Settings.MathFontFamily ?? "Cambria Math"));
-                        OpenTypeFont? controlFont = LoadFont(controlFace, fontCache, token);
+                        OpenTypeFont? controlFont = await LoadFontAsync(controlFace, fontCache, token).ConfigureAwait(false);
                         if (controlFont is null || (controlPoints.Count != 0 && !controlFont.HasTrueTypeOutlines) || !controlFont.TryGetMathConstants(out _))
                             return false;
                         controlKey = (controlFace.Source.StableId, controlFace.FontFaceIndex);

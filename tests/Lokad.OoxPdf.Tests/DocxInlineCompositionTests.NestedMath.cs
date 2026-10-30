@@ -79,7 +79,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(NestedMathCasePath("mixed-nested-math-static.docx"), mode), null, default).Single();
+            var page = renderer.RenderPagesAsync(DocxTests.ReadDocx(NestedMathCasePath("mixed-nested-math-static.docx"), mode), null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Where(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))).ToArray();
             var words = row.GetProperty("Math").EnumerateArray().ToArray();
@@ -113,7 +113,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed, partOverride: part);
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
                 TestAssert.Equal(row.GetProperty("ExpectedEquations").GetInt32(), text.Split("ratetime", StringSplitOptions.None).Length - 1);
                 foreach (var prose in row.GetProperty("ExpectedText").EnumerateArray()) TestAssert.Contains(prose.GetString()!, text);

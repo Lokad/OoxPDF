@@ -1032,7 +1032,7 @@ internal static partial class PdfWriterTests
     private static byte[] WritePdfBytes(IReadOnlyList<PdfPage> pages, DateTimeOffset? creationDate)
     {
         using var stream = new MemoryStream();
-        PdfDocumentWriter.WriteStagedAsync(stream, pages, new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, creationDate, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        PdfDocumentWriter.WriteStagedAsync(stream, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, creationDate, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         return stream.ToArray();
     }
 
@@ -1078,9 +1078,8 @@ internal static partial class PdfWriterTests
     // silently reading the disposed store.
     public static void DisposedStagedDocumentCannotEmit()
     {
-        PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync(
-            [new PdfPage(612d, 792d, "0 g")],
-            new OoxConversionLimits(),
+        PdfStagedDocument staged = PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>(
+            [new PdfPage(612d, 792d, "0 g")]), new OoxConversionLimits(),
             diagnosticSink: null,
             CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         staged.Dispose();

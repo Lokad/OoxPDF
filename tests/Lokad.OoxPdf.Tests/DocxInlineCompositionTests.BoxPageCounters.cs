@@ -31,7 +31,7 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(input, mode);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var renderer = new DocxRenderer(resolver, mode, geometry);
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             var page = pages[0];
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
@@ -62,7 +62,7 @@ internal static partial class DocxInlineCompositionTests
             elements.Add(new DocxParagraphElement(lead with { SpacingAfterPoints = capacity - 30d }));
             elements.AddRange(document.BodyElements.Skip(1));
             diagnostics.Clear();
-            var admitted = renderer.RenderBlankPages(document with { BodyElements = elements }, diagnostics.Add, default).ToArray();
+            var admitted = renderer.RenderPagesAsync(document with { BodyElements = elements }, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(10, admitted.Length);
             var tenth = DocxCommentsTests.ReadEmbeddedGlyphTextShows(admitted[9], usePageCoordinates: true).ToArray();
             TestAssert.True(tenth.Count(show => show.Text.Trim() == "10") == 1,

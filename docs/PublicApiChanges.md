@@ -21,8 +21,10 @@ resolver never disposes the caller's `HttpClient` or budget.
 
 `ConvertAsync` awaits bounded package input, ZIP extraction, page staging and PDF
 output, including owned storage disposal. Synchronous entry points block on the
-same pipeline. CPU rendering and font acquisition remain synchronous during the
-embedding migration. Caller streams stay open; cancellation waits for outstanding
+same pipeline. DOCX awaits font-program acquisition during preparation; measurement
+and painting then use prepared fonts. PPTX acquisition and initial local Windows
+font discovery remain synchronous during the embedding migration. Caller streams
+stay open; cancellation waits for outstanding
 I/O before refunding borrowed storage. Input failures escape without preflight retry.
 
 Set `TemporaryStorage` when embedded stream conversions may exceed
@@ -82,8 +84,8 @@ recolor reuses private pixels and leaves encoded input/cache bytes unchanged.
 Models, parsed maps and other PDF resources still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
-The converter's asynchronous font-preparation migration and remaining producer
-coverage are still open. The removed estimated lease is not a second memory model.
+PPTX font preparation, initial local discovery and remaining producer coverage
+are still open. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,

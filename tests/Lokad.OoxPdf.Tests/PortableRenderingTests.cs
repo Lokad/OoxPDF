@@ -228,7 +228,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case("CompositionProbes/note-footer-frame-" + tail + ".docx"), mode);
             var pages = new DocxRenderer(new PinnedResolver(mathFont: true), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             foreach (var page in pages)
             {
@@ -649,7 +649,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(new PinnedResolver(mathFont: true), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).Single();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
                 .Select(font => font.Font).ToHashSet();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true)
@@ -745,7 +745,7 @@ internal static class PortableRenderingTests
             };
             var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             string text = Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), @"\s", "");
             TestAssert.Contains("Endofsupportednote.", text);
@@ -797,7 +797,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string owner in new[] { "Body", "Cell", "Header", "Footer" })
@@ -828,7 +828,7 @@ internal static class PortableRenderingTests
             }
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(source with { BodyElements = body }, null, default).ToArray();
+                .RenderPagesAsync(source with { BodyElements = body }, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(12, pages.Length);
             foreach (int number in new[] { 9, 10, 12 })
             {
@@ -849,7 +849,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string container in new[] { "Body", "Cell", "Header" })
@@ -875,7 +875,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(10, pages.Length);
             foreach (int number in new[] { 9, 10 })
             {
@@ -898,7 +898,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(10, pages.Length);
             foreach (int number in new[] { 9, 10 })
             {
@@ -923,7 +923,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
                 .Normalize(NormalizationForm.FormKC), @"\s", "");
@@ -962,7 +962,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
                 .Normalize(NormalizationForm.FormKC), @"\s", "");
@@ -985,7 +985,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1033,7 +1033,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(12, pages.Length);
             for (int index = 0; index < pages.Length; index++)
             {
@@ -1060,7 +1060,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1082,7 +1082,7 @@ internal static class PortableRenderingTests
             var layout = renderer.InspectLayout(document).Pages.Single();
             double occupied = layout.Items.SelectMany(item => item.Kind == "TextLine" ? new[] { item }
                 : item.TextLines ?? []).Max(line => line.LineHeightPoints ?? 0d);
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var fills = Regex.Matches(page.Content,
                 @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
                 .Cast<Match>().Where(match => double.Parse(match.Groups["x"].Value,
@@ -1106,7 +1106,7 @@ internal static class PortableRenderingTests
         {
             var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-pane-letter-" + margins + ".docx"), OoxPdfDocxMarkupMode.AllMarkup);
             var page = new DocxRenderer(new PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).Single();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var bounds = DocxCommentsTests.ReviewLaneBounds(page);
             if (expected is null) expected = (bounds.Y, bounds.Height);
             else TestAssert.True(Math.Abs(bounds.Y - expected.Value.Y) < .000001d && Math.Abs(bounds.Height - expected.Value.Height) < .000001d,
@@ -1136,7 +1136,7 @@ internal static class PortableRenderingTests
                     TestAssert.True(Math.Abs(gap - nominalGap.Value * scale) < .1d,
                         $"The physical math baseline scales once with its table frame: {size}/{script}/gap={gap}/expected={nominalGap.Value * scale}.");
                 }
-                var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+                var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(1, pages.Length);
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
                 TestAssert.Equal(1, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1156,7 +1156,7 @@ internal static class PortableRenderingTests
                 "CompositionProbes", "scaled-note-" + container + ".docx")), mode);
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.True(pages.Length == 1, $"{container} / {mode}: expected one page, got {pages.Length}.");
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             for (int section = 1; section <= 6; section++)
@@ -1175,7 +1175,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case("CompositionProbes/complete-note-" + container + ".docx"), mode);
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             TestAssert.True(text.Contains("Section 6 line 3.", StringComparison.Ordinal) &&
@@ -1205,7 +1205,7 @@ internal static class PortableRenderingTests
                     ? new DocxParagraphElement(changed) : element).ToArray() };
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
             TestAssert.Equal(includeMath ? 2 : 0, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
                 .Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1224,7 +1224,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1247,7 +1247,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1268,7 +1268,7 @@ internal static class PortableRenderingTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1292,7 +1292,7 @@ internal static class PortableRenderingTests
                     .Where(item => item.Kind == "TextLine" && item.SourceBlockIndex == 0).ToArray();
                 TestAssert.True(lines.Length >= 2, "The source paragraph must wrap to expose its inherited line slot.");
                 gaps.Add(scope, lines[0].Y - lines[1].Y);
-                var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+                var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
                 foreach (int index in Enumerable.Range(1, 6)) TestAssert.Contains("Case " + index + ".", text);
                 CheckWrittenPages(pages);
@@ -1313,7 +1313,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case("PortableFonts/math-literal-inline-break-default-" + story + "-upright.docx"), mode);
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
                 TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
@@ -1330,7 +1330,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case("PortableFonts/math-literal-inline-break-" + setting + "-upright.docx"), mode);
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
                 TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
@@ -1349,7 +1349,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case("PortableFonts/math-composition-" + (numbered ? "numbered" : "unnumbered") + story + "-normal.docx"), mode);
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("x+2y", StringSplitOptions.None).Length - 1);
             TestAssert.Equal(2, text.Split("a+b=c", StringSplitOptions.None).Length - 1);
@@ -1395,7 +1395,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case("PortableFonts/math-table-boundary-after" + suffix + "-normal.docx"), mode);
             var pages = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             int expectedPage = suffix.Contains("cant-split", StringComparison.Ordinal) || suffix.Contains("tight", StringComparison.Ordinal) ? 1 : 0;
             string text = DocxPageFootnoteNumberingTests.DecodeText(pages[expectedPage]).Normalize(NormalizationForm.FormKC);
             TestAssert.Contains("x+2y", text);
@@ -1414,7 +1414,7 @@ internal static class PortableRenderingTests
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var document = DocxTests.ReadDocx(Case("PortableFonts/math-cell-spacing-normal.docx"), mode);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(4, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
                 .Split("x+2y", StringSplitOptions.None).Length - 1);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION" || d.PartName != document.MainPartName),
@@ -1447,7 +1447,7 @@ internal static class PortableRenderingTests
             var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var document = DocxTests.ReadDocx(Case("CompositionProbes/math-printed-frame-fraction-anchor12-cell-" + context + ".docx"), mode);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(1, text.Split("ratetime", StringSplitOptions.None).Length - 1);
             if (context == "flow")
@@ -1531,7 +1531,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-authored-whitespace.docx"), mode);
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             foreach (string expected in new[] { "Reviewed check. Supporting note1", "Earlier annotation. Separate words",
                 "Same run. Following text", "Multiple spaces.  Two spaces", "Nonbreaking gap.\u00a0Following word",
@@ -1545,7 +1545,7 @@ internal static class PortableRenderingTests
     {
         var document = DocxTests.ReadDocx(Case("CompositionProbes/comment-labels.docx"), OoxPdfDocxMarkupMode.AllMarkup);
         var pages = new DocxRenderer(new PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).ToArray();
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
         string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
         foreach (string label in new[] { "[1]", "[2]", "[RV3]", "[4]", "[QA5]" })
             TestAssert.Contains("Commented " + label + ":", text);
@@ -1641,7 +1641,7 @@ internal static class PortableRenderingTests
             var document = DocxTests.ReadDocx(Case(fixture), mode);
             var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             var destinations = pages.SelectMany(page => page.Annotations).Where(annotation => annotation.Destination is not null)
                 .Select(annotation => annotation.Destination!.Value).ToArray();
             TestAssert.Equal(count, destinations.Length);
@@ -1708,7 +1708,7 @@ internal static class PortableRenderingTests
         var document = DocxTests.ReadDocx(Case("PortableFonts/letter-normal-math.docx"), mode);
         var diagnostics = new List<OoxPdfDiagnostic>();
         var pages = new DocxRenderer(new PinnedResolver(), mode, geometry)
-            .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
         string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("Engineering review letter", text);
         TestAssert.Contains("Acceptance of the revised delivery schedule", text);
@@ -1726,7 +1726,7 @@ internal static class PortableRenderingTests
     {
         TestAssert.True(pages.Length > 0 && pages.All(page => page.Fonts.Count > 0), "Real embedded text resources are required.");
         using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStagedAsync(output, pages, new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages), new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         string pdf = Encoding.Latin1.GetString(output.ToArray());
         TestAssert.Contains("/FontFile2", pdf);
         TestAssert.Contains("/ToUnicode", pdf);

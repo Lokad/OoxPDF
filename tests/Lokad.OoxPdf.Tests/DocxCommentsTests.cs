@@ -35,7 +35,7 @@ internal static partial class DocxCommentsTests
                 TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(input))));
                 var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
                 pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                    .RenderBlankPages(document, null, default).ToArray();
+                    .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
                 pagesByCase.Add(relative, pages);
             }
             var bounds = ReviewLaneBounds(pages[row.GetProperty("PageIndex").GetInt32()]);
@@ -185,11 +185,11 @@ internal static partial class DocxCommentsTests
         DocxDocument document = CreateStoryVisibilityDocument("header", inTable: false, bodyComment: true);
         var resolver = new TestFaceFontResolver();
         PdfPage word = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Equal(4, Regex.Matches(word.Content, @"(?m)\bc\r?$").Count);
         TestAssert.Contains("1 j", word.Content);
         PdfPage preserve = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Equal(0, Regex.Matches(preserve.Content, @"(?m)\bc\r?$").Count);
         TestAssert.Contains(" re B*", preserve.Content);
     }
@@ -253,8 +253,8 @@ internal static partial class DocxCommentsTests
         DocxDocument withoutHeader = withHeader with { PageSettings = DocxPageSettings.Empty };
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        PdfLinkAnnotation expected = renderer.RenderBlankPages(withoutHeader, null, CancellationToken.None).Single().Annotations.Single();
-        PdfLinkAnnotation actual = renderer.RenderBlankPages(withHeader, null, CancellationToken.None).Single().Annotations.Single();
+        PdfLinkAnnotation expected = renderer.RenderPagesAsync(withoutHeader, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
+        PdfLinkAnnotation actual = renderer.RenderPagesAsync(withHeader, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
         TestAssert.True(Math.Abs(actual.X - expected.X) < .000001d && Math.Abs(actual.Y - expected.Y) < .000001d &&
             Math.Abs(actual.Width - expected.Width) < .000001d && Math.Abs(actual.Height - expected.Height) < .000001d,
             "Adding a plain header must preserve the body's clickable text rectangle.");
@@ -368,7 +368,7 @@ internal static partial class DocxCommentsTests
             DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)) -
             document.PageWidthPoints / (document.PageWidthPoints - document.MarginRightPoints + 266.5d)) < .000001d,
             "Independent mixed-view header/footer formatting controls fit the printed page to the balloon lane.");
-        TestAssert.True(renderer.RenderBlankPages(document, null, CancellationToken.None)
+        TestAssert.True(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Any(page => page.Content.Contains("0.949 g", StringComparison.Ordinal)),
             "A surviving static formatting balloon retains its fitted review lane.");
     }
@@ -393,7 +393,7 @@ internal static partial class DocxCommentsTests
             TestAssert.True(bodyText.Length > 0 && bodyText.All(segment => Math.Abs(segment.PdfFontSize - 12d) < .000001d),
                 "A comment outside the main body must not shrink its printed font: " + kind + "/" + inTable + " " +
                 string.Join(",", body.SelectMany(line => line.Segments).Select(segment => segment.Role + ":" + segment.TextLength + ":" + segment.PdfFontSize)));
-            TestAssert.True(renderer.RenderBlankPages(document, null, CancellationToken.None)
+            TestAssert.True(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
                 .All(page => !page.Content.Contains("0.949 g", StringComparison.Ordinal)),
                 "Hidden story comments must not paint an empty review lane.");
             TestAssert.Equal(1, new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
@@ -420,7 +420,7 @@ internal static partial class DocxCommentsTests
             double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document,
                 DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
             TestAssert.True(scale > 0d && scale < 1d, "A surviving body comment must retain its printed review canvas.");
-            TestAssert.True(renderer.RenderBlankPages(document, null, CancellationToken.None)
+            TestAssert.True(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
                 .Any(page => page.Content.Contains("0.949 g", StringComparison.Ordinal)),
                 "A surviving body comment must retain the review lane background.");
             TestAssert.Equal(2, new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
@@ -473,7 +473,7 @@ internal static partial class DocxCommentsTests
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Contains("0.5 w", page.Content);
         TestAssert.Contains(" re B*", page.Content);
@@ -801,11 +801,11 @@ internal static partial class DocxCommentsTests
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
-        PdfPage preservePage = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage preservePage = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfPage wordPage = new DocxRenderer(
             fontResolver: null,
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
-            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+            markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(
             DocxTests.CountPdfTextShows(wordPage.Content) < DocxTests.CountPdfTextShows(preservePage.Content),
@@ -822,7 +822,7 @@ internal static partial class DocxCommentsTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
@@ -889,7 +889,7 @@ internal static partial class DocxCommentsTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
@@ -964,7 +964,7 @@ internal static partial class DocxCommentsTests
         // A CFF-outlined face parses and measures but cannot back an embedded subset,
         // so it must fall back exactly like an unloadable stub.
         TestAssert.True(
-            DocxRenderer.ResolveBalloonTitleFace(new CffTitleResolver(), context, CancellationToken.None) is null,
+            DocxRenderer.ResolveBalloonTitleFaceAsync(new CffTitleResolver(), context, CancellationToken.None).GetAwaiter().GetResult() is null,
             "A CFF-outlined bold title face must fall back to the label face.");
     }
 
@@ -973,7 +973,7 @@ internal static partial class DocxCommentsTests
         var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         TestAssert.True(
-            DocxRenderer.ResolveBalloonTitleFace(new BoldUnresolvedTitleResolver(), context, CancellationToken.None) is null,
+            DocxRenderer.ResolveBalloonTitleFaceAsync(new BoldUnresolvedTitleResolver(), context, CancellationToken.None).GetAwaiter().GetResult() is null,
             "A bold-marked but unloadable title face (server-SKU Segoe stub) must fall back to the label face.");
     }
 
@@ -1001,7 +1001,8 @@ internal static partial class DocxCommentsTests
         try
         {
             var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            FontFaceResolution? resolution = DocxRenderer.ResolveBalloonTitleFace(new WindowsFontResolver(), context, CancellationToken.None);
+            var titleFace = DocxRenderer.ResolveBalloonTitleFaceAsync(new WindowsFontResolver(), context, CancellationToken.None).GetAwaiter().GetResult();
+            FontFaceResolution? resolution = titleFace?.Resolution;
             OpenTypeFont? font = resolution is null ? null : FontProgramLoader.Load(resolution, CancellationToken.None);
             // Mirror the production outlines gate: CFF/outlineless faces measure advances
             // but cannot back an embedded title subset.
@@ -1078,7 +1079,7 @@ internal static partial class DocxCommentsTests
         double titleAdvance = MeasureSegoeTitleDesignAdvance();
         if (titleAdvance < 78d)
         {
-            TestAssert.Skip("Environmental precondition not met: Segoe UI Bold probe-title design advance is " + titleAdvance.ToString("0.##", CultureInfo.InvariantCulture) + ", not Office-like (â‰ˆ82).");
+            TestAssert.Skip("Environmental precondition not met: Segoe UI Bold probe-title design advance is " + titleAdvance.ToString("0.##", CultureInfo.InvariantCulture) + ", not Office-like (≈82).");
         }
 
         string input = Path.GetFullPath(Path.Combine(
@@ -1159,7 +1160,7 @@ internal static partial class DocxCommentsTests
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         double balloonMinX = renderer.InspectMarkupBalloons(document).Where(placement => placement.Kind == "Comment").Min(placement => placement.X);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         Match background = Regex.Match(page.Content, @"0\.949 g\r?\n(?<x>[\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");
         double printScale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
 
@@ -1219,7 +1220,7 @@ internal static partial class DocxCommentsTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0.835 0.929 1 rg", page.Content);
@@ -1446,7 +1447,7 @@ internal static partial class DocxCommentsTests
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(
             textEmission.Lines.Count(line => !line.IsStaticStory && line.TextLength != 0) >= 2,
@@ -1504,7 +1505,7 @@ internal static partial class DocxCommentsTests
         PdfPage page = new DocxRenderer(
             new TestFaceFontResolver(),
             OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         double balloonFontSize = 9d * 612d / 671.5d;
         var ops = Regex.Matches(
@@ -1609,7 +1610,7 @@ internal static partial class DocxCommentsTests
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
         DocxMarkupBalloonPlacementSnapshot[] placements = renderer.InspectMarkupBalloons(document).ToArray();
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         DocxMarkupBalloonPlacementSnapshot mixedPlacement = placements.Single(placement => placement.Kind == "Markup");
         TestAssert.True(
@@ -1667,8 +1668,8 @@ internal static partial class DocxCommentsTests
             TestAssert.Equal(1, balloon.CommentReplyCount);
             TestAssert.Equal(0, balloon.CommentSeparatorLineCount);
             TestAssert.Equal(word.InspectMarkupBalloons(parentOnly).Single().Height, balloon.Height);
-            TestAssert.Equal(word.RenderBlankPages(parentOnly, null, CancellationToken.None).Single().Content,
-                word.RenderBlankPages(threaded, null, CancellationToken.None).Single().Content);
+            TestAssert.Equal(word.RenderPagesAsync(parentOnly, null, CancellationToken.None).ToBlockingEnumerable().Single().Content,
+                word.RenderPagesAsync(threaded, null, CancellationToken.None).ToBlockingEnumerable().Single().Content);
 
             var preserve = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             // A short parent leaves room for the default profile's trimmed reply summary.
@@ -1679,8 +1680,8 @@ internal static partial class DocxCommentsTests
                     : story).ToArray()
             };
             DocxDocument shortParentOnly = shortParent with { RelatedStories = shortParent.RelatedStories.Where(story => story.Id != "2").ToArray() };
-            TestAssert.True(preserve.RenderBlankPages(shortParentOnly, null, CancellationToken.None).Single().Content !=
-                preserve.RenderBlankPages(shortParent, null, CancellationToken.None).Single().Content,
+            TestAssert.True(preserve.RenderPagesAsync(shortParentOnly, null, CancellationToken.None).ToBlockingEnumerable().Single().Content !=
+                preserve.RenderPagesAsync(shortParent, null, CancellationToken.None).ToBlockingEnumerable().Single().Content,
                 "The preserve-layout profile must retain its reply summaries and body text.");
             TestAssert.Equal(2, threaded.RelatedStories.Count);
         }
@@ -1693,8 +1694,8 @@ internal static partial class DocxCommentsTests
         DocxDocument emptyParentOnly = emptyParent with { RelatedStories = emptyParent.RelatedStories.Where(story => story.Id != "2").ToArray() };
         var fallback = new DocxRenderer(new MapFontResolver([], "Fallback"), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         TestAssert.Equal(0, fallback.InspectMarkupBalloons(emptyParent).Single().WordCompatibleBodySummaryPartCount);
-        TestAssert.Equal(fallback.RenderBlankPages(emptyParentOnly, null, CancellationToken.None).Single().Content,
-            fallback.RenderBlankPages(emptyParent, null, CancellationToken.None).Single().Content);
+        TestAssert.Equal(fallback.RenderPagesAsync(emptyParentOnly, null, CancellationToken.None).ToBlockingEnumerable().Single().Content,
+            fallback.RenderPagesAsync(emptyParent, null, CancellationToken.None).ToBlockingEnumerable().Single().Content);
     }
 
     public static void DocxWordCompatibleAllMarkupKeepsReplyMetadataWithoutPrintedSeparators()
@@ -1761,7 +1762,7 @@ internal static partial class DocxCommentsTests
 
         DocxMarkupBalloonPlacementSnapshot placement = renderer.InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Comment");
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         int renderedSeparatorLines = Regex.Matches(page.Content, @"(?<x1>-?[0-9.]+) (?<y>-?[0-9.]+) m (?<x2>-?[0-9.]+) \k<y> l S")
             .Cast<Match>()
@@ -1970,7 +1971,7 @@ internal static partial class DocxCommentsTests
         using FileStream stream = File.OpenRead(input);
         DocxDocument document = new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, markupMode: OoxPdfDocxMarkupMode.AllMarkup);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "RG"), page.Content);
         TestAssert.Contains(" re B*", page.Content);
@@ -2498,7 +2499,7 @@ internal static partial class DocxCommentsTests
         };
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         const string title = "Commented [RV1]: ";
@@ -2539,7 +2540,7 @@ internal static partial class DocxCommentsTests
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
             PdfPage page = new DocxRenderer(new BalloonSubsetFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry)
-                .RenderBlankPages(document, null, CancellationToken.None).Single();
+                .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             var emitted = new StringBuilder();
             foreach (Match show in Regex.Matches(page.Content,
                 @"/(?<font>F\d+) [\d.]+ Tf\s+\S+ Tc\s+1 0 0 1 [-\d.]+ [-\d.]+ Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
@@ -2590,7 +2591,7 @@ internal static partial class DocxCommentsTests
             };
             PdfPage page = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, CancellationToken.None).Single();
+                .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             bool foundBody = false;
             foreach (Match show in Regex.Matches(page.Content,
                 @"/(?<font>F\d+) [\d.]+ Tf\s+\S+ Tc\s+1 0 0 1 [-\d.]+ [-\d.]+ Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
@@ -2652,7 +2653,7 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
             .Where(show => show.X >= balloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                 !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal(2, shows.Length);
@@ -2677,7 +2678,7 @@ internal static partial class DocxCommentsTests
                 RelatedStories = [story with { BodyElements = [new DocxParagraphElement(fallbackComment)] }]
             };
             var fallbackBalloon = renderer.InspectMarkupBalloons(fallbackDocument).Single();
-            var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(fallbackDocument, null, CancellationToken.None).Single())
+            var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(fallbackDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= fallbackBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                     !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(firstText + secondText, string.Join(" ", fallbackShows.Select(show => show.Text.Trim())));
@@ -2717,7 +2718,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(900, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -2775,7 +2776,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(900, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -2805,7 +2806,7 @@ internal static partial class DocxCommentsTests
             DocxParagraph composed = comment with { Runs = [comment.Runs[0] with { Text = "Review table," }, comment.Runs[1]] };
             DocxDocument fallback = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(composed)] }] };
             var fallbackBalloon = renderer.InspectMarkupBalloons(fallback).Single();
-            var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(fallback, null, CancellationToken.None).Single())
+            var fallbackShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(fallback, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= fallbackBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                     !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.True(fallbackShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -2844,7 +2845,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodyDescender: -350),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(900, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -2906,7 +2907,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450, bodyDescender: -350, bodyAscender: 500),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal("Review ", shows[0].Text);
             TestAssert.Equal("table", shows[1].Text);
@@ -2977,7 +2978,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -3012,7 +3013,7 @@ internal static partial class DocxCommentsTests
                 DocxParagraph guardedComment = comment with { Runs = [comment.Runs[0], comment.Runs[1] with { Text = guardedTail }] };
                 DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -3057,7 +3058,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500, tailFirstAdvance: zeroAdvance ? (short)0 : null), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -3131,7 +3132,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500, tailFirstAdvance: zeroAdvance ? (short)0 : null), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -3179,7 +3180,7 @@ internal static partial class DocxCommentsTests
                     RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
                 };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
@@ -3225,7 +3226,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500, tailFirstAdvance: zeroAdvance ? (short)0 : null), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -3274,7 +3275,7 @@ internal static partial class DocxCommentsTests
                     RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
                 };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
@@ -3337,7 +3338,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: prefixAscender), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -3380,7 +3381,7 @@ internal static partial class DocxCommentsTests
             {
                 DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(comment with { Runs = guardedRuns })] }] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     $"Guard retains complete fallback: runs={guardedRuns.Length}, closingLength={guardedRuns[2].Text.Length}, bold={guardedRuns[2].Bold}, closingFace={guardedRuns[2].FontFamily}, leadingTail={guardedRuns[1].Text.StartsWith(' ')}, prefixComma={guardedRuns[0].Text.EndsWith(',')}.");
@@ -3395,7 +3396,7 @@ internal static partial class DocxCommentsTests
                 var numericRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(tailFirstAdvance: advance), OoxPdfDocxMarkupMode.AllMarkup,
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var guardedBalloon = numericRenderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Zero-width and overwide tail words retain complete fallback in the closing-run branch.");
@@ -3459,7 +3460,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -3531,7 +3532,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(3), new DocxParagraphElement(fourth)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three fourth-body runs, decoration, an overwide closing run and unqualified spacing retain fallback.");
@@ -3557,7 +3558,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -3610,7 +3611,7 @@ internal static partial class DocxCommentsTests
             byte[] Serialize(DocxDocument input)
             {
                 using var output = new MemoryStream();
-                PdfDocumentWriter.WriteStagedAsync(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+                PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(renderer.RenderPagesAsync(input, null, CancellationToken.None).ToBlockingEnumerable().ToArray()), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                 return output.ToArray();
             }
             TestAssert.True(Serialize(document).SequenceEqual(Serialize(document with { RelatedStories = [formerStory] })),
@@ -3683,7 +3684,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -3755,7 +3756,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(fifth)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three fifth-body runs, decoration, an overwide closing run and unqualified spacing retain fallback.");
@@ -3783,7 +3784,7 @@ internal static partial class DocxCommentsTests
                     byte[] Serialize(DocxDocument input)
                     {
                         using var output = new MemoryStream();
-                        PdfDocumentWriter.WriteStagedAsync(output, renderer.RenderBlankPages(input, null, CancellationToken.None).ToArray(), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+                        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(renderer.RenderPagesAsync(input, null, CancellationToken.None).ToBlockingEnumerable().ToArray()), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                         return output.ToArray();
                     }
                     TestAssert.True(Serialize(guarded with { RelatedStories = [retainedStory] }).SequenceEqual(Serialize(guarded with { RelatedStories = [formerStory] })),
@@ -3811,7 +3812,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -3878,7 +3879,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -3951,7 +3952,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(2), new DocxParagraphElement(fourth)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three third-body runs, decoration, an overwide closing run and unqualified spacing retain fallback.");
@@ -3977,7 +3978,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -4044,7 +4045,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -4118,7 +4119,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(1), new DocxParagraphElement(terminal)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three second-body runs, decoration, an overwide closing run and unqualified spacing retain fallback.");
@@ -4144,7 +4145,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -4187,7 +4188,7 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodySpaceAdvance: 123),
             OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
             .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal("end. end. " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
         var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4261,7 +4262,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(leadingText + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4342,7 +4343,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4424,7 +4425,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4464,7 +4465,7 @@ internal static partial class DocxCommentsTests
                 var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
                 var rejectedDocument = document with { RelatedStories = [rejectedStory] };
                 var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
-                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(rejectedDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Overwide/three-word/doubled closing separators, trailing prefixes, extra runs, decoration and unqualified spacing retain fallback.");
@@ -4525,7 +4526,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4568,7 +4569,7 @@ internal static partial class DocxCommentsTests
                 var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
                 var rejectedDocument = document with { RelatedStories = [rejectedStory] };
                 var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
-                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(rejectedDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Overwide two-word/doubled closing separators, trailing prefixes, extra runs, decoration and unqualified spacing retain fallback: " + rejected.Runs[1].Text);
@@ -4629,7 +4630,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4672,7 +4673,7 @@ internal static partial class DocxCommentsTests
                 var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
                 var rejectedDocument = document with { RelatedStories = [rejectedStory] };
                 var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
-                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(rejectedDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Overwide two-word/doubled closing separators, trailing prefixes, extra runs, decoration and unqualified spacing retain fallback: " + rejected.Runs[1].Text);
@@ -4733,7 +4734,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4781,7 +4782,7 @@ internal static partial class DocxCommentsTests
                 var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
                 var rejectedDocument = document with { RelatedStories = [rejectedStory] };
                 var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
-                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(rejectedDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Overwide two-word/doubled closing separators, trailing prefixes, extra runs, decoration and unqualified spacing retain fallback: " + rejected.Runs[1].Text);
@@ -4842,7 +4843,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -4894,7 +4895,7 @@ internal static partial class DocxCommentsTests
                 var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
                 var rejectedDocument = document with { RelatedStories = [rejectedStory] };
                 var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
-                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(rejectedDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Unqualified three-word boundaries retain fallback: " + rejected.Runs[1].Text);
@@ -4955,7 +4956,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -5007,7 +5008,7 @@ internal static partial class DocxCommentsTests
                 var rejectedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(rejected)] };
                 var rejectedDocument = document with { RelatedStories = [rejectedStory] };
                 var rejectedBalloon = renderer.InspectMarkupBalloons(rejectedDocument).Single();
-                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(rejectedDocument, null, CancellationToken.None).Single())
+                var rejectedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(rejectedDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= rejectedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(rejectedShows.Length > 0 && rejectedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Unqualified three-word boundaries retain fallback: " + rejected.Runs[1].Text);
@@ -5068,7 +5069,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length > 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Join(" ", leading.Select(paragraph => paragraph.Runs[0].Text)) + " " + prefix + closing + " ", string.Concat(shows.Select(show => show.Text)));
             var rows = shows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
@@ -5159,7 +5160,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -5264,7 +5265,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(1), new DocxParagraphElement(second)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three second-body runs, decoration, a closing run that cannot fit, a trailing prefix separator and unqualified spacing retain fallback.");
@@ -5290,7 +5291,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -5358,7 +5359,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -5462,7 +5463,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(2), new DocxParagraphElement(third)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three third-body runs, decoration, a closing run that cannot fit, a trailing prefix separator and unqualified spacing retain fallback.");
@@ -5488,7 +5489,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -5556,7 +5557,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -5658,7 +5659,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(fifth)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three fifth-body runs, decoration, a closing run that cannot fit, a trailing prefix separator and unqualified spacing retain fallback.");
@@ -5674,7 +5675,7 @@ internal static partial class DocxCommentsTests
                 var overflowStory = story with { BodyElements = [.. story.BodyElements.Take(4), new DocxParagraphElement(overflowFifth)] };
                 var overflowDocument = document with { RelatedStories = [overflowStory] };
                 var overflowBalloon = renderer.InspectMarkupBalloons(overflowDocument).Single();
-                var overflowShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(overflowDocument, null, CancellationToken.None).Single())
+                var overflowShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(overflowDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= overflowBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 var overflowRows = overflowShows.GroupBy(show => show.Y).OrderByDescending(group => group.Key).ToArray();
                 TestAssert.Equal(suffix.TrimStart(' '), overflowRows[^1].First().Text);
@@ -5702,7 +5703,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -5770,7 +5771,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: gap, bodySpaceAdvance: 123),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && show.Text.Length != 0 && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             string expected = string.Join(" ", paragraphs.Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))) + " ";
             TestAssert.Equal(expected, string.Concat(shows.Select(show => show.Text)));
@@ -5871,7 +5872,7 @@ internal static partial class DocxCommentsTests
                 var guardedStory = story with { BodyElements = [.. story.BodyElements.Take(3), new DocxParagraphElement(fourth)] };
                 var guarded = document with { RelatedStories = [guardedStory] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "Three fourth-body runs, decoration, a closing run that cannot fit, a trailing prefix separator and unqualified spacing retain fallback.");
@@ -5897,7 +5898,7 @@ internal static partial class DocxCommentsTests
                     var numericRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var numericBalloon = numericRenderer.InspectMarkupBalloons(numericDocument).Single();
-                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderBlankPages(numericDocument, null, CancellationToken.None).Single())
+                    var numericShows = ReadEmbeddedGlyphTextShows(numericRenderer.RenderPagesAsync(numericDocument, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= numericBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(numericBalloon.Height) && numericShows.Length > 0 &&
                         numericShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -5948,7 +5949,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: -50, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.Text.Length != 0 && show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Concat(paragraphs.Select(paragraph => paragraph.Runs[0].Text + " ")),
                 string.Concat(shows.Select(show => show.Text)));
@@ -6031,7 +6032,7 @@ internal static partial class DocxCommentsTests
                     var invalidRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var guardedBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedRows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedRows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedRows.Length > 0 &&
                         guardedRows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6046,7 +6047,7 @@ internal static partial class DocxCommentsTests
                 {
                     DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = guardedElements }] };
                     var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedRows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedRows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedRows.Length > 0 && guardedRows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                         "decorated fifth bodies and unsupported spacing retain complete fallback.");
@@ -6151,7 +6152,7 @@ internal static partial class DocxCommentsTests
             bodyDescender: prefixDescender, bodyAscender: 500, tailFirstAdvance: zeroFirst ? (short)0 : null), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
             .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal(prefix + " " + tail + " " + (hasThird ? thirdText + " " : string.Empty) + (hasFourth ? fourthText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
         var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 900).ToArray();
@@ -6277,7 +6278,7 @@ internal static partial class DocxCommentsTests
                     var invalidRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
                         invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6302,7 +6303,7 @@ internal static partial class DocxCommentsTests
                     var invalidRenderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
                         invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6321,7 +6322,7 @@ internal static partial class DocxCommentsTests
                         new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = new string('a', 80) + " last.", FontFamily = "OtherCommentFace" }] })] }]
                 };
                 var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
                     invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6342,7 +6343,7 @@ internal static partial class DocxCommentsTests
                         new DocxParagraphElement(fourth with { Runs = [fourth.Runs[0] with { Text = invalidTransition ? "last." : "aaa", FontFamily = invalidTransition ? "CommentFace" : "OtherCommentFace" }] })] }]
                 };
                 var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
                     invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6361,7 +6362,7 @@ internal static partial class DocxCommentsTests
         {
             DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = guardedElements }] };
             var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-            var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+            var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                 "spacing, nonfitting closing runs, decorated bodies, repeated spaces and tabs retain complete fallback.");
@@ -6371,7 +6372,7 @@ internal static partial class DocxCommentsTests
             var oversizedRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(tailFirstAdvance: 32700),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var oversizedBalloon = oversizedRenderer.InspectMarkupBalloons(document).Single();
-            var oversizedShows = ReadEmbeddedGlyphTextShows(oversizedRenderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var oversizedShows = ReadEmbeddedGlyphTextShows(oversizedRenderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= oversizedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.True(oversizedShows.Length > 0 && oversizedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                 "A second-paragraph scalar wider than the continuation retains complete fallback.");
@@ -6392,7 +6393,7 @@ internal static partial class DocxCommentsTests
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     DocxDocument guarded = document with { RelatedStories = [guardedStory] };
                     var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
                         invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6410,7 +6411,7 @@ internal static partial class DocxCommentsTests
                 var zeroSecondRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(tailFirstAdvance: 0),
                     OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var zeroSecondBalloon = zeroSecondRenderer.InspectMarkupBalloons(zeroSecond).Single();
-                var zeroSecondShows = ReadEmbeddedGlyphTextShows(zeroSecondRenderer.RenderBlankPages(zeroSecond, null, CancellationToken.None).Single())
+                var zeroSecondShows = ReadEmbeddedGlyphTextShows(zeroSecondRenderer.RenderPagesAsync(zeroSecond, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= zeroSecondBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(double.IsFinite(zeroSecondBalloon.Height) && zeroSecondShows.Length > 0 &&
                     zeroSecondShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6424,7 +6425,7 @@ internal static partial class DocxCommentsTests
                 var invalidRenderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyFirstAdvance: 32700),
                     OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var invalidBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var invalidShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= invalidBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(double.IsFinite(invalidBalloon.Height) && invalidShows.Length > 0 &&
                     invalidShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6491,7 +6492,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             if (!wrappedFourth) { TestAssert.Equal(fourthParagraph ? 8 : 6, shows.Length); }
             TestAssert.Equal("Review table " + middleText + " ending. " + (fourthParagraph ? fourthText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
@@ -6561,7 +6562,7 @@ internal static partial class DocxCommentsTests
                 {
                     DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = guardedElements }] };
                     var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                         "explicit line spacing, mixed/decorated faces and repeated spaces retain complete fallback.");
@@ -6585,7 +6586,7 @@ internal static partial class DocxCommentsTests
                         var invalidRenderer = new DocxRenderer(invalidResolver, OoxPdfDocxMarkupMode.AllMarkup,
                             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                         var guardedBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                        var guardedShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        var guardedShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                             .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                         TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
                             guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6601,7 +6602,7 @@ internal static partial class DocxCommentsTests
                     DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first), new DocxParagraphElement(first), new DocxParagraphElement(first)] }] };
                     var invalidRenderer = new DocxRenderer(invalidResolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var guardedBalloon = invalidRenderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedShows = ReadEmbeddedGlyphTextShows(invalidRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
                         guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6708,7 +6709,7 @@ internal static partial class DocxCommentsTests
             bodyDescender: -50, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
             .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal("Review table", shows[0].Text);
         TestAssert.Equal(" ", shows[1].Text);
@@ -6779,7 +6780,7 @@ internal static partial class DocxCommentsTests
             {
                 DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(first with { Spacing = spacing }), new DocxParagraphElement(second)] }] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(double.IsFinite(guardedBalloon.Height) && guardedShows.Length > 0 &&
                     guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -6901,7 +6902,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(4, shows.Length);
             TestAssert.Equal(prefix, shows[0].Text);
@@ -6933,7 +6934,7 @@ internal static partial class DocxCommentsTests
             {
                 DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = guardedElements }] };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
                     "unsupported spacing and decorated runs retain complete fallback.");
@@ -6983,7 +6984,7 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500, tailFirstAdvance: zeroAdvance ? (short)0 : null, tailSpaceAdvance: 123), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix, shows[0].Text);
             TestAssert.Equal(700, (int)shows[0].Font.Font.GetAdvanceWidth(shows[0].Font.Font.MapCodePoint('R')));
@@ -7041,7 +7042,7 @@ internal static partial class DocxCommentsTests
                     RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }]
                 };
                 var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                         !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
@@ -7086,7 +7087,7 @@ internal static partial class DocxCommentsTests
                     bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var balloon = renderer.InspectMarkupBalloons(document).Single();
-                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 var prefixRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
@@ -7136,7 +7137,7 @@ internal static partial class DocxCommentsTests
                         bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, tailFirstAdvance: firstAdvance),
                         OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                             !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -7164,7 +7165,7 @@ internal static partial class DocxCommentsTests
                             bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, bodyFirstAdvance: firstAdvance),
                             OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                         var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                        var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                             .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                                 !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                         TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
@@ -7212,7 +7213,7 @@ internal static partial class DocxCommentsTests
                     bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var balloon = renderer.InspectMarkupBalloons(document).Single();
-                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 var prefixRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
@@ -7262,7 +7263,7 @@ internal static partial class DocxCommentsTests
                         bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, tailFirstAdvance: firstAdvance),
                         OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                             !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -7290,7 +7291,7 @@ internal static partial class DocxCommentsTests
                             bodySpaceAdvance: 1800, bodyDescender: -350, bodyAscender: 500, bodyFirstAdvance: firstAdvance),
                             OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                         var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                        var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                        var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                             .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                                 !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                         TestAssert.True(guardedShows.Length > 0 && guardedShows.All(show =>
@@ -7339,7 +7340,7 @@ internal static partial class DocxCommentsTests
                     bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var balloon = renderer.InspectMarkupBalloons(document).Single();
-                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 var prefixRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
@@ -7389,7 +7390,7 @@ internal static partial class DocxCommentsTests
                     };
                     DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }] };
                     var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                             !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -7409,7 +7410,7 @@ internal static partial class DocxCommentsTests
                         bodySpaceAdvance: prefixSpace, bodyDescender: -350, bodyAscender: 500, tailFirstAdvance: firstAdvance),
                         OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                     var guardedBalloon = guardedRenderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedShows = ReadEmbeddedGlyphTextShows(guardedRenderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                             !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -7455,7 +7456,7 @@ internal static partial class DocxCommentsTests
                     bodyDescender: -350, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var balloon = renderer.InspectMarkupBalloons(document).Single();
-                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+                var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                     .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                 var prefixRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
@@ -7508,7 +7509,7 @@ internal static partial class DocxCommentsTests
                     };
                     DocxDocument guarded = document with { RelatedStories = [story with { BodyElements = [new DocxParagraphElement(guardedComment)] }] };
                     var guardedBalloon = renderer.InspectMarkupBalloons(guarded).Single();
-                    var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(guarded, null, CancellationToken.None).Single())
+                    var guardedShows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(guarded, null, CancellationToken.None).ToBlockingEnumerable().Single())
                         .Where(show => show.X >= guardedBalloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                             !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
                     TestAssert.True(guardedShows.All(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 500),
@@ -7543,7 +7544,7 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
             .Where(show => show.X >= balloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                 !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal("Review ", shows[0].Text);
@@ -7592,7 +7593,7 @@ internal static partial class DocxCommentsTests
             };
             PdfPage page = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, CancellationToken.None).Single();
+                .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             var bodyShows = ReadEmbeddedGlyphTextShows(page)
                 .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
             var spaces = bodyShows.Where(show => show.Text == " ").ToArray();
@@ -7631,7 +7632,7 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single();
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         var lines = ReadEmbeddedGlyphTextShows(page)
             .Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                 show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
@@ -7683,7 +7684,7 @@ internal static partial class DocxCommentsTests
             };
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodySpaceAdvance: spaceAdvance),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single()).ToArray();
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single()).ToArray();
             var lines = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
             TestAssert.Equal(3, lines.Length);
@@ -7727,7 +7728,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
             var rows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
             TestAssert.Equal(firstRow ? 3 : 4, rows.Length);
@@ -7770,7 +7771,7 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodySpaceAdvance: 200, bodyAdvance: 32700),
             OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
             .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 32700).ToArray();
         TestAssert.Equal(body + " ", string.Concat(shows.Select(show => show.Text)));
         var visible = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
@@ -7808,7 +7809,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: lineGap),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single();
-            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             var lines = ReadEmbeddedGlyphTextShows(page)
                 .Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                     show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
@@ -7855,7 +7856,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodyLineGap: 450),
                 OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single();
-            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             var lines = ReadEmbeddedGlyphTextShows(page)
                 .Where(show => show.X >= balloon.X && !string.IsNullOrWhiteSpace(show.Text) &&
                     !show.Text.StartsWith("Commented", StringComparison.Ordinal) &&
@@ -7896,7 +7897,7 @@ internal static partial class DocxCommentsTests
             RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         PdfPage[] pages = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).ToArray();
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(2, pages.Length);
         for (int i = 0; i < pages.Length; i++)
         {
@@ -7961,7 +7962,7 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, CancellationToken.None).Single())
+            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
                 .Where(show => show.X >= balloon.X).ToArray();
             var body = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(prefix + tail, string.Join(" ", body.Select(show => show.Text.Trim())));
@@ -8004,7 +8005,7 @@ internal static partial class DocxCommentsTests
             };
             PdfPage page = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, CancellationToken.None).Single();
+                .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             var shows = ReadEmbeddedGlyphTextShows(page).ToArray();
             var bodyRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) &&
                 show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
@@ -9097,7 +9098,7 @@ internal static partial class DocxCommentsTests
         DocxMarkupBalloonPlacementSnapshot placement = renderer
             .InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Comment");
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         var rows = ReadEmbeddedGlyphTextShows(page)
             .Where(show => show.Text.StartsWith("Balloon", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal(4, rows.Length);
@@ -9228,7 +9229,7 @@ internal static partial class DocxCommentsTests
                 """
         });
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Equal(4, DocxTests.CountOccurrences(page.Content, "0.973 0.863 0.867 rg"));
     }
     public static void DocxWordCompatibleAllMarkupRendersFullLongCommentBalloonBody()
@@ -9286,7 +9287,7 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         DocxMarkupBalloonPlacementSnapshot balloon = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
         TestAssert.True(balloon.Height > 30d, "Word-compatible balloons should grow past the two-row preview cap for long comment bodies. Height=" + balloon.Height.ToString(CultureInfo.InvariantCulture));
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.True(!page.Content.Contains("...", StringComparison.Ordinal), "Word-compatible balloons should render full comment bodies without truncation markers.");
     }
 

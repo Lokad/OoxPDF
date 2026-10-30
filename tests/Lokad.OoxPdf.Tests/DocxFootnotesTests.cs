@@ -38,7 +38,7 @@ internal static class DocxFootnotesTests
             using var baselineInput = TestFixtures.CreateZipPackage(original);
             DocxDocument baseline = new DocxReader().Read(OoxPackage.Open(baselineInput, default), null, default, mode);
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            PdfPage[] baselinePages = renderer.RenderBlankPages(baseline, null, default).ToArray();
+            PdfPage[] baselinePages = renderer.RenderPagesAsync(baseline, null, default).ToBlockingEnumerable().ToArray();
             foreach (var spelling in new[] { (Declarations: false, References: true), (Declarations: true, References: false), (Declarations: true, References: true) })
             {
                 var parts = new Dictionary<string, byte[]>(original);
@@ -61,7 +61,7 @@ internal static class DocxFootnotesTests
                 DocxDocument candidate = new DocxReader().Read(OoxPackage.Open(input, default), null, default, mode);
                 TestAssert.True(candidate.RelatedStories.Select(s => (s.Kind, s.Id, s.Type)).SequenceEqual(baseline.RelatedStories.Select(s => (s.Kind, s.Id, s.Type))),
                     "Numeric aliases must retain distinct notes and reserved-story identities.");
-                PdfPage[] pages = renderer.RenderBlankPages(candidate, null, default).ToArray();
+                PdfPage[] pages = renderer.RenderPagesAsync(candidate, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.True(pages.Select(p => p.Content).SequenceEqual(baselinePages.Select(p => p.Content)), "Numeric aliases must retain every painted note.");
                 TestAssert.True(pages.SelectMany(p => p.Annotations).SequenceEqual(baselinePages.SelectMany(p => p.Annotations)), "Numeric aliases must preserve navigation destinations.");
             }
@@ -96,7 +96,7 @@ internal static class DocxFootnotesTests
                 "CompositionProbes", "scaled-note-" + container + ".docx")), mode);
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.True(pages.Length == 1, $"{container} / {mode}: expected one page, got {pages.Length}.");
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             for (int section = 1; section <= 6; section++)
@@ -139,7 +139,7 @@ internal static class DocxFootnotesTests
                 "complete-note-" + container + ".docx"), mode);
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             for (int section = 1; section <= 6; section++)
@@ -296,7 +296,7 @@ internal static class DocxFootnotesTests
     private static PdfPage[] RenderSectionPages(DocxDocument document,
         OoxPdfDocxMarkupGeometryMode geometry = OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup) =>
         new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry)
-            .RenderBlankPages(document, null, CancellationToken.None).ToArray();
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
 
     private static void SetSectionTypes(XDocument xml, string? preceding, string? following)
     {
@@ -1543,7 +1543,7 @@ internal static class DocxFootnotesTests
     private static PdfLinkAnnotation[] RenderCustomNoteLinks(DocxDocument document,
         OoxPdfDocxMarkupGeometryMode geometry = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout) =>
         new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry)
-            .RenderBlankPages(document, null, CancellationToken.None).SelectMany(p => p.Annotations).ToArray();
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
 
     private static DocxDocument ReadCustomMarkFixture(string kind, string mark) =>
         ReadSectionNumberingFixture(kind, (xml, _, parts) =>
@@ -1594,7 +1594,7 @@ internal static class DocxFootnotesTests
                 SetNoteSection(xml.Descendants(NoteWord + "sectPr").Last(), kind, "lowerRoman", "4", "eachSect"));
             CheckNoteLabels(document, ["iv", "v", "iv", "v"]);
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
+            PdfPage[] pages = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             PdfLinkAnnotation[] links = pages.SelectMany(p => p.Annotations).ToArray();
             TestAssert.Equal(2, pages.Length);
             TestAssert.Equal(4, links.Length);
@@ -1909,7 +1909,7 @@ internal static class DocxFootnotesTests
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
             var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
                 .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
-            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            var links = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single().Annotations.ToArray();
             TestAssert.Equal(2, links.Length);
             for (int i = 0; i < links.Length; i++)
             {
@@ -1940,7 +1940,7 @@ internal static class DocxFootnotesTests
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
             var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
                 .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
-            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            var links = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single().Annotations.ToArray();
             TestAssert.Equal(2, links.Length);
             TestAssert.True(Math.Abs(links[0].Destination!.Value.Top!.Value - notes[0].TopY) < .000001d,
                 "The first note retains its target, including its own before spacing.");
@@ -1971,7 +1971,7 @@ internal static class DocxFootnotesTests
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var notes = renderer.InspectLayout(document).Pages.Single().PlacedRelatedStories
                 .Where(s => s.Kind == "Endnote" && s.Type is null).ToArray();
-            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            var links = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single().Annotations.ToArray();
             TestAssert.Equal(2, links.Length);
             for (int i = 0; i < notes.Length; i++)
                 TestAssert.True(Math.Abs(links[i].Destination!.Value.Top!.Value - notes[i].TopY) < .000001d,
@@ -1994,7 +1994,7 @@ internal static class DocxFootnotesTests
             double overlap = Math.Min(before, after);
             TestAssert.True(Math.Abs(notes[0].TopY - notes[1].TopY - notes[0].Height + overlap) < .000001d,
                 "Wrapped notes use the final paragraph after-gap and next paragraph before-gap.");
-            var links = renderer.RenderBlankPages(document, null, default).Single().Annotations.ToArray();
+            var links = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single().Annotations.ToArray();
             TestAssert.Equal(2, links.Length);
             TestAssert.True(Math.Abs(links[0].Destination!.Value.Top!.Value - notes[0].TopY) < .000001d,
                 "The first wrapped note retains its source-owned destination top.");
@@ -2014,7 +2014,7 @@ internal static class DocxFootnotesTests
         TestAssert.True(notes.Any(n => n.Note.ContentTopOffset > 0d),
             "The oversized complete block must retain continued story slices.");
         var firstPlacements = notes.GroupBy(n => n.Note.Id).Select(g => g.First()).ToArray();
-        var links = renderer.RenderBlankPages(document, null, default).SelectMany(p => p.Annotations).ToArray();
+        var links = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
         TestAssert.Equal(2, firstPlacements.Length);
         TestAssert.Equal(2, links.Length);
         for (int i = 0; i < links.Length; i++)
@@ -5530,7 +5530,7 @@ internal static class DocxFootnotesTests
         {
             DocxDocument document = ReadNoteNavigationFixture(fixture);
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            PdfPage[] pages = renderer.RenderBlankPages(document, null, CancellationToken.None).ToArray();
+            PdfPage[] pages = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             PdfLinkAnnotation[] links = pages.SelectMany(page => page.Annotations).ToArray();
             int expected = fixture is "note-nav-two-footnotes" or "note-nav-mixed-notes" or "note-nav-numbered-ids" ? 2 : 1;
             TestAssert.Equal(expected, links.Length);
@@ -5558,12 +5558,12 @@ internal static class DocxFootnotesTests
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxDocument orphan = source with { RelatedStories = [] };
-        TestAssert.Equal(0, renderer.RenderBlankPages(orphan, null, CancellationToken.None).Sum(page => page.Annotations.Count));
+        TestAssert.Equal(0, renderer.RenderPagesAsync(orphan, null, CancellationToken.None).ToBlockingEnumerable().Sum(page => page.Annotations.Count));
         DocxParagraph paragraph = source.Paragraphs.Single();
         int markerRun = paragraph.InlineReferences.Single().SourceRunIndex;
         DocxDocument hidden = source with { BodyElements = [new DocxParagraphElement(paragraph with
             { Runs = paragraph.Runs.Where(run => run.SourceRunIndex != markerRun).ToArray() })] };
-        TestAssert.Equal(0, renderer.RenderBlankPages(hidden, null, CancellationToken.None).Sum(page => page.Annotations.Count));
+        TestAssert.Equal(0, renderer.RenderPagesAsync(hidden, null, CancellationToken.None).ToBlockingEnumerable().Sum(page => page.Annotations.Count));
     }
 
     public static void DocxReaderNoteStoryMarksFollowFilteredBodyLabels()
@@ -6061,7 +6061,7 @@ internal static class DocxFootnotesTests
             .First(story => story.Kind == "Footnote" && story.Id == "16");
         // Overlong notes slice across pages now; the head slice keeps full-story height with a page-slice height.
         PdfPage placedPage = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .First(page => page.Content.Contains(" re W n", StringComparison.Ordinal));
 
         TestAssert.True(placedStory.ContentHeight > placedStory.Height, "The overlong footnote should retain full-story height while exposing the clipped page slice height.");
@@ -6944,7 +6944,7 @@ internal static class DocxFootnotesTests
 
         var resolver = new StrikeoutFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxPlacedRelatedStoryLayout separator = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0]
@@ -6982,7 +6982,7 @@ internal static class DocxFootnotesTests
 
         var resolver = new StrikeoutFontResolver(67, 250);
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxPlacedRelatedStoryLayout separator = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0]
@@ -7045,7 +7045,7 @@ internal static class DocxFootnotesTests
 
         var resolver = new StrikeoutFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None);
         DocxPlacedRelatedStoryLayout separator = layout.Pages
@@ -7080,7 +7080,7 @@ internal static class DocxFootnotesTests
         }
         var resolver = new StrikeoutFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxPlacedRelatedStoryLayout separator = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .Create(document, measurer, CancellationToken.None)
             .Pages[0]
@@ -7089,7 +7089,7 @@ internal static class DocxFootnotesTests
         double designThickness = separator.SeparatorThickness;
         double designWidth = Math.Min(144d, separator.Width);
         var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         Match[] ruleMatches = Regex.Matches(page.Content, @"(?<x>-?[0-9.]+) (?<y>-?[0-9.]+) (?<w>[0-9.]+) (?<h>[0-9.]+) re f[^*]")
             .Cast<Match>()
             .Where(match => double.Parse(match.Groups["x"].Value, CultureInfo.InvariantCulture) < 200d && double.Parse(match.Groups["w"].Value, CultureInfo.InvariantCulture) > 50d)
@@ -7133,7 +7133,7 @@ internal static class DocxFootnotesTests
         }
         var resolver = new StrikeoutFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .Create(document, measurer, CancellationToken.None);
         var continuations = layout.Pages.SelectMany(page => page.PlacedRelatedStories
@@ -7286,7 +7286,7 @@ internal static class DocxFootnotesTests
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
         TestAssert.True(fontPlan.Runs.All(run => run.ResolvedFamily == "Aptos"),
             "The Office Aptos control must measure every source/default/separator owner with Aptos.");
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("Aptos")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("Aptos")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None);
     }
@@ -7386,7 +7386,7 @@ internal static class DocxFootnotesTests
 
         var resolver = new StrikeoutFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, measurer, CancellationToken.None);
         DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.SeparatorY is not null);
@@ -7416,7 +7416,7 @@ internal static class DocxFootnotesTests
 
         var resolver = new StrikeoutFontResolver();
         DocxFontPlan fontPlan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
-        var measurer = new DocxFontPlanTextMeasurer(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(fontPlan, resolver.Resolve(new FontRequest("StrikeFace")), CancellationToken.None, resolver).GetAwaiter().GetResult();
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.SeparatorY is not null);
@@ -9613,7 +9613,7 @@ internal static class DocxFootnotesTests
             document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
         }
 
-        PdfPage page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         return DocxTests.CountPdfTextShows(page.Content);
     }
     public static void DocxFootnoteSeparatorIgnoresExactLineSpacing()

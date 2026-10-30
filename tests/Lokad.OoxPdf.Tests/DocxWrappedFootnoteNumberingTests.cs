@@ -94,7 +94,7 @@ internal static class DocxWrappedFootnoteNumberingTests
         foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
         {
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            var pages = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            var pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
             for (int i = 0; i < pages.Length; i++)
                 TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual links retain the complete physical owner page.");

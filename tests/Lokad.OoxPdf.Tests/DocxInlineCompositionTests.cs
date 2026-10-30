@@ -86,7 +86,7 @@ internal static partial class DocxInlineCompositionTests
                     "Unpainted paragraph-mark metrics remain available for the object-only source owner.");
                 var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                     ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                    .RenderBlankPages(source, null, default).Single();
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
                 TestAssert.Equal(1, page.Images.Count);
                 var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
                 var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
@@ -112,7 +112,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).Single();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(1, page.Images.Count);
             var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
             var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
@@ -149,7 +149,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var combined = renderer.RenderBlankPages(ReadMutation($"CompositionProbes/math-display-image-{container}-combined", mode, false, false), null, default).Single();
+            var combined = renderer.RenderPagesAsync(ReadMutation($"CompositionProbes/math-display-image-{container}-combined", mode, false, false), null, default).ToBlockingEnumerable().Single();
             var combinedFonts = combined.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
             var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(combined, usePageCoordinates: true).Where(show => combinedFonts.Contains(show.Font)).ToArray();
             foreach (string position in new[] { "before", "between", "combined" })
@@ -160,7 +160,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(position == "combined" ? 1 : 2, owner.Equations.Count);
                 TestAssert.True(owner.Equations.All(equation => equation.Display), "Source display flags remain attached to the original formulas.");
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var page = renderer.RenderBlankPages(source, diagnostics.Add, default).Single();
+                var page = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.Equal(1, page.Images.Count);
                 var picture = System.Text.RegularExpressions.Regex.Match(page.Content,
                     @"(?<width>-?[\d.]+) 0 0 (?<height>-?[\d.]+) (?<x>-?[\d.]+) (?<y>-?[\d.]+) cm\s*/" + page.Images.Single().ResourceName + @" Do");
@@ -214,7 +214,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).Single();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
             var math = shows.Where(show => fonts.Contains(show.Font)).ToArray();
@@ -287,14 +287,14 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetMixedSourceEquations(owner, default).Count);
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.RenderBlankPages(inline, null, default).Single();
+            var before = renderer.RenderPagesAsync(inline, null, default).ToBlockingEnumerable().Single();
             var baselineFonts = before.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
             var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(before, usePageCoordinates: true).Where(show => baselineFonts.Contains(show.Font)).ToArray();
             foreach (bool transformed in new[] { false, true })
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var page = renderer.RenderBlankPages(transformed ? ReadMutation(fixture, mode, true, true, portableStyle, partOverride: part) : source,
-                    diagnostics.Add, default).Single();
+                var page = renderer.RenderPagesAsync(transformed ? ReadMutation(fixture, mode, true, true, portableStyle, partOverride: part) : source,
+                    diagnostics.Add, default).ToBlockingEnumerable().Single();
                 var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
                 var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
                 TestAssert.Equal(suffix.StartsWith("fraction", StringComparison.Ordinal) ? 16 : 10, actual.Length);
@@ -321,7 +321,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true).ToArray();
             var fonts = pages[0].Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
@@ -375,7 +375,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             string text = DocxPageFootnoteNumberingTests.DecodeText(pages[0]);
             TestAssert.True(!text.Contains("777", StringComparison.Ordinal) && !text.Contains("NUMPAGES", StringComparison.Ordinal),
@@ -415,10 +415,10 @@ internal static partial class DocxInlineCompositionTests
         }
         // The plain field line fits after the spacer; restoring its fractions
         // moves it to page two. A PAGE control proves that actual placement.
-        TestAssert.Equal(2, renderer.RenderBlankPages(Boundary("PAGE"), null, default).Count());
+        TestAssert.Equal(2, renderer.RenderPagesAsync(Boundary("PAGE"), null, default).ToBlockingEnumerable().Count());
         var diagnostics = new List<OoxPdfDiagnostic>();
         var source = Boundary("NUMPAGES");
-        var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+        var pages = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(2, pages.Length);
         TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
             "Restoring supported math may change the total; one confirmation preserves it with the actual count.");
@@ -426,7 +426,7 @@ internal static partial class DocxInlineCompositionTests
             "A stable confirmed count publishes the completed math resources instead of the initial omission.");
         using var canceled = new CancellationTokenSource();
         canceled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, canceled.Token).ToArray());
+        TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, canceled.Token).ToBlockingEnumerable().ToArray());
     }
 
     public static void DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice()
@@ -442,7 +442,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var document = DocxTests.ReadDocx(input, mode);
             var page = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
-                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(1, page.Images.Count);
             var image = System.Text.RegularExpressions.Regex.Match(page.Content,
                 @"(?<width>-?[\d.]+) 0 0 (?<height>-?[\d.]+) (?<x>-?[\d.]+) (?<y>-?[\d.]+) cm\s*/" + page.Images.Single().ResourceName + @" Do");
@@ -475,7 +475,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = System.Text.RegularExpressions.Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
                 .Normalize(NormalizationForm.FormKC), @"\s", "");
@@ -575,7 +575,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = System.Text.RegularExpressions.Regex.Replace(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText))
                 .Normalize(NormalizationForm.FormKC), @"\s", "");
             TestAssert.Equal(4, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -641,7 +641,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(single ? 1 : 2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
             TestAssert.Contains("mark" + (start == 1 ? "i" : "xii") + "edge", System.Text.RegularExpressions.Regex.Replace(text, @"\s", ""));
@@ -665,7 +665,7 @@ internal static partial class DocxInlineCompositionTests
             bool review = group.Key.Mode == "all-word-compatible";
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
-                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(12, pages.Length);
             foreach (var row in group)
             {
@@ -721,7 +721,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var document = DocxTests.ReadDocx(input, mode);
             var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
-                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(10, pages.Length);
             foreach (var row in group)
             {
@@ -752,7 +752,7 @@ internal static partial class DocxInlineCompositionTests
             bool review = group.Key == "all-word-compatible";
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
-                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(10, pages.Length);
             foreach (var row in group)
             {
@@ -821,7 +821,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string value in new[] { "Start", "middle", "End.", "rate", "time" })
                 TestAssert.Contains(value, string.Concat(text.Where(character => !char.IsWhiteSpace(character))));
@@ -870,7 +870,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
-                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages.Single()).ToArray();
             foreach (var container in group.GroupBy(row => row.GetProperty("Container").GetString()))
@@ -1233,7 +1233,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var document = DocxTests.ReadDocx(input, mode);
             var page = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
-                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
             var start = shows.Single(show => show.Text.TrimStart().StartsWith("Sta", StringComparison.Ordinal));
             TestAssert.True(Math.Abs(start.Y - row.GetProperty("BaselineY").GetDouble()) < .5d,
@@ -1291,8 +1291,8 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var before = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
-            var after = renderer.RenderBlankPages(split, diagnostics.Add, default).ToArray();
+            var before = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(split, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string Text(IEnumerable<Lokad.OoxPdf.Pdf.PdfPage> pages) => string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(System.Text.RegularExpressions.Regex.Replace(Text(before), @"\s", ""),
                 System.Text.RegularExpressions.Regex.Replace(Text(after), @"\s", ""));
@@ -1385,7 +1385,7 @@ internal static partial class DocxInlineCompositionTests
             });
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).ToArray();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Single().Annotations.Count(annotation => annotation.Destination is not null));
             TestAssert.Equal(includeMath ? 2 : 0, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
                 .Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1405,7 +1405,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1508,7 +1508,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
@@ -1531,7 +1531,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
             var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var fills = System.Text.RegularExpressions.Regex.Matches(page.Content,
                 @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
                 .Cast<System.Text.RegularExpressions.Match>().Select(match => (
@@ -1607,7 +1607,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(resolver, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("ratetime", StringSplitOptions.None).Length - 1);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Tabs cannot discard the supported formulas.");
@@ -1736,7 +1736,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).Single();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var start = shows.Single(show => show.Text.TrimStart().StartsWith("Sta", StringComparison.Ordinal));
             double startX = VisibleTextStartX(start);
@@ -1784,7 +1784,7 @@ internal static partial class DocxInlineCompositionTests
             }, partOverride: container == "footer" ? "word/math-tabs-footer.xml" : null);
             var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).Single();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
                 .Select(resource => resource.Font).ToHashSet();
             var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
@@ -1841,7 +1841,7 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(input, mode);
             var renderer = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(renderer.RenderBlankPages(document, null, default).Single());
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single());
             double leading = shows.Single(show => show.Text.StartsWith("Leading paragraph.", StringComparison.Ordinal)).Y;
             foreach (var row in group)
             {
@@ -1891,7 +1891,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
                 TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
@@ -1914,7 +1914,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).Single();
+            var page = renderer.RenderPagesAsync(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
                 .Select(resource => resource.Font).ToHashSet();
@@ -1959,7 +1959,7 @@ internal static partial class DocxInlineCompositionTests
                     var equation = xml.Descendants(m + "oMath").First();
                     equation.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), new XElement(equation)));
                 });
-                var page = renderer.RenderBlankPages(document, null, default).Single();
+                var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
                 var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
                     .Select(resource => resource.Font).ToHashSet();
                 var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => mathFonts.Contains(show.Font))
@@ -2011,7 +2011,7 @@ internal static partial class DocxInlineCompositionTests
             });
         var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        var page = renderer.RenderBlankPages(document, null, default).Single();
+        var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
         var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
             .Select(resource => resource.Font).ToHashSet();
         var glyphs = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
@@ -2097,7 +2097,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = renderer.RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).Single();
+            var page = renderer.RenderPagesAsync(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
                 .Select(resource => resource.Font).ToHashSet();
@@ -2130,7 +2130,7 @@ internal static partial class DocxInlineCompositionTests
             });
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var mathFonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
                 .Select(resource => resource.Font).ToHashSet();
             var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
@@ -2159,7 +2159,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
                 "Malformed grouping retains its source-line fallback.");
             TestAssert.True(pages.All(page => page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
@@ -2178,7 +2178,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             foreach (string glyph in new[] { "α", "+", "β", "=", "γ" })
                 TestAssert.Equal(1, text.Split(glyph, StringSplitOptions.None).Length - 1);
@@ -2200,7 +2200,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(2, text.Split("x+2y", StringSplitOptions.None).Length - 1);
             TestAssert.Equal(2, text.Split("a+b=c", StringSplitOptions.None).Length - 1);
@@ -2223,7 +2223,7 @@ internal static partial class DocxInlineCompositionTests
             var document = ReadMutation("CompositionProbes/math-table-boundary-after" + suffix, mode, false, false);
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             int expectedPage = suffix.Contains("cant-split", StringComparison.Ordinal) || suffix.Contains("tight", StringComparison.Ordinal) ? 1 : 0;
             TestAssert.Contains("x+2y", DocxPageFootnoteNumberingTests.DecodeText(pages[expectedPage]).Normalize(NormalizationForm.FormKC));
             var snapshot = renderer.InspectLayout(document);
@@ -2262,7 +2262,7 @@ internal static partial class DocxInlineCompositionTests
                 double width = renderer.InspectLayout(document).Pages.Single().TableRows[0].Cells[1].Width;
                 TestAssert.True(width > originalWidth, "Additional measured inline content must contribute to autofit width.");
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
                 TestAssert.Equal(duplicate ? 8 : 4, text.Split("x+2y", StringSplitOptions.None).Length - 1);
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION" || d.PartName != document.MainPartName),
@@ -2282,7 +2282,7 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(path, mode);
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             var targets = pages.SelectMany(page => page.Annotations).Where(annotation => annotation.Destination is not null)
                 .Select(annotation => annotation.Destination!.Value).ToArray();
             var prefixes = renderer.InspectTextEmission(document).Lines.SelectMany(line => line.Segments)
@@ -2342,7 +2342,7 @@ internal static partial class DocxInlineCompositionTests
             var after = renderer.InspectLayout(hidden).Pages.Single().Items.Single(item => item.Kind == "Equation");
             TestAssert.True(before.X == after.X && before.Y == after.Y && before.Width == after.Width && before.Height == after.Height,
                 "Invisible source prose must not alter mathematical style, alignment or occupied geometry.");
-            var pages = renderer.RenderBlankPages(hidden, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(hidden, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             TestAssert.True(!text.Contains("Invisible", StringComparison.Ordinal), "Hidden prose cannot paint.");
             TestAssert.Equal(1, text.Normalize(NormalizationForm.FormKC).Split("x+2y", StringSplitOptions.None).Length - 1);
@@ -2393,7 +2393,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(ReadMutation("CompositionProbes/" + id, mode, transformed, transformed), diagnostics.Add, default).Single();
+                .RenderPagesAsync(ReadMutation("CompositionProbes/" + id, mode, transformed, transformed), diagnostics.Add, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
             var math = shows.Where(show => fonts.Contains(show.Font)).ToArray();
@@ -2458,7 +2458,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).Single();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, mode), diagnostics.Add, default).ToBlockingEnumerable().Single();
             var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
             var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
             string expectedText = row.GetProperty("MathText").GetString()!;
@@ -2537,7 +2537,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, diagnostics.Add, default).Single();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
             var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
             TestAssert.Equal(row.GetProperty("MathText").GetString(), string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
@@ -2587,7 +2587,7 @@ internal static partial class DocxInlineCompositionTests
                     "Word's math-only groups center independently of surrounding paragraph alignment.");
             }
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(11, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC)
                 .Split("x+2y", StringSplitOptions.None).Length - 1);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "All fitting group and mixed-row formulas must survive.");
@@ -2630,7 +2630,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
             var destinations = pages.SelectMany(page => page.Annotations).Where(a => a.Destination is not null)
                 .Select(a => a.Destination!.Value).ToArray();
             TestAssert.Equal(4, destinations.Length);
@@ -2657,7 +2657,7 @@ internal static partial class DocxInlineCompositionTests
             var document = source with { BodyElements = [new DocxParagraphElement(link), .. source.BodyElements] };
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             var annotation = pages.SelectMany(page => page.Annotations).SingleOrDefault(a => a.Destination is not null);
             TestAssert.True(annotation.Destination is { PageIndex: >= 0, Top: > 0d },
                 "A painted equation-only bookmark must retain its internal link destination: " + fixture + "/" + mode);
@@ -2676,7 +2676,7 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(path, mode);
             var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             TestAssert.Contains("Following body", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
         }
@@ -2690,7 +2690,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(ReadMutation("Composition/report", mode, false, false), null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(ReadMutation("Composition/report", mode, false, false), null, default).ToBlockingEnumerable().ToArray();
             // Independent Word exports keep these sections on the same source
             // pages in both modes, including the header, table, image and note.
             TestAssert.Equal(2, pages.Length);
@@ -2759,7 +2759,7 @@ internal static partial class DocxInlineCompositionTests
             "word/header1.xml");
         var diagnostics = new List<OoxPdfDiagnostic>();
         var output = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
         TestAssert.True(output.Length != 0 && diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION" && d.PartName == "/word/header1.xml") == 1 &&
             diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION" && d.PartName == "/word/header1.xml") == 1,
             "A genuinely unsupported third equation retains the part warning while supported neighbors still paint.");
@@ -2805,7 +2805,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(ReadPlacedComposition(mode, placement), diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(ReadPlacedComposition(mode, placement), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.True(text.Contains("x+2y", StringComparison.Ordinal) && text.Contains("a+b=c", StringComparison.Ordinal),
                 "Both supported mathematical source objects reach the PDF in " + placement + "/" + mode);
@@ -2828,7 +2828,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.True(text.Split("x+2y", StringSplitOptions.None).Length - 1 == 3,
                 "All three source fractions must reach the PDF in " + mode);
@@ -2961,9 +2961,9 @@ internal static partial class DocxInlineCompositionTests
             var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
             var renderer = new DocxRenderer(null, mode, geometry);
-            var before = renderer.RenderBlankPages(ReadMutation(fixture, mode, false, false), null, default).ToArray();
+            var before = renderer.RenderPagesAsync(ReadMutation(fixture, mode, false, false), null, default).ToBlockingEnumerable().ToArray();
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var after = renderer.RenderBlankPages(ReadMutation(fixture, mode, true, true), diagnostics.Add, default).ToArray();
+            var after = renderer.RenderPagesAsync(ReadMutation(fixture, mode, true, true), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string Text(IEnumerable<Lokad.OoxPdf.Pdf.PdfPage> pages) =>
                 string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(Text(before), Text(after));

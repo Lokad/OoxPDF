@@ -112,7 +112,7 @@ internal static partial class DocxInlineCompositionTests
             var paragraph = source.Paragraphs.Single();
             double size = paragraph.Runs.Where(run => run.VerticalAlignment == DocxRunVerticalAlignment.Baseline && run.Text.Length != 0).Min(run => run.FontSize);
             var pages = new DocxRenderer(resolver, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
-                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(source, null, default).ToArray();
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.True(pages.Length > 1, "The paragraph must cross a physical page boundary.");
             if (requireIndependentGeometry)
             {

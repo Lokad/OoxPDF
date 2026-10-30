@@ -50,7 +50,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var document = ReadMutation(CellStructureFixture(story, kind), OoxPdfDocxMarkupMode.AllMarkup, false, false);
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup,
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             string text = DocxPageFootnoteNumberingTests.DecodeText(page);
             string label = kind == "ins" ? "Inserted Cells" : "Deleted Cells";
             if (story == "body") TestAssert.Contains(label, text);

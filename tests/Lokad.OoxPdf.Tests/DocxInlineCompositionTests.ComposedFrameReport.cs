@@ -71,7 +71,7 @@ internal static partial class DocxInlineCompositionTests
             var source = DocxTests.ReadDocx(input, mode);
             var diagnostics = new List<Diagnostics.OoxPdfDiagnostic>();
             var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, diagnostics.Add, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).Select(show => (Page: index + 1, Height: page.Height, Show: show))).ToArray();
             if (row.TryGetProperty("WordFieldGlyphs", out var fieldGlyphs))

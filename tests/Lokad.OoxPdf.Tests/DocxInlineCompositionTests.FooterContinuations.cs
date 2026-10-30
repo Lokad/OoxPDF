@@ -33,7 +33,7 @@ internal static partial class DocxInlineCompositionTests
                 var document = ReadMutation("InlineBoxMath/" + id, mode, false, split, partOverride: part);
                 var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                var page = renderer.RenderBlankPages(document, null, default).Single();
+                var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
                 string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text))
                     .Normalize(NormalizationForm.FormKC);
                 foreach (string expected in new[] { "Before public math table.", "After public math table.", "Before inline",
@@ -55,7 +55,7 @@ internal static partial class DocxInlineCompositionTests
                 }
                 using var cancelled = new CancellationTokenSource();
                 cancelled.Cancel();
-                TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(document, null, cancelled.Token).ToArray());
+                TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null, cancelled.Token).ToBlockingEnumerable().ToArray());
             }
         }
     }

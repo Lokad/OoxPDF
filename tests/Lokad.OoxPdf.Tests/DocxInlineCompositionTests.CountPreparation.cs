@@ -41,18 +41,18 @@ internal static partial class DocxInlineCompositionTests
         var source = PreparationCounterDocument(DocxFieldKind.NumPages, warnings: false);
         var resolver = new PreparationCountingResolver(new PortableRenderingTests.PinnedResolver());
         var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        var first = renderer.RenderBlankPages(source, null, default).ToArray();
+        var first = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
         int firstRequests = resolver.Requests;
-        var second = renderer.RenderBlankPages(source, null, default).ToArray();
+        var second = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
         TestAssert.True(firstRequests != 0 && resolver.Requests == firstRequests * 2,
             "Font preparation belongs to one conversion, even when source and renderer are reused.");
         TestAssert.Equal(first.Single().Content, second.Single().Content);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(source, null, cancellation.Token).ToArray());
+        TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, cancellation.Token).ToBlockingEnumerable().ToArray());
         TestAssert.Equal(firstRequests * 2, resolver.Requests);
         var other = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), OoxPdfDocxMarkupMode.Final,
-            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(source, null, default).Single();
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
         TestAssert.True(first.Single().Fonts.All(font => font.Font.Font.FamilyName.Contains("DejaVu Sans", StringComparison.Ordinal)) &&
             other.Fonts.All(font => font.Font.Font.FamilyName.Contains("DejaVu Math", StringComparison.Ordinal)),
             "A different resolver retains its own source faces.");
@@ -66,7 +66,7 @@ internal static partial class DocxInlineCompositionTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var renderer = new DocxRenderer(resolver, review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final,
             review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        var pages = renderer.RenderBlankPages(source, capture ? diagnostics.Add : null, default).ToArray();
+        var pages = renderer.RenderPagesAsync(source, capture ? diagnostics.Add : null, default).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(1, pages.Length);
         return (pages, resolver.Requests, diagnostics);
     }

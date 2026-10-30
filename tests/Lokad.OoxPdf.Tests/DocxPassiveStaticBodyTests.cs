@@ -27,13 +27,13 @@ internal static class DocxPassiveStaticBodyTests
         var plan = DocxFontPlan.Create(document, resolver, default);
         TestAssert.True(plan.Runs.Any(run => ReferenceEquals(run.Run, mark)),
             "A glyphless picture paragraph's mark owns a resolved measurement font in Final mode.");
-        var measurer = new DocxFontPlanTextMeasurer(plan, null, default, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, null, default, resolver).GetAwaiter().GetResult();
         TestAssert.Equal(measurer.MeasureSingleLineHeight(document.Paragraphs[0].Runs[0], 20d),
             measurer.MeasureSingleLineHeight(mark, 20d));
         var parent = DocxTests.ReadDocx(Case("CompositionProbes/minimum-passive-picture-header-ordinary11.docx"), OoxPdfDocxMarkupMode.Final);
         var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        TestAssert.Equal(renderer.RenderBlankPages(parent, null, default).Single().Fonts.Count,
-            renderer.RenderBlankPages(document, null, default).Single().Fonts.Count);
+        TestAssert.Equal(renderer.RenderPagesAsync(parent, null, default).ToBlockingEnumerable().Single().Fonts.Count,
+            renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single().Fonts.Count);
     }
 
     public static void DocxStaticPictureOnlyFramesMatchIndependentWord()
@@ -100,7 +100,7 @@ internal static class DocxPassiveStaticBodyTests
             cancelled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() =>
                 new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                    .RenderBlankPages(document, null, cancelled.Token).ToArray());
+                    .RenderPagesAsync(document, null, cancelled.Token).ToBlockingEnumerable().ToArray());
         }
     }
 
@@ -164,7 +164,7 @@ internal static class DocxPassiveStaticBodyTests
                 }
 
             (int Page, string Text, double X, double Y, double Size)[] Shows(string path) =>
-                new DocxRenderer(resolver, mode, geometry).RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default)
+                new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable()
                     .SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                         .Where(show => show.Text.Length != 0).Select(show =>
                             (index + 1, show.Text.Normalize(NormalizationForm.FormKC), show.X, page.Height - show.Y, show.Size)))
@@ -227,7 +227,7 @@ internal static class DocxPassiveStaticBodyTests
             (int Page, double X, double Y, string Text)[] Lines(string path)
             {
                 var pages = new DocxRenderer(resolver, mode, geometry)
-                    .RenderBlankPages(DocxTests.ReadDocx(path, mode), null, default).ToArray();
+                    .RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
                 if (path == input && row.TryGetProperty("ExpectedInlineImageCount", out var count))
                     TestAssert.Equal(count.GetInt32(), pages.Sum(page => page.Images.Count));
                 if (path == input && row.TryGetProperty("ExpectedVectorPaint", out var vector) && vector.GetBoolean())
@@ -322,8 +322,8 @@ internal static class DocxPassiveStaticBodyTests
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, default),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), default, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, default),
+            resolver.Resolve(new FontRequest("Calibri", false, false)), default, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, default);
     }
 

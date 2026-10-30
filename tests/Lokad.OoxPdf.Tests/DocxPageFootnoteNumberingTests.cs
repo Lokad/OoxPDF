@@ -139,7 +139,7 @@ internal static partial class DocxPageFootnoteNumberingTests
         {
             DocxDocument source = ReadFixture(runBreak: true, format: "decimalZero", start: 9);
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            PdfPage[] pages = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            PdfPage[] pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             for (int i = 0; i < pages.Length; i++)
             {
@@ -221,7 +221,7 @@ internal static partial class DocxPageFootnoteNumberingTests
         {
             DocxDocument source = ReadMultipleFixture(runBreak: true, format: "decimalZero", start: 9);
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            PdfPage[] pages = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();
+            PdfPage[] pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             for (int page = 0; page < pages.Length; page++)
             {

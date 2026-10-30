@@ -30,7 +30,7 @@ internal static partial class DocxInlineCompositionTests
             double gap = preceding.Y - next.Y - next.Height;
             TestAssert.True(Math.Abs(gap - row.GetProperty("TableGap").GetDouble()) < .5d,
                 $"Authored rows keep Word's shared body frame and intervening paragraph: {id}/{mode}/gap={gap}.");
-            var page = renderer.RenderBlankPages(source, null, default).Single();
+            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             var following = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Single(show => show.Text == "Following tables.");
             TestAssert.True(Math.Abs(following.Y - row.GetProperty("FollowingY").GetDouble()) < .5d,

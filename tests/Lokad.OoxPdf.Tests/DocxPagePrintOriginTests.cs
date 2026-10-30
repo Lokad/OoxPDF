@@ -21,7 +21,7 @@ internal static class DocxPagePrintOriginTests
             {
                 string id = family == "composed" ? $"page-origin-first{firstSize}-continuation11" : $"page-origin-{family}-first{firstSize}";
                 var source = DocxTests.ReadDocx(Case(id + ".docx"), final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup);
-                var pages = Renderer(new TestFaceFontResolver(), final).RenderBlankPages(source, null, default).ToArray();
+                var pages = Renderer(new TestFaceFontResolver(), final).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(2, pages.Length);
                 var body = Anchor(pages, "Public continuation body.");
                 var note = Anchor(pages, "All quantities");
@@ -45,7 +45,7 @@ internal static class DocxPagePrintOriginTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
             bool final = row.GetProperty("Mode").GetString() == "final-preserve";
             var source = DocxTests.ReadDocx(input, final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup);
-            var pages = Renderer(null, final).RenderBlankPages(source, null, default).ToArray();
+            var pages = Renderer(null, final).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(row.GetProperty("WordPages").GetInt32(), pages.Length);
             foreach (var expected in row.GetProperty("WordAnchors").EnumerateArray())
             {
@@ -68,7 +68,7 @@ internal static class DocxPagePrintOriginTests
         {
             var source = WithContinuationBookmark(Case($"page-origin-first{firstSize}-continuation11.docx"));
             var renderer = Renderer(new TestFaceFontResolver(), final: false);
-            var pages = renderer.RenderBlankPages(source, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var snapshot = renderer.InspectTextEmission(source);
             TestAssert.Equal(2, pages.Length);
             var body = Anchor(pages, "Public continuation body.");
@@ -107,9 +107,9 @@ internal static class DocxPagePrintOriginTests
         {
             var source = WithContinuationBookmark(Case($"page-origin-first{firstSize}-continuation11.docx"), exact: true);
             var fonts = new TestFaceFontResolver();
-            var printed = Renderer(fonts, final: false).RenderBlankPages(source, null, default).ToArray();
+            var printed = Renderer(fonts, final: false).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var nominal = new DocxRenderer(fonts, OoxPdfDocxMarkupMode.AllMarkup,
-                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(source, null, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, printed.Length);
             TestAssert.Equal(2, nominal.Length);
             var actual = Anchor(printed, "Public continuation body.");

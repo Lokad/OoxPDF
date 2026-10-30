@@ -50,7 +50,7 @@ internal static partial class DocxInlineCompositionTests
                 body.ReplaceNodes(new XElement(body.Element(w + "p")!), new XElement(body.Element(w + "sectPr")!));
             });
         var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(source, null, default).Single();
+            .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
         TestAssert.True(page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
             "The bar uses metric-only preparation without a dummy glyph or mathematical PDF subset.");
         TestAssert.True(Regex.IsMatch(page.Content, @"(?m)^0 g\r?\n[-\d.]+ [-\d.]+ [\d.]+ [\d.]+ re f\r?$"),

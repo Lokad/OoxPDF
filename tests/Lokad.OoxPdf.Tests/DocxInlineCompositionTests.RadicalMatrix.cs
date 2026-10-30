@@ -57,7 +57,7 @@ internal static partial class DocxInlineCompositionTests
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                var page = renderer.RenderBlankPages(source, diagnostics.Add, default).Single();
+                var page = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                     "Supported container/matrix composition survives ordinary cell placement and neutral source metadata.");
                 var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true);

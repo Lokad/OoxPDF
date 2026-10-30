@@ -39,7 +39,7 @@ internal static partial class DocxInlineCompositionTests
                         }
                 }, partOverride: part);
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(document, null, default).Single();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var targetText = new HashSet<string>(["1.", "Summary: "], StringComparer.Ordinal);
             var matched = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match block in Regex.Matches(page.Content, @"(?m)^BT\r?\n.*?^ET\r?$", RegexOptions.Singleline))
@@ -104,7 +104,7 @@ internal static partial class DocxInlineCompositionTests
                 }
                 var page = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                     ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                    .RenderBlankPages(source, null, default).Single();
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
                 var fonts = page.Fonts.Where(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(resource => resource.Font).ToHashSet();
                 var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Where(show => fonts.Contains(show.Font)).ToArray();
                 TestAssert.Equal(18, math.Length);

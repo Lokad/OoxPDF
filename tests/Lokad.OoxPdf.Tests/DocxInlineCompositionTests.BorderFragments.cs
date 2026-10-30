@@ -37,7 +37,7 @@ internal static partial class DocxInlineCompositionTests
                 var document = DocxTests.ReadDocx(input, mode);
                 var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                var pages = renderer.RenderBlankPages(document, null, default).ToArray();
+                var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
                 var anchors = expected.GetProperty("WordProseAnchors").EnumerateArray().ToList();
                 if (expected.TryGetProperty("WordTailAnchors", out var tail)) anchors.AddRange(tail.EnumerateArray());
                 var sourceText = anchors.Select(anchor => anchor.GetProperty("Text").GetString()!).ToHashSet(StringComparer.Ordinal);
@@ -98,7 +98,7 @@ internal static partial class DocxInlineCompositionTests
                 if (compareWord) TestAssert.Equal(expected.GetProperty("WordFollowingAnchor").GetProperty("Page").GetInt32(), pages.Length);
                 using var canceled = new CancellationTokenSource();
                 canceled.Cancel();
-                TestAssert.Throws<OperationCanceledException>(() => renderer.RenderBlankPages(document, null, canceled.Token).ToArray());
+                TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null, canceled.Token).ToBlockingEnumerable().ToArray());
             }
         }
 

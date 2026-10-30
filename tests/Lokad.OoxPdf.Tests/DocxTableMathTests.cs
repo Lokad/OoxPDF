@@ -487,7 +487,7 @@ internal static class DocxTableMathTests
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages.Single()).ToArray();
             foreach (var row in group)
@@ -514,7 +514,7 @@ internal static class DocxTableMathTests
             var mode = review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final;
             var pages = new DocxRenderer(null, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(DocxTests.ReadDocx(input, mode), null, default).ToArray();
+                .RenderPagesAsync(DocxTests.ReadDocx(input, mode), null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             TestAssert.True(!DocxPageFootnoteNumberingTests.DecodeText(pages[0]).Contains("Review section 7.", StringComparison.Ordinal) &&
                 DocxPageFootnoteNumberingTests.DecodeText(pages[1]).Contains("Review section 7.", StringComparison.Ordinal),

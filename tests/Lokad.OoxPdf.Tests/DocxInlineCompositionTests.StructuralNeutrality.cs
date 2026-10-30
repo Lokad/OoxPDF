@@ -49,8 +49,8 @@ internal static partial class DocxInlineCompositionTests
                 wrapper.ReplaceWith(wrapper.Nodes());
             });
             var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.RenderBlankPages(source, null, default).Single();
-            var after = renderer.RenderBlankPages(neutral, null, default).Single();
+            var before = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            var after = renderer.RenderPagesAsync(neutral, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(after.Content, before.Content);
         }
     }

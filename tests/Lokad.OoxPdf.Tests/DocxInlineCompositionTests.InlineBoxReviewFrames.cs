@@ -28,7 +28,7 @@ internal static partial class DocxInlineCompositionTests
             var source = ReadMutation("InlineBoxMath/" + id, mode, false, false,
                 partOverride: row.GetProperty("MathPart").GetString());
             var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var math = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).Where(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
                     ReferenceEquals(font.Font, show.Font))).Select(show => (Page: index + 1, Height: page.Height, Show: show))).ToArray();

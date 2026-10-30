@@ -324,7 +324,7 @@ internal static partial class OoxMemoryAdmissionTests
     public static void StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose()
     {
         var page = new PdfPage(100d, 100d, "q\nQ\n");
-        var staged = PdfDocumentWriter.ProduceStagedPagesAsync([page], new(), null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+        var staged = PdfDocumentWriter.ProduceStagedPagesAsync(AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new(), null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
         var storage = staged.Staging;
         TestAssert.Equal(1, staged.Pages.Count);
         staged.Dispose();

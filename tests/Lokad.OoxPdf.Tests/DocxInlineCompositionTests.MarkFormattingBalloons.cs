@@ -58,7 +58,7 @@ internal static partial class DocxInlineCompositionTests
             var owners = paragraphs.SelectMany(p => p.Runs).ToArray();
             var marks = paragraphs.Select(p => p.ParagraphMarkRun).ToArray();
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
             if (final)
                 TestAssert.True(!shows.Any(show => show.Text.Trim() == "Formatted:"), "Final does not paint revision balloons.");

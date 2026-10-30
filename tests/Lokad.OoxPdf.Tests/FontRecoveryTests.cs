@@ -90,7 +90,7 @@ internal static class FontRecoveryTests
                 DocxDocument document = DocxTests.ReadDocx(path, mode);
                 var diagnostics = new DiagnosticCollector();
                 var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-                TestAssert.Equal(1, renderer.RenderBlankPages(document, diagnostics.Add, default).Count());
+                TestAssert.Equal(1, renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Count());
                 TestAssert.Equal(warns ? 1 : 0, diagnostics.Diagnostics.Count(d => d.Id == "FONT_MISSING_GLYPHS"));
                 TestAssert.Equal(warns, diagnostics.HasWarningsOrErrors);
                 if (hidden == "<w:vanish/>") {

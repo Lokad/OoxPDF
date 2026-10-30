@@ -260,7 +260,7 @@ internal static class DocxFieldsTests
         DocxTextEmissionLineSnapshot[] noteLines = renderer.InspectTextEmission(document).Lines
             .Where(line => line.StoryKind == "Footnote" || line.StoryKind == "Endnote")
             .ToArray();
-        PdfLinkAnnotation[] annotations = renderer.RenderBlankPages(document, null, CancellationToken.None)
+        PdfLinkAnnotation[] annotations = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .SelectMany(page => page.Annotations)
             .ToArray();
 

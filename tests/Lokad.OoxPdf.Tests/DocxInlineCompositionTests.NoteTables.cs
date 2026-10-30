@@ -104,8 +104,8 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
-            var after = renderer.RenderBlankPages(transformed, diagnostics.Add, default).ToArray();
+            var before = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(transformed, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(before.Length, after.Length);
             foreach (var pages in new[] { before, after })
             {

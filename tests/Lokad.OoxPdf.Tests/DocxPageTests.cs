@@ -240,7 +240,7 @@ internal static class DocxPageTests
             [body],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/header", annotation.Uri);
@@ -297,7 +297,7 @@ internal static class DocxPageTests
             [body],
             []);
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         PdfLinkAnnotation annotation = page.Annotations.Single();
         TestAssert.Equal("https://example.invalid/footer", annotation.Uri);

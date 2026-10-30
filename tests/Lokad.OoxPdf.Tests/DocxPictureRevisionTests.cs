@@ -35,7 +35,7 @@ internal static class DocxPictureRevisionTests
             var document = ReadSource(row, mode);
             var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
                 ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
-            var page = new DocxRenderer(resolver, mode, geometry).RenderBlankPages(document, null, default).Single();
+            var page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             int expected = row.TryGetProperty("ImageClips", out var clips) ? clips.GetArrayLength() : 1;
             TestAssert.Equal(expected, page.Images.Count);
             var officeClip = expected == 1 ? row.GetProperty("ImageClip") : clips[0];
@@ -115,7 +115,7 @@ internal static class DocxPictureRevisionTests
             var document = ReadSource(row, mode);
             var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
                 ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
-            var page = new DocxRenderer(resolver, mode, geometry).RenderBlankPages(document, null, default).Single();
+            var page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             int expected = row.TryGetProperty("ImageClips", out var clips) ? clips.GetArrayLength() : 1;
             TestAssert.Equal(expected, page.Images.Count);
             var officeClip = expected == 1 ? row.GetProperty("ImageClip") : clips[0];
@@ -190,7 +190,7 @@ internal static class DocxPictureRevisionTests
         TestAssert.True(paragraph.Images.All(image => ReferenceEquals(image.SourceRunStyle, owner)),
             "Pictures and text from the same source run must share their resolved owning style.");
         var page = new DocxRenderer(new MissingPictureFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
         TestAssert.Equal(2, page.Images.Count);
         TestAssert.True(ReferenceEquals(page.Images[0].Image, page.Images[1].Image),
             "Repeated source pictures must retain the existing decoded-image cache owner.");
@@ -226,7 +226,7 @@ internal static class DocxPictureRevisionTests
             var source = ReadSource(row, mode);
             var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
                 ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
-            var page = new DocxRenderer(resolver, mode, geometry).RenderBlankPages(source, null, default).Single();
+            var page = new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(2, page.Images.Count);
             var pictures = page.Images.Select(resource => Regex.Match(page.Content,
                 @"(?<w>[-\d.]+) 0 0 (?<h>[-\d.]+) (?<x>[-\d.]+) (?<y>[-\d.]+) cm\r?\n/" + Regex.Escape(resource.ResourceName) + " Do")).ToArray();
@@ -266,7 +266,7 @@ internal static class DocxPictureRevisionTests
             var imageOwners = DocxBlockTraversal.EnumerateSourceParagraphs(source).SelectMany(paragraph => paragraph.Images)
                 .Distinct<DocxInlineImage>(ReferenceEqualityComparer.Instance).ToArray();
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-                .RenderBlankPages(source, null, default).Single();
+                .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(1, page.Images.Count);
             string name = Regex.Escape(page.Images.Single().ResourceName);
             Match bitmap = Regex.Match(page.Content, @"(?<w>[-\d.]+) 0 0 (?<h>[-\d.]+) (?<x>[-\d.]+) (?<y>[-\d.]+) cm\r?\n/" + name + " Do");

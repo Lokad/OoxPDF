@@ -475,7 +475,7 @@ internal static class DocxPageMarkupTests
                 PageWidthPoints = 612d, PageHeightPoints = 792d
             };
             PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             int count = Regex.Matches(page.Content, @"18\s+-?[\d.]+\s+0\.72\s+[\d.]+\s+re\s+f\b").Count;
             TestAssert.Equal(gap ? 2 : 1, count);
         }
@@ -497,7 +497,7 @@ internal static class DocxPageMarkupTests
             BodyElements = [new DocxParagraphElement(changed), new DocxTableElement(table), new DocxParagraphElement(changed)]
         };
         PdfPage page = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
-            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, CancellationToken.None).Single();
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Equal(1, Regex.Matches(page.Content, @"18\s+-?[\d.]+\s+0\.72\s+[\d.]+\s+re\s+f\b").Count);
     }
 
@@ -532,7 +532,7 @@ internal static class DocxPageMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -580,7 +580,7 @@ internal static class DocxPageMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -641,7 +641,7 @@ internal static class DocxPageMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -705,7 +705,7 @@ internal static class DocxPageMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -754,7 +754,7 @@ internal static class DocxPageMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0 g", page.Content);
@@ -806,7 +806,7 @@ internal static class DocxPageMarkupTests
                 fontResolver: null,
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(document, null, CancellationToken.None)
+            .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Contains("0 g", page.Content);

@@ -38,7 +38,7 @@ internal static partial class DocxInlineCompositionTests
                 var source = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, diagnostics.Add, default).ToArray();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Merge continuations cannot remove their supported source mathematics.");
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
                 TestAssert.Equal(equations, text.Split("Before inline", StringSplitOptions.None).Length - 1);

@@ -71,7 +71,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(6, source.EquationParts.Sum(part => part.SourceCount));
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var renderer = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-                var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+                var pages = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 TestAssert.True(pages.Length >= 2, "The specification exercises page boundaries and repeated static content.");
                 // Portable faces have their own metrics. Native composed controls
                 // can independently qualify Word page membership when requested.

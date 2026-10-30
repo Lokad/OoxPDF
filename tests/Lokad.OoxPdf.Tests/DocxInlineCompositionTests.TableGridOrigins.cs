@@ -117,7 +117,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 var source = ReadMutation("TableGridOrigins/" + id, mode, transformed, transformed);
                 var pages = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
                 var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                     usePageCoordinates: true).Select(show => (Page: index + 1, Height: page.Height, Show: show))).ToArray();
                 var lines = shows.GroupBy(item => (item.Page, item.Show.Y)).Select(group => {

@@ -72,7 +72,7 @@ internal static partial class DocxInlineCompositionTests
                 "Parsed numbered marks own their shared paragraph source: " + id);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
             foreach (string label in new[] { "1.", "2.", "3." })
                 TestAssert.True(shows.Any(show => show.Text.Trim() == label && show.X >= 0d && show.X < page.Width && show.Y > 0d && show.Y < page.Height),

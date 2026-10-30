@@ -21,7 +21,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var source = ReadMutation("InlineBoxMath/" + id, mode, false, false);
             var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             string followingText = row.TryGetProperty("FollowingText", out var text) ? text.GetString()! : "After public math table.";
             var following = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).GroupBy(show => show.Y).Select(line =>

@@ -47,7 +47,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(first.ColorHex == "1964AE" && first.Underline && first.UnderlineValue == "double",
                 "First-run authored color/underline stay on their original owner.");
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true, includeTextTransforms: true).ToArray();
             foreach (var expected in labels)
                 TestAssert.True(shows.Any(show => show.Text.Trim() == expected.GetProperty("Text").GetString() && show.Y > 0d && show.Y < page.Height),

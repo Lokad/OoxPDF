@@ -48,7 +48,7 @@ internal static partial class DocxInlineCompositionTests
             string fixture = shape == "sole" ? "table-math-revision-row-del" : "row-visibility-" + shape + "-deleted";
             var document = ReadMutation("CompositionProbes/" + fixture, mode, false, false);
             var page = new DocxRenderer(resolver, mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, null, default).Single();
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             string text = DocxPageFootnoteNumberingTests.DecodeText(page);
             TestAssert.DoesNotContain("Summary:", text);
             TestAssert.DoesNotContain("share the same input series.", text);

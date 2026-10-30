@@ -2199,7 +2199,7 @@ internal static partial class OoxLimitsTests
         var run = new DocxTextRun("Hello", 11d, null, false, false, false, null, "Arial");
         var resolved = new DocxResolvedRunTypeface(run, ["Arial"], "Arial", "Arial", DocxTypefaceResolutionSource.Primary, null);
         var plan = new DocxFontPlan([resolved]);
-        var measurer = new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, null, CancellationToken.None).GetAwaiter().GetResult();
         System.Reflection.FieldInfo field = typeof(DocxFontPlanTextMeasurer).GetField("runsByReference", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected run identity index.");
         MethodInfo resolve = typeof(DocxFontPlanTextMeasurer).GetMethod("ResolveRun", BindingFlags.NonPublic | BindingFlags.Instance)

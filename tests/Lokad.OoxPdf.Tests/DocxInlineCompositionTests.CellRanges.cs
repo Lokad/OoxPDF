@@ -29,7 +29,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("BalloonFrames").GetArrayLength(), balloons.Count);
             TestAssert.Equal(2, balloons.Sum(balloon => balloon.CandidateCount));
             TestAssert.Equal(2, balloons.Sum(balloon => balloon.RevisionCandidateCount));
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
             var math = shows.Where(show => fonts.Contains(show.Font)).ToArray();

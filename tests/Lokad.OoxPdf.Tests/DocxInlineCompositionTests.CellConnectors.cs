@@ -22,7 +22,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(Math.Abs(anchor.AnchorConnectorX - row.GetProperty("FirstAnchorX").GetDouble()) < 1d &&
                 Math.Abs(anchor.AnchorY - row.GetProperty("FirstAnchorY").GetDouble()) < 1d,
                 $"The first structural connector retains its independent source frame: {id}/{anchor.AnchorConnectorX}/{anchor.AnchorY}.");
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             string stroke = row.GetProperty("StrokeColor").GetString()!.Replace("RG:", "", StringComparison.Ordinal).Replace(',', ' ') + " RG";
             TestAssert.Contains(stroke, page.Content);
         }
@@ -44,7 +44,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(folder, id + ".docx")))));
             var document = ReadMutation("CompositionProbes/" + id, OoxPdfDocxMarkupMode.AllMarkup, false, false);
             var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
             var math = shows.Where(show => fonts.Contains(show.Font)).ToArray();

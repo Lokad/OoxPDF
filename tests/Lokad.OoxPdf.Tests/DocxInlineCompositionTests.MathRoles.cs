@@ -28,7 +28,7 @@ internal static partial class DocxInlineCompositionTests
                 });
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(unsupported, diagnostics.Add, default).Single();
+                .RenderPagesAsync(unsupported, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
             TestAssert.True(!DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Any(show => fonts.Contains(show.Font)) &&
                 diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),

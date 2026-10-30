@@ -61,7 +61,7 @@ internal static class DocxMetGlyphAdvanceTests
         TestAssert.Equal(old.Pages.Count, current.Pages.Count);
         TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(adjusted, current, owners), "Each complete note retains its source owner's page.");
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        var pages = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();
+        var pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));
         for (int i = 0; i < pages.Length; i++) TestAssert.True(pages[i].Annotations.All(a => a.Destination!.Value.PageIndex == i), "Actual destinations retain the complete owned page.");
     }

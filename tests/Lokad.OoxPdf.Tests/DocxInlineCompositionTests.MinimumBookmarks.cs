@@ -20,7 +20,7 @@ internal static partial class DocxInlineCompositionTests
                 var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
                 var source = DocxTests.ReadDocx(path, mode);
                 var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
                 var shows = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)).ToArray();
                 foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
@@ -40,8 +40,8 @@ internal static partial class DocxInlineCompositionTests
         {
             var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            double[] Origins(string name) => renderer.RenderBlankPages(DocxTests.ReadDocx(NestedMathCasePath(
-                    $"minimum-local-leading-{name}.docx"), mode), null, default)
+            double[] Origins(string name) => renderer.RenderPagesAsync(DocxTests.ReadDocx(NestedMathCasePath(
+                    $"minimum-local-leading-{name}.docx"), mode), null, default).ToBlockingEnumerable()
                 .SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true))
                 .Where(show => show.Text.StartsWith("Public minimum ", StringComparison.Ordinal))
                 .Select(show => show.Y).ToArray();
@@ -66,13 +66,13 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var control = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-control.docx"), mode);
-            var before = renderer.RenderBlankPages(control, null, default).ToArray();
+            var before = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
             foreach (string kind in new[] { "highlight", "shading" })
             {
                 var source = DocxTests.ReadDocx(NestedMathCasePath($"minimum-paint-{context}-{kind}.docx"), mode);
                 TestAssert.True(source.Paragraphs.SelectMany(p => p.Runs).Any(run => kind == "highlight"
                     ? run.HighlightValue == "yellow" : run.ShadingFillHex == "FFFF00"), "The paint control must retain its source background.");
-                var after = renderer.RenderBlankPages(source, null, default).ToArray();
+                var after = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(before.Length, after.Length);
                 for (int page = 0; page < before.Length; page++)
                 {
@@ -96,12 +96,12 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var control = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-control.docx"), mode);
-            var before = renderer.RenderBlankPages(control, null, default).ToArray();
+            var before = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
             foreach (string kind in new[] { "external", "internal" })
             {
                 var source = DocxTests.ReadDocx(NestedMathCasePath($"minimum-navigation-{context}-{kind}.docx"), mode);
                 TestAssert.Equal(1, source.Paragraphs.Sum(p => p.Hyperlinks.Count));
-                var after = renderer.RenderBlankPages(source, null, default).ToArray();
+                var after = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(before.Length, after.Length);
                 for (int page = 0; page < before.Length; page++)
                 {
@@ -140,8 +140,8 @@ internal static partial class DocxInlineCompositionTests
                 string.Concat(annotatedParagraphs.SelectMany(p => p.Runs).Select(r => r.Text)));
             var renderer = new DocxRenderer(new TestFaceFontResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.RenderBlankPages(source, null, default).ToArray();
-            var after = renderer.RenderBlankPages(annotated, null, default).ToArray();
+            var before = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(annotated, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(before.Length, after.Length);
             for (int page = 0; page < before.Length; page++)
             {

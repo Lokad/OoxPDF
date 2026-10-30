@@ -32,7 +32,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(Math.Abs(balloon.Y + balloon.Height - expected.GetProperty("Y").GetDouble() - expected.GetProperty("Height").GetDouble()) < 1d,
                 $"A complete exact cell retains its independently measured printed top: {id}/{balloon.Y + balloon.Height}.");
             if (!row.TryGetProperty("ProseAnchors", out var following)) continue;
-            var page = renderer.RenderBlankPages(document, null, default).Single();
+            var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             foreach (var anchor in following.EnumerateArray())
             {

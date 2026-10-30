@@ -20,7 +20,7 @@ internal static partial class DocxInlineCompositionTests
             var source = DocxTests.ReadDocx(path, mode);
             var renderer = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = renderer.RenderBlankPages(source, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
             int mathematicalGlyphs = pages.Sum(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Count(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))));

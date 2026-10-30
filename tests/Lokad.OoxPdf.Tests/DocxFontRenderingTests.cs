@@ -61,7 +61,7 @@ internal static class DocxFontRenderingTests
         var resolver = new DocxTests.SingleResolutionFontResolver(font.Value.Resolution);
         DocxFontPlan plan = DocxFontPlan.Create(document, resolver, CancellationToken.None);
 
-        double measured = new DocxFontPlanTextMeasurer(plan, null, CancellationToken.None).MeasureText(run, text, run.FontSize);
+        double measured = DocxFontPlanTextMeasurer.CreateAsync(plan, null, CancellationToken.None).GetAwaiter().GetResult().MeasureText(run, text, run.FontSize);
         double expected = DocxTests.MeasureOpenTypeText(font.Value.Font, text, run.FontSize);
 
         TestAssert.True(Math.Abs(measured - expected) < 0.000001d, "Font-plan measurement should use the resolved OpenType face, including TTC face index, instead of a hard-coded font.");
@@ -644,7 +644,7 @@ internal static class DocxFontRenderingTests
         DocxDocument document = DocxTests.CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
         var diagnostics = new List<OoxPdfDiagnostic>();
         List<PdfPage> pages = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).ToList();
+            .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
 
         TestAssert.Equal(1, pages.Count);
         PdfPage page = pages[0];
@@ -670,11 +670,11 @@ internal static class DocxFontRenderingTests
         DocxDocument document = DocxTests.CreateFontPlanDocument(run, new DocxFontCatalog([], DocxThemeFonts.Empty));
         var cffDiagnostics = new List<OoxPdfDiagnostic>();
         PdfPage cffPage = new DocxRenderer(new DocxTests.CffPrimaryFontResolver(cffBytes, fallbackBytes), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, cffDiagnostics.Add, CancellationToken.None)
+            .RenderPagesAsync(document, cffDiagnostics.Add, CancellationToken.None).ToBlockingEnumerable()
             .Single();
         var ttDiagnostics = new List<OoxPdfDiagnostic>();
         PdfPage ttPage = new DocxRenderer(new DocxTests.CffPrimaryFontResolver(cffBytes, fallbackBytes, emitCff: false), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, ttDiagnostics.Add, CancellationToken.None)
+            .RenderPagesAsync(document, ttDiagnostics.Add, CancellationToken.None).ToBlockingEnumerable()
             .Single();
 
         TestAssert.Equal(ttPage.Content, cffPage.Content);
@@ -714,7 +714,7 @@ internal static class DocxFontRenderingTests
                 resolver,
                 OoxPdfDocxMarkupMode.Final,
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).ToList();
+            .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
 
         TestAssert.Equal(1, pages.Count);
         PdfPage page = pages[0];
@@ -749,7 +749,7 @@ internal static class DocxFontRenderingTests
                 resolver,
                 OoxPdfDocxMarkupMode.Final,
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .RenderBlankPages(document, diagnostics.Add, CancellationToken.None).ToList();
+            .RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToList();
 
         TestAssert.Equal(1, pages.Count);
         TestAssert.True(

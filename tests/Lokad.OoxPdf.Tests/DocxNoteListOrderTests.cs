@@ -58,7 +58,7 @@ internal static class DocxNoteListOrderTests
             var source = DocxTests.ReadDocx(Path.Combine(Cases, control.GetProperty("Input").GetString()!), mode);
             var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderBlankPages(source, null, default).ToArray();
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(control.GetProperty("ExpectedPages").GetInt32(), pages.Length);
             string text = string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)).Select(show => show.Text));
             TestAssert.Equal(1, Regex.Matches(text, @"(?<![0-9])1\.").Count);

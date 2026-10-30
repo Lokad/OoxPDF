@@ -29,7 +29,7 @@ internal static partial class DocxInlineCompositionTests
                 .SelectMany(value => value).ToArray();
             var sourceRuns = paragraphs.SelectMany(paragraph => paragraph.Runs).ToArray();
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, null, default).Single();
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).ToArray();
             var labels = shows.Where(show => show.Text.Trim() is "1." or "2." or "3.").ToArray();
             TestAssert.Equal("1.,2.,3.", string.Join(',', labels.Select(show => show.Text.Trim()).Distinct()));

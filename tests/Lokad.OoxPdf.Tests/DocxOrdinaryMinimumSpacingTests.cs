@@ -49,7 +49,7 @@ internal static class DocxOrdinaryMinimumSpacingTests
             preserve.Segments.First().BaselineY - word.Segments.First().BaselineY,
             "Actual requested Word emission moves minimum excess; Preserve keeps its authored baseline.");
         foreach (var mode in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
-            TestAssert.Equal(0, Renderer(mode).RenderBlankPages(source, null, CancellationToken.None).Sum(p => p.Annotations.Count));
+            TestAssert.Equal(0, Renderer(mode).RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().Sum(p => p.Annotations.Count));
     }
 
     public static void DocxOrdinaryMinimumSpacingRetainsInheritedRawTokensAndCapacity()
@@ -82,7 +82,7 @@ internal static class DocxOrdinaryMinimumSpacingTests
             TestAssert.True(pair.First.Items.OfType<DocxTextLineLayout>().Select(l => l.SourceBlockIndex)
                 .SequenceEqual(pair.Second.Items.OfType<DocxTextLineLayout>().Select(l => l.SourceBlockIndex)), "Every actual body owner stays on its original page.");
         TestAssert.Equal(0, Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .RenderBlankPages(source, null, CancellationToken.None).Sum(p => p.Annotations.Count));
+            .RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().Sum(p => p.Annotations.Count));
     }
 
     public static void DocxOrdinaryMinimumSpacingKeepsUnsupportedSpacingRunsAndFlow()
@@ -119,8 +119,8 @@ internal static class DocxOrdinaryMinimumSpacingTests
     private static DocxLayout Layout(DocxDocument document)
     {
         var resolver = new TestFaceFontResolver();
-        var measurer = new DocxFontPlanTextMeasurer(DocxFontPlan.Create(document, resolver, CancellationToken.None),
-            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver);
+        var measurer = DocxFontPlanTextMeasurer.CreateAsync(DocxFontPlan.Create(document, resolver, CancellationToken.None),
+            resolver.Resolve(new FontRequest("Calibri", false, false)), CancellationToken.None, resolver).GetAwaiter().GetResult();
         return new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, measurer, CancellationToken.None);
     }
     private static DocxDocument Read(int before, int after, Action<XDocument, XDocument>? modify = null)

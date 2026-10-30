@@ -56,7 +56,7 @@ internal static partial class DocxInlineCompositionTests
             var document = DocxTests.ReadDocx(input, mode);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(document, diagnostics.Add, default).Single();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var mathFonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
             var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
                 .Where(show => mathFonts.Contains(show.Font) && show.Text.Trim().Length != 0).ToArray();

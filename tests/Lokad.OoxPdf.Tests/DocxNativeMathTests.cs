@@ -80,7 +80,7 @@ internal static class DocxNativeMathTests
         {
             DocxDocument document = NamedFixture("docx-omml-static-" + owner + "-" + shape);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, default).Single();
+            PdfPage page = Renderer().RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
             TestAssert.Contains(meaning, decoded);
             TestAssert.Contains("Following public " + owner + " prose.", decoded);
@@ -92,7 +92,7 @@ internal static class DocxNativeMathTests
             { ("partial", 1, 0, 1), ("mixed-fallback", 1, 0, 1), ("shared-variants", 1, 0, 2), ("body-and-header", 2, 0, 1) })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var output = Renderer().RenderBlankPages(NamedFixture("docx-omml-static-guard-" + kind), diagnostics.Add, default).ToArray();
+            var output = Renderer().RenderPagesAsync(NamedFixture("docx-omml-static-guard-" + kind), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(pages, output.Length);
             TestAssert.True(approximated == diagnostics.Count(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
                 ignored == diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"),
@@ -121,7 +121,7 @@ internal static class DocxNativeMathTests
             TestAssert.True(!original.Display && ReferenceEquals(original, DocxMathParagraphPolicy.GetStandaloneRow(paragraph)),
                 "An isolated inline source owns standalone Office layout without rewriting its metadata.");
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, default).Single();
+            PdfPage page = Renderer().RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
             TestAssert.Contains(meaning, decoded);
             TestAssert.Contains("Before public math table.", decoded);
@@ -139,7 +139,7 @@ internal static class DocxNativeMathTests
             ("script", "αi2"), ("root", "√x+1"), ("wrap-fraction", "x+2y"), ("exact50-fraction", "x+2y") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-inline-" + suffix), diagnostics.Add, default).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-table-inline-" + suffix), diagnostics.Add, default).ToBlockingEnumerable().Single();
             string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
             TestAssert.Contains(meaning, decoded);
             foreach (string word in new[] { "Before", "inline", "after", "equation.", "After public math table." })
@@ -150,7 +150,7 @@ internal static class DocxNativeMathTests
         foreach (string suffix in new[] { "unfit-fallback", "multiple-fallback" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-inline-" + suffix), diagnostics.Add, default).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-table-inline-" + suffix), diagnostics.Add, default).ToBlockingEnumerable().Single();
             if (suffix == "multiple-fallback")
             {
                 string content = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
@@ -174,7 +174,7 @@ internal static class DocxNativeMathTests
             ("align-top", 1), ("align-center", 1), ("align-bottom", 1),
             ("frame-large120", 3), ("frame-oversize160", 3), ("plain-row-fit275", 2), ("plain-row-overflow280", 3) })
         {
-            var pages = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-frame-" + suffix), null, CancellationToken.None).ToArray();
+            var pages = Renderer().RenderPagesAsync(NamedFixture("docx-omml-table-frame-" + suffix), null, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(count, pages.Length);
             string first = DocxPageFootnoteNumberingTests.DecodeText(pages[0]);
             string last = DocxPageFootnoteNumberingTests.DecodeText(pages[^1]);
@@ -192,7 +192,7 @@ internal static class DocxNativeMathTests
             ("script", "αi2"), ("two-columns", "x+2y"), ("paragraph-flow", "x+2y") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-display-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-table-display-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             string decoded = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
             TestAssert.Contains(meaning, decoded);
             TestAssert.Contains("Before public math table.", decoded);
@@ -203,7 +203,7 @@ internal static class DocxNativeMathTests
                 "Painted table equations replace their ignored-source warning while retaining approximate scope.");
         }
         var fixedDiagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage fixedRow = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-display-fixed-row-guard"), fixedDiagnostics.Add, CancellationToken.None).Single();
+        PdfPage fixedRow = Renderer().RenderPagesAsync(NamedFixture("docx-omml-table-display-fixed-row-guard"), fixedDiagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.True(fixedDiagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && fixedDiagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION") &&
             fixedRow.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
             "A known fixed frame paints through its existing clip instead of dropping the equation.");
@@ -216,7 +216,7 @@ internal static class DocxNativeMathTests
             "minimum50-center", "minimum50-bottom", "default-minimum50", "exact0-top", "minimum0-top" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-table-declared-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-table-declared-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("x+2y", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Resolved declared frames retain their native equation through shared measurement, alignment and clipping.");
@@ -224,7 +224,7 @@ internal static class DocxNativeMathTests
         foreach (string suffix in new[] { "unknown-rule", "negative-height", "missing-height" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-table-declared-guard-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-table-declared-guard-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") &&
                 !page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
                 "Unknown, invalid or unresolved row frames retain source fallback without unused math fonts.");
@@ -243,7 +243,7 @@ internal static class DocxNativeMathTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-cases-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-cases-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Piecewise grouping, every cell, scripts/fraction and normal punctuation must retain native mathematical meaning.");
@@ -259,7 +259,7 @@ internal static class DocxNativeMathTests
             ("literal-punctuation", "sinx,"), ("normal-punctuation", "logx,"), ("fraction-punctuation", "sinxk,"), ("matrix-fenced-punctuation", "det(abcd),") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-boundary-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-function-boundary-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Outgoing application spacing retains every argument, neighbor and punctuation glyph.");
@@ -274,7 +274,7 @@ internal static class DocxNativeMathTests
             ("inline-matrix-control20", "detabcd"), ("inline-function-control20", "detabcd"), ("inline-mixed-control20", "adetabcdb") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-matrix-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-function-matrix-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Bounded applications retain their upright name and every matrix cell through shared ownership and measurement.");
@@ -295,7 +295,7 @@ internal static class DocxNativeMathTests
             ("inline-matrix-control20", "(abcd)"), ("display-fence-control20", "(abcd)") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-fenced-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-fenced-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Bounded fenced grids preserve all source cells and both nested controls.");
@@ -317,7 +317,7 @@ internal static class DocxNativeMathTests
             ("inline-adjacent20-12", "aabcdabcdb"), ("display-grouped-minimum", "a+abbccccdeeee=b"), ("inline-hidden", "a+bc=b") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-mixed-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-mixed-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "The existing structured-row composer retains every literal neighbor and independently controlled matrix.");
@@ -331,7 +331,7 @@ internal static class DocxNativeMathTests
             "inline-zero-gap-minimum12", "display-grouped-minimum18", "inline-double-control20" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-gap-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-gap-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(suffix.Contains("grouped", StringComparison.Ordinal) ? "abbccccdeeee" : "abcd",
                 DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -347,7 +347,7 @@ internal static class DocxNativeMathTests
             ("display-diagonal-off", "ad"), ("display-diagonal-omitted", "ad") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-empty-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-empty-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Hidden empty cells retain the surrounding painted source and explicit row/column slots.");
@@ -364,7 +364,7 @@ internal static class DocxNativeMathTests
             ("structured-display-stack-zero", "akbcd"), ("structured-inline-fraction-top-control20-empty", "akbcd") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-spacing-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-spacing-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Explicit default spacing admits the same literal, column, base and structured grid capabilities.");
@@ -377,13 +377,13 @@ internal static class DocxNativeMathTests
         foreach (string suffix in new[] { "inline-fraction", "display-stack", "inline-script", "display-script", "inline-fraction-top-control20", "display-fraction-bot-right" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-structured-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-structured-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(suffix.EndsWith("script", StringComparison.Ordinal) ? "aknbcd" : "akbcd",
                 DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Bounded structured cells retain native numerator/denominator/script roles through matrix placement.");
         }
-        var retained = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-display-fraction-cell"), null, CancellationToken.None).Single();
+        var retained = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-display-fraction-cell"), null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Contains("akbcd", DocxPageFootnoteNumberingTests.DecodeText(retained).Normalize(NormalizationForm.FormKC));
     }
 
@@ -394,7 +394,7 @@ internal static class DocxNativeMathTests
             "inline-center-literal", "inline-empty-literal", "inline-top-control20", "display-bot-three-rows" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-base-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-base-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(suffix.EndsWith("three-rows", StringComparison.Ordinal) ? "abcdef" : "abcd",
                 DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -409,7 +409,7 @@ internal static class DocxNativeMathTests
             ("inline-right", "abbcccd"), ("display-grouped", "abbccccdeeee"), ("inline-defaults", "abbcccd"), ("inline-control20-center", "abbcccd") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-columns-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-columns-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Known column declarations retain ordered native cells through the existing grid owner.");
@@ -424,7 +424,7 @@ internal static class DocxNativeMathTests
             ("inline-first20", "abcd"), ("inline-all-normal", "abcd") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-matrix-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-matrix-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Literal matrix grids retain ordered native cell glyphs without flattening or implicitly adding delimiters.");
@@ -445,7 +445,7 @@ internal static class DocxNativeMathTests
             ("ordinary-inline-fraction", "a(n+1k)=b"), ("ordinary-inline-literal20", "a(n+1)=b"), ("function-fixed-literal20", "sin(n+1)") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-subformula-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-subformula-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Semantic delimiter classification retains every authored name, operand and ordinary-row neighbor.");
@@ -459,12 +459,12 @@ internal static class DocxNativeMathTests
         foreach (string suffix in new[] { "", "-brackets", "-stack", "-child20", "-parent20" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-{mode}-fraction{suffix}"), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-delimiter-{mode}-fraction{suffix}"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(suffix == "-brackets" ? "[n+1k]" : "(n+1k)", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Bounded fractions/stacks retain readable grouped native source instead of disappearing with the enclosing delimiter.");
         }
-        var composed = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-inline-sin-delimiter-fraction"), null, CancellationToken.None).Single();
+        var composed = Renderer().RenderPagesAsync(NamedFixture("docx-omml-function-inline-sin-delimiter-fraction"), null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Contains("sin(n+1k)", DocxPageFootnoteNumberingTests.DecodeText(composed).Normalize(NormalizationForm.FormKC));
     }
 
@@ -483,7 +483,7 @@ internal static class DocxNativeMathTests
             ("inline-cos-control20-ordinary-parent16", "acosx=b") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-row-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-function-row-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Mixed functions retain prefix, argument, adjacent controls and outgoing relation source in native paint.");
@@ -498,7 +498,7 @@ internal static class DocxNativeMathTests
             ("inline-log-normal-name", "logx"), ("inline-log-normal-both", "logx") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-function-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-function-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Known function names and bounded arguments retain actual native glyph/rule painting.");
@@ -521,7 +521,7 @@ internal static class DocxNativeMathTests
             ("display-adjacent-product", "a\u2211xni=1\u220Fxni=1=b"), ("inline-adjacent-integral", "a\u2211xni=1\u222Bx10=b") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-nary-row-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-nary-row-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Mixed rows retain all literal, body/limit and per-node operator source meaning.");
@@ -540,7 +540,7 @@ internal static class DocxNativeMathTests
             ("inline-sum-body36-on", "\u2211", "g+y", "ni=1"), ("inline-integral-body36-on", "\u222B", "g+y", "10") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-nary-growth-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-nary-growth-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(character + body + limits, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Known growth-off/default and explicit body-fit roles retain native operator, body and limits.");
@@ -554,7 +554,7 @@ internal static class DocxNativeMathTests
         foreach ((string kind, string meaning) in new[] { ("single", "a+(n+1)=b"), ("multiple", "a+(n+1|k+2)=b"), ("mixed-growth", "a+(n+1)+(k+2)=b") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-row-{mode}-{kind}"), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-delimiter-row-{mode}-{kind}"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Supported mixed rows retain every literal, child argument and implicit delimiter control.");
@@ -570,7 +570,7 @@ internal static class DocxNativeMathTests
             ("docx-omml-integral-inline-fraction-body", "xk"), ("docx-omml-integral-inline-script-body", "xi2") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture(name), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture(name), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("\u222B" + meaning + "10", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Qualified inline integrals retain their native operator, body and both limits across font sizes and location requests.");
@@ -585,7 +585,7 @@ internal static class DocxNativeMathTests
             ("sum", "fraction", "\u2211", "xk"), ("product", "stack", "\u220F", "xk"), ("sum", "script", "\u2211", "xi2") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nary-body-{mode}-{kind}-{body}"), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-nary-body-{mode}-{kind}-{body}"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(character + meaning + "ni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Bounded body boxes retain native operator, inner mathematical meaning and both outer limits.");
@@ -607,7 +607,7 @@ internal static class DocxNativeMathTests
             TestAssert.True(ReferenceEquals(source.Settings.MathLimitSettings, equation.LimitSettings), "Equations share the document's immutable settings owner.");
             TestAssert.Equal(location, nary.LimitLocationValue);
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(source, diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(source, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(character + "xni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Document defaults and authored node precedence retain native body and limit painting.");
@@ -622,7 +622,7 @@ internal static class DocxNativeMathTests
             ("sum", "\u2211", "lower", "xn"), ("product", "\u220F", "upper", "xi=1"), ("sum", "\u2211", "both", "x") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nary-hidden-empty-{mode}-{kind}-{hidden}"), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-nary-hidden-empty-{mode}-{kind}-{hidden}"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(character + meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Empty hidden arguments retain native operator, body and visible limit painting.");
@@ -641,7 +641,7 @@ internal static class DocxNativeMathTests
             TestAssert.True(nary.Subscript.Children.Count > 0 && nary.Superscript.Children.Count > 0 &&
                 !DocxMathLayout.TryGetRuns(equation, CancellationToken.None, out _), "Stored hidden arguments stay in typed source without claiming omission is correct.");
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var pages = Renderer().RenderBlankPages(source, diagnostics.Add, CancellationToken.None).ToArray();
+            var pages = Renderer().RenderPagesAsync(source, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToArray();
             TestAssert.True(pages.All(page => page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
                 "A stored hidden argument cannot produce partial equation font resources.");
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_APPROXIMATED_EQUATION"),
@@ -657,7 +657,7 @@ internal static class DocxNativeMathTests
             ("display-sum-subSup-control20", "\u2211"), ("inline-product-undOvr-body16", "\u220F") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture("docx-omml-nary-" + suffix), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-nary-" + suffix), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(character + "xni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Qualified side limits retain native operator, body and both script arguments.");
@@ -671,7 +671,7 @@ internal static class DocxNativeMathTests
             ("sum", "\u2211", "-control20"), ("product", "\u220F", "-body16") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            var page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nary-display-{kind}-undOvr{suffix}"), diagnostics.Add, CancellationToken.None).Single();
+            var page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-nary-display-{kind}-undOvr{suffix}"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(character + "xni=1", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Stacked sum/product operators retain native body and both limits.");
@@ -685,7 +685,7 @@ internal static class DocxNativeMathTests
         foreach(string kind in new[]{"default","empty","large20"})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-arguments-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            var page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-delimiter-arguments-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(kind=="empty"?"(n+1k+2)":"(n+1|k+2)",DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
                 "Supported argument lists retain actual native control and child glyph painting.");
@@ -699,7 +699,7 @@ internal static class DocxNativeMathTests
         foreach((string kind,double childSize,double controlSize) in new[]{("literal12",12d,12d),("literal20",20.04d,12d),("control20",12d,20.04d)})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-fixed-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            var page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-delimiter-fixed-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("(n+1)",DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             foreach(double size in new[]{childSize,controlSize})TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
             TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
@@ -714,7 +714,7 @@ internal static class DocxNativeMathTests
         foreach((string kind,string meaning,double size) in new[]{("literal16","(n+1)",15.96d),("literal20","(n+1)",20.04d),("descender12","(g+y)",12d)})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-height-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            var page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-delimiter-height-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
             TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
@@ -742,7 +742,7 @@ internal static class DocxNativeMathTests
         foreach((string kind,string meaning) in new[]{("parentheses","(n+1)"),("brackets","[n+1]"),("one-sided","{n+1")})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-delimiter-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).Single();
+            var page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-delimiter-{placement}-{kind}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
                 "Qualified literal delimiters retain actual native glyph painting.");
@@ -758,7 +758,7 @@ internal static class DocxNativeMathTests
             ("paired-cube","n+1i23"),("descender","xg"),("large20","xi")})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-script-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).Single();
+            var page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-root-script-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("√"+meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Equal(1,System.Text.RegularExpressions.Regex.Matches(page.Content," re f").Count);
             TestAssert.Contains(tag=="large20"?" 14.52 Tf":" 8.52 Tf",page.Content);
@@ -775,7 +775,7 @@ internal static class DocxNativeMathTests
         foreach(string degree in new[]{"square","cube"})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            var page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-fraction-{placement}-{kind}-{degree}"),diagnostics.Add,CancellationToken.None).Single();
+            var page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-root-fraction-{placement}-{kind}-{degree}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("√n+1k"+(degree=="cube"?"3":""),DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Equal(kind=="bar"?2:1,System.Text.RegularExpressions.Regex.Matches(page.Content," re f").Count);
             TestAssert.True(diagnostics.Any(d=>d.Id=="DOCX_APPROXIMATED_EQUATION") && diagnostics.All(d=>d.Id!="DOCX_UNSUPPORTED_EQUATION"),
@@ -790,7 +790,7 @@ internal static class DocxNativeMathTests
         foreach((string tag,string degree) in new[]{("cube","3"),("letter","n"),("expression","n+1"),("large-control","3")})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-degree-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).Single();
+            PdfPage page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-root-degree-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("√n+1"+degree,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Contains(" 6.96 Tf",page.Content);
             TestAssert.Equal(1,System.Text.RegularExpressions.Regex.Matches(page.Content," re f").Count);
@@ -806,7 +806,7 @@ internal static class DocxNativeMathTests
         foreach((string tag,double size) in new[]{("neutral",12d),("small8",8.04d),("large20",20.04d),("color-font",12d),("italic",12d)})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-control-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).Single();
+            PdfPage page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-root-control-{placement}-{tag}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("√n+1",DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
             int rule=page.Content.IndexOf(" re f",StringComparison.Ordinal);TestAssert.True(rule>=0,"Expected the authored control's root rule.");
@@ -829,7 +829,7 @@ internal static class DocxNativeMathTests
             ("normal-default","rate","Cambria"),("normal-calibri-color","rate","Calibri"),("normal-arial-color","rate","Arial")})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-root-owner-{placement}-{suffix}"),diagnostics.Add,CancellationToken.None).Single();
+            PdfPage page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-root-owner-{placement}-{suffix}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("√"+meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(page.Fonts.Any(f=>f.ResourceName.StartsWith("Eq",StringComparison.Ordinal) &&
                 f.Font.Font.FamilyName.Contains(family,StringComparison.OrdinalIgnoreCase)),"The child retains its authored face.");
@@ -850,7 +850,7 @@ internal static class DocxNativeMathTests
             ("descenders12","g+y",12d),("large20","a+b",20.04d)})
         {
             var diagnostics=new List<OoxPdfDiagnostic>();
-            PdfPage page=Renderer().RenderBlankPages(NamedFixture($"docx-omml-radical-{placement}-{shape}"),diagnostics.Add,CancellationToken.None).Single();
+            PdfPage page=Renderer().RenderPagesAsync(NamedFixture($"docx-omml-radical-{placement}-{shape}"),diagnostics.Add,CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("√"+meaning,DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Contains(" re f",page.Content);
             TestAssert.Contains(" "+size.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture)+" Tf",page.Content);
@@ -870,8 +870,8 @@ internal static class DocxNativeMathTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-sequence-{placement}-{pair}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-sequence-{placement}-{pair}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Equal(rules, System.Text.RegularExpressions.Regex.Matches(page.Content, " re f").Count);
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
@@ -886,8 +886,8 @@ internal static class DocxNativeMathTests
         foreach (string suffix in new[] { "sub-prefix", "sub-both", "sup-prefix", "sup-both", "sup-size20" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-mixed-script-{placement}-{suffix}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-mixed-script-{placement}-{suffix}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(suffix.EndsWith("prefix", StringComparison.Ordinal) ? "y=x2" : "y=x2+z",
                 DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
@@ -903,8 +903,8 @@ internal static class DocxNativeMathTests
         foreach (string tail in new[] { "prefix", "both" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-mixed-fraction-{placement}-{kind}-{tail}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-mixed-fraction-{placement}-{kind}-{tail}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(tail == "both" ? "y=n+1k+z" : "y=n+1k",
                 DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Equal(kind == "bar", page.Content.Contains(" re f", StringComparison.Ordinal));
@@ -921,8 +921,8 @@ internal static class DocxNativeMathTests
         foreach (string role in new[] { "sub", "sup" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-nested-base-{placement}-{kind}-{role}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-nested-base-{placement}-{kind}-{role}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("n+1k2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Equal(kind == "bar", page.Content.Contains(" re f", StringComparison.Ordinal));
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION") &&
@@ -937,8 +937,8 @@ internal static class DocxNativeMathTests
         foreach (string kind in new[] { "math12", "math20", "normal12" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-stack-{placement}-{kind}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-stack-{placement}-{kind}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("n+1k", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(!page.Content.Contains(" re f", StringComparison.Ordinal), "An authored noBar stack must not paint a fraction rule.");
             PdfFontResource child = page.Fonts.First(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
@@ -952,7 +952,7 @@ internal static class DocxNativeMathTests
     public static void DocxNativeNoBarDisplayStackRetainsWordBaselineSeparation()
     {
         RequireMathFont();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-stack-display-math12"), null, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-stack-display-math12"), null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource font = page.Fonts.Single(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         double Baseline(int codePoint)
         {
@@ -972,8 +972,8 @@ internal static class DocxNativeMathTests
         foreach ((string suffix, double wordX) in new[] { ("sub-default-i", 295.01d), ("sup-default-i", 294.65d) })
         {
             var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            PdfPage page = renderer.RenderBlankPages(NamedFixture("docx-omml-styled-owner-" + suffix),
-                null, CancellationToken.None).Single();
+            PdfPage page = renderer.RenderPagesAsync(NamedFixture("docx-omml-styled-owner-" + suffix),
+                null, CancellationToken.None).ToBlockingEnumerable().Single();
             PdfFontResource font = page.Fonts.Single(resource => resource.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
             TestAssert.True(font.Font.TryGetEncodedCid(font.Font.Font.MapCodePoint(0x1D465), out ushort cid),
                 "Expected the mathematical base's owned CID.");
@@ -997,8 +997,8 @@ internal static class DocxNativeMathTests
         foreach (string style in new[] { "b", "i", "bi" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-normal-text-style-{face}-{style}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-normal-text-style-{face}-{style}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("sin x", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             PdfFontResource text = page.Fonts.First(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
             TestAssert.Equal(style.Contains('b'), text.Font.Font.Os2.WeightClass >= 600);
@@ -1006,8 +1006,8 @@ internal static class DocxNativeMathTests
             TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "An available normal-text face owns its authored weight and slant.");
         }
-        PdfPage synthetic = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-text-style-default-i"),
-            null, CancellationToken.None).Single();
+        PdfPage synthetic = Renderer().RenderPagesAsync(NamedFixture("docx-omml-normal-text-style-default-i"),
+            null, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Contains("sin x", DocxPageFootnoteNumberingTests.DecodeText(synthetic).Normalize(NormalizationForm.FormKC));
         TestAssert.Contains("0.333", synthetic.Content);
     }
@@ -1022,8 +1022,8 @@ internal static class DocxNativeMathTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-fraction-" + suffix),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-normal-fraction-" + suffix),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Equal(resources, page.Fonts.Count(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)));
             TestAssert.Contains(" re f", page.Content);
@@ -1043,8 +1043,8 @@ internal static class DocxNativeMathTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-script-" + name),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-normal-script-" + name),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("xmax", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Contains(" " + size.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " Tf", page.Content);
             TestAssert.Equal(resources, page.Fonts.Count(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)));
@@ -1061,8 +1061,8 @@ internal static class DocxNativeMathTests
         foreach (string face in new[] { "default", "calibri" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-normal-text-{placement}-{face}-true"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-normal-text-{placement}-{face}-true"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("sin x", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
                 diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -1076,8 +1076,8 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-normal-text-display-calibri-false"),
-            diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-normal-text-display-calibri-false"),
+            diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource font = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         TestAssert.True(font.Font.Font.MapCodePoint(0x1D460) != 0, "Explicit false retains the mathematical italic alphabet.");
         TestAssert.True(font.Font.TryGetEncodedCid(font.Font.Font.MapCodePoint(0x1D460), out _),
@@ -1097,8 +1097,8 @@ internal static class DocxNativeMathTests
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-symbol-style-variants-{style}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-symbol-style-variants-{style}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
             foreach (int point in points)
             {
@@ -1119,8 +1119,8 @@ internal static class DocxNativeMathTests
         foreach (string style in new[] { "b", "bi" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-greek-style-{kind}-{style}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-greek-style-{kind}-{style}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
                 diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -1135,8 +1135,8 @@ internal static class DocxNativeMathTests
         foreach (string style in new[] { "b", "bi" })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-style-literal-{placement}-12-{style}"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-style-literal-{placement}-12-{style}"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("Ah+h=x", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
                 diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -1149,8 +1149,8 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         foreach ((string style, int x, int i) in new[] { ("b", 0x1D431, 0x1D422), ("bi", 0x1D499, 0x1D48A) })
         {
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-style-scripts-display-12-{style}"),
-                null, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-style-scripts-display-12-{style}"),
+                null, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
             foreach ((int point, int level) in new[] { (x, 0), (i, 1), (0x1D7D0, 1) })
@@ -1167,8 +1167,8 @@ internal static class DocxNativeMathTests
     public static void DocxNativeDisplayFractionOperatorGapUsesTheParentMathSize()
     {
         RequireMathFont();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-display-spacing-fraction-child18-parent12-auto240"),
-            null, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-display-spacing-fraction-child18-parent12-auto240"),
+            null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         double X(int point)
         {
@@ -1186,8 +1186,8 @@ internal static class DocxNativeMathTests
     public static void DocxNativeDisplayFractionParentMetricsRetainWordChildBaselineSeparation()
     {
         RequireMathFont();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-display-spacing-fraction-child18-parent12-auto240"),
-            null, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-display-spacing-fraction-child18-parent12-auto240"),
+            null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         double Y(int point)
         {
@@ -1209,8 +1209,8 @@ internal static class DocxNativeMathTests
             { ("literal", "first", "α+β=γ"), ("fraction", "first", "a+bc"), ("scripts", "after", "xi2") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture($"docx-omml-display-spacing-{kind}-{place}-auto360"),
-                diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture($"docx-omml-display-spacing-{kind}-{place}-auto360"),
+                diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(meaning, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
                 diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -1240,8 +1240,8 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-display-spacing-literal-first-auto120"),
-            diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-display-spacing-literal-first-auto120"),
+            diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION") &&
             diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"),
             "Compressed slots need their own baseline contract and retain explicit fallback.");
@@ -1257,7 +1257,7 @@ internal static class DocxNativeMathTests
               ("docx-omml-argsize-both-12-absentval", 8.52d) })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture(name), diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture(name), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.Contains(" " + size.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " Tf", page.Content);
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION") &&
@@ -1270,7 +1270,7 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-script-scale-arg0"), diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-script-scale-arg0"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
         TestAssert.Contains(" 8.52 Tf", page.Content);
         TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
@@ -1284,7 +1284,7 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         DocxDocument document = Fixture("literal", "after");
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("α+β=γ", text);
         TestAssert.Contains("Before formula:", text);
@@ -1306,7 +1306,7 @@ internal static class DocxNativeMathTests
         DocxDocument document = source with { BodyElements = source.BodyElements.Select(element =>
             element is DocxParagraphElement p && ReferenceEquals(p.Paragraph, paragraph) ? new DocxParagraphElement(unsupported) : element).ToArray() };
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "Unsupported math must not publish unused equation fonts.");
         TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION" && diagnostic.Fallback == "Ignored"), "Unsupported structures retain an explicit ignored fallback.");
         TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"), "Unpainted mathematics cannot claim native rendering.");
@@ -1316,7 +1316,7 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(Fixture("fraction", "inline"), diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(Fixture("fraction", "inline"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("a+bc", text);
         TestAssert.Contains("Before formula:", text);
@@ -1336,7 +1336,7 @@ internal static class DocxNativeMathTests
         DocxEquation equation = document.Paragraphs[0].Equations[0];
         TestAssert.True(equation.ParentFontSize is { } parent && Math.Abs(parent - 12d) < 1e-9,
             "The source paragraph owns the parent math metric size independently of18pt child formatting.");
-        PdfPage page = Renderer().RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         double Y(int point)
         {
@@ -1356,7 +1356,7 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(Fixture("scripts", "inline"), diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(Fixture("scripts", "inline"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("xi2", text);
         TestAssert.Contains("Before formula:", text);
@@ -1371,7 +1371,7 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage fitting = Renderer().RenderBlankPages(NamedFixture("docx-omml-inline-script-wrap110"), diagnostics.Add, CancellationToken.None).Single();
+        PdfPage fitting = Renderer().RenderPagesAsync(NamedFixture("docx-omml-inline-script-wrap110"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(fitting).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("xi2", text);
         TestAssert.Contains("after formula.", text);
@@ -1379,7 +1379,7 @@ internal static class DocxNativeMathTests
             "Following-prose wrapping must share the same script source owner.");
         diagnostics.Clear();
         var narrow = NamedFixture("docx-omml-inline-script-overwide30");
-        PdfPage retained = Renderer().RenderBlankPages(narrow, diagnostics.Add, CancellationToken.None).Single();
+        PdfPage retained = Renderer().RenderPagesAsync(narrow, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.Contains("xi2", DocxPageFootnoteNumberingTests.DecodeText(retained).Normalize(NormalizationForm.FormKC));
         TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"),
             "Emergency word breaks retain a formula that now fits its source line; Word also preserves this equation.");
@@ -1387,7 +1387,7 @@ internal static class DocxNativeMathTests
         double right = narrow.PageWidthPoints - narrow.MarginLeftPoints - 8d;
         var unfit = narrow with { MarginRightPoints = right,
             PageSettings = narrow.PageSettings with { MarginRightValue = (right * 20d).ToString(System.Globalization.CultureInfo.InvariantCulture) } };
-        var overwide = Renderer().RenderBlankPages(unfit, diagnostics.Add, CancellationToken.None).ToArray();
+        var overwide = Renderer().RenderPagesAsync(unfit, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"),
             "A formula wider than every available line retains its whole-equation fallback.");
         TestAssert.True(overwide.All(page => !page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
@@ -1399,7 +1399,7 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         DocxDocument document = NamedFixture("docx-omml-inline-script-boundary140");
         DocxRenderer renderer = Renderer();
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("xi2", text);
         TestAssert.Contains("Following prose.", text);
@@ -1412,7 +1412,7 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(Fixture("scripts", "after"), diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(Fixture("scripts", "after"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("xi2", text);
         TestAssert.Contains("Following prose.", text);
@@ -1426,7 +1426,7 @@ internal static class DocxNativeMathTests
     public static void DocxNativeDisplayScriptsOwnTheirSelectedVariantSubsetMappings()
     {
         RequireMathFont();
-        PdfPage page = Renderer().RenderBlankPages(Fixture("scripts", "after"), null, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(Fixture("scripts", "after"), null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         foreach (int point in new[] { 0x1D456, (int)'2' })
         {
@@ -1444,7 +1444,7 @@ internal static class DocxNativeMathTests
         foreach ((string name, string expected) in new[] { ("docx-omml-script-sub12", "xi"), ("docx-omml-script-sup12", "x2") })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            PdfPage page = Renderer().RenderBlankPages(NamedFixture(name), diagnostics.Add, CancellationToken.None).Single();
+            PdfPage page = Renderer().RenderPagesAsync(NamedFixture(name), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
             TestAssert.Contains(expected, DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC));
             TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_APPROXIMATED_EQUATION"),
                 "Single source-script roles must report their actual native painting.");
@@ -1456,7 +1456,7 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         DocxDocument document = NamedFixture("docx-omml-script-boundary12");
         DocxRenderer renderer = Renderer();
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("xi2", text);
         TestAssert.Contains("Following prose.", text);
@@ -1468,7 +1468,7 @@ internal static class DocxNativeMathTests
     public static void DocxNativeDisplayDescenderScriptUsesGlyphRatherThanBoxDropMinimum()
     {
         RequireMathFont();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-script-descender12"), null, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-script-descender12"), null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         ushort original = resource.Font.Font.MapCodePoint(0x1D456);
         TestAssert.True(resource.Font.Font.TryGetMathScriptGlyph(original, 1, CancellationToken.None, out ushort script), "Expected script-style i.");
@@ -1485,7 +1485,7 @@ internal static class DocxNativeMathTests
     public static void DocxNativeDisplayMathCornerKernMovesTheScriptToItsMeasuredOfficeGap()
     {
         RequireMathFont();
-        PdfPage page = Renderer().RenderBlankPages(NamedFixture("docx-omml-kern-y-sub"), null, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-kern-y-sub"), null, CancellationToken.None).ToBlockingEnumerable().Single();
         PdfFontResource resource = page.Fonts.Single(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal));
         ushort basis = resource.Font.Font.MapCodePoint(0x1D466);
         TestAssert.True(resource.Font.Font.TryGetMathScriptGlyph(resource.Font.Font.MapCodePoint(0x1D456), 1,
@@ -1508,7 +1508,7 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(Fixture("fraction", "after"), diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(Fixture("fraction", "after"), diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("a+bc", text);
         TestAssert.Contains("Following prose.", text);
@@ -1523,7 +1523,7 @@ internal static class DocxNativeMathTests
     {
         RequireMathFont();
         DocxDocument document = NamedFixture("docx-omml-display-fraction-boundary12");
-        PdfPage[] pages = Renderer().RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        PdfPage[] pages = Renderer().RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(2, pages.Length);
         string first = DocxPageFootnoteNumberingTests.DecodeText(pages[0]).Normalize(NormalizationForm.FormKC);
         string second = DocxPageFootnoteNumberingTests.DecodeText(pages[1]).Normalize(NormalizationForm.FormKC);
@@ -1538,7 +1538,7 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         DocxDocument document = Fixture("literal", "inline");
         var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("α+β=γ", text);
         TestAssert.Contains("Before formula:", text);
@@ -1551,7 +1551,7 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         DocxDocument document = NamedFixture("docx-omml-inline-middle12");
         DocxRenderer renderer = Renderer();
-        PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("α+β=γ", text);
         TestAssert.Contains(" after formula.", text);
@@ -1568,7 +1568,7 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         var diagnostics = new List<OoxPdfDiagnostic>();
         var document = NamedFixture("docx-omml-inline-overfull12");
-        PdfPage page = Renderer().RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = Renderer().RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.True(new[] { "α", "+", "β", "=", "γ" }.All(text.Contains), "Operator breaking must preserve every authored mathematical glyph.");
         TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "DOCX_UNSUPPORTED_EQUATION"), "Supported literal breaking cannot report ignored math.");
@@ -1581,7 +1581,7 @@ internal static class DocxNativeMathTests
         DocxDocument document = NamedFixture("docx-omml-wrap-middle140");
         var diagnostics = new List<OoxPdfDiagnostic>();
         DocxRenderer renderer = Renderer();
-        PdfPage page = renderer.RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+        PdfPage page = renderer.RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
         TestAssert.Contains("α+β=γ", text);
         TestAssert.Contains("after formula.", text);
@@ -1604,7 +1604,7 @@ internal static class DocxNativeMathTests
         {
             DocxDocument document = NamedFixture(name);
             DocxRenderer renderer = Renderer();
-            PdfPage page = renderer.RenderBlankPages(document, null, CancellationToken.None).Single();
+            PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
             string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
             TestAssert.Contains("α+β=γ", text);
             TestAssert.Contains("Following prose.", text);
@@ -1629,7 +1629,7 @@ internal static class DocxNativeMathTests
         RequireMathFont();
         string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "docx-omml-display-boundary12.docx"));
         DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
-        PdfPage[] pages = Renderer().RenderBlankPages(document, null, CancellationToken.None).ToArray();
+        PdfPage[] pages = Renderer().RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(2, pages.Length);
         string first = DocxPageFootnoteNumberingTests.DecodeText(pages[0]).Normalize(NormalizationForm.FormKC);
         string second = DocxPageFootnoteNumberingTests.DecodeText(pages[1]).Normalize(NormalizationForm.FormKC);
@@ -1643,7 +1643,7 @@ internal static class DocxNativeMathTests
         DocxDocument document = Fixture("literal", "after");
         var diagnostics = new List<OoxPdfDiagnostic>();
         PdfPage page = new DocxRenderer(new MapFontResolver([], "Unavailable"), OoxPdfDocxMarkupMode.Final,
-            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderBlankPages(document, diagnostics.Add, CancellationToken.None).Single();
+            OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
         TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION"), "Unavailable math fonts retain ignored-source diagnostics.");
         TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)), "A missing math face cannot claim embedded equation output.");
         DocxParagraph paragraph = document.Paragraphs.Single(value => value.Equations.Count != 0);

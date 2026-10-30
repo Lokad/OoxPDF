@@ -52,7 +52,7 @@ internal static partial class DocxInlineCompositionTests
             var source = ReadMutation("InlineBoxMath/" + id, mode, false, false,
                 partOverride: row.GetProperty("MathPart").GetString());
             var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderBlankPages(source, null, default).ToArray();
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var lines = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).GroupBy(show => show.Y).Select(line =>
                     (Page: index + 1, Height: page.Height, Y: line.Key, X: line.Min(show => show.X),

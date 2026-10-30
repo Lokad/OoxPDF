@@ -113,7 +113,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 var document = ReadMutation("CompositionProbes/" + id, mode, transformed, transformed);
                 var diagnostics = new List<OoxPdfDiagnostic>();
-                var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+                var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
                 int expected = row.GetProperty("AcceptedPaintedEquations").GetInt32();
                 TestAssert.Equal(expected, text.Split("ratetime", StringSplitOptions.None).Length - 1);

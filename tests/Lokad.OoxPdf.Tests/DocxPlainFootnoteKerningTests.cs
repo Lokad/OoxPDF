@@ -41,9 +41,9 @@ internal static class DocxPlainFootnoteKerningTests
         TestAssert.Equal(before.SourceTextOffsetInRun, after.SourceTextOffsetInRun);
         TestAssert.True(before.PairKerningEnabled && !after.PairKerningEnabled, "Only the derived rendering document changes its pair policy.");
         var resolver = new TestFaceFontResolver();
-        double Measure(DocxDocument doc, DocxTextRun run) => new DocxFontPlanTextMeasurer(
+        double Measure(DocxDocument doc, DocxTextRun run) => DocxFontPlanTextMeasurer.CreateAsync(
             DocxFontPlan.Create(doc, resolver, CancellationToken.None), resolver.Resolve(new FontRequest("Calibri", false, false)),
-            CancellationToken.None, resolver).MeasureText(run, "AB", 12d);
+            CancellationToken.None, resolver).GetAwaiter().GetResult().MeasureText(run, "AB", 12d);
         double kerned = Measure(source, before), nominal = Measure(adjusted, after);
         TestAssert.True(Math.Abs(nominal - kerned - 0.6d) < 0.00001d, "The synthetic AB pair has a genuine -50-unit adjustment at 12pt.");
         var renderer = Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -52,7 +52,7 @@ internal static class DocxPlainFootnoteKerningTests
         TestAssert.True(segments.Length > 0 && segments.All(s => s.GlyphAdvanceSignature.KerningUnits == 0), "Emission signatures must describe the actual nominal glyph advances.");
         TestAssert.True(segments.All(s => Math.Abs(s.AdvanceProfile.KerningAdjustmentTotal) < 0.00001d), "Layout measurement and emitted positioning use the same pair policy.");
         TestAssert.True(DocxPageFootnoteNumbering.HasStablePages(adjusted, Layout(adjusted), pages), "The derived document retains complete marker/note owners.");
-        var rendered = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();
+        var rendered = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(4, rendered.Sum(p => p.Annotations.Count));
         TestAssert.Equal(4, rendered.SelectMany(p => p.Annotations).Select(a => a.Destination).Distinct().Count());
         for (int i = 0; i < rendered.Length; i++)

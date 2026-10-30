@@ -68,7 +68,7 @@ internal static class DocxMetWrappedFootnoteNumberingTests
         foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout })
         {
             var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry);
-            var pages = renderer.RenderBlankPages(source, null, CancellationToken.None).ToArray();TestAssert.Equal(2, pages.Length);
+            var pages = renderer.RenderPagesAsync(source, null, CancellationToken.None).ToBlockingEnumerable().ToArray();TestAssert.Equal(2, pages.Length);
             string text = string.Join('|', pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             TestAssert.Contains("09 Public destination", text);
             TestAssert.Equal(4, pages.Sum(p => p.Annotations.Count));

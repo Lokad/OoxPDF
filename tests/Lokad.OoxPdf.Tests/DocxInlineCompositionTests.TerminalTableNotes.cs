@@ -30,7 +30,7 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var renderer = new DocxRenderer(resolver, mode, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                 : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var pages = renderer.RenderBlankPages(document, diagnostics.Add, default).ToArray();
+            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
             TestAssert.Equal(8, text.Split("ratetime", StringSplitOptions.None).Length - 1);
             for (int index = 1; index <= 4; index++) TestAssert.Contains("Public destination " + index + ".", text);

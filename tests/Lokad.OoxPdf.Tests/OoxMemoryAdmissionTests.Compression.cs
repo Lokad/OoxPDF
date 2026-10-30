@@ -89,7 +89,7 @@ internal static partial class OoxMemoryAdmissionTests
             using var output = new ObservedOutput(() => TestAssert.True(pool.Reserved >= retained,
                 "Encoded RGB/alpha remain funded through actual image writes."));
             var page = new PdfPage(100, 100, "q 20 0 0 10 0 0 cm /Im1 Do Q\n", [], [new PdfImageResource("Im1", image)]);
-            PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits { MaxResidentPageContentBytesPerConversion=0 }, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+            PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new OoxConversionLimits { MaxResidentPageContentBytesPerConversion=0 }, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Writes > 0, "Exercise actual resource serialization.");
             TestAssert.Equal(retained, pool.Reserved);
         }
@@ -135,9 +135,9 @@ internal static partial class OoxMemoryAdmissionTests
                 });
                 var page = new PdfPage(100, 100, "BT /F1 12 Tf <0001> Tj ET\n", [new PdfFontResource("F1", font)]);
                 if (failOutput)
-                    TestAssert.Throws<IOException>(() => PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits { MaxResidentPageContentBytesPerConversion=0 }, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
+                    TestAssert.Throws<IOException>(() => PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new OoxConversionLimits { MaxResidentPageContentBytesPerConversion=0 }, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult());
                 else
-                    PdfDocumentWriter.WriteStagedAsync(output, [page], new OoxConversionLimits { MaxResidentPageContentBytesPerConversion=0 }, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
+                    PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new OoxConversionLimits { MaxResidentPageContentBytesPerConversion=0 }, null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
                 TestAssert.True(payload && (failOutput || following), "Observe real font emission and its following ToUnicode stream.");
                 TestAssert.Equal(0L, pool.Reserved);
             }

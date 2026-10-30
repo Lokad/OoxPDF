@@ -85,7 +85,7 @@ internal static class DocxSpacedWrappedFootnoteTests
 
     private static PdfLinkAnnotation[] Render(DocxDocument document, OoxPdfDocxMarkupGeometryMode geometry) =>
         new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, geometry)
-            .RenderBlankPages(document, null, default).SelectMany(p => p.Annotations).ToArray();
+            .RenderPagesAsync(document, null, default).ToBlockingEnumerable().SelectMany(p => p.Annotations).ToArray();
 
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static DocxDocument Read(bool later, int after, string first = "0", string second = "24", bool runBreak = true,

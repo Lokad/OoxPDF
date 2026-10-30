@@ -53,7 +53,7 @@ internal static partial class DocxInlineCompositionTests
                 });
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .RenderBlankPages(document, diagnostics.Add, default).Single();
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
             var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
             var embedded = fonts.Select(font => font.Font).ToHashSet();
             string actual = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
