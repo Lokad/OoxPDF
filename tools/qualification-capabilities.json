@@ -85,6 +85,13 @@
     "DocxInlineCompositionMergedCellMath",
     "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement"
   ],
+  "docx-natural-table-width": [
+    "DocxTableLayoutStageNaturalAutoWidth",
+    "DocxTableLayoutStageLineFitIgnoresRoundoffAndKeepsActualOverflow",
+    "DocxSyntheticTable",
+    "DocxTableNormal",
+    "PortableRenderingDocx"
+  ],
   "docx-story-drawing-diagnostics": [
     "DocxStoryOwnership",
     "DocxUnsupportedFeaturesEmitDiagnostics",
