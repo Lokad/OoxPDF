@@ -281,12 +281,13 @@ internal sealed partial class DocxReader
         int rowIndex,
         int cellIndex,
         int rowCount,
-        int cellCount)
+        int cellCount,
+        bool leadingRowEmphasis)
     {
         DocxTableCellStyle resolved = tableStyle.Cell;
         IEnumerable<string> regions = conditionalFormat?.IsDefined == true
             ? EnumerateTableStyleRegions(conditionalFormat)
-            : EnumerateTableStyleRegions(tableLook, tableStyle.Table.RowBandSize, tableStyle.Table.ColumnBandSize, rowIndex, cellIndex, rowCount, cellCount, tableStyle.ConditionalRegions.ContainsKey("firstRow"), tableStyle.ConditionalRegions.ContainsKey("firstCol"), tableStyle.ConditionalRegions.ContainsKey("lastRow"), tableStyle.ConditionalRegions.ContainsKey("lastCol"));
+            : EnumerateTableStyleRegions(tableLook, tableStyle.Table.RowBandSize, tableStyle.Table.ColumnBandSize, rowIndex, cellIndex, rowCount, cellCount, tableStyle.ConditionalRegions.ContainsKey("firstRow"), tableStyle.ConditionalRegions.ContainsKey("firstCol"), tableStyle.ConditionalRegions.ContainsKey("lastRow"), tableStyle.ConditionalRegions.ContainsKey("lastCol"), leadingRowEmphasis);
         foreach (string region in regions)
         {
             // Word activates bands only with a resolved positive size. Cell
@@ -331,7 +332,8 @@ internal sealed partial class DocxReader
         bool hasFirstRowRegion,
         bool hasFirstColRegion,
         bool hasLastRowRegion,
-        bool hasLastColRegion)
+        bool hasLastColRegion,
+        bool leadingRowEmphasis)
     {
         bool firstRow = tableLook.FirstRow != false;
         bool lastRow = tableLook.LastRow == true;
@@ -343,7 +345,7 @@ internal sealed partial class DocxReader
         bool verticalBand = tableLook.NoVerticalBand == false;
 
         // Banding skips an emphasized header row/column only along its own axis when the style defines the matching edge region (band probes 2026-09-06: probe4B header row unshaded, probe5B/probe6/probe10 headers take the edge region, probe11 header row still takes cross-axis bands); otherwise bands start at row0/col0 (probes 7/8T1). Edge regions yield after bands so they win same-property ties.
-        bool excludeLeadingRow = firstRow && hasFirstRowRegion;
+        bool excludeLeadingRow = leadingRowEmphasis && hasFirstRowRegion;
         bool excludeLeadingColumn = firstColumn && hasFirstColRegion;
         bool edgeRow = excludeLeadingRow && rowIndex == 0;
         bool edgeLastRow = lastRow && rowIndex == rowCount - 1 && hasLastRowRegion;

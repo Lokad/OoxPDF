@@ -1,5 +1,5 @@
 {
-  "Reason": "Word coalesces six adjacent same-style table elements into one 13-row table. OoxPdf retains six logical tables. This case is outside the positive flag-only oracle and retains its exact measured colors/failures.",
+  "Reason": "Independent Word colors and source identity for the original six adjacent table elements. Word joins them into one 13-row/22-cell logical table. The logical reader must preserve all colors; autofit geometry remains separately qualified.",
   "Controls": [
     {
       "Id": "legacy-original",

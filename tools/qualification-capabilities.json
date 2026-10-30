@@ -1,4 +1,19 @@
 {
+  "docx-adjacent-tables": [
+    "DocxAdjacentTables",
+    "DocxBodyElementsRetainRevisionProvenance",
+    "DocxMarkupModesFilterStaticAndRelatedStoryRevisions",
+    "DocxReaderInfersMissingTableGridFromLogicalGridSpans",
+    "DocxReaderTableInventoryIncludesNestedTableCellBodies",
+    "DocxReaderTableCellPreservesGridSpanToken",
+    "DocxReaderTableCellPreservesVerticalMergeToken",
+    "DocxReaderTableRowPreservesPropertyExceptionCellMargins",
+    "DocxTableLayoutStage",
+    "DocxInlineCompositionNestedCellNeighbors",
+    "DocxInlineCompositionNestedNavigation",
+    "DocxInlineCompositionMergedCellMath",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement"
+  ],
   "docx-story-drawing-diagnostics": [
     "DocxStoryOwnership",
     "DocxUnsupportedFeaturesEmitDiagnostics",

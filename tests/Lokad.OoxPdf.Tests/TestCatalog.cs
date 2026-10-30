@@ -104,6 +104,7 @@ internal static class TestCatalog
         .. FromType("docx-tables", typeof(DocxTableStyleInheritanceTests)),
         .. FromType("docx-tables", typeof(DocxTableBandSizeTests)),
         .. FromType("docx-tables", typeof(DocxTableLookTests)),
+        .. FromType("docx-tables", typeof(DocxAdjacentTableTests)),
         .. FromType("docx-tables", typeof(DocxNormalTableStyleTests)),
         .. FromType("docx-text", typeof(DocxNoteListOrderTests)),
         .. FromType("docx-tables", typeof(DocxTableCellsTests)),

@@ -1,0 +1,1064 @@
+{
+  "Oracle": "Independent Word 16 normalized topology/grid spans, row leading columns and properties, plus native PDF fills. Paragraph/style/positioned boundaries, grid partitions, indents and widths are independently captured. Visible calibration remains pending.",
+  "Controls": [
+    {
+      "Id": "adjacent",
+      "Input": "adjacent.docx",
+      "InputSha256": "685CA365BC7CF8230578EF94322D835C7E1DE1559E913F3600362B72EEDE8171",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "84938735C072AD7725FCADD8E29B1A8BADA6A3C59B6DCB3A73ACCC1088C03297",
+      "NormalizedSha256": "3AC56F03732FE101BE71582D8A7C551C01E6DDCA650FD01846A3BBFBB30E7650"
+    },
+    {
+      "Id": "separated",
+      "Input": "separated.docx",
+      "InputSha256": "06C66222938EB865301808E9D610E84BBC655AE2ED990FD26EBBB82AB911663C",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        },
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "008844",
+        "join-A11": "008844",
+        "join-B00": "0066CC",
+        "join-B01": "0066CC",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "FD5D074FFA373143EE7246C589EFCB0C407A669CE353406BFF73B62B436FBF86",
+      "NormalizedSha256": "28D592DAF89E9326AFAB11353AE4AEF664B28F3BD8969DE17D23128B6D8C19BE"
+    },
+    {
+      "Id": "different-style",
+      "Input": "different-style.docx",
+      "InputSha256": "CEF3FA990A9CEB9E128EF794E079DF31DEF6D07E982EC324FD011042C116AFCF",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        },
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "008844",
+        "join-A11": "008844",
+        "join-B00": "0066CC",
+        "join-B01": "0066CC",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "51A30D2CE7F90029DD3BE156A0FE5B1B8AFEC5ACD05AF4947E683A1649EE9A4D",
+      "NormalizedSha256": "7DD43B058AA4327FEF4EF43FD5C0B461342B77EBE4F7C9ECDEBF6AA053060F2A"
+    },
+    {
+      "Id": "positioned",
+      "Input": "positioned.docx",
+      "InputSha256": "EFB96542222C32507F66BE987F1809A1557CC924E84C1055E8048D053EF88F25",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        },
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "008844",
+        "join-A11": "008844",
+        "join-B00": "0066CC",
+        "join-B01": "0066CC",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "ACEF147668BE57542712F19635D425B25C34F9F476A963922895601604B9338C",
+      "NormalizedSha256": "28BB9CED621B6C02292F0A286C4A261BCE93CAE12DCF1A91B22BEB509F2E3AFD"
+    },
+    {
+      "Id": "row-properties",
+      "Input": "row-properties.docx",
+      "InputSha256": "E4F9E9D796E417DB3EE8402856D13960C50F9DCEFE788754E5F2C38BE9DF51DD",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 10.8,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 10.8,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "DD4400",
+        "join-B01": "A8C8E8",
+        "join-B10": "DD4400",
+        "join-B11": "A8C8E8"
+      },
+      "OfficeFinalPdfSha256": "1274B8554D308ED5F910F502B21E876CC8C134FFE4C86BBAEBF03BED73C9D710",
+      "NormalizedSha256": "B0EC239082760B447A00EAA566DCAEDB6D068E5A2914D0ACE5ACD51B1A2D3435"
+    },
+    {
+      "Id": "grid-partitions",
+      "Input": "grid-partitions.docx",
+      "InputSha256": "37B85FA881539B2653CA55BE3BBC95EF9233CB5AD7E830CF16250C3FB7B37B40",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 4,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                2,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                2,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B02": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844",
+        "join-B12": "008844"
+      },
+      "OfficeFinalPdfSha256": "CA0B81C22DC44FC42B2776AA65C843980CBADCD02766002F384918734D80ACCC",
+      "NormalizedSha256": "13CE6F88E5470680687E4055B5BDBF8141487043B1A13CF7175C7D09F5B551B5"
+    },
+    {
+      "Id": "cell",
+      "Input": "cell.docx",
+      "InputSha256": "866D4DFFFABE9B4C4D4C2B103B41518845E0EA41B969CDC29BD3F82F8313F876",
+      "Container": "cell",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "92FDF87DD5E0A605689048E0DD8A28F0F0A53478C267560DA51AD3FC39DF2618",
+      "NormalizedSha256": "21F98D6414BB745E852DE45801A01A705A1B189EE3FEB55772840F92CDF20CCD"
+    },
+    {
+      "Id": "header",
+      "Input": "header.docx",
+      "InputSha256": "66D7B098B73F7E90F853B82B75F803F08772806FEB8A4D68D3596AA1F75AB984",
+      "Container": "header",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "4E2D5FAD2DDFE1E940BF849C5F063A43CCC7C75428877A7D40DF886FD930520A",
+      "NormalizedSha256": "249F1AB494634674D8011093877AE3FE42F9EFA4F3B1D3C9540BE6325B0FD7D0"
+    },
+    {
+      "Id": "composed",
+      "Input": "composed.docx",
+      "InputSha256": "11E91D45E199BEA6F026A6AFD35FD3C0049E9A677BB17C061436B6D7D97E8DC0",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "B46004C6CC2EDEB7D22F722D58115371AFD8E34045B7FE32DF77EF5ED500B5DC",
+      "NormalizedSha256": "ECB38365CB0B35F88886D64AD728225CFFFC3428EB00D9C5973D25F03CECB27B"
+    },
+    {
+      "Id": "border-change",
+      "Input": "border-change.docx",
+      "InputSha256": "0769A21B79B7471CAA6CBF9EFF769E743AE82B45C3395964E37062373003295C",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": "0000FF",
+              "BorderSize": "8"
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": "0000FF",
+              "BorderSize": "8"
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": "FF0000",
+              "BorderSize": "16"
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": "FF0000",
+              "BorderSize": "16"
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": null,
+        "join-A01": null,
+        "join-A10": null,
+        "join-A11": null,
+        "join-B00": null,
+        "join-B01": null,
+        "join-B10": null,
+        "join-B11": null
+      },
+      "OfficeFinalPdfSha256": "1C4A778EF5796304814241AE0C28C3FA41B9F57646B6F02628A78343D70A679E",
+      "NormalizedSha256": "E61C500F9B2AFB726E4375B7DBDE6435AE39179BC008BDCB9684221A9230AF43"
+    },
+    {
+      "Id": "border-absent",
+      "Input": "border-absent.docx",
+      "InputSha256": "C91C00B5C4D4EAF1840D9CF370F775E071204A31094C49719EEDB77DDD3D9AA9",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 2,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": "0000FF",
+              "BorderSize": "8"
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": "0000FF",
+              "BorderSize": "8"
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                1
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": null,
+        "join-A01": null,
+        "join-A10": null,
+        "join-A11": null,
+        "join-B00": null,
+        "join-B01": null,
+        "join-B10": null,
+        "join-B11": null
+      },
+      "OfficeFinalPdfSha256": "70878819B1BEB4B81A01BBAFD0FDE4BE798F5A4E9DB8718D206490AC5AFAC05A",
+      "NormalizedSha256": "BBE44E673529A8BE1F027088C691149C7A5CE8996872AE31A8C8060E8ADC8E68"
+    },
+    {
+      "Id": "indent-change",
+      "Input": "indent-change.docx",
+      "InputSha256": "F92799C3946DA973F4A78D86CD7FE96871BFBD0D3F661B05FA915B001D21330D",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 5,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 1,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 1,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "00C4ECB2CB711F7E2E07DC46F62C774E990DD4C93574A99A83FF781BA98E2404",
+      "NormalizedSha256": "F94841741865316C6FC5CE5B985E95ED728794887788ECD293E301E31E026377"
+    },
+    {
+      "Id": "indent-first",
+      "Input": "indent-first.docx",
+      "InputSha256": "D5DADE64F50183CA623F9A7BF007B1DB69258A9408F465446265917D70C78EAA",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 5,
+          "Rows": [
+            {
+              "GridBefore": 1,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 1,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "35805DD91FE9123F6DFD37FDFE06AF3DDE36C87164E6DB30A96D943B46DB0EF3",
+      "NormalizedSha256": "88411B0DF6A75007B517B5225CC2F6C919790D8B9D7BDD57BAF78E8BDF3CF136"
+    },
+    {
+      "Id": "width-grow",
+      "Input": "width-grow.docx",
+      "InputSha256": "9F3673000C39F966333B11C164F22AB9D88244344CE8254E6B9A5603652ADBCC",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 4,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "CF6F86654258F91964C63777E073C29D1AD1C47AAFE4C4A0CCBBD56DB5B0B95F",
+      "NormalizedSha256": "24676CBE5557CDA914DAE84F3C24E612984B426B503DC85631D22581A12922C2"
+    },
+    {
+      "Id": "width-shrink",
+      "Input": "width-shrink.docx",
+      "InputSha256": "8068E853EE7AE117A11D71D291E54680432479A3F1EC0E578F23296DD860BCC7",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 4,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                1,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "E8C8A8",
+        "join-A11": "E8C8A8",
+        "join-B00": "C8A888",
+        "join-B01": "C8A888",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "1F0CBAD19D542C2557C15CB8D7A3AE31044D0636D9DBDD623CB81E2CDFAD9EBD",
+      "NormalizedSha256": "1C14E9A53402774E9DEF031615B5A8C8CF38D7C1D52EEA8F9D289FC1E530BE9C"
+    },
+    {
+      "Id": "indent-edges",
+      "Input": "indent-edges.docx",
+      "InputSha256": "57E3DB8970277117C659680A459C12701F746147B4C6B01565CE2CB1358C1091",
+      "Container": "body",
+      "Tables": [
+        {
+          "GridColumns": 5,
+          "Rows": [
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 0,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 1,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            },
+            {
+              "GridBefore": 1,
+              "Spans": [
+                2,
+                2
+              ],
+              "LeftPadding": 0.0,
+              "BorderColor": null,
+              "BorderSize": null
+            }
+          ]
+        }
+      ],
+      "Fills": {
+        "join-A00": "0066CC",
+        "join-A01": "0066CC",
+        "join-A10": "DD4400",
+        "join-A11": "AA00AA",
+        "join-B00": "DD4400",
+        "join-B01": "AA00AA",
+        "join-B10": "008844",
+        "join-B11": "008844"
+      },
+      "OfficeFinalPdfSha256": "E88EFECEF63D5854FEFB0718F6E1930A1535DC61A1BFEEEAEEFC2C88846B30D2",
+      "NormalizedSha256": "D92EA355345AB19C8392A067F80EA3F9B58C850FE3DE86D7CFBBF762D7B2F001"
+    }
+  ]
+}

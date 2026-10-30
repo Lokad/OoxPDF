@@ -96,6 +96,8 @@ internal sealed record DocxTableRow(
     }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 
+    public int GridBefore { get; init; }
+
     public bool HasSupportedHeight => HeightRuleValue is null or "auto" or "exact" or "atLeast" &&
         (HeightPoints is { } height ? double.IsFinite(height) && height >= 0d :
             HeightValue is null && HeightRuleValue is null or "auto");

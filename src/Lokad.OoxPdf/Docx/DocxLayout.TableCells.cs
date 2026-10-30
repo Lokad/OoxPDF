@@ -426,7 +426,7 @@ var context = new DocxTableCellLayoutContext(
 
     private static bool TryGetCellAtGridColumn(DocxTableRow row, int gridColumnIndex, out DocxTableCell? cell)
     {
-        int currentGridColumnIndex = 0;
+        int currentGridColumnIndex = row.GridBefore;
         foreach (DocxTableCell candidate in row.Cells)
         {
             int span = Math.Max(1, candidate.GridSpan);
@@ -446,7 +446,7 @@ var context = new DocxTableCellLayoutContext(
     private static double[] GetTableRowCellWidths(DocxTableRow row, IReadOnlyList<double> effectiveColumns, double scale)
     {
         var widths = new double[row.Cells.Count];
-        int gridColumnIndex = 0;
+        int gridColumnIndex = row.GridBefore;
         for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
         {
             DocxTableCell cell = row.Cells[cellIndex];

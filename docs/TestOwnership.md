@@ -72,13 +72,23 @@ and unavailable checks retain their explicit classifications.
 
 `DocxTableLookTests` pins independent Word fills for bitmask, explicit, partial and
 absent/default declarations, preserving raw source tokens in both DOCX modes.
-The exact old adjacent-table source remains an unresolved composition witness:
-Word joins its six table elements. A separate control supplies paragraph separators
+The exact old adjacent-table source pins Word's single logical table, thirteen
+rows and twenty-two fills. A separate control supplies paragraph separators
 and declares trailing edges off. The live band-intent test reuses that pinned input
 and keeps its assertions, removing repeated inline package construction.
 Select it with `docx-conditional-table-styles`; table-margin and banding neighbors
 belong to the same affected union. Native geometry and full-page image gates
 remain independent of the reader assertions.
+
+`DocxAdjacentTableTests` pins sixteen independent Word controls for same-style
+grouping, paragraph/style/positioned boundaries, row-owned looks/margins/borders,
+grid partitions, indents and preferred widths in body, cell and header containers.
+It also checks cached XML immutability, revision ownership, cancellation and the
+existing derived-grid bound. Qualify `docx-adjacent-tables` with
+`docx-conditional-table-styles` and `docx-table-style-margins`: the union includes
+grid spans, vertical merges, nested content, placement, revisions and composition
+neighbors once per exact method. Reader correctness and Office PDF/image geometry
+remain separate gates; visible Office calibration is still pending.
 
 `DocxNormalTableStyleTests` checks twenty-two source-pinned Word controls for the
 intrinsic style's name/custom metadata, padding and paint, including direct and

@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxReader
 {
     private static DocxTable? ReadTable(
-        XElement table,
+        DocxRevisionScopedElement source,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
         DocxNumberingCounters numberingCounters,
@@ -21,9 +21,12 @@ internal sealed partial class DocxReader
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        DocxRevisionInfo? inheritedRevision)
+        IReadOnlyList<DocxRevisionScopedElement>? fragments = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        XElement table = source.Element;
+        DocxRevisionInfo? inheritedRevision = fragments is null || fragments.All(fragment => fragment.Revision == source.Revision)
+            ? source.Revision : null;
         XElement? tableProperties = table.Element(WordprocessingNamespace + "tblPr");
         string? layoutValue = (string?)tableProperties
             ?.Element(WordprocessingNamespace + "tblLayout")
@@ -41,14 +44,12 @@ internal sealed partial class DocxReader
         AddRevision(tableRevisions, inheritedRevision);
         AddRevisions(tableRevisions, ReadPropertyChangeRevisions(tableProperties));
         DocxTableLook tableLook = ReadTableLook(tableProperties);
-        IReadOnlyList<DocxTableCellBorder> tableBorders = ReadTableBorders(tableProperties);
         DocxTableStyle? resolvedStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
             ? parsedTableStyle
             : styles.DefaultTableStyle;
         DocxTableStyle tableStyle = resolvedStyle ?? DocxTableStyle.Empty;
         bool isCustomStyle = resolvedStyle is { HasCompleteInheritance: true, UsesTableNormal: false };
         bool anchorsStyleGrid = isCustomStyle && tableIndent is null && tableStyle.Table.IndentValue is null;
-        DocxTableCellMargins tableCellMargins = ReadTableStyleCellMargins(tableProperties);
         // Office A/B (m13/ladder compat15 probes): a present compatibilityMode pins the
         // table grid at margin/indent plus the outer border half (legacy outer-edge
         // alignment); without it the grid sits at the origin (modern) or pins text via
@@ -56,152 +57,192 @@ internal sealed partial class DocxReader
         // (survey: only 15 occurs in the wild).
         bool useLegacyTableGrid = documentSettings is not null && documentSettings.CompatSettings.Any(setting => string.Equals(setting.Name, "compatibilityMode", StringComparison.Ordinal));
         double? resolvedTableIndentPoints = tableIndent is not null ? ReadDxaWidth(tableIndent) : tableStyle.Table.IndentPoints;
-        IReadOnlyList<double> columns = table
-            .Element(WordprocessingNamespace + "tblGrid")
-            ?.Elements(WordprocessingNamespace + "gridCol")
-            .Select(column => ReadTwipsAttribute(column, WordprocessingNamespace + "w") ?? 72d)
-            .ToArray() ?? [];
-        bool hasExplicitGrid = columns.Count != 0;
+        var parts = (fragments ?? [source]).Select(fragment => (
+            Properties: fragment.Element.Element(WordprocessingNamespace + "tblPr"),
+            Grid: ReadTableGrid(fragment.Element, cancellationToken),
+            Rows: EnumerateRevisionScopedChildren(fragment.Element.Elements(), markupMode, cancellationToken,
+                [WordprocessingNamespace + "tr"], fragment.Revision == inheritedRevision ? null : fragment.Revision)
+                .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray())).ToArray();
+        bool hasExplicitGrid = parts.Any(part => part.Grid.Length != 0);
+        IReadOnlyList<double> columns = parts[0].Grid;
+        int[][]? gridMappings = null;
+        if (parts.Length > 1)
+        {
+            var grids = parts.Select(part => CompleteJoinedTableGrid(part.Grid, part.Rows, markupMode, cancellationToken)).ToArray();
+            var offsets = parts.Select(part => (ReadDxaWidth(part.Properties?.Element(WordprocessingNamespace + "tblInd"))
+                ?? tableStyle.Table.IndentPoints ?? 0d) - (resolvedTableIndentPoints ?? 0d)).ToArray();
+            var joined = JoinTableGrids(grids, offsets, cancellationToken);
+            columns = joined.Columns;
+            gridMappings = joined.Boundaries;
+        }
+        int rowCount = parts.Sum(part => part.Rows.Length);
+        bool leadingRowEmphasis = true;
+        foreach (var part in parts)
+        {
+            if (part.Rows.Length == 0) continue;
+            leadingRowEmphasis = ReadRowTableLook(part.Rows[0].Element, part.Properties).FirstRow != false;
+            break;
+        }
         var rows = new List<DocxTableRow>();
-        DocxRevisionScopedElement[] rowElements = EnumerateRevisionScopedChildren(table.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "tr"])
-            .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray();
-        for (int rowIndex = 0; rowIndex < rowElements.Length; rowIndex++)
+        int rowIndex = 0;
+        for (int sourceIndex = 0; sourceIndex < parts.Length; sourceIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            XElement row = rowElements[rowIndex].Element;
-            XElement? rowProperties = row.Element(WordprocessingNamespace + "trPr");
-            var rowRevisions = new List<DocxRevisionInfo>();
-            AddRevision(rowRevisions, rowElements[rowIndex].Revision);
-            AddRevisions(rowRevisions, ReadPropertyChangeRevisions(rowProperties));
-            DocxTableCellMargins rowExceptionMargins = ReadTablePropertyExceptionCellMargins(row);
-            DocxTableCellMargins rowInheritedMargins = rowExceptionMargins.Merge(tableCellMargins.Merge(tableStyle.Cell.Margins));
-            var cells = new List<DocxTableCell>();
-            DocxRevisionScopedElement[] cellElements = EnumerateRevisionScopedChildren(row.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "tc"]).ToArray();
-            for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
+            var part = parts[sourceIndex];
+            DocxTableCellMargins partMargins = ReadTableStyleCellMargins(part.Properties);
+            IReadOnlyList<DocxTableCellBorder> partBorders = ReadTableBorders(part.Properties);
+            foreach (var rowElement in part.Rows)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                XElement cell = cellElements[cellIndex].Element;
-                DocxRevisionInfo? inheritedCellRevision = cellElements[cellIndex].Revision ?? rowElements[rowIndex].Revision;
-                XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
-                var cellRevisions = new List<DocxRevisionInfo>();
-                AddRevision(cellRevisions, cellElements[cellIndex].Revision);
-                AddRevisions(cellRevisions, ReadPropertyChangeRevisions(cellProperties));
-                DocxTableCellConditionalFormat? conditionalFormat = ReadTableCellConditionalFormat(cellProperties);
-                DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, tableLook, conditionalFormat, rowIndex, cellIndex, rowElements.Length, cellElements.Length);
-                IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
-                    cell,
-                    styles,
-                    numbering,
-                    numberingCounters,
-                    package,
-                    relationships,
-                    conditionalStyle,
-                    inlineReferenceCounters,
-                    documentSettings,
-                    markupMode,
-                    cancellationToken,
-                    inheritedCellRevision);
-                IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
-                string text = string.Join(" ", paragraphs
-                    .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
-                    .Where(t => t.Length != 0));
-                XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
-                string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? conditionalStyle.FillHex;
-                string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val") ?? conditionalStyle.ShadingValue;
-                string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color") ?? conditionalStyle.ShadingColor;
-                string? verticalAlignment = (string?)cellProperties
-                    ?.Element(WordprocessingNamespace + "vAlign")
-                    ?.Attribute(WordprocessingNamespace + "val")
-                    ?? conditionalStyle.VerticalAlignmentValue;
-                XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
-                XElement? verticalMerge = cellProperties?.Element(WordprocessingNamespace + "vMerge");
-                XElement? noWrap = cellProperties?.Element(WordprocessingNamespace + "noWrap");
-                XElement? fitText = cellProperties?.Element(WordprocessingNamespace + "tcFitText");
-                string? textDirectionValue = cellProperties?.Element(WordprocessingNamespace + "textDirection") is { } textDirection
-                    ? (string?)textDirection.Attribute(WordprocessingNamespace + "val")
-                    : conditionalStyle.TextDirectionValue;
-                bool resolvedNoWrap = noWrap is not null
-                    ? ReadOnOff(noWrap) == true
-                    : conditionalStyle.NoWrap == true;
-                string? resolvedNoWrapValue = noWrap is not null
-                    ? (string?)noWrap.Attribute(WordprocessingNamespace + "val")
-                    : conditionalStyle.NoWrapValue;
-                bool resolvedFitText = fitText is not null
-                    ? ReadOnOff(fitText) == true
-                    : conditionalStyle.FitText == true;
-                string? resolvedFitTextValue = fitText is not null
-                    ? (string?)fitText.Attribute(WordprocessingNamespace + "val")
-                    : conditionalStyle.FitTextValue;
-                IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
-                IReadOnlyList<DocxTableCellBorder> borders = ResolveTableCellBorders(
-                    directBorders,
-                    conditionalStyle.Borders,
-                    tableStyle.TableBorders,
-                    tableBorders,
-                    rowIndex,
-                    cellIndex,
-                    rowElements.Length,
-                    cellElements.Length);
-                DocxTableCellMargins inheritedMargins = rowInheritedMargins.Merge(conditionalStyle.Margins);
-                DocxTableCellMargins margins = ReadTableCellMargins(cellProperties).Merge(inheritedMargins);
-                DocxTableCellMargins styleMargins = tableStyle.Cell.Margins.Merge(conditionalStyle.Margins);
-                // Without compat, an intrinsic style pins text through the first
-                // cell's effective padding. Table, row and cell declarations replace
-                // style padding for both that grid anchor and the content offset.
-                bool pinTextToMargin = !isCustomStyle && !useLegacyTableGrid && (resolvedTableIndentPoints ?? 0d) == 0d && (styleMargins.LeftPoints ?? 0d) > 0d;
-                DocxTableCellMargins? gridAnchorMargins = anchorsStyleGrid
-                    ? DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d }
-                    : pinTextToMargin ? margins : null;
-                cells.Add(new DocxTableCell(
-                    text,
-                    paragraphs,
-                    fill,
-                    shadingValue,
-                    shadingColor,
-                    verticalAlignment,
-                    borders,
-                    margins,
-                    ReadDxaWidth(cellWidth),
-                    (string?)cellWidth?.Attribute(WordprocessingNamespace + "w"),
-                    (string?)cellWidth?.Attribute(WordprocessingNamespace + "type"),
-                    ReadGridSpan(cellProperties),
-                    (string?)cellProperties
-                        ?.Element(WordprocessingNamespace + "gridSpan")
-                        ?.Attribute(WordprocessingNamespace + "val"),
-                    conditionalFormat,
-                    verticalMerge is not null,
-                    (string?)verticalMerge?.Attribute(WordprocessingNamespace + "val"),
-                    resolvedNoWrap,
-                    resolvedNoWrapValue,
-                    resolvedFitText,
-                    resolvedFitTextValue,
-                    textDirectionValue,
-                    gridAnchorMargins,
-                    pinTextToMargin)
+                XElement row = rowElement.Element;
+                XElement? rowExceptions = row.Element(WordprocessingNamespace + "tblPrEx");
+                DocxTableLook rowLook = ReadRowTableLook(row, part.Properties);
+                IReadOnlyList<DocxTableCellBorder> rowTableBorders = ReadTableBorders(rowExceptions);
+                XElement? rowProperties = row.Element(WordprocessingNamespace + "trPr");
+                var rowRevisions = new List<DocxRevisionInfo>();
+                AddRevision(rowRevisions, rowElement.Revision);
+                AddRevisions(rowRevisions, ReadPropertyChangeRevisions(rowProperties));
+                DocxTableCellMargins rowExceptionMargins = ReadTablePropertyExceptionCellMargins(row);
+                DocxTableCellMargins rowInheritedMargins = rowExceptionMargins.Merge(partMargins.Merge(tableStyle.Cell.Margins));
+                if (sourceIndex != 0) AddRevisions(rowRevisions, ReadPropertyChangeRevisions(part.Properties));
+                var cells = new List<DocxTableCell>();
+                int sourceColumn = ReadRowGridBefore(rowProperties);
+                int gridBefore = gridMappings is null ? sourceColumn : gridMappings[sourceIndex][sourceColumn];
+                DocxRevisionScopedElement[] cellElements = EnumerateRevisionScopedChildren(row.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "tc"]).ToArray();
+                for (int cellIndex = 0; cellIndex < cellElements.Length; cellIndex++)
                 {
-                    BodyElements = cellBodyElements,
-                    Revisions = cellRevisions
-                });
-            }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    XElement cell = cellElements[cellIndex].Element;
+                    DocxRevisionInfo? inheritedCellRevision = cellElements[cellIndex].Revision ?? rowElement.Revision;
+                    XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
+                    var cellRevisions = new List<DocxRevisionInfo>();
+                    AddRevision(cellRevisions, cellElements[cellIndex].Revision);
+                    AddRevisions(cellRevisions, ReadPropertyChangeRevisions(cellProperties));
+                    DocxTableCellConditionalFormat? conditionalFormat = ReadTableCellConditionalFormat(cellProperties);
+                    DocxTableCellStyle conditionalStyle = ResolveTableCellStyle(tableStyle, rowLook, conditionalFormat, rowIndex, cellIndex, rowCount, cellElements.Length, leadingRowEmphasis);
+                    IReadOnlyList<DocxBodyElement> cellBodyElements = ReadTableCellBodyElements(
+                        cell,
+                        styles,
+                        numbering,
+                        numberingCounters,
+                        package,
+                        relationships,
+                        conditionalStyle,
+                        inlineReferenceCounters,
+                        documentSettings,
+                        markupMode,
+                        cancellationToken,
+                        inheritedCellRevision);
+                    IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(cellBodyElements).ToArray();
+                    string text = string.Join(" ", paragraphs
+                        .Select(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)))
+                        .Where(t => t.Length != 0));
+                    XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
+                    string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill") ?? conditionalStyle.FillHex;
+                    string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val") ?? conditionalStyle.ShadingValue;
+                    string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color") ?? conditionalStyle.ShadingColor;
+                    string? verticalAlignment = (string?)cellProperties
+                        ?.Element(WordprocessingNamespace + "vAlign")
+                        ?.Attribute(WordprocessingNamespace + "val")
+                        ?? conditionalStyle.VerticalAlignmentValue;
+                    XElement? cellWidth = cellProperties?.Element(WordprocessingNamespace + "tcW");
+                    XElement? verticalMerge = cellProperties?.Element(WordprocessingNamespace + "vMerge");
+                    XElement? noWrap = cellProperties?.Element(WordprocessingNamespace + "noWrap");
+                    XElement? fitText = cellProperties?.Element(WordprocessingNamespace + "tcFitText");
+                    string? textDirectionValue = cellProperties?.Element(WordprocessingNamespace + "textDirection") is { } textDirection
+                        ? (string?)textDirection.Attribute(WordprocessingNamespace + "val")
+                        : conditionalStyle.TextDirectionValue;
+                    bool resolvedNoWrap = noWrap is not null
+                        ? ReadOnOff(noWrap) == true
+                        : conditionalStyle.NoWrap == true;
+                    string? resolvedNoWrapValue = noWrap is not null
+                        ? (string?)noWrap.Attribute(WordprocessingNamespace + "val")
+                        : conditionalStyle.NoWrapValue;
+                    bool resolvedFitText = fitText is not null
+                        ? ReadOnOff(fitText) == true
+                        : conditionalStyle.FitText == true;
+                    string? resolvedFitTextValue = fitText is not null
+                        ? (string?)fitText.Attribute(WordprocessingNamespace + "val")
+                        : conditionalStyle.FitTextValue;
+                    IReadOnlyList<DocxTableCellBorder> directBorders = ReadTableCellBorders(cellProperties);
+                    IReadOnlyList<DocxTableCellBorder> borders = ResolveTableCellBorders(
+                        directBorders,
+                        conditionalStyle.Borders,
+                        tableStyle.TableBorders,
+                        partBorders,
+                        rowTableBorders,
+                        rowIndex,
+                        cellIndex,
+                        rowCount,
+                        cellElements.Length);
+                    DocxTableCellMargins inheritedMargins = rowInheritedMargins.Merge(conditionalStyle.Margins);
+                    DocxTableCellMargins margins = ReadTableCellMargins(cellProperties).Merge(inheritedMargins);
+                    DocxTableCellMargins styleMargins = tableStyle.Cell.Margins.Merge(conditionalStyle.Margins);
+                    // Without compat, an intrinsic style pins text through the first
+                    // cell's effective padding. Table, row and cell declarations replace
+                    // style padding for both that grid anchor and the content offset.
+                    bool pinTextToMargin = !isCustomStyle && !useLegacyTableGrid && (resolvedTableIndentPoints ?? 0d) == 0d && (styleMargins.LeftPoints ?? 0d) > 0d;
+                    DocxTableCellMargins? gridAnchorMargins = anchorsStyleGrid
+                        ? DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d }
+                        : pinTextToMargin ? margins : null;
+                    int sourceSpan = ReadGridSpan(cellProperties);
+                    int gridSpan = gridMappings is null ? sourceSpan : Math.Max(1,
+                        gridMappings[sourceIndex][sourceColumn + sourceSpan] - gridMappings[sourceIndex][sourceColumn]);
+                    sourceColumn += sourceSpan;
+                    cells.Add(new DocxTableCell(
+                        text,
+                        paragraphs,
+                        fill,
+                        shadingValue,
+                        shadingColor,
+                        verticalAlignment,
+                        borders,
+                        margins,
+                        ReadDxaWidth(cellWidth),
+                        (string?)cellWidth?.Attribute(WordprocessingNamespace + "w"),
+                        (string?)cellWidth?.Attribute(WordprocessingNamespace + "type"),
+                        gridSpan,
+                        (string?)cellProperties
+                            ?.Element(WordprocessingNamespace + "gridSpan")
+                            ?.Attribute(WordprocessingNamespace + "val"),
+                        conditionalFormat,
+                        verticalMerge is not null,
+                        (string?)verticalMerge?.Attribute(WordprocessingNamespace + "val"),
+                        resolvedNoWrap,
+                        resolvedNoWrapValue,
+                        resolvedFitText,
+                        resolvedFitTextValue,
+                        textDirectionValue,
+                        gridAnchorMargins,
+                        pinTextToMargin)
+                    {
+                        BodyElements = cellBodyElements,
+                        Revisions = cellRevisions
+                    });
+                }
 
-            if (cells.Count > 0)
-            {
-                XElement? header = rowProperties?.Element(WordprocessingNamespace + "tblHeader");
-                XElement? cantSplit = rowProperties?.Element(WordprocessingNamespace + "cantSplit");
-                XElement? rowHeight = rowProperties?.Element(WordprocessingNamespace + "trHeight");
-                rows.Add(new DocxTableRow(
-                    cells,
-                    ReadTableRowHeight(rowHeight),
-                    ReadOnOff(header) == true,
-                    (string?)header?.Attribute(WordprocessingNamespace + "val"),
-                    (string?)rowHeight?.Attribute(WordprocessingNamespace + "val"),
-                    (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule"),
-                    HasAnyTableCellMargin(rowExceptionMargins) ? rowExceptionMargins : null,
-                    ReadOnOff(cantSplit) == true,
-                    (string?)cantSplit?.Attribute(WordprocessingNamespace + "val"))
+                if (cells.Count > 0)
                 {
-                    Revisions = rowRevisions
-                });
+                    XElement? header = rowProperties?.Element(WordprocessingNamespace + "tblHeader");
+                    XElement? cantSplit = rowProperties?.Element(WordprocessingNamespace + "cantSplit");
+                    XElement? rowHeight = rowProperties?.Element(WordprocessingNamespace + "trHeight");
+                    DocxTableCellMargins effectiveExceptions = sourceIndex == 0 ? rowExceptionMargins : rowExceptionMargins.Merge(partMargins);
+                    rows.Add(new DocxTableRow(
+                        cells,
+                        ReadTableRowHeight(rowHeight),
+                        ReadOnOff(header) == true,
+                        (string?)header?.Attribute(WordprocessingNamespace + "val"),
+                        (string?)rowHeight?.Attribute(WordprocessingNamespace + "val"),
+                        (string?)rowHeight?.Attribute(WordprocessingNamespace + "hRule"),
+                        HasAnyTableCellMargin(effectiveExceptions) ? effectiveExceptions : null,
+                        ReadOnOff(cantSplit) == true,
+                        (string?)cantSplit?.Attribute(WordprocessingNamespace + "val"))
+                    {
+                        Revisions = rowRevisions,
+                        GridBefore = gridBefore
+                    });
+                }
+                rowIndex++;
             }
         }
 
@@ -215,7 +256,7 @@ internal sealed partial class DocxReader
             int inferredGridColumns = 0;
             foreach (DocxTableRow row in rows)
             {
-                long rowTotal = 0;
+                long rowTotal = row.GridBefore;
                 foreach (DocxTableCell cell in row.Cells)
                 {
                     rowTotal = checked(rowTotal + Math.Max(1, cell.GridSpan));
@@ -246,7 +287,7 @@ internal sealed partial class DocxReader
             tableWidth is not null ? ReadDxaWidth(tableWidth) : tableStyle.Table.PreferredWidthPoints,
             tableWidth is not null ? (string?)tableWidth.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.PreferredWidthValue,
             tableWidth is not null ? (string?)tableWidth.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.PreferredWidthType,
-            tableIndent is not null ? ReadDxaWidth(tableIndent) : tableStyle.Table.IndentPoints,
+            resolvedTableIndentPoints,
             tableIndent is not null ? (string?)tableIndent.Attribute(WordprocessingNamespace + "w") : tableStyle.Table.IndentValue,
             tableIndent is not null ? (string?)tableIndent.Attribute(WordprocessingNamespace + "type") : tableStyle.Table.IndentType,
             tableCellSpacing is not null ? ReadDxaWidth(tableCellSpacing) : tableStyle.Table.CellSpacingPoints,
@@ -329,7 +370,7 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision)
     {
         var elements = new List<DocxBodyElement>();
-        foreach (DocxRevisionScopedElement scopedChild in EnumerateRevisionScopedChildren(cell.Elements(), markupMode, cancellationToken, [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"]))
+        foreach (var (scopedChild, tableFragments) in EnumerateLogicalTableBlocks(cell.Elements(), styles, markupMode, cancellationToken, inheritedRevision))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement child = scopedChild.Element;
@@ -420,7 +461,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? nestedTable = ReadTable(child, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, childRevision);
+                DocxTable? nestedTable = ReadTable(scopedChild, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments);
                 if (nestedTable is not null)
                 {
                     elements.Add(DocxBodyElementFactory.CreateTable(nestedTable));
@@ -617,6 +658,7 @@ internal sealed partial class DocxReader
         IReadOnlyList<DocxTableCellBorder> styleBorders,
         IReadOnlyList<DocxTableCellBorder> styleTableBorders,
         IReadOnlyList<DocxTableCellBorder> tableBorders,
+        IReadOnlyList<DocxTableCellBorder> rowTableBorders,
         int rowIndex,
         int cellIndex,
         int rowCount,
@@ -626,6 +668,7 @@ internal sealed partial class DocxReader
         AddBorders(resolved, ResolveTableBordersForCell(styleTableBorders, rowIndex, cellIndex, rowCount, cellCount));
         AddBorders(resolved, styleBorders);
         AddBorders(resolved, ResolveTableBordersForCell(tableBorders, rowIndex, cellIndex, rowCount, cellCount));
+        AddBorders(resolved, ResolveTableBordersForCell(rowTableBorders, rowIndex, cellIndex, rowCount, cellCount));
         AddBorders(resolved, directBorders);
         return new[] { "top", "bottom", "left", "right" }
             .Where(resolved.ContainsKey)

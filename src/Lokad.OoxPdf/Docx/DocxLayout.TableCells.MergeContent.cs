@@ -64,7 +64,7 @@ internal sealed partial class DocxLayoutEngine
         for (int first = 0; first < table.Rows.Count; first++)
         {
             token.ThrowIfCancellationRequested();
-            int gridColumn = 0;
+            int gridColumn = table.Rows[first].GridBefore;
             foreach (var cell in table.Rows[first].Cells)
             {
                 if (cell.IsVerticalMergeRestart && IsStaticTopAlignedMergeSource(cell) &&

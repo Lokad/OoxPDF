@@ -1117,7 +1117,7 @@ internal sealed partial class DocxLayoutEngine
             double?[] preferredWidths = new double?[columnCount];
             foreach (DocxTableRow row in table.Rows)
             {
-                int gridColumnIndex = 0;
+                int gridColumnIndex = row.GridBefore;
                 foreach (DocxTableCell cell in row.Cells)
                 {
                     int span = Math.Max(1, cell.GridSpan);
@@ -1538,7 +1538,7 @@ internal sealed partial class DocxLayoutEngine
         int max = 0;
         foreach (DocxTableRow row in table.Rows)
         {
-            long total = 0;
+            long total = row.GridBefore;
             foreach (DocxTableCell cell in row.Cells)
             {
                 total = checked(total + Math.Max(1, cell.GridSpan));
@@ -2097,10 +2097,10 @@ internal sealed partial class DocxLayoutEngine
         double rowTopPadding = ResolveTableRowTopPadding(row, paragraphSpacingScale);
         double fullRowHeight = rowHeights[rowIndex];
         double fragmentOffsetFromRowTop = logicalRowTopY - cursorY;
-        double cellX = tableContext.TableX;
+        double cellX = tableContext.TableX + effectiveColumns.Take(row.GridBefore).Sum() * scale;
         double cellY = cursorY - rowHeight;
         var cells = new List<DocxTableCellLayout>(row.Cells.Count);
-        int gridColumnIndex = 0;
+        int gridColumnIndex = row.GridBefore;
         for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
         {
             double cellWidth = cellWidths[columnIndex];

@@ -114,7 +114,7 @@ internal sealed partial class DocxReader
         bool retainBalloonParagraphMark = false)
     {
         var bodyElements = new List<DocxBodyElement>();
-        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(elements, markupMode, cancellationToken, [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"]))
+        foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(elements, styles, markupMode, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;
@@ -129,7 +129,7 @@ internal sealed partial class DocxReader
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: null, markupMode: markupMode, cancellationToken: cancellationToken, inheritedRevision: inheritedRevision);
+                DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: null, markupMode: markupMode, cancellationToken: cancellationToken, fragments: tableFragments);
                 if (table is not null)
                 {
                     bodyElements.Add(DocxBodyElementFactory.CreateTable(table));

@@ -52,7 +52,7 @@ internal sealed partial class DocxReader
         documentSettings = ResolveSingleSectionNoteReferenceSettings(document, documentSettings);
         IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(document, authoredSettings, documentSettings);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
-        foreach (DocxRevisionScopedElement scopedElement in EnumerateRevisionScopedChildren(bodyChildren, markupMode, cancellationToken, [WordprocessingNamespace + "p", WordprocessingNamespace + "tbl"]))
+        foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(bodyChildren, styles, markupMode, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;
@@ -159,7 +159,7 @@ internal sealed partial class DocxReader
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(element, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, inheritedRevision);
+                DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters, documentSettings, markupMode, cancellationToken, tableFragments);
                 if (table is not null)
                 {
                     elements.Add(DocxBodyElementFactory.CreateTable(table));
