@@ -70,8 +70,9 @@ and unavailable checks retain their explicit classifications.
 
 `docx-conditional-table-styles` covers the shared table-style cascade, direct
 formatting, inheritance, false flags, margins and borders. Four pinned public
-controls retain 108 independent Word cell-fill expectations, with and without
-compatibility mode 15. Their font-independent checks run in the Ubuntu capability
+controls and nine edge/span controls retain 201 independent Word cell-fill expectations.
+These include compatibility mode 15, coincident edges and trailing-only fallback.
+Their font-independent checks run in the Ubuntu capability
 union; full-page comparisons remain separate from resolved-color correctness.
 
 `docx-page-print-origins` qualifies body origins, annotation targets, inspection,

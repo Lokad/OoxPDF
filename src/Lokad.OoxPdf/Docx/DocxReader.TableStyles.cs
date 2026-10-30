@@ -343,18 +343,20 @@ internal sealed partial class DocxReader
         // One cascade for explicit cnfStyle and positional membership. Word's
         // independent controls (with/without compat15) agree with MS-OI29500
         // 2.1.251: row bands, column bands, columns, rows, then corners.
+        // When a cell belongs to both ends of an axis, the leading edge wins.
+        // Trailing declarations still supply properties absent from that edge.
         if (oddHorizontalBand) yield return "band1Horz";
         if (evenHorizontalBand) yield return "band2Horz";
         if (oddVerticalBand) yield return "band1Vert";
         if (evenVerticalBand) yield return "band2Vert";
-        if (firstColumn) yield return "firstCol";
         if (lastColumn) yield return "lastCol";
-        if (firstRow) yield return "firstRow";
+        if (firstColumn) yield return "firstCol";
         if (lastRow) yield return "lastRow";
-        if (firstRowFirstColumn) yield return "nwCell";
-        if (firstRowLastColumn) yield return "neCell";
-        if (lastRowFirstColumn) yield return "swCell";
+        if (firstRow) yield return "firstRow";
         if (lastRowLastColumn) yield return "seCell";
+        if (lastRowFirstColumn) yield return "swCell";
+        if (firstRowLastColumn) yield return "neCell";
+        if (firstRowFirstColumn) yield return "nwCell";
     }
 
     private static string? ResolveBandRegion(int index, int bandSize, string firstBand, string secondBand, bool excludeLeading)

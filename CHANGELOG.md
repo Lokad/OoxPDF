@@ -19,7 +19,8 @@
 - DOCX: continuation pages use their own body print origins, keeping text,
   bookmarks, links and following endnotes independent of page-one font sizes.
 - DOCX: resolves table bands, edge styles and corner styles in one precedence
-  order for both explicit conditional flags and positional styling.
+  order for both explicit conditional flags and positional styling, including
+  merged edges and single-row/column tables.
 - PPTX: retains readable advances and run/chart hyperlinks when standard PDF
   fonts replace unavailable fonts, including cell text and transformed links.
 - Preserves authored chart titles when automatic-title deletion is enabled;

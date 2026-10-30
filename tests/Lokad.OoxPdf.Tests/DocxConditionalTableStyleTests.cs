@@ -76,6 +76,28 @@ internal static class DocxConditionalTableStyleTests
         TestAssert.Equal("0066CC", cells[2].Paragraphs[0].Runs[0].ColorHex);
     }
 
+    public static void DocxConditionalTableStylesKeepTrailingPropertiesUnderLeadingEdges()
+    {
+        var document = Read(Path.Combine(Cases, "single-cell.docx"), (_, styles) =>
+        {
+            var regions = styles.Root!.Elements(W + "style").First()
+                .Elements(W + "tblStylePr").ToDictionary(e => (string)e.Attribute(W + "type")!);
+            regions["lastRow"].AddFirst(new XElement(W + "rPr",
+                new XElement(W + "b", new XAttribute(W + "val", "0")), new XElement(W + "i")));
+            regions["firstRow"].AddFirst(new XElement(W + "rPr", new XElement(W + "b")));
+            regions["lastCol"].Element(W + "tcPr")!.Add(new XElement(W + "vAlign", new XAttribute(W + "val", "bottom")),
+                new XElement(W + "tcMar", new XElement(W + "left", new XAttribute(W + "w", "100"), new XAttribute(W + "type", "dxa"))));
+            regions["firstCol"].Element(W + "tcPr")!.Add(new XElement(W + "vAlign", new XAttribute(W + "val", "top")));
+        });
+        var cell = document.Tables[0].Rows[0].Cells[0];
+        var run = cell.Paragraphs[0].Runs[0];
+        TestAssert.Equal("0066CC", cell.FillHex);
+        TestAssert.Equal("top", cell.VerticalAlignmentValue);
+        TestAssert.Equal(5d, cell.Margins.LeftPoints!.Value);
+        TestAssert.True(run.Bold && run.Italic,
+            "Leading formatting overrides conflicting properties while retaining independent trailing properties.");
+    }
+
     private static void AssertOfficeFills(DocxDocument document, JsonElement control)
     {
         var expected = control.GetProperty("Fills");
@@ -85,7 +107,7 @@ internal static class DocxConditionalTableStyleTests
             TestAssert.Equal(expected.GetProperty(cell.Text).GetString(), cell.FillHex);
             count++;
         }
-        TestAssert.Equal(27, count);
+        TestAssert.Equal(expected.EnumerateObject().Count(), count);
     }
 
     private static DocxDocument Read(string path, Action<XDocument, XDocument>? transform = null)

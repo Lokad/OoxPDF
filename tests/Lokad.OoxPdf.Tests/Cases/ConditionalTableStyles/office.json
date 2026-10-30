@@ -137,7 +137,164 @@
         "bands-21": "88A8C8",
         "bands-22": "A8C8E8"
       }
+    },
+    {
+      "Input": "merged-one.docx",
+      "InputSha256": "5A336644979EBBF9E95F1524A218AA73FEE0A7591BFE82A2079070FDEEBA2282",
+      "OfficePdfSha256": "C19596330E966E8699BD09BF5B1CA90772248CDC3CCCE0EC2FC3023DE6F2542A",
+      "Fills": {
+        "edges-00": "0066CC",
+        "edges-02": "0066CC",
+        "edges-10": "DD4400",
+        "edges-11": "AA00AA",
+        "edges-20": "008844",
+        "corners-00": "FFC000",
+        "corners-02": "CCAA00",
+        "corners-10": "DD4400",
+        "corners-11": "AA00AA",
+        "corners-20": "AAAA00",
+        "bands-00": "A8C8E8",
+        "bands-02": "88A8C8",
+        "bands-10": "A8C8E8",
+        "bands-11": "88A8C8",
+        "bands-20": "A8C8E8"
+      }
+    },
+    {
+      "Input": "merged-two.docx",
+      "InputSha256": "53EFF9390B18B44EA1C8471C9F5A0EE59B0AA71DB85978251350DAE1E6AB4603",
+      "OfficePdfSha256": "C8F58B8667C2509F122DEFDBA3003FB24AFD534FB7B7DF2641C5C5F8D998D032",
+      "Fills": {
+        "edges-00": "0066CC",
+        "edges-02": "0066CC",
+        "edges-10": "DD4400",
+        "edges-11": "AA00AA",
+        "edges-20": "008844",
+        "corners-00": "FFC000",
+        "corners-02": "CCAA00",
+        "corners-10": "DD4400",
+        "corners-11": "AA00AA",
+        "corners-20": "AAAA00",
+        "bands-00": "A8C8E8",
+        "bands-02": "A8C8E8",
+        "bands-10": "A8C8E8",
+        "bands-11": "A8C8E8",
+        "bands-20": "A8C8E8"
+      }
+    },
+    {
+      "Input": "plain-two.docx",
+      "InputSha256": "F2F01A2805734CC24855A5FFFCCBC8D1D5CB98F528FF8107479E44DC2311E72F",
+      "OfficePdfSha256": "74CA713753CDA69FBF455860A95FEACA0802C0D0DD672B5D5F002F68134D9FA8",
+      "Fills": {
+        "edges-00": "0066CC",
+        "edges-01": "0066CC",
+        "edges-02": "0066CC",
+        "edges-10": "DD4400",
+        "edges-11": "A8C8E8",
+        "edges-12": "AA00AA",
+        "edges-20": "008844",
+        "edges-21": "008844",
+        "edges-22": "008844",
+        "corners-00": "FFC000",
+        "corners-01": "0066CC",
+        "corners-02": "CCAA00",
+        "corners-10": "DD4400",
+        "corners-11": "A8C8E8",
+        "corners-12": "AA00AA",
+        "corners-20": "AAAA00",
+        "corners-21": "008844",
+        "corners-22": "888800",
+        "bands-00": "A8C8E8",
+        "bands-01": "A8C8E8",
+        "bands-02": "88A8C8",
+        "bands-10": "A8C8E8",
+        "bands-11": "A8C8E8",
+        "bands-12": "88A8C8",
+        "bands-20": "A8C8E8",
+        "bands-21": "A8C8E8",
+        "bands-22": "88A8C8"
+      }
+    },
+    {
+      "Input": "full-rows.docx",
+      "InputSha256": "4ED52C6587DE82B35017DE2773DCF47DCE99FBDFD170BDF22DC751BAE8E73E1E",
+      "OfficePdfSha256": "7D6AB92F17CBD69795D466397B047F587370D7F8E5AC90EB126E003E4C403BEB",
+      "Fills": {
+        "edges-00": "0066CC",
+        "edges-10": "DD4400",
+        "edges-20": "008844",
+        "corners-00": "FFC000",
+        "corners-10": "DD4400",
+        "corners-20": "AAAA00",
+        "bands-00": "A8C8E8",
+        "bands-10": "A8C8E8",
+        "bands-20": "A8C8E8"
+      }
+    },
+    {
+      "Input": "one-column.docx",
+      "InputSha256": "840AB1F9512E1E7E4BCE3217926B45C39C9633A1B94D0FCA62E960F23B330F1B",
+      "OfficePdfSha256": "8DD86C806A3BA533518681B276A7E009860C3579DE90AAFB5753EE8E3A09D9A8",
+      "Fills": {
+        "edges-00": "0066CC",
+        "edges-10": "DD4400",
+        "edges-20": "008844",
+        "corners-00": "FFC000",
+        "corners-10": "DD4400",
+        "corners-20": "AAAA00",
+        "bands-00": "A8C8E8",
+        "bands-10": "A8C8E8",
+        "bands-20": "A8C8E8"
+      }
+    },
+    {
+      "Input": "one-row.docx",
+      "InputSha256": "312E12C98E6C0290F04508392F591223703B7EDE50B8A5A889C29D4B0F1040DA",
+      "OfficePdfSha256": "53F8E29E67DB92EC738B0488BB6993A0FC2C8DE092C981B5F06DFD42809E733F",
+      "Fills": {
+        "edges-00": "0066CC",
+        "edges-01": "0066CC",
+        "edges-02": "0066CC",
+        "corners-00": "FFC000",
+        "corners-01": "0066CC",
+        "corners-02": "CCAA00",
+        "bands-00": "A8C8E8",
+        "bands-01": "88A8C8",
+        "bands-02": "A8C8E8"
+      }
+    },
+    {
+      "Input": "single-cell.docx",
+      "InputSha256": "B885902E0B9989EE354BED448D30C18C4AA382DA144AEAE66EE7CA3E6D480161",
+      "OfficePdfSha256": "5A6F8DE3070D10839AB2917F1ECB493E9F69455B2FF2222837803F6C1A3425D1",
+      "Fills": {
+        "edges-00": "0066CC",
+        "corners-00": "FFC000",
+        "bands-00": "A8C8E8"
+      }
+    },
+    {
+      "Input": "trailing-only.docx",
+      "InputSha256": "2DC6BF5205BADDD1C8A1B7EA450450CCB3720E2A0040F23EAE20F61681866E4E",
+      "OfficePdfSha256": "73D660FAC76E240F5BF7F6C1170102FD809A2B172296E2BD0FC484D9A800F989",
+      "Fills": {
+        "edges-00": "008844",
+        "corners-00": "888800",
+        "bands-00": "A8C8E8"
+      }
+    },
+    {
+      "Input": "explicit-single-cell.docx",
+      "InputSha256": "6EAD7E7F48832B72B7CC971A1B5C1D3E41E58C25FA90EA9F5B4791A33FBC5505",
+      "OfficePdfSha256": "292F4208AD8FB2E606D3C8D692EBD4E07D582974B75D6771A0F4FC48CA5F53D5",
+      "Fills": {
+        "edges-00": "0066CC",
+        "corners-00": "FFC000",
+        "bands-00": "A8C8E8"
+      }
     }
   ],
-  "ExplicitMembership": "Explicit edge controls encode the same band membership as positional header/last-edge exclusions. Earlier stale parity flags are retained in ignored probe evidence; Word recomputes those flags."
+  "ExplicitMembership": "Explicit edge controls encode the same band membership as positional header/last-edge exclusions. Earlier stale parity flags are retained in ignored probe evidence; Word recomputes those flags.",
+  "CoincidentEdges": "Leading-edge declarations win when first/last memberships coincide. Trailing declarations remain fallback when a leading declaration is absent. Supported by whole-row spans, one-row/column and explicit single-cell controls."
 }
