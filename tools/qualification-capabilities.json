@@ -1,4 +1,20 @@
 {
+  "image-transform-storage": [
+    "MemoryBudgetImageTransforms",
+    "PptxPictureGeometry",
+    "PptxSyntheticPngPicture",
+    "PptxSyntheticTransformedPngPictureUsesSlideClip",
+    "PptxSyntheticCroppedPictureUsesClipping",
+    "PptxSyntheticRgbaPngPicturePreservesSoftMask",
+    "PptxSyntheticShapePictureFillRendersImageXObject",
+    "PptxSyntheticEllipsePictureFillClipsImage",
+    "PptxSyntheticOuterShadowRendersOffsetShape",
+    "PptxSyntheticShapeRectGlowUsesRasterSoftMask",
+    "PptxSyntheticBaselineJpegPictureAppliesDuotoneRecolor",
+    "PptxImageRecolorPreservesRawOoxmlTokens",
+    "MemoryBudgetJpegRefusalRemainsTerminalForRecolorAndCrop",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "pdf-resource-compression": [
     "MemoryBudgetCompression",
     "MemoryBudgetImagePlanesFollowDecodedOwnerAndCompressionBorrow",

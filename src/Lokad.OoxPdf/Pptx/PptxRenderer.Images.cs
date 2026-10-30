@@ -456,8 +456,8 @@ internal sealed partial class PptxRenderer
                     try
                     {
                         using DecodedPixels recolorSource = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
-                        byte[] rgb = ApplyImageRecolor(recolorSource.Rgb, recolor, cancellationToken);
-                        return PdfImageXObject.RgbPng(recolorSource.Width, recolorSource.Height, rgb, alpha: null, cancellationToken);
+                        RecolorOwnedPixels(recolorSource.Rgb, recolor, cancellationToken);
+                        return PdfImageXObject.RgbPng(recolorSource.Width, recolorSource.Height, recolorSource.Rgb, alpha: null, cancellationToken);
                     }
                     catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
                     {
@@ -481,8 +481,8 @@ internal sealed partial class PptxRenderer
             // unknown types throw with the same message the explicit branch used to
             // emit, so the catch below reports byte-identical diagnostics.
             using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
-            byte[] recoloredRgb = ApplyImageRecolor(decoded.Rgb, recolor, cancellationToken);
-            return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recoloredRgb, decoded.Alpha, cancellationToken);
+            RecolorOwnedPixels(decoded.Rgb, recolor, cancellationToken);
+            return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, cancellationToken);
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
@@ -538,6 +538,10 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        using IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
+            checked((long)croppedWidth * croppedHeight * (alpha is null ? 3 : 4)));
+        cancellationToken.ThrowIfCancellationRequested();
         byte[] croppedRgb = new byte[croppedWidth * croppedHeight * 3];
         byte[]? croppedAlpha = alpha is null ? null : new byte[croppedWidth * croppedHeight];
         for (int y = 0; y < croppedHeight; y++)
@@ -550,23 +554,20 @@ internal sealed partial class PptxRenderer
                 Buffer.BlockCopy(alpha, sourceY * width + left, croppedAlpha, y * croppedWidth, croppedWidth);
             }
         }
-        if (IsNoImageRecolor(recolor))
-        {
-            return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, croppedRgb, croppedAlpha, cancellationToken);
-        }
-        byte[] recoloredRgb = ApplyImageRecolor(croppedRgb, recolor, cancellationToken);
-        return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, recoloredRgb, croppedAlpha, cancellationToken);
+        RecolorOwnedPixels(croppedRgb, recolor, cancellationToken);
+        return PdfImageXObject.RgbPng(croppedWidth, croppedHeight, croppedRgb, croppedAlpha, cancellationToken);
     }
 
-    private static byte[] ApplyImageRecolor(byte[] rgb, PptxSceneImageRecolor recolor, CancellationToken cancellationToken)
+    // Every caller supplies fresh private decoded/cropped planes. Recolor those
+    // pixels under their existing owner; never mutate the encoded source/cache.
+    private static void RecolorOwnedPixels(byte[] rgb, PptxSceneImageRecolor recolor, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (IsNoImageRecolor(recolor))
         {
-            return rgb;
+            return;
         }
 
-        byte[] transformed = new byte[rgb.Length];
         for (int i = 0; i < rgb.Length; i += 3)
         {
             if (i % 12288 == 0) { cancellationToken.ThrowIfCancellationRequested(); }
@@ -575,9 +576,9 @@ internal sealed partial class PptxRenderer
             double blue = rgb[i + 2];
             if (recolor.Kind == PptxSceneImageRecolorKind.Luminance)
             {
-                transformed[i] = ApplyBrightnessContrast(red);
-                transformed[i + 1] = ApplyBrightnessContrast(green);
-                transformed[i + 2] = ApplyBrightnessContrast(blue);
+                rgb[i] = ApplyBrightnessContrast(red);
+                rgb[i + 1] = ApplyBrightnessContrast(green);
+                rgb[i + 2] = ApplyBrightnessContrast(blue);
                 continue;
             }
 
@@ -585,27 +586,25 @@ internal sealed partial class PptxRenderer
             if (recolor.Kind == PptxSceneImageRecolorKind.Grayscale)
             {
                 byte gray = PptxColorResolver.ToByte(luma * 255d);
-                transformed[i] = gray;
-                transformed[i + 1] = gray;
-                transformed[i + 2] = gray;
+                rgb[i] = gray;
+                rgb[i + 1] = gray;
+                rgb[i + 2] = gray;
                 continue;
             }
 
             if (recolor.Kind == PptxSceneImageRecolorKind.BiLevel)
             {
                 byte value = luma >= recolor.Threshold ? (byte)255 : (byte)0;
-                transformed[i] = value;
-                transformed[i + 1] = value;
-                transformed[i + 2] = value;
+                rgb[i] = value;
+                rgb[i + 1] = value;
+                rgb[i + 2] = value;
                 continue;
             }
 
-            transformed[i] = Interpolate(recolor.Dark.Red, recolor.Light.Red, luma);
-            transformed[i + 1] = Interpolate(recolor.Dark.Green, recolor.Light.Green, luma);
-            transformed[i + 2] = Interpolate(recolor.Dark.Blue, recolor.Light.Blue, luma);
+            rgb[i] = Interpolate(recolor.Dark.Red, recolor.Light.Red, luma);
+            rgb[i + 1] = Interpolate(recolor.Dark.Green, recolor.Light.Green, luma);
+            rgb[i + 2] = Interpolate(recolor.Dark.Blue, recolor.Light.Blue, luma);
         }
-
-        return transformed;
 
         byte ApplyBrightnessContrast(double channel)
         {
@@ -677,7 +676,8 @@ internal sealed partial class PptxRenderer
         out PdfImageXObject? image,
         out CropRect crop,
         out FillRect fillRect,
-        out double alpha)
+        out double alpha,
+        CancellationToken cancellationToken)
     {
         name = null;
         image = null;
@@ -704,7 +704,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        image = GetOrCreateImage(resolvedPictureFill.Resource, PptxSceneImageRecolor.None, imageCache, diagnosticSink, slideIndex);
+        image = GetOrCreateImage(resolvedPictureFill.Resource, PptxSceneImageRecolor.None, imageCache, diagnosticSink, slideIndex, cancellationToken);
         if (image is null)
         {
             return false;

@@ -69,7 +69,8 @@ internal sealed partial class PptxRenderer
         GroupTransform groupTransform,
         List<PdfImageResource>? images,
         Dictionary<string, PdfImageXObject?>? imageCache,
-        ref int imageIndex)
+        ref int imageIndex,
+        CancellationToken cancellationToken)
     {
         if (shape.Shape is null || shape.Bounds is null)
         {
@@ -101,7 +102,8 @@ internal sealed partial class PptxRenderer
             ToOuterShadow(shape.Shape.OuterShadow),
             ToLineStyle(shape.Shape.Line),
             ToLineEndStyle(shape.Shape.HeadEnd),
-            ToLineEndStyle(shape.Shape.TailEnd));
+            ToLineEndStyle(shape.Shape.TailEnd),
+            cancellationToken);
     }
 
     private static void RenderShape(
@@ -129,8 +131,10 @@ internal sealed partial class PptxRenderer
         OuterShadow? outerShadowOverride,
         LineStyle? lineOverride,
         LineEndStyle? headEndOverride,
-        LineEndStyle? tailEndOverride)
+        LineEndStyle? tailEndOverride,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
         if (shapeProperties is null)
         {
@@ -222,7 +226,8 @@ internal sealed partial class PptxRenderer
             out PdfImageXObject? pictureFillImage,
             out CropRect pictureFillCrop,
             out FillRect pictureFillRect,
-            out double pictureFillAlpha);
+            out double pictureFillAlpha,
+            cancellationToken);
         PptxSceneCustomGeometry? sceneCustomGeometry = customGeometryOverride is { HasGeometry: true } ? customGeometryOverride : null;
 
         if (transformed)
@@ -239,7 +244,7 @@ internal sealed partial class PptxRenderer
             CanRenderGlowPreset(preset) &&
             images is not null)
         {
-            DrawRasterGlow(graphics, x, y, width, height, glow, images, ref imageIndex);
+            DrawRasterGlow(graphics, x, y, width, height, glow, images, ref imageIndex, cancellationToken);
         }
 
         if (hasOuterShadow &&
@@ -250,7 +255,8 @@ internal sealed partial class PptxRenderer
                 preset == "rect" &&
                 images is not null)
             {
-                DrawRasterOuterShadow(graphics, x, y, width, height, outerShadow, images, ref imageIndex);
+                DrawRasterOuterShadow(graphics, x, y, width, height, outerShadow, images, ref imageIndex,
+                    cancellationToken: cancellationToken);
             }
             else
             {

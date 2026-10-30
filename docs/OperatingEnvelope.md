@@ -15,10 +15,11 @@ JPEG component/RGB construction overlap before allocation. Image/font compressio
 also admits actual output capacity, growth overlap and final copying. Image payloads
 remain funded through emission; font-compression storage refunds after its stream
 is written. Storage refunds after
-its users finish, including failure/cancellation.
+its users finish, including failure/cancellation. Crop and generated shadow/glow
+planes are admitted for their invocation; recolor reuses privately owned pixels.
 Its scopes share the caller's root; they create no private allowance. Caller-owned
 buffers are not charged twice. Models, font source/cache and parsed maps,
-image transforms and other PDF resources remain pending, so
+other PDF resources remain pending, so
 this is partial coverage. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.
 

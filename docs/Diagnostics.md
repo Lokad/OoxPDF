@@ -173,8 +173,10 @@ and cancellation refund immediately. Image/font compression admits actual output
 capacity, replacement overlap and final copying. Retained image payloads remain
 funded through emission; font buffers refund after their stream is written.
 Failed preparation refunds immediately, including a prepared RGB payload when
-alpha compression fails. Models, font sources/caches and parsed maps, image
-transforms and other PDF resources remain pending.
+alpha compression fails. Crop and generated shadow/glow planes are admitted before
+allocation and refund after their compression/paint users finish. Recolor mutates
+only private decoded/cropped pixels, leaving encoded source/cache bytes unchanged.
+Models, font sources/caches and parsed maps, and other PDF resources remain pending.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.

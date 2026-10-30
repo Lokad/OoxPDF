@@ -79,6 +79,9 @@ internal sealed partial class PptxRenderer
         // run downward, so samples map back into that same geometry.
         TryCreatePresetPolygonPoints(preset, 0d, 0d, width, height, out var polygon);
 
+        using IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
+            checked((long)pixelWidth * pixelHeight * 4));
+        cancellationToken.ThrowIfCancellationRequested();
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
@@ -208,8 +211,10 @@ internal sealed partial class PptxRenderer
         double height,
         Glow glow,
         List<PdfImageResource> images,
-        ref int imageIndex)
+        ref int imageIndex,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (glow.Radius <= 0d ||
             glow.Alpha <= 0d ||
             width <= 0d ||
@@ -227,10 +232,14 @@ internal sealed partial class PptxRenderer
         double scaleX = pixelWidth / glowWidth;
         double scaleY = pixelHeight / glowHeight;
 
+        using IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
+            checked((long)pixelWidth * pixelHeight * 4));
+        cancellationToken.ThrowIfCancellationRequested();
         byte[] rgb = new byte[pixelWidth * pixelHeight * 3];
         byte[] alpha = new byte[pixelWidth * pixelHeight];
         for (int pixelY = 0; pixelY < pixelHeight; pixelY++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             double localY = (pixelY + 0.5d) / scaleY - glow.Radius;
             double dy = localY < 0d ? -localY : localY > height ? localY - height : 0d;
             for (int pixelX = 0; pixelX < pixelWidth; pixelX++)
@@ -260,7 +269,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha);
+        var image = PdfImageXObject.RgbPng(pixelWidth, pixelHeight, rgb, alpha, cancellationToken);
         // RV10: admit retained bytes at creation like ordinary image producers.
         string name = "Im" + imageIndex++;
         graphics.SaveState();

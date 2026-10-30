@@ -228,7 +228,8 @@ internal sealed partial class PptxRenderer
                             transform,
                             images,
                             context.ImageCache,
-                            ref imageIndex);
+                            ref imageIndex,
+                            cancellationToken);
                         EndSlideNodeClip(graphics);
                     }
 
@@ -259,7 +260,8 @@ internal sealed partial class PptxRenderer
                     transform,
                     images,
                     context.ImageCache,
-                    ref imageIndex);
+                    ref imageIndex,
+                    cancellationToken);
                 EndSlideNodeClip(graphics);
                 AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
                 break;
