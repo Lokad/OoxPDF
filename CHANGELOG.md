@@ -2,6 +2,8 @@
 
 ## 0.3.0 — Unreleased
 
+- DOCX: reports omitted external images, malformed floating drawings and unsupported
+  VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
   qualification records framework-specific library and tool identities.
 - PPTX: honors series and point negative-bar inversion flags across clustered and

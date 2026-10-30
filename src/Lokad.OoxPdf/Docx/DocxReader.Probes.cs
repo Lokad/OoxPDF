@@ -117,6 +117,29 @@ internal sealed partial class DocxReader
 
         }
 
+        void EmitDrawingPayloadDiagnostics(XDocument probeDocument, string probePartName,
+            IReadOnlyDictionary<string, OoxRelationship> probeRelationships)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (probeDocument.Descendants(WordprocessingDrawingNamespace + "anchor")
+                .Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, probeRelationships)))
+            {
+                Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing", probePartName, "Ignored", false);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (HasUnsupportedVml(probeDocument, probeRelationships))
+            {
+                Emit("DOCX_UNSUPPORTED_VML", "VML drawing payload", probePartName, "Ignored", false);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (HasExternalDrawingImage(probeDocument, probeRelationships))
+            {
+                Emit("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image", probePartName, "Ignored", false);
+            }
+        }
+
         if (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
             document.Descendants(WordprocessingNamespace + "commentReference").Any())
         {
@@ -174,23 +197,7 @@ internal sealed partial class DocxReader
 
         EmitStaticPayloadDiagnostics(document, partName);
 
-        cancellationToken.ThrowIfCancellationRequested();
-        if (document.Descendants(WordprocessingDrawingNamespace + "anchor").Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, relationships)))
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing");
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (HasUnsupportedVml(document, relationships))
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_VML", "VML drawing payload");
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (HasExternalDrawingImage(document, relationships))
-        {
-            EmitUnsupported("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image");
-        }
+        EmitDrawingPayloadDiagnostics(document, partName, relationships);
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(WordprocessingNamespace + "footnoteReference").Any())
@@ -288,11 +295,12 @@ internal sealed partial class DocxReader
             EmitUnsupported("DOCX_UNSUPPORTED_MACRO", "macro");
         }
         // Related-story payloads render through their own stories, so probe them too.
-        // Relationship-dependent checks stay body-only; their story variants remain open.
         foreach ((string storyPartName, XDocument storyDocument) in LoadProbeStoryDocuments(package, document, relationships, cancellationToken))
         {
             EmitStaticPayloadDiagnostics(storyDocument, storyPartName);
-
+            var storyRelationships = package.GetRelationships(storyPartName, cancellationToken)
+                .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
+            EmitDrawingPayloadDiagnostics(storyDocument, storyPartName, storyRelationships);
         }
     }
 

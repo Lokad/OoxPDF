@@ -1,4 +1,12 @@
 {
+  "docx-story-drawing-diagnostics": [
+    "DocxStoryOwnership",
+    "DocxUnsupportedFeaturesEmitDiagnostics",
+    "DocxUnsupportedChartInHeaderIsDiagnosed",
+    "DocxUnsupportedEquationInFooterIsDiagnosed",
+    "DocxMissingPicturePreserves",
+    "DiagnosticCancellationPreservesCallerToken"
+  ],
   "docx-table-style-margins": [
     "DocxCustomTableMargins",
     "DocxStyleMarginsPinTextAtMarginWithoutCompat",

@@ -134,6 +134,111 @@ internal static class DocxStoryOwnershipTests
         }, path => TestAssert.Equal(1, Render(path, OoxPdfDocxMarkupMode.Final).Diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_MACRO")));
     }
 
+    public static void DocxStoryOwnershipDiagnosesDrawingFallbacksWithLocalProvenance()
+    {
+        foreach (var mode in Modes)
+        foreach (string story in new[] { "header", "footer" })
+        foreach (bool selected in new[] { false, true })
+            Mutate("uncached-selected-header", (parts, xml) => {
+                SetDrawingStory(parts, xml, story, selected, external: true, unsupported: true);
+            }, path => {
+                var actual = Render(path, mode);
+                foreach (string id in new[] { "DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "DOCX_UNSUPPORTED_FLOATING_DRAWING", "DOCX_UNSUPPORTED_VML" })
+                {
+                    var warnings = actual.Diagnostics.Where(d => d.Id == id).ToArray();
+                    TestAssert.Equal(selected ? 1 : 0, warnings.Length);
+                    if (selected)
+                    {
+                        TestAssert.Equal("/word/unused-header.xml", warnings[0].PartName);
+                        TestAssert.Equal("Ignored", warnings[0].Fallback);
+                        TestAssert.Equal(OoxPdfSeverity.Warning, warnings[0].Severity);
+                    }
+                }
+                string text = DocxPageFootnoteNumberingTests.DecodeText(actual.Pages.Single());
+                TestAssert.Contains("Visible body", text);
+                TestAssert.Equal(selected, text.Contains("Story neighbor", StringComparison.Ordinal));
+                TestAssert.Equal(0, actual.Pages.Sum(page => page.Images.Count));
+            });
+    }
+
+    public static void DocxStoryOwnershipKeepsDrawingRelationshipIdsLocal()
+    {
+        foreach (var mode in Modes)
+        foreach (string story in new[] { "header", "footer" })
+            Mutate("uncached-selected-header", (parts, xml) => {
+                SetDrawingStory(parts, xml, story, selected: true, external: false, unsupported: false);
+            }, path => {
+                var actual = Render(path, mode);
+                TestAssert.Equal(0, actual.Diagnostics.Count);
+                TestAssert.Equal(2, actual.Pages.Sum(page => page.Images.Count));
+                TestAssert.Contains("Story neighbor", DocxPageFootnoteNumberingTests.DecodeText(actual.Pages.Single()));
+            });
+    }
+
+    public static void DocxStoryOwnershipDrawingDiagnosticsObserveCancellation()
+    {
+        Mutate("uncached-selected-header", (parts, xml) => {
+            SetDrawingStory(parts, xml, "header", selected: true, external: true, unsupported: true);
+        }, path => {
+            using var input = File.OpenRead(path);
+            var package = OoxPackage.Open(input, default);
+            using var cancellation = new CancellationTokenSource();
+            int warnings = 0;
+            var error = TestAssert.Throws<OperationCanceledException>(() => new DocxReader().Read(package, diagnostic => {
+                if (diagnostic.Id == "DOCX_UNSUPPORTED_FLOATING_DRAWING")
+                {
+                    warnings++;
+                    cancellation.Cancel();
+                }
+            }, cancellation.Token, OoxPdfDocxMarkupMode.Final));
+            TestAssert.Equal(1, warnings);
+            TestAssert.Equal(cancellation.Token, error.CancellationToken);
+        });
+    }
+
+    private static void SetDrawingStory(Dictionary<string, byte[]> parts, XDocument document,
+        string story, bool selected, bool external, bool unsupported)
+    {
+        var reference = document.Descendants(W+"headerReference").Single();
+        reference.Name = W+(story+"Reference");
+        if (!selected) reference.Remove();
+        var relationships = Xml(parts, "word/_rels/document.xml.rels");
+        relationships.Root!.Elements().Single(e => (string?)e.Attribute("Id") == "reviewHeader")
+            .SetAttributeValue("Type", R.NamespaceName+"/"+story);
+        // The same ID in the body has the opposite target kind. A story must
+        // use its own relationship table for both image reading and diagnostics.
+        XNamespace rel = "http://schemas.openxmlformats.org/package/2006/relationships";
+        relationships.Root.Add(new XElement(rel+"Relationship", new XAttribute("Id", "localImage"),
+            new XAttribute("Type", R.NamespaceName+"/image"),
+            new XAttribute("Target", external ? "media/pixel.png" : "https://example.invalid/body.png"),
+            external ? null : new XAttribute("TargetMode", "External")));
+        parts["word/_rels/document.xml.rels"] = Bytes(relationships);
+        parts["word/_rels/unused-header.xml.rels"] = Bytes(new XDocument(new XElement(rel+"Relationships",
+            new XElement(rel+"Relationship", new XAttribute("Id", "localImage"),
+                new XAttribute("Type", R.NamespaceName+"/image"),
+                new XAttribute("Target", external ? "https://example.invalid/story.png" : "media/pixel.png"),
+                external ? new XAttribute("TargetMode", "External") : null))));
+        XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XNamespace v = "urn:schemas-microsoft-com:vml";
+        var paragraph = new XElement(W+"p", new XElement(W+"r", new XElement(W+"t", "Story neighbor")),
+            new XElement(W+"r", new XElement(W+"drawing", new XElement(wp+"inline",
+                new XElement(wp+"extent", new XAttribute("cx", 127000), new XAttribute("cy", 127000)),
+                new XElement(a+"graphic", new XElement(a+"graphicData", new XElement(a+"blip",
+                    new XAttribute(R+(external ? "link" : "embed"), "localImage"))))))));
+        if (unsupported) paragraph.Add(new XElement(W+"r",
+            new XElement(W+"drawing", new XElement(wp+"anchor")),
+            new XElement(W+"pict", new XElement(v+"rect"))));
+        parts["word/unused-header.xml"] = Bytes(new XDocument(new XElement(W+(story == "header" ? "hdr" : "ftr"),
+            paragraph, new XElement(paragraph))));
+        parts["word/media/pixel.png"] = TestFixtures.CreateRgbPng(1, 1, [255, 0, 0]);
+        var types = Xml(parts, "[Content_Types].xml");
+        types.Root!.Elements().Single(e => (string?)e.Attribute("PartName") == "/word/unused-header.xml")
+            .SetAttributeValue("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml."+story+"+xml");
+        types.Root.Add(new XElement(types.Root.Name.Namespace+"Default", new XAttribute("Extension", "png"), new XAttribute("ContentType", "image/png")));
+        parts["[Content_Types].xml"] = Bytes(types);
+    }
+
     private static (PdfPage[] Pages, List<OoxPdfDiagnostic> Diagnostics) Render(string path, OoxPdfDocxMarkupMode mode)
     {
         using var input = File.OpenRead(path);

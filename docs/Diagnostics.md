@@ -65,8 +65,8 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: a complex field was malformed in a way that prevents cached-result or placeholder rendering, nested inside another field instruction, or had no supported dynamic placeholder and no cached result to render.
 - `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
 - `DOCX_APPROXIMATED_EQUATION`: native Office Math was painted with approximate layout; one warning per affected part. This is distinct from omitted unsupported equations.
-- `DOCX_UNSUPPORTED_EXTERNAL_IMAGE`: an externally referenced image was detected and ignored because only packaged parts render; one warning per document.
-- `DOCX_UNSUPPORTED_FLOATING_DRAWING`: floating DrawingML content was malformed or used an unsupported payload such as a chart, SmartArt, external image, or anchor positioning outside the supported image/text-box placement model.
+- `DOCX_UNSUPPORTED_EXTERNAL_IMAGE`: an externally referenced image was detected and ignored because only packaged parts render; one warning per document, with the owning body/related-story part. Selected headers and footers use their own image relationships.
+- `DOCX_UNSUPPORTED_FLOATING_DRAWING`: floating DrawingML content in the body or a probed related story was malformed or used an unsupported payload such as a chart, SmartArt, external image, or anchor positioning outside the supported image/text-box placement model.
 - `DOCX_UNSUPPORTED_FORMATTING_REVISIONS`: formatting revisions were detected outside a mode that approximates them, so they are ignored; the AllMarkup approximation is `DOCX_APPROXIMATED_FORMATTING_REVISIONS`.
 - `DOCX_UNSUPPORTED_MACRO`: a VBA project was detected and ignored.
 - `DOCX_UNSUPPORTED_MANUAL_BREAK`: an unsupported manual column-break container was detected; visible body column breaks are supported.
