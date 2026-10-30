@@ -153,3 +153,10 @@ This is a content-presence screen; geometry and visual gates remain independent.
 content, source grid ownership, styles, links and row-height recovery. The three
 portable methods join neighboring table checks through `pptx-table-merges-portable`;
 the separate Office-origin oracle requires the declared installed Aptos faces.
+
+`pptx-chart-semantic-fonts` checks category-label offset, tick-label skipping and
+stack-segment label placement with the existing synthetic `TestFaceFontResolver`.
+These are relative geometry/content assertions, independent of Office fonts.
+All original color, operator-count and geometry assertions remain. The earlier
+Ubuntu failures with an empty local catalog are retained; font-specific Office
+baselines and independent visual thresholds remain separate checks.

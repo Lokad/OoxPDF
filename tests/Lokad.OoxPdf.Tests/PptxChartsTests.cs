@@ -429,7 +429,7 @@ internal static class PptxChartsTests
             });
             string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-            OoxPdfConverter.Convert(input, output);
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
             return File.ReadAllText(output, Encoding.ASCII);
         }
@@ -509,7 +509,7 @@ internal static class PptxChartsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
@@ -3545,7 +3545,7 @@ internal static class PptxChartsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         var labelMatrices = Regex.Matches(pdf, @"1 0 0 1 (?<x>[0-9.]+) (?<y>[0-9.]+) Tm")

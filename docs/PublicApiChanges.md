@@ -68,8 +68,9 @@ refusal reports `MemoryAdmission` / `Conversion`; the existing constructors reta
 `DocumentBound` / `Conversion`. Custom shared-resource providers can use the new
 constructor with `SharedResource`. Existing exception catches still work. Refusal
 remains terminal and preserves file publication and caller-stream ownership.
-This classification does not provide producer memory accounting or true async I/O;
-those embedding contracts are being revised separately.
+Admission coverage remains partial; see the [operating envelope](OperatingEnvelope.md).
+Conversion now awaits input, temporary storage, output and selected DOCX/PPTX font
+programs. CPU layout and drawing run synchronously between those awaits.
 
 Replace `OoxPdfOptions.MemoryAdmission` / `IOoxPdfMemoryAdmission` with
 `MemoryBudget` / `IMemoryBudget`. The caller owns the shared root; the library

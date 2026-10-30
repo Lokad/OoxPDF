@@ -12537,5 +12537,10 @@
     "WorkbookSheetsBeyondBudgetThrow",
     "WorksheetCellsAtBudgetBoundaryPass",
     "WorksheetCellsBeyondBudgetThrow"
+  ],
+  "pptx-chart-semantic-fonts": [
+    "PptxSyntheticChartCategoryAxisLabelOffsetRender",
+    "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
+    "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry"
   ]
 }
