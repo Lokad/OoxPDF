@@ -69,7 +69,7 @@ internal static class DocxTableStyleMarginTests
             string input = TestFixtures.WriteTempPackage(".docx", parts);
             try
             {
-                var cell = FirstCell(DocxTests.ReadDocx(input), true);
+                var cell = FirstCell(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), true);
                 TestAssert.True(cell.Cell.Margins.LeftPoints is null, "An incomplete/cyclic chain retains the unset-margin fallback.");
                 TestAssert.True(Math.Abs(cell.X + cell.ContentPaddingLeft - 72.48d) < 1e-9,
                     "Unknown inheritance keeps the previous bare-table anchor.");
