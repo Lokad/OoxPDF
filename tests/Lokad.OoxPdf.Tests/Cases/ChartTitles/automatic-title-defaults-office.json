@@ -1,0 +1,28 @@
+{
+  "OfficeBuild": "16.0.20527.20088",
+  "Provenance": "Public single-series column charts. Independent PowerPoint PDF font sizes; no whole-slide image or calibrated application-view claim. External title-role sizes remain 18.62/30/18.62pt respectively. The no-style control changes only selector ownership.",
+  "FontSizeTolerancePoints": 0.1,
+  "Cases": [
+    {
+      "Input": "automatic-title-default.pptx",
+      "InputSha256": "1DB5DAC05EC822E45E7E9BC52165E7875B345AB2FBDB2EE6518F1D37A4A71AE8",
+      "NominalSize": 18,
+      "OfficeSize": 18,
+      "OfficePdfSha256": "3693E2B2FE25FA0AE75991A91DFBABB58447EF66363998C295ECB88BB507843A"
+    },
+    {
+      "Input": "automatic-title-no-style.pptx",
+      "InputSha256": "4CDB167B7AAEB5365019ECEE66C9BD207F944865C2E3FAEF2E86518D712A2A4E",
+      "NominalSize": 10,
+      "OfficeSize": 9.960000038146973,
+      "OfficePdfSha256": "2824050A556AAF3DE8C52B01BAD52434B0ADC7D17CDB25B47CBF87AB0D52B759"
+    },
+    {
+      "Input": "automatic-title-style48.pptx",
+      "InputSha256": "F998DDC1E6B04513FA23049DE778999B292D4F502E9D089EE9DB8B87F6D5BA38",
+      "NominalSize": 18,
+      "OfficeSize": 18,
+      "OfficePdfSha256": "C4E0CB501A403E97795EE4F286C2C011A72362CBDB305D1F6E3B49BC4B351832"
+    }
+  ]
+}

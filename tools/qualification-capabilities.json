@@ -80,6 +80,8 @@
       "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback"
   ],
   "pptx-chart-titles": [
+    "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
+    "PptxInferredTitleSizeFollowsSourcePrecedence",
       "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
       "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",
       "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",

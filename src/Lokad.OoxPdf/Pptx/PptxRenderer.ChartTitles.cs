@@ -585,9 +585,6 @@ internal sealed partial class PptxRenderer
 
         return style with
         {
-            FontSize = sceneChart.Title.TextStyle.FontSize is null
-                ? style.FontSize * PptxChartMetricRules.AutoTitleFontScale
-                : style.FontSize,
             Bold = true
         };
     }

@@ -571,7 +571,6 @@ internal sealed partial class PptxRenderer
         // on full, short, and moved frames alike (sigma 0.05); plot-top versus shape-top stays
         // confounded on full-frame plots. Explicit and manual titles keep the ratio fallback.
         public const double PolarTitleTopOffset = 28.0d;
-        public const double AutoTitleFontScale = 1.2d;
         public const double TitleAbovePlotBaselineOffsetFactor = 0.8483333333333334d;
         public const double AutoBarTitleAbovePlotBaselineOffsetFactor = 1.08d;
         public const double TitleWidthRatio = 0.84d;
