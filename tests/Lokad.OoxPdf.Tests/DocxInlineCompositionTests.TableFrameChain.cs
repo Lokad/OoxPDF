@@ -83,7 +83,9 @@ internal static partial class DocxInlineCompositionTests
             double expected = (Origin(final, before[0]) - Following(final)) * scale;
             double actual = Origin(review, after[0]) - Following(review);
             TestAssert.True(Math.Abs(expected - actual) < .000001d,
-                "The following paragraph consumes the same physical frame across mixed cell/body metrics.");
+                $"The following paragraph consumes the same physical frame: expected={expected}/actual={actual}/heading={headingSize}/cells={sizes}/scale={scale}/separator={separator}; " +
+                $"before={string.Join(';', before.Select(row => $"{row.Height}:{row.Cells[0].Width}:{row.Cells[0].TextLines.Count}"))}; " +
+                $"after={string.Join(';', after.Select(row => $"{row.Height}:{row.Cells[0].Width}:{row.Cells[0].TextLines.Count}"))}.");
         }
     }
 }
