@@ -271,68 +271,20 @@ internal sealed partial class DocxReader
         return resolved;
     }
 
-    private static IEnumerable<string> EnumerateTableStyleRegions(DocxTableCellConditionalFormat conditionalFormat)
-    {
-        if (conditionalFormat.FirstRow == true)
-        {
-            yield return "firstRow";
-        }
-
-        if (conditionalFormat.LastRow == true)
-        {
-            yield return "lastRow";
-        }
-
-        if (conditionalFormat.FirstColumn == true)
-        {
-            yield return "firstCol";
-        }
-
-        if (conditionalFormat.LastColumn == true)
-        {
-            yield return "lastCol";
-        }
-
-        if (conditionalFormat.FirstRowFirstColumn == true)
-        {
-            yield return "nwCell";
-        }
-
-        if (conditionalFormat.FirstRowLastColumn == true)
-        {
-            yield return "neCell";
-        }
-
-        if (conditionalFormat.LastRowFirstColumn == true)
-        {
-            yield return "swCell";
-        }
-
-        if (conditionalFormat.LastRowLastColumn == true)
-        {
-            yield return "seCell";
-        }
-
-        if (conditionalFormat.OddHorizontalBand == true)
-        {
-            yield return "band1Horz";
-        }
-
-        if (conditionalFormat.EvenHorizontalBand == true)
-        {
-            yield return "band2Horz";
-        }
-
-        if (conditionalFormat.OddVerticalBand == true)
-        {
-            yield return "band1Vert";
-        }
-
-        if (conditionalFormat.EvenVerticalBand == true)
-        {
-            yield return "band2Vert";
-        }
-    }
+    private static IEnumerable<string> EnumerateTableStyleRegions(DocxTableCellConditionalFormat format) =>
+        EnumerateTableStyleRegions(
+            oddHorizontalBand: format.OddHorizontalBand == true,
+            evenHorizontalBand: format.EvenHorizontalBand == true,
+            oddVerticalBand: format.OddVerticalBand == true,
+            evenVerticalBand: format.EvenVerticalBand == true,
+            firstColumn: format.FirstColumn == true,
+            lastColumn: format.LastColumn == true,
+            firstRow: format.FirstRow == true,
+            lastRow: format.LastRow == true,
+            firstRowFirstColumn: format.FirstRowFirstColumn == true,
+            firstRowLastColumn: format.FirstRowLastColumn == true,
+            lastRowFirstColumn: format.LastRowFirstColumn == true,
+            lastRowLastColumn: format.LastRowLastColumn == true);
 
     private static IEnumerable<string> EnumerateTableStyleRegions(
         DocxTableLook tableLook,
@@ -364,58 +316,45 @@ internal sealed partial class DocxReader
         bool edgeCol = excludeLeadingColumn && cellIndex == 0;
         bool edgeLastCol = lastColumn && cellIndex == cellCount - 1 && hasLastColRegion;
 
-        // Horizontal bands win over vertical bands on cells matching both (probe6/probe8T1/probe10 interiors follow the row band).
         string? verticalBandRegion = ResolveBandRegion(cellIndex, columnBandSize ?? 1, "band1Vert", "band2Vert", excludeLeading: excludeLeadingColumn);
-        if (verticalBand && !edgeCol && !edgeLastCol && verticalBandRegion is not null)
-        {
-            yield return verticalBandRegion;
-        }
-
         string? horizontalBandRegion = ResolveBandRegion(rowIndex, rowBandSize ?? 1, "band1Horz", "band2Horz", excludeLeading: excludeLeadingRow);
-        if (horizontalBand && !edgeRow && !edgeLastRow && horizontalBandRegion is not null)
-        {
-            yield return horizontalBandRegion;
-        }
+        return EnumerateTableStyleRegions(
+            oddHorizontalBand: horizontalBand && !edgeRow && !edgeLastRow && horizontalBandRegion == "band1Horz",
+            evenHorizontalBand: horizontalBand && !edgeRow && !edgeLastRow && horizontalBandRegion == "band2Horz",
+            oddVerticalBand: verticalBand && !edgeCol && !edgeLastCol && verticalBandRegion == "band1Vert",
+            evenVerticalBand: verticalBand && !edgeCol && !edgeLastCol && verticalBandRegion == "band2Vert",
+            firstColumn: firstColumn && cellIndex == 0,
+            lastColumn: lastColumn && cellIndex == cellCount - 1,
+            firstRow: firstRow && rowIndex == 0,
+            lastRow: lastRow && rowIndex == rowCount - 1,
+            firstRowFirstColumn: firstRow && firstColumn && rowIndex == 0 && cellIndex == 0,
+            firstRowLastColumn: firstRow && lastColumn && rowIndex == 0 && cellIndex == cellCount - 1,
+            lastRowFirstColumn: lastRow && firstColumn && rowIndex == rowCount - 1 && cellIndex == 0,
+            lastRowLastColumn: lastRow && lastColumn && rowIndex == rowCount - 1 && cellIndex == cellCount - 1);
+    }
 
-        if (firstRow && rowIndex == 0)
-        {
-            yield return "firstRow";
-        }
-
-        if (lastRow && rowIndex == rowCount - 1)
-        {
-            yield return "lastRow";
-        }
-
-        if (firstColumn && cellIndex == 0)
-        {
-            yield return "firstCol";
-        }
-
-        if (lastColumn && cellIndex == cellCount - 1)
-        {
-            yield return "lastCol";
-        }
-
-        if (firstRow && firstColumn && rowIndex == 0 && cellIndex == 0)
-        {
-            yield return "nwCell";
-        }
-
-        if (firstRow && lastColumn && rowIndex == 0 && cellIndex == cellCount - 1)
-        {
-            yield return "neCell";
-        }
-
-        if (lastRow && firstColumn && rowIndex == rowCount - 1 && cellIndex == 0)
-        {
-            yield return "swCell";
-        }
-
-        if (lastRow && lastColumn && rowIndex == rowCount - 1 && cellIndex == cellCount - 1)
-        {
-            yield return "seCell";
-        }
+    private static IEnumerable<string> EnumerateTableStyleRegions(
+        bool oddHorizontalBand, bool evenHorizontalBand,
+        bool oddVerticalBand, bool evenVerticalBand,
+        bool firstColumn, bool lastColumn, bool firstRow, bool lastRow,
+        bool firstRowFirstColumn, bool firstRowLastColumn,
+        bool lastRowFirstColumn, bool lastRowLastColumn)
+    {
+        // One cascade for explicit cnfStyle and positional membership. Word's
+        // independent controls (with/without compat15) agree with MS-OI29500
+        // 2.1.251: row bands, column bands, columns, rows, then corners.
+        if (oddHorizontalBand) yield return "band1Horz";
+        if (evenHorizontalBand) yield return "band2Horz";
+        if (oddVerticalBand) yield return "band1Vert";
+        if (evenVerticalBand) yield return "band2Vert";
+        if (firstColumn) yield return "firstCol";
+        if (lastColumn) yield return "lastCol";
+        if (firstRow) yield return "firstRow";
+        if (lastRow) yield return "lastRow";
+        if (firstRowFirstColumn) yield return "nwCell";
+        if (firstRowLastColumn) yield return "neCell";
+        if (lastRowFirstColumn) yield return "swCell";
+        if (lastRowLastColumn) yield return "seCell";
     }
 
     private static string? ResolveBandRegion(int index, int bandSize, string firstBand, string secondBand, bool excludeLeading)

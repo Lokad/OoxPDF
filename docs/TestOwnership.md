@@ -68,6 +68,12 @@ layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures
 and unavailable checks retain their explicit classifications.
 
+`docx-conditional-table-styles` covers the shared table-style cascade, direct
+formatting, inheritance, false flags, margins and borders. Four pinned public
+controls retain 108 independent Word cell-fill expectations, with and without
+compatibility mode 15. Their font-independent checks run in the Ubuntu capability
+union; full-page comparisons remain separate from resolved-color correctness.
+
 `docx-page-print-origins` qualifies body origins, annotation targets, inspection,
 static stories and following-note boundaries together. Eight source-pinned public
 controls retain sixteen independent Word PDF measurements. Portable tests change

@@ -1,4 +1,16 @@
 {
+  "docx-conditional-table-styles": [
+    "DocxConditionalTableStyles",
+    "DocxReaderTableStyle",
+    "DocxReaderAppliesDefaultTableStyleCellMargins",
+    "DocxReaderDirectTableCellMarginsOverrideDefaultTableStyle",
+    "DocxReaderDirectTableBordersOverrideTableStyleCellBordersPerEdge",
+    "DocxTableStyleParagraphSpacingCollapsesInCellLayout",
+    "DocxReaderTableBordersApplyOuterAndInsideEdges",
+    "DocxReaderPreservesTableLookTokens",
+    "DocxTableRendererBlendsPercentageCellShading",
+    "DocxReaderTableCellPreservesShadingTokens"
+  ],
   "pptx-table-merges": [
     "PptxMergedTable",
     "PptxSyntheticTable",
