@@ -163,7 +163,8 @@ refund after their readers finish. Refusal throws `OoxPdfLimitExceededException`
 with `Kind=MemoryAdmission`, `Scope=Conversion`; it never becomes node recovery,
 cache eviction, storage spilling or omitted content. Existing format/output
 failures retain `DocumentBound`. Current producer coverage is package byte
-storage and intake; model, font, image and PDF ownership migration remains open.
+storage/intake and PDF content staging, including encoding/readback scratch and
+spill buffers. Model, font, image and PDF resource ownership migration remains open.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.

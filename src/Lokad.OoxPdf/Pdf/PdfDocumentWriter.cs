@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -135,26 +134,19 @@ internal sealed class PdfDocumentWriter
 
     // RV11-P1: bounded-scratch ASCII encoding. One ASCII char always encodes to
     // exactly one byte (non-ASCII becomes ?), so any char-boundary chunking is
-    // byte-identical to whole-string encoding while scratch stays at one pooled
-    // chunk. Validation upstream already rejects non-ASCII content.
+    // byte-identical to whole-string encoding. The store owns and admits the
+    // single scratch chunk, reused for emission. Validation rejects non-ASCII.
     private static void AppendEncodedPageContent(PdfPageContentStaging staging, string content, CancellationToken cancellationToken)
     {
-        byte[] scratch = ArrayPool<byte>.Shared.Rent(PdfPageContentStaging.ChunkByteCount);
-        try
+        byte[] scratch = staging.Scratch;
+        int offset = 0;
+        while (offset < content.Length)
         {
-            int offset = 0;
-            while (offset < content.Length)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                int chars = Math.Min(PdfPageContentStaging.ChunkByteCount, content.Length - offset);
-                int bytes = Encoding.ASCII.GetBytes(content, offset, chars, scratch, 0);
-                staging.AppendPageBytes(scratch, 0, bytes, cancellationToken);
-                offset += chars;
-            }
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(scratch);
+            cancellationToken.ThrowIfCancellationRequested();
+            int chars = Math.Min(scratch.Length, content.Length - offset);
+            int bytes = Encoding.ASCII.GetBytes(content, offset, chars, scratch, 0);
+            staging.AppendPageBytes(scratch, 0, bytes, cancellationToken);
+            offset += chars;
         }
     }
 
@@ -442,19 +434,15 @@ internal sealed class PdfDocumentWriter
 
     private static void CopyStagedContent(PdfObjectWriter writer, PdfPageContentStaging staging, int entry, int length, CancellationToken cancellationToken)
     {
-        byte[] copy = ArrayPool<byte>.Shared.Rent(PdfPageContentStaging.ChunkByteCount);
-        try
+        byte[] copy = staging.Scratch;
+        int offset = 0;
+        while (offset < length)
         {
-            int offset = 0;
-            while (offset < length)
-            {
-                int read = staging.ReadPageBytes(entry, copy, 0, offset, Math.Min(copy.Length, length - offset), cancellationToken);
-                if (read == 0) { throw new InvalidDataException("Content spill store ended unexpectedly."); }
-                writer.WriteContentStreamBytes(copy.AsSpan(0, read));
-                offset += read;
-            }
+            int read = staging.ReadPageBytes(entry, copy, 0, offset, Math.Min(copy.Length, length - offset), cancellationToken);
+            if (read == 0) { throw new InvalidDataException("Content spill store ended unexpectedly."); }
+            writer.WriteContentStreamBytes(copy.AsSpan(0, read));
+            offset += read;
         }
-        finally { ArrayPool<byte>.Shared.Return(copy); }
     }
 
     private static void WriteFontObjects(PdfObjectWriter writer, PdfEmbeddedFont font, FontObjectNumbers objects, CancellationToken cancellationToken)

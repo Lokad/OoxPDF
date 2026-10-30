@@ -11,20 +11,18 @@ namespace Lokad.OoxPdf.Pdf;
 // The temp file uses delete-on-close plus handle disposal, so no registry or
 // awkward lifetime plumbing is needed: crashing or cancelling releases the file.
 //
-// RV11-P1 scratch policy: page payloads are admission-capped before production
-// (content bytes are charged per page upstream), so the resident set is at most
-// the admitted current page plus bounded scratch. Production encodes and appends
-// in fixed chunks (see ChunkByteCount) through one pooled buffer; emission copies
-// spill back to the destination through one pooled buffer. Spilled pages are never
+// Page/group output bounds apply upstream. Shared memory admission separately
+// funds this store's resident bytes, one encoding/readback buffer and spill-file
+// buffering before acquisition. A refusal never selects file backing: only the
+// independently configured resident window does that. Spilled pages are never
 // fully re-read: reads address explicit (page, offset, count) ranges. Memory mode
 // retains at most the window in page segments; file mode retains only the running
 // page being appended.
 internal sealed class PdfPageContentStaging : IDisposable
 {
-    // RV11-P1: single scratch size for chunked encode/append/readback. Large
-    // enough to keep file copies efficient, small enough that transient scratch
-    // stays flat while page payloads scale.
+    // One store-owned buffer serves chunked encoding and later readback.
     internal const int ChunkByteCount = 65536;
+    private const int FileBufferByteCount = 4096;
 
     private static readonly byte[] LengthPlaceholder = new byte[8];
 
@@ -32,6 +30,9 @@ internal sealed class PdfPageContentStaging : IDisposable
     private readonly List<long> fileOffsets = new();
     private readonly long windowBytes;
     private readonly Action<OoxPdfDiagnostic>? diagnosticSink;
+    private readonly IMemoryReservation? storage;
+    private byte[]? scratch;
+    private long residentBytes;
     private long bufferedBytes;
     private FileStream? spillFile;
     private bool spillNotified;
@@ -56,6 +57,21 @@ internal sealed class PdfPageContentStaging : IDisposable
 
         this.windowBytes = windowBytes;
         this.diagnosticSink = diagnosticSink;
+        storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0);
+    }
+
+    internal byte[] Scratch
+    {
+        get
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            if (scratch is null)
+            {
+                OoxMemory.Resize(storage, checked(residentBytes + ChunkByteCount + (spillFile is null ? 0 : FileBufferByteCount)));
+                scratch = new byte[ChunkByteCount];
+            }
+            return scratch;
+        }
     }
 
     public int Count => memory.Count + fileOffsets.Count;
@@ -70,6 +86,7 @@ internal sealed class PdfPageContentStaging : IDisposable
     // without an open page, or opening twice, fails loudly.
     public void BeginPage(CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
         if (pendingPage is not null)
         {
@@ -84,6 +101,7 @@ internal sealed class PdfPageContentStaging : IDisposable
 
     public void AppendPageBytes(byte[] chunk, int offset, int count, CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         ArgumentNullException.ThrowIfNull(chunk);
         ArgumentOutOfRangeException.ThrowIfNegative(offset);
         ArgumentOutOfRangeException.ThrowIfNegative(count);
@@ -123,15 +141,18 @@ internal sealed class PdfPageContentStaging : IDisposable
         }
         else
         {
+            OoxMemory.Resize(storage, checked(residentBytes + count + (scratch?.Length ?? 0)));
             var copy = new byte[count];
             Buffer.BlockCopy(chunk, offset, copy, 0, count);
             pendingPage.Segments.Add(copy);
+            residentBytes += count;
             pendingLength += count;
         }
     }
 
     public void EndPage(CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
         if (pendingPage is null)
         {
@@ -191,6 +212,7 @@ internal sealed class PdfPageContentStaging : IDisposable
     // never triggers a whole-page allocation.
     public int ReadPageBytes(int pageIndex, byte[] destination, int destinationOffset, int sourceOffset, int count, CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentOutOfRangeException.ThrowIfNegative(destinationOffset);
         ArgumentOutOfRangeException.ThrowIfNegative(sourceOffset);
@@ -278,8 +300,10 @@ internal sealed class PdfPageContentStaging : IDisposable
 
     private void Escalate(CancellationToken cancellationToken)
     {
+        OoxMemory.Resize(storage, checked(residentBytes + (scratch?.Length ?? 0) + FileBufferByteCount));
+        cancellationToken.ThrowIfCancellationRequested();
         string path = Path.Combine(Path.GetTempPath(), "OoxPdfPages-" + Guid.NewGuid().ToString("N") + ".tmp");
-        FileStream file = new(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.SequentialScan | FileOptions.DeleteOnClose);
+        FileStream file = new(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, FileBufferByteCount, FileOptions.SequentialScan | FileOptions.DeleteOnClose);
         spillFile = file;
         foreach (MemoryPage buffered in memory)
         {
@@ -292,6 +316,7 @@ internal sealed class PdfPageContentStaging : IDisposable
             }
 
             SpilledBytes += buffered.Length;
+            buffered.Segments.Clear();
         }
 
         memory.Clear();
@@ -312,6 +337,8 @@ internal sealed class PdfPageContentStaging : IDisposable
             pendingPage.Segments.Clear();
             pendingRecordStarted = true;
         }
+        residentBytes = 0;
+        OoxMemory.Resize(storage, (scratch?.Length ?? 0) + FileBufferByteCount);
         if (!spillNotified)
         {
             spillNotified = true;
@@ -348,7 +375,13 @@ internal sealed class PdfPageContentStaging : IDisposable
         pendingPage = null;
         fileOffsets.Clear();
         bufferedBytes = 0;
-        spillFile?.Dispose();
-        spillFile = null;
+        residentBytes = 0;
+        scratch = null;
+        try { spillFile?.Dispose(); }
+        finally
+        {
+            spillFile = null;
+            storage?.Dispose();
+        }
     }
 }

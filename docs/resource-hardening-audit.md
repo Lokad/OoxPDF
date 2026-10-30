@@ -11,8 +11,8 @@ qualification results. Those results retain their original runtime and scope.
 
 Current contracts:
 
-- [Caller migration](PublicApiChanges.md): intentional API removals and one coarse,
-  host-supplied memory-admission lease with deterministic disposal.
+- [Caller migration](PublicApiChanges.md): intentional API removals and shared,
+  caller-owned capacity with producer reservations and deterministic refunds.
 - [Diagnostics](Diagnostics.md): meaningful input/output bounds, cancellation,
   bounded staging and output/spill totals. Totals do not measure the managed heap.
 - [Release qualification](PreviewQualification.md): the current frozen candidate,

@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class OoxMemoryAdmissionTests
+internal static partial class OoxMemoryAdmissionTests
 {
 
     public static void MemoryAdmissionCallbackCannotRedirectRelativeInputOrOutput()
@@ -326,6 +326,11 @@ internal static class OoxMemoryAdmissionTests
         staged.Dispose();
         TestAssert.Throws<ObjectDisposedException>(() => _ = staged.Pages);
         TestAssert.Throws<ObjectDisposedException>(() => storage.GetPageLength(0, default));
+        TestAssert.Throws<ObjectDisposedException>(() => storage.BeginPage(default));
+        TestAssert.Throws<ObjectDisposedException>(() => storage.AppendPageBytes([1], 0, 1, default));
+        TestAssert.Throws<ObjectDisposedException>(() => storage.EndPage(default));
+        TestAssert.Throws<ObjectDisposedException>(() => storage.ReadPageBytes(0, new byte[1], 0, 0, 1, default));
+        TestAssert.Throws<ObjectDisposedException>(() => _ = storage.Scratch);
     }
 
     private static string Case(string relative) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,

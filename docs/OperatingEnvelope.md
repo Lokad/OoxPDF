@@ -9,11 +9,12 @@ managed heap or guarantee conversion of arbitrary documents. See
 
 File conversion publishes atomically after staging. Caller-owned streams stay
 open and may retain an incomplete prefix after a failure; discard that output.
-`MemoryBudget` admits package buffers/parts before allocation and refunds them
-on success, failure or cancellation after their readers finish. Its scopes share
+`MemoryBudget` admits package buffers/parts and PDF content staging before
+allocation and refunds them on success, failure or cancellation after their readers
+finish. Its scopes share
 the caller's root; they create no private allowance. Caller-owned buffers are not
-charged twice. Model/font/image/PDF storage and shared resolver cache admission
-remain pending, so this is partial coverage. Null budget is ungoverned. Use
+charged twice. Model/font/image/PDF resource storage and shared resolver cache
+admission remain pending, so this is partial coverage. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.
 
 ## Measurement scope

@@ -18,10 +18,12 @@ own their own reservations, share the root allowance, and do not dispose the roo
 or other independently created scopes. Dispose/refund only after storage users
 finish. Refusal never triggers eviction, spilling or reduced output.
 
-The first producer migration covers package intake, extracted parts and copy
-buffers, including nested chart workbooks. Package bytes remain funded through
-PDF resource emission; temporary buffers refund after intake. Parsed models,
-fonts, image planes and PDF staging/resources still need their producer migration.
+Producer admission covers package intake, extracted parts and copy buffers,
+including nested chart workbooks, plus staged PDF content and its fixed encoding/
+readback and spill buffers. Package bytes and resident staged content remain funded
+through emission; temporary intake buffers and transferred resident bytes refund
+after their users finish. Parsed models, fonts, image planes and PDF resources
+still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
 Async I/O, explicit temporary storage and font borrow lifetimes remain separate
