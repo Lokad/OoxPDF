@@ -1,5 +1,5 @@
 {
-  "Oracle": "Independent Word 16 PDF origins and unchanged full-page visual thresholds. A complete custom-style hierarchy anchors the grid; TableNormal preserves its prior text anchor. Forward custom definitions are retained as an unresolved Office difference.",
+  "Oracle": "Independent Word 16 PDF origins and unchanged full-page visual thresholds. Complete custom styles anchor the grid; conditional styles inherit earlier parent declarations, while plain styles retain forward parents. TableNormal keeps its qualified anchor.",
   "Controls": [
     {
       "Id": "bare",
@@ -7,7 +7,6 @@
       "InputSha256": "31EAE6169DDB1BF42BEA0CC37CA2046414313FFFD468A3B224543290E0EFE895",
       "LeftMargin": null,
       "RightMargin": null,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -34,7 +33,6 @@
       "InputSha256": "C2F356F7DE27F36691A139FFA99CA7AC704DEAF1CAB9707E60F955F9693E6947",
       "LeftMargin": null,
       "RightMargin": null,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -61,7 +59,6 @@
       "InputSha256": "C0E6DC8A9C1C0AB423156BD44EB3C817785918F355F9D7BEA52C00D85AA465D4",
       "LeftMargin": 0,
       "RightMargin": 0,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -88,7 +85,6 @@
       "InputSha256": "74BBACFBC3464D6E3A522A67382C209BFADFB08F10B3E74D952150266DFF3E4E",
       "LeftMargin": 0,
       "RightMargin": 0,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -115,7 +111,6 @@
       "InputSha256": "B912EE2F502CD8099E98B704F8CE705F65C06A57E168EFF094CEC3479F9EA12D",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -142,7 +137,6 @@
       "InputSha256": "4F36BF69203E52A29804F32A62A3C9C206F092348554F905A220D58C46825B5C",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -169,7 +163,6 @@
       "InputSha256": "7716E47CD82B499E7516D6E1BB20A216BDAD12785C4DA567AFBE7DE6C37DA7D8",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -196,7 +189,6 @@
       "InputSha256": "F5CCFB6969C6518ABB6907E0AE06030EC346CEFFBB7DB4A44EA57F2553D066D9",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -223,7 +215,6 @@
       "InputSha256": "5BDECCA3EAAE4CB20866999255E88204BDA354D381C5E87DD22AF43FDFFB4F52",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -250,7 +241,6 @@
       "InputSha256": "0C32C84C4F24692A497CFAE6939EA4CC1A457CD2EC21159B260527F6BA87DD7B",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -277,7 +267,6 @@
       "InputSha256": "EF185613EEBC1DBB6B878DFE6B88090CF40798B8AC09E80A33F2B7EF489E4A3C",
       "LeftMargin": 0,
       "RightMargin": 0,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -304,7 +293,6 @@
       "InputSha256": "4DB81B58AD9008AEB154D5EA507848DEC57600A04C1A817CA6C7B3233657F1F9",
       "LeftMargin": 0,
       "RightMargin": 0,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -331,7 +319,6 @@
       "InputSha256": "BCC40ECC07B15189220CCE0C18C85EC7D831887857D1EAA62DE9F4499422856F",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -358,7 +345,6 @@
       "InputSha256": "C37E1BC7994E7D41C43627A15AF463F552963949BB1DF58370EA0E0C0873DC2E",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -385,7 +371,6 @@
       "InputSha256": "169A8FC66D680BFBAE67A75A3B368452BC119E6DC0F74D8E3215A0A1166476AB",
       "LeftMargin": 5.4,
       "RightMargin": 10,
-      "ApproximateForwardParent": false,
       "RightAligned": true,
       "Rows": [
         {
@@ -412,7 +397,6 @@
       "InputSha256": "4D6A5051DD7CC0D6891B0DFFFE70D249CA949911FA33C46C8C00680DE2B26D95",
       "LeftMargin": 0,
       "RightMargin": 0,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {
@@ -437,9 +421,8 @@
       "Id": "forward-custom",
       "Input": "forward-custom.docx",
       "InputSha256": "652535E509EA8D709F1D65684D85D357C455D7FF40DBDDC66829322EE0DBAA24",
-      "LeftMargin": 5.4,
-      "RightMargin": 5.4,
-      "ApproximateForwardParent": true,
+      "LeftMargin": 0,
+      "RightMargin": 0,
       "RightAligned": false,
       "Rows": [
         {
@@ -466,7 +449,6 @@
       "InputSha256": "5CD868B97284C81D6C1E2F12D6BC9EED9F3B1E9021A584BDB98ACD1673CC1983",
       "LeftMargin": 5.4,
       "RightMargin": 5.4,
-      "ApproximateForwardParent": false,
       "RightAligned": false,
       "Rows": [
         {

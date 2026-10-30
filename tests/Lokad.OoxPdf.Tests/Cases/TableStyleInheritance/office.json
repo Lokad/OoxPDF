@@ -1,0 +1,117 @@
+{
+  "Oracle": "Independent Word 16 source-order controls; conditional declarations differ from plain inheritance. Original geometry/image thresholds remain.",
+  "Controls": [
+    {
+      "Id": "parent-first",
+      "Input": "parent-first.docx",
+      "InputSha256": "A550CFC54ABDCBE882192E80FB1039B536F9BBA0DEA667881E65330C02A1FAF9",
+      "LeftPadding": 5.4,
+      "TextColor": "2030C0",
+      "HasInheritedBorders": true,
+      "OfficeFinal": {
+        "PdfSha256": "57DBB7E4A6D00FB3E04B11CC5BE1D92E2CC1DFEF6C8F49F2C8258AB5A0AF73D9",
+        "FirstOrigin": [
+          77.42400360107422,
+          84.5
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "parent-later",
+      "Input": "parent-later.docx",
+      "InputSha256": "1C2E7DCF18AD352C874E73F40E1495CEC6A642A92E36ADEA6189E5980F8F70DB",
+      "LeftPadding": 5.4,
+      "TextColor": "2030C0",
+      "HasInheritedBorders": true,
+      "OfficeFinal": {
+        "PdfSha256": "5A824D87B9E7318E6C9881C1FC0428D9DA8198801E1961FE7920F17A2B0E33F0",
+        "FirstOrigin": [
+          77.42400360107422,
+          84.5
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "conditional-parent-first",
+      "Input": "conditional-parent-first.docx",
+      "InputSha256": "0FF4A547B0468565F848D06473A48E1E240B8857B7E1AD2387AAE1F54EC4C79E",
+      "LeftPadding": 5.4,
+      "TextColor": "2030C0",
+      "HasInheritedBorders": true,
+      "OfficeFinal": {
+        "PdfSha256": "F030126275282AD91D85B90343787627846CCA655566B6BBFFEB95044CF9D4DC",
+        "FirstOrigin": [
+          77.42400360107422,
+          84.5
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "conditional-parent-later",
+      "Input": "conditional-parent-later.docx",
+      "InputSha256": "4AACF09E5B208DBEFBDB7324726789201DE6346080507ECB8AC9B0EBF3D47C6D",
+      "LeftPadding": 0,
+      "TextColor": "000000",
+      "HasInheritedBorders": false,
+      "OfficeFinal": {
+        "PdfSha256": "ABFEAF65CE2B0C4CCAD6806A5FB82503B1C69426980842DB0CDDF9AE94BB57DB",
+        "FirstOrigin": [
+          72.02400207519531,
+          82.46002197265625
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "conditional-normal-later",
+      "Input": "conditional-normal-later.docx",
+      "InputSha256": "91682B91F0B3EE2AF606AF78AF2465A3E55AD5641DED67612ECDE687C573A1E9",
+      "LeftPadding": 0,
+      "TextColor": "000000",
+      "HasInheritedBorders": false,
+      "OfficeFinal": {
+        "PdfSha256": "A6DBBFFD76FBE3EEA76D1009631BD95256829273A8675A9210455798F1531096",
+        "FirstOrigin": [
+          72.02400207519531,
+          82.46002197265625
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "conditional-chain-first",
+      "Input": "conditional-chain-first.docx",
+      "InputSha256": "F459B7D02B5ED879DBD14B6D44B3CC67900DE1DBB48CA11FDCBA0E21D4628FD3",
+      "LeftPadding": 5.4,
+      "TextColor": "2030C0",
+      "HasInheritedBorders": true,
+      "OfficeFinal": {
+        "PdfSha256": "D2EC5A786567814742DF15A2A86FCF9233865064386FDEC2BF0D74A35A92CD0A",
+        "FirstOrigin": [
+          77.42400360107422,
+          84.5
+        ],
+        "Pages": 1
+      }
+    },
+    {
+      "Id": "conditional-chain-forward",
+      "Input": "conditional-chain-forward.docx",
+      "InputSha256": "BF810DF1D765EEAD79FB5EFE9E76AB77BB81ADC7B552FC3999B3F598793BEF99",
+      "LeftPadding": 0,
+      "TextColor": "000000",
+      "HasInheritedBorders": false,
+      "OfficeFinal": {
+        "PdfSha256": "95BFEA2F0C332A5D7D60E244901D80F77B0D403EDCAE529E8FB63D76D482819B",
+        "FirstOrigin": [
+          72.02400207519531,
+          82.46002197265625
+        ],
+        "Pages": 1
+      }
+    }
+  ]
+}

@@ -137,7 +137,9 @@ Supported within the following constraints:
   occupancy controls following-prose admission. Conditional bands, columns, rows
   and corners share one style cascade; direct formatting remains above styles.
   Custom-style padding stays inside the grid; explicit indentation and TableNormal
-  keep their own anchors. Forward custom-style parents can differ from Office.
+  keep their own anchors. Conditional table styles inherit earlier parent
+  declarations; plain styles retain forward inheritance. Built-in style paint
+  defaults remain approximate.
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,

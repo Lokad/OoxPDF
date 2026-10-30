@@ -187,33 +187,47 @@ internal sealed partial class DocxReader
 
     private static IReadOnlyDictionary<string, DocxTableStyle> ResolveTableStyles(IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
     {
+        var sourceOrder = tableStyles.Keys.Select((id, index) => (id, index))
+            .ToDictionary(item => item.id, item => item.index, StringComparer.Ordinal);
         var resolved = new Dictionary<string, DocxTableStyle>(StringComparer.Ordinal);
         foreach (string styleId in tableStyles.Keys)
         {
-            resolved[styleId] = ResolveTableStyle(styleId, tableStyles);
+            resolved[styleId] = ResolveTableStyle(styleId, tableStyles, sourceOrder);
         }
 
         return resolved;
     }
 
-    private static DocxTableStyle ResolveTableStyle(string styleId, IReadOnlyDictionary<string, DocxTableStyle> tableStyles)
+    private static DocxTableStyle ResolveTableStyle(string styleId, IReadOnlyDictionary<string, DocxTableStyle> tableStyles,
+        IReadOnlyDictionary<string, int> sourceOrder)
     {
-        var chain = new Stack<DocxTableStyle>();
+        var chain = new Stack<(string Id, DocxTableStyle Style)>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         string? currentStyleId = styleId;
         while (currentStyleId is not null && seen.Add(currentStyleId) && tableStyles.TryGetValue(currentStyleId, out DocxTableStyle? style))
         {
-            chain.Push(style);
+            chain.Push((currentStyleId, style));
             currentStyleId = style.BasedOnStyleId;
         }
 
+        bool complete = currentStyleId is null;
         DocxTableStyle resolved = DocxTableStyle.Empty;
         while (chain.Count != 0)
         {
-            resolved = resolved.Merge(chain.Pop());
+            var (id, style) = chain.Pop();
+            // Independent Word controls: conditional table styles inherit only
+            // earlier parent declarations. Apply this at every source link, so
+            // ordinary descendants retain that parent's effective properties.
+            // Plain styles still resolve forward references. Invalid chains
+            // retain their existing missing/cyclic inheritance fallback.
+            if (complete && style.ConditionalRegions.Count != 0 && style.BasedOnStyleId is { } parent &&
+                sourceOrder[parent] > sourceOrder[id])
+            {
+                resolved = DocxTableStyle.Empty;
+            }
+            resolved = resolved.Merge(style);
         }
 
-        bool complete = currentStyleId is null;
         if (complete && !resolved.UsesTableNormal)
         {
             // A resolved custom style has zero implicit horizontal padding.

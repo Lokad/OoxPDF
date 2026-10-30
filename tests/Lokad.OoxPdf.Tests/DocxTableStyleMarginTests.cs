@@ -32,20 +32,10 @@ internal static class DocxTableStyleMarginTests
                     "The resolved left padding keeps its source/style owner.");
                 TestAssert.True(double.IsNaN(right) ? cell.Cell.Margins.RightPoints is null : cell.Cell.Margins.RightPoints == right,
                     "The resolved right padding keeps its source/style owner.");
-                if (control.GetProperty("ApproximateForwardParent").GetBoolean())
-                {
-                    // Source inheritance remains order independent. Word's later
-                    // custom-parent discrepancy is an explicit visual residual.
-                    TestAssert.True(Math.Abs(cell.X + cell.ContentPaddingLeft - 77.424d) < 1d,
-                        "Forward source inheritance retains the declared padding.");
-                }
-                else
-                {
-                    double expectedLeft = control.GetProperty("RightAligned").GetBoolean()
-                        ? 77.424d : expected.GetProperty("FirstX").GetDouble();
-                    TestAssert.True(Math.Abs(cell.X + cell.ContentPaddingLeft - expectedLeft) <= 1d,
-                        "Cell content uses the unchanged one-point independent Word origin gate: " + control.GetProperty("Id").GetString());
-                }
+                double expectedLeft = control.GetProperty("RightAligned").GetBoolean()
+                    ? 77.424d : expected.GetProperty("FirstX").GetDouble();
+                TestAssert.True(Math.Abs(cell.X + cell.ContentPaddingLeft - expectedLeft) <= 1d,
+                    "Cell content uses the unchanged one-point independent Word origin gate: " + control.GetProperty("Id").GetString());
             }
         }
     }
