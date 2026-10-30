@@ -1281,9 +1281,16 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double totalPad = pads.Sum();
+        double totalContentInset = contentInsets.Sum();
         if (table.PreferredWidthKind == DocxTableWidthKind.Auto && table.PreferredWidthPoints is not > 0d)
         {
-            targetTableWidth = Math.Min(availableTableWidth, totalContent + totalPad);
+            if (totalContent + totalContentInset <= availableTableWidth)
+            {
+                // Natural width must fund each column's actual layout insets;
+                // proportional expansion can leave a short column under-sized.
+                return columnMaxima.Select((maximum, index) => maximum + contentInsets[index]).ToArray();
+            }
+            targetTableWidth = availableTableWidth;
         }
         double contentTarget = targetTableWidth - totalPad;
         if (contentTarget <= 0d)
@@ -1291,7 +1298,6 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        double totalContentInset = contentInsets.Sum();
         double compressedContentTarget = targetTableWidth - totalContentInset;
         // Word width/word-boundary controls: compression distributes only the
         // flexible width above each column's minimum, preserving whole words.
@@ -1477,13 +1483,14 @@ internal sealed partial class DocxLayoutEngine
                             paragraph.ParagraphMarkFontSize ?? fontSize);
                     }
                 }
-                maxWidth = Math.Max(maxWidth, markerWidth + MeasureTextSpansForLayout(
-                    textSpans,
-                    fontSize,
-                    textMeasurer,
-                    ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale),
-                    defaultTabStopPoints * fixedScale,
-                    pageNumber));
+                // Empty source runs acquire a space for line-height/painting.
+                // That paragraph mark is not intrinsic content width.
+                double textWidth = paragraph.Runs.Any(run => run.Text.Length != 0 || run.FieldKind is not null)
+                    ? MeasureTextSpansForLayout(textSpans, fontSize, textMeasurer,
+                        ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale),
+                        defaultTabStopPoints * fixedScale, pageNumber)
+                    : 0d;
+                maxWidth = Math.Max(maxWidth, markerWidth + textWidth);
             }
 
             foreach (DocxInlineImage image in paragraph.Images)

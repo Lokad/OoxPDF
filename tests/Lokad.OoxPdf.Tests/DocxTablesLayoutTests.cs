@@ -451,14 +451,14 @@ internal static class DocxTablesLayoutTests
     {
         // Office A/B (comment-table autofit probes, Word-COM rendered): tables without a
         // fixed layout distribute width by column content instead of the grid, so skewed
-        // content yields skewed columns.
+        // content yields skewed columns within the authored table width.
         var table = new DocxTable(
             null,
             [100d, 100d],
             [new DocxTableRow([
                 new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty),
                 new DocxTableCell(string.Empty, [DocxTests.CreateDocxLayoutParagraph("AAAAAAAA", 10d, 12d)], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], null)]);
+            ], null)]) with { PreferredWidthPoints = 180d, PreferredWidthType = "dxa", PreferredWidthValue = "3600" };
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
