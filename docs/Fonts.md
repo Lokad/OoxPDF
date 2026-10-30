@@ -71,6 +71,14 @@ does not add system fonts when a custom resolver lacks a catalog. Built-in font
 packs retain fallback among their supplied faces. Missing glyphs use the existing
 diagnosed replacement; supply the necessary coverage for faithful typography.
 Omitting `FontResolver` selects local Windows discovery.
+For DOCX runs without a declared or theme family, the library asks the resolver
+for `OOXPDF_DOCUMENT_DEFAULT`. A resolver can supply that request explicitly;
+otherwise the library tries Times New Roman, Aptos, Calibri and Arial in order,
+then uses the resolver's fallback. This stable policy can differ from Word's
+application default. Declare the document's font or bind that resolver request
+when matching a particular Office environment: different font metrics change
+table widths, line heights and pagination.
+
 Use `MemoryFontProgramSource` for programs held in memory or implement the source
 interface for other storage. Different font programs need different stable IDs;
 published bytes must stay immutable and byte-identical for each ID. Resolvers
