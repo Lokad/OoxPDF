@@ -137,8 +137,8 @@ Supported within the following constraints:
   occupancy controls following-prose admission. Conditional bands, columns, rows
   and corners share one style cascade; direct formatting remains above styles.
   Table-look bitmasks apply when no explicit flags are present; an explicit
-  declaration supplies false for omitted flags. Absent/empty declarations keep
-  Word's default look, with raw source tokens retained for inspection.
+  declaration enables omitted flags, including band suppression. Absent/empty
+  declarations keep Word's default look; inspection retains raw source tokens.
   Bands require a positive resolved size; zero or an omitted size disables the
   axis, following [Word's band-size default](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/77519f5b-08b3-4547-9f5d-0c4d87854220).
   Custom-style padding stays inside the grid; explicit indentation and TableNormal
@@ -147,6 +147,7 @@ Supported within the following constraints:
   non-custom Normal Table name supplies built-in padding and ignores authored
   children; custom styles and descendant/direct overrides retain their formatting.
   Other built-in style defaults remain approximate.
+  Word's coalescing of adjacent tables remains approximate.
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,

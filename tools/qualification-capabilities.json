@@ -39,7 +39,7 @@
     "PortableRenderingNoteTableCompositionKeepsContentAndDestinations"
   ],
   "docx-conditional-table-styles": [
-    "DocxTableLookDeclarationsMatchIndependentWordFills",
+    "DocxTableLook",
     "DocxTableBandSizesMatchIndependentWordFills",
     "DocxConditionalTableStyles",
     "DocxReaderTableStyle",

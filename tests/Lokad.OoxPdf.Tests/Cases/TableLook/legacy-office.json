@@ -1,0 +1,35 @@
+{
+  "Oracle": "Independent Word 16 separated table controls with explicitly disabled trailing edges. The exact adjacent-table original is retained as a separate unresolved composition case.",
+  "Controls": [
+    {
+      "Id": "legacy-separated-leading-band",
+      "Input": "legacy-separated-leading-band.docx",
+      "InputSha256": "D8FDF291F9DEB6C4B73883B0CB3DB3DAB89ED29D93E3D55E18196C1AC0B00E23",
+      "Fills": {
+        "E10": "FF0000",
+        "E01": "FF0000",
+        "D01": "FF0000",
+        "E21": "00FF00",
+        "A2": "00FF00",
+        "E00": "FF0000",
+        "C1": "00FF00",
+        "B1": "0000FF",
+        "B0": "00FF00",
+        "D00": "FF0000",
+        "E11": "00FF00",
+        "B2": "00FF00",
+        "F00": "00FF00",
+        "A0": "00FF00",
+        "A1": "0000FF",
+        "D11": "00FF00",
+        "D10": "FF0000",
+        "F11": "FF0000",
+        "E20": "FF0000",
+        "F10": "FF0000",
+        "C0": "FF0000",
+        "F01": "FF0000"
+      },
+      "OfficeFinalPdfSha256": "6FA5270FF72827B2E873F78A8E7E1DF3012FE8A0CCBC5AE8CC87DFFA716643BA"
+    }
+  ]
+}

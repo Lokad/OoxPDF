@@ -72,6 +72,10 @@ and unavailable checks retain their explicit classifications.
 
 `DocxTableLookTests` pins independent Word fills for bitmask, explicit, partial and
 absent/default declarations, preserving raw source tokens in both DOCX modes.
+The exact old adjacent-table source remains an unresolved composition witness:
+Word joins its six table elements. A separate control supplies paragraph separators
+and declares trailing edges off. The live band-intent test reuses that pinned input
+and keeps its assertions, removing repeated inline package construction.
 Select it with `docx-conditional-table-styles`; table-margin and banding neighbors
 belong to the same affected union. Native geometry and full-page image gates
 remain independent of the reader assertions.

@@ -526,19 +526,19 @@ internal sealed partial class DocxReader
             (string?)look.Attribute(WordprocessingNamespace + "noVBand"));
 
         // Word ignores the bitmask when any explicit flag is present. Missing
-        // flags in that declaration are false, rather than absent-look defaults.
+        // flags in that declaration are enabled, including band suppression.
         if (parsed.FirstRow is not null || parsed.LastRow is not null ||
             parsed.FirstColumn is not null || parsed.LastColumn is not null ||
             parsed.NoHorizontalBand is not null || parsed.NoVerticalBand is not null)
         {
             return parsed with
             {
-                FirstRow = parsed.FirstRow ?? false,
-                LastRow = parsed.LastRow ?? false,
-                FirstColumn = parsed.FirstColumn ?? false,
-                LastColumn = parsed.LastColumn ?? false,
-                NoHorizontalBand = parsed.NoHorizontalBand ?? false,
-                NoVerticalBand = parsed.NoVerticalBand ?? false
+                FirstRow = parsed.FirstRow ?? true,
+                LastRow = parsed.LastRow ?? true,
+                FirstColumn = parsed.FirstColumn ?? true,
+                LastColumn = parsed.LastColumn ?? true,
+                NoHorizontalBand = parsed.NoHorizontalBand ?? true,
+                NoVerticalBand = parsed.NoVerticalBand ?? true
             };
         }
         if (ushort.TryParse(parsed.Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort mask))

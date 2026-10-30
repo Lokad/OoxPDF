@@ -6,6 +6,32 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableLookTests
 {
+    public static void DocxTableLookLegacyFlagsMatchIndependentWordFills()
+    {
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+            "..", "..", "..", "Cases", "TableLook"));
+        using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "legacy-office.json")));
+        foreach (var control in oracle.RootElement.GetProperty("Controls").EnumerateArray())
+        {
+            string path = Path.Combine(cases, control.GetProperty("Input").GetString()!);
+            TestAssert.Equal(control.GetProperty("InputSha256").GetString(),
+                Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
+            foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+            {
+                var document = DocxTests.ReadDocx(path, mode);
+                int count = 0;
+                foreach (var cell in document.Tables.SelectMany(table => table.Rows).SelectMany(row => row.Cells))
+                {
+                    string? expected = control.GetProperty("Fills").GetProperty(cell.Text).GetString();
+                    TestAssert.True(expected == cell.FillHex,
+                        $"Word legacy look {control.GetProperty("Id").GetString()}/{cell.Text}: expected {expected}, got {cell.FillHex}.");
+                    count++;
+                }
+                TestAssert.Equal(22, count);
+            }
+        }
+    }
+
     public static void DocxTableLookDeclarationsMatchIndependentWordFills()
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
@@ -32,7 +58,9 @@ internal static class DocxTableLookTests
                         TestAssert.Equal(raw.GetProperty(names[i]).GetString(), values[i]);
                     foreach (var cell in table.Rows.SelectMany(row => row.Cells))
                     {
-                        TestAssert.Equal(control.GetProperty("Fills").GetProperty(cell.Text).GetString(), cell.FillHex);
+                        string? expected = control.GetProperty("Fills").GetProperty(cell.Text).GetString();
+                        TestAssert.True(expected == cell.FillHex,
+                            $"Word table look {control.GetProperty("Id").GetString()}/{cell.Text}: expected {expected}, got {cell.FillHex}.");
                         count++;
                     }
                 }

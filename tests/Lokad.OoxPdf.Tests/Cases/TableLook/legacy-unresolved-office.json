@@ -1,0 +1,35 @@
+{
+  "Reason": "Word coalesces six adjacent same-style table elements into one 13-row table. OoxPdf retains six logical tables. This case is outside the positive flag-only oracle and retains its exact measured colors/failures.",
+  "Controls": [
+    {
+      "Id": "legacy-original",
+      "Input": "legacy-original.docx",
+      "InputSha256": "66435D8DAFDBA54D90A8273B39E6A1F26C45F2D079F46435612DD08C67B9E81C",
+      "Fills": {
+        "E10": "FF0000",
+        "E01": "FF0000",
+        "D01": "00FF00",
+        "E21": "FF0000",
+        "A2": "FF0000",
+        "E00": "FF0000",
+        "C1": "FF0000",
+        "B1": "0000FF",
+        "B0": "00FF00",
+        "D00": "FF0000",
+        "E11": "FF0000",
+        "B2": "FF0000",
+        "F00": "00FF00",
+        "A0": "FF0000",
+        "A1": "FF0000",
+        "D11": "0000FF",
+        "D10": "FF0000",
+        "F11": "FF0000",
+        "E20": "FF0000",
+        "F10": "FF0000",
+        "C0": "FF0000",
+        "F01": "FF0000"
+      },
+      "OfficeFinalPdfSha256": "A8C0F30E713BD1DEA376D160084DCFFEDF1E5E780500251E3DE9B5BD5EDBE1BF"
+    }
+  ]
+}
