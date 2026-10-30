@@ -29,7 +29,10 @@ Producer admission covers package intake, extracted parts and copy buffers,
 including nested chart workbooks, plus staged PDF content and its fixed encoding/
 readback and spill buffers. Package bytes and resident staged content remain funded
 through emission; temporary intake buffers and transferred resident bytes refund
-after their users finish. Parsed models, fonts, image planes and PDF resources
+after their users finish. Private copied/extracted SFNTs and subset program buffers
+are also admitted before construction, held through emission, and refunded after
+failed preparation. Only the selected collection face is copied and charged.
+Models, font sources/caches and parsed maps, image planes and other PDF resources
 still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.

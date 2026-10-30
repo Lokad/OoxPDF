@@ -84,9 +84,26 @@ internal sealed partial class OpenTypeFont
     internal static OpenTypeFont LoadShared(ReadOnlySpan<byte> bytes, int fontIndex, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return bytes.StartsWith("ttcf"u8)
-            ? Load(ExtractCollectionFont(bytes, fontIndex, cancellationToken), 0, cancellationToken)
-            : Load(bytes.ToArray(), fontIndex, cancellationToken);
+        IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0);
+        try
+        {
+            OpenTypeFont font;
+            if (bytes.StartsWith("ttcf"u8))
+            {
+                font = ParseSfnt(ExtractCollectionFont(bytes, fontIndex, cancellationToken, storage), cancellationToken);
+            }
+            else
+            {
+                OoxMemory.Resize(storage, bytes.Length);
+                cancellationToken.ThrowIfCancellationRequested();
+                font = Load(bytes.ToArray(), fontIndex, cancellationToken);
+            }
+            // The conversion's existing scope owns successful program storage
+            // through resource emission; the caller still owns the source bytes.
+            storage = null;
+            return font;
+        }
+        finally { storage?.Dispose(); }
     }
 
     // font-table parsing (especially kern/GPOS expansion) is CPU work
@@ -111,6 +128,11 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
+        return ParseSfnt(bytes, cancellationToken);
+    }
+
+    private static OpenTypeFont ParseSfnt(byte[] bytes, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         string scalerTag = ReadScalerTag(bytes);
         try
@@ -398,7 +420,8 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static byte[] ExtractCollectionFont(ReadOnlySpan<byte> bytes, int fontIndex, CancellationToken cancellationToken = default)
+    private static byte[] ExtractCollectionFont(ReadOnlySpan<byte> bytes, int fontIndex, CancellationToken cancellationToken = default,
+        IMemoryReservation? storage = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (bytes.Length < 16)
@@ -454,7 +477,10 @@ internal sealed partial class OpenTypeFont
                 throw new InvalidDataException("TrueType collection face exceeds file length.");
             }
 
-            var output = new byte[Align4((int)outputLength)];
+            int capacity = Align4((int)outputLength);
+            OoxMemory.Resize(storage, capacity);
+            cancellationToken.ThrowIfCancellationRequested();
+            var output = new byte[capacity];
             bytes.Slice((int)fontOffset, directoryLength).CopyTo(output);
 
             int writeOffset = directoryLength;

@@ -1,6 +1,4 @@
 using System.Buffers.Binary;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Lokad.OoxPdf.Fonts;
@@ -46,32 +44,13 @@ internal static class OpenTypeFontSubsetter
         }
     }
 
-    // RV17: fast path for the single representation OpenTypeFont uses today
-    // (a whole owned array); anything else keeps the copying fallback.
-    private static bool TryGetOwnedProgramBytes(OpenTypeFont font, [NotNullWhen(true)] out byte[]? owned)
-    {
-        if (MemoryMarshal.TryGetArray(font.Bytes, out ArraySegment<byte> segment)
-            && segment.Array is not null
-            && segment.Offset == 0
-            && segment.Count == segment.Array.Length)
-        {
-            owned = segment.Array;
-            return true;
-        }
-
-        owned = null;
-        return false;
-    }
-
     private static OpenTypeFontSubset? CreateCore(OpenTypeFont font, IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        // RV17: the font owns its program bytes for the whole synchronous subset
-        // build and every use below only reads them, so share the owned array
-        // instead of copying per subset. The caller holds the font throughout;
-        // resolvers evict whole font instances, never pooled buffers mid-read.
-        byte[] source = TryGetOwnedProgramBytes(font, out byte[]? owned) ? owned : font.Bytes.ToArray();
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(source);
+        // The caller holds the immutable source throughout this synchronous
+        // build. Read its memory directly, without depending on an array backing.
+        ReadOnlyMemory<byte> source = font.Bytes;
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(source.Span);
         if (!tables.TryGetValue("glyf", out TableRecord glyf) ||
             !tables.TryGetValue("loca", out TableRecord loca) ||
             !tables.TryGetValue("head", out TableRecord head) ||
@@ -90,13 +69,13 @@ internal static class OpenTypeFontSubsetter
             throw new InvalidDataException("Font subsetting requires complete outline tables.");
         }
 
-        ushort originalGlyphCount = OpenTypeFont.U16(source, maxp.Offset + 4);
+        ushort originalGlyphCount = OpenTypeFont.U16(source.Span, maxp.Offset + 4);
         if (originalGlyphCount == 0)
         {
             throw new InvalidDataException("Font declares zero glyphs.");
         }
 
-        short indexToLocFormat = OpenTypeFont.I16(source, head.Offset + 50);
+        short indexToLocFormat = OpenTypeFont.I16(source.Span, head.Offset + 50);
         if (indexToLocFormat is not 0 and not 1)
         {
             throw new InvalidDataException("Font uses an unsupported loca format.");
@@ -115,42 +94,65 @@ internal static class OpenTypeFontSubsetter
             cidByOriginalGlyph[originalGlyphs[i]] = (ushort)i;
         }
 
-        byte[] subsetGlyf = BuildGlyf(out byte[] subsetLoca);
-        byte[] subsetHhea = CopyTable(source, hhea);
-        byte[] subsetHmtx = BuildHmtx();
-        byte[] subsetMaxp = CopyTable(source, maxp);
-        OpenTypeFont.W16(subsetMaxp, 4, (ushort)originalGlyphs.Length);
-        byte[] subsetHead = CopyTable(source, head);
-        OpenTypeFont.W32(subsetHead, 8, 0);
-        OpenTypeFont.W16(subsetHead, 50, 1);
-        byte[] subsetPost = BuildPost();
-        byte[] subsetCmap = BuildCmap();
-
-        var outputTables = new List<TableData>
-        {
-            new("OS/2", CopyTable(source, os2)),
-            new("cmap", subsetCmap),
-            new("glyf", subsetGlyf),
-            new("head", subsetHead),
-            new("hhea", subsetHhea),
-            new("hmtx", subsetHmtx),
-            new("loca", subsetLoca),
-            new("maxp", subsetMaxp),
-            new("name", CopyTable(source, name)),
-            new("post", subsetPost)
-        };
-
-        foreach (string optionalTag in new[] { "cvt ", "fpgm", "prep", "gasp" })
+        int glyfLength = MeasureGlyfLength();
+        string[] optionalTags = ["cvt ", "fpgm", "prep", "gasp"];
+        long copiedBytes = (long)os2.Length + head.Length + hhea.Length + maxp.Length + name.Length;
+        foreach (string tag in optionalTags)
+            if (tables.TryGetValue(tag, out TableRecord optional)) copiedBytes += optional.Length;
+        // One coarse construction reservation covers outline/metric/table buffers,
+        // both cmap formats and their assembly, and old/new SFNT overlap. Metadata
+        // and source/cache storage remain separate; this is not heap accounting.
+        long tableBytes = checked(glyfLength + 8L * originalGlyphs.Length + 4 + copiedBytes
+            + 32 + 60 + 20L * unicodeByOriginalGlyph.Count);
+        long constructionBytes = checked(2 * tableBytes + 12 + 20 * (10 + optionalTags.Length) + 4);
+        byte[] subsetHhea = [];
+        IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, constructionBytes);
+        try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (tables.TryGetValue(optionalTag, out TableRecord optional))
-            {
-                outputTables.Add(new TableData(optionalTag, CopyTable(source, optional)));
-            }
-        }
+            byte[] subsetGlyf = BuildGlyf(out byte[] subsetLoca);
+            subsetHhea = CopyTable(source.Span, hhea);
+            byte[] subsetHmtx = BuildHmtx();
+            byte[] subsetMaxp = CopyTable(source.Span, maxp);
+            OpenTypeFont.W16(subsetMaxp, 4, (ushort)originalGlyphs.Length);
+            byte[] subsetHead = CopyTable(source.Span, head);
+            OpenTypeFont.W32(subsetHead, 8, 0);
+            OpenTypeFont.W16(subsetHead, 50, 1);
+            byte[] subsetPost = BuildPost();
+            byte[] subsetCmap = BuildCmap();
 
-        byte[] subsetBytes = BuildSfnt(source.AsSpan(0, 4), outputTables);
-        return new OpenTypeFontSubset(subsetBytes, cidByOriginalGlyph);
+            var outputTables = new List<TableData>
+            {
+                new("OS/2", CopyTable(source.Span, os2)),
+                new("cmap", subsetCmap),
+                new("glyf", subsetGlyf),
+                new("head", subsetHead),
+                new("hhea", subsetHhea),
+                new("hmtx", subsetHmtx),
+                new("loca", subsetLoca),
+                new("maxp", subsetMaxp),
+                new("name", CopyTable(source.Span, name)),
+                new("post", subsetPost)
+            };
+
+            foreach (string optionalTag in optionalTags)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (tables.TryGetValue(optionalTag, out TableRecord optional))
+                {
+                    outputTables.Add(new TableData(optionalTag, CopyTable(source.Span, optional)));
+                }
+            }
+
+            byte[] subsetBytes = BuildSfnt(source.Span.Slice(0, 4), outputTables);
+            var result = new OpenTypeFontSubset(subsetBytes, cidByOriginalGlyph);
+            // Temporary table buffers have no further users. The conversion scope
+            // retains the resulting program through final resource emission.
+            OoxMemory.Resize(storage, subsetBytes.Length);
+            storage = null;
+            return result;
+        }
+        finally { storage?.Dispose(); }
 
         byte[] BuildSfnt(ReadOnlySpan<byte> scalerType, List<TableData> tables)
         {
@@ -204,14 +206,14 @@ internal static class OpenTypeFontSubsetter
         byte[] BuildPost()
         {
             var output = new byte[32];
-            Array.Copy(source, post.Offset, output, 0, Math.Min(post.Length, output.Length));
+            source.Span.Slice(post.Offset, Math.Min(post.Length, output.Length)).CopyTo(output);
             OpenTypeFont.W32(output, 0, 0x00030000);
             return output;
         }
 
         byte[] BuildHmtx()
         {
-            ushort numberOfHMetrics = OpenTypeFont.U16(source, hhea.Offset + 34);
+            ushort numberOfHMetrics = OpenTypeFont.U16(source.Span, hhea.Offset + 34);
             if (numberOfHMetrics == 0)
             {
                 throw new InvalidDataException("Horizontal metrics table is empty.");
@@ -222,7 +224,7 @@ internal static class OpenTypeFontSubsetter
             for (int i = 0; i < originalGlyphs.Length; i++)
             {
                 ushort glyph = originalGlyphs[i];
-                if (!TryReadHorizontalMetric(source, glyph, originalGlyphCount, numberOfHMetrics, hmtx, out ushort advance, out short leftSideBearing))
+                if (!TryReadHorizontalMetric(source.Span, glyph, originalGlyphCount, numberOfHMetrics, hmtx, out ushort advance, out short leftSideBearing))
                 {
                     throw new InvalidDataException("Horizontal metric is invalid.");
                 }
@@ -234,43 +236,45 @@ internal static class OpenTypeFontSubsetter
             return output;
         }
 
+        int MeasureGlyfLength()
+        {
+            int length = 0;
+            foreach (ushort glyph in originalGlyphs)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!TryGetGlyphData(source.Span, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out _, out int glyphLength))
+                    throw new InvalidDataException("Glyph range is invalid.");
+                length = checked(((length + 3) & ~3) + glyphLength);
+            }
+            return checked((length + 3) & ~3);
+        }
+
         byte[] BuildGlyf(out byte[] subsetLoca)
         {
-            using var glyfStream = new MemoryStream();
+            var output = new byte[glyfLength];
             subsetLoca = new byte[(originalGlyphs.Length + 1) * 4];
+            int writeOffset = 0;
             for (int i = 0; i < originalGlyphs.Length; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int alignedOffset = OpenTypeFont.Align4((int)glyfStream.Position);
-                while (glyfStream.Position < alignedOffset)
-                {
-                    glyfStream.WriteByte(0);
-                }
-
-                OpenTypeFont.W32(subsetLoca, i * 4, (uint)glyfStream.Position);
-                if (!TryGetGlyphData(source, originalGlyphs[i], originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
+                writeOffset = OpenTypeFont.Align4(writeOffset);
+                OpenTypeFont.W32(subsetLoca, i * 4, (uint)writeOffset);
+                if (!TryGetGlyphData(source.Span, originalGlyphs[i], originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
                 {
                     throw new InvalidDataException("Glyph range is invalid.");
                 }
 
-                byte[] glyphData = new byte[glyphLength];
-                Array.Copy(source, glyphOffset, glyphData, 0, glyphLength);
+                Span<byte> glyphData = output.AsSpan(writeOffset, glyphLength);
+                source.Span.Slice(glyphOffset, glyphLength).CopyTo(glyphData);
                 if (!RemapCompoundGlyph(glyphData, cidByOriginalGlyph))
                 {
                     throw new InvalidDataException("Compound glyph remapping failed.");
                 }
 
-                glyfStream.Write(glyphData);
+                writeOffset += glyphLength;
             }
-
-            int finalOffset = OpenTypeFont.Align4((int)glyfStream.Position);
-            while (glyfStream.Position < finalOffset)
-            {
-                glyfStream.WriteByte(0);
-            }
-
-            OpenTypeFont.W32(subsetLoca, originalGlyphs.Length * 4, (uint)glyfStream.Position);
-            return glyfStream.ToArray();
+            OpenTypeFont.W32(subsetLoca, originalGlyphs.Length * 4, (uint)output.Length);
+            return output;
         }
 
         ushort[] BuildGlyphClosure(IEnumerable<ushort> seedGlyphs)
@@ -291,7 +295,7 @@ internal static class OpenTypeFontSubsetter
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 ushort glyph = pending.Dequeue();
-                if (!TryReadCompoundComponents(source, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out ushort[] components))
+                if (!TryReadCompoundComponents(source.Span, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out ushort[] components))
                 {
                     throw new InvalidDataException("Compound glyph is malformed.");
                 }
@@ -406,7 +410,7 @@ internal static class OpenTypeFontSubsetter
         }
     }
 
-    private static Dictionary<string, TableRecord> ReadTableDirectory(byte[] bytes)
+    private static Dictionary<string, TableRecord> ReadTableDirectory(ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length < 12)
         {
@@ -423,7 +427,7 @@ internal static class OpenTypeFontSubsetter
         int recordOffset = 12;
         for (int i = 0; i < tableCount; i++)
         {
-            string tag = Encoding.ASCII.GetString(bytes, recordOffset, 4);
+            string tag = Encoding.ASCII.GetString(bytes.Slice(recordOffset, 4));
             uint tableOffset = OpenTypeFont.U32(bytes, recordOffset + 8);
             uint tableLength = OpenTypeFont.U32(bytes, recordOffset + 12);
             if (tableOffset > int.MaxValue || tableLength > int.MaxValue || tableOffset + tableLength > bytes.Length)
@@ -439,7 +443,7 @@ internal static class OpenTypeFontSubsetter
     }
 
     private static bool TryReadHorizontalMetric(
-        byte[] source,
+        ReadOnlySpan<byte> source,
         ushort glyph,
         ushort originalGlyphCount,
         ushort numberOfHMetrics,
@@ -480,7 +484,7 @@ internal static class OpenTypeFontSubsetter
     }
 
     private static bool TryReadCompoundComponents(
-        byte[] source,
+        ReadOnlySpan<byte> source,
         ushort glyph,
         ushort originalGlyphCount,
         short indexToLocFormat,
@@ -563,7 +567,7 @@ internal static class OpenTypeFontSubsetter
         return true;
     }
 
-    private static bool RemapCompoundGlyph(byte[] glyphData, IReadOnlyDictionary<ushort, ushort> cidByOriginalGlyph)
+    private static bool RemapCompoundGlyph(Span<byte> glyphData, IReadOnlyDictionary<ushort, ushort> cidByOriginalGlyph)
     {
         if (glyphData.Length == 0)
         {
@@ -624,7 +628,7 @@ internal static class OpenTypeFontSubsetter
     }
 
     private static bool TryGetGlyphData(
-        byte[] source,
+        ReadOnlySpan<byte> source,
         ushort glyph,
         ushort originalGlyphCount,
         short indexToLocFormat,
@@ -682,10 +686,10 @@ internal static class OpenTypeFontSubsetter
         return true;
     }
 
-    private static byte[] CopyTable(byte[] source, TableRecord table)
+    private static byte[] CopyTable(ReadOnlySpan<byte> source, TableRecord table)
     {
         var output = new byte[table.Length];
-        Array.Copy(source, table.Offset, output, 0, table.Length);
+        source.Slice(table.Offset, table.Length).CopyTo(output);
         return output;
     }
 

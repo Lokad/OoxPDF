@@ -164,7 +164,10 @@ with `Kind=MemoryAdmission`, `Scope=Conversion`; it never becomes node recovery,
 cache eviction, storage spilling or omitted content. Existing format/output
 failures retain `DocumentBound`. Current producer coverage is package byte
 storage/intake and PDF content staging, including encoding/readback scratch and
-spill buffers. Model, font, image and PDF resource ownership migration remains open.
+spill buffers, plus private SFNT and subset program buffers. Copied programs stay
+funded through emission; failed preparation refunds its storage immediately.
+Models, font sources/caches and parsed maps, images and other PDF resources
+remain pending.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.

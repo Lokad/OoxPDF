@@ -11,22 +11,19 @@ internal sealed partial class OpenTypeFont
             : throw new InvalidDataException($"Font is missing required '{tag}' table.");
     }
 
-    internal static ushort U16(byte[] bytes, int offset)
+    internal static ushort U16(ReadOnlySpan<byte> bytes, int offset)
     {
-        return BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(offset, 2));
+        return BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(offset, 2));
     }
 
-    internal static uint U32(byte[] bytes, int offset)
+    internal static uint U32(ReadOnlySpan<byte> bytes, int offset)
     {
-        return U32(bytes.AsSpan(), offset);
+        return BinaryPrimitives.ReadUInt32BigEndian(bytes.Slice(offset, 4));
     }
 
-    private static uint U32(ReadOnlySpan<byte> bytes, int offset) =>
-        BinaryPrimitives.ReadUInt32BigEndian(bytes.Slice(offset, 4));
-
-    internal static short I16(byte[] bytes, int offset)
+    internal static short I16(ReadOnlySpan<byte> bytes, int offset)
     {
-        return BinaryPrimitives.ReadInt16BigEndian(bytes.AsSpan(offset, 2));
+        return BinaryPrimitives.ReadInt16BigEndian(bytes.Slice(offset, 2));
     }
 
     private static int I32(byte[] bytes, int offset)
@@ -34,14 +31,14 @@ internal sealed partial class OpenTypeFont
         return BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
     }
 
-    internal static void W16(byte[] bytes, int offset, ushort value)
+    internal static void W16(Span<byte> bytes, int offset, ushort value)
     {
-        BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(offset, 2), value);
+        BinaryPrimitives.WriteUInt16BigEndian(bytes.Slice(offset, 2), value);
     }
 
-    internal static void W32(byte[] bytes, int offset, uint value)
+    internal static void W32(Span<byte> bytes, int offset, uint value)
     {
-        BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(offset, 4), value);
+        BinaryPrimitives.WriteUInt32BigEndian(bytes.Slice(offset, 4), value);
     }
 
     private static double F2Dot14(byte[] bytes, int offset)

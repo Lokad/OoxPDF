@@ -61,8 +61,6 @@ internal sealed partial class OpenTypeFont
         return true;
     }
 
-    private static ushort U16(ReadOnlySpan<byte> table, int offset) => BinaryPrimitives.ReadUInt16BigEndian(table.Slice(offset, 2));
-
     internal static bool TryGetCoverageIndex(ReadOnlySpan<byte> coverage, ushort glyph, out int index)
     {
         index = -1;
