@@ -3533,7 +3533,10 @@ internal static class DocxTableCellsTests
 
     public static void DocxSyntheticTableRowsBreakAcrossPages()
     {
-        string rows = string.Concat(Enumerable.Range(0, 8).Select(i => "<w:tr><w:tc><w:p/></w:tc></w:tr>"));
+        // Exercise row admission independently of ambient font metrics for an
+        // empty paragraph: eight 18pt rows exceed the 108pt content frame.
+        string rows = string.Concat(Enumerable.Range(0, 8).Select(i =>
+            "<w:tr><w:trPr><w:trHeight w:val=\"360\" w:hRule=\"atLeast\"/></w:trPr><w:tc><w:p/></w:tc></w:tr>"));
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = """
