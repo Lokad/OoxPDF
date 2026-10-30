@@ -2,7 +2,7 @@ namespace Lokad.OoxPdf;
 
 /// <summary>
 /// PDF output and resource payload bounds, plus the resident page-content staging
-/// window. These are not memory accounting or work quotas. Use host-supplied MemoryAdmission and
+/// window. These are not memory accounting or work quotas. Use host-supplied MemoryBudget and
 /// cooperative cancellation for shared-process admission and execution control.
 /// Archive, XML and image bounds apply independently.
 /// </summary>

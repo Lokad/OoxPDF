@@ -3,7 +3,7 @@ using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Ooxml;
 
-internal sealed class OoxPackage
+internal sealed class OoxPackage : IDisposable
 {
     private const int MaxEntryCount = 10_000;
     internal const long MaxPartBytes = 64L * 1024L * 1024L;
@@ -13,6 +13,9 @@ internal sealed class OoxPackage
     internal const long MaxCentralDirectoryBytes = 32L * 1024L * 1024L;
 
     private readonly Dictionary<string, OoxPart> parts;
+    private IMemoryScope? storageScope;
+    private bool disposed;
+    private const int ScratchBytes = 81920;
 
     // Conversion-local parse caches for LoadXml/relationship consumers. Callers
     // read the shared DOMs or work on detached copies. One conversion owns the
@@ -20,15 +23,33 @@ internal sealed class OoxPackage
     private readonly Dictionary<string, XDocument> xmlCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyDictionary<string, OoxRelationship>> relationshipCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes)
+    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes, IMemoryScope? storageScope)
     {
         this.parts = parts;
         ContentTypes = contentTypes;
+        this.storageScope = storageScope;
     }
 
     public OoxContentTypes ContentTypes { get; }
 
-    public IReadOnlyCollection<OoxPart> Parts => parts.Values;
+    public IReadOnlyCollection<OoxPart> Parts
+    {
+        get { ObjectDisposedException.ThrowIf(disposed, this); return parts.Values; }
+    }
+
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        // Source arrays are borrowed through PDF resource emission. The owner
+        // closes the package only after those readers finish, before refunding.
+        parts.Clear();
+        xmlCache.Clear();
+        relationshipCache.Clear();
+        IMemoryScope? held = storageScope;
+        storageScope = null;
+        held?.Dispose();
+    }
 
     public static OoxPackage Open(string path, CancellationToken cancellationToken)
     {
@@ -49,12 +70,17 @@ internal sealed class OoxPackage
         Stream archiveStream = stream;
         // one scratch buffer is allocated for the whole open call instead of
         // allocating an 81,920-byte array per retained part plus staging.
-        byte[] scratch = new byte[81920];
+        IMemoryScope? memory = OoxConversionBudget.Current?.Memory?.CreateScope();
         try
         {
+            var working = OoxMemory.Reserve(memory, ScratchBytes);
+            var compressed = OoxMemory.Reserve(memory, 0);
+            var retained = OoxMemory.Reserve(memory, 0);
+            cancellationToken.ThrowIfCancellationRequested();
+            byte[] scratch = new byte[ScratchBytes];
             if (!stream.CanSeek)
             {
-                stagedBytes = StageCompressedInput(stream, MaxCompressedBytes, scratch, cancellationToken);
+                stagedBytes = StageCompressedInput(stream, MaxCompressedBytes, scratch, compressed, cancellationToken);
                 archiveStream = stagedBytes;
             }
             else
@@ -85,7 +111,7 @@ internal sealed class OoxPackage
 
                 if (stageSeekable)
                 {
-                    stagedBytes = StageCompressedInput(stream, MaxCompressedBytes, scratch, cancellationToken);
+                    stagedBytes = StageCompressedInput(stream, MaxCompressedBytes, scratch, compressed, cancellationToken);
                     archiveStream = stagedBytes;
                 }
             }
@@ -132,7 +158,7 @@ internal sealed class OoxPackage
         byte[] contentTypesBytes;
         using (Stream contentTypesStream = contentTypesEntry.Open())
         {
-            contentTypesBytes = CopyBounded(contentTypesStream, MaxContentTypesBytes, "[Content_Types].xml", scratch, cancellationToken);
+            contentTypesBytes = CopyBounded(contentTypesStream, MaxContentTypesBytes, "[Content_Types].xml", scratch, working, retained, cancellationToken);
         }
 
         OoxContentTypes contentTypes;
@@ -198,10 +224,10 @@ internal sealed class OoxPackage
                 {
                     using (Stream entryStream = entry.Open())
                     {
-                        partBytes = CopyBounded(entryStream, partBudget, partName, scratch, cancellationToken);
+                        partBytes = CopyBounded(entryStream, partBudget, partName, scratch, working, retained, cancellationToken);
                     }
                 }
-                catch (OoxPdfLimitExceededException) when (cappedByTotal)
+                catch (OoxPdfLimitExceededException exception) when (cappedByTotal && exception.Kind == OoxPdfLimitKind.DocumentBound)
                 {
                     throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported uncompressed size.");
                 }
@@ -216,12 +242,20 @@ internal sealed class OoxPackage
             parts.Add(partName, new OoxPart(partName, contentType, partBytes));
         }
 
-            OoxPackage result = new OoxPackage(parts, contentTypes);
+            // Intake buffers have no remaining readers. Refund them before
+            // transferring the package's retained-byte scope to the result.
+            stagedBytes?.Dispose();
+            stagedBytes = null;
+            OoxMemory.Resize(compressed, 0);
+            OoxMemory.Resize(working, 0);
+            OoxPackage result = new OoxPackage(parts, contentTypes, memory);
+            memory = null;
             return result;
         }
         finally
         {
-            stagedBytes?.Dispose();
+            try { stagedBytes?.Dispose(); }
+            finally { memory?.Dispose(); }
         }
     }
 
@@ -465,6 +499,7 @@ internal sealed class OoxPackage
 
     public OoxPart? GetPart(string partName)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         return parts.TryGetValue(OoxPath.NormalizePartName(partName), out OoxPart? part) ? part : null;
     }
 
@@ -499,6 +534,7 @@ internal sealed class OoxPackage
 
     public XDocument LoadXml(OoxPart part, CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
         if (xmlCache.TryGetValue(part.Name, out XDocument? cached))
         {
@@ -538,7 +574,7 @@ internal sealed class OoxPackage
         return relationships;
     }
 
-    private static MemoryStream StageCompressedInput(Stream source, long maxBytes, byte[] scratch, CancellationToken cancellationToken)
+    private static MemoryStream StageCompressedInput(Stream source, long maxBytes, byte[] scratch, IMemoryReservation? storage, CancellationToken cancellationToken)
     {
         var destination = new MemoryStream();
         try
@@ -559,6 +595,7 @@ internal sealed class OoxPackage
                     throw new OoxPdfLimitExceededException("OOXML package exceeds the maximum supported compressed size.");
                 }
 
+                GrowBuffer(destination, checked((int)(destination.Length + read)), maxBytes, storage, 0, cancellationToken);
                 destination.Write(buffer, 0, read);
             }
         }
@@ -569,26 +606,48 @@ internal sealed class OoxPackage
         }
     }
 
-    private static byte[] CopyBounded(Stream source, long maxBytes, string what, byte[] scratch, CancellationToken cancellationToken)
+    private static byte[] CopyBounded(Stream source, long maxBytes, string what, byte[] scratch,
+        IMemoryReservation? working, IMemoryReservation? retained, CancellationToken cancellationToken)
     {
-        byte[] buffer = scratch;
-        using var destination = new MemoryStream();
-        while (true)
+        var destination = new MemoryStream();
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            int read = source.Read(buffer, 0, buffer.Length);
-            if (read == 0)
+            while (true)
             {
-                return destination.ToArray();
+                cancellationToken.ThrowIfCancellationRequested();
+                int read = source.Read(scratch, 0, scratch.Length);
+                if (read == 0)
+                {
+                    // The final array and construction buffer overlap until
+                    // ToArray finishes. The package owns every retained array.
+                    OoxMemory.Resize(retained, checked((retained?.Bytes ?? 0) + destination.Length));
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return destination.ToArray();
+                }
+                if (checked(destination.Length + read) > maxBytes)
+                    throw new OoxPdfLimitExceededException($"OOXML part {what} exceeds the maximum supported size.");
+                GrowBuffer(destination, checked((int)(destination.Length + read)), maxBytes,
+                    working, ScratchBytes, cancellationToken);
+                destination.Write(scratch, 0, read);
             }
-
-            if (checked(destination.Length + read) > maxBytes)
-            {
-                throw new OoxPdfLimitExceededException($"OOXML part {what} exceeds the maximum supported size.");
-            }
-
-            destination.Write(buffer, 0, read);
         }
+        finally
+        {
+            destination.Dispose();
+            OoxMemory.Resize(working, ScratchBytes);
+        }
+    }
+
+    private static void GrowBuffer(MemoryStream buffer, int required, long maximum,
+        IMemoryReservation? reservation, int otherBytes, CancellationToken cancellationToken)
+    {
+        int oldCapacity = buffer.Capacity;
+        if (required <= oldCapacity) return;
+        int capacity = checked((int)Math.Min(maximum, Math.Max(required, Math.Max(256L, 2L * oldCapacity))));
+        OoxMemory.Resize(reservation, (long)otherBytes + oldCapacity + capacity);
+        cancellationToken.ThrowIfCancellationRequested();
+        buffer.Capacity = capacity;
+        OoxMemory.Resize(reservation, (long)otherBytes + capacity);
     }
 
     private static string RequiredAttribute(XElement element, string name)

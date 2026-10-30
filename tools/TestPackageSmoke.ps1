@@ -140,14 +140,14 @@ if (!string.Equals(expectedLibrarySha256, loadedLibrarySha256, StringComparison.
     throw new InvalidDataException("Smoke consumer loaded a DLL different from the freshly packed library.");
 }
 Console.WriteLine("Loaded packed library SHA-256 " + loadedLibrarySha256 + ".");
-var admission = new SmokeAdmission();
+var admission = new SmokeBudget();
 var options = new OoxPdfOptions
 {
     FontResolver = args[4].Length != 0 ? new SmokeFontResolver(args[4]) : null,
-    MemoryAdmission = admission
+    MemoryBudget = admission
 };
 OoxPdfConverter.Convert(input, output, options);
-if (admission.Requests != 1 || admission.Releases != 1) { throw new InvalidOperationException("Packed admission ownership is unbalanced."); }
+if (admission.Requests != 1 || admission.Releases != 1 || admission.Reserved != 0) { throw new InvalidOperationException("Packed admission ownership is unbalanced."); }
 byte[] header = new byte[5];
 using (FileStream stream = File.OpenRead(output))
 {
@@ -171,7 +171,7 @@ OoxPdfConverter.Convert(args[5], pptxOutput, options);
 string pptxPdf = Encoding.ASCII.GetString(File.ReadAllBytes(pptxOutput));
 if (!pptxPdf.StartsWith("%PDF-", StringComparison.Ordinal) || !pptxPdf.Contains("/FontFile2", StringComparison.Ordinal))
     throw new InvalidDataException("Packed PPTX conversion must produce a PDF with embedded text.");
-if (admission.Requests != 2 || admission.Releases != 2)
+if (admission.Requests != 2 || admission.Releases != 2 || admission.Reserved != 0)
     throw new InvalidOperationException("Packed DOCX/PPTX admission ownership is unbalanced.");
 
 string protectedOutput = Path.ChangeExtension(output, ".protected.pdf");
@@ -187,10 +187,12 @@ using (var cancellation = new CancellationTokenSource())
 string malformed = Path.ChangeExtension(input, ".malformed.docx");
 File.WriteAllText(malformed, "This is not an OOXML ZIP package.");
 ExpectFailure<InvalidDataException>(() => OoxPdfConverter.Convert(malformed, protectedOutput, options));
-var refusal = new RefusingAdmission();
-ExpectFailure<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(args[5], protectedOutput,
-    new OoxPdfOptions { FontResolver = options.FontResolver, MemoryAdmission = refusal }));
-if (refusal.Requests != 1 || admission.Requests != admission.Releases || File.ReadAllText(protectedOutput) != retained)
+var refusal = new RefusingBudget();
+var admissionError = ExpectFailure<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(args[5], protectedOutput,
+    new OoxPdfOptions { FontResolver = options.FontResolver, MemoryBudget = refusal }));
+if (admissionError.Kind != OoxPdfLimitKind.MemoryAdmission || admissionError.Scope != OoxPdfLimitScope.Conversion)
+    throw new InvalidOperationException("Packed refusal must retain its structured category.");
+if (refusal.Requests != 1 || admission.Requests != admission.Releases || admission.Reserved != 0 || File.ReadAllText(protectedOutput) != retained)
     throw new InvalidOperationException("Packed failure must balance ownership and preserve the destination.");
 Console.WriteLine("Packed PPTX conversion, cancellation, malformed-input recovery, admission refusal and destination preservation passed.");
 
@@ -201,18 +203,84 @@ static T ExpectFailure<T>(Action action) where T : Exception
     throw new InvalidOperationException("Expected packed failure: " + typeof(T).Name);
 }
 
-sealed class RefusingAdmission : IOoxPdfMemoryAdmission
+sealed class RefusingBudget : IMemoryBudget
 {
     public int Requests;
-    public IDisposable? TryAcquire(CancellationToken token) { token.ThrowIfCancellationRequested(); Requests++; return null; }
+    public IMemoryScope CreateScope() => new RefusingScope(this);
+    public bool TryReserve(long bytes, out IMemoryReservation? reservation)
+    { Requests++; reservation = null; return false; }
+    sealed class RefusingScope(RefusingBudget owner) : IMemoryScope
+    {
+        public IMemoryScope CreateScope() => new RefusingScope(owner);
+        public bool TryReserve(long bytes, out IMemoryReservation? reservation) => owner.TryReserve(bytes, out reservation);
+        public void Dispose() { }
+    }
 }
 
-sealed class SmokeAdmission : IOoxPdfMemoryAdmission, IDisposable
+// Consumer-owned shared capacity, not an estimate of the whole conversion.
+sealed class SmokeBudget : IMemoryBudget
 {
-    public int Requests;
-    public int Releases;
-    public IDisposable? TryAcquire(CancellationToken token) { token.ThrowIfCancellationRequested(); Requests++; return this; }
-    public void Dispose() { Releases++; }
+    readonly object sync = new();
+    readonly Scope direct;
+    public int Requests, Releases;
+    public long Reserved;
+    public SmokeBudget() { direct = new Scope(this, false); }
+    public IMemoryScope CreateScope() { Requests++; return new Scope(this, true); }
+    public bool TryReserve(long bytes, out IMemoryReservation? reservation) => direct.TryReserve(bytes, out reservation);
+    sealed class Scope(SmokeBudget owner, bool outer) : IMemoryScope
+    {
+        public long Owned;
+        public bool Closed;
+        public IMemoryScope CreateScope() => new Scope(owner, false);
+        public bool TryReserve(long bytes, out IMemoryReservation? reservation)
+        {
+            lock (owner.sync)
+            {
+                if (Closed) throw new ObjectDisposedException(nameof(Scope));
+                if (bytes < 0) throw new ArgumentOutOfRangeException(nameof(bytes));
+                if (bytes > 64L * 1024 * 1024 - owner.Reserved) { reservation = null; return false; }
+                owner.Reserved += bytes; Owned += bytes;
+                reservation = new Reservation(owner, this, bytes);
+                return true;
+            }
+        }
+        public void Dispose()
+        {
+            lock (owner.sync)
+            {
+                if (Closed) return;
+                Closed = true; owner.Reserved -= Owned; Owned = 0;
+                if (outer) owner.Releases++;
+            }
+        }
+    }
+    sealed class Reservation(SmokeBudget owner, Scope scope, long bytes) : IMemoryReservation
+    {
+        long held = bytes;
+        bool closed;
+        public long Bytes { get { lock (owner.sync) return scope.Closed ? 0 : held; } }
+        public bool TryResize(long bytes)
+        {
+            lock (owner.sync)
+            {
+                if (closed || scope.Closed) throw new ObjectDisposedException(nameof(Reservation));
+                if (bytes < 0) throw new ArgumentOutOfRangeException(nameof(bytes));
+                long delta = bytes - held;
+                if (delta > 64L * 1024 * 1024 - owner.Reserved) return false;
+                owner.Reserved += delta; scope.Owned += delta; held = bytes; return true;
+            }
+        }
+        public void Dispose()
+        {
+            lock (owner.sync)
+            {
+                if (closed) return;
+                closed = true;
+                if (!scope.Closed) { owner.Reserved -= held; scope.Owned -= held; }
+                held = 0;
+            }
+        }
+    }
 }
 
 sealed class SmokeFontResolver(string path) : IFontResolver

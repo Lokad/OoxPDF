@@ -3,15 +3,18 @@
 The library offers cooperative cancellation, meaningful input/output bounds,
 bounded font caches and page staging, and optional coarse host memory admission.
 These protect specific operations and ownership; they do not bound the entire
-managed heap or guarantee conversion of arbitrary hostile documents. See
+managed heap or guarantee conversion of arbitrary documents. See
 [limits and admission](Diagnostics.md#output-bounds-and-host-admission) and
 [caller migration](PublicApiChanges.md).
 
 File conversion publishes atomically after staging. Caller-owned streams stay
 open and may retain an incomplete prefix after a failure; discard that output.
-Memory admission is acquired before construction and released on success, failure
-or cancellation. Shared resolver caches and caller-owned buffers sit outside it.
-Use host concurrency limits and representative measurements to size headroom.
+`MemoryBudget` admits package buffers/parts before allocation and refunds them
+on success, failure or cancellation after their readers finish. Its scopes share
+the caller's root; they create no private allowance. Caller-owned buffers are not
+charged twice. Model/font/image/PDF storage and shared resolver cache admission
+remain pending, so this is partial coverage. Null budget is ungoverned. Use
+representative measurements to size incidental-storage and concurrency headroom.
 
 ## Measurement scope
 

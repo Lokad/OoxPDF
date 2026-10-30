@@ -10,6 +10,23 @@ remains terminal and preserves file publication and caller-stream ownership.
 This classification does not provide producer memory accounting or true async I/O;
 those embedding contracts are being revised separately.
 
+Replace `OoxPdfOptions.MemoryAdmission` / `IOoxPdfMemoryAdmission` with
+`MemoryBudget` / `IMemoryBudget`. The caller owns the shared root; the library
+creates zero-reservation scopes and asks producers to reserve and resize their
+capacity before allocation, including overlapping buffers during growth. Scopes
+own their own reservations, share the root allowance, and do not dispose the root
+or other independently created scopes. Dispose/refund only after storage users
+finish. Refusal never triggers eviction, spilling or reduced output.
+
+The first producer migration covers package intake, extracted parts and copy
+buffers, including nested chart workbooks. Package bytes remain funded through
+PDF resource emission; temporary buffers refund after intake. Parsed models,
+fonts, image planes and PDF staging/resources still need their producer migration.
+This partial coverage is not a complete conversion-memory limit. Null budget
+means ungoverned memory; input/output bounds and cancellation remain independent.
+Async I/O, explicit temporary storage and font borrow lifetimes remain separate
+work. The removed estimated lease is not retained as a second memory model.
+
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,
 with DOCX `Fallback` changed to `Partial`; callers must still inspect other
@@ -79,7 +96,7 @@ and `MaxLiveImageBytesPerConversion`. The first two counted production without
 refunds, so they did not express current memory ownership. The last estimated
 image buffers alone. There is no automatic complete-memory limit.
 
-Hosts can set `OoxPdfOptions.MemoryAdmission` to an implementation of
+In **0.2.0**, hosts could set `OoxPdfOptions.MemoryAdmission` to an implementation of
 `IOoxPdfMemoryAdmission`. Its `TryAcquire(CancellationToken)` reserves one coarse
 amount in the host's shared memory pool and returns an `IDisposable` lease, or
 returns null to refuse. The host chooses the estimate for the input/workload;

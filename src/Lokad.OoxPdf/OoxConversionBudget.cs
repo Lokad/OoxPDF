@@ -11,7 +11,12 @@ internal sealed class OoxConversionBudget
     public static OoxConversionBudget? Current => Storage.Value;
     private readonly OoxConversionLimits limits;
 
-    internal OoxConversionBudget(OoxConversionLimits? limits) => this.limits = limits ?? new();
+    internal OoxConversionBudget(OoxConversionLimits? limits, IMemoryScope? memory = null)
+    {
+        this.limits = limits ?? new();
+        Memory = memory;
+    }
+    internal IMemoryScope? Memory { get; }
     private long pdfPages;
     public long PdfPages => pdfPages;
     private long pdfContentBytes;
@@ -31,9 +36,9 @@ internal sealed class OoxConversionBudget
         PageContentSpilledBytes = checked(PageContentSpilledBytes + bytes);
     }
 
-    public static Scope BeginScope(OoxConversionLimits? limits)
+    public static Scope BeginScope(OoxConversionLimits? limits, IMemoryBudget? memory = null)
     {
-        var budget = new OoxConversionBudget(limits);
+        var budget = new OoxConversionBudget(limits, memory?.CreateScope());
         OoxConversionBudget? prior = Storage.Value;
         Storage.Value = budget;
         return new Scope(budget, prior);
@@ -71,7 +76,8 @@ internal sealed class OoxConversionBudget
         {
             if (disposed) { return; }
             disposed = true;
-            Storage.Value = prior;
+            try { budget.Memory?.Dispose(); }
+            finally { Storage.Value = prior; }
         }
     }
 }

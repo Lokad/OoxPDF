@@ -21,7 +21,7 @@ internal sealed partial class PptxRenderer
         }
 
         using var stream = new MemoryStream(sceneExternalData.Resource.Bytes, writable: false);
-        OoxPackage workbookPackage = OoxPackage.Open(stream, cancellationToken);
+        using OoxPackage workbookPackage = OoxPackage.Open(stream, cancellationToken);
         return ReadWorkbookDataCore(workbookPackage, cancellationToken);
     }
 

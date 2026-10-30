@@ -65,6 +65,13 @@ drawing diagnostics. Extensive suites use .NET 11.
 Do not run all portable rendering tests again merely to check framework transfer.
 Reuse one frozen artifact per TFM and retain each report's actual runtime identity.
 
+`host-refusal-categories` checks shared producer admission and package-buffer
+ownership, construction overlap, refusal, nested workbooks, cancellation, nested
+conversions and publication. Existing `MemoryAdmission*` method identities are
+retained while their host adapters now implement `IMemoryBudget`; the estimated
+whole-conversion lease is removed. These checks do not establish admission of
+all renderer allocations. Package-consumer coverage uses the same public contract.
+
 Independent Office comparisons remain necessary for fidelity changes. Parser or
 layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures

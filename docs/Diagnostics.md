@@ -157,13 +157,16 @@ Archive, XML, image, font and individual expansion bounds apply independently.
 Cancellation is cooperative. The retired cumulative work and nonrefunding
 retained-byte limits are listed in [caller migration](PublicApiChanges.md).
 
-The optional `MemoryAdmission` host adapter acquires one coarse lease before
-conversion construction. It covers retained storage and construction peaks;
-refusal throws `OoxPdfLimitExceededException` before input reads or PDF writes.
-Ownership is released on success, failure and cancellation, before file
-publication. Caller-owned streams/resolvers and shared bounded caches remain
-outside that lease. Size shared host capacity from measured representative
-workloads and concurrency headroom; this is not comprehensive heap accounting.
+The optional `MemoryBudget` supplies shared caller-owned capacity. Producers
+reserve storage before allocating it, including old/new buffer overlap, and
+refund after their readers finish. Refusal throws `OoxPdfLimitExceededException`
+with `Kind=MemoryAdmission`, `Scope=Conversion`; it never becomes node recovery,
+cache eviction, storage spilling or omitted content. Existing format/output
+failures retain `DocumentBound`. Current producer coverage is package byte
+storage and intake; model, font, image and PDF ownership migration remains open.
+Null budget leaves memory ungoverned. No private allowance or complete heap
+accounting is introduced; allow headroom for incidental storage and GC lag.
+Caller streams remain open and are not charged again as library storage.
 
 Page/group content beyond the resident window spills into a delete-on-close
 file. Informational `PDF_PAGE_CONTENT_SPILLED` is emitted once on escalation.

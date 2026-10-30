@@ -1,6 +1,8 @@
 {
   "host-refusal-categories": [
     "MemoryAdmission",
+    "MemoryBudget",
+    "PptxWorkbookOptionalParts",
     "FontResolutionLimits",
     "FontResolutionKeepsOrdinaryPptxIoRecovery",
     "FontResolutionCancellationStillPropagates",

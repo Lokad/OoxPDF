@@ -35,12 +35,13 @@ public sealed class OoxPdfOptions
     public OoxConversionLimits? ConversionLimits { get; init; }
 
     /// <summary>
-    /// Optional host admission to shared memory capacity. A host chooses a coarse
-    /// reservation covering this conversion's retained storage and construction
-    /// peak. Refusal throws OoxPdfLimitExceededException before construction or
-    /// output publication. No per-object memory accounting is performed.
+    /// Optional caller-owned shared capacity. Producers reserve covered storage
+    /// before allocation and release it after its users finish. Null leaves memory
+    /// ungoverned; independent format/output bounds still apply. Package byte
+    /// storage is currently covered; model, font, image and PDF storage admission
+    /// is being migrated. This is not a complete heap limit.
     /// </summary>
-    public IOoxPdfMemoryAdmission? MemoryAdmission { get; init; }
+    public IMemoryBudget? MemoryBudget { get; init; }
 
     /// <summary>
     /// Emits an informational CONVERSION_RESOURCE_SUMMARY with page/content,
