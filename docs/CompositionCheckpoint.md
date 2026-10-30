@@ -34,6 +34,15 @@ properties, and calibrated Office image references alongside the retained PDF
 comparisons. Changes need source-backed witnesses and independent appearance
 and content checks. Historical thresholds and residuals above remain visible.
 
+The 0.3.0 custom-table-padding correction adds eight independent Word sources
+that newly pass content, 1pt/.1pt geometry and unchanged image gates in both
+Final and Review. Across all eighteen controls, thirty of thirty-six outcomes
+pass those combined gates. Four bare/unknown-style image failures remain;
+two forward-parent outcomes fail geometry despite passing image scores. Their
+source-order-independent inheritance moves text 5.376pt from Word, a retained
+regression. These PDF-backed results await visible application-view calibration
+and do not replace the original portfolio. Local evidence: `artifacts/tmargin/completion.json`.
+
 The complete 9,570-line development and qualification journal remains in
 [checkpoint history at the reviewed revision](https://github.com/Lokad/OoxPDF/blob/6584386f9f36bd0c32dc59c7f3043f5b39f8d062/docs/CompositionCheckpoint.md).
 Detailed local evidence remains under ignored artifacts; private inputs stay
