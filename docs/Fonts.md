@@ -18,7 +18,16 @@ public interface IOoxPdfFontProgramLease : IDisposable
 }
 ```
 
-The built-in `WindowsFontResolver` is a file-backed resolver for local Windows font directories. For deterministic Linux operation, `OoxPdfFontPackResolver` can load a packaged font manifest over HTTP(S) and lazily download only the font programs that conversion actually uses:
+The built-in `WindowsFontResolver` uses local Windows font directories. Await
+`WindowsFontResolver.CreateAsync(token)` to prepare metadata; the constructor
+synchronously prepares the same shared snapshot. Resolution afterwards performs
+no file reads; font programs are acquired lazily. Conversions with no explicit
+resolver await this metadata preparation automatically. Directory enumeration
+remains synchronous.
+
+For deterministic Linux operation, `OoxPdfFontPackResolver` can load a packaged
+font manifest over HTTP(S) and lazily download only the font programs that
+conversion actually uses:
 
 ```csharp
 using Lokad.OoxPdf;

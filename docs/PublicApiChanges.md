@@ -2,6 +2,15 @@
 
 ## 0.3.0
 
+`WindowsFontResolver.CreateAsync(cancellationToken)` prepares installed-font
+metadata with awaited file reads. `Resolve` and catalog queries then use the
+published snapshot without file I/O; program bytes remain lazy. The existing
+constructor now completes metadata discovery during construction instead of the
+first query, blocking on the same initialization core. Concurrent callers share
+one snapshot; canceled initialization publishes nothing, and canceled waiters do
+not cancel other callers. Cache invalidation still affects only future resolvers.
+Directory enumeration has no asynchronous platform equivalent here.
+
 `IFontProgramSource.GetBytesAsync` is replaced by
 `AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)`,
 returning an `IOoxPdfFontProgramLease`. Custom sources must implement the new
@@ -22,8 +31,10 @@ resolver never disposes the caller's `HttpClient` or budget.
 `ConvertAsync` awaits bounded package input, ZIP extraction, page staging and PDF
 output, including owned storage disposal. Synchronous entry points block on the
 same pipeline. DOCX awaits font-program acquisition during preparation; measurement
-and painting then use prepared fonts. PPTX acquisition and initial local Windows
-font discovery remain synchronous during the embedding migration. Caller streams
+and painting then use prepared fonts. Default local discovery awaits font-file
+metadata reads before either renderer starts; directory enumeration remains a
+synchronous platform operation. PPTX program acquisition remains synchronous
+during the embedding migration. Caller streams
 stay open; cancellation waits for outstanding
 I/O before refunding borrowed storage. Input failures escape without preflight retry.
 
@@ -84,8 +95,8 @@ recolor reuses private pixels and leaves encoded input/cache bytes unchanged.
 Models, parsed maps and other PDF resources still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
-PPTX font preparation, initial local discovery and remaining producer coverage
-are still open. The removed estimated lease is not a second memory model.
+PPTX font preparation and remaining producer coverage (including discovery
+metadata storage admission) are still open. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,

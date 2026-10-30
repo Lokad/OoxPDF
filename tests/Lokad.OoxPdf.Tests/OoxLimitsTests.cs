@@ -970,9 +970,10 @@ internal static partial class OoxLimitsTests
         File.WriteAllBytes(path, collection);
         try
         {
-            MethodInfo read = typeof(WindowsFontResolver).GetMethod("ReadDiscoveryBytes", BindingFlags.NonPublic | BindingFlags.Static)
+            MethodInfo read = typeof(WindowsFontResolver).GetMethod("ReadDiscoveryBytesAsync", BindingFlags.NonPublic | BindingFlags.Static)
                 ?? throw new InvalidOperationException("Expected discovery span helper.");
-            var span = ((byte[] Bytes, bool Complete, long FileLength))read.Invoke(null, [path])!;
+            var pending = (ValueTask<(byte[] Bytes, bool Complete, long FileLength)>)read.Invoke(null, [path, false, CancellationToken.None])!;
+            var span = pending.GetAwaiter().GetResult();
             TestAssert.True(!span.Complete, "Collection discovery must return a span, not the whole file.");
             TestAssert.True(span.Bytes.Length > 0 && span.Bytes.Length < collection.Length, "Span must exclude the trailing dead space.");
             TestAssert.Equal(collection.Length, span.FileLength);

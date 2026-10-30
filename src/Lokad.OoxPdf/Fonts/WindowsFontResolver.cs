@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 namespace Lokad.OoxPdf.Fonts;
 
 /// <summary>
@@ -18,8 +17,8 @@ namespace Lokad.OoxPdf.Fonts;
 public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 {
     private static readonly object CacheLock = new();
-    private static readonly Dictionary<string, Lazy<DiscoverySnapshot>> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Lazy<DiscoverySnapshot> cache;
+    private static readonly Dictionary<string, DiscoveryState> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
+    private readonly DiscoverySnapshot cache;
 
     // per-instance (usually per-conversion) resolution cache. Requests repeat
     // per run; the static snapshot underneath is shared. Capped with clear-all so a
@@ -40,240 +39,286 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         Dictionary<string, FontFaceResolution[]> ByFamily,
         FontFaceResolution[] TextFaces);
 
+    // Only initialization performs file reads. A canceled initializer publishes
+    // nothing; another caller can retry the same directory set with its own token.
+    private sealed class DiscoveryState(IReadOnlyList<string> directories)
+    {
+        private readonly SemaphoreSlim gate = new(1, 1);
+        private DiscoverySnapshot? snapshot;
+
+        public async ValueTask<DiscoverySnapshot> GetAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Volatile.Read(ref snapshot) is { } ready) return ready;
+            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (snapshot is null)
+                {
+                    DiscoverySnapshot discovered = await DiscoverAsync(directories, cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    Volatile.Write(ref snapshot, discovered);
+                }
+                return snapshot;
+            }
+            finally { gate.Release(); }
+        }
+    }
+
+    /// <summary>
+    /// Prepares installed-font metadata synchronously. Use <see cref="CreateAsync(CancellationToken)"/>
+    /// to await font-file reads. Resolution afterwards uses only this snapshot.
+    /// </summary>
     public WindowsFontResolver()
-        : this(GetDefaultFontDirectories())
+        : this(GetOrCreateDiscovery(GetDefaultFontDirectories()).GetAsync(default).GetAwaiter().GetResult())
     {
     }
 
     internal WindowsFontResolver(string fontsDirectory)
-        : this([fontsDirectory])
+        : this(GetOrCreateDiscovery([fontsDirectory]).GetAsync(default).GetAwaiter().GetResult())
     {
     }
 
-    private WindowsFontResolver(IReadOnlyList<string> fontDirectories)
+    private WindowsFontResolver(DiscoverySnapshot snapshot) => cache = snapshot;
+
+    /// <summary>Prepares installed-font metadata, awaiting cancellable font-file reads.</summary>
+    /// <remarks>
+    /// Directory enumeration uses the platform's synchronous directory API.
+    /// Concurrent initializers share one published snapshot. Cancellation does not
+    /// publish a partial snapshot or cancel another caller's initialization.
+    /// </remarks>
+    public static ValueTask<WindowsFontResolver> CreateAsync(CancellationToken cancellationToken = default)
+        => CreateAsync(GetDefaultFontDirectories(), cancellationToken);
+
+    private static async ValueTask<WindowsFontResolver> CreateAsync(IReadOnlyList<string> fontDirectories, CancellationToken cancellationToken)
+        => new(await GetOrCreateDiscovery(fontDirectories).GetAsync(cancellationToken).ConfigureAwait(false));
+
+    private static DiscoveryState GetOrCreateDiscovery(IReadOnlyList<string> fontDirectories)
     {
-        cache = GetOrCreateCache();
-
-        Lazy<DiscoverySnapshot> GetOrCreateCache()
+        string cacheKey = string.Join("|", fontDirectories
+            .Where(d => !string.IsNullOrWhiteSpace(d))
+            .Select(Path.GetFullPath).Order(StringComparer.OrdinalIgnoreCase));
+        lock (CacheLock)
         {
-            string cacheKey = string.Join(
-                "|",
-                fontDirectories
-                    .Where(d => !string.IsNullOrWhiteSpace(d))
-                    .Select(Path.GetFullPath)
-                    .Order(StringComparer.OrdinalIgnoreCase));
-            lock (CacheLock)
+            if (!DiscoveryCaches.TryGetValue(cacheKey, out DiscoveryState? state))
             {
-                if (!DiscoveryCaches.TryGetValue(cacheKey, out Lazy<DiscoverySnapshot>? cached))
-                {
-                    cached = new Lazy<DiscoverySnapshot>(() => Discover());
-                    DiscoveryCaches[cacheKey] = cached;
-                }
+                state = new DiscoveryState(fontDirectories);
+                DiscoveryCaches.Add(cacheKey, state);
+            }
+            return state;
+        }
+    }
 
-                return cached;
-
-            DiscoverySnapshot Discover()
+    private static async ValueTask<DiscoverySnapshot> DiscoverAsync(IReadOnlyList<string> fontDirectories, CancellationToken cancellationToken)
+    {
+        var fonts = new List<FontFaceResolution>();
+        var aliases = new Dictionary<string, List<FontFaceResolution>>(StringComparer.OrdinalIgnoreCase);
+        var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
+        var retention = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase);
+        foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
+                ? SearchOption.AllDirectories
+                : SearchOption.TopDirectoryOnly;
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (string path in Directory.EnumerateFiles(fontsDirectory, "*.*", searchOption)
+                         .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                             p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
+                             p.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
+                         .Order(StringComparer.OrdinalIgnoreCase))
             {
-                var fonts = new List<FontFaceResolution>();
-                var aliases = new Dictionary<string, List<FontFaceResolution>>(StringComparer.OrdinalIgnoreCase);
-                var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
-                var retention = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase);
-                foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
+                cancellationToken.ThrowIfCancellationRequested();
+                try
                 {
-                    SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
-                        ? SearchOption.AllDirectories
-                        : SearchOption.TopDirectoryOnly;
-                    foreach (string path in Directory.EnumerateFiles(fontsDirectory, "*.*", searchOption)
-                                 .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
-                                     p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
-                                     p.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
-                                 .Order(StringComparer.OrdinalIgnoreCase))
+                    // Read the prefix covering discovery tables. This can include
+                    // unrelated tables between them; trailing program data stays on disk.
+                    (byte[] bytes, bool complete, long fileLength) = await ReadDiscoveryBytesAsync(path, false, cancellationToken).ConfigureAwait(false);
+                    if (!sourcesByPath.TryGetValue(path, out FileFontProgramSource? source))
                     {
+                        source = new FileFontProgramSource(path, retention);
+                        sourcesByPath[path] = source;
+                    }
+                    bool isCollection = OpenTypeFont.IsTrueTypeCollectionHeader(bytes);
+                    int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
+                    for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        OpenTypeFont.FontDiscoveryHeaders headers;
                         try
                         {
-                            // discovery parses only the directory plus eight
-                            // table extents, never outlines or layout tables. Read exactly
-                            // those bytes instead of the whole program per file.
-                            (byte[] bytes, bool complete, long fileLength) = ReadDiscoveryBytes(path);
-                            if (!sourcesByPath.TryGetValue(path, out FileFontProgramSource? source))
-                            {
-                                source = new FileFontProgramSource(path, retention);
-                                sourcesByPath[path] = source;
-                            }
-                            bool isCollection = OpenTypeFont.IsTrueTypeCollectionHeader(bytes);
-                            int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
-                            for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
-                            {
-                                OpenTypeFont.FontDiscoveryHeaders headers;
-                                try
-                                {
-                                    // Collections parse each face in place instead of
-                                    // repackaging per-face sfnt copies (G02).
-                                    headers = isCollection
-                                        ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength)
-                                        : OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength);
-                                }
-                                catch (Exception spanEx) when (!complete && spanEx is InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
-                                {
-                                    // A span read can truncate bytes a malformed font's
-                                    // parser would otherwise touch. Re-parse the full file
-                                    // so accept/reject matches whole-program reads exactly.
-                                    // Malformed files pay one extra bounded read; valid
-                                    // fonts never take this path.
-                                    bytes = File.ReadAllBytes(path);
-                                    complete = true;
-                                    headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex);
-                                }
-                                if (!string.IsNullOrWhiteSpace(headers.FamilyName))
-                                {
-                                    var face = new FontFaceResolution(
-                                        headers.FamilyName,
-                                        headers.FamilyName,
-                                        new FontStyleKey(
-                                            Bold: headers.WeightClass >= 600,
-                                            Italic: Math.Abs(headers.ItalicAngle) > 0.01d,
-                                            WeightClass: headers.WeightClass,
-                                            FaceIndex: faceIndex,
-                                            HasMathTable: headers.HasMathTable),
-                                        source,
-                                        IsFallback: false);
-                                    fonts.Add(face);
-                                    foreach (string family in headers.FamilyNames) {
-                                        if (!aliases.TryGetValue(family, out List<FontFaceResolution>? familyFaces)) {
-                                            familyFaces = new();
-                                            aliases.Add(family, familyFaces);
-                                        }
-                                        familyFaces.Add(face);
-                                    }
-                                }
+                            // Collections parse each face in place instead of
+                            // repackaging per-face sfnt copies (G02).
+                            headers = isCollection
+                                ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength)
+                                : OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength);
                         }
-                        }
-                        catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+                        catch (Exception spanEx) when (!complete && spanEx is InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
                         {
-                            // Ignore fonts outside the minimal parser's current scope.
+                            // A span read can truncate bytes a malformed font's
+                            // parser would otherwise touch. Re-parse the full file
+                            // so accept/reject matches whole-program reads exactly.
+                            // Malformed files pay one extra bounded read; valid
+                            // fonts never take this path.
+                            (bytes, _, _) = await ReadDiscoveryBytesAsync(path, true, cancellationToken).ConfigureAwait(false);
+                            complete = true;
+                            headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex);
+                        }
+                        if (!string.IsNullOrWhiteSpace(headers.FamilyName))
+                        {
+                            var face = new FontFaceResolution(
+                                headers.FamilyName,
+                                headers.FamilyName,
+                                new FontStyleKey(
+                                    Bold: headers.WeightClass >= 600,
+                                    Italic: Math.Abs(headers.ItalicAngle) > 0.01d,
+                                    WeightClass: headers.WeightClass,
+                                    FaceIndex: faceIndex,
+                                    HasMathTable: headers.HasMathTable),
+                                source,
+                                IsFallback: false);
+                            fonts.Add(face);
+                            foreach (string family in headers.FamilyNames) {
+                                if (!aliases.TryGetValue(family, out List<FontFaceResolution>? familyFaces)) {
+                                    familyFaces = new();
+                                    aliases.Add(family, familyFaces);
+                                }
+                                familyFaces.Add(face);
+                            }
                         }
                     }
                 }
-
-                FontFaceResolution[] faces = fonts
-                    .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-                var byFamily = aliases.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
-
-                return new DiscoverySnapshot(faces, byFamily, faces.Where(f => !f.HasMathTable).ToArray());
-            }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+                {
+                    // Ignore fonts outside the minimal parser's current scope.
+                }
             }
         }
+
+        FontFaceResolution[] faces = fonts
+            .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var byFamily = aliases.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
+
+        return new DiscoverySnapshot(faces, byFamily, faces.Where(f => !f.HasMathTable).ToArray());
     }
 
-
-    private static (byte[] Bytes, bool Complete, long FileLength) ReadDiscoveryBytes(string path)
+    private static async ValueTask<(byte[] Bytes, bool Complete, long FileLength)> ReadDiscoveryBytesAsync(
+        string path, bool wholeFile, CancellationToken cancellationToken)
     {
-        byte[] header = new byte[12];
-        long fileLength;
-        using (FileStream stream = File.OpenRead(path))
+        (byte[] Bytes, bool Complete, long FileLength) result;
+        await using (var stream = new FileStream(path, new FileStreamOptions { Mode = FileMode.Open,
+            Access = FileAccess.Read, Share = FileShare.Read, BufferSize = 1,
+            Options = FileOptions.Asynchronous | FileOptions.RandomAccess }))
         {
-            fileLength = stream.Length;
-            // Same per-font ceiling as first use (FileFontProgramSource): oversized
-            // files are skipped at stat time instead of buffered.
-            FileFontProgramSource.CheckLocalFontSize(fileLength, path);
-            if (fileLength < 12 || fileLength > int.MaxValue)
-            {
-                return (File.ReadAllBytes(path), true, fileLength);
-            }
+            result = await ReadDiscoveryStreamAsync(stream, path, wholeFile, cancellationToken).ConfigureAwait(false);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
+    }
 
-            ReadExactly(stream, header, 0, header.Length);
+    // Borrows the seekable stream; the path overload owns and closes the file.
+    private static async ValueTask<(byte[] Bytes, bool Complete, long FileLength)> ReadDiscoveryStreamAsync(
+        Stream stream, string path, bool wholeFile, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        long fileLength = stream.Length;
+        FileFontProgramSource.CheckLocalFontSize(fileLength, path);
+        if (!wholeFile && fileLength >= 12)
+        {
+            byte[] header = new byte[12];
+            await stream.ReadExactlyAsync(header, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             if (OpenTypeFont.IsTrueTypeCollectionHeader(header))
             {
-                // R13: collections read the header, face offsets, face directories,
-                // and needed table extents instead of the whole program per file.
-                if (TryReadCollectionDiscoverySpan(stream, header, fileLength, out byte[]? span))
-                {
-                    return (span, false, fileLength);
-                }
-
-                return (File.ReadAllBytes(path), true, fileLength);
+                byte[]? span = await TryReadCollectionDiscoverySpanAsync(stream, header, fileLength, cancellationToken).ConfigureAwait(false);
+                if (span is not null) return (span, false, fileLength);
             }
-
-            ushort tableCount = OpenTypeFont.U16(header, 4);
-            if (tableCount != 0 && tableCount <= 256)
+            else
             {
-                int directoryLength = tableCount * 16;
-                var prefix = new byte[12 + directoryLength];
-                Buffer.BlockCopy(header, 0, prefix, 0, header.Length);
-                ReadExactly(stream, prefix, header.Length, directoryLength);
-                if (OpenTypeFont.TryGetDiscoveryByteBudget(prefix, fileLength, out long requiredEnd))
+                ushort tableCount = OpenTypeFont.U16(header, 4);
+                if (tableCount != 0 && tableCount <= 256)
                 {
-                    if (requiredEnd <= prefix.Length)
+                    int directoryLength = tableCount * 16;
+                    var prefix = new byte[12 + directoryLength];
+                    Buffer.BlockCopy(header, 0, prefix, 0, header.Length);
+                    await stream.ReadExactlyAsync(prefix.AsMemory(header.Length, directoryLength), cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (OpenTypeFont.TryGetDiscoveryByteBudget(prefix, fileLength, out long requiredEnd))
                     {
-                        return (prefix, false, fileLength);
-                    }
-
-                    if (requiredEnd <= fileLength)
-                    {
-                        var span = new byte[(int)requiredEnd];
-                        Buffer.BlockCopy(prefix, 0, span, 0, prefix.Length);
-                        ReadExactly(stream, span, prefix.Length, (int)requiredEnd - prefix.Length);
-                        return (span, false, fileLength);
+                        if (requiredEnd <= prefix.Length) return (prefix, false, fileLength);
+                        if (requiredEnd <= fileLength)
+                        {
+                            var span = new byte[(int)requiredEnd];
+                            Buffer.BlockCopy(prefix, 0, span, 0, prefix.Length);
+                            await stream.ReadExactlyAsync(span.AsMemory(prefix.Length), cancellationToken).ConfigureAwait(false);
+                            cancellationToken.ThrowIfCancellationRequested();
+                            return (span, false, fileLength);
+                        }
                     }
                 }
             }
         }
 
-        return (File.ReadAllBytes(path), true, fileLength);
+        // Reuse this bounded open-file length even on malformed metadata fallback;
+        // reopening by path could race replacement/growth and lose the size bound.
+        stream.Seek(0, SeekOrigin.Begin);
+        byte[] bytes = new byte[checked((int)fileLength)];
+        await stream.ReadExactlyAsync(bytes, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return (bytes, true, fileLength);
     }
 
-    private static bool TryReadCollectionDiscoverySpan(FileStream stream, byte[] header, long fileLength, [NotNullWhen(true)] out byte[]? span)
+    private static async ValueTask<byte[]?> TryReadCollectionDiscoverySpanAsync(Stream stream, byte[] header, long fileLength, CancellationToken cancellationToken)
     {
-        span = null;
         try
         {
             uint faceCount = OpenTypeFont.U32(header, 8);
             if (faceCount == 0 || faceCount > 256)
             {
-                return false;
+                return null;
             }
 
             int offsetTableLength = checked((int)faceCount * 4);
             long offsetsEnd = checked(12L + offsetTableLength);
             if (offsetsEnd > fileLength)
             {
-                return false;
+                return null;
             }
 
             var offsets = new byte[offsetTableLength];
-            ReadExactly(stream, offsets, 0, offsets.Length);
+            await stream.ReadExactlyAsync(offsets, cancellationToken).ConfigureAwait(false);
             long requiredEnd = offsetsEnd;
             var faceWindow = new byte[12];
             for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 long faceOffset = OpenTypeFont.U32(offsets, faceIndex * 4);
                 if (faceOffset > fileLength - 12)
                 {
-                    return false;
+                    return null;
                 }
 
                 stream.Seek(faceOffset, SeekOrigin.Begin);
-                ReadExactly(stream, faceWindow, 0, faceWindow.Length);
+                await stream.ReadExactlyAsync(faceWindow, cancellationToken).ConfigureAwait(false);
                 ushort faceTableCount = OpenTypeFont.U16(faceWindow, 4);
                 if (faceTableCount == 0 || faceTableCount > 256)
                 {
-                    return false;
+                    return null;
                 }
 
                 int directoryLength = checked(faceTableCount * 16);
                 if (faceOffset > fileLength - 12 - directoryLength)
                 {
-                    return false;
+                    return null;
                 }
 
                 var window = new byte[12 + directoryLength];
                 Buffer.BlockCopy(faceWindow, 0, window, 0, faceWindow.Length);
                 stream.Seek(faceOffset + 12, SeekOrigin.Begin);
-                ReadExactly(stream, window, 12, directoryLength);
+                await stream.ReadExactlyAsync(window.AsMemory(12, directoryLength), cancellationToken).ConfigureAwait(false);
                 if (!OpenTypeFont.TryGetTableDirectoryByteBudget(window, headerOffset: 0, fileLength, out long faceEnd))
                 {
-                    return false;
+                    return null;
                 }
 
                 requiredEnd = Math.Max(requiredEnd, faceEnd);
@@ -281,34 +326,18 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
             if (requiredEnd > fileLength || requiredEnd > int.MaxValue)
             {
-                return false;
+                return null;
             }
 
             stream.Seek(0, SeekOrigin.Begin);
             var prefix = new byte[(int)requiredEnd];
-            ReadExactly(stream, prefix, 0, prefix.Length);
-            span = prefix;
-            return true;
+            await stream.ReadExactlyAsync(prefix, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return prefix;
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException or NotSupportedException)
         {
-            span = null;
-            return false;
-        }
-    }
-
-    private static void ReadExactly(Stream stream, byte[] buffer, int offset, int count)
-    {
-        while (count > 0)
-        {
-            int read = stream.Read(buffer, offset, count);
-            if (read == 0)
-            {
-                throw new EndOfStreamException("Font file ended unexpectedly during discovery.");
-            }
-
-            offset += read;
-            count -= read;
+            return null;
         }
     }
 
@@ -358,7 +387,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     private FontFaceResolution ResolveCore(FontRequest request)
     {
-        DiscoverySnapshot snapshot = cache.Value;
+        DiscoverySnapshot snapshot = cache;
         if (snapshot.ByFamily.TryGetValue(request.FamilyName, out FontFaceResolution[]? exact) && exact.Length != 0)
         {
             return SelectBest(exact, request);
@@ -381,7 +410,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     internal IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
-        return cache.Value.Faces;
+        return cache.Faces;
     }
 
     IReadOnlyList<FontFaceResolution> IFontCatalog.GetDiscoveredFonts()

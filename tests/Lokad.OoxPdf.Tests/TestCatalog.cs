@@ -38,6 +38,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxLockedFieldTests)),
         .. FromType("rendering-portable", typeof(DocxFontSlotTests)),
         .. FromType("fonts", typeof(FontResolverConcurrencyTests)),
+        .. FromType("fonts", typeof(FontDiscoveryAsyncTests)),
         .. FromType("fonts", typeof(MathFontTests)),
         .. FromType("api", typeof(DiagnosticOutcomeTests)),
         .. FromType("cli", typeof(CliTests)),
