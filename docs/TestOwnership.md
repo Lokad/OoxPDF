@@ -85,6 +85,8 @@ including individual property groups, a single conditional region, inherited
 color/borders, an ordinary descendant and TableNormal.
 The former forward-only origin exception is removed; all margin controls use
 the same independent Word origin assertion.
+For inheritance changes, select this capability together with
+`docx-conditional-table-styles`; their union is 34 exact methods in one invocation.
 
 `docx-conditional-table-styles` covers the shared table-style cascade, direct
 formatting, inheritance, false flags, margins and borders. Four pinned public

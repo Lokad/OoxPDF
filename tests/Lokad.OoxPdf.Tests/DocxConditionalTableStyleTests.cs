@@ -38,7 +38,9 @@ internal static class DocxConditionalTableStyleTests
                     string id = (string)style.Attribute(W + "styleId")!;
                     var regions = style.Elements(W + "tblStylePr").Reverse().ToArray();
                     foreach (var region in regions) region.Remove();
-                    styles.Root.Add(new XElement(W + "style", new XAttribute(W + "type", "table"),
+                    // Word binds table formatting to earlier parents. Keep that
+                    // ownership while reversing the conditional region order.
+                    style.AddBeforeSelf(new XElement(W + "style", new XAttribute(W + "type", "table"),
                         new XAttribute(W + "styleId", id + "Base"), regions));
                     style.AddFirst(new XElement(W + "basedOn", new XAttribute(W + "val", id + "Base")));
                 }
