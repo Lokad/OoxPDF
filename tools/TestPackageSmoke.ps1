@@ -146,6 +146,7 @@ IOoxPdfTemporaryStorage temporaryStorage = new OoxPdfFileTemporaryStorage(tempor
 var options = new OoxPdfOptions
 {
     FontResolver = args[4].Length != 0 ? new SmokeFontResolver(args[4]) : null,
+    FixedCreationDate = DateTimeOffset.UnixEpoch,
     MemoryBudget = admission, TemporaryStorage = temporaryStorage,
     ConversionLimits = new OoxConversionLimits { MaxResidentPageContentBytesPerConversion = 1 }
 };
@@ -183,6 +184,7 @@ using (var streamOutput = new AsyncOnlySmokeOutput())
 {
     await OoxPdfConverter.ConvertAsync(streamInput, streamOutput, new OoxPdfOptions {
         InputKind = OoxPdfInputKind.Docx, FontResolver = options.FontResolver,
+        FixedCreationDate = options.FixedCreationDate,
         MemoryBudget = asyncAdmission, TemporaryStorage = temporaryStorage, ConversionLimits = options.ConversionLimits });
     if (!streamOutput.ToArray().AsSpan().SequenceEqual(File.ReadAllBytes(output)))
         throw new InvalidDataException("Packed async output/storage changed the PDF.");
@@ -358,6 +360,9 @@ Write-Host "Package smoke test passed through the packed library."
     FailurePreservesDestinationChecked = $true
     VersionMetadataChecked = $true
     CallerDocumentationChecked = $true
+    AsyncOnlyOutputChecked = $true
+    ExplicitTemporaryStorageChecked = $true
+    TemporaryStorageCleanupChecked = $true
     LocalDocumentationLinksChecked = $localDocumentationLinks
     Package = $package.FullName
     PackageVersion = $version
