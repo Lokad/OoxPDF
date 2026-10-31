@@ -1463,9 +1463,13 @@ internal static class PptxChartsTests
     public static void PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides()
     {
         foreach (int offset in new[] { 0, 50, 100, 200 })
+        foreach (string position in new[] { "nextTo", "low", "high" })
+        foreach (bool reversed in new[] { false, true })
         {
-            string left = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: offset);
-            string right = RenderLegendlessLineLayoutProbe(18, 360, 100, guard: "right", categoryLabelOffset: offset);
+            string left = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: offset,
+                categoryCrossesAt: 50d, categoryLabelPosition: position, valueAxisReversed: reversed);
+            string right = RenderLegendlessLineLayoutProbe(18, 360, 100, guard: "right", categoryLabelOffset: offset,
+                categoryCrossesAt: 50d, categoryLabelPosition: position, valueAxisReversed: reversed);
             string[] Baselines(string pdf) => Regex.Matches(pdf,
                 @"/CCA1 18 Tf\s+0 Tc\s+1 0 0 1 [-\d.]+ (?<y>[-\d.]+) Tm")
                 .Select(match => match.Groups["y"].Value).ToArray();
@@ -1595,7 +1599,7 @@ internal static class PptxChartsTests
 
     public static void PptxLegendlessLineCategoryPlacementRetainsSourceLayoutFallbacks()
     {
-        foreach (string guard in new[] { "manual", "composed", "right", "category-top", "extra-axis", "hidden" })
+        foreach (string guard in new[] { "manual", "composed", "category-top", "extra-axis" })
         {
             string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard,
                 categoryCrossesAt: 50d, categoryLabelPosition: "high");
