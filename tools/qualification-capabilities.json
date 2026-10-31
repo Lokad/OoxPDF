@@ -16,8 +16,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
-  ]
-,
+  ],
   "pptx-point-legends": [
     "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
     "PptxVaryingBarCategoryLegends",

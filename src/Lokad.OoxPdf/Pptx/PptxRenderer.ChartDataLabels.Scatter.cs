@@ -87,7 +87,7 @@ internal sealed partial class PptxRenderer
                 double textWidth = labelBox.Width;
                 if (effectiveOptions.ShowLegendKey)
                 {
-                    double consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, ChartSeriesColor(theme, colorMap, null, seriesIndex, seriesFills, 1d));
+                    double consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, ChartSeriesColor(theme, colorMap, default, seriesIndex, seriesFills, 1d));
                     textX += consumedWidth;
                     textWidth = Math.Max(1d, textWidth - consumedWidth);
                     alignment = TextAlignment.Left;

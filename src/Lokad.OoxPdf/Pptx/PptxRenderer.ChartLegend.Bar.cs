@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     private static IReadOnlyList<ChartLegendEntry> BuildBarCategoryLegendEntries(
-        PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? palette,
+        PptxTheme theme, PptxColorMap colorMap, ChartColorPalette palette,
         PptxSceneChartPlot? plot, XElement chart, ChartIndexedNumberVector vector,
         ChartBarPlotOptions options, IReadOnlyList<ChartSeriesFill?> seriesFills,
         IReadOnlyList<ChartSeriesStroke?> seriesStrokes,

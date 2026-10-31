@@ -106,7 +106,7 @@ internal sealed partial class PptxRenderer
                     double textWidth = labelBox.Width;
                     if (effectiveOptions.ShowLegendKey)
                     {
-                        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, null, seriesIndex, seriesStrokes, 1.2d);
+                        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, default, seriesIndex, seriesStrokes, 1.2d);
                         ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
                         double consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke);
                         textX += consumedWidth;
