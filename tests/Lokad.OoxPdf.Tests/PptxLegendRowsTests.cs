@@ -19,23 +19,9 @@ internal static class PptxLegendRowsTests
             var reserved = Render(width, size, count, overlay: false);
             foreach (PdfPage page in new[] { overlay.Page, reserved.Page })
             {
-                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
-                var baselines = new HashSet<double>();
-                for (int index = 1; index <= count; index++)
-                {
-                    string name = "North West Region " + index;
-                    var show = shows.First(item => item.Text.Contains(name, StringComparison.Ordinal));
-                    var font = show.Font.Font;
-                    double Advance(string text) => text.Sum(c => font.GetAdvanceWidth(font.MapCodePoint(c))) * show.Size / font.UnitsPerEm;
-                    double x = show.X + Advance(show.Text[..show.Text.IndexOf(name, StringComparison.Ordinal)]);
-                    TestAssert.True(x >= 71.99d && x + Advance(name) <= 72d + width + 0.01d,
-                        "Every complete legend name must fit horizontally inside its chart frame.");
-                    TestAssert.True(show.Y > page.Height - 468d && show.Y + show.Size < page.Height - 108d,
-                        "Wrapped legend baselines stay inside the chart, rather than below the slide.");
-                    baselines.Add(show.Y);
-                }
+                int rows = CheckCompleteNamesInFrame(page, width, count);
                 if (width == 288 && size >= 12)
-                    TestAssert.True(baselines.Count > 1, "Long line-series names wrap instead of continuing beyond the frame.");
+                    TestAssert.True(rows > 1, "Long line-series names wrap instead of continuing beyond the frame.");
             }
             TestAssert.True(overlay.Diagnostics.Concat(reserved.Diagnostics).All(item => !item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
                 "These fitting names must not be admitted as clipped overflow.");
@@ -67,9 +53,34 @@ internal static class PptxLegendRowsTests
         foreach (bool overlay in new[] { false, true })
         {
             var ordinary = Render(288, 12, 6, overlay, kind: kind).Page;
+            CheckCompleteNamesInFrame(ordinary, 288, 6);
             foreach (string metadata in new[] { "<c:layout/>", "<c:layout><c:manualLayout/></c:layout>" })
-                TestAssert.Equal(ordinary.Content, Render(288, 12, 6, overlay, metadata, kind).Page.Content);
+            {
+                var withMetadata = Render(288, 12, 6, overlay, metadata, kind).Page;
+                CheckCompleteNamesInFrame(withMetadata, 288, 6);
+                TestAssert.Equal(ordinary.Content, withMetadata.Content);
+            }
         }
+    }
+
+    private static int CheckCompleteNamesInFrame(PdfPage page, int width, int count)
+    {
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
+        var baselines = new HashSet<double>();
+        for (int index = 1; index <= count; index++)
+        {
+            string name = "North West Region " + index;
+            var show = shows.First(item => item.Text.Contains(name, StringComparison.Ordinal));
+            var font = show.Font.Font;
+            double Advance(string text) => text.Sum(c => font.GetAdvanceWidth(font.MapCodePoint(c))) * show.Size / font.UnitsPerEm;
+            double x = show.X + Advance(show.Text[..show.Text.IndexOf(name, StringComparison.Ordinal)]);
+            TestAssert.True(x >= 71.99d && x + Advance(name) <= 72d + width + 0.01d,
+                "Every complete legend name must fit horizontally inside its chart frame.");
+            TestAssert.True(show.Y > page.Height - 468d && show.Y + show.Size < page.Height - 108d,
+                "Wrapped legend baselines stay inside the chart, rather than below the slide.");
+            baselines.Add(show.Y);
+        }
+        return baselines.Count;
     }
 
     private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line")

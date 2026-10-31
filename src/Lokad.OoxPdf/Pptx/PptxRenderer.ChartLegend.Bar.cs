@@ -20,7 +20,7 @@ internal sealed partial class PptxRenderer
             legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
 
     private static bool UsesMeasuredHorizontalBarLegend(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
-        UsesAutomaticHorizontalBarFrame(options, chart, legend) && legend.Visible && !legend.Overlay;
+        UsesAutomaticHorizontalBarFrame(options, chart, legend) && legend.Visible;
 
     private static bool IsLegendBaselineClipped(ChartLegendBox box, double baseline) =>
         baseline - box.ContentDescent < box.ClipY - 0.001d ||
