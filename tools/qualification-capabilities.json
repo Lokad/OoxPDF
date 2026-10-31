@@ -1,5 +1,6 @@
 {
   "pptx-cartesian-sides": [
+    "PptxLineCategoryFooterKeepsItsInsetAcrossFrameHeights",
     "PptxPrimaryValueAxisLabelsPaintOnceOnTheirSelectedSide",
     "PptxSecondaryValueAxisOwnsItsVisibilityIndependently",
     "PptxLineNumericSideStripsFollowLabelsAcrossFrameWidths",

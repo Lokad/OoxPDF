@@ -82,6 +82,24 @@ internal static class PptxCartesianSideTests
         TestAssert.Equal(small, large);
     }
 
+    public static void PptxLineCategoryFooterKeepsItsInsetAcrossFrameHeights()
+    {
+        foreach (bool right in new[] { false, true })
+        foreach (bool visible in new[] { false, true })
+        {
+            double? inset = null;
+            foreach (int height in new[] { 180, 300, 420 })
+            {
+                var page = Render(576, 12, right: right, visible: visible, furniture: true, height: height);
+                double actual = Grid(page).Bottom - (page.Height - 108d - height);
+                inset ??= actual;
+                TestAssert.True(Math.Abs(actual - inset.Value) < 0.002d,
+                    "The category strip keeps its measured frame inset when captions and overlay legends coexist.");
+                TestAssert.Contains("Series", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text)));
+            }
+        }
+    }
+
     private static (double Left, double Right, double Bottom, double Top) Grid(PdfPage page)
     {
         var lines = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) m ([-\d.]+) ([-\d.]+) l S")
@@ -92,7 +110,7 @@ internal static class PptxCartesianSideTests
     }
 
     private static PdfPage Render(int width, int size, bool right = false, bool visible = true,
-        bool secondary = false, bool secondaryVisible = true, bool furniture = false, bool manual = false)
+        bool secondary = false, bool secondaryVisible = true, bool furniture = false, bool manual = false, int height = 300)
     {
         const string series = "<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:tx><c:v>Series</c:v></c:tx><c:cat><c:strLit><c:pt idx=\"0\"><c:v>Q1</c:v></c:pt><c:pt idx=\"1\"><c:v>Q2</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>3</c:v></c:pt><c:pt idx=\"1\"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>";
         string additional = secondary ? "<c:lineChart>" + series.Replace("val=\"0\"", "val=\"1\"") + "<c:axId val=\"4\"/><c:axId val=\"3\"/></c:lineChart>" : "";
@@ -113,7 +131,7 @@ internal static class PptxCartesianSideTests
             """;
         string slide = $$"""
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="{{width * 12700}}" cy="3810000"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+              <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="{{width * 12700}}" cy="{{height * 12700}}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
             </p:sld>
             """;
         using var stream = PptxTests.CreateSingleChartPackageStream(chart,

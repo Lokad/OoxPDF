@@ -12,7 +12,8 @@
   horizontal title/legend bands preserve axis spacing. Ordinary column and line
   plot headers compose measured captions and numeric labels across frame sizes,
   preserving overlay neutrality and minimum clearance. Line plots also share
-  measured numeric side margins and preserve primary/secondary label ownership.
+  measured frame placement across titles/legends and preserve primary/secondary
+  label ownership.
 
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
