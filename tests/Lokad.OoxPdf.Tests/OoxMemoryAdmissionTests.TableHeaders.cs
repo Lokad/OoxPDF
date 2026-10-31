@@ -56,6 +56,7 @@ internal static partial class OoxMemoryAdmissionTests
         foreach (bool cancel in new[] { false, true })
         foreach (int stop in new[] { 1, 3 })
         {
+            var measurer = LayoutAdmissionMeasurer(); // Caller-owned before the observed operation.
             var pool = new TestMemoryBudget();
             using var cancellation = new CancellationTokenSource();
             using var input = new MemoryStream(LayoutTableHeaderInput(5, cells: 16));
@@ -71,12 +72,12 @@ internal static partial class OoxMemoryAdmissionTests
                 };
                 var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
                 if (cancel)
-                    TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(() => engine.Create(document, LayoutAdmissionMeasurer(), cancellation.Token)).CancellationToken);
+                    TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(() => engine.Create(document, measurer, cancellation.Token)).CancellationToken);
                 else
-                    TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, TestAssert.Throws<OoxPdfLimitExceededException>(() => engine.Create(document, LayoutAdmissionMeasurer(), default)).Kind);
+                    TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, TestAssert.Throws<OoxPdfLimitExceededException>(() => engine.Create(document, measurer, default)).Kind);
                 TestAssert.Equal(stop, growths);
                 pool.RefuseChange = null;
-                TestAssert.Equal(5, engine.Create(document, LayoutAdmissionMeasurer(), default).Pages.Count);
+                TestAssert.Equal(5, engine.Create(document, measurer, default).Pages.Count);
             }
             TestAssert.Equal(0L, pool.Reserved);
             TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
