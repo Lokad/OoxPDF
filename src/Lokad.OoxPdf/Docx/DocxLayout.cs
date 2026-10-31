@@ -326,6 +326,14 @@ internal sealed partial class DocxLayoutEngine
         int sectionFirstPageNumber = 1;
 
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
+        if (OoxConversionBudget.Current is { Memory: not null } budget)
+        {
+            long pageCapacity = EstimatePagePlacementCapacity(finalSectionSettings.PageSettings, cancellationToken);
+            foreach (var settings in sectionSettingsByElementIndex.Values)
+                pageCapacity = Math.Max(pageCapacity, EstimatePagePlacementCapacity(settings.PageSettings, cancellationToken));
+            budget.AdmitDocxLayoutPages(1, pageCapacity);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
         DocxEffectiveSectionSettings activeSectionSettings = FindSectionSettingsAtOrAfter(document.BodyElements, 0, sectionSettingsByElementIndex) ?? finalSectionSettings;
         DocxPageGeometry page = ResolveSectionGeometry(document, activeSectionSettings, reserveMarkupMargin, retuneReserveToPrintScale, reservePrintScale, pageNumber: 1);
         int activeColumnIndex = 0;
@@ -389,6 +397,8 @@ internal sealed partial class DocxLayoutEngine
 
         void FinishPage()
         {
+            OoxConversionBudget.Current?.AdmitDocxLayoutPages(pages.Count + 1);
+            cancellationToken.ThrowIfCancellationRequested();
             pages.Add(new DocxLayoutPage(
                 page.Width,
                 page.Height,
@@ -2099,6 +2109,8 @@ internal sealed partial class DocxLayoutEngine
 
         DocxStaticStoryLayoutResult? GetContinuationHeader(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
+            OoxConversionBudget.Current?.AdmitDocxLayoutPages(pageNumber);
+            cancellationToken.ThrowIfCancellationRequested();
             var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount, templatePage.SectionFirstPageNumber);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
@@ -2159,6 +2171,8 @@ internal sealed partial class DocxLayoutEngine
         (double Body, double Note, double? Physical) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            OoxConversionBudget.Current?.AdmitDocxLayoutPages(pageNumber);
+            cancellationToken.ThrowIfCancellationRequested();
             var key = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount, templatePage.SectionFirstPageNumber);
             if (!continuationFooterTopByPage.TryGetValue(key, out var bounds))
             {
@@ -2199,6 +2213,8 @@ internal sealed partial class DocxLayoutEngine
             return double.IsFinite(result) ? result : null;
         }
         DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
+        OoxConversionBudget.Current?.AdmitDocxLayoutPages(pagesWithRelatedStories.Length);
+        cancellationToken.ThrowIfCancellationRequested();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);
         DocxLayoutPage[] pagesWithStaticText = staticContent.Pages.ToArray();
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;

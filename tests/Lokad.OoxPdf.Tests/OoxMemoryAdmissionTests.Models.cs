@@ -28,9 +28,11 @@ internal static partial class OoxMemoryAdmissionTests
             long held = pool.Reserved;
             var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var first = engine.Create(document, (IDocxTextMeasurer?)null, default);
+            long placed = pool.Reserved;
+            TestAssert.True(placed > held, "Page frames have reusable capacity beyond source models.");
             var second = engine.Create(document, (IDocxTextMeasurer?)null, default);
             TestAssert.Equal(first.Pages.Count, second.Pages.Count);
-            TestAssert.Equal(held, pool.Reserved);
+            TestAssert.Equal(placed, pool.Reserved);
             TestAssert.True(input.CanRead, "Package disposal preserves caller input ownership.");
         }
         TestAssert.Equal(0L, pool.Reserved);

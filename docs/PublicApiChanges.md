@@ -98,7 +98,7 @@ overlap and final copying without source-sized preallocation. Image payloads sta
 funded through emission; font-compression buffers refund after their stream is
 written. Crop and generated shadow/glow planes are admitted for their invocation;
 recolor reuses private pixels and leaves encoded input/cache bytes unchanged.
-Models, parsed maps and other PDF resources still need their producer migration.
+Other parsed maps, discovery metadata and PDF resources still need producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
 Derived document/scene/workbook models now request their own coarse capacity before
@@ -106,8 +106,12 @@ construction and retain it through their producer's last reader. Embedded-workbo
 models survive their temporary package's disposal. That model group refunds after
 page production, before serialization; source buffers and PDF resources retain
 their separate emission lifetimes. Existing budgeted inputs can refuse earlier.
-Remaining producer coverage, including repeated-placement and discovery metadata
-storage admission, is still open. The removed estimated lease is not a second memory model.
+Repeated DOCX page/static-story placement now requests reusable coarse capacity
+before construction, including overlapping candidate/frame copies. It shares the
+model producer lifetime and does not charge cumulatively per retry. Existing host
+allowances may therefore refuse documents previously accepted without this storage
+being admitted. Discovery metadata, other parsed maps and PDF/vector resource
+coverage remain partial. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,

@@ -18,13 +18,29 @@ internal sealed class OoxConversionBudget
     }
     internal IMemoryScope? Memory { get; }
     private IMemoryScope? models;
+    private IMemoryReservation? placement;
+    private long placementPageCapacity;
     // One producer-owned group, independent of package buffers and emitted PDF
     // resources. Nested workbook models can outlive their temporary package.
     internal IMemoryScope? Models => models ??= Memory?.CreateScope();
+    internal void AdmitDocxLayoutPages(int pages, long pageCapacity = 0)
+    {
+        if (Memory is null) return;
+        placementPageCapacity = Math.Max(placementPageCapacity, pageCapacity);
+        // Coarse reusable preparation capacity: nested bounded candidate passes
+        // retain earlier layouts, and static frames coexist with continuation
+        // measurements and their mapped copies. This is headroom, not a count of
+        // attempts or a heap ceiling. All passes reuse the same high-water grant.
+        long capacity = checked(8L * pages * placementPageCapacity);
+        if (placement is null) placement = OoxMemory.Reserve(Models, capacity);
+        else if (capacity > placement.Bytes) OoxMemory.Resize(placement, capacity);
+    }
     internal void ReleaseModels()
     {
         IMemoryScope? held = models;
         models = null;
+        placement = null;
+        placementPageCapacity = 0;
         held?.Dispose();
     }
     private long pdfPages;

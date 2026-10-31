@@ -1200,6 +1200,7 @@ internal sealed partial class DocxLayoutEngine
         bool insertContinuationAfterActivePage, 
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null)
     {
+        OoxConversionBudget.Current?.AdmitDocxLayoutPages(outputPages.Count + 1);
         DocxLayoutPage templatePage = activePage;
         activePage = CreateEmptyContinuationPage(templatePage);
         if (insertContinuationAfterActivePage)
