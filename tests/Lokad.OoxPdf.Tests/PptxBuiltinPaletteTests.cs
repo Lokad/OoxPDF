@@ -7,10 +7,14 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxBuiltinPaletteTests
 {
-    public static void PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds()
+    public static void PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds() => Check("office.json");
+
+    public static void PptxLineDataLabelKeysMatchIndependentOfficePalette() => Check("label-keys-office.json");
+
+    private static void Check(string referenceFile)
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "BuiltinPalettes"));
-        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "office.json")));
+        using var reference = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, referenceFile)));
         var resolver = new PortableRenderingTests.PinnedResolver();
         foreach (var row in reference.RootElement.GetProperty("Rows").EnumerateArray())
         {

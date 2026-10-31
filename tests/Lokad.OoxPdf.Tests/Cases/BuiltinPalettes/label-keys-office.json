@@ -1,0 +1,42 @@
+{
+  "OfficeVersion": "16.0",
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "PDF-backed; application-view calibration pending",
+  "SourceTransformation": "Existing line-3 fixture: showLegendKey and showVal changed from0 to1; other source properties unchanged.",
+  "Rows": [
+    {
+      "Id": "line-single-accent-value-keys",
+      "Input": "line-single-accent-value-keys.pptx",
+      "InputSha256": "F6F97EC5A42018E3E984DEC89DF55568FD627018A39D7A4B5D26350A26FD8B26",
+      "ReferencePdfSha256": "C8999B608E4208648CEB5B3D1B18F761A96A91EE18D348772CA1F925AB6A4615",
+      "ReferencePath": "artifacts/tlabel-key-1031/references/line-single-accent-value-keys-presentation/reference.pdf",
+      "Strokes": true,
+      "ColoredPaints": [
+        "0A82B0",
+        "0A82B0",
+        "0A82B0",
+        "0A82B0",
+        "0A82B0",
+        "0A82B0",
+        "0A82B0",
+        "0A82B0",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "A0C7E5",
+        "A0C7E5",
+        "A0C7E5",
+        "A0C7E5",
+        "A0C7E5",
+        "A0C7E5",
+        "A0C7E5",
+        "A0C7E5"
+      ]
+    }
+  ]
+}

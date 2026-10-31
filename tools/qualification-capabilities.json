@@ -1,4 +1,21 @@
 {
+  "pptx-line-label-palette": [
+    "PptxLineDataLabelKeysMatchIndependentOfficePalette",
+    "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
+    "PptxAuthoredTintShadeChartsMatchIndependentOfficePaints",
+    "PptxSyntheticLineChartRendersLegendKeyOnlyDataLabels",
+    "PptxSyntheticScatterChartRendersLegendKeyOnlyDataLabels",
+    "PptxSyntheticLineChartSeriesLineWithoutWidthUsesOfficeDefault",
+    "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation",
+    "LineStyle18LegendKeysMatchSeriesAppearance",
+    "DefaultLegendKeysKeepTintedSwatches",
+    "PptxChartDataLabelOverridePreservesDelete",
+    "PptxSyntheticChartValueAxisReversedOrientationMovesLineDataLabels",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-color-owner": [
     "PptxScenePreservesChartColorStyleDeclarations",
     "PptxSceneChartPartRecordsEnforceDefinedUndefined",

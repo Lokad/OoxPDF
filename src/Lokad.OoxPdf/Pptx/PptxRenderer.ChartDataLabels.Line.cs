@@ -14,6 +14,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask RenderLineDataLabelsAsync(
         PptxTheme theme,
         PptxColorMap colorMap,
+        ChartColorPalette chartPalette,
         PdfGraphicsBuilder graphics,
         ChartPlotBox plotBox,
         IReadOnlyList<ChartIndexedNumberVector> series,
@@ -106,7 +107,7 @@ internal sealed partial class PptxRenderer
                     double textWidth = labelBox.Width;
                     if (effectiveOptions.ShowLegendKey)
                     {
-                        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, default, seriesIndex, seriesStrokes, 1.2d);
+                        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
                         ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
                         double consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke);
                         textX += consumedWidth;

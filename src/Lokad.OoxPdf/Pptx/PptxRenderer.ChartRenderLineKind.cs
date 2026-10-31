@@ -111,6 +111,7 @@ internal sealed partial class PptxRenderer
                 await RenderLineDataLabelsAsync(
                     theme,
                     colorMap,
+                    chartPalette,
                     graphics,
                     plotBox,
                     lineSeriesVectors,
