@@ -28,7 +28,8 @@ and storage are released. Each page producer also holds one coarse source-sized 
 through painting, snapshots and staging awaits. It refunds on page advancement or
 iterator disposal; spilled content retains its independent descriptor funding.
 DOCX estimates placed text/math/tables/textboxes/stories and SVG expansion; PPTX
-uses existing slide/master/layout/chart source summaries and SVG bytes. Prepared
+uses the existing rendered-node traversal, node/chart source summaries, inherited
+text and SVG bytes; unused master/layout definitions do not inflate it. Prepared
 balloon text grows the same page reservation. These estimates cover ordinary
 construction overlap; unusually expanding effects/vector inputs remain unproven.
 MemoryBudget also admits

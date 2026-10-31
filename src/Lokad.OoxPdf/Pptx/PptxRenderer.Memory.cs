@@ -8,23 +8,34 @@ internal sealed partial class PptxRenderer
     {
         IMemoryScope? owner = OoxConversionBudget.Current?.Memory;
         if (owner is null) return null;
-        long capacity = checked(8 * OoxMemory.EstimateMarkupCapacity(slide.SlideXml, token));
-        if (slide.LayoutXml is { } layout) capacity = checked(capacity + 8 * OoxMemory.EstimateMarkupCapacity(layout, token));
-        if (slide.MasterXml is { } master) capacity = checked(capacity + 8 * OoxMemory.EstimateMarkupCapacity(master, token));
-        if (slide.ShowMasterShapes) Resources(slide.MasterNodes);
-        Resources(slide.LayoutNodes); Resources(slide.SlideNodes);
+        // Background painting is one solid rectangle. Unused master/layout style
+        // definitions do not increase construction; select nodes as painting does.
+        long capacity = 64L * 1024;
+        if (slide.ShowMasterShapes) Nodes(slide.MasterNodes, renderPlaceholders: false);
+        Nodes(slide.LayoutNodes, renderPlaceholders: false);
+        Nodes(slide.SlideNodes, renderPlaceholders: true);
         token.ThrowIfCancellationRequested();
         return OoxMemory.Reserve(owner, capacity);
 
-        void Resources(IReadOnlyList<PptxSceneNode> nodes)
+        void Nodes(IReadOnlyList<PptxSceneNode> nodes, bool renderPlaceholders)
         {
-            foreach (var node in nodes)
+            foreach (var node in EnumerateRenderedSceneNodes(nodes, renderPlaceholders))
             {
                 token.ThrowIfCancellationRequested();
+                capacity = checked(capacity + 4096);
+                if (node.Kind == PptxSceneNodeKind.Group) continue; // Its children are yielded once by the shared traversal.
+                capacity = checked(capacity + 8 * OoxMemory.EstimateMarkupCapacity(node.Source, token));
                 if (node.Chart?.ChartXml is { } chart) capacity = checked(capacity + 8 * OoxMemory.EstimateMarkupCapacity(chart, token));
+                // A placeholder may inherit text absent from its own source XML.
+                if (node.TextBody is { } text)
+                    foreach (var paragraph in text.Paragraphs)
+                        foreach (var run in paragraph.Runs)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            capacity = checked(capacity + 512L * run.Text.Length);
+                        }
                 Image(node.Picture?.Resource);
                 Image(node.Shape?.PictureFill.Resource);
-                Resources(node.Children);
             }
         }
         void Image(PptxSceneImageResource? image)

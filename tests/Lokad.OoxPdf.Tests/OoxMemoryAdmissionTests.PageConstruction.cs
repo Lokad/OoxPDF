@@ -32,6 +32,8 @@ internal static partial class OoxMemoryAdmissionTests
                         if (previous is not null) TestAssert.Equal(0L, previous.Bytes);
                         previous = budget.LargestLiveGrant();
                         TestAssert.True(previous.Bytes > 0, "Keep page construction funded while its yielded content is borrowed.");
+                        if (kind == OoxPdfInputKind.Pptx)
+                            TestAssert.True(previous.Bytes <= 256 * 1024, "A background-only slide must not fund unused master/layout definitions.");
                         TestAssert.True(reader.Current.Content.Length > 0, "Exercise the main graphics producer.");
                         if (++seen == 1) budget.Pool.Capacity = budget.Pool.Peak;
                         if (early) break;

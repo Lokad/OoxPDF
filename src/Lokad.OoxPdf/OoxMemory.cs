@@ -33,14 +33,14 @@ internal static class OoxMemory
     internal static void GrowModel(IMemoryReservation? storage, XContainer source, CancellationToken token)
     {
         if (storage is null) return;
-        Resize(storage, checked(storage.Bytes + 2 * EstimateMarkupCapacity(source, token)));
+        Resize(storage, checked(storage.Bytes + 2 * (64L * 1024 + EstimateMarkupCapacity(source, token))));
         token.ThrowIfCancellationRequested();
     }
 
     // Shared source-shape summary; page painting adds its own expansion headroom.
     internal static long EstimateMarkupCapacity(XContainer source, CancellationToken token)
     {
-        long capacity = 64L * 1024;
+        long capacity = 0;
         foreach (XNode node in source.DescendantNodes())
         {
             token.ThrowIfCancellationRequested();
