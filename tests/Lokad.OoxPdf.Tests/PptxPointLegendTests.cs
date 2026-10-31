@@ -22,9 +22,9 @@ internal static class PptxPointLegendTests
             var document = new PptxReader().Read(package, default);
             var chart = new PptxSceneBuilder().Build(document, package, default).Slides[0].SlideNodes
                 .Select(node => node.Chart).First(value => value is not null)!;
-            bool fullyAuthoredPaint = chart.Plots.SelectMany(plot => plot.Series).All(series => series.Fill.IsDefined ||
+            bool fullyAuthoredPaint = chart.Plots.SelectMany(plot => plot.Series).All(series => series.Fill.HasFill ||
                 Enumerable.Range(0, row.GetProperty("CategoryOccurrences").GetArrayLength()).All(index =>
-                    series.PointStyles.Any(point => point.Index == index && point.Fill.IsDefined)));
+                    series.PointStyles.Any(point => point.Index == index && point.Fill.HasFill)));
             var page = new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
             text = string.Concat(text.Where(c => !char.IsWhiteSpace(c)));
