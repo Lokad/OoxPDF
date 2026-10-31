@@ -161,10 +161,14 @@ internal static class PptxColorResolver
             switch (transform.Name.LocalName)
             {
                 case "lumMod":
-                case "shade":
                     red *= value;
                     green *= value;
                     blue *= value;
+                    break;
+                case "shade":
+                    red = TransformLinearLight(red, value, 0d);
+                    green = TransformLinearLight(green, value, 0d);
+                    blue = TransformLinearLight(blue, value, 0d);
                     break;
                 case "lumOff":
                     red += 255d * value;
@@ -172,14 +176,20 @@ internal static class PptxColorResolver
                     blue += 255d * value;
                     break;
                 case "tint":
-                    red += (255d - red) * value;
-                    green += (255d - green) * value;
-                    blue += (255d - blue) * value;
+                    red = TransformLinearLight(red, value, 1d - value);
+                    green = TransformLinearLight(green, value, 1d - value);
+                    blue = TransformLinearLight(blue, value, 1d - value);
                     break;
             }
         }
 
         return new RgbColor(ToTransformByte(red), ToTransformByte(green), ToTransformByte(blue));
+
+        // DrawingML tint retains val of the source and adds its complement in
+        // linear light; shade multiplies by val. Keep continuous channels between
+        // transforms so authored order is preserved without intermediate rounding.
+        static double TransformLinearLight(double channel, double scale, double offset) =>
+            255d * LinearLightColor.ToSrgb(LinearLightColor.ToLinear(channel) * scale + offset);
     }
 
     private static byte ReadPercentageByte(XElement element, string attributeName)

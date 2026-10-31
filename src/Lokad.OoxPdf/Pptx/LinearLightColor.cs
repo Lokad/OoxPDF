@@ -4,7 +4,7 @@ internal static class LinearLightColor
 {
     // Single owner for the Office-calibrated linear-light color math (sRGB to linear,
     // float, round-half-away bytes). Shared by automatic chart colors and table fills.
-    public static double ToLinear(byte channel)
+    public static double ToLinear(double channel)
     {
         double c = channel / 255d;
         return c <= 0.04045d ? c / 12.92d : System.Math.Pow((c + 0.055d) / 1.055d, 2.4d);

@@ -42,6 +42,8 @@ Supported within the following constraints:
   including authored opacity. Common inherited shapes, theme colors and Latin theme fonts
   resolved from each slide's master. Missing master themes retain the existing
   presentation/first-master fallback; theme-override expansion remains unsupported.
+- Authored DrawingML tint/shade transforms share linear-light color resolution
+  across supported solid shapes, chart point fills and legend keys.
 - Common solid shapes, paths, straight lines, rotation/flips and nested group
   translation/scaling. Advanced/custom geometry and effects remain partial.
 - JPEG/PNG pictures and bounded native SVG paint. Crop/fill clipping, source

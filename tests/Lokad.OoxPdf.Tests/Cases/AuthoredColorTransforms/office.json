@@ -1,0 +1,649 @@
+{
+  "OfficeVersion": "16.0",
+  "ImageCalibration": "Uncalibrated; no visible application comparison",
+  "Rows": [
+    {
+      "Input": "gallery-1.pptx",
+      "InputSha256": "820FF5E6A406A25E042DA555090AC2FE150954E97B1D17F8F09FEB72DC0BE133",
+      "ReferencePdfSha256": "16E4BADFF92D2A42C553FC0ED71E2CFFAC0C359E3B807381E5425ABF70A5EA6B",
+      "ExpectedPaints": [
+        [
+          85,
+          85,
+          85
+        ],
+        [
+          158,
+          158,
+          158
+        ],
+        [
+          114,
+          114,
+          114
+        ],
+        [
+          70,
+          70,
+          70
+        ],
+        [
+          131,
+          131,
+          131
+        ],
+        [
+          193,
+          193,
+          193
+        ],
+        [
+          85,
+          85,
+          85
+        ],
+        [
+          158,
+          158,
+          158
+        ],
+        [
+          114,
+          114,
+          114
+        ],
+        [
+          70,
+          70,
+          70
+        ],
+        [
+          131,
+          131,
+          131
+        ],
+        [
+          193,
+          193,
+          193
+        ]
+      ],
+      "Kind": "Chart",
+      "Gallery": 1
+    },
+    {
+      "Input": "gallery-9.pptx",
+      "InputSha256": "92B0714EFD9FDE62136F5A0CAF8D3113E7A9A457F4A2E95F99245CE5F4322ACB",
+      "ReferencePdfSha256": "53B5271C17B9DF197A7730258A5114495960D8EB98EB6835458668432736629C",
+      "ExpectedPaints": [
+        [
+          221,
+          221,
+          221
+        ],
+        [
+          158,
+          158,
+          158
+        ],
+        [
+          114,
+          114,
+          114
+        ],
+        [
+          210,
+          210,
+          210
+        ],
+        [
+          131,
+          131,
+          131
+        ],
+        [
+          193,
+          193,
+          193
+        ],
+        [
+          221,
+          221,
+          221
+        ],
+        [
+          158,
+          158,
+          158
+        ],
+        [
+          114,
+          114,
+          114
+        ],
+        [
+          210,
+          210,
+          210
+        ],
+        [
+          131,
+          131,
+          131
+        ],
+        [
+          193,
+          193,
+          193
+        ]
+      ],
+      "Kind": "Chart",
+      "Gallery": 9
+    },
+    {
+      "Input": "gallery-10.pptx",
+      "InputSha256": "7424E3D3DD60F5BD776662328E4D24142E63FA43F669E10A613DCA5C53564606",
+      "ReferencePdfSha256": "A12CF2EF2E3E1C03067F125E55405FD9D882C509093BAFA315DF41A1995A87EC",
+      "ExpectedPaints": [
+        [
+          21,
+          96,
+          130
+        ],
+        [
+          233,
+          113,
+          50
+        ],
+        [
+          25,
+          107,
+          36
+        ],
+        [
+          15,
+          158,
+          213
+        ],
+        [
+          160,
+          43,
+          147
+        ],
+        [
+          78,
+          167,
+          46
+        ],
+        [
+          21,
+          96,
+          130
+        ],
+        [
+          233,
+          113,
+          50
+        ],
+        [
+          25,
+          107,
+          36
+        ],
+        [
+          15,
+          158,
+          213
+        ],
+        [
+          160,
+          43,
+          147
+        ],
+        [
+          78,
+          167,
+          46
+        ]
+      ],
+      "Kind": "Chart",
+      "Gallery": 10
+    },
+    {
+      "Input": "gallery-17.pptx",
+      "InputSha256": "85B29903D7283617529CA708F2D5172E983A467A525AB5D49E032DC5D8BA5308",
+      "ReferencePdfSha256": "FC99886FF95C2C204F01F78007EC92FE178229E7E287018791182F11C4EC5A76",
+      "ExpectedPaints": [
+        [
+          8,
+          115,
+          156
+        ],
+        [
+          11,
+          134,
+          182
+        ],
+        [
+          14,
+          151,
+          203
+        ],
+        [
+          91,
+          171,
+          218
+        ],
+        [
+          150,
+          194,
+          227
+        ],
+        [
+          188,
+          214,
+          235
+        ],
+        [
+          8,
+          115,
+          156
+        ],
+        [
+          11,
+          134,
+          182
+        ],
+        [
+          14,
+          151,
+          203
+        ],
+        [
+          91,
+          171,
+          218
+        ],
+        [
+          150,
+          194,
+          227
+        ],
+        [
+          188,
+          214,
+          235
+        ]
+      ],
+      "Kind": "Chart",
+      "Gallery": 17
+    },
+    {
+      "Input": "gallery-26.pptx",
+      "InputSha256": "D47D1B0ABC836DE55A5DAB15C79EC95C2D295617F00F62CA3B71CB5B62DD3F71",
+      "ReferencePdfSha256": "0341D6B1686874D6DF20978EEB2A7579810879397B2FD27E58402D1B81A09511",
+      "ExpectedPaints": [
+        [
+          194,
+          217,
+          190
+        ],
+        [
+          160,
+          199,
+          153
+        ],
+        [
+          114,
+          178,
+          99
+        ],
+        [
+          74,
+          159,
+          43
+        ],
+        [
+          65,
+          142,
+          38
+        ],
+        [
+          55,
+          122,
+          31
+        ],
+        [
+          194,
+          217,
+          190
+        ],
+        [
+          160,
+          199,
+          153
+        ],
+        [
+          114,
+          178,
+          99
+        ],
+        [
+          74,
+          159,
+          43
+        ],
+        [
+          65,
+          142,
+          38
+        ],
+        [
+          55,
+          122,
+          31
+        ]
+      ],
+      "Kind": "Chart",
+      "Gallery": 26
+    },
+    {
+      "Input": "shape-transforms.pptx",
+      "InputSha256": "92E27E8FA3F2CA314DCF3B6CD7C3B1CB2FA6A1005C9F7B21B93353A66483321E",
+      "ReferencePdfSha256": "1B91CAF37FECC3C2B9B23963E07013BA4DA7894DD62B3D5921F03A8A58EA3893",
+      "ExpectedPaints": [
+        [
+          85,
+          85,
+          85
+        ],
+        [
+          158,
+          158,
+          158
+        ],
+        [
+          114,
+          114,
+          114
+        ],
+        [
+          70,
+          70,
+          70
+        ],
+        [
+          131,
+          131,
+          131
+        ],
+        [
+          193,
+          193,
+          193
+        ],
+        [
+          221,
+          221,
+          221
+        ],
+        [
+          158,
+          158,
+          158
+        ],
+        [
+          114,
+          114,
+          114
+        ],
+        [
+          210,
+          210,
+          210
+        ],
+        [
+          131,
+          131,
+          131
+        ],
+        [
+          193,
+          193,
+          193
+        ],
+        [
+          8,
+          115,
+          156
+        ],
+        [
+          11,
+          134,
+          182
+        ],
+        [
+          14,
+          151,
+          203
+        ],
+        [
+          91,
+          171,
+          218
+        ],
+        [
+          150,
+          194,
+          227
+        ],
+        [
+          188,
+          214,
+          235
+        ],
+        [
+          194,
+          217,
+          190
+        ],
+        [
+          160,
+          199,
+          153
+        ],
+        [
+          114,
+          178,
+          99
+        ],
+        [
+          74,
+          159,
+          43
+        ],
+        [
+          65,
+          142,
+          38
+        ],
+        [
+          55,
+          122,
+          31
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          23,
+          104,
+          211
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          23,
+          104,
+          211
+        ],
+        [
+          170,
+          176,
+          197
+        ],
+        [
+          112,
+          122,
+          153
+        ],
+        [
+          16,
+          81,
+          167
+        ],
+        [
+          172,
+          186,
+          230
+        ]
+      ],
+      "Kind": "Shapes",
+      "Cases": [
+        {
+          "Name": "gallery-1-point-0",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"88000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-1-point-1",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"55000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-1-point-2",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"78000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-1-point-3",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"92000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-1-point-4",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"70000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-1-point-5",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"30000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-9-point-0",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"5000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-9-point-1",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"55000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-9-point-2",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"78000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-9-point-3",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"15000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-9-point-4",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"70000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-9-point-5",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"dk1\"><ns0:tint val=\"30000\" /><ns0:shade val=\"76000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-17-point-0",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent4\"><ns0:shade val=\"50000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-17-point-1",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent4\"><ns0:shade val=\"70000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-17-point-2",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent4\"><ns0:shade val=\"90000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-17-point-3",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent4\"><ns0:tint val=\"90000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-17-point-4",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent4\"><ns0:tint val=\"70000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-17-point-5",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent4\"><ns0:tint val=\"50000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-26-point-0",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent6\"><ns0:tint val=\"50000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-26-point-1",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent6\"><ns0:tint val=\"70000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-26-point-2",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent6\"><ns0:tint val=\"90000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-26-point-3",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent6\"><ns0:shade val=\"90000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-26-point-4",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent6\"><ns0:shade val=\"70000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "gallery-26-point-5",
+          "ColorXml": "<ns0:schemeClr xmlns:ns0=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent6\"><ns0:shade val=\"50000\" /></ns0:schemeClr>"
+        },
+        {
+          "Name": "shade0",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:shade val=\"0\"/></a:srgbClr>"
+        },
+        {
+          "Name": "shade100",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:shade val=\"100000\"/></a:srgbClr>"
+        },
+        {
+          "Name": "tint0",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:tint val=\"0\"/></a:srgbClr>"
+        },
+        {
+          "Name": "tint100",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:tint val=\"100000\"/></a:srgbClr>"
+        },
+        {
+          "Name": "shade-tint",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:shade val=\"40000\"/><a:tint val=\"60000\"/></a:srgbClr>"
+        },
+        {
+          "Name": "tint-shade",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:tint val=\"60000\"/><a:shade val=\"40000\"/></a:srgbClr>"
+        },
+        {
+          "Name": "two-shades",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:shade val=\"73000\"/><a:shade val=\"81000\"/></a:srgbClr>"
+        },
+        {
+          "Name": "two-tints",
+          "ColorXml": "<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"1768D3\"><a:tint val=\"73000\"/><a:tint val=\"81000\"/></a:srgbClr>"
+        }
+      ]
+    }
+  ]
+}

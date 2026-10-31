@@ -20,6 +20,8 @@
   VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
   qualification records framework-specific library and tool identities.
+- PPTX: corrects authored tint/shade colors and transform order in shapes, charts
+  and legend keys using the shared color resolver.
 - PPTX: honors series and point negative-bar inversion flags across clustered and
   stacked bar/column charts, including label swatches and explicit point fills.
 - Replaces fitted bar-color regimes with shared cycle shading, including

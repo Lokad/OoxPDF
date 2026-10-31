@@ -1,4 +1,23 @@
 {
+  "pptx-authored-color": [
+    "PptxAuthoredTintShade",
+    "PptxAutomaticBarPalettes",
+    "PptxVaryingBarCategoryLegends",
+    "PptxScenePreservesChartColorStyleDeclarations",
+    "PptxThemeColorMapOwnsSchemeAliases",
+    "PptxThemeColorMapPreservesSceneOverrideProvenance",
+    "PptxThemeColorMapResolvesSceneTextAndShapeColors",
+    "PptxGalleryGridlinesUseIndependentThemeColorTransform",
+    "PptxPartialMajorGridlineStrokeKeepsAuthoredWidthWithInheritedColor",
+    "PptxPartialMinorGridlineStrokeInheritsWidthAndKeepsColorAlpha",
+    "PptxPartialMinorGridlineStrokeRetainsInvalidFillAndScopeFallbacks",
+    "PptxSyntheticTableStyleMediumStyle2Accent6RendersFills",
+    "PptxSyntheticLinearGradientShapeUsesPdfShading",
+    "PptxSyntheticMultiStopLinearGradientShapeUsesStitchedPdfShading",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "package-async-input": [
     "ConvertAsyncInput",
     "ConvertAsyncCapturesPathsBeforeHostCallbacks",
