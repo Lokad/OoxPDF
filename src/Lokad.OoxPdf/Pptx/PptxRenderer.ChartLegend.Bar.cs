@@ -144,6 +144,9 @@ internal sealed partial class PptxRenderer
         int admittedRowCount = automaticLegend
             ? (int)Math.Min(rows.Count, Math.Max(0d, Math.Floor(layout.Frame.Height / (2d * box.LineHeight))))
             : rows.Count;
+        // Truncated Office legends allocate one further row at the tail; only
+        // the admitted rows paint. Complete legends keep their existing extent.
+        int placementRowCount = admittedRowCount + (admittedRowCount > 0 && admittedRowCount < rows.Count ? 1 : 0);
         if (!layout.Legend.Layout.HasGeometryValues)
         {
             double packedWidth = Math.Min(availableWidth, rows.Max(row => row.Width));
@@ -155,7 +158,7 @@ internal sealed partial class PptxRenderer
         double firstY, clipY, clipHeight;
         if (measuredBand)
         {
-            double occupied = admittedRowCount * box.LineHeight - (admittedRowCount > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
+            double occupied = placementRowCount * box.LineHeight - (placementRowCount > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
             double requiredBand = admittedRowCount == 0 ? 0d : occupied + HorizontalLegendFrameInset;
             double reserved = layout.Legend.Overlay ? 0d : Math.Min(requiredBand, Math.Max(0d, layout.PlotBox.Height - 1d));
             double topContent = Math.Max(0d, layout.Frame.Y + layout.Frame.Height -
@@ -179,7 +182,7 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            double extra = Math.Max(0, admittedRowCount - 1) * box.LineHeight;
+            double extra = Math.Max(0, placementRowCount - 1) * box.LineHeight;
             bool automatic = !layout.Legend.Overlay && !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
             double reserved = automatic ? Math.Min(extra, Math.Max(0d, layout.PlotBox.Height - 1d)) : 0d;
             if (reserved > 0d)
