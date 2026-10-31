@@ -662,7 +662,9 @@
       "ConvertAsyncInputUsesAwaitedShortReadsForDocxAndPptx",
       "ConvertAsyncInputZip64PreflightKeepsBoundsAndContent",
       "DocxParagraphShadingPaintsWordColorsAcrossFlowCellsStaticAndMath",
-      "DocxParagraphShadingSurvivesPictureOnlyCellPlacement"
+      "DocxParagraphShadingSurvivesPictureOnlyCellPlacement",
+      "DocxExplicitPageStartMatchesWordAcrossModesSizesAndSurroundingContent",
+      "DocxExplicitPageStartPreservesComposedContent"
   ],
   "pptx-inheritance": [
       "PptxInheritance",
