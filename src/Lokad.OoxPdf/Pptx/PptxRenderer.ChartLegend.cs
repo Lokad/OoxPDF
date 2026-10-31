@@ -279,20 +279,20 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < entries.Count; i++)
         {
             ChartLegendEntry entry = entries[i];
-            double GetPackedHorizontalLegendEntryX(double markerSize, double legendX, int entryIndex)
+            double GetPackedHorizontalLegendEntryX(double markerWidth, double legendX, int entryIndex)
             {
             double x = legendX;
             for (int i = 0; i < entryIndex; i++)
             {
-                x += GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, markerSize, emitTextGap, emitEntryPadding);
+                x += GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, markerWidth, emitTextGap, emitEntryPadding);
             }
     
             return x;
             }
 
             ChartLegendEntryFrame? entryFrame = legendBox.EntryFrames is { } frames ? frames[i] : null;
-            double entryX = entryFrame?.X ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(legendBox.MarkerSize, legendBox.X, i) : legendBox.X);
-            double entryWidth = entryFrame?.Width ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, legendBox.MarkerSize, emitTextGap, emitEntryPadding) : legendBox.Width);
+            double entryX = entryFrame?.X ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(legendBox.MarkerWidth, legendBox.X, i) : legendBox.X);
+            double entryWidth = entryFrame?.Width ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, legendBox.MarkerWidth, emitTextGap, emitEntryPadding) : legendBox.Width);
             double y = entryFrame?.Y ?? (legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight);
             if (entryFrame is not null && IsLegendBaselineClipped(legendBox, y)) { continue; }
             double markerBaselineFactor = legendBox.Horizontal || legendBox.SideStrokeLegend
@@ -478,7 +478,9 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.LegendSideGap;
         double markerWidth = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor
-            : markerSize;
+            : horizontal && layout.PositionKind == PptxSceneChartLegendPosition.Bottom &&
+                entries.All(entry => entry.Stroke is not null && entry.Fill is null)
+                ? PptxChartMetricRules.LegendBottomStrokeMarkerWidth : markerSize;
         // Fill-swatch side keys share the resolved 4.66pt Office text gap (area, doughnut
         // and bubble branches per the helper evidence note).
         double textGap = ResolveSideLegendTextGap(placement, useDoughnutRightAnchor, useDoughnutLeftAnchor, sideStrokeLegend, fontSize, layout.Overlay);
@@ -505,7 +507,7 @@ internal sealed partial class PptxRenderer
             double packedWidth = 0d;
             foreach (ChartLegendEntry entry in entries)
             {
-                packedWidth += GetPackedHorizontalLegendEntryWidth(entry.Name, style, textMeasurer, markerSize, horizontalTextGap, horizontalEntryPadding);
+                packedWidth += GetPackedHorizontalLegendEntryWidth(entry.Name, style, textMeasurer, markerWidth, horizontalTextGap, horizontalEntryPadding);
             }
 
             // Office rows carry no trailing padding after the last entry (botleg block
@@ -690,9 +692,9 @@ internal sealed partial class PptxRenderer
         return entries.Count < 2 ? 0d : Math.Max(0d, maxAdvance - minAdvance);
     }
 
-    private static double GetPackedHorizontalLegendEntryWidth(string name, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerSize, double textGap, double entryPadding)
+    private static double GetPackedHorizontalLegendEntryWidth(string name, ChartTextStyle style, ChartTextMeasurer textMeasurer, double markerWidth, double textGap, double entryPadding)
     {
-        return markerSize + textGap + textMeasurer.Measure(name, style) + entryPadding;
+        return markerWidth + textGap + textMeasurer.Measure(name, style) + entryPadding;
     }
 
     private static bool IsOoxmlTrue(string? value)

@@ -1,4 +1,28 @@
 {
+  "pptx-legend-rows": [
+    "PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame",
+    "PptxBottomStrokeLegendKeyKeepsItsOfficeSpanAcrossTextSizes",
+    "PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace",
+    "PptxOmittedLegendOverlayMatchesPowerPointDefaultAcrossKinds",
+    "PptxExplicitReservedLegendKeepsItsDistinctPlotContract",
+    "PptxHorizontalFrame",
+    "PptxHorizontalLegend",
+    "PptxHorizontalOverlayTitlesKeepTheUnreservedPlot",
+    "PptxChartLegend",
+    "PptxChartMissingLegend",
+    "PptxChartUnknownLegendPosition",
+    "PptxChartRightLegend",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders",
+    "PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "CffChartUnresolvableRunesSubstituteQuestionMark"
+  ],
   "pptx-legend-defaults": [
     "PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace",
     "PptxOmittedLegendOverlayMatchesPowerPointDefaultAcrossKinds",

@@ -62,7 +62,7 @@ internal sealed partial class PptxRenderer
                 bool measuredHorizontalLegend = UsesMeasuredHorizontalBarLegend(barOptions, sceneChart, chartLayout.Legend);
                 if (categoryLegend || measuredHorizontalLegend)
                 {
-                    var prepared = (await LayoutBarLegendAsync(chartLayout, legendEntries, legendTextStyle, fontResolver, context, measuredHorizontalLegend).ConfigureAwait(false));
+                    var prepared = (await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle, fontResolver, context, measuredHorizontalLegend).ConfigureAwait(false));
                     chartLayout = prepared.Layout;
                     preparedLegendBox = prepared.Box;
                 }

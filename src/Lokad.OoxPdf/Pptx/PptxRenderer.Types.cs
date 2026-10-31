@@ -643,6 +643,9 @@ internal sealed partial class PptxRenderer
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;
+        // Office bottom line samples stay 19.2pt across 8/12/18pt legend text
+        // and narrow/wide wrapped rows. The fill swatch remains font-relative.
+        public const double LegendBottomStrokeMarkerWidth = 19.2d;
         public const double LegendMinimumSideWidth = 36d;
         public const double LegendSideFillMinimumWidthFactor = 1.95d;
         public const double LegendSideWidthRatio = 0.22d;

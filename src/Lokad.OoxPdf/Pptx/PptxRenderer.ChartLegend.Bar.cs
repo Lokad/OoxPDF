@@ -49,7 +49,7 @@ internal sealed partial class PptxRenderer
 
     // Measure once, reserve automatic plot space, then give painting the same rows.
     // Manual frames and overlay legends retain their authored placement contract.
-    private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box)> LayoutBarLegendAsync(
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box)> LayoutChartLegendRowsAsync(
         ChartLayout layout, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style,
         PresentationFontResolver resolver, PptxRenderContext context, bool measuredBand)
     {
@@ -77,7 +77,7 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < entries.Count; i++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
-            widths[i] = GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, measure, box.MarkerSize, gap, padding);
+            widths[i] = GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, measure, box.MarkerWidth, gap, padding);
             if (i > start && width + widths[i] - padding > availableWidth)
             {
                 rows.Add((start, i, Math.Max(0d, width - padding)));
@@ -140,7 +140,7 @@ internal sealed partial class PptxRenderer
         {
             double occupied = rows.Count * box.LineHeight - (rows.Count > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
             double requiredBand = occupied + HorizontalLegendFrameInset;
-            double reserved = Math.Min(requiredBand, Math.Max(0d, layout.PlotBox.Height - 1d));
+            double reserved = layout.Legend.Overlay ? 0d : Math.Min(requiredBand, Math.Max(0d, layout.PlotBox.Height - 1d));
             double topContent = Math.Max(0d, layout.Frame.Y + layout.Frame.Height -
                 PptxChartMetricRules.HorizontalBarPlotTopReserve - layout.PlotBox.Y - layout.PlotBox.Height);
             double legendTop = bottom

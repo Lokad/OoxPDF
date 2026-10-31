@@ -46,6 +46,17 @@ internal sealed partial class PptxRenderer
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxisForScale, theme, valueExtents, lineOptions.PercentStacked) with
                 { TickPolicy = ReadLineChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, lineOptions.PercentStacked) };
                 ChartLayout chartLayout = (await GetLineChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
+                IReadOnlyList<ChartLegendEntry> legendEntries = BuildStrokeLegendEntries(theme, colorMap, chartPalette, linePlot, lineChart, seriesStrokes, markerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook, chartStyleId: ReadChartStyleId(chartXml));
+                ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+                ChartLegendBox? preparedLegendBox = null;
+                if (chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
+                {
+                    bool automatic = !chartLayout.ManualPlotLayoutApplied && !chartLayout.Legend.Layout.HasLayout;
+                    var prepared = await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle,
+                        fontResolver, context, measuredBand: automatic).ConfigureAwait(false);
+                    chartLayout = prepared.Layout;
+                    preparedLegendBox = prepared.Box;
+                }
                 if (chartLayout.AutomaticCategoryAxisPlacement is { } categoryPlacement)
                 {
                     valueAxisOptions = valueAxisOptions with { CrossingValue = categoryPlacement.CrossingValue };
@@ -94,7 +105,9 @@ internal sealed partial class PptxRenderer
                     }
                 }
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, linePlot, lineChart, seriesStrokes, markerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook, chartStyleId: ReadChartStyleId(chartXml)), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts).ConfigureAwait(false);
+                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend,
+                    legendTextStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts,
+                    preparedBox: preparedLegendBox).ConfigureAwait(false);
                 await RenderLineDataLabelsAsync(
                     theme,
                     colorMap,
