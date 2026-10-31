@@ -111,7 +111,12 @@ Custom sources fund significant acquisition buffers before allocation and finish
 outstanding reads before refunding them, including when cancellation is requested.
 
 Pass a longer-lived `cacheBudget` to `CreateHttpAsync` or `FileFontProgramSource`
-to fund shared cached programs. Without one, operations with a memory budget fund
+to fund shared cached programs. The pack budget also admits coarse manifest-derived
+metadata/index capacity before parsing, with separate construction headroom. Metadata
+retention ends after shutdown clears the owned indexes and pending acquisitions
+finish; completed program leases retain their own funding. Catalog/resolution
+values already returned are caller-owned and do not permit new source acquisition
+after shutdown. Without a cache budget, operations with a memory budget fund
 private leases rather than lend their short-lived budget to cache retention.
 Ungoverned local convenience retains its bounded cache. Dispose the pack resolver
 or an owned file source to end retention and refuse new acquisition. Existing

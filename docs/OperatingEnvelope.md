@@ -33,7 +33,11 @@ formatting span, without a copied mapping list or a full text/encoded payload.
 Its scopes share the caller's root; they create no private allowance. Caller-owned
 buffers are not charged twice. Font leases fund acquisition and copy overlap;
 explicit longer-lived cache budgets keep storage admitted through eviction or
-shutdown until the final reader releases it. Governed operations without a cache
+shutdown until the final reader releases it. Font-pack metadata uses the same
+explicit cache budget: coarse admission precedes parsing/indexing, construction
+headroom refunds after publication, and retained capacity ends after owned indexes
+are cleared and pending acquisitions finish. Returned catalog values are caller-owned.
+Governed operations without a cache
 budget acquire private programs. Local-discovery metadata, other parsed maps and
 other PDF resources remain pending, so
 this is partial coverage. Null budget is ungoverned. Use

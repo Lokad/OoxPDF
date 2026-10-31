@@ -98,7 +98,7 @@ overlap and final copying without source-sized preallocation. Image payloads sta
 funded through emission; font-compression buffers refund after their stream is
 written. Crop and generated shadow/glow planes are admitted for their invocation;
 recolor reuses private pixels and leaves encoded input/cache bytes unchanged.
-Other parsed maps, discovery metadata and PDF resources still need producer migration.
+Other parsed maps, local-discovery metadata and PDF resources still need producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
 Derived document/scene/workbook models now request their own coarse capacity before
@@ -110,8 +110,14 @@ Repeated DOCX page/static-story placement now requests reusable coarse capacity
 before construction, including overlapping candidate/frame copies. It shares the
 model producer lifetime and does not charge cumulatively per retry. Existing host
 allowances may therefore refuse documents previously accepted without this storage
-being admitted. Discovery metadata, other parsed maps and PDF/vector resource
-coverage remain partial. The removed estimated lease is not a second memory model.
+being admitted. A font pack's existing `cacheBudget` now also admits coarse
+manifest-derived metadata before parsing/indexing and holds it until shutdown
+clears the indexes and pending acquisitions finish. Live program leases retain
+separate byte funding. Returned catalog values are caller-owned; their sources
+reject new acquisition after shutdown. Small cache allowances can therefore refuse
+pack creation earlier, with `MemoryAdmission` / `SharedResource` rather than a
+transport error or retry. Local-discovery metadata, other parsed maps and PDF/vector
+resource coverage remain partial. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,

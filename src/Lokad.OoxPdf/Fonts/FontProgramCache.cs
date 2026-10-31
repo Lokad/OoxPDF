@@ -71,7 +71,7 @@ internal sealed class FontProgramCache(long maxBytes, StringComparer comparer, I
             if (disposed) return;
             disposed = true;
             retired = order.Select(entry => entry.Program).ToArray();
-            entries.Clear(); order.Clear(); retainedBytes = 0;
+            entries.Clear(); entries.TrimExcess(); order.Clear(); retainedBytes = 0;
         }
         foreach (var program in retired) program.Release();
     }

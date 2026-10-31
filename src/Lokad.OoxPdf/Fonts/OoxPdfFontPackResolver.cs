@@ -15,10 +15,10 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
     internal const long MaxTotalFontPackBytes = 256L * 1024L * 1024L;
     private readonly FontPackFileSource fileSource;
     private bool disposed;
-    private readonly IReadOnlyList<FontPackFace> faces;
-    private readonly IReadOnlyList<string> fallbackFamilies;
+    private IReadOnlyList<FontPackFace> faces;
+    private IReadOnlyList<string> fallbackFamilies;
     private readonly Dictionary<string, FontPackFace[]> facesByFamily;
-    private readonly FontPackFace[] textFaces;
+    private FontPackFace[] textFaces;
     private readonly Dictionary<FontRequest, FontFaceResolution> requestCache = new(FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
 
     private OoxPdfFontPackResolver(
@@ -27,22 +27,24 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         HttpClient httpClient,
         IReadOnlyList<FontPackFace> faces,
         IReadOnlyList<string> fallbackFamilies,
-        IMemoryBudget? cacheBudget)
+        IMemoryBudget? cacheBudget, IMemoryReservation? metadataStorage, CancellationToken token)
     {
         PackId = packId;
         PackRootUri = packRootUri;
-        fileSource = new FontPackFileSource(packId, packRootUri, httpClient, MaxTotalFontPackBytes, cacheBudget);
         this.faces = faces;
         this.fallbackFamilies = fallbackFamilies;
-        facesByFamily = IndexFacesByFamily(faces);
+        facesByFamily = IndexFacesByFamily(faces, token);
         textFaces = faces.Where(face => !face.Style.HasMathTable).ToArray();
+        token.ThrowIfCancellationRequested();
+        fileSource = new FontPackFileSource(packId, packRootUri, httpClient, MaxTotalFontPackBytes, cacheBudget, metadataStorage);
     }
 
-    private static Dictionary<string, FontPackFace[]> IndexFacesByFamily(IReadOnlyList<FontPackFace> faces)
+    private static Dictionary<string, FontPackFace[]> IndexFacesByFamily(IReadOnlyList<FontPackFace> faces, CancellationToken token)
     {
         var grouped = new Dictionary<string, List<FontPackFace>>(StringComparer.OrdinalIgnoreCase);
         foreach (FontPackFace face in faces)
         {
+            token.ThrowIfCancellationRequested();
             if (!grouped.TryGetValue(face.RequestedFamily, out List<FontPackFace>? requested))
             {
                 requested = [];
@@ -65,6 +67,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         var index = new Dictionary<string, FontPackFace[]>(StringComparer.OrdinalIgnoreCase);
         foreach ((string family, List<FontPackFace> group) in grouped)
         {
+            token.ThrowIfCancellationRequested();
             index[family] = group.ToArray();
         }
 
@@ -102,17 +105,29 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
             cacheBudget,
             OoxPdfLimitScope.SharedResource,
             cancellationToken).ConfigureAwait(false);
-        FontPackManifest manifest = DeserializeManifest();
-        ValidatedManifest validated = ValidateManifest(packId, manifest);
-
-        var resolver = new OoxPdfFontPackResolver(
-            packId,
-            packRootUri,
-            httpClient,
-            validated.Faces,
-            validated.FallbackFamilies, cacheBudget);
-
-        return resolver;
+        // Coarse metadata/index capacity plus the bounded request-cache window.
+        // Deserialization, validation and indexing coexist before publication;
+        // their extra window refunds once the resolver owns the retained graph.
+        long retainedCapacity = checked(1024L * 1024 + 16L * manifestBytes.Bytes.Length);
+        IMemoryReservation? metadataStorage = OoxMemory.Reserve(cacheBudget, checked(2 * retainedCapacity), OoxPdfLimitScope.SharedResource);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FontPackManifest manifest = DeserializeManifest();
+            ValidatedManifest validated = ValidateManifest(packId, manifest, cancellationToken);
+            IMemoryReservation? owned = metadataStorage;
+            var resolver = new OoxPdfFontPackResolver(packId, packRootUri, httpClient,
+                validated.Faces, validated.FallbackFamilies, cacheBudget, owned, cancellationToken);
+            metadataStorage = null; // The existing file-source owner now holds it.
+            try
+            {
+                OoxMemory.Resize(owned, retainedCapacity, OoxPdfLimitScope.SharedResource);
+                cancellationToken.ThrowIfCancellationRequested();
+                return resolver;
+            }
+            catch { resolver.Dispose(); throw; }
+        }
+        finally { metadataStorage?.Dispose(); }
 
         FontPackManifest DeserializeManifest()
         {
@@ -181,6 +196,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         return SelectBest(textFaces.Length == 0 ? faces : textFaces, request, isFallback: true);
     }
 
+    /// <summary>Returns caller-owned resolution values; their sources refuse new acquisition after shutdown.</summary>
     public IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
         lock (requestCache)
@@ -198,7 +214,9 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         {
             if (disposed) return;
             disposed = true;
-            requestCache.Clear();
+            requestCache.Clear(); requestCache.TrimExcess();
+            facesByFamily.Clear(); facesByFamily.TrimExcess();
+            faces = []; textFaces = []; fallbackFamilies = [];
         }
         fileSource.Dispose();
     }
@@ -396,7 +414,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         return ex is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException;
     }
 
-    private static ValidatedManifest ValidateManifest(string packId, FontPackManifest manifest)
+    private static ValidatedManifest ValidateManifest(string packId, FontPackManifest manifest, CancellationToken token)
     {
         if (!packId.Equals(manifest.PackId, StringComparison.Ordinal))
         {
@@ -411,6 +429,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         var files = new Dictionary<string, FontPackFile>(StringComparer.Ordinal);
         foreach (FontPackFileManifest? file in manifest.Files)
         {
+            token.ThrowIfCancellationRequested();
             if (file is null)
             {
                 throw InvalidManifest("The font pack manifest contains an empty font file entry.");
@@ -434,6 +453,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         var faces = new List<FontPackFace>();
         foreach (FontPackFamilyManifest? family in manifest.Families)
         {
+            token.ThrowIfCancellationRequested();
             if (family is null)
             {
                 throw InvalidManifest("The font pack manifest contains an empty font family entry.");
@@ -633,24 +653,29 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         private readonly FontProgramCache cache;
         private readonly object sync = new();
         private readonly Dictionary<string, IFontProgramSource> sources = new(StringComparer.Ordinal);
+        private IMemoryReservation? metadataStorage;
+        private int readers = 1; // Resolver retention; acquisitions add temporary readers.
+        private bool disposed;
 
         internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient)
             : this(packId, packRootUri, httpClient, MaxTotalFontPackBytes)
         {
         }
 
-        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient, long maxTotalBytes, IMemoryBudget? cacheBudget = null)
+        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient, long maxTotalBytes, IMemoryBudget? cacheBudget = null, IMemoryReservation? metadataStorage = null)
         {
             this.packId = packId;
             this.packRootUri = packRootUri;
             this.httpClient = httpClient;
             cache = new FontProgramCache(maxTotalBytes, StringComparer.Ordinal, cacheBudget);
+            this.metadataStorage = metadataStorage;
         }
 
         public IFontProgramSource Create(FontPackFile file)
         {
             lock (sync)
             {
+                ObjectDisposedException.ThrowIf(disposed, this);
                 if (!sources.TryGetValue(file.RelativePath, out IFontProgramSource? source))
                 {
                     source = new OoxPdfFontPackProgramSource(packId, packRootUri, httpClient, file, this);
@@ -666,7 +691,38 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         internal IMemoryBudget? Budget => cache.Budget;
         internal bool TryAcquire(string path, IMemoryBudget? operationBudget, out IOoxPdfFontProgramLease? lease) => cache.TryAcquire(path, operationBudget, out lease);
         internal void Store(string path, FontProgramBuffer program, IMemoryBudget? operationBudget) => cache.Store(path, program, operationBudget);
-        public void Dispose() => cache.Dispose();
+        internal void AcquireReader()
+        {
+            lock (sync)
+            {
+                ObjectDisposedException.ThrowIf(disposed, this);
+                readers = checked(readers + 1);
+            }
+        }
+
+        internal void ReleaseReader()
+        {
+            IMemoryReservation? retired = null;
+            lock (sync)
+            {
+                if (--readers == 0) { retired = metadataStorage; metadataStorage = null; }
+            }
+            retired?.Dispose();
+        }
+
+        public void Dispose()
+        {
+            lock (sync)
+            {
+                if (disposed) return;
+                disposed = true;
+                sources.Clear(); sources.TrimExcess();
+            }
+            // Retention remains a reader until cache shutdown finishes. Refunds
+            // happen outside locks, after this and any pending acquisitions end.
+            try { cache.Dispose(); }
+            finally { ReleaseReader(); }
+        }
     }
 
     private sealed class OoxPdfFontPackProgramSource(
@@ -683,37 +739,42 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         public async ValueTask<IOoxPdfFontProgramLease> AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
-            if (owner.TryAcquire(file.RelativePath, operationBudget, out var cached))
-            {
-                return cached!;
-            }
-
-            await gate.WaitAsync(ct).ConfigureAwait(false);
+            owner.AcquireReader();
             try
             {
-                if (owner.TryAcquire(file.RelativePath, operationBudget, out var rechecked))
+                if (owner.TryAcquire(file.RelativePath, operationBudget, out var cached))
                 {
-                    return rechecked!;
+                    return cached!;
                 }
 
-                using FontProgramBuffer bytes = await DownloadBytesAsync(
-                    httpClient,
-                    new Uri(packRootUri, file.RelativePath),
-                    "font file '" + file.RelativePath + "'",
-                    Math.Min(file.ByteSize, MaxFontFileBytes),
-                    owner.Budget ?? operationBudget,
-                    owner.Budget is null ? OoxPdfLimitScope.Conversion : OoxPdfLimitScope.SharedResource,
-                    ct).ConfigureAwait(false);
+                await gate.WaitAsync(ct).ConfigureAwait(false);
+                try
+                {
+                    if (owner.TryAcquire(file.RelativePath, operationBudget, out var rechecked))
+                    {
+                        return rechecked!;
+                    }
 
-                ct.ThrowIfCancellationRequested();
-                ValidateFontBytes(file, bytes.Bytes.Span);
-                owner.Store(file.RelativePath, bytes, operationBudget);
-                return bytes.Acquire();
+                    using FontProgramBuffer bytes = await DownloadBytesAsync(
+                        httpClient,
+                        new Uri(packRootUri, file.RelativePath),
+                        "font file '" + file.RelativePath + "'",
+                        Math.Min(file.ByteSize, MaxFontFileBytes),
+                        owner.Budget ?? operationBudget,
+                        owner.Budget is null ? OoxPdfLimitScope.Conversion : OoxPdfLimitScope.SharedResource,
+                        ct).ConfigureAwait(false);
+
+                    ct.ThrowIfCancellationRequested();
+                    ValidateFontBytes(file, bytes.Bytes.Span);
+                    owner.Store(file.RelativePath, bytes, operationBudget);
+                    return bytes.Acquire();
+                }
+                finally
+                {
+                    gate.Release();
+                }
             }
-            finally
-            {
-                gate.Release();
-            }
+            finally { owner.ReleaseReader(); }
         }
 
         private static void ValidateFontBytes(FontPackFile file, ReadOnlySpan<byte> bytes)

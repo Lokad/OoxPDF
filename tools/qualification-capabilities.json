@@ -12885,5 +12885,15 @@
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "font-pack-metadata-admission": [
+    "FontPack",
+    "FontLeases",
+    "MemoryAdmission",
+    "PortableRenderingDocxFinalPreservesMixedContent",
+    "PortableRenderingDocxAllMarkupPreservesMixedContent",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 }
