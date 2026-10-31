@@ -12,7 +12,7 @@ internal static partial class OoxMemoryAdmissionTests
     {
         byte[] bytes = Encoding.UTF8.GetBytes(SvgMemorySource);
         var baseline = new PdfGraphicsBuilder();
-        TestAssert.True(PptxRenderer.TryRenderSvgImage(baseline, 0, 0, 100, 100, bytes, _ => { }, 0, null, default));
+        TestAssert.True(PptxRenderer.TryRenderSvgImage(baseline, 0, 0, 100, 100, bytes, _ => { }, 0, null, default), "Render the ungoverned control.");
         string expected = baseline.ToString();
         var pool = new TestMemoryBudget();
         using (var operation = OoxConversionBudget.BeginScope(null, pool))
@@ -24,7 +24,7 @@ internal static partial class OoxMemoryAdmissionTests
                 TestAssert.True(PptxRenderer.TryRenderSvgImage(graphics, 0, 0, 100, 100, bytes, _ => {
                     observed = true;
                     TestAssert.True(pool.Reserved > 0, "Keep the DOM/gradient working grant while its diagnostic reader is active.");
-                }, 0, null, default));
+                }, 0, null, default), "Render while the working grant is owned.");
                 TestAssert.True(observed, "The existing unsupported-element diagnostic observes the live parse.");
                 TestAssert.Equal(0L, pool.Reserved); // This is render-local scratch, not retained PDF funding.
                 TestAssert.Equal(0, graphics.StateDepth);
@@ -78,7 +78,7 @@ internal static partial class OoxMemoryAdmissionTests
             TestAssert.True(!PptxRenderer.TryRenderSvgImage(new PdfGraphicsBuilder(), 0, 0, 10, 10, "<svg"u8.ToArray(), _ => {
                 observed = true;
                 TestAssert.True(pool.Reserved > 0, "Malformed-content reporting still reads within scratch ownership.");
-            }, 0, null, default));
+            }, 0, null, default), "Malformed SVG keeps its existing recovery result.");
             TestAssert.True(observed, "Malformed content keeps its existing diagnostic.");
             TestAssert.Equal(0L, pool.Reserved);
             var sentinel = new InvalidOperationException("SVG observer sentinel");
