@@ -420,6 +420,14 @@ internal sealed partial class PptxRenderer
             {
                 defaultPlotBox = measuredPlotBox;
             }
+            else if (hasLineChart &&
+                ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line) is { } lineElement &&
+                await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend,
+                    ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0), lineElement, chartXml, fontResolver).ConfigureAwait(false) is { } header)
+            {
+                double top = frame.Y + frame.Height - header;
+                defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };
+            }
             return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
                 ? manualPlotLayout
                 : ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -471,7 +479,8 @@ internal sealed partial class PptxRenderer
                 ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis,
                     fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-                double topReserve = PptxChartMetricRules.AutomaticCartesianTopPadding + (await textMeasurer.MeasureNormalLineHeightAsync(tickStyle).ConfigureAwait(false)) / 2d;
+                double topReserve = await MeasureCartesianHeaderReserveAsync(theme, sceneChart, fontResolver,
+                    await textMeasurer.MeasureNormalLineHeightAsync(tickStyle).ConfigureAwait(false)).ConfigureAwait(false);
                 double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
                 double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
                 double? measuredOffsetAdjustment = null;

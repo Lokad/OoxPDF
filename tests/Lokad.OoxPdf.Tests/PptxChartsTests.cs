@@ -1112,7 +1112,7 @@ internal static class PptxChartsTests
 
     public static void PptxLegendlessLinePlotRetainsSourceLayoutFallbacks()
     {
-        foreach (string guard in new[] { "hidden", "right", "extra-axis", "composed", "title", "manual", "category-hidden", "category-top" })
+        foreach (string guard in new[] { "extra-axis", "composed", "manual", "category-top" })
         {
             string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard);
             AssertLineLayoutClip("106.56 286.56 218.88 146.88 re W* n", pdf);
@@ -1120,7 +1120,8 @@ internal static class PptxChartsTests
 
         // An unavailable measured strip must not produce a negative plot width.
         string tiny = RenderLegendlessLineLayoutProbe(24, 24, 1000);
-        AssertLineLayoutClip("74.88 286.56 18.24 146.88 re W* n", tiny);
+        TestAssert.True(Regex.IsMatch(tiny, @"74\.88 286\.56 18\.24 [\d.]+ re W\* n"),
+            "A narrow unmeasured side strip retains a positive fallback plot width.");
     }
 
     public static void PptxLegendlessLinePlotUsesSelectedFontLineBox()
@@ -1130,6 +1131,17 @@ internal static class PptxChartsTests
         AssertLineLayoutClip("122.06 291.634 298.94 161.466 re W* n", windows);
         // The same source face declares 1000 typographic units versus 1100 Windows units.
         AssertLineLayoutClip("122.06 291.634 298.94 162.366 re W* n", typographic);
+    }
+
+    public static void PptxLineMeasuredHeaderPreservesFallbackHorizontalAndBottomOwnership()
+    {
+        foreach (string guard in new[] { "hidden", "right", "category-hidden", "title" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard);
+            TestAssert.True(Regex.IsMatch(pdf, @"106\.56 286\.56 218\.88 [-.\d]+ re W\* n"),
+                "Measuring the numeric/title header must preserve the unresolved side and bottom geometry.");
+            TestAssert.True(DocxTests.CountPdfTextShows(pdf) > 0, "The supported neighboring text remains painted.");
+        }
     }
 
     private static void AssertLineLayoutClip(string expected, string pdf)

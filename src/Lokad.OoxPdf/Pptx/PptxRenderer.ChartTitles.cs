@@ -547,6 +547,55 @@ internal sealed partial class PptxRenderer
         return reserveSides;
     }
 
+    private static async ValueTask<double?> TryMeasureCartesianHeaderAsync(
+        PptxTheme theme, PptxSceneChart chart, ChartLegendLayout legend,
+        PptxSceneChartPlot? plot, XElement plotElement, XDocument chartXml, PresentationFontResolver? resolver)
+    {
+        // Authored frames and furniture above/beside the plot keep their existing
+        // placement owner. This path measures the ordinary numeric-axis header.
+        ChartAxisTitleReserveSides titles = ReadDefaultAxisTitleReserveSides(chart);
+        if (chart.Plots.Count != 1 || chart.PlotAreaLayout.HasGeometryValues ||
+            chart.Title.Layout.HasGeometryValues || legend.Layout.HasGeometryValues ||
+            titles.HasHorizontalTitle || titles.HasVerticalTitle ||
+            legend.Visible && !legend.Overlay && legend.PositionKind != PptxSceneChartLegendPosition.Bottom)
+            return null;
+        IReadOnlyList<ChartAxisSource> axes = ReadSceneOrXmlChartValueAxesForPlot(chart, plot, chartXml, plotElement);
+        if (axes.Count != 1 || axes[0].SceneAxis is not { } axis ||
+            axis.PositionKind is not (PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right))
+            return null;
+        ChartAxisSource category = ReadSceneOrXmlChartCategoryAxisForPlot(chart, plot, chartXml, plotElement);
+        if (IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis) &&
+            (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } categoryAxis ||
+             categoryAxis.TickLabelPositionKind == PptxSceneChartTickLabelPosition.High ||
+             ReadSceneOrXmlValueAxisReversed(axis, axes[0].XmlAxis) && categoryAxis.TickLabelPositionKind != PptxSceneChartTickLabelPosition.Low))
+            return null;
+        double lineHeight = 0d;
+        if (IsSceneOrXmlChartAxisLabelVisible(axis, axes[0].XmlAxis))
+        {
+            ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, axis, chartXml, axes[0].XmlAxis,
+                fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+            var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
+            if (await measure.TryMeasureNormalLineHeightAsync(style).ConfigureAwait(false) is not { } measured)
+                return null;
+            lineHeight = measured;
+        }
+        return await MeasureCartesianHeaderReserveAsync(theme, chart, resolver, lineHeight).ConfigureAwait(false);
+    }
+
+    private static async ValueTask<double> MeasureCartesianHeaderReserveAsync(
+        PptxTheme theme, PptxSceneChart chart, PresentationFontResolver? resolver, double numericLineHeight)
+    {
+        double reserve = Math.Max(PptxChartMetricRules.HorizontalBarPlotTopReserve,
+            PptxChartMetricRules.AutomaticCartesianTopPadding + numericLineHeight / 2d);
+        if (!string.IsNullOrWhiteSpace(chart.Title.Text) && chart.Title.Overlay != true)
+        {
+            var title = await MeasureChartTitleLineAsync(theme, chart, resolver).ConfigureAwait(false);
+            reserve += PptxChartMetricRules.ChartTitleFrameInset +
+                2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height;
+        }
+        return reserve;
+    }
+
     private static async ValueTask<(double Ascent, double Height)> MeasureChartTitleLineAsync(
         PptxTheme theme, PptxSceneChart sceneChart, PresentationFontResolver? resolver)
     {

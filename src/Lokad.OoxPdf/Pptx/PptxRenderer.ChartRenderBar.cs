@@ -330,11 +330,19 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForCategoryLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForValueLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
-        defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
+        double? cartesianHeader = horizontalBars ? null :
+            await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, barChart, chartXml, fontResolver).ConfigureAwait(false);
+        if (cartesianHeader is null)
+            defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
         ChartAxisSource rightReserveCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
         bool rightReserveLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis, rightReserveCategoryAxis.XmlAxis);
         defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
-        if (measuredTitle is { } measuredLine)
+        if (cartesianHeader is { } measuredHeader)
+        {
+            double top = frame.Y + frame.Height - measuredHeader;
+            defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };
+        }
+        else if (measuredTitle is { } measuredLine)
         {
             // Title box and plot gap share the frame with axes and legend rows.
             // Overlay titles use the same painted baseline and consume no plot space.

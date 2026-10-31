@@ -4,7 +4,9 @@
 
 - PPTX: automatic chart titles share measured frame placement and caption-sized
   painting across chart kinds. Manual title rectangles retain authored bounds;
-  horizontal title/legend bands preserve axis spacing.
+  horizontal title/legend bands preserve axis spacing. Ordinary column and line
+  plot headers compose measured captions and numeric labels across frame sizes,
+  preserving overlay neutrality and minimum clearance.
 
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
