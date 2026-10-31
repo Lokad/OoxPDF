@@ -92,7 +92,9 @@ foreach ($job in $jobs) {
             $settings = Assert-WordView $job.Log $view ($document.Id + '/' + $mode)
         }
         else {
-            & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputPath -OutputDirectory $folder -SkipBuild:$SkipBuild *> (Join-Path $folder 'export.log')
+            # Publish the PDF reference once. Comparisons own the verified raster
+            # derivative and bind their explicit frozen validation tools.
+            & (Join-Path $PSScriptRoot 'RenderReference.ps1') -InputPath $inputPath -OutputDirectory $folder -SkipBuild:$SkipBuild -SkipRaster *> (Join-Path $folder 'export.log')
         }
         $pin = [ordered]@{Id=$document.Id;Mode=$mode;InputSha256=$document.Sha256;PdfSha256=(Get-FileHash $pdf).Hash;ReferenceKind=$ReferenceKind}
         if ($ReferenceKind -eq 'OfficeImage') {

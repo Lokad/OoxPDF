@@ -80,10 +80,45 @@ internal static class PptxTitleShapeTests
             Math.Abs(box.Height - 43.2) < 0.001, "A manual title retains its source rectangle.");
     }
 
+    public static void PptxAutomaticTitlePlacementKeepsFrameAnchorAcrossKinds()
+    {
+        foreach (bool inferred in new[] { false, true })
+        {
+            double? referenceBaseline = null, referenceTop = null;
+            foreach (string kind in new[] { "bar", "column", "line", "pie" })
+            foreach (int height in new[] { 216, 300, 420 })
+            {
+                PdfPage page = Render(kind, inferred: inferred, height: height);
+                var show = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+                    .Single(show => show.Text == (inferred ? "Series" : "Supported title"));
+                var box = Rectangles(page, Yellow).Single();
+                double baseline = page.Height - show.Y;
+                double top = page.Height - box.Y - box.Height;
+                referenceBaseline ??= baseline;
+                referenceTop ??= top;
+                TestAssert.True(Math.Abs(baseline - referenceBaseline.Value) < 0.001 &&
+                    Math.Abs(top - referenceTop.Value) < 0.001,
+                    "An automatic title keeps its measured frame anchor across chart kinds and heights.");
+            }
+        }
+    }
+
+    public static void PptxAutomaticTitlePlacementIgnoresManualPlotBox()
+    {
+        foreach (string kind in new[] { "bar", "column", "line", "pie" })
+        {
+            var ordinary = Rectangles(Render(kind), Yellow).Single();
+            var manualPlot = Rectangles(Render(kind, manualPlot: true), Yellow).Single();
+            TestAssert.True(Delta(ordinary, manualPlot) < 0.001,
+                "A plot-area override must not displace the independent automatic title frame.");
+        }
+    }
+
     private static string Run(string text, int size) => $"<a:r><a:rPr sz=\"{size * 100}\"/><a:t>{text}</a:t></a:r>";
 
     private static PdfPage Render(string kind, string? titleRuns = null, string shape = Fill,
-        bool inferred = false, bool linked = false, bool manual = false, bool overlay = false)
+        bool inferred = false, bool linked = false, bool manual = false, bool overlay = false,
+        int height = 216, bool manualPlot = false)
     {
         titleRuns ??= Run("Supported title", 18);
         if (linked) titleRuns = titleRuns.Replace("/>", "><a:hlinkClick r:id=\"titleLink\"/></a:rPr>", StringComparison.Ordinal);
@@ -101,10 +136,16 @@ internal static class PptxTitleShapeTests
         };
         string axes = "<c:catAx><c:axId val=\"1\"/><c:axPos val=\"b\"/><c:tickLblPos val=\"none\"/><c:crossAx val=\"2\"/></c:catAx>" +
             "<c:valAx><c:axId val=\"2\"/><c:scaling><c:min val=\"0\"/><c:max val=\"5\"/></c:scaling><c:axPos val=\"l\"/><c:tickLblPos val=\"none\"/><c:crossAx val=\"1\"/></c:valAx>";
+        string plotLayout = manualPlot ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:x val=\"0.2\"/><c:y val=\"0.2\"/><c:w val=\"0.6\"/><c:h val=\"0.6\"/></c:manualLayout></c:layout>" : "";
         string chart = "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
-            "<c:style val=\"2\"/><c:chart><c:title>" + titleText + layout + shape + "<c:overlay val=\"" + (overlay ? 1 : 0) + "\"/></c:title><c:autoTitleDeleted val=\"0\"/><c:plotArea>" + plot +
+            "<c:style val=\"2\"/><c:chart><c:title>" + titleText + layout + shape + "<c:overlay val=\"" + (overlay ? 1 : 0) + "\"/></c:title><c:autoTitleDeleted val=\"0\"/><c:plotArea>" + plotLayout + plot +
             (kind == "pie" ? "" : axes) + "</c:plotArea></c:chart></c:chartSpace>";
         var parts = new Dictionary<string, byte[]>();
+        parts["ppt/slides/slide1.xml"] = TestFixtures.Utf8($$"""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="{{height * 12700}}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+            </p:sld>
+            """);
         if (linked) parts["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="titleLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/title" TargetMode="External"/></Relationships>
             """);

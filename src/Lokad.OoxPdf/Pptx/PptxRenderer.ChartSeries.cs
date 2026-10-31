@@ -174,7 +174,7 @@ internal sealed partial class PptxRenderer
             EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartTrendlineDiagnostics(resolvedChartXml, context.DiagnosticSink, chartPartName, context.SlideNumber);
             await RenderManualChartAxisTitlesAsync(context.Document, context.Theme, graphics, bounds, sceneChart, context.FontResolver, context.DiagnosticSink, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-            await RenderChartTitleAsync(context.Document, context.Theme, chartColorMap, graphics, bounds, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink).ConfigureAwait(false);
+            await RenderChartTitleAsync(context.Document, context.Theme, graphics, bounds, sceneChart, context.FontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds, context.DiagnosticSink).ConfigureAwait(false);
             return;
         }
 

@@ -1464,37 +1464,6 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)displayBlanksAs);
     }
 
-    public static void PptxChartTitlePolarDetectionUsesScenePlotKinds()
-    {
-        PptxSceneChart chart = PptxTests.BuildSingleChartScene("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:pieChart>
-                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
-                </c:pieChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """) ?? throw new InvalidOperationException("Expected chart scene.");
-
-        PptxSceneChart lineChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:lineChart><c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser></c:lineChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """));
-        System.Reflection.MethodInfo hasPolarChart = typeof(PptxRenderer).GetMethod(
-            "HasPolarChart",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected polar chart resolver.");
-        object sceneBacked = hasPolarChart.Invoke(null, [chart]) ?? throw new InvalidOperationException("Expected scene-backed polar decision.");
-        object lineBacked = hasPolarChart.Invoke(null, [lineChart]) ?? throw new InvalidOperationException("Expected line-chart decision.");
-
-        TestAssert.True((bool)sceneBacked, "Pie titles use the polar layout.");
-        TestAssert.True(!(bool)lineBacked, "Line titles use the Cartesian layout.");
-    }
-
     public static void PptxChartPlotElementSelectionUsesSceneSource()
     {
         PptxSceneChart chart = PptxTests.BuildSingleChartScene("""

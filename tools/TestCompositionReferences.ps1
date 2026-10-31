@@ -125,6 +125,21 @@ foreach ($fault in @('reference-kind','capture-fonts')) {
     if (!$rejected -or @(Get-Content (Join-Path $scripts 'image-calls.txt')).Count -ne 4) {throw 'Image cache mismatch was not refused before export'}
     $passed+=$fault
 }
-@{Passed=$passed;OfficeInvocations=0;LibraryBuilds=0;Scope='Fake DOCX/PDF inputs; view and provenance orchestration only'} |
+@'
+param($InputPath,$OutputDirectory,[switch]$SkipBuild,[switch]$SkipRaster)
+if (!$SkipRaster) {throw 'PDF-only composition references must defer rasterization to comparisons'}
+Add-Content (Join-Path $PSScriptRoot 'pptx-calls.txt') $InputPath
+[IO.File]::WriteAllText((Join-Path $OutputDirectory 'reference.pdf'),'Fake PowerPoint PDF')
+'@ | Set-Content (Join-Path $scripts 'RenderReference.ps1')
+$pptx=Join-Path $repo 'slide.pptx'
+'Fake PPTX input' | Set-Content $pptx
+ConvertTo-Json -InputObject @(@{Id='slide';Input='slide.pptx';Sha256=(Get-FileHash $pptx).Hash}) | Set-Content $manifest
+$pptxReference=Join-Path $OutputDirectory 'pptx-reference'
+& $script -Manifest $manifest -OutputDirectory $pptxReference -SkipBuild | Out-Null
+& $script -Manifest $manifest -OutputDirectory $pptxReference -SkipBuild | Out-Null
+if (@(Get-Content (Join-Path $scripts 'pptx-calls.txt')).Count -ne 1) {throw 'Pinned PPTX PDF export was repeated'}
+if (!(Test-Path (Join-Path $pptxReference 'slide-presentation/source-identity.json'))) {throw 'PPTX PDF reference was not pinned'}
+$passed+='pptx-pdf-only-export-and-cache-reuse'
+@{Passed=$passed;OfficeInvocations=0;LibraryBuilds=0;Scope='Fake DOCX/PPTX/PDF inputs; view and provenance orchestration only'} |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json')
 Write-Output ($passed.Count.ToString()+' reference view/provenance checks passed; no Office or library build.')

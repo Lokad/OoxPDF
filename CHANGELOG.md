@@ -2,9 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
-- Automatic chart-title fills, outlines and effects follow the caption box instead of covering the chart.
-
-- Horizontal chart titles use their rich-run metrics for frame placement; overlay titles leave the plot unreserved and titles retain the measured value-axis strip.
+- PPTX: automatic chart titles share measured frame placement and caption-sized
+  painting across chart kinds. Manual title rectangles retain authored bounds;
+  horizontal title/legend bands preserve axis spacing.
 
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected

@@ -200,10 +200,7 @@ internal sealed partial class PptxRenderer
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine).ConfigureAwait(false));
-        double? titleBaseline = titleLine is { } line
-            ? frame.Y + frame.Height - PptxChartMetricRules.ChartTitleFrameInset - PptxChartMetricRules.ChartTitleLinePadding - line.Ascent
-            : null;
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, AutomaticTitleBaselineY: titleBaseline);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
     private static double ReadCategoryTitleFontSizeAtPosition(PptxSceneChart sceneChart, PptxSceneChartAxisPosition titlePosition)
