@@ -17,82 +17,92 @@ internal sealed class PptxReader
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart presentationPart = FindPresentationPart();
         XDocument document = package.LoadXml(presentationPart, cancellationToken);
-
-        // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
-        // fail visibly once per document instead of converting silently empty (O02).
-        if (diagnosticSink is not null && OoxNamespaces.HasStrictOoxmlOrigin(document))
+        IMemoryReservation? modelStorage = OoxMemory.ReserveModel(document, cancellationToken);
+        PptxDocument? result = null;
+        try
         {
-            diagnosticSink(new OoxPdfDiagnostic(
-                "OOXML_STRICT_DIALECT",
-                OoxPdfSeverity.Warning,
-                "Strict OOXML content was detected; only the transitional dialect is supported and content may be missing.",
-                presentationPart.Name,
-                SlideIndex: null,
-                PageIndex: null,
-                Feature: "strict-dialect",
-                Fallback: "Ignored"));
-        }
 
-        if (diagnosticSink is not null && OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document))
-        {
-            diagnosticSink(new OoxPdfDiagnostic(
-                "OOXML_MUST_UNDERSTAND",
-                OoxPdfSeverity.Warning,
-                "A must-understand declaration requires unsupported or unresolved namespaces; conversion continues with partial compatibility handling.",
-                presentationPart.Name,
-                SlideIndex: null,
-                PageIndex: null,
-                Feature: "must-understand",
-                Fallback: "Partial compatibility"));
-        }
-
-        XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");
-        double width = size is null ? 720d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cx", "PPTX"));
-        double height = size is null ? 540d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cy", "PPTX"));
-        long firstSlideNumber = OoxXml.ReadOptionalLong(document.Root, "firstSlideNum", 1);
-        if (firstSlideNumber is < 0 or > uint.MaxValue) firstSlideNumber = 1;
-
-        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(presentationPart.Name, cancellationToken)
-            .Where(r => !r.IsExternal && r.Type == SlideRelationshipType && r.ResolvedTarget is not null)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
-
-        var slides = new List<PptxSlide>();
-        XElement? slideList = document.Root?.Element(PresentationNamespace + "sldIdLst");
-        IEnumerable<XElement> slideIds = slideList?.Elements(PresentationNamespace + "sldId") ?? [];
-
-        int sourceIndex = -1;
-        foreach (XElement slideId in slideIds)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            sourceIndex++;
-            string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
-            if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
+            // Strict OOXML (ISO 29500) parts read as blank under transitional queries;
+            // fail visibly once per document instead of converting silently empty (O02).
+            if (diagnosticSink is not null && OoxNamespaces.HasStrictOoxmlOrigin(document))
             {
-                string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
-                if (!IsHiddenSlide(package, target, cancellationToken))
-                {
-                    slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
-                }
+                diagnosticSink(new OoxPdfDiagnostic(
+                    "OOXML_STRICT_DIALECT",
+                    OoxPdfSeverity.Warning,
+                    "Strict OOXML content was detected; only the transitional dialect is supported and content may be missing.",
+                    presentationPart.Name,
+                    SlideIndex: null,
+                    PageIndex: null,
+                    Feature: "strict-dialect",
+                    Fallback: "Ignored"));
             }
-        }
 
-        // Recover missing ordering metadata, never an explicitly empty or fully
-        // hidden list: relationships alone do not make an unlisted slide printable.
-        if (slideList is null)
-        {
-            foreach (OoxRelationship relationship in relationships.Values)
+            if (diagnosticSink is not null && OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document))
+            {
+                diagnosticSink(new OoxPdfDiagnostic(
+                    "OOXML_MUST_UNDERSTAND",
+                    OoxPdfSeverity.Warning,
+                    "A must-understand declaration requires unsupported or unresolved namespaces; conversion continues with partial compatibility handling.",
+                    presentationPart.Name,
+                    SlideIndex: null,
+                    PageIndex: null,
+                    Feature: "must-understand",
+                    Fallback: "Partial compatibility"));
+            }
+
+            XElement? size = document.Root?.Element(PresentationNamespace + "sldSz");
+            double width = size is null ? 720d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cx", "PPTX"));
+            double height = size is null ? 540d : OoxUnits.EmuToPoints(OoxXml.ParseRequiredLong(size, "cy", "PPTX"));
+            long firstSlideNumber = OoxXml.ReadOptionalLong(document.Root, "firstSlideNum", 1);
+            if (firstSlideNumber is < 0 or > uint.MaxValue) firstSlideNumber = 1;
+
+            IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(presentationPart.Name, cancellationToken)
+                .Where(r => !r.IsExternal && r.Type == SlideRelationshipType && r.ResolvedTarget is not null)
+                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+
+            var slides = new List<PptxSlide>();
+            XElement? slideList = document.Root?.Element(PresentationNamespace + "sldIdLst");
+            IEnumerable<XElement> slideIds = slideList?.Elements(PresentationNamespace + "sldId") ?? [];
+
+            int sourceIndex = -1;
+            foreach (XElement slideId in slideIds)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 sourceIndex++;
-                string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
-                if (!IsHiddenSlide(package, target, cancellationToken))
+                string? relationshipId = (string?)slideId.Attribute(RelationshipsNamespace + "id");
+                if (relationshipId is not null && relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
                 {
-                    slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
+                    string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
+                    if (!IsHiddenSlide(package, target, cancellationToken))
+                    {
+                        slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
+                    }
                 }
             }
-        }
 
-        return new PptxDocument(presentationPart.Name, slides, width, height) { FirstSlideNumber = firstSlideNumber };
+            // Recover missing ordering metadata, never an explicitly empty or fully
+            // hidden list: relationships alone do not make an unlisted slide printable.
+            if (slideList is null)
+            {
+                foreach (OoxRelationship relationship in relationships.Values)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    sourceIndex++;
+                    string target = relationship.ResolvedTarget ?? throw new InvalidDataException("Slide relationship has no resolved target part.");
+                    if (!IsHiddenSlide(package, target, cancellationToken))
+                    {
+                        slides.Add(new PptxSlide(target, slides.Count) { SourceIndex = sourceIndex });
+                    }
+                }
+            }
+
+            return result = new PptxDocument(presentationPart.Name, slides, width, height) { FirstSlideNumber = firstSlideNumber };
+        }
+        finally
+        {
+            if (result is null) modelStorage?.Dispose();
+            else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
+        }
 
         OoxPart FindPresentationPart()
         {

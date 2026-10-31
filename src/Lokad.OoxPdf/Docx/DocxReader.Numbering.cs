@@ -230,10 +230,10 @@ internal sealed partial class DocxReader
         return resolved;
     }
 
-    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts)
+    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName, DocxFontCatalog fontCatalog, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink, HashSet<string> warnedParts, IMemoryReservation? modelStorage = null)
     {
         XDocument? numberingXml = LoadRelatedXmlPart(package, documentPartName, NumberingRelationshipType,
-            out _, cancellationToken, diagnosticSink, warnedParts);
+            out _, cancellationToken, diagnosticSink, warnedParts, modelStorage);
         if (numberingXml is null) return DocxNumberingSet.Empty;
         var levels = new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>();
         var canonicalAbstractIds = new Dictionary<string, string>(StringComparer.Ordinal);

@@ -17,6 +17,16 @@ internal sealed class OoxConversionBudget
         Memory = memory;
     }
     internal IMemoryScope? Memory { get; }
+    private IMemoryScope? models;
+    // One producer-owned group, independent of package buffers and emitted PDF
+    // resources. Nested workbook models can outlive their temporary package.
+    internal IMemoryScope? Models => models ??= Memory?.CreateScope();
+    internal void ReleaseModels()
+    {
+        IMemoryScope? held = models;
+        models = null;
+        held?.Dispose();
+    }
     private long pdfPages;
     public long PdfPages => pdfPages;
     private long pdfContentBytes;
@@ -76,8 +86,12 @@ internal sealed class OoxConversionBudget
         {
             if (disposed) { return; }
             disposed = true;
-            try { Budget.Memory?.Dispose(); }
-            finally { Storage.Value = prior; }
+            try { Budget.ReleaseModels(); }
+            finally
+            {
+                try { Budget.Memory?.Dispose(); }
+                finally { Storage.Value = prior; }
+            }
         }
     }
 }

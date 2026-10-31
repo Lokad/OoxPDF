@@ -175,3 +175,10 @@ PPTX file and stream refusals preserve destinations. The selection includes pack
 I/O/bounds, MCE/strict relationship semantics, cached story/table source owners and
 embedded-workbook parsing. The DOCX main part and comment metadata use that same
 package owner; repeated Final/review reads preserve the cached main DOM.
+
+`derived-model-admission` covers model construction/refusal, package-independent
+model lifetimes, cancellation while font acquisition is pending and the actual
+staged-summary boundary. It includes package/XML/workbook neighbors, budgeted
+fonts/images/staging/publication, and count-retry preparation. The workbook refusal
+control selects a known retained payload rather than depending on scope ordinals.
+Repeated-layout/cached-font assertions remain distinct from new admission checks.

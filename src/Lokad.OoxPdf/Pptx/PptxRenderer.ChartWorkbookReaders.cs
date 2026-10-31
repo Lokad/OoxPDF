@@ -40,67 +40,77 @@ internal sealed partial class PptxRenderer
         }
 
         XDocument workbookXml = workbookPackage.LoadXml(workbookPart, cancellationToken);
-        ChartWorkbookSharedString[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart, cancellationToken);
-        ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart, cancellationToken);
-        IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
-            .GetRelationships(workbookPart.Name, cancellationToken)
-            .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
-            .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
-        ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml);
-        if (workbookSheets.Length > MaxWorkbookSheets)
+        IMemoryReservation? modelStorage = OoxMemory.ReserveModel(workbookXml, cancellationToken);
+        ChartWorkbookData? result = null;
+        try
         {
-            throw new OoxPdfLimitExceededException("Chart workbook declares more sheets than the maximum supported count.");
-        }
-        ChartWorkbookDefinedName[] definedNameRecords = ReadWorkbookDefinedNameRecords(workbookXml, workbookSheets);
-        IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(definedNameRecords);
-        var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
-        var sheets = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (ChartWorkbookSheet sheet in workbookSheets)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (string.IsNullOrWhiteSpace(sheet.Name) ||
-                string.IsNullOrWhiteSpace(sheet.RelationshipId) ||
-                !workbookRelationships.TryGetValue(sheet.RelationshipId, out OoxRelationship? relationship) ||
-                relationship.Type != WorksheetRelationshipType ||
-                relationship.ResolvedTarget is null)
+            ChartWorkbookSharedString[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart, cancellationToken, modelStorage);
+            ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart, cancellationToken, modelStorage);
+            IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
+                .GetRelationships(workbookPart.Name, cancellationToken)
+                .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
+                .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
+            ChartWorkbookSheet[] workbookSheets = ReadWorkbookSheetRecords(workbookXml);
+            if (workbookSheets.Length > MaxWorkbookSheets)
             {
-                continue;
+                throw new OoxPdfLimitExceededException("Chart workbook declares more sheets than the maximum supported count.");
             }
+            ChartWorkbookDefinedName[] definedNameRecords = ReadWorkbookDefinedNameRecords(workbookXml, workbookSheets);
+            IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(definedNameRecords);
+            var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
+            var sheets = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
 
-            OoxPart? worksheetPart = workbookPackage.GetPart(relationship.ResolvedTarget);
-            if (worksheetPart is null)
-            {
-                continue;
-            }
-
-            ChartWorksheetData worksheetData = ReadWorksheetData(workbookPackage, worksheetPart, sharedStrings, cancellationToken);
-            long totalCells = 0;
-            foreach (ChartWorksheetData existing in sheets.Values)
-            {
-                totalCells = checked(totalCells + existing.Cells.Count);
-            }
-            totalCells = checked(totalCells + worksheetData.Cells.Count);
-            if (totalCells > MaxWorkbookTotalCells)
-            {
-                throw new OoxPdfLimitExceededException(
-                    "Chart workbook exceeds the maximum supported total cell count of " + MaxWorkbookTotalCells + ".");
-            }
-
-            sheets[sheet.Name] = worksheetData;
-            foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, sheet.Name, cancellationToken))
+            foreach (ChartWorkbookSheet sheet in workbookSheets)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                tables[table.Name] = table;
-                if (!string.Equals(table.DisplayName, table.Name, StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrWhiteSpace(sheet.Name) ||
+                    string.IsNullOrWhiteSpace(sheet.RelationshipId) ||
+                    !workbookRelationships.TryGetValue(sheet.RelationshipId, out OoxRelationship? relationship) ||
+                    relationship.Type != WorksheetRelationshipType ||
+                    relationship.ResolvedTarget is null)
                 {
-                    tables[table.DisplayName] = table;
+                    continue;
+                }
+
+                OoxPart? worksheetPart = workbookPackage.GetPart(relationship.ResolvedTarget);
+                if (worksheetPart is null)
+                {
+                    continue;
+                }
+
+                ChartWorksheetData worksheetData = ReadWorksheetData(workbookPackage, worksheetPart, sharedStrings, cancellationToken, modelStorage);
+                long totalCells = 0;
+                foreach (ChartWorksheetData existing in sheets.Values)
+                {
+                    totalCells = checked(totalCells + existing.Cells.Count);
+                }
+                totalCells = checked(totalCells + worksheetData.Cells.Count);
+                if (totalCells > MaxWorkbookTotalCells)
+                {
+                    throw new OoxPdfLimitExceededException(
+                        "Chart workbook exceeds the maximum supported total cell count of " + MaxWorkbookTotalCells + ".");
+                }
+
+                sheets[sheet.Name] = worksheetData;
+                foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, sheet.Name, cancellationToken, modelStorage))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    tables[table.Name] = table;
+                    if (!string.Equals(table.DisplayName, table.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        tables[table.DisplayName] = table;
+                    }
                 }
             }
-        }
 
-        ChartWorkbookData? model = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, definedNameRecords);
-        return model;
+            result = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, definedNameRecords);
+            return result;
+        }
+        finally
+        {
+            if (result is null) modelStorage?.Dispose();
+            else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
+        }
     }
 
     private static bool ReadWorkbookDate1904(XDocument workbookXml)
@@ -111,7 +121,7 @@ internal sealed partial class PptxRenderer
             ?.Attribute("date1904"));
     }
 
-    private static ChartWorkbookSharedString[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken)
+    private static ChartWorkbookSharedString[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? sharedStringsPart = workbookPackage
@@ -125,6 +135,7 @@ internal sealed partial class PptxRenderer
         }
 
         XDocument document = workbookPackage.LoadXml(sharedStringsPart, cancellationToken);
+        OoxMemory.GrowModel(modelStorage, document, cancellationToken);
         var sharedStrings = new List<ChartWorkbookSharedString>();
         foreach (XElement item in document.Descendants(SpreadsheetNamespace + "si"))
         {
@@ -208,7 +219,7 @@ internal sealed partial class PptxRenderer
         return definedNames;
     }
 
-    private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken)
+    private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? stylesPart = workbookPackage
@@ -222,6 +233,7 @@ internal sealed partial class PptxRenderer
         }
 
         XDocument document = workbookPackage.LoadXml(stylesPart, cancellationToken);
+        OoxMemory.GrowModel(modelStorage, document, cancellationToken);
         var customNumberFormats = new Dictionary<int, string>();
         foreach (XElement numberFormat in document.Root?.Element(SpreadsheetNamespace + "numFmts")?.Elements(SpreadsheetNamespace + "numFmt") ?? [])
         {
@@ -398,9 +410,10 @@ internal sealed partial class PptxRenderer
     private const long MaxWorkbookDefinedNames = 100_000;
     private const long MaxWorkbookStyleRecords = 100_000;
 
-    private static ChartWorksheetData ReadWorksheetData(OoxPackage workbookPackage, OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken)
+    private static ChartWorksheetData ReadWorksheetData(OoxPackage workbookPackage, OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         XDocument document = workbookPackage.LoadXml(worksheetPart, cancellationToken);
+        OoxMemory.GrowModel(modelStorage, document, cancellationToken);
         var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
         var hiddenRows = new HashSet<int>();
         var hiddenColumns = new HashSet<int>();
@@ -551,7 +564,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName, CancellationToken cancellationToken)
+    private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         var tables = new List<ChartWorkbookTable>();
         foreach (OoxRelationship relationship in workbookPackage.GetRelationships(worksheetPart.Name, cancellationToken))
@@ -571,6 +584,7 @@ internal sealed partial class PptxRenderer
             }
 
             XDocument tableXml = workbookPackage.LoadXml(tablePart, cancellationToken);
+            OoxMemory.GrowModel(modelStorage, tableXml, cancellationToken);
             XElement? tableElement = tableXml.Root;
             if (tableElement is null)
             {

@@ -17,7 +17,7 @@ internal sealed partial class DocxReader
     // are deterministic functions of (part bytes, styles, numbering, markup mode),
     // all constant within a Read, so sharing is exact. Diagnostics still fire once
     // per part via the shared warned-parts set.
-    private sealed class RelatedStoryPartCache
+    private sealed class RelatedStoryPartCache(IMemoryReservation? modelStorage)
     {
         private readonly Dictionary<string, ParsedRelatedStoryPart> parts = new(StringComparer.OrdinalIgnoreCase);
 
@@ -33,6 +33,8 @@ internal sealed partial class DocxReader
                 if (count > 0) { yield return new(part.Key, count, body); }
             }
         }
+
+        public void Admit(XDocument source, CancellationToken token) => OoxMemory.GrowModel(modelStorage, source, token);
 
         public ParsedRelatedStoryPart GetOrCreate(string partName)
         {
@@ -119,6 +121,7 @@ internal sealed partial class DocxReader
             if (parsed.Xml is null)
             {
                 parsed.Xml = package.LoadXml(part, cancellationToken);
+                storyCache.Admit(parsed.Xml, cancellationToken);
             }
 
             WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
@@ -177,6 +180,7 @@ internal sealed partial class DocxReader
             if (parsed.Xml is null)
             {
                 parsed.Xml = package.LoadXml(part, cancellationToken);
+                storyCache.Admit(parsed.Xml, cancellationToken);
             }
 
             WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
@@ -207,7 +211,7 @@ internal sealed partial class DocxReader
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null,
         IReadOnlyList<DocxBodyElement>? mainBodyElements = null,
-        XDocument? settings = null)
+        XDocument? settings = null, IMemoryReservation? modelStorage = null)
     {
         var noteReferences = new Dictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order)>();
         foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(mainBodyElements ?? []))
@@ -222,9 +226,9 @@ internal sealed partial class DocxReader
                 }
             }
         }
-        return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings))
+        return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts, modelStorage)
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings, modelStorage))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings, modelStorage))
             .ToArray();
     }
 
@@ -236,10 +240,10 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        HashSet<string>? warnedParts = null)
+        HashSet<string>? warnedParts = null, IMemoryReservation? modelStorage = null)
     {
         IReadOnlyDictionary<string, DocxCommentThreadMetadata> threadMetadataByParagraphId =
-            ReadCommentThreadMetadata(package, documentPartName, cancellationToken);
+            ReadCommentThreadMetadata(package, documentPartName, cancellationToken, modelStorage);
         IReadOnlyList<DocxRelatedStory> stories = ReadRelatedStories(
             package,
             documentPartName,
@@ -252,7 +256,7 @@ internal sealed partial class DocxReader
             cancellationToken,
             threadMetadataByParagraphId,
             diagnosticSink,
-            warnedParts);
+            warnedParts, modelStorage: modelStorage);
         return ResolveCommentThreadParents(stories);
     }
 
@@ -270,7 +274,7 @@ internal sealed partial class DocxReader
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null,
         IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order)>? noteReferences = null,
-        XDocument? settings = null)
+        XDocument? settings = null, IMemoryReservation? modelStorage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, cancellationToken);
@@ -280,6 +284,7 @@ internal sealed partial class DocxReader
         }
 
         XDocument partXml = package.LoadXml(part, cancellationToken);
+        OoxMemory.GrowModel(modelStorage, partXml, cancellationToken);
         OoxMarkupCompatibility.WarnMustUnderstandOnce(partXml, part.Name, diagnosticSink, warnedParts);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(part.Name, cancellationToken)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -511,7 +516,7 @@ internal sealed partial class DocxReader
     private static IReadOnlyDictionary<string, DocxCommentThreadMetadata> ReadCommentThreadMetadata(
         OoxPackage package,
         string documentPartName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, CommentsExtendedRelationshipType, cancellationToken);
@@ -521,6 +526,7 @@ internal sealed partial class DocxReader
         }
 
         XDocument document = package.LoadXml(part, cancellationToken);
+        OoxMemory.GrowModel(modelStorage, document, cancellationToken);
         var metadataByParagraphId = new Dictionary<string, DocxCommentThreadMetadata>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement element in document.Root?.Elements(Office2012WordNamespace + "commentEx") ?? [])
         {

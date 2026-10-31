@@ -34,10 +34,19 @@ Its scopes share the caller's root; they create no private allowance. Caller-own
 buffers are not charged twice. Font leases fund acquisition and copy overlap;
 explicit longer-lived cache budgets keep storage admitted through eviction or
 shutdown until the final reader releases it. Governed operations without a cache
-budget acquire private programs. Models, local-discovery metadata, other parsed maps and
+budget acquire private programs. Repeated placements, local-discovery metadata, other parsed maps and
 other PDF resources remain pending, so
 this is partial coverage. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.
+
+The existing producer now owns one model scope separate from package buffers and
+emitted resources. DOCX models, PPTX scenes/charts and workbook records retain
+coarse capacity through page production, including font/staging awaits; nested
+package disposal does not refund a still-used workbook model. Factory construction
+headroom refunds after construction. Source-shape estimates cover ordinary model/
+placement overlap; they neither count every runtime object nor prove coverage of
+all repeated placements or runtime vector/resource expansion. Those owners remain
+under review. No new quota setting or private allowance is introduced.
 
 ## Measurement scope
 

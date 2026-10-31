@@ -157,15 +157,32 @@ internal static partial class OoxMemoryAdmissionTests
 
     public static void MemoryBudgetNestedWorkbookRefusalEscapesChartRecovery()
     {
-        var pool = new TestMemoryBudget();
-        pool.RefuseChange = (_, after) => pool.ScopesCreated >= 3 && after > 0;
+        // Refuse a known nested retained payload, independent of how many other
+        // producer scopes the conversion uses before reading the workbook.
+        var parts = ModelAdmissionParts(File.ReadAllBytes(Case("pptx-ladder-11-chart-bar-clustered-port.pptx")));
+        const string embedded = "ppt/embeddings/Microsoft_Excel_Sheet1.xlsx";
+        var workbook = ModelAdmissionParts(parts[embedded]);
+        var types = System.Xml.Linq.XDocument.Parse(System.Text.Encoding.UTF8.GetString(workbook["[Content_Types].xml"]));
+        types.Root!.Add(new System.Xml.Linq.XElement(types.Root.Name.Namespace + "Default",
+            new System.Xml.Linq.XAttribute("Extension", "modelprobe"), new System.Xml.Linq.XAttribute("ContentType", "application/octet-stream")));
+        workbook["[Content_Types].xml"] = TestFixtures.Utf8(types.ToString(System.Xml.Linq.SaveOptions.DisableFormatting));
+        workbook["padding.modelprobe"] = new byte[2 * 1024 * 1024];
+        long nestedBytes = workbook.Values.Sum(bytes => bytes.LongLength);
+        using (var nested = TestFixtures.CreateZipPackage(workbook)) parts[embedded] = nested.ToArray();
+        bool refusedNested = false;
+        var pool = new TestMemoryBudget { RefuseChange = (_, after) => {
+            if (after != nestedBytes) return false;
+            refusedNested = true;
+            return true;
+        }};
         var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
-        using var input = File.OpenRead(Case("pptx-ladder-11-chart-bar-clustered-port.pptx"));
+        using var input = TestFixtures.CreateZipPackage(parts);
         using var output = new MemoryStream();
         var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output,
             new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, MemoryBudget = pool,
                 FontResolver = new PortableRenderingTests.PinnedResolver(), DiagnosticSink = diagnostics.Add }));
         TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
+        TestAssert.True(refusedNested, "The nested workbook's retained bytes reached the shared root.");
         TestAssert.True(diagnostics.All(item => item.Id != "PPTX_NODE_RENDER_FAILED"), "Shared refusal must not omit a chart and report success.");
         TestAssert.Equal(0L, output.Length);
         TestAssert.Equal(0L, pool.Reserved);

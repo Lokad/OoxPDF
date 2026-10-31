@@ -38,103 +38,155 @@ internal sealed partial class DocxReader
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart documentPart = FindDocumentPart(package, cancellationToken);
         XDocument document = package.LoadXml(documentPart, cancellationToken);
-        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name, cancellationToken)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
-            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
-        XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, out _, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
-        DocxDocumentSettings documentSettings = ReadDocumentSettings(settings, cancellationToken);
-        OoxPdfDocxMarkupMode revisionFilteringMarkupMode = ResolveRevisionFilteringMarkupMode(markupMode, documentSettings);
-        DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
-        DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
-        var equationDiagnostics = new List<OoxPdfDiagnostic>();
-        int equationSourceCount = 0;
-        foreach (XElement equation in document.Descendants(MathNamespace + "oMath"))
+        IMemoryReservation? modelStorage = OoxMemory.ReserveModel(document, cancellationToken);
+        DocxDocument? result = null;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            equationSourceCount++;
-        }
-        Action<OoxPdfDiagnostic>? featureSink = diagnosticSink;
-        if (diagnosticSink is not null || equationSourceCount != 0 || document.Descendants(MathNamespace + "oMathPara").Any())
-        {
-            featureSink = diagnostic =>
-            {
-                // Font availability and frame admission belong to rendering. Preserve
-                // probes until that stage can distinguish painted and ignored math.
-                if (diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION") { equationDiagnostics.Add(diagnostic); }
-                else { diagnosticSink?.Invoke(diagnostic); }
-            };
-        }
-        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, featureSink, warnedMustUnderstandParts, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Current sections belong to the body or a paragraph's properties.
-        // Revision snapshots also contain sectPr, but do not own page geometry.
-        XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr")
-            .LastOrDefault(section => section.Parent?.Name == WordprocessingNamespace + "body" ||
-                (section.Parent?.Name == WordprocessingNamespace + "pPr" &&
-                 section.Parent?.Parent?.Name == WordprocessingNamespace + "p"));
-        XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
-        XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
-
-        DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
-        DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
-        DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken, diagnosticSink, warnedMustUnderstandParts);
-        cancellationToken.ThrowIfCancellationRequested();
-        // one related-story cache per Read, shared by document headers/footers,
-        // body section breaks, and every section's page settings.
-        var storyCache = new RelatedStoryPartCache();
-        DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
-            ? null
-            : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
-        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken, storyCache);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ToStaticParagraphsByType(footerBodyElementsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
-        IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
-        IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
-        IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts, bodyElements, settings);
-        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        IReadOnlyList<DocxEquationPartSource> ReadEquationParts()
-        {
-            var parts = new[] { new DocxEquationPartSource(documentPart.Name, equationSourceCount, bodyElements) }
-                .Concat(storyCache.EnumerateEquationParts(cancellationToken))
-                .Concat(relatedStories.Where(story => story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
-                    .GroupBy(story => story.PartName, StringComparer.Ordinal)
-                    .Where(group => group.Any(story => story.SourceEquationCount != 0))
-                    .Select(group => new DocxEquationPartSource(group.Key, group.Sum(story => story.SourceEquationCount),
-                        group.Where(story => story.IsNormalStoryType).SelectMany(story => story.BodyElements).ToArray())))
-                .ToArray();
-            // Sink-less readers retain story-only equation warnings from the
-            // already parsed story cache, without enabling unrelated probes.
-            var probedParts = equationDiagnostics.Select(d => d.PartName).ToHashSet(StringComparer.Ordinal);
-            foreach (DocxEquationPartSource part in parts)
+            IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name, cancellationToken)
+                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+            IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values
+                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+            var warnedMustUnderstandParts = new HashSet<string>(StringComparer.Ordinal);
+            XDocument? settings = LoadRelatedXmlPart(package, documentPart.Name, SettingsRelationshipType, out _, cancellationToken, diagnosticSink, warnedMustUnderstandParts, modelStorage);
+            DocxDocumentSettings documentSettings = ReadDocumentSettings(settings, cancellationToken);
+            OoxPdfDocxMarkupMode revisionFilteringMarkupMode = ResolveRevisionFilteringMarkupMode(markupMode, documentSettings);
+            DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
+            DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
+            var equationDiagnostics = new List<OoxPdfDiagnostic>();
+            int equationSourceCount = 0;
+            foreach (XElement equation in document.Descendants(MathNamespace + "oMath"))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (part.SourceCount == 0 || !probedParts.Add(part.PartName)) { continue; }
-                equationDiagnostics.Add(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_EQUATION", OoxPdfSeverity.Warning,
-                    "Unsupported DOCX feature 'equation' was detected and ignored or approximated.", part.PartName,
-                    SlideIndex: null, PageIndex: null, Feature: "equation", Fallback: "Ignored"));
+                equationSourceCount++;
             }
-            return parts;
-        }
+            Action<OoxPdfDiagnostic>? featureSink = diagnosticSink;
+            if (diagnosticSink is not null || equationSourceCount != 0 || document.Descendants(MathNamespace + "oMathPara").Any())
+            {
+                featureSink = diagnostic =>
+                {
+                    // Font availability and frame admission belong to rendering. Preserve
+                    // probes until that stage can distinguish painted and ignored math.
+                    if (diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION") { equationDiagnostics.Add(diagnostic); }
+                    else { diagnosticSink?.Invoke(diagnostic); }
+                };
+            }
+            EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, relationships, markupContext, featureSink, warnedMustUnderstandParts, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
-        if (pageSize is null)
-        {
-            return new DocxDocument(
-                612d,
-                792d,
-                72d,
-                72d,
-                72d,
-                72d,
+            // Current sections belong to the body or a paragraph's properties.
+            // Revision snapshots also contain sectPr, but do not own page geometry.
+            XElement? sectionProperties = document.Descendants(WordprocessingNamespace + "sectPr")
+                .LastOrDefault(section => section.Parent?.Name == WordprocessingNamespace + "body" ||
+                    (section.Parent?.Name == WordprocessingNamespace + "pPr" &&
+                     section.Parent?.Parent?.Name == WordprocessingNamespace + "p"));
+            XElement? pageSize = sectionProperties?.Element(WordprocessingNamespace + "pgSz");
+            XElement? pageMargins = sectionProperties?.Element(WordprocessingNamespace + "pgMar");
+
+            DocxFontCatalog fontCatalog = LoadFontCatalog(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts, modelStorage);
+            DocxStyleSet styles = LoadStyles(package, documentPart.Name, cancellationToken, diagnosticSink, warnedMustUnderstandParts, modelStorage);
+            DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name, fontCatalog, cancellationToken, diagnosticSink, warnedMustUnderstandParts, modelStorage);
+            cancellationToken.ThrowIfCancellationRequested();
+            // one related-story cache per Read, shared by document headers/footers,
+            // body section breaks, and every section's page settings.
+            var storyCache = new RelatedStoryPartCache(modelStorage);
+            DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
+                ? null
+                : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
+            IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken, storyCache);
+            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+            IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
+            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = ToStaticParagraphsByType(footerBodyElementsByType);
+            IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> headerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+            IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
+            IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
+            IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
+            IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts, bodyElements, settings, modelStorage);
+            IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            IReadOnlyList<DocxEquationPartSource> ReadEquationParts()
+            {
+                var parts = new[] { new DocxEquationPartSource(documentPart.Name, equationSourceCount, bodyElements) }
+                    .Concat(storyCache.EnumerateEquationParts(cancellationToken))
+                    .Concat(relatedStories.Where(story => story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+                        .GroupBy(story => story.PartName, StringComparer.Ordinal)
+                        .Where(group => group.Any(story => story.SourceEquationCount != 0))
+                        .Select(group => new DocxEquationPartSource(group.Key, group.Sum(story => story.SourceEquationCount),
+                            group.Where(story => story.IsNormalStoryType).SelectMany(story => story.BodyElements).ToArray())))
+                    .ToArray();
+                // Sink-less readers retain story-only equation warnings from the
+                // already parsed story cache, without enabling unrelated probes.
+                var probedParts = equationDiagnostics.Select(d => d.PartName).ToHashSet(StringComparer.Ordinal);
+                foreach (DocxEquationPartSource part in parts)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (part.SourceCount == 0 || !probedParts.Add(part.PartName)) { continue; }
+                    equationDiagnostics.Add(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_EQUATION", OoxPdfSeverity.Warning,
+                        "Unsupported DOCX feature 'equation' was detected and ignored or approximated.", part.PartName,
+                        SlideIndex: null, PageIndex: null, Feature: "equation", Fallback: "Ignored"));
+                }
+                return parts;
+            }
+
+            if (pageSize is null)
+            {
+                return result = new DocxDocument(
+                    612d,
+                    792d,
+                    72d,
+                    72d,
+                    72d,
+                    72d,
+                    ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken, storyCache),
+                    floatingDrawings,
+                    headers,
+                    footers,
+                    bodyElements,
+                    [],
+                    [])
+                {
+                    FontCatalog = fontCatalog,
+                    MainPartName = documentPart.Name,
+                    EquationParts = ReadEquationParts(),
+                    EquationDiagnostics = equationDiagnostics,
+                    StyleCatalog = ToStyleCatalog(styles),
+                    HeaderParagraphsByType = headersByType,
+                    FooterParagraphsByType = footersByType,
+                    HeaderBodyElementsByType = headerBodyElementsByType,
+                    FooterBodyElementsByType = footerBodyElementsByType,
+                    HeaderFloatingDrawingsByType = headerDrawingsByType,
+                    FooterFloatingDrawingsByType = footerDrawingsByType,
+                    RelatedStories = relatedStories,
+                    PackageCommentAnchorIds = commentAnchorInventory.PackageAnchorIds,
+                    HiddenCommentAnchorIds = commentAnchorInventory.HiddenAnchorIds,
+                    Settings = documentSettings,
+                    MarkupMode = markupMode,
+                    FinalSectionBreak = finalSectionBreak
+                };
+            }
+
+            double width = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "w", "DOCX"));
+            double height = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "h", "DOCX"));
+            (width, height) = NormalizePageSize(width, height);
+            string? orientation = (string?)pageSize.Attribute(WordprocessingNamespace + "orient");
+            if (orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
+            {
+                (width, height) = (height, width);
+            }
+
+            double left = ReadMargin(pageMargins, WordprocessingNamespace + "left", 72d);
+            double right = ReadMargin(pageMargins, WordprocessingNamespace + "right", 72d);
+            double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
+            double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
+            return result = new DocxDocument(
+                width,
+                height,
+                left,
+                right,
+                top,
+                bottom,
                 ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken, storyCache),
                 floatingDrawings,
                 headers,
@@ -162,53 +214,11 @@ internal sealed partial class DocxReader
                 FinalSectionBreak = finalSectionBreak
             };
         }
-
-        double width = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "w", "DOCX"));
-        double height = OoxUnits.TwipsToPoints(OoxXml.ParseRequiredLong(pageSize, WordprocessingNamespace + "h", "DOCX"));
-        (width, height) = NormalizePageSize(width, height);
-        string? orientation = (string?)pageSize.Attribute(WordprocessingNamespace + "orient");
-        if (orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
+        finally
         {
-            (width, height) = (height, width);
+            if (result is null) modelStorage?.Dispose();
+            else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
         }
-
-        double left = ReadMargin(pageMargins, WordprocessingNamespace + "left", 72d);
-        double right = ReadMargin(pageMargins, WordprocessingNamespace + "right", 72d);
-        double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
-        double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
-        return new DocxDocument(
-            width,
-            height,
-            left,
-            right,
-            top,
-            bottom,
-            ReadPageSettings(pageSize, pageMargins, sectionProperties, settings, package, internalRelationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken, storyCache),
-            floatingDrawings,
-            headers,
-            footers,
-            bodyElements,
-            [],
-            [])
-        {
-            FontCatalog = fontCatalog,
-            MainPartName = documentPart.Name,
-            EquationParts = ReadEquationParts(),
-            EquationDiagnostics = equationDiagnostics,
-            StyleCatalog = ToStyleCatalog(styles),
-            HeaderParagraphsByType = headersByType,
-            FooterParagraphsByType = footersByType,
-            HeaderBodyElementsByType = headerBodyElementsByType,
-            FooterBodyElementsByType = footerBodyElementsByType,
-            HeaderFloatingDrawingsByType = headerDrawingsByType,
-            FooterFloatingDrawingsByType = footerDrawingsByType,
-            RelatedStories = relatedStories,
-            PackageCommentAnchorIds = commentAnchorInventory.PackageAnchorIds,
-            HiddenCommentAnchorIds = commentAnchorInventory.HiddenAnchorIds,
-            Settings = documentSettings,
-            MarkupMode = markupMode,
-            FinalSectionBreak = finalSectionBreak
-        };
     }
 
     private static OoxPdfDocxMarkupMode ResolveRevisionFilteringMarkupMode(
@@ -689,7 +699,7 @@ internal sealed partial class DocxReader
         return (width, height);
     }
 
-    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, out string? relatedPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
+    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, out string? relatedPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null, IMemoryReservation? modelStorage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? part = FindRelatedPart(package, documentPartName, relationshipType, cancellationToken);
@@ -700,6 +710,7 @@ internal sealed partial class DocxReader
         }
 
         XDocument related = package.LoadXml(part, cancellationToken);
+        OoxMemory.GrowModel(modelStorage, related, cancellationToken);
         OoxMarkupCompatibility.WarnMustUnderstandOnce(related, part.Name, diagnosticSink, warnedParts);
         return related;
     }
@@ -719,10 +730,10 @@ internal sealed partial class DocxReader
         return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
-    private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null)
+    private static DocxFontCatalog LoadFontCatalog(OoxPackage package, string documentPartName, CancellationToken cancellationToken, Action<OoxPdfDiagnostic>? diagnosticSink = null, HashSet<string>? warnedParts = null, IMemoryReservation? modelStorage = null)
     {
-        XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, out _, cancellationToken, diagnosticSink, warnedParts);
-        XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, out _, cancellationToken, diagnosticSink, warnedParts);
+        XDocument? fontTable = LoadRelatedXmlPart(package, documentPartName, FontTableRelationshipType, out _, cancellationToken, diagnosticSink, warnedParts, modelStorage);
+        XDocument? theme = LoadRelatedXmlPart(package, documentPartName, ThemeRelationshipType, out _, cancellationToken, diagnosticSink, warnedParts, modelStorage);
         return new DocxFontCatalog(ReadFontTableEntries(fontTable), ReadThemeFonts(theme));
     }
 

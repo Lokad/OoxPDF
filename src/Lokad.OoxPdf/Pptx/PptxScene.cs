@@ -226,84 +226,102 @@ internal sealed partial class PptxSceneBuilder
         var themes = new Dictionary<string, PptxTheme>(StringComparer.OrdinalIgnoreCase);
         PptxTheme? fallbackTheme = null;
         var slides = new List<PptxSceneSlide>(document.Slides.Count);
-        foreach (PptxSlide slide in document.Slides)
+        IMemoryReservation? modelStorage = OoxMemory.Reserve(OoxConversionBudget.Current?.Models, 0);
+        PptxScene? result = null;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            OoxPart? slidePart = package.GetPart(slide.PartName);
-            if (slidePart is null)
+            foreach (PptxSlide slide in document.Slides)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                OoxPart? slidePart = package.GetPart(slide.PartName);
+                if (slidePart is null)
+                {
+                    slides.Add(new PptxSceneSlide(
+                        slide.Index,
+                        slide.PartName,
+                        GetFallbackTheme(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        new XDocument(),
+                        new Dictionary<string, OoxRelationship>(),
+                        new Dictionary<string, OoxRelationship>(),
+                        new Dictionary<string, OoxRelationship>(),
+                        PptxColorMap.Default,
+                        PptxColorMap.Default,
+                        PptxColorMap.Default,
+                        default,
+                        default,
+                        default,
+                        false,
+                        false,
+                        false,
+                        true,
+                        [],
+                        [],
+                        []));
+                    continue;
+                }
+
+                XDocument slideXml = LoadXml(package, slidePart, cancellationToken);
+                OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType, cancellationToken);
+                OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType, cancellationToken);
+                if (modelStorage is not null)
+                {
+                    // Master/layout nodes are copied into each slide's scene. Admit
+                    // that fan-out before constructing the next complete slide model.
+                    long sourceBytes = slidePart.Bytes.LongLength + (layoutPart?.Bytes.LongLength ?? 0) + (masterPart?.Bytes.LongLength ?? 0);
+                    OoxMemory.Resize(modelStorage, checked(modelStorage.Bytes + 2 * (64 * 1024L + 64 * sourceBytes)));
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                PptxTheme theme = ReadTheme(masterPart?.Name) ?? GetFallbackTheme();
+                XDocument? masterXml = masterPart is null ? null : LoadXml(package, masterPart, cancellationToken);
+                XDocument? layoutXml = layoutPart is null ? null : LoadXml(package, layoutPart, cancellationToken);
+                IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name, cancellationToken);
+                IReadOnlyDictionary<string, OoxRelationship> layoutRelationships = layoutPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, layoutPart.Name, cancellationToken);
+                IReadOnlyDictionary<string, OoxRelationship> slideRelationships = ReadRelationships(package, slide.PartName, cancellationToken);
+                IReadOnlyList<XDocument> layoutSources = masterXml is null ? [] : [masterXml];
+                IReadOnlyList<XDocument> slideSources = masterXml is null
+                    ? layoutXml is null ? [] : [layoutXml]
+                    : layoutXml is null ? [masterXml] : [masterXml, layoutXml];
+                PptxColorMap masterColorMap = ReadMasterColorMap(masterXml);
+                PptxColorMap layoutColorMap = ReadColorMapOverride(layoutXml, masterColorMap);
+                PptxColorMap slideColorMap = ReadColorMapOverride(slideXml, layoutColorMap);
                 slides.Add(new PptxSceneSlide(
                     slide.Index,
                     slide.PartName,
-                    GetFallbackTheme(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    new XDocument(),
-                    new Dictionary<string, OoxRelationship>(),
-                    new Dictionary<string, OoxRelationship>(),
-                    new Dictionary<string, OoxRelationship>(),
-                    PptxColorMap.Default,
-                    PptxColorMap.Default,
-                    PptxColorMap.Default,
-                    default,
-                    default,
-                    default,
-                    false,
-                    false,
-                    false,
-                    true,
-                    [],
-                    [],
-                    []));
-                continue;
+                    theme,
+                    masterPart?.Name,
+                    layoutPart?.Name,
+                    masterXml,
+                    layoutXml,
+                    slideXml,
+                    masterRelationships,
+                    layoutRelationships,
+                    slideRelationships,
+                    masterColorMap,
+                    layoutColorMap,
+                    slideColorMap,
+                    ReadBackground(masterXml, theme, masterColorMap),
+                    ReadBackground(layoutXml, theme, layoutColorMap),
+                    ReadBackground(slideXml, theme, slideColorMap),
+                    HasSlideTransition(slideXml),
+                    HasSlideTiming(slideXml),
+                    HasSlideOleObject(slideXml),
+                    ReadShowMasterShapes(slideXml, layoutXml),
+                    masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships, cancellationToken),
+                    layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships, cancellationToken),
+                    ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
             }
 
-            XDocument slideXml = LoadXml(package, slidePart, cancellationToken);
-            OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType, cancellationToken);
-            OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType, cancellationToken);
-            PptxTheme theme = ReadTheme(masterPart?.Name) ?? GetFallbackTheme();
-            XDocument? masterXml = masterPart is null ? null : LoadXml(package, masterPart, cancellationToken);
-            XDocument? layoutXml = layoutPart is null ? null : LoadXml(package, layoutPart, cancellationToken);
-            IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name, cancellationToken);
-            IReadOnlyDictionary<string, OoxRelationship> layoutRelationships = layoutPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, layoutPart.Name, cancellationToken);
-            IReadOnlyDictionary<string, OoxRelationship> slideRelationships = ReadRelationships(package, slide.PartName, cancellationToken);
-            IReadOnlyList<XDocument> layoutSources = masterXml is null ? [] : [masterXml];
-            IReadOnlyList<XDocument> slideSources = masterXml is null
-                ? layoutXml is null ? [] : [layoutXml]
-                : layoutXml is null ? [masterXml] : [masterXml, layoutXml];
-            PptxColorMap masterColorMap = ReadMasterColorMap(masterXml);
-            PptxColorMap layoutColorMap = ReadColorMapOverride(layoutXml, masterColorMap);
-            PptxColorMap slideColorMap = ReadColorMapOverride(slideXml, layoutColorMap);
-            slides.Add(new PptxSceneSlide(
-                slide.Index,
-                slide.PartName,
-                theme,
-                masterPart?.Name,
-                layoutPart?.Name,
-                masterXml,
-                layoutXml,
-                slideXml,
-                masterRelationships,
-                layoutRelationships,
-                slideRelationships,
-                masterColorMap,
-                layoutColorMap,
-                slideColorMap,
-                ReadBackground(masterXml, theme, masterColorMap),
-                ReadBackground(layoutXml, theme, layoutColorMap),
-                ReadBackground(slideXml, theme, slideColorMap),
-                HasSlideTransition(slideXml),
-                HasSlideTiming(slideXml),
-                HasSlideOleObject(slideXml),
-                ReadShowMasterShapes(slideXml, layoutXml),
-                masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships, cancellationToken),
-                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships, cancellationToken),
-                ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
+            return result = new PptxScene(slides);
         }
-
-        return new PptxScene(slides);
+        finally
+        {
+            if (result is null) modelStorage?.Dispose();
+            else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
+        }
 
         PptxTheme? ReadTheme(string? ownerPartName)
         {
@@ -312,7 +330,10 @@ internal sealed partial class PptxSceneBuilder
                 GetRelatedPart(package, ownerPartName, ThemeRelationshipType, cancellationToken);
             if (part is null) return null;
             if (!themes.TryGetValue(part.Name, out PptxTheme? parsed))
+            {
+                if (modelStorage is not null) OoxMemory.GrowModel(modelStorage, package.LoadXml(part, cancellationToken), cancellationToken);
                 themes.Add(part.Name, parsed = PptxTheme.Load(package, part, cancellationToken));
+            }
             return parsed;
         }
 

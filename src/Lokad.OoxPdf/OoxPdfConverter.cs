@@ -175,7 +175,7 @@ public static class OoxPdfConverter
                         BufferSize = 1, Options = FileOptions.Asynchronous | FileOptions.SequentialScan });
                     await using (output.ConfigureAwait(false))
                     {
-                        await PdfDocumentWriter.WriteStagedAsync(output, await PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken).ConfigureAwait(false),
+                        await PdfDocumentWriter.WriteStagedAsync(output, PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken),
                             options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken,
                             options.FixedCreationDate, temporaryStorage).ConfigureAwait(false);
                     }
@@ -263,7 +263,7 @@ public static class OoxPdfConverter
                 // R06.3: produce (drain, spill, blank) first so the totals snapshot and the
                 // observer report still precede serialization, preserving the stream rules;
                 // emission follows from staging.
-                PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(await PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken).ConfigureAwait(false),
+                PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken),
                     options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.TemporaryStorage).ConfigureAwait(false);
                 await using (staged.ConfigureAwait(false))
                 {
@@ -305,17 +305,23 @@ public static class OoxPdfConverter
         }
     }
 
-    private static async ValueTask<IAsyncEnumerable<PdfPage>> PreparePagesAsync(OoxPackage package, OoxPdfInputKind inputKind, OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
+    private static async IAsyncEnumerable<PdfPage> PreparePagesAsync(OoxPackage package, OoxPdfInputKind inputKind, OoxPdfOptions options, Action<OoxPdfDiagnostic>? diagnosticSink, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        IFontResolver resolver = options.FontResolver ?? await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false);
-
-        return inputKind switch
+        OoxConversionBudget? budget = OoxConversionBudget.Current;
+        try
         {
-            OoxPdfInputKind.Pptx => new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, cancellationToken, diagnosticSink), package, diagnosticSink, cancellationToken),
-            OoxPdfInputKind.Docx => new DocxRenderer(resolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderPagesAsync(new DocxReader().Read(package, diagnosticSink, cancellationToken, options.DocxMarkupMode), diagnosticSink, cancellationToken),
-            _ => throw new NotSupportedException($"Unsupported input kind '{inputKind}'.")
-        };
+            cancellationToken.ThrowIfCancellationRequested();
+            IFontResolver resolver = options.FontResolver ?? await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false);
+            IAsyncEnumerable<PdfPage> pages = inputKind switch
+            {
+                OoxPdfInputKind.Pptx => new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, cancellationToken, diagnosticSink), package, diagnosticSink, cancellationToken),
+                OoxPdfInputKind.Docx => new DocxRenderer(resolver, options.DocxMarkupMode, options.DocxMarkupGeometryMode).RenderPagesAsync(new DocxReader().Read(package, diagnosticSink, cancellationToken, options.DocxMarkupMode), diagnosticSink, cancellationToken),
+                _ => throw new NotSupportedException($"Unsupported input kind '{inputKind}'.")
+            };
+            await foreach (PdfPage page in pages.WithCancellation(cancellationToken).ConfigureAwait(false))
+                yield return page;
+        }
+        finally { budget?.ReleaseModels(); }
     }
 
     private static OoxPdfInputKind RequireExplicitInputKind(OoxPdfInputKind requestedKind)

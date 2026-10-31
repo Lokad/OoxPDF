@@ -28,50 +28,60 @@ internal sealed partial class PptxSceneBuilder
             : null;
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
         XDocument? chartXml = chartPart is null ? null : LoadXml(package, chartPart, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        PptxSceneChartExternalData externalData = chartPart is null
-            ? default
-            : ReadChartExternalData(package, chartPart.Name, chartXml, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        PptxSceneChartColorStyle colorStyle = chartPart is null
-            ? PptxSceneChartColorStyle.Undefined(null)
-            : ReadChartColorStyle(package, chartPart.Name, theme, colorMap, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        PptxSceneChartStyle stylePart = chartPart is null
-            ? PptxSceneChartStyle.Undefined(null)
-            : ReadChartStylePart(package, chartPart.Name, theme, colorMap, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
-        IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
-        cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyDictionary<string, OoxRelationship> chartRelationships = chartPart is null
-            ? new Dictionary<string, OoxRelationship>(StringComparer.Ordinal)
-            : package.GetRelationships(chartPart.Name, cancellationToken).ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
-        cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart, plots);
-        return new PptxSceneChart(
-            relationshipId,
-            targetPartName,
-            chartXml,
-            colorMap,
-            externalData,
-            ReadChartOptions(chartXml),
-            paletteColors,
-            colorStyle,
-            stylePart,
-            ReadChartElementValue(chartXml?.Root, "style"),
-            plots,
-            axes,
-            ReadChartTitle(chartXml, theme, colorMap, plots),
-            ReadChartLegend(chartXml, theme, colorMap),
-            ReadChartTextStyleOverride(chartXml?.Root, theme, colorMap),
-            ReadChartPlotAreaManualLayout(chartXml),
-            ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme, colorMap),
-            ReadChartShapeStyle(chartXml?
-                .Descendants(ChartNamespace + "plotArea")
-                .FirstOrDefault()
-                ?.Element(ChartNamespace + "spPr"), theme, colorMap),
-            chartRelationships);
+        IMemoryReservation? modelStorage = chartXml is null ? null : OoxMemory.ReserveModel(chartXml, cancellationToken);
+        PptxSceneChart? result = null;
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            PptxSceneChartExternalData externalData = chartPart is null
+                ? default
+                : ReadChartExternalData(package, chartPart.Name, chartXml, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            PptxSceneChartColorStyle colorStyle = chartPart is null
+                ? PptxSceneChartColorStyle.Undefined(null)
+                : ReadChartColorStyle(package, chartPart.Name, theme, colorMap, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            PptxSceneChartStyle stylePart = chartPart is null
+                ? PptxSceneChartStyle.Undefined(null)
+                : ReadChartStylePart(package, chartPart.Name, theme, colorMap, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
+            IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
+            cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyDictionary<string, OoxRelationship> chartRelationships = chartPart is null
+                ? new Dictionary<string, OoxRelationship>(StringComparer.Ordinal)
+                : package.GetRelationships(chartPart.Name, cancellationToken).ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
+            cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart, plots);
+            return result = new PptxSceneChart(
+                relationshipId,
+                targetPartName,
+                chartXml,
+                colorMap,
+                externalData,
+                ReadChartOptions(chartXml),
+                paletteColors,
+                colorStyle,
+                stylePart,
+                ReadChartElementValue(chartXml?.Root, "style"),
+                plots,
+                axes,
+                ReadChartTitle(chartXml, theme, colorMap, plots),
+                ReadChartLegend(chartXml, theme, colorMap),
+                ReadChartTextStyleOverride(chartXml?.Root, theme, colorMap),
+                ReadChartPlotAreaManualLayout(chartXml),
+                ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme, colorMap),
+                ReadChartShapeStyle(chartXml?
+                    .Descendants(ChartNamespace + "plotArea")
+                    .FirstOrDefault()
+                    ?.Element(ChartNamespace + "spPr"), theme, colorMap),
+                chartRelationships);
+        }
+        finally
+        {
+            if (result is null) modelStorage?.Dispose();
+            else if (modelStorage is not null) OoxMemory.Resize(modelStorage, modelStorage.Bytes / 2);
+        }
     }
 
     internal static PptxSceneChartOptions ReadChartOptions(XDocument? chartXml)

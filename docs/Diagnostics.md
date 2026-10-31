@@ -171,6 +171,14 @@ DOM; malformed/canceled parses refund attempted growth. The current estimates us
 constructing them. These estimates leave margin for dense nodes and normalization;
 they are not measured live bytes or universal heap bounds. Budgeted documents can
 now refuse at parsing where only their encoded bytes were previously funded.
+Derived document, scene/chart and embedded-workbook models use one independent
+producer-owned scope on that same root. It survives temporary nested packages and
+ends after the final page-production borrow, before staged serialization. Model
+factories use coarse source-shape capacity with construction headroom, then refund
+the construction window while models remain funded. Scene admission includes each
+slide's copied master/layout content. Repagination does not accumulate another
+parsed-model charge. Estimates are capacity, not exact live bytes or a heap bound;
+remaining repeated-placement/vector resource coverage is tracked separately.
 PDF content staging includes encoding/readback scratch and
 spill buffers, plus private SFNT/subset programs and retained kerning-pair arrays.
 Copied programs and pair arrays stay funded through emission. Sorting scratch is
@@ -187,8 +195,8 @@ alpha compression fails. Crop and generated shadow/glow planes are admitted befo
 allocation and refund after their compression/paint users finish. Recolor mutates
 only private decoded/cropped pixels, leaving encoded source/cache bytes unchanged.
 Font-source leases and longer-lived caches keep admission through their final
-reader, including eviction and shutdown. Models, discovery metadata, other parsed maps
-and other PDF resources remain pending.
+reader, including eviction and shutdown. Repeated-placement capacity, discovery
+metadata, other parsed maps and other PDF/vector resources remain pending.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.
