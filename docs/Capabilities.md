@@ -100,7 +100,7 @@ Approximate or restricted:
 - Legends without an overlay flag follow PowerPoint's overlay default. Specify
   `<c:overlay val="0"/>` to reserve plot space. Legend geometry remains approximate.
   Bottom line legends share measured wrapping with horizontal bar legends;
-  manual legend frames still constrain overflow.
+  empty layout metadata preserves wrapping; authored manual frames constrain overflow.
 - Authored chart titles survive automatic-title deletion flags. Automatic-title
   inference remains limited to an explicitly enabled, unambiguous series name;
   inferred titles resolve built-in/default sizes and honor explicit chart text

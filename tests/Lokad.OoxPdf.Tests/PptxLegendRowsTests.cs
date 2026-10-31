@@ -61,20 +61,33 @@ internal static class PptxLegendRowsTests
         }
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay)
+    public static void PptxEmptyLegendLayoutMetadataKeepsWrappedContent()
+    {
+        foreach (string kind in new[] { "line", "bar" })
+        foreach (bool overlay in new[] { false, true })
+        {
+            var ordinary = Render(288, 12, 6, overlay, kind: kind).Page;
+            foreach (string metadata in new[] { "<c:layout/>", "<c:layout><c:manualLayout/></c:layout>" })
+                TestAssert.Equal(ordinary.Content, Render(288, 12, 6, overlay, metadata, kind).Page.Content);
+        }
+    }
+
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line")
     {
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
             <c:ser><c:idx val="{{i - 1}}"/><c:order val="{{i - 1}}"/><c:tx><c:v>North West Region {{i}}</c:v></c:tx>
               <c:cat><c:strLit><c:pt idx="0"><c:v>Q1</c:v></c:pt><c:pt idx="1"><c:v>Q2</c:v></c:pt></c:strLit></c:cat>
               <c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
             """));
+        bool bar = kind == "bar";
+        string plot = bar ? "barChart" : "lineChart";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:lineChart><c:grouping val="standard"/>
-                {{series}}<c:axId val="1"/><c:axId val="2"/></c:lineChart>
-                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>
-                <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
-              </c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
+              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{plot}}>{{(bar ? "<c:barDir val=\"bar\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
+                {{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
+                <c:catAx><c:axId val="1"/><c:axPos val="{{(bar ? "l" : "b")}}"/><c:crossAx val="2"/></c:catAx>
+                <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(bar ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
+              </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="b"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
                 <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>
               </c:legend></c:chart>
             </c:chartSpace>

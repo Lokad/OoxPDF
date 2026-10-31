@@ -4,7 +4,8 @@
 
 - PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
   explicit non-overlay legends retain their plot-space reservation. Bottom line
-  legends wrap long series names using the shared measured legend rows.
+  legends wrap long series names using shared measured rows, including when
+  empty layout metadata is present.
 
 - PPTX: automatic chart titles share measured frame placement and caption-sized
   painting across chart kinds. Manual title rectangles retain authored bounds;

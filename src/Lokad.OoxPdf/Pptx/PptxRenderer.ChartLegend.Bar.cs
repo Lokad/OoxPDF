@@ -15,7 +15,7 @@ internal sealed partial class PptxRenderer
 
     private static bool UsesAutomaticHorizontalBarFrame(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
         options.BarDirection == PptxSceneChartBarDirection.Bar &&
-        !chart.PlotAreaLayout.HasLayout && !legend.Layout.HasLayout &&
+        !chart.PlotAreaLayout.HasGeometryValues && !legend.Layout.HasGeometryValues &&
         (!legend.Visible || legend.Overlay ||
             legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
 
@@ -70,7 +70,7 @@ internal sealed partial class PptxRenderer
         // The container supplies its row constraint; bar frames include the
         // axis strips, while line rows follow their plot width. Manual legends
         // keep their authored width. Painting consumes these same packed frames.
-        double availableWidth = layout.Legend.Layout.HasLayout ? box.Width : Math.Min(layout.Frame.Width, maximumRowWidth);
+        double availableWidth = layout.Legend.Layout.HasGeometryValues ? box.Width : Math.Min(layout.Frame.Width, maximumRowWidth);
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
         int start = 0;
@@ -128,7 +128,7 @@ internal sealed partial class PptxRenderer
             }
             rows.Add((start, entries.Count, Math.Max(0d, width - padding)));
         }
-        if (!layout.Legend.Layout.HasLayout)
+        if (!layout.Legend.Layout.HasGeometryValues)
         {
             double packedWidth = Math.Min(availableWidth, rows.Max(row => row.Width));
             double x = packedAsBottom
@@ -164,7 +164,7 @@ internal sealed partial class PptxRenderer
         else
         {
             double extra = (rows.Count - 1) * box.LineHeight;
-            bool automatic = !layout.Legend.Overlay && !layout.Legend.Layout.HasLayout && !layout.ManualPlotLayoutApplied;
+            bool automatic = !layout.Legend.Overlay && !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
             double reserved = automatic ? Math.Min(extra, Math.Max(0d, layout.PlotBox.Height - 1d)) : 0d;
             if (reserved > 0d)
             {
@@ -179,7 +179,7 @@ internal sealed partial class PptxRenderer
             firstY = box.FirstY + (bottom ? admitted : 0d);
             clipY = box.ClipY - (bottom ? 0d : admitted);
             clipHeight = box.ClipHeight + admitted;
-            if (layout.Legend.Layout.HasLayout)
+            if (layout.Legend.Layout.HasGeometryValues)
             {
                 clipY = box.ClipY;
                 clipHeight = box.ClipHeight;

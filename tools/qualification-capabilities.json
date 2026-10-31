@@ -1,5 +1,6 @@
 {
   "pptx-legend-rows": [
+    "PptxEmptyLegendLayoutMetadataKeepsWrappedContent",
     "PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame",
     "PptxBottomStrokeLegendKeyKeepsItsOfficeSpanAcrossTextSizes",
     "PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace",

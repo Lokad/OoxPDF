@@ -51,7 +51,7 @@ internal sealed partial class PptxRenderer
                 ChartLegendBox? preparedLegendBox = null;
                 if (chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
                 {
-                    bool automatic = !chartLayout.ManualPlotLayoutApplied && !chartLayout.Legend.Layout.HasLayout;
+                    bool automatic = !chartLayout.ManualPlotLayoutApplied && !chartLayout.Legend.Layout.HasGeometryValues;
                     var prepared = await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle,
                         fontResolver, context, chartLayout.PlotBox.Width, measuredBand: automatic).ConfigureAwait(false);
                     chartLayout = prepared.Layout;
