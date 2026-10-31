@@ -23,7 +23,10 @@ The built-in `WindowsFontResolver` uses local Windows font directories. Await
 synchronously prepares the same shared snapshot. Resolution afterwards performs
 no file reads; font programs are acquired lazily. Conversions with no explicit
 resolver await this metadata preparation automatically. Directory enumeration
-remains synchronous.
+remains synchronous. With a conversion memory budget, discovery funds actual
+file-buffer capacity and bounded parsing headroom until the attempt finishes.
+Refusal is terminal and never publishes a partial catalog or becomes a missing-font
+fallback. The process-shared catalog metadata remains incidental storage.
 Selected DOCX and PPTX font programs are acquired asynchronously before
 measurement and painting, including generated bullets and chart labels.
 Preparation shares one conversion-scoped parsed-program cache across slides.

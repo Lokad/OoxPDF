@@ -195,8 +195,11 @@ alpha compression fails. Crop and generated shadow/glow planes are admitted befo
 allocation and refund after their compression/paint users finish. Recolor mutates
 only private decoded/cropped pixels, leaving encoded source/cache bytes unchanged.
 Font-source leases and longer-lived caches keep admission through their final
-reader, including eviction and shutdown. Repeated-placement capacity, discovery
-metadata, other parsed maps and other PDF/vector resources remain pending.
+reader, including eviction and shutdown. Page construction, repeated DOCX
+placement and staged page/vector metadata have coarse capacity admission through
+their existing owners, including content spills. Local discovery buffers remain
+funded through reads and parsing; the shared catalog metadata is incidental at
+the measured scale. Arbitrary expansion and other incidental owners remain unproven.
 Null budget leaves memory ungoverned. No private allowance or complete heap
 accounting is introduced; allow headroom for incidental storage and GC lag.
 Caller streams remain open and are not charged again as library storage.

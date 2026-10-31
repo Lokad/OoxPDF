@@ -9,7 +9,9 @@ constructor now completes metadata discovery during construction instead of the
 first query, blocking on the same initialization core. Concurrent callers share
 one snapshot; canceled initialization publishes nothing, and canceled waiters do
 not cancel other callers. Cache invalidation still affects only future resolvers.
-Directory enumeration has no asynchronous platform equivalent here.
+Directory enumeration has no asynchronous platform equivalent here. With a
+conversion memory budget, discovery buffer capacity is admitted through parsing;
+refusal ends conversion without publishing a partial catalog or falling back.
 
 `IFontProgramSource.GetBytesAsync` is replaced by
 `AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)`,

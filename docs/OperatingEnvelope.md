@@ -23,8 +23,10 @@ coarse source-sized DOM/path/gradient working capacity before parsing and refund
 it after painting or failure. Retained vector/PDF construction resources remain
 partial; render-local scratch does not cover their later lifetime. Staging retains
 coarse vector descriptor/stop/pattern capacity in its existing aggregate reservation
-through emission, including when content spills; cleanup refunds after descriptors
-and storage are released. Each page producer also holds one coarse source-sized construction reservation
+through emission, including when content spills. The same aggregate includes
+coarse page/store records, font/image/annotation references and ordinary numbering/
+collection headroom; small or spilled payloads keep their metadata funding. Cleanup
+refunds after descriptors and storage are released. Each page producer also holds one coarse source-sized construction reservation
 through painting, snapshots and staging awaits. It refunds on page advancement or
 iterator disposal; spilled content retains its independent descriptor funding.
 DOCX estimates placed text/math/tables/textboxes/stories and SVG expansion; PPTX
@@ -53,9 +55,11 @@ explicit cache budget: coarse admission precedes parsing/indexing, construction
 headroom refunds after publication, and retained capacity ends after owned indexes
 are cleared and pending acquisitions finish. Returned catalog values are caller-owned.
 Governed operations without a cache
-budget acquire private programs. Local-discovery metadata, other parsed maps and
-other PDF resources remain pending, so
-this is partial coverage. Null budget is ungoverned. Use
+budget acquire private programs. Local discovery admits actual file-buffer
+capacity and bounded parsing headroom through each read/parse attempt, including
+collection fallback overlap, then refunds. Its shared catalog metadata remains
+incidental at the measured scale. Unusually expanding inputs and other incidental
+owners remain unproven, so this is partial coverage. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.
 
 The existing producer now owns one model scope separate from package buffers and
