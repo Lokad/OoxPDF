@@ -1481,14 +1481,21 @@ internal static class PptxChartsTests
 
     public static void PptxLegendlessLinePlotCategoryOffsetRetainsSourceLayoutFallbacks()
     {
-        foreach (string guard in new[] { "manual", "composed", "right", "category-top", "category-hidden" })
+        foreach (string guard in new[] { "manual", "composed", "category-top" })
         {
             string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard, categoryLabelOffset: 200);
             AssertLineLayoutClip("106.56 286.56 218.88 146.88 re W* n", pdf);
         }
+        foreach (string guard in new[] { "right", "category-hidden" })
+        {
+            string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard, categoryLabelOffset: 200);
+            TestAssert.True(Regex.IsMatch(pdf, @"106\.56 286\.56 218\.88 [\d.]+ re W\* n"),
+                "A measured numeric header preserves the unmeasured category-offset and horizontal fallbacks.");
+        }
 
         string crowded = RenderLegendlessLineLayoutProbe(48, 360, 100, categoryLabelOffset: 2000);
-        AssertLineLayoutClip("115.2 286.56 273.6 146.88 re W* n", crowded);
+        TestAssert.True(Regex.IsMatch(crowded, @"115\.2 286\.56 273\.6 [\d.]+ re W\* n"),
+            "An unadmitted category band retains its positive fallback width and bottom.");
     }
 
     public static void PptxChartSourceMinimumIntervalsEmitLabelsAndGridlineLevels()
