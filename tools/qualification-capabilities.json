@@ -13017,5 +13017,16 @@
       "PortableRenderingPptxJustificationPreservesWordAndGlyphGeometry",
       "PortablePptxInspectionUsesTheRenderingFontSource",
       "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
+  "pptx-chart-portable-semantics": [
+      "PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering",
+      "PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering",
+      "PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering",
+      "PptxSyntheticChartValueAxisReversedOrientationMovesBarDataLabels",
+      "PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels",
+      "PptxSyntheticChartCategoryAxisLabelOffsetRender",
+      "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
+      "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
+      "PptxSyntheticChartStyleAxisDefaultsDriveManualAxisTitleRendering"
   ]
 }
