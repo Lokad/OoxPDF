@@ -138,6 +138,12 @@ internal sealed partial class PptxRenderer
             }
             rows.Add((start, entries.Count, Math.Max(0d, width - padding)));
         }
+        // Office limits automatic legends to whole rows within half the chart
+        // height, including overlay legends. Authored geometry keeps its bounds.
+        bool automaticLegend = !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
+        int admittedRowCount = automaticLegend
+            ? (int)Math.Min(rows.Count, Math.Max(0d, Math.Floor(layout.Frame.Height / (2d * box.LineHeight))))
+            : rows.Count;
         if (!layout.Legend.Layout.HasGeometryValues)
         {
             double packedWidth = Math.Min(availableWidth, rows.Max(row => row.Width));
@@ -149,8 +155,8 @@ internal sealed partial class PptxRenderer
         double firstY, clipY, clipHeight;
         if (measuredBand)
         {
-            double occupied = rows.Count * box.LineHeight - (rows.Count > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
-            double requiredBand = occupied + HorizontalLegendFrameInset;
+            double occupied = admittedRowCount * box.LineHeight - (admittedRowCount > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
+            double requiredBand = admittedRowCount == 0 ? 0d : occupied + HorizontalLegendFrameInset;
             double reserved = layout.Legend.Overlay ? 0d : Math.Min(requiredBand, Math.Max(0d, layout.PlotBox.Height - 1d));
             double topContent = Math.Max(0d, layout.Frame.Y + layout.Frame.Height -
                 PptxChartMetricRules.HorizontalBarPlotTopReserve - layout.PlotBox.Y - layout.PlotBox.Height);
@@ -173,7 +179,7 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            double extra = (rows.Count - 1) * box.LineHeight;
+            double extra = Math.Max(0, admittedRowCount - 1) * box.LineHeight;
             bool automatic = !layout.Legend.Overlay && !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
             double reserved = automatic ? Math.Min(extra, Math.Max(0d, layout.PlotBox.Height - 1d)) : 0d;
             if (reserved > 0d)
@@ -199,9 +205,9 @@ internal sealed partial class PptxRenderer
         clipY = Math.Max(layout.Frame.Y, clipY);
         clipHeight = Math.Max(0d, clipTop - clipY);
         box = box with { ClipY = clipY, ClipHeight = clipHeight };
-        var frames = new ChartLegendEntryFrame[entries.Count];
-        bool clipped = false;
-        for (int row = 0; row < rows.Count; row++)
+        var frames = new ChartLegendEntryFrame[admittedRowCount == 0 ? 0 : rows[admittedRowCount - 1].End];
+        bool clipped = admittedRowCount < rows.Count;
+        for (int row = 0; row < admittedRowCount; row++)
         {
             double x = box.X + Math.Max(0d, (box.Width - rows[row].Width) / 2d);
             double y = firstY - row * box.LineHeight;

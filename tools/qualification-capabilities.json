@@ -1,4 +1,27 @@
 {
+  "pptx-legend-admission": [
+    "PptxCrowdedLegendsPreservePlotSpaceAndDiagnoseUnadmittedRows",
+    "PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame",
+    "PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame",
+    "PptxEmptyLegendLayoutMetadataKeepsWrappedContent",
+    "PptxBottomStrokeLegendKeyKeepsItsOfficeSpanAcrossTextSizes",
+    "PptxHorizontalLegends",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+    "PptxHorizontalFrameOverlayLegendDoesNotConsumePlotSpace",
+    "PptxCartesianHeadersKeepOverlayCaptionsOutOfPlotReservation",
+    "PptxColumnCategoryOffsetsKeepCompleteInkInsideTheirFrame",
+    "PptxVaryingBarCategoryLegends",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-line-label-palette": [
     "PptxLineDataLabelKeysMatchIndependentOfficePalette",
     "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",

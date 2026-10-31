@@ -16,7 +16,8 @@
   label ownership. Column footers share category-strip measurement and numeric
   end clearance, including when category labels are hidden. Custom offsets no longer
   displace column category labels below their automatic chart frame. Line data-label
-  keys retain the chart's inherited palette colors.
+  keys retain the chart's inherited palette colors. Crowded automatic legends
+  truncate overflowing rows while preserving space for the plot.
 
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected

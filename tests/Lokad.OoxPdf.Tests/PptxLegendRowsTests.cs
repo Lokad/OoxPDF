@@ -13,6 +13,55 @@ internal static class PptxLegendRowsTests
 
     public static void PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame() => CheckBottomLegendRows("column");
 
+    public static void PptxCrowdedLegendsPreservePlotSpaceAndDiagnoseUnadmittedRows()
+    {
+        // Office PDF/API controls establish a row budget within half the chart
+        // height. Exercise the resulting placement contract with portable fonts.
+        foreach (var (width, height, size, count) in new[]
+        {
+            (576, 360, 12, 97), (576, 360, 12, 205),
+            (288, 240, 8, 97), (840, 420, 18, 205)
+        })
+        {
+            var overlay = Render(width, size, count, overlay: true, kind: "column", height: height, categoryLegend: true);
+            var reserved = Render(width, size, count, overlay: false, kind: "column", height: height, categoryLegend: true);
+            var overlayBars = ReadBars(overlay.Page, count);
+            var reservedBars = ReadBars(reserved.Page, count);
+            // All values are4 on an authored0..5 scale; painted height exposes
+            // actual plot admission without depending on private layout helpers.
+            double reservedHeight = (overlayBars[0][3] - reservedBars[0][3]) / 0.8d;
+            TestAssert.True(reservedHeight > 0d && reservedHeight <= height / 2d + 0.01d,
+                "A crowded legend must not consume more than its chart-height budget.");
+            TestAssert.True(reservedBars.All(bar => bar[3] > size),
+                "Every source bar retains useful visible height instead of collapsing to a one-point plot.");
+            var overlayNames = Names(overlay.Page);
+            var reservedNames = Names(reserved.Page);
+            TestAssert.True(overlayNames.Length > 0 && overlayNames.Length < count,
+                "The automatic frame paints an admitted prefix and diagnoses overflow.");
+            TestAssert.True(overlayNames.SequenceEqual(reservedNames),
+                "Overlay changes plot reservation while keeping the same admitted legend frames.");
+            for (int i = 0; i < reservedNames.Length; i++)
+                TestAssert.Equal("Category " + (i + 1).ToString(CultureInfo.InvariantCulture), reservedNames[i].Text);
+            TestAssert.True(overlay.Diagnostics.Any(d => d.Message.Contains("overflowing entries", StringComparison.Ordinal)) &&
+                reserved.Diagnostics.Any(d => d.Message.Contains("overflowing entries", StringComparison.Ordinal)),
+                "Unadmitted source entries must remain explicit through the existing overflow diagnostic.");
+        }
+
+        static (string Text, double X, double Y)[] Names(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+            .SelectMany(show => Regex.Matches(show.Text, @"Category \d+")
+                .Select(match => (match.Value, show.X, show.Y))).ToArray();
+
+        static double[][] ReadBars(PdfPage page, int count)
+        {
+            var bars = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re f")
+                .Select(match => match.Groups.Cast<Group>().Skip(1)
+                    .Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(rect => rect[2] > 0d && rect[2] < 3d).ToArray();
+            TestAssert.Equal(count, bars.Length);
+            return bars;
+        }
+    }
+
     private static void CheckBottomLegendRows(string kind)
     {
         foreach (int width in new[] { 288, 576 })
@@ -21,14 +70,19 @@ internal static class PptxLegendRowsTests
         {
             var overlay = Render(width, size, count, overlay: true, kind: kind);
             var reserved = Render(width, size, count, overlay: false, kind: kind);
+            // Independent Office long6/long9 and line9 controls: the narrow
+            // 18pt frame admits six rows, even when nine names fit the whole frame.
+            int admittedNames = width == 288 && size == 18 ? Math.Min(count, 6) : count;
             foreach (PdfPage page in new[] { overlay.Page, reserved.Page })
             {
-                int rows = CheckCompleteNamesInFrame(page, width, count);
+                int rows = CheckCompleteNamesInFrame(page, width, admittedNames);
+                TestAssert.Equal(admittedNames, DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+                    .SelectMany(item => Regex.Matches(item.Text, @"North West Region \d+")).Count());
                 if (width == 288 && size >= 12)
                     TestAssert.True(rows > 1, "Long series names wrap instead of continuing beyond the frame.");
             }
-            TestAssert.True(overlay.Diagnostics.Concat(reserved.Diagnostics).All(item => !item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
-                "These fitting names must not be admitted as clipped overflow.");
+            TestAssert.Equal(admittedNames < count, overlay.Diagnostics.Any(item => item.Message.Contains("overflowing entries", StringComparison.Ordinal)));
+            TestAssert.Equal(admittedNames < count, reserved.Diagnostics.Any(item => item.Message.Contains("overflowing entries", StringComparison.Ordinal)));
             var overlayNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(overlay.Page).Where(item => item.Text.Contains("North West Region", StringComparison.Ordinal)).ToArray();
             var reservedNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(reserved.Page).Where(item => item.Text.Contains("North West Region", StringComparison.Ordinal)).ToArray();
             TestAssert.True(overlayNames.Select(item => (item.Text, item.X, item.Y)).SequenceEqual(reservedNames.Select(item => (item.Text, item.X, item.Y))),
@@ -87,21 +141,29 @@ internal static class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line")
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false)
     {
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
             <c:ser><c:idx val="{{i - 1}}"/><c:order val="{{i - 1}}"/><c:tx><c:v>North West Region {{i}}</c:v></c:tx>
               <c:cat><c:strLit><c:pt idx="0"><c:v>Q1</c:v></c:pt><c:pt idx="1"><c:v>Q2</c:v></c:pt></c:strLit></c:cat>
               <c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
             """));
+        if (categoryLegend)
+        {
+            string categories = string.Concat(Enumerable.Range(0, count).Select(i =>
+                $"<c:pt idx=\"{i}\"><c:v>Category {i + 1}</c:v></c:pt>"));
+            string values = string.Concat(Enumerable.Range(0, count).Select(i =>
+                $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
+            series = $"<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:cat><c:strLit><c:ptCount val=\"{count}\"/>{categories}</c:strLit></c:cat><c:val><c:numLit><c:ptCount val=\"{count}\"/>{values}</c:numLit></c:val></c:ser>";
+        }
         bool bar = kind != "line";
         bool horizontal = kind == "bar";
         string plot = bar ? "barChart" : "lineChart";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
-                {{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
-                <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/></c:catAx>
+                {{(categoryLegend ? "<c:varyColors val=\"1\"/>" : "")}}{{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
+                <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/>{{(categoryLegend ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
               </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="b"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
                 <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>
@@ -110,7 +172,7 @@ internal static class PptxLegendRowsTests
             """;
         string slide = $$"""
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="{{width * 12700}}" cy="4572000"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+              <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="{{width * 12700}}" cy="{{height * 12700}}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
             </p:sld>
             """;
         using var stream = PptxTests.CreateSingleChartPackageStream(chart,

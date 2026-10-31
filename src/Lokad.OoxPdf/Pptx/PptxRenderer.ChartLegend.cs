@@ -275,8 +275,9 @@ internal sealed partial class PptxRenderer
         bool emitBottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
         double emitTextGap = ComputeHorizontalLegendTextGap(style.FontSize, emitBottomLegend);
         double emitEntryPadding = ResolveHorizontalLegendInterEntryGap(style.FontSize, entries, style, textMeasurer, emitBottomLegend);
-        var runs = new List<TextRun>(entries.Count);
-        for (int i = 0; i < entries.Count; i++)
+        int admittedEntryCount = legendBox.EntryFrames?.Count ?? entries.Count;
+        var runs = new List<TextRun>(admittedEntryCount);
+        for (int i = 0; i < admittedEntryCount; i++)
         {
             ChartLegendEntry entry = entries[i];
             double GetPackedHorizontalLegendEntryX(double markerWidth, double legendX, int entryIndex)
