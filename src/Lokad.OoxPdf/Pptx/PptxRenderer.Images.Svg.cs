@@ -42,6 +42,13 @@ internal sealed partial class PptxRenderer
         int slideIndex, string? partName, CancellationToken cancellationToken,
         string picturePreset = "rect", IReadOnlyDictionary<string, double>? pictureAdjustments = null)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        // Coarse render-local DOM, gradient/path models and working headroom.
+        // Encoded input is borrowed; retained PDF content/resources have their
+        // separate lifetime and are not funded by this temporary reservation.
+        using IMemoryReservation? scratch = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
+            checked(64L * 1024 + 32L * bytes.Length));
+        cancellationToken.ThrowIfCancellationRequested();
         XDocument svg;
         try
         {

@@ -18,7 +18,11 @@ drawing remain synchronous.
 cache capacity, with temporary parsing/normalization headroom. One existing package
 scope holds retained estimates through its final readers; failed parsing refunds
 attempted growth and cache hits reuse funding. XML admission is a coarse estimate,
-not an exact graph/heap measurement. It also admits PDF content staging, private SFNT/
+not an exact graph/heap measurement. The shared SVG painter separately admits
+coarse source-sized DOM/path/gradient working capacity before parsing and refunds
+it after painting or failure. Retained vector/PDF construction resources remain
+partial; render-local scratch does not cover their later lifetime. It also admits
+PDF content staging, private SFNT/
 subset programs, retained kerning-pair arrays and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression
 also admits actual output capacity, growth overlap and final copying. Image payloads

@@ -12936,5 +12936,14 @@
     "DocxTableLayoutStageSplitsOversizedCellPageBreakFragmentAcrossFreshPages",
     "DocxTableLayoutStageUsesEarliestCellPageBreakAsRowBoundary",
     "DocxTableCellTextLinesMemoSharesSplitCells"
+  ],
+  "svg-render-scratch": [
+    "SvgMemory",
+    "DocxSvgImage",
+    "PptxSvg",
+    "PptxSyntheticSvg",
+    "MemoryAdmission",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 }

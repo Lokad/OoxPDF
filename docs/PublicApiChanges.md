@@ -119,7 +119,11 @@ separate byte funding. Returned catalog values are caller-owned; their sources
 reject new acquisition after shutdown. Small cache allowances can therefore refuse
 pack creation earlier, with `MemoryAdmission` / `SharedResource` rather than a
 transport error or retry. Local-discovery metadata, other parsed maps and PDF/vector
-resource coverage remain partial. The removed estimated lease is not a second memory model.
+resource coverage remain partial. SVG now requests coarse render-local DOM/path/
+gradient working capacity before parsing, then refunds it after painting/failure.
+A host refusal escapes DOCX raster fallback and PPTX ignored-node recovery; small
+budgets can refuse earlier. This does not fund retained PDF/vector resources or
+change the rendering rules. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,
