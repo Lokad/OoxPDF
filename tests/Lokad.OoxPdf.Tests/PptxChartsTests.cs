@@ -1737,38 +1737,6 @@ internal static class PptxChartsTests
         TestAssert.True(Math.Abs(areaNoCats - 42.05d) < 0.001d, "Missing edge labels should leave the bare block. Got " + areaNoCats);
     }
 
-    public static void PptxSyntheticChartHorizontalBarCategoryReserveKeepsOfficeGap()
-    {
-        var method = typeof(PptxRenderer).GetMethod(
-            "ComputeHorizontalBarCategoryLeftReserve",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        TestAssert.True(method is not null, "Expected chart category-reserve helper to remain inspectable by the Office evidence guard.");
-
-        double shortLabels = (double)method!.Invoke(null, [49.9d])!;
-        double longLabels = (double)method.Invoke(null, [86.5d])!;
-        double noLabels = (double)method.Invoke(null, [0d])!;
-
-        TestAssert.True(Math.Abs(shortLabels - 73.1d) < 0.0001d, "Short-label reserve should be label plus 23.2pt Office gap. Got " + shortLabels);
-        TestAssert.True(Math.Abs(longLabels - 109.7d) < 0.0001d, "Long-label reserve should use the same gap. Got " + longLabels);
-        TestAssert.True(Math.Abs(noLabels - 23.2d) < 0.0001d, "Empty labels keep the bare gap below every preset. Got " + noLabels);
-    }
-
-    public static void PptxSyntheticChartBarValueAxisReserveKeepsOfficeGap()
-    {
-        var method = typeof(PptxRenderer).GetMethod(
-            "ComputeCartesianValueAxisLeftReserve",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        TestAssert.True(method is not null, "Expected chart value-reserve helper to remain inspectable by the Office evidence guard.");
-
-        double threeDigit = (double)method!.Invoke(null, [27.37d, 18d])!;
-        double twoDigit = (double)method.Invoke(null, [18.25d, 18d])!;
-        double compositeNarrow = (double)method.Invoke(null, [6.41d, 12d])!;
-
-        TestAssert.True(Math.Abs(threeDigit - 50.43d) < 0.01d, "Three-digit reserve should be label plus indent plus font-relative gap. Got " + threeDigit);
-        TestAssert.True(Math.Abs(twoDigit - 41.31d) < 0.01d, "Two-digit reserve should meet narrow presets exactly. Got " + twoDigit);
-        TestAssert.True(Math.Abs(compositeNarrow - 23.95d) < 0.01d, "Narrow-tick titled columns should not overshoot the preset. Got " + compositeNarrow);
-    }
-
     public static void PptxSyntheticStackedValueAxisReserveKeepsSinglePlotRegime()
     {
         var method = typeof(PptxRenderer).GetMethod(

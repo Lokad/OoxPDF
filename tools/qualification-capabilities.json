@@ -1,4 +1,23 @@
 {
+  "pptx-horizontal-frame": [
+    "PptxHorizontalFrame",
+    "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
+    "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
+    "PptxVaryingBarCategoryLegends",
+    "PptxNegativeBar",
+    "PptxAuthoredTintShade",
+    "PptxAutomaticBarPalettes",
+    "PptxClusteredSpacing",
+    "PptxAutomaticColumnInsets",
+    "PptxScenePreservesChartColorStyleDeclarations",
+    "PptxSyntheticBarChartLegendSwatchesUseSeriesStroke",
+    "PptxSyntheticBarChartSeriesLineWithoutWidthUsesFilledSeriesDefault",
+    "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-builtin-palettes": [
     "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
     "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
@@ -703,6 +722,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxHorizontalFrame",
     "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
     "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
     "PptxAutomaticColumnInsets",
@@ -12288,7 +12308,7 @@
     "PptxSyntheticChartAutoTitleUsesOfficeScaledSize",
     "PptxSyntheticChartAxisLabelsSkipPairKerning",
     "PptxSyntheticChartAxisTickLabelOptionsRender",
-    "PptxSyntheticChartBarValueAxisReserveKeepsOfficeGap",
+    "PptxHorizontalFrameOverlayLegendDoesNotConsumePlotSpace",
     "PptxSyntheticChartCategoryAxisLabelOffsetRender",
     "PptxSyntheticChartCategoryAxisLineUsesCrossingTick",
     "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
@@ -12298,7 +12318,7 @@
     "PptxSyntheticChartDefaultAxisTitleMissingPositionEmitsTargetedDiagnostic",
     "PptxSyntheticChartDefaultAxisTitleRendersWithoutUnsupportedDiagnostic",
     "PptxSyntheticChartHorizontalBarCategoryAxisStrokeUsesAxisPosition",
-    "PptxSyntheticChartHorizontalBarCategoryReserveKeepsOfficeGap",
+    "PptxHorizontalFrameAssignsFontsToTheirAxisStrips",
     "PptxSyntheticChartHorizontalBarValueAxisStrokeUsesAxisPosition",
     "PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks",
     "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithManualBoxUseOfficeSparseTicks",

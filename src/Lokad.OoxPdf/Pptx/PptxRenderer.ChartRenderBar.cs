@@ -272,6 +272,8 @@ internal sealed partial class PptxRenderer
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
+        bool usesMeasuredAxisInsets = !sceneChart.PlotAreaLayout.HasLayout &&
+            (!hasLegend || legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
         ChartPlotBox defaultPlotBox;
         if (!hasTitle && !hasLegend)
         {
@@ -280,7 +282,7 @@ internal sealed partial class PptxRenderer
         else if (!hasTitle && legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
         {
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarNoTitleBottomLegend);
-            defaultPlotBox = AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(defaultPlotBox, frame, theme, colorMap, sceneChart, chartXml, barPlot, barChart, horizontalBars);
+            defaultPlotBox = AdjustNoTitleBottomLegendPlotBoxForMeasuredContent(defaultPlotBox, frame, theme, colorMap, sceneChart, chartXml, barPlot, barChart, horizontalBars, usesMeasuredAxisInsets);
         }
         else if (horizontalBars && hasTitle && !hasLegend)
         {
@@ -299,11 +301,10 @@ internal sealed partial class PptxRenderer
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarDefault);
         }
 
-        if (!horizontalBars && !sceneChart.PlotAreaLayout.HasLayout &&
-            (!hasLegend || legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom))
+        if (usesMeasuredAxisInsets)
         {
-            // Titles and horizontal legends reserve vertical space. Automatic
-            // horizontal edges belong to the axis strips measured below; retain
+            // Titles and horizontal legends reserve vertical space. In both
+            // orientations, horizontal edges belong to the measured axis strips; retain
             // the explicit manual and side-legend placement contracts.
             double inset = PptxChartMetricRules.ColumnPlotRightReserve;
             defaultPlotBox = defaultPlotBox with { X = frame.X + inset, Width = Math.Max(1d, frame.Width - 2d * inset) };
@@ -474,7 +475,8 @@ internal sealed partial class PptxRenderer
 
             bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
             ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-            ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, percentStacked).Units;
+            ChartValueAxisRenderOptions valueOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, percentStacked);
+            ChartAxisUnits axisUnits = valueOptions.Units;
             ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxLabelWidth = 0d;
@@ -492,10 +494,20 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
+            double leftReserve = plotBox.X - frame.X;
+            if (usesMeasuredAxisInsets)
+            {
+                double endpoint = valueOptions.Reversed ? valueExtents.Maximum : valueExtents.Minimum;
+                string label = FormatSceneOrXmlChartAxisLabel(endpoint, valueAxis.SceneAxis, valueAxis.XmlAxis, percentStacked ? "0%" : null);
+                double endpointWidth = string.IsNullOrWhiteSpace(label) ? 0d : await textMeasurer.MeasureAsync(label, tickStyle).ConfigureAwait(false);
+                leftReserve = Math.Max(leftReserve, endpointWidth / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
+            }
+
             double rightReserve = ResolveMeasuredRightReserve(frame.X + frame.Width - plotBox.X - plotBox.Width, maxLabelWidth);
             double right = frame.X + frame.Width - rightReserve;
-            double width = Math.Max(1d, right - plotBox.X);
-            return new ChartPlotBox(plotBox.X, plotBox.Y, width, plotBox.Height);
+            double x = frame.X + leftReserve;
+            double width = Math.Max(1d, right - x);
+            return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
         }
 
         ChartPlotBox AdjustHorizontalBarPlotBoxForTopAndBottom(ChartPlotBox plotBox)
@@ -505,15 +517,19 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            if (hasTitle || hasLegend || legend.Visible)
+            bool usesAutomaticTop = usesMeasuredAxisInsets && !hasTitle &&
+                (!hasLegend || legend.PositionKind == PptxSceneChartLegendPosition.Bottom);
+            double automaticTop = frame.Y + frame.Height - PptxChartMetricRules.HorizontalBarPlotTopReserve;
+            if (hasTitle || hasLegend || (legend.Visible && !usesMeasuredAxisInsets))
             {
-                return plotBox;
+                return usesAutomaticTop ? plotBox with { Height = Math.Max(1d, automaticTop - plotBox.Y) } : plotBox;
             }
 
             ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
             if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
             {
-                return plotBox;
+                double bottom = frame.Y + PptxChartMetricRules.HorizontalBarPlotTopReserve;
+                return usesAutomaticTop ? new ChartPlotBox(plotBox.X, bottom, plotBox.Width, Math.Max(1d, automaticTop - bottom)) : plotBox;
             }
 
             IReadOnlyList<ChartIndexedNumberVector> topBottomSeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
@@ -544,11 +560,11 @@ internal sealed partial class PptxRenderer
 
             double requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(bottomTickStyle.FontSize);
             double presetBottomReserve = plotBox.Y - frame.Y;
-            double newY = Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
+            double newY = usesAutomaticTop ? frame.Y + requiredBottomReserve : Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
                 ? plotBox.Y
                 : frame.Y + requiredBottomReserve;
             double presetTopReserve = frame.Y + frame.Height - plotBox.Y - plotBox.Height;
-            double newTop = Math.Abs(presetTopReserve - PptxChartMetricRules.HorizontalBarPlotTopReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
+            double newTop = usesAutomaticTop ? automaticTop : Math.Abs(presetTopReserve - PptxChartMetricRules.HorizontalBarPlotTopReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
                 ? plotBox.Y + plotBox.Height
                 : frame.Y + frame.Height - PptxChartMetricRules.HorizontalBarPlotTopReserve;
             return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, newTop - newY));
@@ -584,7 +600,9 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            double requiredReserve = ComputeHorizontalBarCategoryLeftReserve(maxCategoryWidth);
+            double requiredReserve = usesMeasuredAxisInsets
+                ? ComputeCartesianAxisLabelSideReserve(maxCategoryWidth, tickStyle.FontSize)
+                : maxCategoryWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
             bool labelsRight = ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultRightSide: false);
@@ -646,7 +664,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            double requiredReserve = ComputeCartesianValueAxisLeftReserve(maxLabelWidth, tickStyle.FontSize);
+            double requiredReserve = ComputeCartesianAxisLabelSideReserve(maxLabelWidth, tickStyle.FontSize);
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
             bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false);
@@ -782,7 +800,7 @@ internal sealed partial class PptxRenderer
                     return plotBox;
                 }
 
-                requiredReserve = ComputeCartesianValueAxisLeftReserve(stackedMaxLabelWidth, stackedTickStyle.FontSize);
+                requiredReserve = ComputeCartesianAxisLabelSideReserve(stackedMaxLabelWidth, stackedTickStyle.FontSize);
             }
             else
             {
@@ -1170,7 +1188,8 @@ internal sealed partial class PptxRenderer
         XDocument chartXml,
         PptxSceneChartPlot? barPlot,
         XElement barChart,
-        bool horizontalBars)
+        bool horizontalBars,
+        bool usesMeasuredAxisInsets)
     {
         // Office keeps a content-sized bottom margin for untitled bottom-legend columns.
         // Four same-frame probes with varied fonts pin an additive plane (all within 0.06):
@@ -1179,9 +1198,18 @@ internal sealed partial class PptxRenderer
         // flips sign across probes), and bottom-minus-cat-baseline scales cleanly at 1.566
         // catFs inside the total without its own usable law, so the plane ships as such.
         ChartTextStyle legendStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
-        ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
-        ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+        bool horizontalStrip = horizontalBars && usesMeasuredAxisInsets;
+        ChartAxisSource tickAxis = horizontalStrip
+            ? ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault()
+            : ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+        ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickAxis.SceneAxis, chartXml, tickAxis.XmlAxis,
+            fallbackFontSize: horizontalStrip ? PptxChartMetricRules.ValueAxisFallbackFontSize : PptxChartMetricRules.CategoryAxisFallbackFontSize,
+            chartStyleRole: horizontalStrip ? "valueAxis" : "categoryAxis");
         double bottomReserve = ComputeNoTitleBottomLegendReserve(legendStyle.FontSize, tickStyle.FontSize);
+        if (horizontalStrip && !IsSceneOrXmlChartAxisLabelVisible(tickAxis.SceneAxis, tickAxis.XmlAxis))
+        {
+            bottomReserve -= ComputeCartesianLabelStripBottomReserve(tickStyle.FontSize) - PptxChartMetricRules.HorizontalBarPlotTopReserve;
+        }
         double presetTop = frame.Y + frame.Height * (PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio + PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
         double y = frame.Y + bottomReserve;
         double top = presetTop;
@@ -1207,17 +1235,12 @@ internal sealed partial class PptxRenderer
     {
         return barPlotCount == 1;
     }
-    // Left reserve for horizontal-bar category labels: widest label plus the shared Office
-    // axis-label-to-plot gap (bar-stacked-port decomposes exactly to frame + 50.0pt label +
-    // 23.2pt, the same gap calibrated for value-axis labels).
-    // Shared left reserve for measured cartesian value labels: frame indent plus
-    // widest tick label plus a font-relative gap (Office origins decompose to frame plus
-    // 6.5pt plus tick width plus 0.92 times tick font size; the old shared 23.2pt gap
-    // overshot narrow-tick titled columns like the composite port by 5.7pt). Stacked,
-    // multi-axis and horizontal paths keep their own estimators.
-    private static double ComputeCartesianValueAxisLeftReserve(double maxValueLabelWidth, double tickFontSize)
+    // Side strips share label width, frame indent and a font-relative gap:
+    // vertical value labels and horizontal category labels have the same owner.
+    // Manual and side-legend defaults retain their placement fallback above.
+    private static double ComputeCartesianAxisLabelSideReserve(double maxLabelWidth, double tickFontSize)
     {
-        return maxValueLabelWidth +
+        return maxLabelWidth +
             PptxChartMetricRules.BarValueAxisLabelFrameIndent +
             tickFontSize * PptxChartMetricRules.BarValueAxisLabelGapFactor;
     }
@@ -1239,11 +1262,6 @@ internal sealed partial class PptxRenderer
     private static double ResolveMeasuredRightReserve(double presetRightReserve, double maxValueLabelWidth)
     {
         return Math.Max(presetRightReserve, maxValueLabelWidth / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
-    }
-
-    private static double ComputeHorizontalBarCategoryLeftReserve(double maxCategoryLabelWidth)
-    {
-        return maxCategoryLabelWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
     }
 
     private readonly record struct ChartValueAxisStripMeasure(double MaxLabelWidth, double FontSize, double StripWidth);
