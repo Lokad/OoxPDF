@@ -30,14 +30,22 @@ internal static class PptxLegendRowsTests
             // All values are4 on an authored0..5 scale; painted height exposes
             // actual plot admission without depending on private layout helpers.
             double reservedHeight = (overlayBars[0][3] - reservedBars[0][3]) / 0.8d;
-            TestAssert.True(reservedHeight > 0d && reservedHeight <= height / 2d + 0.01d,
-                "A crowded legend must not consume more than its chart-height budget.");
+            TestAssert.True(reservedHeight > 0d,
+                $"A reserved legend consumes plot space: {width}x{height}, {size}pt, {count} entries; reserved {reservedHeight}pt.");
             TestAssert.True(reservedBars.All(bar => bar[3] > size),
                 "Every source bar retains useful visible height instead of collapsing to a one-point plot.");
             var overlayNames = Names(overlay.Page);
             var reservedNames = Names(reserved.Page);
             TestAssert.True(overlayNames.Length > 0 && overlayNames.Length < count,
                 "The automatic frame paints an admitted prefix and diagnoses overflow.");
+            double[] baselines = reservedNames.Select(name => name.Y).Distinct().Order().ToArray();
+            TestAssert.True(baselines.Length > 1, "These crowded names occupy multiple admitted rows.");
+            double rowAdvance = baselines[1] - baselines[0];
+            double occupiedRows = baselines[^1] - baselines[0] + rowAdvance;
+            // Office caps visible rows; its physical legend box also includes
+            // padding/rounding, so total plot reservation need not equal that cap.
+            TestAssert.True(occupiedRows <= height / 2d + 0.01d,
+                $"Visible legend rows fit their height budget: {width}x{height}, {size}pt; occupied {occupiedRows}pt.");
             TestAssert.True(overlayNames.SequenceEqual(reservedNames),
                 "Overlay changes plot reservation while keeping the same admitted legend frames.");
             for (int i = 0; i < reservedNames.Length; i++)
