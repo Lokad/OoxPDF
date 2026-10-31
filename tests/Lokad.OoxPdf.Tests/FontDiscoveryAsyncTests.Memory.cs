@@ -164,6 +164,62 @@ internal static partial class FontDiscoveryAsyncTests
         });
     }
 
+    public static void FontDiscoveryMemoryPublicRefusalAndCancellationPreserveDestinations()
+    {
+        InDirectory(directory => {
+            File.WriteAllBytes(Path.Combine(directory, "font.ttf"), WithDiscoveryPadding(TestFontBuilder.CreateTestFont()));
+            var control = new TestMemoryBudget();
+            using (var operation = OoxConversionBudget.BeginScope(null, control))
+                _ = CreateAsync(directory).AsTask().GetAwaiter().GetResult();
+            long request = control.Peak;
+            TestAssert.True(request > 0, "Observe the live factory's request for selective refusal.");
+            foreach (string name in new[] { "docx-svg-inline.docx", "pptx-ladder-02-plain-text.pptx" })
+            foreach (bool file in new[] { false, true })
+            foreach (bool cancel in new[] { false, true })
+            {
+                WindowsFontResolver.InvalidateDiscoveryCaches();
+                using var cancellation = new CancellationTokenSource();
+                var resolver = new DiscoveryDirectoryResolver(directory, cancellation.Token);
+                bool reached = false;
+                var pool = new TestMemoryBudget { RefuseChange = (_, after) => {
+                    if (!resolver.Called || after != request) return false;
+                    reached = true;
+                    if (cancel) cancellation.Cancel();
+                    return !cancel;
+                }};
+                string input = Path.Combine(directory, name), target = Path.Combine(directory, "result.pdf");
+                byte[] bytes = File.ReadAllBytes(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name)));
+                File.WriteAllBytes(input, bytes); File.WriteAllBytes(target, [1, 2, 3]);
+                using var source = new MemoryStream(bytes); using var output = new MemoryStream();
+                var options = new OoxPdfOptions { InputKind = name.EndsWith(".docx") ? OoxPdfInputKind.Docx : OoxPdfInputKind.Pptx,
+                    FontResolver = resolver, MemoryBudget = pool };
+                void Convert() => (file ? OoxPdfConverter.ConvertAsync(input, target, options, cancellation.Token) :
+                    OoxPdfConverter.ConvertAsync(source, output, options, cancellation.Token)).GetAwaiter().GetResult();
+                if (cancel) TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(Convert).CancellationToken);
+                else TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, TestAssert.Throws<OoxPdfLimitExceededException>(Convert).Kind);
+                TestAssert.True(reached, "Discovery refusal cannot become font fallback or ignored content.");
+                TestAssert.Equal(0L, output.Length);
+                TestAssert.True(File.ReadAllBytes(target).SequenceEqual(new byte[] { 1, 2, 3 }), "Preserve the file destination.");
+                TestAssert.True(source.CanRead && output.CanWrite, "Caller streams remain open.");
+                TestAssert.Equal(0, Directory.GetFiles(directory, "*.tmp-*").Length);
+                TestAssert.Equal(0L, pool.Reserved);
+                TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
+            }
+        });
+    }
+
+    // Invoke the live metadata factory during synchronous resolution so public
+    // DOCX/PPTX recovery and publication paths see the same discovery failure.
+    private sealed class DiscoveryDirectoryResolver(string directory, CancellationToken token) : IFontResolver
+    {
+        public bool Called;
+        public FontFaceResolution Resolve(FontRequest request)
+        {
+            Called = true;
+            return CreateAsync(directory, token).AsTask().GetAwaiter().GetResult().Resolve(request);
+        }
+    }
+
     public static void FontDiscoveryMemoryRepeatedFilesReuseCapacityAndKeepSnapshot()
     {
         InDirectory(directory => {
