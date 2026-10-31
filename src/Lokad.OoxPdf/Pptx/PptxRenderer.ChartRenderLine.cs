@@ -28,10 +28,9 @@ internal sealed partial class PptxRenderer
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
-        // Resolved single-accent defaults already carry their final paint.
-        // The independently qualified style18/26 recipes also omit the legacy tint;
-        // other palettes retain it. Marker selection remains a separate contract.
-        bool lineStyleSkipsUnstyledTint = chartPalette.SingleAccent is not null || chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
+        // Existing style18/26 geometry also controls smoothing. Keep that contract
+        // separate from whether the resolved palette needs an additional paint tint.
+        bool lineStyleSkipsUnstyledTint = chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
         bool lineStyleGalleryMarkers = chartStyleId == 18 || chartStyleId == 118;
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = 0;
@@ -121,7 +120,7 @@ internal sealed partial class PptxRenderer
                 // Unstyled series lines default to round caps/joins (Office line forensics);
                 // explicitly styled lines keep DrawingML attr defaults (combo contract).
                 bool defaultSeriesStroke = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
-                ChartSeriesStroke lineStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = (lineStyleSkipsUnstyledTint || smoothAppearance) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
+                ChartSeriesStroke lineStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = (chartPalette.SingleAccent is not null || lineStyleSkipsUnstyledTint || smoothAppearance) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
                 SetChartStroke(graphics, lineStroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
@@ -212,7 +211,7 @@ internal sealed partial class PptxRenderer
                     // RV04: style-18 marker outlines stroke the raw base at 1pt (Office emits
                     // no luminance tint on marker rims); other styles keep the tinted 0.75pt rim.
                     RgbColor markerOutline = defaultSeriesStroke
-                        ? ((lineStyleSkipsUnstyledTint || smoothForcedMarker) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
+                        ? ((chartPalette.SingleAccent is not null || lineStyleGalleryMarkers || smoothForcedMarker) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
                         : stroke.Color;
                     double? outlineWidth = (lineStyleGalleryMarkers || smoothForcedMarker) ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null;
                     if (lineStyleGalleryMarkers
