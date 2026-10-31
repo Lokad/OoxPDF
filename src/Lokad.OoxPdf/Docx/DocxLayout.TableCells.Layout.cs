@@ -977,12 +977,13 @@ internal sealed partial class DocxLayoutEngine
             }
             bool currentHasVisibleText = false;
             DocxMidLinePlan? midLinePlan = null;
+            IReadOnlyList<DocxTextSpan> textSpans = [];
             if (textMeasurer is not null)
             {
                 double fontSize = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeight(paragraph, fontSize, textMeasurer);
                 previousTextLineHeight = lineHeight;
-                IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
+                textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
                 if (textSpans.Count != 0)
                 {
                     double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
