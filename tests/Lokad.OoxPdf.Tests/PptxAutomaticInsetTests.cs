@@ -63,7 +63,7 @@ internal static class PptxAutomaticInsetTests
             """));
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:style val="2"/><c:chart>{{titleXml}}<c:autoTitleDeleted val="{{(title == "none" ? 1 : 0)}}/>
+              <c:style val="2"/><c:chart>{{titleXml}}<c:autoTitleDeleted val="{{(title == "none" ? 1 : 0)}}"/>
                 <c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>{{series}}<c:axId val="1"/><c:axId val="2"/></c:barChart>
                   <c:catAx><c:axId val="1"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>
                   <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/>
