@@ -12696,5 +12696,19 @@
     "VariedSubsetsShareFontSourceBytes",
     "WritesCMapBatchesWithinOneHundredMappings",
     "WritesFontFile2WithDecodedLength"
+  ],
+  "host-output-lifetime": [
+    "ConvertAsyncCallerOutputFundingSurvivesDeferredPublication",
+    "ConversionResourceSummaryPreservesRouteTimingAndProvenance",
+    "ThrowingSummaryCallbackLeavesFileDestinationUntouched",
+    "ThrowingSummaryCallbackLeavesStreamOutputEmpty",
+    "FinalSummaryCancellationPreventsPublication",
+    "DiagnosticCallbacksCanRunNestedConversionsWithoutAffectingRecovery",
+    "RecoverableDiagnosticExceptionsPreserveFileAndOriginalFailure",
+    "RecoverableDiagnosticExceptionsLeaveStreamEmpty",
+    "ConvertCapturesDestinationBeforeSummaryChangesWorkingDirectory",
+    "ConvertAsyncOutputUsesCallerAsyncWriteProtocol",
+    "ConvertAsyncStorageFailureKeepsFilePublicationAtomic",
+    "ConvertAsyncStorageAwaitsBothFormatsAndKeepsExactPdf"
   ]
 }

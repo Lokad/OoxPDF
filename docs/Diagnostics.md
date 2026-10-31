@@ -207,6 +207,11 @@ caller-owned; write failures may leave a prefix. File conversion preserves the
 previous destination on rendering, observer, cancellation, limit or publication
 failure and cleans its owned staging. Normal return signals successful output;
 there is no separate committed-notification diagnostic.
+For deferred publication, the caller owns and funds its retained output buffer.
+Reserve it from the host pool before allocation and keep that reservation alive
+until the final write/upload finishes. Sharing that pool through `MemoryBudget`
+lets conversion see the occupied capacity; it does not charge or dispose caller
+storage again. Converter cleanup releases only its own scopes.
 
 Historical performance measurements and their workload limits are documented in
 [the operating envelope](OperatingEnvelope.md). They do not establish current

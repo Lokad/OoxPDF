@@ -160,3 +160,10 @@ These are relative geometry/content assertions, independent of Office fonts.
 All original color, operator-count and geometry assertions remain. The earlier
 Ubuntu failures with an empty local catalog are retained; font-specific Office
 baselines and independent visual thresholds remain separate checks.
+
+`host-output-lifetime` checks both formats with a caller-funded fixed output
+buffer held through a delayed publication borrow. A second conversion sees the
+occupied shared capacity; host release makes it available again. File/stream
+summary checks retain timing, provenance and output totals, alongside existing
+throwing-observer, cancellation and publication controls. These use the existing
+public stream/budget contract without an owned-result API or another buffer layer.
