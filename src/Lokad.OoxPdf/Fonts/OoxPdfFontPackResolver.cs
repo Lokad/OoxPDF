@@ -657,12 +657,7 @@ public sealed class OoxPdfFontPackResolver : IFontResolver, IFontCatalog, IDispo
         private int readers = 1; // Resolver retention; acquisitions add temporary readers.
         private bool disposed;
 
-        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient)
-            : this(packId, packRootUri, httpClient, MaxTotalFontPackBytes)
-        {
-        }
-
-        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient, long maxTotalBytes, IMemoryBudget? cacheBudget = null, IMemoryReservation? metadataStorage = null)
+        internal FontPackFileSource(string packId, Uri packRootUri, HttpClient httpClient, long maxTotalBytes = MaxTotalFontPackBytes, IMemoryBudget? cacheBudget = null, IMemoryReservation? metadataStorage = null)
         {
             this.packId = packId;
             this.packRootUri = packRootUri;
