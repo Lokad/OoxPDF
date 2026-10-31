@@ -18,6 +18,7 @@ internal static partial class OoxMemoryAdmissionTests
             using var input = ImageTransformPackage(kind);
             using var package = OoxPackage.Open(input, default);
             var document = new PptxReader().Read(package, default);
+            long modelCapacity = ImageTransformModelCapacity(document, package);
             byte[] source = TestAssert.NotNull(package.GetPart("/ppt/media/image1.png")).Bytes;
             byte[] original = (byte[])source.Clone();
             var renderer = new PptxRenderer(new ProgramResolver(new MemoryFontProgramSource("transform-font", TestFontBuilder.CreateTestFont())));
@@ -36,7 +37,7 @@ internal static partial class OoxMemoryAdmissionTests
                     TestAssert.Equal(0, diagnostics.Count);
                     TestAssert.Equal(0, page.Fonts.Count);
                     PdfImageXObject image = page.Images.Single().Image;
-                    TestAssert.Equal((long)image.Bytes.Length + (image.Alpha?.Length ?? 0), pool.Reserved);
+                    TestAssert.Equal(modelCapacity + image.Bytes.Length + (image.Alpha?.Length ?? 0), pool.Reserved);
                     if (TransformPlaneBytes(kind) > 0) TestAssert.True(admitted > 0, "The actual crop/effect plane is admitted: " + kind);
                     if (kind is not ("shadow" or "glow"))
                     {
@@ -72,6 +73,7 @@ internal static partial class OoxMemoryAdmissionTests
             using var input = ImageTransformPackage(kind);
             using var package = OoxPackage.Open(input, default);
             var document = new PptxReader().Read(package, default);
+            long modelCapacity = ImageTransformModelCapacity(document, package);
             using var cancellation = new CancellationTokenSource();
             int attempts = 0;
             var pool = new TestMemoryBudget { RefuseChange = (_, after) => {
@@ -92,7 +94,7 @@ internal static partial class OoxMemoryAdmissionTests
                     TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
                     TestAssert.Equal(OoxPdfLimitScope.Conversion, failure.Scope);
                 }
-                TestAssert.Equal(0L, pool.Reserved);
+                TestAssert.Equal(modelCapacity, pool.Reserved);
                 TestAssert.Equal(1, attempts);
                 TestAssert.True(diagnostics.All(d => d.Id is not "IMAGE_CROP_UNSUPPORTED_FORMAT" and not "PPTX_NODE_RENDER_FAILED"), "Refusal/cancellation cannot become clipping or node omission.");
             }
@@ -151,6 +153,19 @@ internal static partial class OoxMemoryAdmissionTests
             }
         }
         finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    private static long ImageTransformModelCapacity(PptxDocument document, OoxPackage package)
+    {
+        var pool = new TestMemoryBudget();
+        long retained;
+        using (var conversion = OoxConversionBudget.BeginScope(null, pool))
+        {
+            _ = new PptxSceneBuilder().Build(document, package, default);
+            retained = pool.Reserved;
+        }
+        TestAssert.Equal(0L, pool.Reserved);
+        return retained;
     }
 
     private static long TransformPlaneBytes(string kind) => kind switch {
