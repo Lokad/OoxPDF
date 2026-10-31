@@ -10,10 +10,10 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<RgbColor>? Colors, RgbColor? SingleAccent, int SeriesCount);
 
     private static ChartColorPalette ResolveChartColorPalette(
-        PptxSceneChart chart, IReadOnlyList<RgbColor>? colors, PptxTheme theme, PptxColorMap colorMap)
+        PptxSceneChart chart, PptxTheme theme, PptxColorMap colorMap)
     {
         int seriesCount = chart.Plots.Sum(plot => plot.Series.Count);
-        if (colors is { Count: > 0 }) { return new(colors, null, seriesCount); }
+        if (chart.ColorStyle.Colors is { Count: > 0 } colors) { return new(colors, null, seriesCount); }
 
         int? preferred = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chart.ChartXml?.Root);
         int style = preferred is int modern ? modern - 100 :
@@ -26,7 +26,7 @@ internal sealed partial class PptxRenderer
             return new(null, accent, seriesCount);
         }
 
-        return new(colors, null, seriesCount);
+        return new(null, null, seriesCount);
     }
 
     // Office's single-accent palette samples one continuous shade/tint span.

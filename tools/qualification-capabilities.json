@@ -1,4 +1,25 @@
 {
+  "pptx-color-owner": [
+    "PptxScenePreservesChartColorStyleDeclarations",
+    "PptxSceneChartPartRecordsEnforceDefinedUndefined",
+    "PptxSceneBuilderBuildsResolvedNodeLists",
+    "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
+    "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
+    "PptxAuthoredTintShade",
+    "PptxThemeColorMapOwnsSchemeAliases",
+    "PptxThemeColorMapPreservesSceneOverrideProvenance",
+    "PptxThemeColorMapResolvesSceneTextAndShapeColors",
+    "PptxSyntheticBarChartsRenderNativeCharts",
+    "PptxChartSeriesLineNoFillSuppressesBarOutlines",
+    "PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "MemoryBudgetXmlCacheRefusalCancellationAndMalformedInputRefundGrowth",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-column-offset": [
     "PptxSyntheticChartCategoryAxisLabelOffsetRender",
     "PptxColumnCategory",

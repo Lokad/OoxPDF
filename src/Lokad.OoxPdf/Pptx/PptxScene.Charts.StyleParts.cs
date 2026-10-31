@@ -55,19 +55,13 @@ internal sealed partial class PptxSceneBuilder
         }
 
         XDocument document = LoadXml(package, colorPart, cancellationToken);
-        IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations = ReadChartColorStyleRootDeclarations(document, theme, colorMap);
-        IReadOnlyList<PptxSceneChartColorDeclaration> declarations = ReadChartColorStyleDeclarations(document, theme, colorMap, rootDeclarations);
-        IReadOnlyList<PptxSceneChartColorVariation> variations = ReadChartColorStyleVariations(document, theme, colorMap);
-        var colors = new List<RgbColor>();
-        foreach (XElement colorElement in document.Root?.Elements().Where(element => element.Name.Namespace == DrawingNamespace) ?? [])
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
-            if (PptxColorResolver.TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out RgbColor color, out _))
-            {
-                colors.Add(color);
-            }
-        }
+        IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations = ReadChartColorStyleRootDeclarations(document, theme, colorMap, cancellationToken);
+        IReadOnlyList<PptxSceneChartColorVariation> variations = ReadChartColorStyleVariations(document, theme, colorMap, cancellationToken);
+        PptxSceneChartColorDeclaration[] declarations = rootDeclarations
+            .Concat(variations.SelectMany(variation => variation.Declarations)).ToArray();
+        // Painting consumes resolved root colors; unsupported method/variation
+        // semantics remain available in the source and inspection declarations.
+        RgbColor[] colors = rootDeclarations.Select(declaration => declaration.Color).OfType<RgbColor>().ToArray();
 
         return PptxSceneChartColorStyle.Defined(
             colorPart.Name,
@@ -81,7 +75,7 @@ internal sealed partial class PptxSceneBuilder
             document);
     }
 
-    private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleRootDeclarations(XDocument document, PptxTheme theme, PptxColorMap colorMap)
+    private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleRootDeclarations(XDocument document, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
     {
         if (document.Root is null)
         {
@@ -90,34 +84,11 @@ internal sealed partial class PptxSceneBuilder
 
         return document.Root.Elements()
             .Where(PptxColorResolver.IsDrawingColorElement)
-            .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex: null))
+            .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex: null, cancellationToken))
             .ToArray();
     }
 
-    private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleDeclarations(XDocument document, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<PptxSceneChartColorDeclaration> rootDeclarations)
-    {
-        if (document.Root is null)
-        {
-            return [];
-        }
-
-        var declarations = new List<PptxSceneChartColorDeclaration>(rootDeclarations);
-
-        int variationIndex = 0;
-        foreach (XElement variation in document.Root.Elements().Where(IsChartColorStyleVariationElement))
-        {
-            foreach (XElement colorElement in variation.Descendants().Where(PptxColorResolver.IsDrawingColorElement))
-            {
-                declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex));
-            }
-
-            variationIndex++;
-        }
-
-        return declarations;
-    }
-
-    private static IReadOnlyList<PptxSceneChartColorVariation> ReadChartColorStyleVariations(XDocument document, PptxTheme theme, PptxColorMap colorMap)
+    private static IReadOnlyList<PptxSceneChartColorVariation> ReadChartColorStyleVariations(XDocument document, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
     {
         if (document.Root is null)
         {
@@ -128,10 +99,11 @@ internal sealed partial class PptxSceneBuilder
         int variationIndex = 0;
         foreach (XElement variation in document.Root.Elements().Where(IsChartColorStyleVariationElement))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxSceneChartColorDeclaration> declarations = variation
                 .Descendants()
                 .Where(PptxColorResolver.IsDrawingColorElement)
-                .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex))
+                .Select(colorElement => ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex, cancellationToken))
                 .ToArray();
             variations.Add(new PptxSceneChartColorVariation(
                 variationIndex,
@@ -144,8 +116,9 @@ internal sealed partial class PptxSceneBuilder
         return variations;
     }
 
-    private static PptxSceneChartColorDeclaration ReadChartColorStyleDeclaration(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, int? variationIndex)
+    private static PptxSceneChartColorDeclaration ReadChartColorStyleDeclaration(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, int? variationIndex, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
         bool isResolved = PptxColorResolver.TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out RgbColor color, out double alpha);
         return new PptxSceneChartColorDeclaration(

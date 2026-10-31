@@ -12,7 +12,6 @@ internal sealed record PptxSceneChart(
     PptxColorMap ColorMap,
     PptxSceneChartExternalData ExternalData,
     PptxSceneChartOptions Options,
-    IReadOnlyList<RgbColor>? PaletteColors,
     PptxSceneChartColorStyle ColorStyle,
     PptxSceneChartStyle StylePart,
     string StyleId,

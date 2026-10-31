@@ -54,57 +54,23 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
         ShapeBounds? bounds,
-        PptxSceneChart? chart,
-        List<PdfLinkAnnotation> linkAnnotations,
-        HashSet<string> reportedHyperlinkIds)
-    {
-        await RenderChartFrameAsync(
-            context,
-            graphics,
-            fonts,
-            bounds,
-            chart?.TargetPartName,
-            chart?.ChartXml,
-            chart?.PaletteColors,
-            chart,
-            linkAnnotations,
-            reportedHyperlinkIds).ConfigureAwait(false);
-    }
-
-    private static async ValueTask RenderChartFrameAsync(
-        PptxRenderContext context,
-        PdfGraphicsBuilder graphics,
-        List<PdfFontResource> fonts,
-        ShapeBounds? bounds,
-        string? targetPartName,
-        XDocument? chartXml,
-        IReadOnlyList<RgbColor>? chartPalette,
         PptxSceneChart? sceneChart,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
-        string? chartPartName = targetPartName;
+        string? chartPartName = sceneChart?.TargetPartName;
 
-        if (bounds is null || chartPartName is null)
+        if (sceneChart is null || bounds is null || chartPartName is null)
         {
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.SlidePartName, context.SlideNumber, "Ignored");
             return;
         }
 
-        XDocument? resolvedChartXml = chartXml;
-        IReadOnlyList<RgbColor>? resolvedChartPalette = chartPalette;
+        XDocument? resolvedChartXml = sceneChart.ChartXml;
         if (resolvedChartXml is null)
         {
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing from the scene model and was ignored.", chartPartName, context.SlideNumber, "Ignored");
-            return;
-        }
-
-        // Rendering requires the resolved scene model; missing content is diagnosed
-        // here rather than interpreted again by individual painting/layout helpers.
-        if (sceneChart is null)
-        {
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame was missing from the scene model and was ignored.", chartPartName, context.SlideNumber, "Ignored");
             return;
         }
 
@@ -116,7 +82,7 @@ internal sealed partial class PptxRenderer
 
         try
         {
-            await RenderChartFrameWithWorkbookAsync(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, resolvedChartPalette, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+            await RenderChartFrameWithWorkbookAsync(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
         }
         finally
         {
@@ -160,7 +126,6 @@ internal sealed partial class PptxRenderer
         ShapeBounds bounds,
         string chartPartName,
         XDocument resolvedChartXml,
-        IReadOnlyList<RgbColor>? resolvedChartPalette,
         PptxSceneChart sceneChart,
         ChartWorkbookData? chartWorkbook,
         List<PdfLinkAnnotation> linkAnnotations,
@@ -168,7 +133,7 @@ internal sealed partial class PptxRenderer
     {
         PptxColorMap chartColorMap = sceneChart.ColorMap;
 
-        if ((await TryRenderChartAsync(graphics, context.Document, context.Theme, chartColorMap, resolvedChartPalette, bounds, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+        if ((await TryRenderChartAsync(graphics, context.Document, context.Theme, chartColorMap, bounds, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
             EmitUnsupportedChartNumberFormatDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);

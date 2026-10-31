@@ -532,7 +532,6 @@ internal static class PptxModelTests
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Span, slide.SlideNodes[4].Chart?.Options.DisplayBlanksAsKind);
         TestAssert.Equal("span", slide.SlideNodes[4].Chart?.Options.DisplayBlanksAs ?? string.Empty);
         TestAssert.Equal("span", slideSnapshot.SlideNodes[4].ChartDisplayBlanksAs);
-        TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.IsDefined == true, "Expected chart color-style ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/colors1.xml", slide.SlideNodes[4].Chart?.ColorStyle.PartName ?? string.Empty);
         TestAssert.Equal("cycle", slide.SlideNodes[4].Chart?.ColorStyle.Method ?? string.Empty);
