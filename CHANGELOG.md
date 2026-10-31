@@ -20,6 +20,8 @@
   VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
   qualification records framework-specific library and tool identities.
+- PPTX: measures horizontal legend rows and reserves their selected side,
+  preserving wrapped names and composing legend space with chart titles.
 - PPTX: gives horizontal chart labels their own axis strips, anchors untitled
   frames consistently, and keeps overlay legends from consuming plot space.
 - PPTX: resolves built-in single-accent palettes from the theme, sharing

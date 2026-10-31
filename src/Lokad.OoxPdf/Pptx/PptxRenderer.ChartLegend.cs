@@ -292,7 +292,7 @@ internal sealed partial class PptxRenderer
             double entryX = entryFrame?.X ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(legendBox.MarkerSize, legendBox.X, i) : legendBox.X);
             double entryWidth = entryFrame?.Width ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, legendBox.MarkerSize, emitTextGap, emitEntryPadding) : legendBox.Width);
             double y = entryFrame?.Y ?? (legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight);
-            if (entryFrame is not null && (y < legendBox.ClipY - 0.001d || y + legendBox.LineHeight > legendBox.ClipY + legendBox.ClipHeight + 0.001d)) { continue; }
+            if (entryFrame is not null && IsLegendBaselineClipped(legendBox, y)) { continue; }
             double markerBaselineFactor = legendBox.Horizontal || legendBox.SideStrokeLegend
                 ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
                 : entry.Fill is not null

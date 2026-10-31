@@ -309,9 +309,21 @@ internal sealed partial class PptxRenderer
             return TryMeasureNormalLineHeight(style, out double height) ? height : null;
         }
 
-        public bool TryMeasureNormalLineHeight(ChartTextStyle style, out double height)
+        public bool TryMeasureNormalLineHeight(ChartTextStyle style, out double height) =>
+            TryMeasureLineBox(style, out _, out _, out height);
+
+        public async ValueTask<(double Ascent, double Descent, double Height)> MeasureLineBoxAsync(ChartTextStyle style)
         {
-            height = 0d;
+            await PrepareAsync(string.Empty, style).ConfigureAwait(false);
+            if (TryMeasureLineBox(style, out double ascent, out double descent, out double height))
+                return (ascent, descent, height);
+            height = style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+            return (height * 0.8d, height * 0.2d, height);
+        }
+
+        private bool TryMeasureLineBox(ChartTextStyle style, out double ascent, out double descent, out double height)
+        {
+            ascent = descent = height = 0d;
             OpenTypeFont? font = estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic);
             if (font is null || font.UnitsPerEm == 0)
             {
@@ -330,6 +342,9 @@ internal sealed partial class PptxRenderer
             }
 
             height = style.FontSize * ratio;
+            bool typographic = (font.Os2.SelectionFlags & 0x80) != 0;
+            ascent = style.FontSize * Math.Max(0d, typographic ? font.Os2.TypographicAscender : font.Os2.WindowsAscender) / font.UnitsPerEm;
+            descent = style.FontSize * Math.Max(0d, typographic ? -(double)font.Os2.TypographicDescender : font.Os2.WindowsDescender) / font.UnitsPerEm;
             return true;
         }
 

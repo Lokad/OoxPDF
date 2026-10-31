@@ -56,18 +56,65 @@ internal static class PptxHorizontalFrameTests
         }
     }
 
-    private static (double Left, double Top, double Bottom) Render(int height, int categorySize,
-        int valueSize, string legend, bool valueLabels = true, bool categoryLabels = true)
+    public static void PptxHorizontalLegendsReserveTheirOwnMeasuredRows()
     {
-        string legendXml = legend == "none" ? "" : $"<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"{(legend == "overlay" ? 1 : 0)}\"/><c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz=\"1200\"/></a:pPr></a:p></c:txPr></c:legend>";
+        foreach (int fontSize in new[] { 8, 12, 18 })
+        foreach (bool categories in new[] { false, true })
+        {
+            var plain = Render(360, 12, 12, "none");
+            var top = Render(360, 12, 12, "t", legendSize: fontSize, categoryLegend: categories);
+            var bottom = Render(360, 12, 12, "b", legendSize: fontSize, categoryLegend: categories);
+            TestAssert.True(Math.Abs(top.Bottom - plain.Bottom) < 0.01 && Math.Abs(bottom.Top - plain.Top) < 0.01,
+                "A horizontal legend reserves only its selected side.");
+            TestAssert.True(Math.Abs((top.Top - plain.Top) - (plain.Bottom - bottom.Bottom)) < 0.01,
+                "The same measured rows occupy the same band above or below the plot.");
+            TestAssert.True(top.Top > plain.Top + 1 && bottom.Bottom < plain.Bottom - 1,
+                "Visible horizontal legends require an admitted band.");
+        }
+    }
+
+    public static void PptxHorizontalLegendsAdmitWrappedRowsWithoutLosingNames()
+    {
+        foreach (string side in new[] { "t", "b" })
+        {
+            var shortNames = Render(360, 12, 12, side, categoryLabels: false, categoryLegend: true);
+            var wrapped = Render(360, 12, 12, side, categoryLabels: false, categoryLegend: true,
+                width: 288, longNames: true);
+            TestAssert.True(side == "t" ? wrapped.Top > shortNames.Top + 1 : wrapped.Bottom < shortNames.Bottom - 1,
+                "Wrapped legend rows reserve more space on their own side.");
+            for (int i = 1; i <= 6; i++)
+                TestAssert.True(wrapped.Text.Contains("North West Region " + i, StringComparison.Ordinal),
+                    "Every supported wrapped legend name must remain painted.");
+        }
+    }
+
+    public static void PptxHorizontalLegendAndTitleBandsCompose()
+    {
+        var plain = Render(360, 12, 12, "none");
+        var legend = Render(360, 12, 12, "t", categoryLegend: true);
+        var title = Render(360, 12, 12, "none", title: true);
+        var together = Render(360, 12, 12, "t", title: true, categoryLegend: true);
+        TestAssert.True(Math.Abs((together.Top - title.Top) - (legend.Top - plain.Top)) < 0.01,
+            "Title and legend bands compose without either replacing the other.");
+        TestAssert.True(together.Text.Contains("Supported title", StringComparison.Ordinal),
+            "The supported title remains painted alongside the legend.");
+    }
+
+    private static (double Left, double Top, double Bottom, string Text) Render(int height, int categorySize,
+        int valueSize, string legend, bool valueLabels = true, bool categoryLabels = true,
+        int legendSize = 12, bool categoryLegend = false, int width = 576, bool longNames = false, bool title = false)
+    {
+        string legendXml = legend == "none" ? "" : $"<c:legend><c:legendPos val=\"{(legend == "t" ? "t" : "b")}\"/><c:overlay val=\"{(legend == "overlay" ? 1 : 0)}\"/><c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz=\"{legendSize*100}\"/></a:pPr></a:p></c:txPr></c:legend>";
         string values = string.Concat(Enumerable.Range(0, 6).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
-        string categories = string.Concat(Enumerable.Range(0, 6).Select(i => $"<c:pt idx=\"{i}\"><c:v>Category {i+1}</c:v></c:pt>"));
+        string categories = string.Concat(Enumerable.Range(0, 6).Select(i => $"<c:pt idx=\"{i}\"><c:v>{(longNames ? "North West Region " : "Category ")}{i+1}</c:v></c:pt>"));
+        string pointStyle = categoryLegend ? "<c:dPt><c:idx val=\"0\"/><c:spPr/></c:dPt>" : "";
+        string titleXml = title ? "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1800\"/><a:t>Supported title</a:t></a:r></a:p></c:rich></c:tx><c:overlay val=\"0\"/></c:title>" : "";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:style val="2"/><c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
+              <c:style val="2"/><c:chart>{{titleXml}}<c:autoTitleDeleted val="{{(title ? 0 : 1)}}"/><c:plotArea>
                 <c:barChart><c:barDir val="bar"/><c:grouping val="clustered"/>
                   <c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>Series</c:v></c:tx>
-                    <c:spPr><a:solidFill><a:srgbClr val="0F9ED5"/></a:solidFill></c:spPr>
+                    <c:spPr><a:solidFill><a:srgbClr val="0F9ED5"/></a:solidFill></c:spPr>{{pointStyle}}
                     <c:cat><c:strLit><c:ptCount val="6"/>{{categories}}</c:strLit></c:cat>
                     <c:val><c:numLit><c:ptCount val="6"/>{{values}}</c:numLit></c:val>
                   </c:ser><c:axId val="1"/><c:axId val="2"/>
@@ -85,7 +132,7 @@ internal static class PptxHorizontalFrameTests
             """;
         string slide = $$"""
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="7315200" cy="{{height*12700}}"/></p:xfrm>
+              <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="{{width*12700}}" cy="{{height*12700}}"/></p:xfrm>
               <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
             </p:sld>
             """;
@@ -101,6 +148,7 @@ internal static class PptxHorizontalFrameTests
         double first = bars[0].Y + bars[0].Height / 2;
         double last = bars[^1].Y + bars[^1].Height / 2;
         double band = (last - first) / 5;
-        return (bars[0].X, page.Height - last - band / 2, page.Height - first + band / 2);
+        string painted = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
+        return (bars[0].X, page.Height - last - band / 2, page.Height - first + band / 2, painted);
     }
 }

@@ -189,7 +189,11 @@ internal sealed partial class PptxRenderer
         string? title = sceneChart.Title.Text;
         PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, legend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false).ConfigureAwait(false));
+        // Horizontal legend rows are admitted by the legend owner. The baseline
+        // plot retains title/axis space; its legend band is applied exactly once.
+        ChartLegendLayout plotLegend = UsesMeasuredHorizontalBarLegend(barOptions, sceneChart, legend)
+            ? legend with { Visible = false } : legend;
+        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 

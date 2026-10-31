@@ -58,12 +58,13 @@ internal sealed partial class PptxRenderer
                     : BuildFillLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
                 ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
-                ChartLegendBox? categoryLegendBox = null;
-                if (categoryLegend)
+                ChartLegendBox? preparedLegendBox = null;
+                bool measuredHorizontalLegend = UsesMeasuredHorizontalBarLegend(barOptions, sceneChart, chartLayout.Legend);
+                if (categoryLegend || measuredHorizontalLegend)
                 {
-                    var prepared = (await LayoutBarCategoryLegendAsync(chartLayout, legendEntries, legendTextStyle, fontResolver, context).ConfigureAwait(false));
+                    var prepared = (await LayoutBarLegendAsync(chartLayout, legendEntries, legendTextStyle, fontResolver, context, measuredHorizontalLegend).ConfigureAwait(false));
                     chartLayout = prepared.Layout;
-                    categoryLegendBox = prepared.Box;
+                    preparedLegendBox = prepared.Box;
                 }
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
@@ -379,7 +380,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, legendTextStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, preparedBox: categoryLegendBox).ConfigureAwait(false);
+                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, legendTextStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, preparedBox: preparedLegendBox).ConfigureAwait(false);
                 await RenderBarDataLabelsAsync(
                     theme,
                     colorMap,

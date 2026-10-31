@@ -1,4 +1,17 @@
 {
+  "pptx-horizontal-legend": [
+    "PptxHorizontalFrame",
+    "PptxHorizontalLegend",
+    "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
+    "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
+    "PptxVaryingBarCategoryLegends",
+    "PptxAutomaticColumnInsets",
+    "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-horizontal-frame": [
     "PptxHorizontalFrame",
     "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
@@ -722,6 +735,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxHorizontalLegend",
     "PptxHorizontalFrame",
     "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
     "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
