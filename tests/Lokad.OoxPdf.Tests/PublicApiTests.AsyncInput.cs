@@ -17,15 +17,16 @@ internal static partial class PublicApiTests
             byte[] bytes = kind == OoxPdfInputKind.Docx ? ReadMinimalDocxBytes("<w:p><w:r><w:t>async input</w:t></w:r></w:p>") : ReadMinimalPptxBytes();
             using var baseline = new MemoryStream();
             using (var source = new MemoryStream(bytes)) OoxPdfConverter.Convert(source, baseline, AsyncInputOptions(kind));
-            foreach (var (seekable, lengthless) in new[] { (true, false), (false, false), (true, true) })
+            foreach (var (seekable, lengthless, initialPosition) in new[] { (true, false, 0), (false, false, 0), (true, true, 0), (true, false, 17) })
             {
                 var pool = new TestMemoryBudget();
                 using var input = new AsyncInputStream(bytes, seekable, lengthless);
+                input.Position = initialPosition;
                 using var output = new MemoryStream();
                 OoxPdfConverter.ConvertAsync(input, output, AsyncInputOptions(kind, pool)).GetAwaiter().GetResult();
                 TestAssert.True(output.ToArray().AsSpan().SequenceEqual(baseline.ToArray()), "Async input protocol must preserve the matching synchronous PDF.");
                 TestAssert.True(input.AsyncReads > 1 && input.SyncReads == 0, "Every external input read uses the asynchronous stream contract, including preflight and entries.");
-                TestAssert.True((seekable && !lengthless) == (input.Seeks > 0), "Only an actual seekable/length-reporting source avoids compressed-input staging.");
+                TestAssert.True((seekable && !lengthless) == (input.Seeks > 0), "Only a length-reporting seekable source permits ZIP preflight seeks on the caller stream.");
                 TestAssert.Equal(0, input.Disposals);
                 TestAssert.True(input.CanRead && output.CanWrite, "Caller streams stay open.");
                 TestAssert.Equal(0L, pool.Reserved);

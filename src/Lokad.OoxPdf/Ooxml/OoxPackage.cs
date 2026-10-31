@@ -78,7 +78,8 @@ internal sealed class OoxPackage : IDisposable
         // (non-seekable) input, ZipArchive would otherwise consume an unbounded or
         // never-ending stream without observing cancellation. Stage non-seekable input
         // through a bounded, cancellation-aware copy first; seekable inputs are checked
-        // by length and read directly to avoid an extra full copy. Caller retains ownership.
+        // by length. .NET 11 reads them directly; .NET 10 also stages them below
+        // because its ZIP directory API reads synchronously. Caller retains ownership.
         MemoryStream? stagedBytes = null;
         Stream archiveStream = stream;
         // one scratch buffer is allocated for the whole open call instead of
@@ -132,6 +133,17 @@ internal sealed class OoxPackage : IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
             await PreflightCentralDirectoryAsync(archiveStream, scratch, cancellationToken).ConfigureAwait(false);
+#if NET10_0
+            // .NET 10 lazily reads ZipArchive.Entries synchronously, even after
+            // CreateAsync. Keep those reads on owned memory; external input is
+            // copied with the existing bounded, admitted async staging path.
+            if (stagedBytes is null)
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+                stagedBytes = await StageCompressedInputAsync(stream, MaxCompressedBytes, scratch, compressed, cancellationToken).ConfigureAwait(false);
+                archiveStream = stagedBytes;
+            }
+#endif
             OoxContentTypes contentTypes;
             Dictionary<string, OoxPart> parts;
             ZipArchive archive = await ZipArchive.CreateAsync(archiveStream, ZipArchiveMode.Read,

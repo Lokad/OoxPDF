@@ -40,6 +40,11 @@ fonts, generated bullets/chart text, ellipsis and needed glyph fallback candidat
 before measurement, using the shared prepared font owner. Caller streams
 stay open; cancellation waits for outstanding
 I/O before refunding borrowed storage. Input failures escape without preflight retry.
+.NET 10 reads ZIP directory entries synchronously inside the BCL. After bounded
+preflight, the converter therefore copies seekable input through its existing
+admitted async staging path before ZIP parsing; .NET 11 keeps the direct path.
+This requires additional compressed-input capacity on .NET 10, preserves caller
+stream ownership, and avoids synchronous reads on an async-only caller stream.
 
 Set `TemporaryStorage` when embedded stream conversions may exceed
 `MaxResidentPageContentBytesPerConversion`. Without it, exceeding that existing

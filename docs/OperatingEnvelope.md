@@ -13,7 +13,10 @@ Stream conversion exceeding its resident content window requires `TemporaryStora
 without a provider it fails instead of creating process-temp files. File conversion
 selects explicit filesystem backing. Package, staged/output I/O and owned storage
 disposal and selected DOCX/PPTX font acquisition are awaited; CPU layout and
-drawing remain synchronous.
+drawing remain synchronous. On .NET 10, the BCL synchronously materializes
+ZIP directory entries, so even seekable input is copied through the bounded async
+intake stage before ZIP parsing. Its compressed buffer stays admitted until
+extraction finishes; .NET 11 keeps direct seekable intake.
 `MemoryBudget` admits package buffers/parts and coarse parsed content-type/XML
 cache capacity, with temporary parsing/normalization headroom. One existing package
 scope holds retained estimates through its final readers; failed parsing refunds
