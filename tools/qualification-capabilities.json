@@ -1,4 +1,21 @@
 {
+  "pptx-point-legends": [
+    "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
+    "PptxVaryingBarCategoryLegends",
+    "PptxNegativeBar",
+    "PptxAuthoredTintShade",
+    "PptxAutomaticBarPalettes",
+    "PptxClusteredSpacing",
+    "PptxAutomaticColumnInsets",
+    "PptxScenePreservesChartColorStyleDeclarations",
+    "PptxSyntheticBarChartLegendSwatchesUseSeriesStroke",
+    "PptxSyntheticBarChartSeriesLineWithoutWidthUsesFilledSeriesDefault",
+    "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-automatic-insets": [
     "PptxAutomaticColumnInsets",
     "PptxClusteredSpacing",
@@ -668,6 +685,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
     "PptxAutomaticColumnInsets",
     "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
     "PptxAuthoredTintShadeChartsMatchIndependentOfficePaints",

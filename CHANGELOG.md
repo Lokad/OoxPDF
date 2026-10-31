@@ -20,6 +20,8 @@
   VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
   qualification records framework-specific library and tool identities.
+- PPTX: restores category legends for individually formatted single-series points
+  when varying colors is off, and preserves explicit point no-fill.
 - PPTX: measures automatic column-chart horizontal reserves from axis labels,
   keeping titles and horizontal legends from shrinking the plot.
 - PPTX: sizes clustered bars from the actual interseries gaps, preserving single-

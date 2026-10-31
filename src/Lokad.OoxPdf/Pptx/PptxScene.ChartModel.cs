@@ -938,7 +938,11 @@ internal sealed record PptxSceneChartPointStyle(
     PptxSceneLineStyle Line,
     PptxSceneChartEffectFamily Effects,
     double? Explosion,
-    string ExplosionValue);
+    string ExplosionValue)
+{
+    // An explicit empty appearance also gives this point a category identity.
+    public bool HasShapeProperties { get; init; }
+}
 
 // T02: axis kind/position/crossing/orientation/tick enums derive from their raw
 // spellings inside Defined, so an axis cannot carry an enum that disagrees with

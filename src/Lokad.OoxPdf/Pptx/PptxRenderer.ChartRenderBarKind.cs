@@ -51,8 +51,8 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(barPlot, barChart, theme, colorMap, ChartFilledSeriesInheritedStrokeWidth);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme, colorMap);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme, colorMap);
-                bool categoryLegend = barOptions.VaryColors.Value && barSeriesVectors.Count == 1 &&
-                    sceneChart.Plots.Sum(plot => plot.Series.Count) == 1;
+                bool categoryLegend = barSeriesVectors.Count == 1 && sceneChart.Plots.Sum(plot => plot.Series.Count) == 1 &&
+                    (barOptions.VaryColors.Value || barPlot?.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
                     ? BuildBarCategoryLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
                     : BuildFillLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));

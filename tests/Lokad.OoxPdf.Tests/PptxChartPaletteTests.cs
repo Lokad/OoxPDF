@@ -55,15 +55,16 @@ internal static class PptxChartPaletteTests
         {
             (true, false, false, false), (false, false, false, false),
             (true, true, false, false), (true, false, true, false),
-            (true, false, false, true)
+            (true, false, false, true), (false, false, true, false)
         })
         {
             PdfPage page = RenderLegend(count, vary, seriesFill, pointFill, negative);
             RgbColor[] paints = ReadColoredFills(page.Content).ToArray();
             int bars = negative ? count - 1 : count; // White inverted paint is excluded.
-            int keys = vary ? bars : 1;
+            bool categoryLegend = vary || pointFill;
+            int keys = categoryLegend ? bars : 1;
             TestAssert.Equal(bars + keys, paints.Length);
-            if (vary) TestAssert.True(paints.Take(bars).SequenceEqual(paints.Skip(bars)), "Category legend keys must share the resolved point paint.");
+            if (categoryLegend) TestAssert.True(paints.Take(bars).SequenceEqual(paints.Skip(bars)), "Category legend keys must share the resolved point paint.");
         }
     }
 
@@ -135,7 +136,7 @@ internal static class PptxChartPaletteTests
 
 
     // Inspect painted colors rather than private helpers, branch names or constants.
-    private static IEnumerable<RgbColor> ReadColoredFills(string content, Action<string>? painted = null)
+    internal static IEnumerable<RgbColor> ReadColoredFills(string content, Action<string>? painted = null)
     {
         RgbColor? color = null;
         var saved = new Stack<RgbColor?>();

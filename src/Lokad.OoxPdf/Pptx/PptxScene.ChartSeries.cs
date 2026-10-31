@@ -184,7 +184,10 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartLine(shapeProperties, theme, colorMap),
                 ReadChartEffects(shapeProperties),
                 explosion,
-                explosionValue));
+                explosionValue)
+            {
+                HasShapeProperties = shapeProperties is not null
+            });
         }
 
         return styles;
@@ -213,6 +216,11 @@ internal sealed partial class PptxSceneBuilder
 
     private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
     {
+        if (shapeProperties?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            return new PptxSceneFillStyle(true, default, 0d);
+        }
+
         return PptxColorResolver.TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;

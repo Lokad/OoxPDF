@@ -1,0 +1,639 @@
+{
+  "OfficeVersion": "16.0",
+  "ReferenceKind": "OfficePdf-backed bootstrap; direct view not calibrated",
+  "Rows": [
+    {
+      "Id": "different-points",
+      "Input": "different-points.pptx",
+      "InputSha256": "A05517C80B7142EA6BFF1CE59EC0AEECAC5F637493D95B739A09A6D1C5956194",
+      "ReferencePdfSha256": "A682FC86079CE89B7FBDA48AC532FB1102E289F4034ED440B5C4643683C6BE4C",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "08739C",
+        "0B86B6",
+        "0E97CB",
+        "5BABDA",
+        "96C2E3",
+        "BCD6EB",
+        "08739C",
+        "0B86B6",
+        "0E97CB",
+        "5BABDA",
+        "96C2E3",
+        "BCD6EB"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\different-points",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "no-points",
+      "Input": "no-points.pptx",
+      "InputSha256": "ED75AE3D8A9BCC36DCB790DFF418BC0C5CBBF0FF46669FFA39DD11D99A42543D",
+      "ReferencePdfSha256": "92536B8A8D14A484F1126C68A9A671A585AFF667110CE87208CF511F7E751A05",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 1,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\no-points",
+      "LiveLegendEntriesBeforeSave": 1
+    },
+    {
+      "Id": "one-point",
+      "Input": "one-point.pptx",
+      "InputSha256": "25945B7CC2E87B89F316F9AA71B3E9A6A720AEE63A08D267698F7993DA361AF0",
+      "ReferencePdfSha256": "391A5F9FA6863AD88458C5BF536F80C36F2243CD131A9B7771DF51F9D1DC4B0A",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "08739C",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "08739C",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\one-point",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "same-points",
+      "Input": "same-points.pptx",
+      "InputSha256": "35358E6F53772BDD5BC74A3DD0178695E7EFB0F574E99A06D8F96071C863E8AA",
+      "ReferencePdfSha256": "C71227637CD6669C4E644156E8DC2869352C3CF4FD5AFAD46A7F2FF8DF324405",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C",
+        "08739C"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\same-points",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "stroke-only",
+      "Input": "stroke-only.pptx",
+      "InputSha256": "37B2CFFA1059759E5D14CC5E03B81514D72681DB82DB0B65DB1C3AD44854DDB7",
+      "ReferencePdfSha256": "1A60830CCAE6F2E55BEB7748311A41B86A52A79A48E5A6FEB6D84C36498E18BA",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\stroke-only",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "empty-point",
+      "Input": "empty-point.pptx",
+      "InputSha256": "98103580CF55E4A5E17675176F3A2A07AEF6D34283B017F11E34A438842B23C8",
+      "ReferencePdfSha256": "0410E310539E02BBC7C59BCC4A8BCDBA6E9B8C84C32F45ECF80752E12ABB4BBB",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 1,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\empty-point",
+      "LiveLegendEntriesBeforeSave": 1
+    },
+    {
+      "Id": "no-fill",
+      "Input": "no-fill.pptx",
+      "InputSha256": "DB17C87524873299C70BBD16C93B6CD96E53EC14A44A51433F6B1E7A786E514A",
+      "ReferencePdfSha256": "21D8E69EE90891D6D01F063EC7770E5EA73A219D5905CC440B921D2571F264EF",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 5,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\no-fill",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "series-fill",
+      "Input": "series-fill.pptx",
+      "InputSha256": "B7D6C1B53D02AE71AF4C448302EBED4AD3685431BA663EF87F1018A6D7EB5EA6",
+      "ReferencePdfSha256": "20311B69D36659CF16E0D40FBBB12110FB56788D223F25C8E99E3C9E5C5B43D2",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 1,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1
+      ],
+      "ColoredPaints": [
+        "E52C40",
+        "E52C40",
+        "E52C40",
+        "E52C40",
+        "E52C40",
+        "E52C40",
+        "E52C40"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\series-fill",
+      "LiveLegendEntriesBeforeSave": 1
+    },
+    {
+      "Id": "horizontal-point",
+      "Input": "horizontal-point.pptx",
+      "InputSha256": "D1F346CEA7991EC99E2485D0F3146D70AA656D392487E97487A76CA7171E8327",
+      "ReferencePdfSha256": "DC9DF7E45657782F8F992E54F561577228B499D6E32217D46216FA30C6F29756",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "08739C",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "08739C",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\horizontal-point",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "cycle-style",
+      "Input": "cycle-style.pptx",
+      "InputSha256": "58EC6FEB457FACC214E71E6BCAAACE027AF6DD65F694CCBA67834F6C7D2CA2D0",
+      "ReferencePdfSha256": "B4EFE178DB2977861DCF8797F155586099EF86F877513ABB8DA4BAC4AEA0A01C",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "08739C",
+        "156082",
+        "156082",
+        "156082",
+        "156082",
+        "156082",
+        "08739C",
+        "156082",
+        "156082",
+        "156082",
+        "156082",
+        "156082"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\cycle-style",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "unstyled",
+      "Input": "unstyled.pptx",
+      "InputSha256": "903593BE1A1554DA15818CC10F5032482B2DFF7520E2E27151D13ACF60C2D73D",
+      "ReferencePdfSha256": "BB804715F5B72566147B2A9CDFEEEB654E2B2397B99FE1331A28E42150A852A8",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "08739C",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "08739C",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\unstyled",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "multiple-series",
+      "Input": "multiple-series.pptx",
+      "InputSha256": "61C8A00DF69BF961D9D8EF808D741415FC890A6DB17166CBC0801E3210720EC5",
+      "ReferencePdfSha256": "DEE99EE7FB08AE41DFF2E6C2AF07355AFD4ECA49459DDF014764174C31A9ABFA",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 2,
+      "SeriesCount": 2,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1,
+        1
+      ],
+      "ColoredPaints": [
+        "08739C",
+        "0C8BBC",
+        "0C8BBC",
+        "0C8BBC",
+        "0C8BBC",
+        "0C8BBC",
+        "85BAE0",
+        "85BAE0",
+        "85BAE0",
+        "85BAE0",
+        "85BAE0",
+        "85BAE0",
+        "0C8BBC",
+        "85BAE0"
+      ],
+      "VisibleBarCount": 12,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\extended\\multiple-series",
+      "LiveLegendEntriesBeforeSave": 2
+    },
+    {
+      "Id": "empty-shape",
+      "Input": "empty-shape.pptx",
+      "InputSha256": "C76E1FB994EBEB615A20C85A51A8BC59152C10E6EAA963C58E7C485C73E540DE",
+      "ReferencePdfSha256": "34E45BA7EC7EF2E298C127EA6B34AB602F695F34B220703DA8196BFB71DB307F",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 1,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\edge\\empty-shape",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "empty-effects",
+      "Input": "empty-effects.pptx",
+      "InputSha256": "01974C9CFEB28A4CF4FBD047608F9D0CE652C69225C04FC4B6878BA5A6735AAD",
+      "ReferencePdfSha256": "FD5E9CB32B96C38A5DA0D6DEB48FB331D6C14CCB27EC69865FDDE4807208698D",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\edge\\empty-effects",
+      "LiveLegendEntriesBeforeSave": 6
+    },
+    {
+      "Id": "invert-only",
+      "Input": "invert-only.pptx",
+      "InputSha256": "98EC6C5BEB46F904460CF64AAB02160520B69A3E72C80D53D436EA13A7A26510",
+      "ReferencePdfSha256": "CAB369F8416C528EA3EB8AB910E5C919B96E57075E7259E3B5C99E999D11B055",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 1,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\edge\\invert-only",
+      "LiveLegendEntriesBeforeSave": 1
+    },
+    {
+      "Id": "bubble-only",
+      "Input": "bubble-only.pptx",
+      "InputSha256": "9EF813F648AD7D61CECC36FC33A5D6A068DA3C2ECB05FD0A154AE91BB9A438FE",
+      "ReferencePdfSha256": "C2CFDA7B2254E38DA34ADC68DF597BED89954D7350602F7A572F2C4C25C986DB",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 1,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\edge\\bubble-only",
+      "LiveLegendEntriesBeforeSave": 1
+    },
+    {
+      "Id": "explosion-only",
+      "Input": "explosion-only.pptx",
+      "InputSha256": "F1437BFCE21EB361BC4789D05B94CE1745F7887B34D6D292C3A0FD4E88EF70D5",
+      "ReferencePdfSha256": "679FE6D17A8318F6F70C4A5401F5152A471AD304FE9B0460D30FADD2EB59A3E1",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 1,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "SeriesOccurrences": [
+        1
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\edge\\explosion-only",
+      "LiveLegendEntriesBeforeSave": 1
+    },
+    {
+      "Id": "empty-shape-raw",
+      "Input": "empty-shape-raw.pptx",
+      "InputSha256": "9145E7A8711B5E1A7D280CF299BD55751750089587480D30F1B9C81AF19DA397",
+      "ReferencePdfSha256": "6DEF85A432F3E92769B8D11FD7B55BF6682CF9206BFA40B55C95AE3293CEBD14",
+      "NativeVaryByCategories": false,
+      "LegendEntries": 6,
+      "SeriesCount": 1,
+      "CategoryOccurrences": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "SeriesOccurrences": [
+        0
+      ],
+      "ColoredPaints": [
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5",
+        "0F9ED5"
+      ],
+      "VisibleBarCount": 6,
+      "SourceProbeDirectory": "artifacts\\tlegend-policy-1031\\edge",
+      "LiveLegendEntriesBeforeSave": 6,
+      "Normalization": "Bare spPr is present in this original input; Office removes it on SaveAs. Use the verified pre-save PDF/native legend count for this row."
+    }
+  ]
+}
