@@ -54,7 +54,7 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         ChartPlotBox plotBox,
         IReadOnlyList<ChartIndexedNumberVector> series,
-        IReadOnlyList<RgbColor>? chartPalette,
+        ChartColorPalette chartPalette,
         ChartValueExtents extents,
         ChartBarPlotOptions barOptions,
         ChartValueAxisRenderOptions valueAxisOptions,

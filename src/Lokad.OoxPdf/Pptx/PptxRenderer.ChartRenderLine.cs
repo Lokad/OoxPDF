@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -28,11 +28,10 @@ internal sealed partial class PptxRenderer
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
-        // RV04: style-18 (transitional 18, c14 118) and style-26 (26, c14 126) line
-        // series stroke the raw theme base (Office emits no luminance tint on either
-        // gallery polyline); other styles keep the calibrated 97.5% tint. Only
-        // style-18 forces gallery markers; legend entries are untouched.
-        bool lineStyleSkipsUnstyledTint = chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
+        // Resolved single-accent defaults already carry their final paint.
+        // The independently qualified style18/26 recipes also omit the legacy tint;
+        // other palettes retain it. Marker selection remains a separate contract.
+        bool lineStyleSkipsUnstyledTint = chartPalette.SingleAccent is not null || chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
         bool lineStyleGalleryMarkers = chartStyleId == 18 || chartStyleId == 118;
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = 0;
@@ -213,7 +212,7 @@ internal sealed partial class PptxRenderer
                     // RV04: style-18 marker outlines stroke the raw base at 1pt (Office emits
                     // no luminance tint on marker rims); other styles keep the tinted 0.75pt rim.
                     RgbColor markerOutline = defaultSeriesStroke
-                        ? ((lineStyleGalleryMarkers || smoothForcedMarker) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
+                        ? ((lineStyleSkipsUnstyledTint || smoothForcedMarker) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
                         : stroke.Color;
                     double? outlineWidth = (lineStyleGalleryMarkers || smoothForcedMarker) ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null;
                     if (lineStyleGalleryMarkers
@@ -1256,7 +1255,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartSeriesStroke ChartSeriesStrokeColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, double defaultWidth)
+    private static ChartSeriesStroke ChartSeriesStrokeColor(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, double defaultWidth)
     {
         return seriesIndex < seriesStrokes.Count && seriesStrokes[seriesIndex] is { } stroke
             ? stroke

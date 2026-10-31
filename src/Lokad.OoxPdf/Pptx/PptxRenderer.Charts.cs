@@ -30,51 +30,52 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
+        ChartColorPalette palette = ResolveChartColorPalette(sceneChart, chartPalette, theme, colorMap);
         bool plotVisibleOnly = ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, chartXml);
         if ((await TryRenderBarChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderLineChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderAreaChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderScatterChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderBubbleChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderRadarChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderPieChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderDoughnutChartKindAsync(
-            graphics, document, theme, colorMap, chartPalette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
@@ -82,11 +83,17 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static RgbColor ChartPalette(IReadOnlyList<RgbColor>? chartPalette, PptxTheme? theme, PptxColorMap colorMap, int index)
+    private static RgbColor ChartPalette(ChartColorPalette chartPalette, PptxTheme? theme, PptxColorMap colorMap, int index, int count = 0)
     {
-        if (chartPalette is { Count: > 0 })
+        if (chartPalette.SingleAccent is { } accent)
         {
-            return chartPalette[index % chartPalette.Count];
+            int colorCount = Math.Max(1, count > 0 ? count : chartPalette.SeriesCount);
+            return ResolveSingleAccentColor(accent, index % colorCount, colorCount);
+        }
+
+        if (chartPalette.Colors is { Count: > 0 } colors)
+        {
+            return colors[index % colors.Count];
         }
 
         if (theme is not null && theme.TryResolveColor("accent" + (index % 6 + 1).ToString(CultureInfo.InvariantCulture), colorMap, out RgbColor themeColor))

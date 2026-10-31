@@ -16,7 +16,7 @@ internal sealed partial class PptxRenderer
         PptxDocument document,
         PptxTheme theme,
         PptxColorMap colorMap,
-        IReadOnlyList<RgbColor>? chartPalette,
+        ChartColorPalette chartPalette,
         ShapeBounds bounds,
         XDocument chartXml,
         PptxSceneChart sceneChart,

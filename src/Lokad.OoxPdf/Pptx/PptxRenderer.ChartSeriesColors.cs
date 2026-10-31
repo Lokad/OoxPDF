@@ -1,8 +1,45 @@
+using System.Globalization;
+using Lokad.OoxPdf.Ooxml;
+
 namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static ChartSeriesFill ChartSeriesColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, double defaultAlpha)
+    // A palette is an inherited color recipe, separate from authored series/point fills.
+    private readonly record struct ChartColorPalette(
+        IReadOnlyList<RgbColor>? Colors, RgbColor? SingleAccent, int SeriesCount);
+
+    private static ChartColorPalette ResolveChartColorPalette(
+        PptxSceneChart chart, IReadOnlyList<RgbColor>? colors, PptxTheme theme, PptxColorMap colorMap)
+    {
+        int seriesCount = chart.Plots.Sum(plot => plot.Series.Count);
+        if (colors is { Count: > 0 }) { return new(colors, null, seriesCount); }
+
+        int? preferred = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chart.ChartXml?.Root);
+        int style = preferred is int modern ? modern - 100 :
+            int.TryParse(chart.StyleId, NumberStyles.Integer,
+                CultureInfo.InvariantCulture, out int legacy) ? legacy : 0;
+        int slot = (style - 1) % 8;
+        if (style is >= 1 and <= 48 && slot >= 2 &&
+            theme.TryResolveColor("accent" + (slot - 1).ToString(CultureInfo.InvariantCulture), colorMap, out RgbColor accent))
+        {
+            return new(null, accent, seriesCount);
+        }
+
+        return new(colors, null, seriesCount);
+    }
+
+    // Office's single-accent palette samples one continuous shade/tint span.
+    // Integer percentages are shared by series and varying-point colors.
+    private static RgbColor ResolveSingleAccentColor(RgbColor color, int index, int count)
+    {
+        int percentage = (int)(140L * (index + 1L) / (count + 1L));
+        return percentage < 70
+            ? LinearLightColor.ShadeTowardBlack(color, (30 + percentage) / 100d)
+            : LinearLightColor.TintTowardWhite(color, (percentage - 70) / 100d);
+    }
+
+    private static ChartSeriesFill ChartSeriesColor(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, double defaultAlpha)
     {
         return seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is { } fill
             ? fill
@@ -100,12 +137,13 @@ internal sealed partial class PptxRenderer
             : LinearLightColor.TintTowardWhite(color, (percentage - 70) / 100d);
     }
 
-    private static ChartSeriesFill ChartCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, int valuePointCount)
+    private static ChartSeriesFill ChartCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, int valuePointCount)
     {
         if (varyColors && seriesCount == 1 && (seriesFills.Count == 0 || seriesFills[0] is null))
         {
-            RgbColor paletteColor = ChartPalette(chartPalette, theme, colorMap, categoryIndex);
-            paletteColor = ResolveAutomaticBarColor(paletteColor, categoryIndex, valuePointCount);
+            RgbColor paletteColor = ChartPalette(chartPalette, theme, colorMap, categoryIndex, valuePointCount);
+            if (chartPalette.SingleAccent is null)
+                paletteColor = ResolveAutomaticBarColor(paletteColor, categoryIndex, valuePointCount);
 
             return new ChartSeriesFill(paletteColor, 1d, null, null);
         }
@@ -113,7 +151,7 @@ internal sealed partial class PptxRenderer
         return ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
     }
 
-    private static ChartSeriesFill ChartPointCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int valuePointCount)
+    private static ChartSeriesFill ChartPointCategoryOrSeriesColor(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int valuePointCount)
     {
         if (seriesIndex < pointFills.Count && pointFills[seriesIndex].TryGetValue(categoryIndex, out ChartSeriesFill pointFill))
         {
@@ -123,7 +161,7 @@ internal sealed partial class PptxRenderer
         return ChartCategoryOrSeriesColor(theme, colorMap, chartPalette, seriesIndex, categoryIndex, seriesCount, varyColors, seriesFills, valuePointCount);
     }
 
-    private static ChartSeriesFill ResolveBarPointFill(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int valuePointCount, double value, bool invertNegative)
+    private static ChartSeriesFill ResolveBarPointFill(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, int categoryIndex, int seriesCount, bool varyColors, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, int valuePointCount, double value, bool invertNegative)
     {
         if (value < 0d && invertNegative)
         {

@@ -31,7 +31,7 @@ internal static class PptxChartPaletteTests
                 </c:chartSpace>
                 """;
             var page = Render(chart, palette);
-            RgbColor[] paints = ReadColoredFills(page.Content).ToArray();
+            RgbColor[] paints = ReadColoredPaints(page.Content).ToArray();
             string[] expected = row.GetProperty("Colors").EnumerateArray().Select(color => color.GetString()!).ToArray();
             TestAssert.Equal(count, paints.Length);
             var residuals = row.GetProperty("Residuals").EnumerateArray().ToDictionary(
@@ -59,7 +59,7 @@ internal static class PptxChartPaletteTests
         })
         {
             PdfPage page = RenderLegend(count, vary, seriesFill, pointFill, negative);
-            RgbColor[] paints = ReadColoredFills(page.Content).ToArray();
+            RgbColor[] paints = ReadColoredPaints(page.Content).ToArray();
             int bars = negative ? count - 1 : count; // White inverted paint is excluded.
             bool categoryLegend = vary || pointFill;
             int keys = categoryLegend ? bars : 1;
@@ -73,7 +73,7 @@ internal static class PptxChartPaletteTests
         const int count = 13;
         PdfPage page = RenderLegend(count);
         var rectangles = new List<(double X, double Y, double Width, double Height)>();
-        _ = ReadColoredFills(page.Content, line =>
+        _ = ReadColoredPaints(page.Content, line =>
         {
             if (!line.EndsWith(" re f", StringComparison.Ordinal)) return;
             double[] values = line[..^5].Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -136,7 +136,7 @@ internal static class PptxChartPaletteTests
 
 
     // Inspect painted colors rather than private helpers, branch names or constants.
-    internal static IEnumerable<RgbColor> ReadColoredFills(string content, Action<string>? painted = null)
+    internal static IEnumerable<RgbColor> ReadColoredPaints(string content, Action<string>? painted = null, bool strokes = false)
     {
         RgbColor? color = null;
         var saved = new Stack<RgbColor?>();
@@ -145,15 +145,16 @@ internal static class PptxChartPaletteTests
             string line = raw.Trim();
             if (line == "q") { saved.Push(color); }
             else if (line == "Q") { color = saved.Pop(); }
-            else if (line.EndsWith(" rg", StringComparison.Ordinal))
+            else if (line.EndsWith(strokes ? " RG" : " rg", StringComparison.Ordinal))
             {
                 double[] channels = line[..^3].Split(' ', StringSplitOptions.RemoveEmptyEntries)
                     .Select(value => double.Parse(value, CultureInfo.InvariantCulture)).ToArray();
                 color = new RgbColor(Channel(channels[0]), Channel(channels[1]), Channel(channels[2]));
             }
-            else if (line.EndsWith(" g", StringComparison.Ordinal)) { color = null; }
+            else if (line.EndsWith(strokes ? " G" : " g", StringComparison.Ordinal)) { color = null; }
             else if (color is { } paint && (paint.Red != paint.Green || paint.Green != paint.Blue) &&
-                (line is "f" or "f*" || line.EndsWith(" f", StringComparison.Ordinal) || line.EndsWith(" f*", StringComparison.Ordinal)))
+                (strokes ? line is "S" or "s" || line.EndsWith(" S", StringComparison.Ordinal) || line.EndsWith(" s", StringComparison.Ordinal) :
+                    line is "f" or "f*" || line.EndsWith(" f", StringComparison.Ordinal) || line.EndsWith(" f*", StringComparison.Ordinal)))
             { painted?.Invoke(line); yield return paint; }
         }
         static byte Channel(double value) => (byte)Math.Round(value * 255, MidpointRounding.AwayFromZero);

@@ -25,7 +25,7 @@ internal sealed partial class PptxRenderer
         return startAngleRadians - sliceValue / total * Math.PI;
     }
 
-    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (!labelOptions.HasVisibleContent || slices.Count == 0)
         {
@@ -206,7 +206,7 @@ internal sealed partial class PptxRenderer
                     double swatchY = labelBox.Y + Math.Max(0d, (labelBox.Height - swatchSize) / 2d);
                     ChartSeriesFill fill = pointFills.TryGetValue(slice.Index, out ChartSeriesFill explicitFill)
                         ? explicitFill
-                        : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, slice.Index), 1d, null, null);
+                        : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, slice.Index, slices.Count), 1d, null, null);
                     FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, fill);
                     textX += swatchSize + swatchGap;
                     textWidth = Math.Max(1d, textWidth - swatchSize - swatchGap);

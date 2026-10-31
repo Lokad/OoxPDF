@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false)
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
@@ -45,7 +45,7 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
     {
         IReadOnlyList<ChartIndexedTextPoint> points = ReadSharedCategoryLabels(plot, chartElement, workbook, plotVisibleOnly)
             .OfType<ChartIndexedTextPoint>()
@@ -62,7 +62,7 @@ internal sealed partial class PptxRenderer
             usedIndexes.Add(point.Index);
             ChartSeriesFill fill = resolveFill is not null ? resolveFill(point.Index) : pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
-                : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, point.Index), 1d, null, null);
+                : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, point.Index, valuePointCount), 1d, null, null);
             entries.Add(new ChartLegendEntry(point.Text, fill, resolveStroke?.Invoke(point.Index), null, null, LineHidden: false));
         }
 
@@ -78,7 +78,7 @@ internal sealed partial class PptxRenderer
 
             ChartSeriesFill valueFill = resolveFill is not null ? resolveFill(valueIndex) : pointFills.TryGetValue(valueIndex, out ChartSeriesFill valuePointFill)
                 ? valuePointFill
-                : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, valueIndex), 1d, null, null);
+                : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, valueIndex, valuePointCount), 1d, null, null);
             entries.Add(new ChartLegendEntry(string.Empty, valueFill, resolveStroke?.Invoke(valueIndex), null, null, LineHidden: false));
         }
 
@@ -93,7 +93,7 @@ internal sealed partial class PptxRenderer
         return chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null, int? chartStyleId = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null, int? chartStyleId = null)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
@@ -121,7 +121,7 @@ internal sealed partial class PptxRenderer
             // DrawingML attr defaults (same rule as series lines).
             if (i >= seriesStrokes.Count || seriesStrokes[i] is null)
             {
-                keyStroke = keyStroke with { Cap = keyStroke.Cap ?? 1, Join = keyStroke.Join ?? 1, Color = IsGalleryLineChartStyle(chartStyleId) ? keyStroke.Color : ApplyUnstyledLineStrokeTint(keyStroke.Color) };
+                keyStroke = keyStroke with { Cap = keyStroke.Cap ?? 1, Join = keyStroke.Join ?? 1, Color = (chartPalette.SingleAccent is not null || IsGalleryLineChartStyle(chartStyleId)) ? keyStroke.Color : ApplyUnstyledLineStrokeTint(keyStroke.Color) };
                 if (IsGalleryLineChartStyle(chartStyleId))
                 {
                     keyStroke = keyStroke with { Width = ResolveStyleLineSeriesWidth(chartStyleId, false) };
