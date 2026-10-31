@@ -660,7 +660,9 @@
       "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
       "DocxPagePrintOriginsKeepInspectionLinksAndNoteTargetsTogether",
       "ConvertAsyncInputUsesAwaitedShortReadsForDocxAndPptx",
-      "ConvertAsyncInputZip64PreflightKeepsBoundsAndContent"
+      "ConvertAsyncInputZip64PreflightKeepsBoundsAndContent",
+      "DocxParagraphShadingPaintsWordColorsAcrossFlowCellsStaticAndMath",
+      "DocxParagraphShadingSurvivesPictureOnlyCellPlacement"
   ],
   "pptx-inheritance": [
       "PptxInheritance",
