@@ -2,10 +2,16 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    // Word paints after-spacing only between adjacent shaded paragraphs.
-    // Tables, explicit breaks and the end of a container stop the background.
+    // Both sides of the gap join only between shaded paragraphs with matching
+    // background edges. Text alignment, first-line indent and colors may differ.
+    private static bool CanJoinParagraphShading(DocxParagraph previous, DocxParagraph next) =>
+        previous.Shading is not null && next.Shading is not null &&
+        ParagraphShadingLeftInset(previous, 1d) == ParagraphShadingLeftInset(next, 1d) &&
+        GetParagraphRightInset(previous, 1d) == GetParagraphRightInset(next, 1d);
+
     private static bool HasFollowingParagraphShading(IReadOnlyList<DocxBodyElement> elements, int index) =>
-        index + 1 < elements.Count && elements[index + 1] is DocxParagraphElement { Paragraph.Shading: not null };
+        index + 1 < elements.Count && elements[index] is DocxParagraphElement current &&
+        elements[index + 1] is DocxParagraphElement next && CanJoinParagraphShading(current.Paragraph, next.Paragraph);
 
     private static double ParagraphShadingLeftInset(DocxParagraph paragraph, double scale) =>
         Math.Min(GetParagraphTextStartOffset(paragraph, scale), paragraph.ListLabel is null
@@ -15,11 +21,7 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveParagraphShadingBeforeSpacing(DocxParagraph? previous, DocxParagraph paragraph,
         DocxParagraphSpacingProfile spacing)
     {
-        // Word joins the excess gap only when the background edges agree.
-        // Text alignment and first-line indentation may still differ.
-        if (previous?.Shading is null ||
-            ParagraphShadingLeftInset(previous, 1d) != ParagraphShadingLeftInset(paragraph, 1d) ||
-            GetParagraphRightInset(previous, 1d) != GetParagraphRightInset(paragraph, 1d)) return 0d;
+        if (previous is null || !CanJoinParagraphShading(previous, paragraph)) return 0d;
         return Math.Max(0d, spacing.AppliedBeforeSpacing - spacing.PendingAfterSpacing);
     }
 

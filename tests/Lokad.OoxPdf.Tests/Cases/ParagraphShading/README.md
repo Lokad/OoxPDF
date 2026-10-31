@@ -15,9 +15,9 @@ see the [Microsoft Open XML shading reference](https://learn.microsoft.com/en-us
 
 `spacing.docx` and held-out `spacing-containers.docx` independently check background
 boundaries in body, cells, header and footer. After-spacing is painted between
-adjacent shaded paragraphs, including different colors; it stays clear before an
-unshaded paragraph or at the end of a container. `spacing-office.json` pins twelve
-Word fill samples. `before-office.json` adds independent before-spacing controls,
+adjacent shaded paragraphs with matching background edges, including different colors; it stays clear before an
+unshaded paragraph or at the end of a container. `spacing-office.json` pins the original twelve
+Word fill samples and eight edge-continuity controls. `before-office.json` adds independent before-spacing controls,
 including `before-boundaries.docx` and held-out `before-containers.docx`. Excess
 before-spacing joins shaded paragraphs through the first placed line; page and
 container starts keep their clear gaps. `before-edges.docx` distinguishes matching

@@ -146,6 +146,101 @@
           "PaintedAfterSpacing": 0.0
         }
       ]
+    },
+    {
+      "Input": "before-edges.docx",
+      "InputSha256": "029F0905AD5DC2633F4057326829EB1BAC78E7632E9C82CD99AFEE38429939D7",
+      "ReferencePdfSha256": "7CF3E258DDE109F18CA18795D7B784DCAEE438827CE8288C3045CABE8CC74653",
+      "Samples": [
+        {
+          "Label": "ZEROAFTERSAME FIRST",
+          "Page": 1,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0
+        },
+        {
+          "Label": "ZEROAFTERDIFFERENT FIRST",
+          "Page": 2,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0
+        },
+        {
+          "Label": "CURRENTLEFT FIRST",
+          "Page": 3,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0
+        },
+        {
+          "Label": "PREVIOUSLEFT FIRST",
+          "Page": 4,
+          "Rectangle": [
+            88.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0
+        },
+        {
+          "Label": "FIRSTLINE FIRST",
+          "Page": 5,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18
+        },
+        {
+          "Label": "RIGHTEDGE FIRST",
+          "Page": 6,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0
+        },
+        {
+          "Label": "SAMELEFT FIRST",
+          "Page": 7,
+          "Rectangle": [
+            88.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18
+        },
+        {
+          "Label": "CENTER FIRST",
+          "Page": 8,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18
+        }
+      ]
     }
   ]
 }
