@@ -425,8 +425,26 @@ internal sealed partial class PptxRenderer
                 await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend,
                     ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0), lineElement, chartXml, fontResolver).ConfigureAwait(false) is { } header)
             {
-                double top = frame.Y + frame.Height - header;
+                double top = frame.Y + frame.Height - header.Reserve;
                 defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };
+                // Numeric labels own their measured side strip independently
+                // of captions, bottom legends and the unresolved footer metric.
+                double? numericReserve = PptxChartMetricRules.ColumnPlotRightReserve;
+                ChartAxisSource valueAxis = header.ValueAxis;
+                if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+                {
+                    var (labelWidth, tickStyle) = await MeasureLineChartValueLabelWidthAsync().ConfigureAwait(false);
+                    numericReserve = labelWidth > 0d ? ComputeCartesianAxisLabelSideReserve(labelWidth, tickStyle.FontSize) : null;
+                }
+                if (numericReserve is { } reserve)
+                {
+                    bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis,
+                        ResolveSceneOrXmlValueAxisRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+                    double left = labelsRight ? PptxChartMetricRules.ColumnPlotRightReserve : reserve;
+                    double right = labelsRight ? reserve : PptxChartMetricRules.ColumnPlotRightReserve;
+                    double width = frame.Width - left - right;
+                    if (width >= 1d) defaultPlotBox = defaultPlotBox with { X = frame.X + left, Width = width };
+                }
             }
             return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
                 ? manualPlotLayout

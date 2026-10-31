@@ -330,7 +330,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForCategoryLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForValueLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
-        double? cartesianHeader = horizontalBars ? null :
+        (double Reserve, ChartAxisSource ValueAxis)? cartesianHeader = horizontalBars ? null :
             await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, barChart, chartXml, fontResolver).ConfigureAwait(false);
         if (cartesianHeader is null)
             defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
@@ -339,7 +339,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
         if (cartesianHeader is { } measuredHeader)
         {
-            double top = frame.Y + frame.Height - measuredHeader;
+            double top = frame.Y + frame.Height - measuredHeader.Reserve;
             defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };
         }
         else if (measuredTitle is { } measuredLine)

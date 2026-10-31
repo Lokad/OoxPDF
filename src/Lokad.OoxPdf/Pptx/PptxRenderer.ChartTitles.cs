@@ -547,7 +547,7 @@ internal sealed partial class PptxRenderer
         return reserveSides;
     }
 
-    private static async ValueTask<double?> TryMeasureCartesianHeaderAsync(
+    private static async ValueTask<(double Reserve, ChartAxisSource ValueAxis)?> TryMeasureCartesianHeaderAsync(
         PptxTheme theme, PptxSceneChart chart, ChartLegendLayout legend,
         PptxSceneChartPlot? plot, XElement plotElement, XDocument chartXml, PresentationFontResolver? resolver)
     {
@@ -579,7 +579,8 @@ internal sealed partial class PptxRenderer
                 return null;
             lineHeight = measured;
         }
-        return await MeasureCartesianHeaderReserveAsync(theme, chart, resolver, lineHeight).ConfigureAwait(false);
+        // The same eligible numeric-axis owner supplies horizontal measurement.
+        return (await MeasureCartesianHeaderReserveAsync(theme, chart, resolver, lineHeight).ConfigureAwait(false), axes[0]);
     }
 
     private static async ValueTask<double> MeasureCartesianHeaderReserveAsync(

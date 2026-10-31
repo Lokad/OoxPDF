@@ -228,7 +228,8 @@ internal sealed partial class PptxRenderer
         }
         XElement? rightValueAxis = rightValueAxisSource.XmlAxis;
         PptxSceneChartAxis? rightSceneAxis = rightValueAxisSource.SceneAxis;
-        if (rightValueAxis is null && rightSceneAxis is null)
+        if (rightValueAxis is null && rightSceneAxis is null ||
+            !IsSceneOrXmlChartAxisLabelVisible(rightSceneAxis, rightValueAxis))
         {
             return;
         }
