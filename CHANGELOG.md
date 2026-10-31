@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
+  explicit non-overlay legends retain their plot-space reservation.
+
 - PPTX: automatic chart titles share measured frame placement and caption-sized
   painting across chart kinds. Manual title rectangles retain authored bounds;
   horizontal title/legend bands preserve axis spacing. Ordinary column and line

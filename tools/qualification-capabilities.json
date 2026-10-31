@@ -1,4 +1,22 @@
 {
+  "pptx-legend-defaults": [
+    "PptxOmittedLegendOverlayMatchesPowerPointDefaultAcrossKinds",
+    "PptxExplicitReservedLegendKeepsItsDistinctPlotContract",
+    "PptxHorizontalFrame",
+    "PptxHorizontalLegend",
+    "PptxHorizontalOverlayTitlesKeepTheUnreservedPlot",
+    "PptxChartLegend",
+    "PptxChartMissingLegend",
+    "PptxChartUnknownLegendPosition",
+    "PptxChartRightLegend",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-cartesian-header": [
       "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
       "PptxCffSubstitutionMatchesTrueTypeRendering",

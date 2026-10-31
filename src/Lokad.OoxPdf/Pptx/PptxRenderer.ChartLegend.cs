@@ -213,7 +213,9 @@ internal sealed partial class PptxRenderer
         return new ChartLegendLayout(
             ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)),
             position,
-            legend.Overlay == true,
+            // PowerPoint materializes an omitted overlay flag as true on save.
+            // Only an explicit false reserves plot space for the legend.
+            legend.Overlay ?? true,
             Visible: true,
             legend.Layout,
             legend.TextBodyProperties,
@@ -233,7 +235,7 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneChart.Legend.IsDeleted != true
-            ? new ChartLegendLayout(ResolveChartLegendPosition(sceneChart.Legend.PositionKind), sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout, sceneChart.Legend.TextBodyProperties, ToChartShapeStyle(sceneChart.Legend.ShapeStyle))
+            ? new ChartLegendLayout(ResolveChartLegendPosition(sceneChart.Legend.PositionKind), sceneChart.Legend.Position, sceneChart.Legend.Overlay ?? true, Visible: true, sceneChart.Legend.Layout, sceneChart.Legend.TextBodyProperties, ToChartShapeStyle(sceneChart.Legend.ShapeStyle))
             : ChartLegendLayout.Hidden;
     }
 

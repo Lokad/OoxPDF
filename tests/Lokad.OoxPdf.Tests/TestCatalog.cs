@@ -148,6 +148,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(PptxHorizontalFrameTests)),
         .. FromType("rendering-portable", typeof(PptxTitleShapeTests)),
         .. FromType("rendering-portable", typeof(PptxCartesianHeaderTests)),
+        .. FromType("rendering-portable", typeof(PptxLegendDefaultTests)),
         .. FromType("rendering-portable", typeof(PptxPointLegendTests)),
         .. FromType("rendering-portable", typeof(PptxBuiltinPaletteTests)),
         .. FromType("pptx-charts", typeof(PptxChartLegendsTests)),

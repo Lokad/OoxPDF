@@ -97,6 +97,8 @@ Approximate or restricted:
   color-style methods remain incomplete. Category bar legends share point paint
   and wrap within the chart frame; crowded frames diagnose clipped entries.
   Existing independent Office thresholds still apply.
+- Legends without an overlay flag follow PowerPoint's overlay default. Specify
+  `<c:overlay val="0"/>` to reserve plot space. Legend geometry remains approximate.
 - Authored chart titles survive automatic-title deletion flags. Automatic-title
   inference remains limited to an explicitly enabled, unambiguous series name;
   inferred titles resolve built-in/default sizes and honor explicit chart text
