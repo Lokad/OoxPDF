@@ -12539,9 +12539,20 @@
     "WorksheetCellsBeyondBudgetThrow"
   ],
   "pptx-chart-semantic-fonts": [
-    "PptxSyntheticChartCategoryAxisLabelOffsetRender",
-    "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
-    "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry"
+      "PptxSyntheticChartCategoryAxisLabelOffsetRender",
+      "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
+      "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
+      "PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering",
+      "PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering",
+      "PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering",
+      "PptxSyntheticChartValueAxisReversedOrientationMovesBarDataLabels",
+      "PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels",
+      "PptxSyntheticChartStyleAxisDefaultsDriveManualAxisTitleRendering",
+      "PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts",
+      "PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles",
+      "PptxSyntheticBubbleChartRendersBubbleSizeDataLabels",
+      "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
+      "PptxPercentStackedColumnChartUsesPercentValueAxis"
   ],
   "font-kerning-admission": [
     "CffChartUnresolvableRunesSubstituteQuestionMark",
@@ -13017,16 +13028,5 @@
       "PortableRenderingPptxJustificationPreservesWordAndGlyphGeometry",
       "PortablePptxInspectionUsesTheRenderingFontSource",
       "PortableRenderingPptxPreservesCompositeChartAndText"
-  ],
-  "pptx-chart-portable-semantics": [
-      "PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering",
-      "PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering",
-      "PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering",
-      "PptxSyntheticChartValueAxisReversedOrientationMovesBarDataLabels",
-      "PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels",
-      "PptxSyntheticChartCategoryAxisLabelOffsetRender",
-      "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
-      "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
-      "PptxSyntheticChartStyleAxisDefaultsDriveManualAxisTitleRendering"
   ]
 }
