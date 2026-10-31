@@ -336,7 +336,7 @@ internal sealed partial class DocxLayoutEngine
             if (TryGetStandaloneMath(paragraph, width, paragraphSpacingScale, mathEquations, out var math))
             {
                 lines.Add(CreateStandaloneMathLine(paragraph, math, x, width, cursorY,
-                    paragraphSpacingScale, paragraphIndex, spacingProfile) with
+                    paragraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(story.BodyElements, elementIndex)) with
                 {
                     Story = DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                     SingleLineHeight = math.LineHeight
@@ -382,7 +382,7 @@ internal sealed partial class DocxLayoutEngine
                             size, paragraphSpacingScale, pageNumber, null, paragraphIndex, index,
                             DocxStoryId.HeaderOrFooter(isHeader, story.VariantType));
                         lines.Add(placed.Line with { SingleLineHeight = sourceHeight,
-                            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, placed.Line.X,
+                            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, placed.Line.X,
                                 line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
                                 index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
@@ -532,7 +532,7 @@ internal sealed partial class DocxLayoutEngine
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                         LineHeightSource: staticLineHeightSource, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false)
                     { OccupiedLineBox = staticOccupiedLineBox,
-                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, lineX,
+                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, lineX,
                             cursorY - staticBaselineY + extraAbove, staticLineHeight + extraAbove,
                             paragraphSpacingScale, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                     // RV06 header-align probe: headers and footers keep one row-end space
@@ -637,7 +637,7 @@ internal sealed partial class DocxLayoutEngine
                     SourceParagraphIndex: paragraphIndex,
                     Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))
                 { SourceParagraph = paragraph,
-                    ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, imageX,
+                    ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, imageX,
                         imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }

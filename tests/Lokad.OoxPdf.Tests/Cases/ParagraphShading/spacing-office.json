@@ -1,0 +1,151 @@
+{
+  "Source": "Independent Word16 Final export, 2026-10-31; OfficePdf bootstrap, application-view calibration remains open. First-line fills only; excess next-before-spacing is an explicit residual.",
+  "Controls": [
+    {
+      "Input": "spacing.docx",
+      "InputSha256": "F45B26F66F033A459BCFD158A93F656D6A09211BAB560E05784E09F821403A77",
+      "ReferencePdfSha256": "AEE086A078575330DA7E89A8151459F8DC79A0F03472F61873330DE02FE33EFD",
+      "Samples": [
+        {
+          "Label": "PLAIN FIRST",
+          "Page": 1,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0.0
+        },
+        {
+          "Label": "DIFFERENT FIRST",
+          "Page": 2,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18.0
+        },
+        {
+          "Label": "SAME FIRST",
+          "Page": 3,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18.0
+        },
+        {
+          "Label": "PLAINBEFORE FIRST",
+          "Page": 4,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0.0
+        },
+        {
+          "Label": "DIFFERENTBEFORE FIRST",
+          "Page": 5,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18.0
+        },
+        {
+          "Label": "SAMEBEFORE FIRST",
+          "Page": 6,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18.0
+        },
+        {
+          "Label": "TERMINAL FIRST",
+          "Page": 7,
+          "Rectangle": [
+            70.58399963378906,
+            71.99603271484375,
+            541.5339965820312,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0.0
+        }
+      ]
+    },
+    {
+      "Input": "spacing-containers.docx",
+      "InputSha256": "21F43E9DDA45CBB7BC94F54C431E14775E767E1D91FF219038D15133E0D894C8",
+      "ReferencePdfSha256": "77BE81BDC4C398085DC601D7D7426C80D0EB9D40DF9A4E3AE8E8AED470B212D1",
+      "Samples": [
+        {
+          "Label": "HEADER FIRST",
+          "Page": 1,
+          "Rectangle": [
+            70.58399963378906,
+            18.0,
+            541.5339965820312,
+            31.79998779296875
+          ],
+          "PaintedAfterSpacing": 0.0
+        },
+        {
+          "Label": "FOOTER FIRST",
+          "Page": 1,
+          "Rectangle": [
+            70.58399963378906,
+            728.4959716796875,
+            541.5339965820312,
+            760.3200073242188
+          ],
+          "PaintedAfterSpacing": 18.0
+        },
+        {
+          "Label": "CELLPLAIN FIRST",
+          "Page": 1,
+          "Rectangle": [
+            72.02400207519531,
+            71.99603271484375,
+            228.04400634765625,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0.0
+        },
+        {
+          "Label": "CELLSHADE FIRST",
+          "Page": 1,
+          "Rectangle": [
+            228.0500030517578,
+            71.99603271484375,
+            384.07000732421875,
+            103.82000732421875
+          ],
+          "PaintedAfterSpacing": 18.0
+        },
+        {
+          "Label": "CELLEND FIRST",
+          "Page": 1,
+          "Rectangle": [
+            384.07000732421875,
+            71.99603271484375,
+            540.0900268554688,
+            85.82000732421875
+          ],
+          "PaintedAfterSpacing": 0.0
+        }
+      ]
+    }
+  ]
+}

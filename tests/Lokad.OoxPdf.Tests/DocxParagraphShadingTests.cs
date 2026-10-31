@@ -81,7 +81,7 @@ internal static class DocxParagraphShadingTests
         }
     }
 
-    public static void DocxParagraphShadingUsesSourceIndentsLineBoxesAndFinalAfterSpacing()
+    public static void DocxParagraphShadingUsesSourceIndentsAndFragmentLineBoxes()
     {
         var paragraph = DocxTests.CreateDocxLayoutParagraph(string.Concat(Enumerable.Repeat("word ", 100)), 12d, 18d,
             indent: DocxParagraphIndent.Empty with { LeftPoints = 18d, RightPoints = 36d, FirstLinePoints = 18d }) with
@@ -103,8 +103,35 @@ internal static class DocxParagraphShadingTests
                 "First-line text indentation cannot narrow the paragraph background.");
             TestAssert.True(Math.Abs(frame.Width - (document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints - 18d - 36d + 2.88d)) < .001d,
                 "The container width and paragraph indents own the background extent.");
-            TestAssert.True(Math.Abs(frame.Height - (18d + (index == lines.Length - 1 ? 9d : 0d))) < .001d,
-                "Only the final source line includes paragraph after-spacing, including across pages.");
+            TestAssert.True(Math.Abs(frame.Height - 18d) < .001d,
+                "A terminal paragraph keeps after-spacing outside every fragment background.");
+        }
+    }
+
+    public static void DocxParagraphShadingAfterSpacingFollowsAdjacentShadedContent()
+    {
+        using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "spacing-office.json")));
+        foreach (var control in oracle.RootElement.GetProperty("Controls").EnumerateArray())
+        {
+            string input = Path.Combine(Cases, control.GetProperty("Input").GetString()!);
+            TestAssert.Equal(control.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
+            var lines = layout.Pages.SelectMany(page => page.Items.OfType<DocxTextLineLayout>()
+                .Concat(page.StaticTextLines)
+                .Concat(page.Items.OfType<DocxTableRowLayout>().SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines)))
+                .ToArray();
+            foreach (var sample in control.GetProperty("Samples").EnumerateArray())
+            {
+                string label = sample.GetProperty("Label").GetString()!;
+                var line = lines.Single(line => line.Text.Trim() == label);
+                TestAssert.True(line.ParagraphShadingFrame is not null && line.LineHeight is not null,
+                    "The placed line retains its paragraph paint frame: " + label);
+                double paintedAfter = line.ParagraphShadingFrame!.Value.Height - line.LineHeight!.Value;
+                TestAssert.True(Math.Abs(paintedAfter - sample.GetProperty("PaintedAfterSpacing").GetDouble()) < .001d,
+                    "Word paints after-spacing only towards an adjacent shaded paragraph in the same container: " + label);
+            }
         }
     }
 

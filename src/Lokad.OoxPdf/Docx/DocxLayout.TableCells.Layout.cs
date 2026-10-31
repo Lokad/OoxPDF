@@ -406,8 +406,9 @@ internal sealed partial class DocxLayoutEngine
         DocxParagraph? previousParagraph = null;
         double cellFirstBaselineInset = ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(bodyElements), measurer);
         int paragraphIndex = 0;
-        foreach (DocxBodyElement bodyElement in bodyElements)
+        for (int elementIndex = 0; elementIndex < bodyElements.Count; elementIndex++)
         {
+            DocxBodyElement bodyElement = bodyElements[elementIndex];
             if (bodyElement is DocxTableElement tableElement)
             {
                 cursorY -= pendingSpacingAfter;
@@ -514,7 +515,7 @@ internal sealed partial class DocxLayoutEngine
                     : DocxLineMetrics.ResolveBodyBaselineOffset(math.Equation.ParentFontSize ?? GetParagraphFontSize(paragraph),
                         math.LineHeight, false);
                 lines.Add(CreateStandaloneMathLine(paragraph, math, cellX + paddingLeft, textWidth,
-                    cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile,
+                    cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(bodyElements, elementIndex),
                     mathBaselineAnchor));
                 cursorY -= math.LineHeight * context.ParagraphSpacingScale;
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -541,7 +542,7 @@ internal sealed partial class DocxLayoutEngine
                         cursorY + cellFirstBaselineInset, fontSize, context.ParagraphSpacingScale, pageIndex,
                         null, paragraphIndex, index, DocxStoryId.TableCell());
                     lines.Add(placed.Line with { SingleLineHeight = lineHeightProfile.SingleLineHeight,
-                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, cellX + paddingLeft, textWidth, placed.Line.X,
+                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(bodyElements, elementIndex), cellX + paddingLeft, textWidth, placed.Line.X,
                             line.BaselineInset, line.OccupiedHeight, context.ParagraphSpacingScale,
                             index == orderedLines.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
                         AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
@@ -701,7 +702,7 @@ internal sealed partial class DocxLayoutEngine
                         ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
                         SourceParagraph: paragraph, EmitsTerminalParagraphMark: false)
                     { FrameOriginOffsetX = cellX + paddingLeft - lineShape.X,
-                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, cellX + paddingLeft, textWidth, lineShape.X,
+                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(bodyElements, elementIndex), cellX + paddingLeft, textWidth, lineShape.X,
                             cellFirstBaselineInset * context.ParagraphSpacingScale + lineBaselineTransition + extraAbove,
                             lineHeight + extraAbove + extraBelow, context.ParagraphSpacingScale,
                             lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
@@ -903,8 +904,9 @@ internal sealed partial class DocxLayoutEngine
         double previousTextFontSize = 0d;
         double previousTextLineHeight = 0d;
         int paragraphIndex = 0;
-        foreach (DocxBodyElement bodyElement in bodyElements)
+        for (int elementIndex = 0; elementIndex < bodyElements.Count; elementIndex++)
         {
+            DocxBodyElement bodyElement = bodyElements[elementIndex];
             cancellationToken.ThrowIfCancellationRequested();
             if (bodyElement is DocxTableElement tableElement)
             {
@@ -1022,7 +1024,7 @@ internal sealed partial class DocxLayoutEngine
                 };
                 images.Add(new DocxInlineImageLayout(image, imageX, cursorY - imageHeight, imageWidth, imageHeight, pageIndex, null, SourceParagraphIndex: paragraphIndex, Story: null)
                 { SourceParagraph = paragraph,
-                    ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, cellX + paddingLeft, textWidth, imageX,
+                    ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(bodyElements, elementIndex), cellX + paddingLeft, textWidth, imageX,
                         imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
                 cursorY -= ResolveCellImageBlockAdvance(image, imageHeight);
             }

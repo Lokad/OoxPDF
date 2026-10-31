@@ -48,7 +48,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static DocxTextLineLayout CreateStandaloneMathLine(DocxParagraph paragraph, DocxPreparedMathParagraph math,
-        double x, double textWidth, double top, double scale, int paragraphIndex, DocxParagraphSpacingProfile spacing,
+        double x, double textWidth, double top, double scale, int paragraphIndex, DocxParagraphSpacingProfile spacing, bool continuesShading,
         double baselineAnchor = 0d)
     {
         double inset = GetParagraphTextStartOffset(paragraph, scale);
@@ -73,7 +73,7 @@ internal sealed partial class DocxLayoutEngine
             ParagraphAfterSpacing: spacing.ParagraphAfterSpacing, ContextualSpacingSuppressed: spacing.ContextualSpacingSuppressed,
             SourceParagraph: paragraph, LineHeightSource: null, EmitsTerminalParagraphMark: false)
         { Math = math, MathScale = scale, FrameOriginOffsetX = -inset - alignment,
-            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, textWidth, x + inset + alignment,
+            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, continuesShading, x, textWidth, x + inset + alignment,
                 top - baseline, math.LineHeight * scale, scale, spacing.ParagraphAfterSpacing) };
     }
 }

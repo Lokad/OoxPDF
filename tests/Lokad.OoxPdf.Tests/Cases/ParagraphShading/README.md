@@ -12,3 +12,10 @@ in qualification evidence; color agreement alone is not Office parity.
 
 The shading inheritance model follows the existing paragraph style cascade;
 see the [Microsoft Open XML shading reference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.shading).
+
+`spacing.docx` and held-out `spacing-containers.docx` independently check background
+boundaries in body, cells, header and footer. After-spacing is painted between
+adjacent shaded paragraphs, including different colors; it stays clear before an
+unshaded paragraph or at the end of a container. `spacing-office.json` pins twelve
+Word fill samples. Excess before-spacing between shaded paragraphs remains an
+explicit continuity residual; the qualification image thresholds are unchanged.
