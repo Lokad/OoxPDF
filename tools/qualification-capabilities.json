@@ -12986,5 +12986,15 @@
       "XrefTablePointsAtObjectHeaders",
       "PortableRenderingStaticPictureOnlyFramesRetainBodyAndResources",
       "PortableRenderingInlineBoxMathKeepsSourceContentAndResources"
+  ],
+  "font-discovery-memory": [
+      "FontDiscovery",
+      "WindowsFontAsyncFactory",
+      "DiscoveryResolvesSyntheticFontFromDirectory",
+      "CollectionDiscoverySpanCoversNeededTables",
+      "DiscoveryResolvesSyntheticCollectionFromDirectory",
+      "MemoryAdmission",
+      "StreamLengthsMatchPayloads",
+      "XrefTablePointsAtObjectHeaders"
   ]
 }

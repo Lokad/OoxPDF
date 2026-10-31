@@ -172,3 +172,12 @@ and iteration count. Keep fixture generation and builds outside measured
 processes. Mixed-document work uses the fixed portfolio, with Final/preserved and
 AllMarkup/Word-compatible measured separately. Time uncontended runs before
 accepting an optimization. Performance optimization is deferred for the preview.
+
+Default local-font discovery admits its transient header/directory/selected-span
+buffers through file reads and header parsing, including overlap with a full-read
+fallback. Each file refunds before the next; cache hits reuse metadata without
+borrowing that invocation storage. Refusal remains terminal through font recovery.
+The shared catalog's incidental metadata remains outside invocation admission;
+this adds no catalog owner or cache-budget API. The default Windows discovery
+paths may yield no fonts on other platforms; use explicit portable/math resources
+for supported native typography and equations.

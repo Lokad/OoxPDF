@@ -3,7 +3,7 @@ using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class FontDiscoveryAsyncTests
+internal static partial class FontDiscoveryAsyncTests
 {
     public static void FontDiscoveryAsyncShortReadsPreserveSfntAndCollectionMetadata()
     {
@@ -137,9 +137,9 @@ internal static class FontDiscoveryAsyncTests
         => (ValueTask<WindowsFontResolver>)typeof(WindowsFontResolver).GetMethod("CreateAsync", BindingFlags.NonPublic | BindingFlags.Static)!
             .Invoke(null, new object[] { new[] { directory }, token })!;
 
-    private static ValueTask<(byte[] Bytes, bool Complete, long FileLength)> ReadAsync(Stream stream, CancellationToken token = default)
+    private static ValueTask<(byte[] Bytes, bool Complete, long FileLength)> ReadAsync(Stream stream, CancellationToken token = default, IMemoryReservation? discovery = null, bool wholeFile = false)
         => (ValueTask<(byte[], bool, long)>)typeof(WindowsFontResolver).GetMethod("ReadDiscoveryStreamAsync", BindingFlags.NonPublic | BindingFlags.Static)!
-            .Invoke(null, [stream, "synthetic.ttf", false, token])!;
+            .Invoke(null, [stream, "synthetic.ttf", wholeFile, discovery, token])!;
 
     private static void InDirectory(Action<string> action)
     {
@@ -149,7 +149,7 @@ internal static class FontDiscoveryAsyncTests
         finally { WindowsFontResolver.InvalidateDiscoveryCaches(); Directory.Delete(directory, recursive: true); }
     }
 
-    private sealed class DiscoveryStream(byte[] bytes, bool pauseFirstRead = false, long? reportedLength = null) : MemoryStream(bytes, writable: false)
+    private sealed class DiscoveryStream(byte[] bytes, bool pauseFirstRead = false, long? reportedLength = null, Action? observeRead = null) : MemoryStream(bytes, writable: false)
     {
         public readonly TaskCompletionSource ReadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public readonly TaskCompletionSource ReleaseRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -160,6 +160,7 @@ internal static class FontDiscoveryAsyncTests
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            observeRead?.Invoke();
             if (++ReadCalls == 1 && pauseFirstRead)
             {
                 ReadStarted.TrySetResult();

@@ -128,11 +128,14 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                          .Order(StringComparer.OrdinalIgnoreCase))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // Discovery buffers are invocation-local. The static catalog and
+                // lazy program cache do not inherit this short-lived reservation.
+                using IMemoryReservation? discovery = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0);
                 try
                 {
                     // Read the prefix covering discovery tables. This can include
                     // unrelated tables between them; trailing program data stays on disk.
-                    (byte[] bytes, bool complete, long fileLength) = await ReadDiscoveryBytesAsync(path, false, cancellationToken).ConfigureAwait(false);
+                    (byte[] bytes, bool complete, long fileLength) = await ReadDiscoveryBytesAsync(path, false, discovery, cancellationToken).ConfigureAwait(false);
                     if (!sourcesByPath.TryGetValue(path, out FileFontProgramSource? source))
                     {
                         source = new FileFontProgramSource(path, retention);
@@ -159,7 +162,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                             // so accept/reject matches whole-program reads exactly.
                             // Malformed files pay one extra bounded read; valid
                             // fonts never take this path.
-                            (bytes, _, _) = await ReadDiscoveryBytesAsync(path, true, cancellationToken).ConfigureAwait(false);
+                            (bytes, _, _) = await ReadDiscoveryBytesAsync(path, true, discovery, cancellationToken).ConfigureAwait(false);
                             complete = true;
                             headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex);
                         }
@@ -187,7 +190,8 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                         }
                     }
                 }
-                catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException)
+                catch (Exception ex) when (ex is not OoxPdfLimitExceededException &&
+                    (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException or UnauthorizedAccessException))
                 {
                     // Ignore fonts outside the minimal parser's current scope.
                 }
@@ -203,14 +207,14 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     }
 
     private static async ValueTask<(byte[] Bytes, bool Complete, long FileLength)> ReadDiscoveryBytesAsync(
-        string path, bool wholeFile, CancellationToken cancellationToken)
+        string path, bool wholeFile, IMemoryReservation? discovery, CancellationToken cancellationToken)
     {
         (byte[] Bytes, bool Complete, long FileLength) result;
         await using (var stream = new FileStream(path, new FileStreamOptions { Mode = FileMode.Open,
             Access = FileAccess.Read, Share = FileShare.Read, BufferSize = 1,
             Options = FileOptions.Asynchronous | FileOptions.RandomAccess }))
         {
-            result = await ReadDiscoveryStreamAsync(stream, path, wholeFile, cancellationToken).ConfigureAwait(false);
+            result = await ReadDiscoveryStreamAsync(stream, path, wholeFile, discovery, cancellationToken).ConfigureAwait(false);
         }
         cancellationToken.ThrowIfCancellationRequested();
         return result;
@@ -218,19 +222,23 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     // Borrows the seekable stream; the path overload owns and closes the file.
     private static async ValueTask<(byte[] Bytes, bool Complete, long FileLength)> ReadDiscoveryStreamAsync(
-        Stream stream, string path, bool wholeFile, CancellationToken cancellationToken)
+        Stream stream, string path, bool wholeFile, IMemoryReservation? discovery, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         long fileLength = stream.Length;
         FileFontProgramSource.CheckLocalFontSize(fileLength, path);
+        // A parser fallback can still read the previous returned span while the
+        // replacement is constructed. Each attempt keeps that existing window.
+        long retained = discovery?.Bytes ?? 0;
         if (!wholeFile && fileLength >= 12)
         {
+            AdmitDiscoveryBuffer(discovery, retained, 12, cancellationToken);
             byte[] header = new byte[12];
             await stream.ReadExactlyAsync(header, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             if (OpenTypeFont.IsTrueTypeCollectionHeader(header))
             {
-                byte[]? span = await TryReadCollectionDiscoverySpanAsync(stream, header, fileLength, cancellationToken).ConfigureAwait(false);
+                byte[]? span = await TryReadCollectionDiscoverySpanAsync(stream, header, fileLength, discovery, retained, cancellationToken).ConfigureAwait(false);
                 if (span is not null) return (span, false, fileLength);
             }
             else
@@ -248,6 +256,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                         if (requiredEnd <= prefix.Length) return (prefix, false, fileLength);
                         if (requiredEnd <= fileLength)
                         {
+                            AdmitDiscoveryBuffer(discovery, retained, requiredEnd, cancellationToken);
                             var span = new byte[(int)requiredEnd];
                             Buffer.BlockCopy(prefix, 0, span, 0, prefix.Length);
                             await stream.ReadExactlyAsync(span.AsMemory(prefix.Length), cancellationToken).ConfigureAwait(false);
@@ -262,13 +271,15 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         // Reuse this bounded open-file length even on malformed metadata fallback;
         // reopening by path could race replacement/growth and lose the size bound.
         stream.Seek(0, SeekOrigin.Begin);
+        AdmitDiscoveryBuffer(discovery, retained, fileLength, cancellationToken);
         byte[] bytes = new byte[checked((int)fileLength)];
         await stream.ReadExactlyAsync(bytes, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         return (bytes, true, fileLength);
     }
 
-    private static async ValueTask<byte[]?> TryReadCollectionDiscoverySpanAsync(Stream stream, byte[] header, long fileLength, CancellationToken cancellationToken)
+    private static async ValueTask<byte[]?> TryReadCollectionDiscoverySpanAsync(Stream stream, byte[] header, long fileLength,
+        IMemoryReservation? discovery, long retained, CancellationToken cancellationToken)
     {
         try
         {
@@ -330,15 +341,31 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
             }
 
             stream.Seek(0, SeekOrigin.Begin);
+            AdmitDiscoveryBuffer(discovery, retained, requiredEnd, cancellationToken);
             var prefix = new byte[(int)requiredEnd];
             await stream.ReadExactlyAsync(prefix, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             return prefix;
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException or NotSupportedException)
+        catch (Exception ex) when (ex is not OoxPdfLimitExceededException &&
+            (ex is IOException or InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException or NotSupportedException))
         {
             return null;
         }
+    }
+
+    private static void AdmitDiscoveryBuffer(IMemoryReservation? discovery, long retained, long bytes, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (discovery is not null)
+        {
+            // Reuse one capacity window across collection directories/faces.
+            // Their bounded headers/directories fit in fixed working headroom;
+            // selected spans and old/new replacement overlap add actual lengths.
+            long capacity = checked(retained + bytes + 128L * 1024);
+            if (capacity > discovery.Bytes) OoxMemory.Resize(discovery, capacity);
+        }
+        token.ThrowIfCancellationRequested();
     }
 
     /// <summary>

@@ -308,3 +308,9 @@ before graphics creation. A host may refuse before page content is built; the
 reservation survives pending staging I/O and refunds when page production advances
 or is disposed. The same host capacity can serve later pages. Staged descriptors
 retain separate funding through emission. No new option or public signature.
+
+Preparing the default local-font catalog may now refuse host memory admission
+while reading a discovery span. Refusal propagates instead of omitting the font,
+retrying a whole-file read or publishing a partial snapshot. Read/parser buffers
+refund after each file; shared incidental metadata does not retain the caller's
+invocation grant. Public resolver signatures and the font universe are unchanged.
