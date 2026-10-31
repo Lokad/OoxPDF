@@ -4,6 +4,14 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class FontDiscoveryAsyncTests
 {
+    private static byte[] WithDiscoveryPadding(byte[] font)
+    {
+        var (offset, length) = TestFontBuilder.GetTableRange(font, "cmap");
+        var cmap = new byte[length + 1024 * 1024];
+        font.AsSpan(offset, length).CopyTo(cmap);
+        return TestFontBuilder.ReplaceTable(font, "cmap", cmap);
+    }
+
     public static void FontDiscoveryMemoryBuffersStayFundedThroughHeaderParsing()
     {
         foreach (byte[] font in new[] { TestFontBuilder.CreateTestFont(), TestFontBuilder.CreateCollection("First", "Second") })
@@ -79,7 +87,7 @@ internal static partial class FontDiscoveryAsyncTests
 
     public static void FontDiscoveryMemoryFallbackFundsLiveSpanAndReplacement()
     {
-        byte[] font = TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "JUNK", new byte[1024 * 1024]);
+        byte[] font = WithDiscoveryPadding(TestFontBuilder.CreateTestFont());
         byte[] padded = new byte[font.Length + 1024 * 1024]; font.CopyTo(padded, 0);
         var pool = new TestMemoryBudget();
         using (var operation = OoxConversionBudget.BeginScope(null, pool))
@@ -134,8 +142,8 @@ internal static partial class FontDiscoveryAsyncTests
     {
         InDirectory(directory => {
             File.WriteAllBytes(Path.Combine(directory, "a.ttf"), TestFontBuilder.CreateTestFont());
-            File.WriteAllBytes(Path.Combine(directory, "b.ttf"), TestFontBuilder.ReplaceTable(
-                TestFontBuilder.CreateFontWithFamilyNames((0x0409, "LargeFace")), "JUNK", new byte[1024 * 1024]));
+            File.WriteAllBytes(Path.Combine(directory, "b.ttf"), WithDiscoveryPadding(
+                TestFontBuilder.CreateFontWithFamilyNames((0x0409, "LargeFace"))));
             var pool = new TestMemoryBudget(256 * 1024);
             using (var operation = OoxConversionBudget.BeginScope(null, pool))
             {
