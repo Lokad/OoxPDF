@@ -2,7 +2,7 @@ using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Pdf;
 
-// One resident window and one admitted encoding/readback buffer. Beyond the window,
+// One resident window, retained vector descriptors and encoding/readback buffer. Beyond the window,
 // an explicit provider owns temporary backing. Reads stay bounded, records preserve
 // page/group order, and every I/O borrow completes before disposal or refund.
 internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
@@ -16,7 +16,7 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
     private readonly IOoxPdfTemporaryStorage? temporaryStorage;
     private readonly IMemoryReservation? storage;
     private byte[]? scratch;
-    private long residentBytes, bufferedBytes;
+    private long residentBytes, bufferedBytes, retainedResourceBytes;
     private Stream? spillStream;
     private bool disposed;
     private MemoryPage? pendingPage;
@@ -46,11 +46,21 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
             ObjectDisposedException.ThrowIf(disposed, this);
             if (scratch is null)
             {
-                OoxMemory.Resize(storage, checked(residentBytes + ChunkByteCount));
+                OoxMemory.Resize(storage, checked(retainedResourceBytes + residentBytes + ChunkByteCount));
                 scratch = new byte[ChunkByteCount];
             }
             return scratch;
         }
+    }
+
+    // Descriptors share this existing owner through staged-document emission.
+    // Spilling drops content segments, never their still-live vector resources.
+    internal void RetainResourceCapacity(long bytes)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        long retained = checked(retainedResourceBytes + bytes);
+        OoxMemory.Resize(storage, checked(retained + residentBytes + (scratch?.Length ?? 0)));
+        retainedResourceBytes = retained;
     }
 
     public int Count => memory.Count + spillOffsets.Count;
@@ -95,7 +105,7 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
         }
         else
         {
-            OoxMemory.Resize(storage, checked(residentBytes + count + (scratch?.Length ?? 0)));
+            OoxMemory.Resize(storage, checked(retainedResourceBytes + residentBytes + count + (scratch?.Length ?? 0)));
             var copy = new byte[count];
             Buffer.BlockCopy(chunk, offset, copy, 0, count);
             pendingPage.Segments.Add(copy);
@@ -237,7 +247,7 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
             SpilledBytes += buffered.Length;
             buffered.Segments.Clear();
             residentBytes -= buffered.Length;
-            OoxMemory.Resize(storage, checked(residentBytes + (scratch?.Length ?? 0)));
+            OoxMemory.Resize(storage, checked(retainedResourceBytes + residentBytes + (scratch?.Length ?? 0)));
         }
         memory.Clear();
         bufferedBytes = 0;
@@ -255,7 +265,7 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
             residentBytes -= pendingLength;
             pendingRecordStarted = true;
         }
-        OoxMemory.Resize(storage, checked(residentBytes + (scratch?.Length ?? 0)));
+        OoxMemory.Resize(storage, checked(retainedResourceBytes + residentBytes + (scratch?.Length ?? 0)));
         token.ThrowIfCancellationRequested();
         diagnosticSink?.Invoke(new OoxPdfDiagnostic("PDF_PAGE_CONTENT_SPILLED", OoxPdfSeverity.Info,
             "Page content exceeded the resident window and moved to temporary storage.", PartName: null, SlideIndex: null,
@@ -270,7 +280,7 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
         disposed = true;
         memory.Clear();
         pendingPage?.Segments.Clear(); pendingPage = null;
-        spillOffsets.Clear(); bufferedBytes = residentBytes = 0;
+        spillOffsets.Clear(); bufferedBytes = residentBytes = retainedResourceBytes = 0;
         scratch = null;
         try
         {

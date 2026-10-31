@@ -12945,5 +12945,27 @@
     "MemoryAdmission",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pdf-staged-vector-resources": [
+      "VectorMemory",
+      "MemoryBudgetStaging",
+      "MemoryAdmission",
+      "SvgMemory",
+      "DocxSvgImage",
+      "TransparencyGroups",
+      "SharedTransparencyGroups",
+      "VectorSoftMasks",
+      "ShadingPatterns",
+      "WritesAxialShadingResources",
+      "RadialShadingResources",
+      "WritesTilingPatternResources",
+      "WritesImageBackedTilingPatternResources",
+      "WritesStitchedAxialShadingFunctionForMultipleStops",
+      "AcceptsBalancedContentWithAllResourceKinds",
+      "RejectsDanglingShadingReference",
+      "StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose",
+      "PageContentStagingRoundTripsAndCleansTemp",
+      "StreamLengthsMatchPayloads",
+      "XrefTablePointsAtObjectHeaders"
   ]
 }

@@ -297,3 +297,9 @@ hardlink entries can still be replaced atomically without altering the input.
 DOCX wrap searches now use cancellation instead of a 128-probe work ceiling;
 long mixed-width words may fill lines that previously broke early. Unicode
 boundaries, preferred breaks and the existing overwide fallback remain.
+
+Staged vector resources now share the content store's memory reservation through
+emission. A governed conversion may refuse earlier when its descriptors, shading
+stops or retained patterns cannot fit; spilling content does not refund still-live
+resources. No public signature changes. Current-page painting/construction remains
+partial; this is coarse admission, not complete heap accounting.

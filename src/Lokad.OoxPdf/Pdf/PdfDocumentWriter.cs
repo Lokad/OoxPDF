@@ -85,6 +85,33 @@ internal sealed class PdfDocumentWriter
             // staged descriptor without retaining previous pages' payload strings.
             var stagedGroups = new ConditionalWeakTable<PdfTransparencyGroup, PdfTransparencyGroup>();
             var groupEntries = new Dictionary<PdfTransparencyGroup, int>();
+            void AdmitVectorResources(IReadOnlyList<PdfExtGStateResource> states,
+                IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns,
+                IReadOnlyList<PdfTransparencyGroupResource> groups, IReadOnlyList<PdfShadingPatternResource> shadingPatterns,
+                long descriptorCapacity = 0)
+            {
+                if (OoxConversionBudget.Current?.Memory is null) return;
+                // Coarse retained records, collection/map headroom and normalized
+                // stops/keys. This funds staged descriptors, not earlier painting.
+                long bytes = checked(descriptorCapacity + 128L * ((long)states.Count + shadings.Count + patterns.Count + groups.Count + shadingPatterns.Count));
+                foreach (var shading in shadings)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    bytes = checked(bytes + 128L * shading.Shading.Stops.Count);
+                }
+                foreach (var pattern in shadingPatterns)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    bytes = checked(bytes + 128L * pattern.Pattern.Shading.Stops.Count);
+                }
+                foreach (var pattern in patterns)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    bytes = checked(bytes + 4L * pattern.Pattern.Content.Length + 128L * pattern.Pattern.Images.Count);
+                }
+                if (bytes > 0) staging.RetainResourceCapacity(bytes);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
             async ValueTask<PdfTransparencyGroupResource[]> StageGroupsAsync(IReadOnlyList<PdfTransparencyGroupResource> groups)
             {
                 var result = new PdfTransparencyGroupResource[groups.Count];
@@ -96,6 +123,7 @@ internal sealed class PdfDocumentWriter
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (stagedGroups.TryGetValue(group, out PdfTransparencyGroup? existing)) return existing;
+                AdmitVectorResources(group.ExtGStates, group.Shadings, [], group.Groups, group.ShadingPatterns, 1024);
                 var children = await StageGroupsAsync(group.Groups).ConfigureAwait(false);
                 int entry = staging.Count;
                 staging.BeginPage(cancellationToken);
@@ -115,6 +143,7 @@ internal sealed class PdfDocumentWriter
                     throw new ArgumentOutOfRangeException(nameof(pages), "PDF pages must have finite positive dimensions.");
                 }
 
+                AdmitVectorResources(page.ExtGStates, page.Shadings, page.Patterns, page.Groups, page.ShadingPatterns);
                 PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
                 pageEntries.Add(staging.Count);
                 staging.BeginPage(cancellationToken);

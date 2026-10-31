@@ -21,7 +21,10 @@ attempted growth and cache hits reuse funding. XML admission is a coarse estimat
 not an exact graph/heap measurement. The shared SVG painter separately admits
 coarse source-sized DOM/path/gradient working capacity before parsing and refunds
 it after painting or failure. Retained vector/PDF construction resources remain
-partial; render-local scratch does not cover their later lifetime. It also admits
+partial; render-local scratch does not cover their later lifetime. Staging retains
+coarse vector descriptor/stop/pattern capacity in its existing aggregate reservation
+through emission, including when content spills; cleanup refunds after descriptors
+and storage are released. Earlier painting/construction remains partial. MemoryBudget also admits
 PDF content staging, private SFNT/
 subset programs, retained kerning-pair arrays and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression
