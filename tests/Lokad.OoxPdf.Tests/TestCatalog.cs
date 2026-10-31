@@ -132,6 +132,7 @@ internal static class TestCatalog
         .. FromType("pptx-images", typeof(PptxImagesTests)),
         .. FromType("pptx-model", typeof(PptxModelTests)),
         .. FromType("pptx-model", typeof(PptxDiagnosticsTests)),
+        .. FromType("pptx-model", typeof(PptxPlaceholderBoundsTests)),
         .. FromType("pptx-shapes", typeof(PptxShapesTests)),
         .. FromType("pptx-shapes", typeof(PptxSceneTextAgreementTests)),
         .. FromType("pptx-composition", typeof(PptxVisibilityTests)),

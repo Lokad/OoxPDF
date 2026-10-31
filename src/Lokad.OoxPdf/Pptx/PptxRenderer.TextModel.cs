@@ -238,13 +238,16 @@ internal sealed partial class PptxRenderer
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
         XElement? textBody = shape.Element(PresentationNamespace + "txBody");
         IReadOnlyList<XElement> inheritedPlaceholders = FindInheritedPlaceholderShapes(shape, placeholderSources);
-        XElement? inheritedPlaceholder = inheritedPlaceholders.LastOrDefault();
         XElement? inheritedTextBody = BuildEffectiveInheritedTextBody();
         ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
-        bool usesInheritedShapeBounds = bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is not null;
-        if (bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties)
+        bool usesInheritedShapeBounds = false;
+        for (int index = inheritedPlaceholders.Count - 1; bounds is null && index >= 0; index--)
         {
-            bounds = ReadBounds(inheritedProperties);
+            if (inheritedPlaceholders[index].Element(PresentationNamespace + "spPr") is { } inheritedProperties)
+            {
+                bounds = ReadBounds(inheritedProperties);
+                usesInheritedShapeBounds = bounds is not null;
+            }
         }
         if (bounds is null || textBody is null)
         {
