@@ -441,7 +441,17 @@ internal static class PptxChartsTests
 
         TestAssert.Contains("1 0 0 rg", defaultPdf);
         TestAssert.Contains("1 0 0 rg", offsetPdf);
-        TestAssert.True(offsetBaseline < defaultBaseline - 5d, $"Expected lblOffset=200 to move the category label farther from the plot area. Default: {defaultBaseline.ToString(CultureInfo.InvariantCulture)}; offset: {offsetBaseline.ToString(CultureInfo.InvariantCulture)}.");
+        static double PlotEdge(string pdf)
+        {
+            return Regex.Matches(pdf, @"[-\d.]+ (?<y>[-\d.]+) (?<width>[\d.]+) (?<height>[\d.]+) re W\* n")
+                .Where(match => double.Parse(match.Groups["width"].Value, CultureInfo.InvariantCulture) is > 100d and < 288d &&
+                    double.Parse(match.Groups["height"].Value, CultureInfo.InvariantCulture) > 54d)
+                .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture)).Distinct().Single();
+        }
+        TestAssert.True(PlotEdge(offsetPdf) - offsetBaseline > PlotEdge(defaultPdf) - defaultBaseline + 0.002d,
+            "Increasing the label offset increases its distance from the plot area.");
+        TestAssert.True(Math.Abs(offsetBaseline - defaultBaseline) < 0.002d,
+            "The automatic frame admits that offset while preserving the category-label baseline, as in the Office control.");
     }
 
     public static void PptxSyntheticChartCategoryAxisTickLabelSkipRender()
