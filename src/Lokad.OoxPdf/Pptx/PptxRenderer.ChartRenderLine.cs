@@ -510,7 +510,7 @@ internal sealed partial class PptxRenderer
                     fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double numericLineHeight = numericLabelsVisible ? await textMeasurer.MeasureNormalLineHeightAsync(tickStyle).ConfigureAwait(false) : 0d;
-                double topReserve = headerReserve ?? await MeasureCartesianHeaderReserveAsync(theme, sceneChart, fontResolver, numericLineHeight).ConfigureAwait(false);
+                double topReserve = headerReserve ?? (await MeasureCartesianHeaderReserveAsync(theme, sceneChart, fontResolver, numericLineHeight).ConfigureAwait(false)).Reserve;
                 double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
                 double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
                 double? measuredOffsetAdjustment = null;

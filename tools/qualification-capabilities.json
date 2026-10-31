@@ -1,4 +1,28 @@
 {
+  "pptx-column-footer": [
+    "PptxColumnCategory",
+    "PptxCartesianHeaders",
+    "PptxVerticalBarPlotBox",
+    "PptxDualAxisStripFallbackUsesOwningPlotData",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+    "PptxHorizontalFrame",
+    "PptxHorizontalLegends",
+    "PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame",
+    "PptxEmptyLegendLayoutMetadataKeepsWrappedContent",
+    "PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame",
+    "PptxLegendlessLinePlotMeasuresTickLabelsAcrossWidthsAndSizes",
+    "PptxLegendlessLinePlotUsesSelectedFontLineBox",
+    "PptxLegendlessLineCategoryAxisUsesItsSourceCrossing",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-cartesian-sides": [
     "PptxLegendlessLine",
     "PptxLineAuthoredMaximum",

@@ -61,8 +61,51 @@ internal static class PptxCartesianHeaderTests
         }
     }
 
-    private static (double Top, string Text) Render(string kind, int height, int valueSize,
-        bool title = false, bool legend = false, int titleSize = 18, bool overlay = false, bool valueLabels = true)
+    public static void PptxColumnCategoryStripsKeepTheirFrameInsetAcrossTitlesAndHeights()
+    {
+        foreach (int size in new[] { 8, 18 })
+        foreach (bool visible in new[] { false, true })
+        foreach (bool title in new[] { false, true })
+        foreach (bool legend in new[] { false, true })
+        {
+            double? reference = null;
+            foreach (int height in new[] { 180, 300, 420 })
+            {
+                var actual = Render("column", height, 12, title: title, legend: legend,
+                    categorySize: size, categoryLabels: visible);
+                double inset = 108d + height - actual.Bottom;
+                reference ??= inset;
+                TestAssert.True(Math.Abs(inset - reference.Value) < 0.002d,
+                    "The category strip belongs to its content, independently of frame height, caption and overlay legend.");
+                TestAssert.True(!visible || actual.Text.Contains("Category 6", StringComparison.Ordinal),
+                    "All supported categories remain painted after footer admission.");
+            }
+        }
+    }
+
+    public static void PptxColumnCategoryVisibilityOwnsItsFooterClearance()
+    {
+        double Inset(int categorySize, bool visible, int valueSize = 12, bool valueLabels = true)
+        {
+            var result = Render("column", 300, valueSize, title: true, legend: true,
+                categorySize: categorySize, categoryLabels: visible, valueLabels: valueLabels);
+            return 408d - result.Bottom;
+        }
+        double small = Inset(8, true), large = Inset(18, true);
+        double hiddenSmall = Inset(8, false), hiddenLarge = Inset(24, false);
+        TestAssert.True(large > small + 10d && hiddenSmall < small,
+            "Visible categories own their occupied band; hidden categories do not retain that band.");
+        TestAssert.True(Math.Abs(hiddenSmall - hiddenLarge) < 0.002d,
+            "A hidden category font size must not affect footer admission.");
+        TestAssert.True(Inset(8, false, valueSize: 24) > hiddenSmall + 1d,
+            "The numeric end label still owns its clearance when category labels are hidden.");
+        TestAssert.True(Inset(8, false, valueLabels: false) <= hiddenSmall,
+            "Hidden numeric labels do not retain a font-dependent end clearance.");
+    }
+
+    private static (double Top, double Bottom, string Text) Render(string kind, int height, int valueSize,
+        bool title = false, bool legend = false, int titleSize = 18, bool overlay = false, bool valueLabels = true,
+        int? categorySize = null, bool categoryLabels = true)
     {
         string titleXml = title ? $"<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr sz=\"{titleSize * 100}\"/><a:t>Supported title</a:t></a:r></a:p></c:rich></c:tx><c:overlay val=\"{(overlay ? 1 : 0)}\"/></c:title>" : "";
         string values = string.Concat(Enumerable.Range(0, 6).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
@@ -73,7 +116,10 @@ internal static class PptxCartesianHeaderTests
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart>{{titleXml}}<c:autoTitleDeleted val="{{(title ? 0 : 1)}}"/><c:plotArea>{{plot}}
-                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>
+                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/>
+                  {{(categoryLabels ? "" : "<c:tickLblPos val=\"none\"/>")}}
+                  {{(categorySize is { } size ? "<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz=\"" + size * 100 + "\"/></a:pPr></a:p></c:txPr>" : "")}}
+                </c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/>
                   <c:majorGridlines/><c:majorUnit val="1"/><c:tickLblPos val="{{(valueLabels ? "nextTo" : "none")}}"/>
                   <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{valueSize * 100}}"/></a:pPr></a:p></c:txPr>
@@ -92,10 +138,11 @@ internal static class PptxCartesianHeaderTests
         var document = new PptxReader().Read(package, default);
         var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
             .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
-        var tops = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W\* n")
+        var clips = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W\* n")
             .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
-            .Where(v => v[2] > 144 && v[2] < 287.999 && v[3] > height / 4d).Select(v => v[1] + v[3]).ToArray();
-        TestAssert.True(tops.Length > 0, "The rendered chart retains a bounded plot clip.");
-        return (page.Height - tops.Max(), string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(s => s.Text)));
+            .Where(v => v[2] > 144 && v[2] < 287.999 && v[3] > height / 4d).ToArray();
+        TestAssert.True(clips.Length > 0, "The rendered chart retains a bounded plot clip.");
+        return (page.Height - clips.Max(v => v[1] + v[3]), page.Height - clips.Min(v => v[1]),
+            string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(s => s.Text)));
     }
 }

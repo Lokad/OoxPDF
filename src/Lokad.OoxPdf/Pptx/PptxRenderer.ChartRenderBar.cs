@@ -321,6 +321,8 @@ internal sealed partial class PptxRenderer
             defaultPlotBox = defaultPlotBox with { X = frame.X + inset, Width = Math.Max(1d, frame.Width - 2d * inset) };
         }
 
+        (double Reserve, ChartAxisSource ValueAxis, double NumericClearance)? cartesianHeader = horizontalBars ? null :
+            await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, barChart, chartXml, fontResolver).ConfigureAwait(false);
         defaultPlotBox = (await AdjustBarChartPlotBoxForVisibleValueAxesAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForStackedValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForSingleValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
@@ -330,8 +332,6 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForCategoryLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForValueLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
-        (double Reserve, ChartAxisSource ValueAxis)? cartesianHeader = horizontalBars ? null :
-            await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, barChart, chartXml, fontResolver).ConfigureAwait(false);
         if (cartesianHeader is null)
             defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
         ChartAxisSource rightReserveCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
@@ -732,35 +732,38 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            // Stacked columns share the measured bottom strip (Office bottom margins fit
-            // the same 7.0 plus 1.813fs rule within 1pt on ladder, compact and overlay
-            // probes); titled/legend/label-less charts keep legacy paths below.
-            if (hasTitle || hasLegend || legend.Visible)
-            {
-                return plotBox;
-            }
-
             ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
-            if (!IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+            bool labelsVisible = IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+            // The shared header eligibility preserves authored furniture. Custom
+            // category offsets retain their existing reserve/emission fallback.
+            bool measuredFrame = cartesianHeader is not null && (!labelsVisible ||
+                ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis) == 1d);
+            if ((hasTitle || hasLegend || legend.Visible) && !measuredFrame)
             {
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
-            if (CountRenderableSeries(categorySeriesVectors) == 0)
+            double requiredBottomReserve;
+            if (!labelsVisible)
             {
-                return plotBox;
+                if (!measuredFrame) return plotBox;
+                // Hidden categories contribute no text band; the numeric end
+                // label keeps the same clearance used at the opposite end.
+                requiredBottomReserve = cartesianHeader!.Value.NumericClearance;
             }
-
-            if (!HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
+            else
             {
-                return plotBox;
-            }
+                IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+                if (CountRenderableSeries(categorySeriesVectors) == 0 || !HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
+                {
+                    return plotBox;
+                }
 
-            ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-            double requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(categoryTickStyle.FontSize);
+                ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(categoryTickStyle.FontSize);
+            }
             double presetBottomReserve = plotBox.Y - frame.Y;
-            if (Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
+            if (!measuredFrame && Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
             {
                 return plotBox;
             }

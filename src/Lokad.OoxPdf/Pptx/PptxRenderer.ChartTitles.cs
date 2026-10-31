@@ -547,7 +547,7 @@ internal sealed partial class PptxRenderer
         return reserveSides;
     }
 
-    private static async ValueTask<(double Reserve, ChartAxisSource ValueAxis)?> TryMeasureCartesianHeaderAsync(
+    private static async ValueTask<(double Reserve, ChartAxisSource ValueAxis, double NumericClearance)?> TryMeasureCartesianHeaderAsync(
         PptxTheme theme, PptxSceneChart chart, ChartLegendLayout legend,
         PptxSceneChartPlot? plot, XElement plotElement, XDocument chartXml, PresentationFontResolver? resolver)
     {
@@ -579,22 +579,25 @@ internal sealed partial class PptxRenderer
                 return null;
             lineHeight = measured;
         }
-        // The same eligible numeric-axis owner supplies horizontal measurement.
-        return (await MeasureCartesianHeaderReserveAsync(theme, chart, resolver, lineHeight).ConfigureAwait(false), axes[0]);
+        // Keep the numeric end clearance available to both ends of the frame;
+        // the caption contributes only to the header.
+        var header = await MeasureCartesianHeaderReserveAsync(theme, chart, resolver, lineHeight).ConfigureAwait(false);
+        return (header.Reserve, axes[0], header.NumericClearance);
     }
 
-    private static async ValueTask<double> MeasureCartesianHeaderReserveAsync(
+    private static async ValueTask<(double Reserve, double NumericClearance)> MeasureCartesianHeaderReserveAsync(
         PptxTheme theme, PptxSceneChart chart, PresentationFontResolver? resolver, double numericLineHeight)
     {
-        double reserve = Math.Max(PptxChartMetricRules.HorizontalBarPlotTopReserve,
+        double numericClearance = Math.Max(PptxChartMetricRules.HorizontalBarPlotTopReserve,
             PptxChartMetricRules.AutomaticCartesianTopPadding + numericLineHeight / 2d);
+        double reserve = numericClearance;
         if (!string.IsNullOrWhiteSpace(chart.Title.Text) && chart.Title.Overlay != true)
         {
             var title = await MeasureChartTitleLineAsync(theme, chart, resolver).ConfigureAwait(false);
             reserve += PptxChartMetricRules.ChartTitleFrameInset +
                 2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height;
         }
-        return reserve;
+        return (reserve, numericClearance);
     }
 
     private static async ValueTask<(double Ascent, double Height)> MeasureChartTitleLineAsync(

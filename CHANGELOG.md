@@ -13,7 +13,8 @@
   plot headers compose measured captions and numeric labels across frame sizes,
   preserving overlay neutrality and minimum clearance. Line plots also share
   measured frame placement across titles/legends and preserve primary/secondary
-  label ownership.
+  label ownership. Column footers share category-strip measurement and numeric
+  end clearance, including when category labels are hidden.
 
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
