@@ -1,4 +1,17 @@
 {
+  "pptx-title-paint": [
+    "PptxAutomaticTitleShape",
+    "PptxManualTitleShape",
+    "PptxHorizontalTitleLinks",
+    "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
+    "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartTitlePreservesTextBodyProperties",
+    "PptxAuthoredChartTitleSurvivesAutomaticTitleDeletion",
+    "PptxInferredTitle",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-horizontal-title": [
     "PptxHorizontalFrame",
     "PptxHorizontalLegend",
@@ -807,7 +820,9 @@
       "DocxExplicitPageStartMatchesWordAcrossModesSizesAndSurroundingContent",
       "DocxExplicitPageStartPreservesComposedContent",
     "PptxHorizontalTitle",
-    "PptxHorizontalOverlayTitle"
+    "PptxHorizontalOverlayTitle",
+    "PptxAutomaticTitleShape",
+    "PptxManualTitleShape"
   ],
   "pptx-inheritance": [
       "PptxInheritance",

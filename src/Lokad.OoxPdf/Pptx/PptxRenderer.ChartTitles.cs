@@ -50,7 +50,6 @@ internal sealed partial class PptxRenderer
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
             : (await ResolveChartTitleBaselineYAsync(document, theme, colorMap, bounds, chartXml, sceneChart, workbook, plotVisibleOnly, fallbackBaselineY, fontSize, fontResolver).ConfigureAwait(false));
-        RenderChartShapeStyle(graphics, x, y, width, height, ToChartShapeStyle(sceneChart.Title.ShapeStyle));
         double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
         double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
         double titleHeight = fontSize * PptxChartMetricRules.TitleHeightFactor;
@@ -72,6 +71,14 @@ internal sealed partial class PptxRenderer
             TextAlignment.Center,
             fontResolver,
             titleLinks).ConfigureAwait(false);
+        ChartShapeStyle titleShape = ToChartShapeStyle(sceneChart.Title.ShapeStyle);
+        if (!titleShape.IsEmpty)
+        {
+            ChartLayoutBox paintBox = titleManualLayoutApplied
+                ? new ChartLayoutBox(x, y, width, height)
+                : await MeasureChartTitlePaintBoxAsync(runs, style, fontResolver).ConfigureAwait(false);
+            RenderChartShapeStyle(graphics, paintBox.X, paintBox.Y, paintBox.Width, paintBox.Height, titleShape);
+        }
         RenderedFonts titleFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CT", fontResolver, diagnosticSink).ConfigureAwait(false));
         if (titleLinks is not null && sceneChart.Relationships is not null)
         {
@@ -80,6 +87,41 @@ internal sealed partial class PptxRenderer
                 AddChartTextRunHyperlinkAnnotation(titleLink, sceneChart.Relationships, context, sceneChart.TargetPartName, linkAnnotations, reportedHyperlinkIds, titleFonts.Fonts);
             }
         }
+    }
+
+    private static async ValueTask<ChartLayoutBox> MeasureChartTitlePaintBoxAsync(
+        IReadOnlyList<TextRun> runs, ChartTextStyle style, PresentationFontResolver resolver)
+    {
+        var measure = new ChartTextMeasurer(resolver);
+        double left = double.PositiveInfinity, bottom = double.PositiveInfinity;
+        double right = double.NegativeInfinity, top = double.NegativeInfinity;
+        foreach (TextRun run in runs)
+        {
+            ChartTextStyle runStyle = style with
+            {
+                FontFamily = run.FontFamily, FontSize = run.FontSize,
+                Bold = run.Bold, Italic = run.Italic, CharacterSpacing = run.CharacterSpacing
+            };
+            double advance = await measure.MeasureAsync(run.Text, runStyle).ConfigureAwait(false);
+            var line = await measure.MeasureLineBoxAsync(runStyle, horizontalHeader: true).ConfigureAwait(false);
+            double x = run.X + (run.Alignment switch
+            {
+                TextAlignment.Center => Math.Max(0d, run.Width - advance) / 2d,
+                TextAlignment.Right => Math.Max(0d, run.Width - advance),
+                _ => 0d
+            });
+            double baseline = run.Y + run.BaselineOffset;
+            left = Math.Min(left, Math.Min(x, x + advance));
+            right = Math.Max(right, Math.Max(x, x + advance));
+            top = Math.Max(top, baseline + line.Ascent);
+            bottom = Math.Min(bottom, baseline + line.Ascent - line.Height);
+        }
+        double horizontal = PptxChartMetricRules.ChartTitleHorizontalPadding;
+        double vertical = PptxChartMetricRules.ChartTitleLinePadding;
+        // Paint the measured caption box. Text and links retain their existing
+        // frame clip, including glyph overhang; each chart family owns placement.
+        return new ChartLayoutBox(left - horizontal, bottom - vertical,
+            Math.Max(1d, right - left + 2d * horizontal), Math.Max(1d, top - bottom + 2d * vertical));
     }
 
     private static async ValueTask RenderManualChartAxisTitlesAsync(
