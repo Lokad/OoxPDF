@@ -119,6 +119,9 @@ internal static class PptxCartesianHeaderTests
                     "Category offset changes reserve and gap together, keeping the labels attached to their frame.");
                 TestAssert.True(actual.CategoryInkBottoms.All(bottom => bottom <= 408.002d),
                     "Complete category ink must stay inside the chart; extraction alone cannot prove placement.");
+                if (offset != 100)
+                    TestAssert.True((actual.Bottom - ordinary.Bottom) * (100 - offset) > 0d,
+                        "The category offset changes reserved plot space, rather than being ignored while painting remains fixed.");
                 for (int index = 1; index <= 6; index++)
                     TestAssert.True(actual.Text.Contains("Category " + index, StringComparison.Ordinal),
                         "Every supported category remains painted after applying its offset.");
