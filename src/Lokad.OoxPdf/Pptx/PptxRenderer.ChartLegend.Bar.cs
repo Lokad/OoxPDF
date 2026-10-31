@@ -51,7 +51,7 @@ internal sealed partial class PptxRenderer
     // Manual frames and overlay legends retain their authored placement contract.
     private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box)> LayoutChartLegendRowsAsync(
         ChartLayout layout, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style,
-        PresentationFontResolver resolver, PptxRenderContext context, bool measuredBand)
+        PresentationFontResolver resolver, PptxRenderContext context, double maximumRowWidth, bool measuredBand)
     {
         if (!layout.Legend.Visible || entries.Count == 0) { return (layout, default); }
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
@@ -67,9 +67,10 @@ internal sealed partial class PptxRenderer
         if (measuredBand)
             box = box with { LineHeight = lineBox.Height * HorizontalLegendLineBoxScale + HorizontalLegendRowPadding,
                 TextGap = gap, ContentAscent = Math.Max(lineBox.Ascent, box.MarkerSize), ContentDescent = lineBox.Descent };
-        // Horizontal legends belong to the chart frame, including the axis-label
-        // reserve beside the plot. A manual legend keeps its declared width.
-        double availableWidth = layout.Legend.Layout.HasLayout ? box.Width : layout.Frame.Width;
+        // The container supplies its row constraint; bar frames include the
+        // axis strips, while line rows follow their plot width. Manual legends
+        // keep their authored width. Painting consumes these same packed frames.
+        double availableWidth = layout.Legend.Layout.HasLayout ? box.Width : Math.Min(layout.Frame.Width, maximumRowWidth);
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
         int start = 0;

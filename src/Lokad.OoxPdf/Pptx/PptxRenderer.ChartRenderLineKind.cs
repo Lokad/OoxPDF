@@ -53,7 +53,7 @@ internal sealed partial class PptxRenderer
                 {
                     bool automatic = !chartLayout.ManualPlotLayoutApplied && !chartLayout.Legend.Layout.HasLayout;
                     var prepared = await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle,
-                        fontResolver, context, measuredBand: automatic).ConfigureAwait(false);
+                        fontResolver, context, chartLayout.PlotBox.Width, measuredBand: automatic).ConfigureAwait(false);
                     chartLayout = prepared.Layout;
                     preparedLegendBox = prepared.Box;
                 }
