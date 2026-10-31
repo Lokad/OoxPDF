@@ -2,7 +2,7 @@ using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Pdf;
 
-// One resident window, retained vector descriptors and encoding/readback buffer. Beyond the window,
+// One resident window, retained page/resource descriptors and encoding/readback buffer. Beyond the window,
 // an explicit provider owns temporary backing. Reads stay bounded, records preserve
 // page/group order, and every I/O borrow completes before disposal or refund.
 internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
@@ -54,7 +54,7 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
     }
 
     // Descriptors share this existing owner through staged-document emission.
-    // Spilling drops content segments, never their still-live vector resources.
+    // Spilling drops content segments, never their still-live page/resource records.
     internal void RetainResourceCapacity(long bytes)
     {
         ObjectDisposedException.ThrowIf(disposed, this);

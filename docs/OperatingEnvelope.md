@@ -181,3 +181,8 @@ The shared catalog's incidental metadata remains outside invocation admission;
 this adds no catalog owner or cache-budget API. The default Windows discovery
 paths may yield no fonts on other platforms; use explicit portable/math resources
 for supported native typography and equations.
+
+Staging also admits coarse retained page/store records, resource/annotation
+references and ordinary numbering/collection headroom in its existing aggregate.
+Small or spilled content does not remove this metadata's lifetime; cleanup drops
+descriptors and awaits storage disposal before refund. No extra quota or owner.

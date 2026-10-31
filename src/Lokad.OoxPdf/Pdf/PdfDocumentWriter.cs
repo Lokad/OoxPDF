@@ -85,14 +85,15 @@ internal sealed class PdfDocumentWriter
             // staged descriptor without retaining previous pages' payload strings.
             var stagedGroups = new ConditionalWeakTable<PdfTransparencyGroup, PdfTransparencyGroup>();
             var groupEntries = new Dictionary<PdfTransparencyGroup, int>();
-            void AdmitVectorResources(IReadOnlyList<PdfExtGStateResource> states,
+            void AdmitRetainedResources(IReadOnlyList<PdfExtGStateResource> states,
                 IReadOnlyList<PdfShadingResource> shadings, IReadOnlyList<PdfTilingPatternResource> patterns,
                 IReadOnlyList<PdfTransparencyGroupResource> groups, IReadOnlyList<PdfShadingPatternResource> shadingPatterns,
                 long descriptorCapacity = 0)
             {
                 if (OoxConversionBudget.Current?.Memory is null) return;
                 // Coarse retained records, collection/map headroom and normalized
-                // stops/keys. This funds staged descriptors, not earlier painting.
+                // stops/keys. This funds staged descriptors and planning headroom,
+                // not earlier painting.
                 long bytes = checked(descriptorCapacity + 128L * ((long)states.Count + shadings.Count + patterns.Count + groups.Count + shadingPatterns.Count));
                 foreach (var shading in shadings)
                 {
@@ -123,7 +124,7 @@ internal sealed class PdfDocumentWriter
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (stagedGroups.TryGetValue(group, out PdfTransparencyGroup? existing)) return existing;
-                AdmitVectorResources(group.ExtGStates, group.Shadings, [], group.Groups, group.ShadingPatterns, 1024);
+                AdmitRetainedResources(group.ExtGStates, group.Shadings, [], group.Groups, group.ShadingPatterns, 1024);
                 var children = await StageGroupsAsync(group.Groups).ConfigureAwait(false);
                 int entry = staging.Count;
                 staging.BeginPage(cancellationToken);
@@ -143,7 +144,10 @@ internal sealed class PdfDocumentWriter
                     throw new ArgumentOutOfRangeException(nameof(pages), "PDF pages must have finite positive dimensions.");
                 }
 
-                AdmitVectorResources(page.ExtGStates, page.Shadings, page.Patterns, page.Groups, page.ShadingPatterns);
+                // Page/store records survive content spilling; the same window
+                // also covers ordinary resource-reference and numbering overlap.
+                long pageMetadata = checked(1024 + 128L * ((long)page.Fonts.Count + page.FallbackFonts.Count + page.Images.Count + page.Annotations.Count));
+                AdmitRetainedResources(page.ExtGStates, page.Shadings, page.Patterns, page.Groups, page.ShadingPatterns, pageMetadata);
                 PdfContentValidator.ValidatePage(page, pageIndex, cancellationToken);
                 pageEntries.Add(staging.Count);
                 staging.BeginPage(cancellationToken);

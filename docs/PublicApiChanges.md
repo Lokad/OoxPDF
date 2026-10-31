@@ -314,3 +314,8 @@ while reading a discovery span. Refusal propagates instead of omitting the font,
 retrying a whole-file read or publishing a partial snapshot. Read/parser buffers
 refund after each file; shared incidental metadata does not retain the caller's
 invocation grant. Public resolver signatures and the font universe are unchanged.
+
+A host memory budget now includes coarse retained page/store metadata and variable
+resource/annotation references, even for pages with very small or spilled content.
+Large page/annotation counts may refuse earlier. The resident content window,
+output bounds, PDF bytes and public signatures are unchanged.

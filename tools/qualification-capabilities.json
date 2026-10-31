@@ -12996,5 +12996,20 @@
       "MemoryAdmission",
       "StreamLengthsMatchPayloads",
       "XrefTablePointsAtObjectHeaders"
+  ],
+  "pdf-page-descriptor-admission": [
+      "StagedPageMemory",
+      "MemoryBudgetStaging",
+      "MemoryAdmission",
+      "VectorMemory",
+      "PageMemory",
+      "TransparencyGroups",
+      "SharedTransparencyGroups",
+      "VectorSoftMasks",
+      "ShadingPatterns",
+      "StagedDocumentAndContentStoreReleaseOwnedReferencesOnDispose",
+      "PageContentStagingRoundTripsAndCleansTemp",
+      "StreamLengthsMatchPayloads",
+      "XrefTablePointsAtObjectHeaders"
   ]
 }
