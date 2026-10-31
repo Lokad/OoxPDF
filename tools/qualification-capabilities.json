@@ -13011,5 +13011,11 @@
       "PageContentStagingRoundTripsAndCleansTemp",
       "StreamLengthsMatchPayloads",
       "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-justification": [
+      "PptxJustifiedTextLayoutDistributesWrappedLines",
+      "PortableRenderingPptxJustificationPreservesWordAndGlyphGeometry",
+      "PortablePptxInspectionUsesTheRenderingFontSource",
+      "PortableRenderingPptxPreservesCompositeChartAndText"
   ]
 }

@@ -1521,6 +1521,18 @@ internal static class PptxModelTests
 
     public static void PptxJustifiedTextLayoutDistributesWrappedLines()
     {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution face = resolver.Resolve(new FontRequest("Calibri"));
+        if (face.IsFallback || !string.Equals(face.ResolvedFamily, "Calibri", StringComparison.OrdinalIgnoreCase))
+        {
+            TestAssert.Skip("Office-coordinate comparison requires installed Calibri; portable justification is checked separately.");
+        }
+
+        CheckJustifiedTextLayout(resolver, compareOffice: true);
+    }
+
+    internal static void CheckJustifiedTextLayout(IFontResolver resolver, bool compareOffice)
+    {
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -1529,10 +1541,11 @@ internal static class PptxModelTests
             "Cases",
             "pptx-ladder-04-typography-justify-port.pptx"));
         using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        var fonts = new PresentationFontResolver(resolver);
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: fonts);
         PptxTextLineLayoutSnapshot justifiedLine = layout.Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
@@ -1550,9 +1563,14 @@ internal static class PptxModelTests
         double[] wordStarts = justifiedLine.Spans.Select(span => span.X).Take(4).ToArray();
         TestAssert.Equal(4, wordStarts.Length);
         TestAssert.True(wordStarts.Zip(wordStarts.Skip(1), (left, right) => right - left).All(delta => delta > 0d), "Expected justified layout to expose monotonic word starts for Office text-op comparison.");
-        TestAssert.True(Math.Abs(wordStarts[1] - 151.19d) < 0.1d, "Expected justified wrapping to ignore the carried line-end separator when distributing stretchable spaces.");
-        TestAssert.True(Math.Abs(wordStarts[2] - 191.51d) < 0.1d, "Expected justified wrapping to keep Office-like word starts after excluding trailing wrap spaces.");
-        TestAssert.True(Math.Abs(wordStarts[3] - 257.15d) < 0.1d, "Expected justified wrapping to keep Office-like cumulative word spacing.");
+        // These coordinates come from the independent Office/Calibri reference.
+        // Portable fonts still exercise every semantic assertion below.
+        if (compareOffice)
+        {
+            TestAssert.True(Math.Abs(wordStarts[1] - 151.19d) < 0.1d, "Expected justified wrapping to ignore the carried line-end separator when distributing stretchable spaces.");
+            TestAssert.True(Math.Abs(wordStarts[2] - 191.51d) < 0.1d, "Expected justified wrapping to keep Office-like word starts after excluding trailing wrap spaces.");
+            TestAssert.True(Math.Abs(wordStarts[3] - 257.15d) < 0.1d, "Expected justified wrapping to keep Office-like cumulative word spacing.");
+        }
         double[] wordGaps = justifiedLine.Spans.Zip(justifiedLine.Spans.Skip(1), (left, right) => right.X - (left.X + left.Width)).ToArray();
         TestAssert.True(wordGaps.Any(gap => gap > 1d), "Expected justified layout to expose distributed spacing through positioned word starts.");
         PptxTextSpanLayoutSnapshot paragraphSpan = justifiedLine.Spans.First(span => span.Text.StartsWith("Paragraph", StringComparison.Ordinal));
@@ -1562,14 +1580,17 @@ internal static class PptxModelTests
         TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => glyph.Advance > 0d), "Expected layout glyph spans to expose positive glyph advances.");
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.LayoutWidth - paragraphSpan.GlyphSpan.NaturalWidth) < 0.01d, "Expected justified word glyph spans to keep natural width while line positioning owns distributed spacing.");
 
-        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: fonts);
         PptxTextGlyphRunSnapshot paragraphGlyphRun = glyphRuns.First(run => run.Text.StartsWith("Paragraph", StringComparison.Ordinal));
         TestAssert.True(paragraphGlyphRun.GlyphCount > 0, "Expected glyph-run inspection to expose glyph ids before PDF text emission.");
         TestAssert.Equal(paragraphGlyphRun.GlyphCount, paragraphGlyphRun.Glyphs.Count);
         TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => glyph.GlyphId > 0), "Expected glyph-run inspection to expose each emitted glyph id.");
         TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => string.Equals(glyph.Typeface, paragraphSpan.GlyphSpan.Typeface, StringComparison.OrdinalIgnoreCase)), "Expected glyph-run inspection to preserve current glyph typeface ownership before fallback splits it.");
         TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => !string.IsNullOrWhiteSpace(glyph.ResourceName)), "Expected glyph-run inspection to expose the PDF font resource that currently owns each glyph.");
-        TestAssert.True(glyphRuns.Any(run => run.Text == "."), "Expected justified glyph-run inspection to preserve Office-like sentence-period operation boundaries.");
+        if (compareOffice)
+        {
+            TestAssert.True(glyphRuns.Any(run => run.Text == "."), "Expected justified glyph-run inspection to preserve Office-like sentence-period operation boundaries.");
+        }
         TestAssert.True(paragraphGlyphRun.Width > 0d, "Expected glyph-run inspection to expose measured glyph advance.");
         TestAssert.Equal(paragraphSpan.GlyphSpan.GlyphCount, paragraphGlyphRun.GlyphCount);
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.NaturalWidth - paragraphGlyphRun.Width) < 0.01d, "Expected layout-owned glyph span width to match the emitted glyph-run width before PDF text operators are written.");
