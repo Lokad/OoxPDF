@@ -222,6 +222,6 @@ internal static class PptxHorizontalFrameTests
         double titleBaseline = title ? page.Height - shows.First(show => show.Text.Contains("Supported", StringComparison.Ordinal)).Y : 0d;
         var link = page.Annotations.SingleOrDefault(annotation => annotation.Uri == "https://example.invalid/title");
         return (bars[0].X, page.Height - last - band / 2, page.Height - first + band / 2, painted, titleBaseline,
-            link is null ? null : page.Height - link.Y - link.Height, link?.Height);
+            link.Uri is null ? null : page.Height - link.Y - link.Height, link.Uri is null ? null : link.Height);
     }
 }

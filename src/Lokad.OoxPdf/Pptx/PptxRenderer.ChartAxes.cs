@@ -330,8 +330,8 @@ internal sealed partial class PptxRenderer
                 return false;
             }
 
-            // Match the existing font metric ownership: the authored selection
-            // flag chooses typographic metrics; other faces use their Windows box.
+            // Native title controls use the horizontal-header line, including
+            // its gap. Other chart text retains its existing selected OS/2 box.
             bool typographic = (font.Os2.SelectionFlags & 0x80) != 0;
             double ascentUnits = horizontalHeader
                 ? font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap
