@@ -197,8 +197,8 @@ internal static class PptxCartesianHeaderTests
         var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
         var categoryFonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CCA", StringComparison.Ordinal))
             .Select(font => font.Font).ToHashSet();
-        var categories = shows.Where(show => categoryFonts.Contains(show.Font)).ToArray();
-        double[] inkBottoms = categories.Select(show =>
+        var categoryShows = shows.Where(show => categoryFonts.Contains(show.Font)).ToArray();
+        double[] inkBottoms = categoryShows.Select(show =>
         {
             double bottom = 0d;
             foreach (char character in show.Text)
@@ -207,6 +207,6 @@ internal static class PptxCartesianHeaderTests
             return page.Height - show.Y - bottom * show.Size / show.Font.Font.UnitsPerEm;
         }).ToArray();
         return (page.Height - clips.Max(v => v[1] + v[3]), page.Height - clips.Min(v => v[1]),
-            string.Concat(shows.Select(s => s.Text)), categories.Select(show => page.Height - show.Y).ToArray(), inkBottoms);
+            string.Concat(shows.Select(s => s.Text)), categoryShows.Select(show => page.Height - show.Y).ToArray(), inkBottoms);
     }
 }
