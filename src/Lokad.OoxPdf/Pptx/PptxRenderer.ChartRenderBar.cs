@@ -200,7 +200,8 @@ internal sealed partial class PptxRenderer
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine).ConfigureAwait(false));
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
+            plotLayout.AutomaticCategoryLabelOffsetAdjustment);
     }
 
     private static double ReadCategoryTitleFontSizeAtPosition(PptxSceneChart sceneChart, PptxSceneChartAxisPosition titlePosition)
@@ -283,6 +284,7 @@ internal sealed partial class PptxRenderer
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
+        double? categoryLabelOffsetAdjustment = null;
         bool usesMeasuredAxisInsets = !sceneChart.PlotAreaLayout.HasLayout &&
             (!hasLegend || legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
         ChartPlotBox defaultPlotBox;
@@ -326,7 +328,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = (await AdjustBarChartPlotBoxForVisibleValueAxesAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForStackedValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForSingleValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
-        defaultPlotBox = AdjustBarChartPlotBoxForCategoryLabels(defaultPlotBox);
+        defaultPlotBox = await AdjustBarChartPlotBoxForCategoryLabelsAsync(defaultPlotBox).ConfigureAwait(false);
         defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasLegend);
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForCategoryLabelsAsync(defaultPlotBox).ConfigureAwait(false));
@@ -374,7 +376,7 @@ internal sealed partial class PptxRenderer
         }
         if (ignoreManualPlotLayout)
         {
-            return ChartPlotLayout.FromPlotBox(defaultPlotBox);
+            return ChartPlotLayout.FromPlotBox(defaultPlotBox) with { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment };
         }
 
         ChartPlotBox manualDefaultPlotBox = horizontalBars && HasRecognizedManualPlotLayoutTarget()
@@ -382,7 +384,7 @@ internal sealed partial class PptxRenderer
             : defaultPlotBox;
         if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, manualDefaultPlotBox, out ChartPlotLayout manualPlotLayout))
         {
-            return ChartPlotLayout.FromPlotBox(defaultPlotBox);
+            return ChartPlotLayout.FromPlotBox(defaultPlotBox) with { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment };
         }
 
         return (await ResolveBarManualPlotLayoutTargetAsync(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars, frame, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
@@ -725,7 +727,7 @@ internal sealed partial class PptxRenderer
             return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
         }
 
-        ChartPlotBox AdjustBarChartPlotBoxForCategoryLabels(ChartPlotBox plotBox)
+        async ValueTask<ChartPlotBox> AdjustBarChartPlotBoxForCategoryLabelsAsync(ChartPlotBox plotBox)
         {
             if (horizontalBars)
             {
@@ -734,16 +736,16 @@ internal sealed partial class PptxRenderer
 
             ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
             bool labelsVisible = IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
-            // The shared header eligibility preserves authored furniture. Custom
-            // category offsets retain their existing reserve/emission fallback.
-            bool measuredFrame = cartesianHeader is not null && (!labelsVisible ||
-                ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis) == 1d);
+            // Reserve and painting share the category offset measurement, under
+            // the existing frame/source-furniture eligibility.
+            bool measuredFrame = cartesianHeader is not null;
             if ((hasTitle || hasLegend || legend.Visible) && !measuredFrame)
             {
                 return plotBox;
             }
 
             double requiredBottomReserve;
+            double? measuredOffsetAdjustment = null;
             if (!labelsVisible)
             {
                 if (!measuredFrame) return plotBox;
@@ -761,6 +763,19 @@ internal sealed partial class PptxRenderer
 
                 ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(categoryTickStyle.FontSize);
+                double offsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                if (measuredFrame && offsetScale != 1d)
+                {
+                    var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
+                    measuredOffsetAdjustment = await TryMeasureCategoryLabelOffsetAdjustmentAsync(measurer, categoryTickStyle, offsetScale).ConfigureAwait(false);
+                    if (measuredOffsetAdjustment is { } adjustment)
+                        requiredBottomReserve += adjustment;
+                    else
+                    {
+                        measuredFrame = false;
+                        if (hasTitle || hasLegend || legend.Visible) return plotBox;
+                    }
+                }
             }
             double presetBottomReserve = plotBox.Y - frame.Y;
             if (!measuredFrame && Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
@@ -770,6 +785,9 @@ internal sealed partial class PptxRenderer
 
             double newY = frame.Y + requiredBottomReserve;
             double plotTop = plotBox.Y + plotBox.Height;
+            double admittedTop = cartesianHeader is { } header ? frame.Y + frame.Height - header.Reserve : plotTop;
+            if (measuredOffsetAdjustment is not null && admittedTop - newY < 1d) return plotBox;
+            categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
             return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, plotTop - newY));
         }
 

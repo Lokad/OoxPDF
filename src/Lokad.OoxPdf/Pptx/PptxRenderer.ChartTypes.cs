@@ -461,6 +461,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, PptxSceneChartManualLayoutTarget? ManualLayoutTargetKind)
     {
+        public double? AutomaticCategoryLabelOffsetAdjustment { get; init; }
+
         public static ChartPlotLayout FromPlotBox(ChartPlotBox plotBox)
         {
             return new ChartPlotLayout(new ChartLayoutBox(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height), plotBox, null);

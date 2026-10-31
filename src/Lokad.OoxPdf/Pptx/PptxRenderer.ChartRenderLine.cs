@@ -513,11 +513,10 @@ internal sealed partial class PptxRenderer
                 double topReserve = headerReserve ?? (await MeasureCartesianHeaderReserveAsync(theme, sceneChart, fontResolver, numericLineHeight).ConfigureAwait(false)).Reserve;
                 double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
                 double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
-                double? measuredOffsetAdjustment = null;
-                if (labelOffsetScale != 1d && (await textMeasurer.TryMeasureNormalLineHeightAsync(categoryStyle).ConfigureAwait(false)) is { } categoryLineHeight)
+                double? measuredOffsetAdjustment = await TryMeasureCategoryLabelOffsetAdjustmentAsync(textMeasurer, categoryStyle, labelOffsetScale).ConfigureAwait(false);
+                if (measuredOffsetAdjustment is { } offsetAdjustment)
                 {
-                    measuredOffsetAdjustment = categoryLineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (labelOffsetScale - 1d);
-                    bottomReserve += measuredOffsetAdjustment.Value;
+                    bottomReserve += offsetAdjustment;
                 }
 
                 double height = frame.Height - topReserve - bottomReserve;

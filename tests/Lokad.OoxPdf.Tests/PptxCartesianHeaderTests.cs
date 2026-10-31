@@ -103,9 +103,58 @@ internal static class PptxCartesianHeaderTests
             "Hidden numeric labels do not retain a font-dependent end clearance.");
     }
 
-    private static (double Top, double Bottom, string Text) Render(string kind, int height, int valueSize,
+    public static void PptxColumnCategoryOffsetsKeepCompleteInkInsideTheirFrame()
+    {
+        foreach (int legendMode in new[] { 0, 1, 2 })
+        {
+            var ordinary = Render("column", 300, 12, title: true, legend: legendMode != 0,
+                categorySize: 12, categoryOffset: 100, reservedLegend: legendMode == 2);
+            foreach (int offset in new[] { 0, 50, 100, 200 })
+            {
+                var actual = Render("column", 300, 12, title: true, legend: legendMode != 0,
+                    categorySize: 12, categoryOffset: offset, reservedLegend: legendMode == 2);
+                TestAssert.True(actual.CategoryBaselines.Length > 0 &&
+                    actual.CategoryBaselines.Length == ordinary.CategoryBaselines.Length &&
+                    actual.CategoryBaselines.Zip(ordinary.CategoryBaselines).All(pair => Math.Abs(pair.First - pair.Second) < 0.002d),
+                    "Category offset changes reserve and gap together, keeping the labels attached to their frame.");
+                TestAssert.True(actual.CategoryInkBottoms.All(bottom => bottom <= 408.002d),
+                    "Complete category ink must stay inside the chart; extraction alone cannot prove placement.");
+                for (int index = 1; index <= 6; index++)
+                    TestAssert.True(actual.Text.Contains("Category " + index, StringComparison.Ordinal),
+                        "Every supported category remains painted after applying its offset.");
+            }
+        }
+    }
+
+    public static void PptxColumnCategoryOffsetsShareMeasuredPlacementWithLineFrames()
+    {
+        foreach (int size in new[] { 8, 18 })
+        foreach (int offset in new[] { 0, 50, 100, 200 })
+        {
+            var column = Render("column", 300, 12, title: true, categorySize: size, categoryOffset: offset);
+            var line = Render("line", 300, 12, title: true, categorySize: size, categoryOffset: offset);
+            TestAssert.True(column.CategoryBaselines.Length > 0 &&
+                column.CategoryBaselines.Length == line.CategoryBaselines.Length &&
+                column.CategoryBaselines.Zip(line.CategoryBaselines).All(pair => Math.Abs(pair.First - pair.Second) < 0.002d),
+                "The same category content and offset use the same vertical measurement across Cartesian plot kinds.");
+        }
+    }
+
+    public static void PptxColumnCategoryOffsetsRetainAuthoredPlotGeometry()
+    {
+        var ordinary = Render("column", 300, 12, title: true, categoryOffset: 100, manualPlot: true);
+        foreach (int offset in new[] { 0, 50, 200 })
+        {
+            var actual = Render("column", 300, 12, title: true, categoryOffset: offset, manualPlot: true);
+            TestAssert.True(Math.Abs(actual.Top - ordinary.Top) < 0.002d && Math.Abs(actual.Bottom - ordinary.Bottom) < 0.002d,
+                "Authored plot geometry retains its owner when the category label offset changes.");
+        }
+    }
+
+    private static (double Top, double Bottom, string Text, double[] CategoryBaselines, double[] CategoryInkBottoms) Render(string kind, int height, int valueSize,
         bool title = false, bool legend = false, int titleSize = 18, bool overlay = false, bool valueLabels = true,
-        int? categorySize = null, bool categoryLabels = true)
+        int? categorySize = null, bool categoryLabels = true, int? categoryOffset = null,
+        bool reservedLegend = false, bool manualPlot = false)
     {
         string titleXml = title ? $"<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr sz=\"{titleSize * 100}\"/><a:t>Supported title</a:t></a:r></a:p></c:rich></c:tx><c:overlay val=\"{(overlay ? 1 : 0)}\"/></c:title>" : "";
         string values = string.Concat(Enumerable.Range(0, 6).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
@@ -115,16 +164,19 @@ internal static class PptxCartesianHeaderTests
             : "<c:lineChart><c:grouping val=\"standard\"/>" + series + "</c:lineChart>";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart>{{titleXml}}<c:autoTitleDeleted val="{{(title ? 0 : 1)}}"/><c:plotArea>{{plot}}
+              <c:chart>{{titleXml}}<c:autoTitleDeleted val="{{(title ? 0 : 1)}}"/><c:plotArea>
+                {{(manualPlot ? "<c:layout><c:manualLayout><c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\"0.12\"/><c:y val=\"0.16\"/><c:w val=\"0.76\"/><c:h val=\"0.68\"/></c:manualLayout></c:layout>" : "")}}
+                {{plot}}
                 <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/>
                   {{(categoryLabels ? "" : "<c:tickLblPos val=\"none\"/>")}}
+                  {{(categoryOffset is { } offset ? "<c:lblOffset val=\"" + offset + "\"/>" : "")}}
                   {{(categorySize is { } size ? "<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz=\"" + size * 100 + "\"/></a:pPr></a:p></c:txPr>" : "")}}
                 </c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/>
                   <c:majorGridlines/><c:majorUnit val="1"/><c:tickLblPos val="{{(valueLabels ? "nextTo" : "none")}}"/>
                   <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{valueSize * 100}}"/></a:pPr></a:p></c:txPr>
                 </c:valAx>
-              </c:plotArea>{{(legend ? "<c:legend><c:legendPos val=\"b\"/></c:legend>" : "")}}</c:chart>
+              </c:plotArea>{{(legend ? "<c:legend><c:legendPos val=\"b\"/>" + (reservedLegend ? "<c:overlay val=\"0\"/>" : "") + "</c:legend>" : "")}}</c:chart>
             </c:chartSpace>
             """;
         string slide = $$"""
@@ -142,7 +194,19 @@ internal static class PptxCartesianHeaderTests
             .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
             .Where(v => v[2] > 144 && v[2] < 287.999 && v[3] > height / 4d).ToArray();
         TestAssert.True(clips.Length > 0, "The rendered chart retains a bounded plot clip.");
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
+        var categoryFonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CCA", StringComparison.Ordinal))
+            .Select(font => font.Font).ToHashSet();
+        var categories = shows.Where(show => categoryFonts.Contains(show.Font)).ToArray();
+        double[] inkBottoms = categories.Select(show =>
+        {
+            double bottom = 0d;
+            foreach (char character in show.Text)
+                if (show.Font.Font.TryGetGlyphBounds(show.Font.Font.MapCodePoint(character), out var bounds))
+                    bottom = Math.Min(bottom, bounds.YMin);
+            return page.Height - show.Y - bottom * show.Size / show.Font.Font.UnitsPerEm;
+        }).ToArray();
         return (page.Height - clips.Max(v => v[1] + v[3]), page.Height - clips.Min(v => v[1]),
-            string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(s => s.Text)));
+            string.Concat(shows.Select(s => s.Text)), categories.Select(show => page.Height - show.Y).ToArray(), inkBottoms);
     }
 }

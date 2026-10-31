@@ -11,6 +11,14 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private static async ValueTask<double?> TryMeasureCategoryLabelOffsetAdjustmentAsync(
+        ChartTextMeasurer measurer, ChartTextStyle style, double offsetScale)
+    {
+        if (offsetScale == 1d || await measurer.TryMeasureNormalLineHeightAsync(style).ConfigureAwait(false) is not { } lineHeight)
+            return null;
+        return lineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (offsetScale - 1d);
+    }
+
     private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null)
     {
         if (labels.Count == 0)

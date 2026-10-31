@@ -1,4 +1,25 @@
 {
+  "pptx-column-offset": [
+    "PptxColumnCategory",
+    "PptxCartesianHeaders",
+    "PptxLegendlessLinePlotCategoryOffset",
+    "PptxLegendlessLineCategory",
+    "PptxLegendlessLineTopCategoryOffset",
+    "PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+    "PptxHorizontalFrame",
+    "PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame",
+    "PptxEmptyLegendLayoutMetadataKeepsWrappedContent",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-column-footer": [
     "PptxColumnCategory",
     "PptxCartesianHeaders",

@@ -14,7 +14,8 @@
   preserving overlay neutrality and minimum clearance. Line plots also share
   measured frame placement across titles/legends and preserve primary/secondary
   label ownership. Column footers share category-strip measurement and numeric
-  end clearance, including when category labels are hidden.
+  end clearance, including when category labels are hidden. Custom offsets no longer
+  displace column category labels below their automatic chart frame.
 
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
