@@ -461,7 +461,7 @@ internal sealed partial class PptxRenderer
                     return null;
                 }
 
-                double leftReserve = ComputeCartesianValueAxisLeftReserve(maxLabelWidth, tickStyle.FontSize);
+                double leftReserve = ComputeCartesianAxisLabelSideReserve(maxLabelWidth, tickStyle.FontSize);
                 double width = frame.Width - leftReserve - PptxChartMetricRules.ColumnPlotRightReserve;
                 if (width < 1d)
                 {

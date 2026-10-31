@@ -497,7 +497,7 @@ internal sealed partial class PptxRenderer
             double leftReserve = plotBox.X - frame.X;
             if (usesMeasuredAxisInsets)
             {
-                double endpoint = valueOptions.Reversed ? valueExtents.Maximum : valueExtents.Minimum;
+                double endpoint = valueOptions.Reversed ? valueExtents.Max : valueExtents.Min;
                 string label = FormatSceneOrXmlChartAxisLabel(endpoint, valueAxis.SceneAxis, valueAxis.XmlAxis, percentStacked ? "0%" : null);
                 double endpointWidth = string.IsNullOrWhiteSpace(label) ? 0d : await textMeasurer.MeasureAsync(label, tickStyle).ConfigureAwait(false);
                 leftReserve = Math.Max(leftReserve, endpointWidth / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
