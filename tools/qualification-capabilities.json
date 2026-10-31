@@ -1,4 +1,24 @@
 {
+  "pptx-automatic-insets": [
+    "PptxAutomaticColumnInsets",
+    "PptxClusteredSpacing",
+    "PptxAuthoredTintShade",
+    "PptxAutomaticBarPalettes",
+    "PptxVaryingBarCategoryLegends",
+    "PptxNegativeBar",
+    "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
+    "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PptxSyntheticBarChartOverlayLegendDoesNotReservePlotSpace",
+    "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
+    "PptxSyntheticChartValueAxisReversedOrientationMovesBarDataLabels",
+    "PptxPercentStackedColumnChartUsesPercentValueAxis",
+    "PptxSyntheticBarChartLegendSwatchesUseSeriesStroke",
+    "PptxSyntheticBarChartSeriesLineWithoutWidthUsesFilledSeriesDefault",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-clustered-spacing": [
     "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
     "PptxAuthoredTintShade",
@@ -648,6 +668,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxAutomaticColumnInsets",
     "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
     "PptxAuthoredTintShadeChartsMatchIndependentOfficePaints",
     "PptxAuthoredTintShadeShapesMatchOfficeAndPreserveOrder",

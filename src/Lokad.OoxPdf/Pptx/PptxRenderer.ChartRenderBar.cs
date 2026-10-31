@@ -299,6 +299,16 @@ internal sealed partial class PptxRenderer
             defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarDefault);
         }
 
+        if (!horizontalBars && !sceneChart.PlotAreaLayout.HasLayout &&
+            (!hasLegend || legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom))
+        {
+            // Titles and horizontal legends reserve vertical space. Automatic
+            // horizontal edges belong to the axis strips measured below; retain
+            // the explicit manual and side-legend placement contracts.
+            double inset = PptxChartMetricRules.ColumnPlotRightReserve;
+            defaultPlotBox = defaultPlotBox with { X = frame.X + inset, Width = Math.Max(1d, frame.Width - 2d * inset) };
+        }
+
         defaultPlotBox = (await AdjustBarChartPlotBoxForVisibleValueAxesAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForStackedValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForSingleValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));

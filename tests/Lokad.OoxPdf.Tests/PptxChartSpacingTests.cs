@@ -61,7 +61,7 @@ internal static class PptxChartSpacingTests
         }
     }
 
-    private static IEnumerable<(double X, double Y, double Width, double Height)> ReadBarRectangles(string content)
+    internal static IEnumerable<(double X, double Y, double Width, double Height)> ReadBarRectangles(string content)
     {
         bool nonWhite = false;
         var saved = new Stack<bool>();
