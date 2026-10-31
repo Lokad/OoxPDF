@@ -17,6 +17,7 @@ $parentScript = Join-Path $repo 'tools/NewParentRegressionRuntime.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NewParentRegressionRuntime.ps1') -Destination $parentScript
 $transferScript = Join-Path $repo 'tools/TransferQualificationArtifact.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'TransferQualificationArtifact.ps1') -Destination $transferScript
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'BuildQualificationArtifact.ps1') -Destination (Join-Path $repo 'tools/BuildQualificationArtifact.ps1')
 function Invoke-Git([string[]] $Arguments) {
     $result = git -C $repo @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) { throw ($result -join "`n") }
@@ -40,6 +41,9 @@ $nested = Join-Path (Split-Path $inputFile) 'nested/second.txt'
 New-Item -ItemType Directory -Path (Split-Path $nested) -Force | Out-Null
 [IO.File]::WriteAllText($nested, "nested fixture`n")
 foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')) {
+    $projectName=Split-Path $project -Leaf
+    New-Item -ItemType Directory -Path (Join-Path $repo $project) -Force | Out-Null
+    '<Project />' | Set-Content -LiteralPath (Join-Path $repo ($project+'/'+$projectName+'.csproj'))
     $directory = Join-Path $repo ($project + "/bin/Release/$Framework")
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     'same fake library; no executable code' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.dll')
@@ -211,6 +215,49 @@ $worktreeOutput = Join-Path $repo 'artifacts/from-worktree'
 & (Join-Path $worktree 'tools/FreezeQualificationArtifact.ps1') -OutputDirectory $worktreeOutput -Framework $Framework | Out-Null
 $worktreePin = Get-Content -LiteralPath (Join-Path $worktreeOutput 'identity.json') -Raw | ConvertFrom-Json
 if (!$worktreePin.ReusedInputSnapshot -or $worktreePin.InputSnapshot -ne $first.InputSnapshot) { throw 'Linked worktree reuse failed' }
+$reuseBuildScript=Join-Path $worktree 'tools/BuildQualificationArtifact.ps1'
+$reuseBuildRevision=git -C $worktree rev-parse HEAD
+$reuseBuildState=[pscustomobject]@{Calls=0;Damage=$false}
+function dotnet {
+    $buildArguments=@($args)
+    if ($buildArguments[0] -ne 'build' -or $buildArguments[1] -ne (Join-Path $worktree 'tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj') -or
+        '-p:BuildProjectReferences=false' -notin $buildArguments -or '--no-restore' -notin $buildArguments) {
+        throw 'Harness reuse attempted an unexpected build'
+    }
+    $reuseBuildState.Calls++
+    'corrected harness; no executable code' | Set-Content -LiteralPath (Join-Path $worktree "tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/Lokad.OoxPdf.Tests.dll")
+    if ($reuseBuildState.Damage) {
+        'unwanted runtime rewrite' | Set-Content -LiteralPath (Join-Path $worktree "src/Lokad.OoxPdf/bin/Release/$Framework/Lokad.OoxPdf.dll")
+    }
+    $global:LASTEXITCODE=0
+}
+function Reject-ReusedBuild([string]$Name,[string]$Expected,[string]$SelectedFramework=$Framework) {
+    $target=Join-Path $repo ('artifacts/'+$Name)
+    try {
+        & $reuseBuildScript -WorktreeDirectory $worktree -Revision $reuseBuildRevision -OutputDirectory $target -Framework $SelectedFramework -ReuseRuntimeDirectory $worktreeOutput | Out-Null
+    } catch {
+        if (!$_.Exception.Message.Contains($Expected) -or (Test-Path -LiteralPath $target)) { throw }
+        return
+    }
+    throw ('Expected reused-runtime build rejection: '+$Name)
+}
+try {
+    $repairedOutput=Join-Path $repo 'artifacts/repaired-harness'
+    & $reuseBuildScript -WorktreeDirectory $worktree -Revision $reuseBuildRevision -OutputDirectory $repairedOutput -Framework $Framework -ReuseRuntimeDirectory $worktreeOutput | Out-Null
+    $repaired=Get-Content (Join-Path $repairedOutput 'identity.json') -Raw | ConvertFrom-Json
+    if ($reuseBuildState.Calls -ne 1 -or $repaired.LibrarySha256 -ne $worktreePin.LibrarySha256 -or $repaired.TestAssemblySha256 -eq $worktreePin.TestAssemblySha256) { throw 'Harness-only build did not preserve its runtime' }
+    $reuseBuildState.Damage=$true
+    Reject-ReusedBuild 'harness-rewrites-runtime' 'Harness build changed a qualified runtime asset'
+    $reuseBuildState.Damage=$false
+    Reject-ReusedBuild 'harness-wrong-framework' 'Reused runtime framework differs' $(if ($Framework -eq 'net11.0') {'net10.0'} else {'net11.0'})
+    $beforeRefusal=$reuseBuildState.Calls
+    '// changed production' | Set-Content (Join-Path $worktree 'src/Lokad.OoxPdf/changed.cs')
+    git -C $worktree add src/Lokad.OoxPdf/changed.cs
+    git -C $worktree commit --quiet -m 'Changed synthetic production'
+    $reuseBuildRevision=git -C $worktree rev-parse HEAD
+    Reject-ReusedBuild 'harness-changed-production' 'Production source or build inputs changed'
+    if ($reuseBuildState.Calls -ne $beforeRefusal) { throw 'Changed production reached the harness compiler' }
+} finally { Remove-Item Function:\dotnet }
 'second fixture' | Set-Content -LiteralPath $inputFile
 Reject 'dirty' 'Commit source and public inputs'
 Invoke-Git @('add', $inputPath)
@@ -301,8 +348,9 @@ Reject 'mixed' 'Release library copies differ'
         'Duplicate asset sharing', 'Separate frozen output isolation', 'Writable build isolation',
         'Independent transfer copies', 'Dirty root build-setting refusal', 'Committed root build-setting refusal', 'New root targets refusal',
         'Dirty inspector source refusal', 'Committed inspector source refusal',
-        'New tools targets refusal', 'Committed tools targets refusal', 'Harness-only repair transfer')
+        'New tools targets refusal', 'Committed tools targets refusal', 'Harness-only repair transfer',
+        'Harness-only runtime reuse', 'Runtime rewrite refusal', 'Reused framework refusal', 'Reused production-change refusal')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Twenty-eight fixture-freeze/asset/parent-ownership checks passed; no library build or test-suite replay.'
+Write-Output 'Thirty-two fixture-freeze/asset/parent/harness-ownership checks passed; no library build or test-suite replay.'

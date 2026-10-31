@@ -71,7 +71,7 @@ internal static class PptxChartPaletteTests
     public static void PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace()
     {
         const int count = 13;
-        PdfPage page = RenderLegend(count);
+        PdfPage page = RenderLegend(count, overlay: false);
         var rectangles = new List<(double X, double Y, double Width, double Height)>();
         _ = ReadColoredPaints(page.Content, line =>
         {
@@ -88,7 +88,7 @@ internal static class PptxChartPaletteTests
         TestAssert.True(keys.All(key => key.X >= 72 && key.X + key.Width <= 360 && key.Y >= page.Height - 288 && key.Y + key.Height <= page.Height - 72), "Legend keys must stay inside the source chart frame.");
     }
 
-    private static PdfPage RenderLegend(int count, bool vary = true, bool seriesFill = false, bool pointFill = false, bool negative = false)
+    private static PdfPage RenderLegend(int count, bool vary = true, bool seriesFill = false, bool pointFill = false, bool negative = false, bool? overlay = null)
     {
         string values = string.Join("", Enumerable.Range(0, count).Select(i =>
             $"<c:pt idx=\"{i}\"><c:v>{(negative && i == 0 ? -4 : 4)}</c:v></c:pt>"));
@@ -106,7 +106,7 @@ internal static class PptxChartPaletteTests
                   <c:cat><c:strLit><c:ptCount val="{{count}}"/>{{labels}}</c:strLit></c:cat>
                   <c:val><c:numLit><c:ptCount val="{{count}}"/>{{values}}</c:numLit></c:val>
                 </c:ser>
-              </c:barChart></c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
+              </c:barChart></c:plotArea><c:legend><c:legendPos val="b"/>{{(overlay is { } value ? "<c:overlay val=\"" + (value ? 1 : 0) + "\"/>" : "")}}</c:legend></c:chart>
             </c:chartSpace>
             """;
         string palette = string.Join("", new[] { "156082", "E97132", "196B24", "0F9ED5", "A02B93", "4EA72E" }

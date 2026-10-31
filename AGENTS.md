@@ -36,6 +36,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/TestOfficeReferenceOwnership.ps1`, `TestOfficeImageReference.ps1`: Office ownership policy and image/view cache checks with managed controls; no Office, native calls or builds.
 - `tools/TestCliDiagnosticsPublication.ps1`: check frozen CLI diagnostics publication through aliases and file links; never builds. Direct library checks live in `PublicApiTests.PublicationLinks.cs` under the selected test TFM.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
+- Its `-ReuseRuntimeDirectory` mode builds only a repaired harness after checking unchanged production/build inputs and public fixtures; qualified runtime assets remain byte-identical.
 - `tools/TestQualificationTransfer.ps1`: check transfer alias ownership, preflight and failure cleanup with synthetic files; never builds or converts.
 - `tools/NewFrozenAllocationRuntime.ps1`: build/self-test the existing allocation probe against a frozen library without rebuilding the library.
 - `tools/AuditCompositionContent.py`: screen frozen public portfolio prose and simple math against Office; retain unresolved extraction and visual failures.
