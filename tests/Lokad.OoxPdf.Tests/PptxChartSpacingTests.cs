@@ -39,7 +39,7 @@ internal static class PptxChartSpacingTests
             PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
                 .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             bool horizontal = direction == "bar";
-            var bars = ReadColoredRectangles(page.Content).OrderBy(rect => horizontal ? rect.Y : rect.X).ToArray();
+            var bars = ReadBarRectangles(page.Content).OrderBy(rect => horizontal ? rect.Y : rect.X).ToArray();
             TestAssert.Equal(6 * seriesCount, bars.Length);
             double band = ((horizontal ? bars[5 * seriesCount].Y : bars[5 * seriesCount].X) -
                 (horizontal ? bars[0].Y : bars[0].X)) / 5;
@@ -61,19 +61,19 @@ internal static class PptxChartSpacingTests
         }
     }
 
-    private static IEnumerable<(double X, double Y, double Width, double Height)> ReadColoredRectangles(string content)
+    private static IEnumerable<(double X, double Y, double Width, double Height)> ReadBarRectangles(string content)
     {
-        bool colored = false;
+        bool nonWhite = false;
         var saved = new Stack<bool>();
         foreach (string raw in content.Split('\n'))
         {
             string line = raw.Trim();
-            if (line == "q") saved.Push(colored);
-            else if (line == "Q") colored = saved.Pop();
+            if (line == "q") saved.Push(nonWhite);
+            else if (line == "Q") nonWhite = saved.Pop();
             else if (line.EndsWith(" rg", StringComparison.Ordinal))
-                colored = line[..^3].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Number).Distinct().Count() > 1;
-            else if (line.EndsWith(" g", StringComparison.Ordinal)) colored = false;
-            else if (colored && line.EndsWith(" re f", StringComparison.Ordinal))
+                nonWhite = line[..^3].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Number).Any(channel => channel < 1d);
+            else if (line.EndsWith(" g", StringComparison.Ordinal)) nonWhite = Number(line[..^2]) < 1d;
+            else if (nonWhite && line.EndsWith(" re f", StringComparison.Ordinal))
             {
                 double[] values = line[..^5].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Number).ToArray();
                 yield return (values[0], values[1], values[2], values[3]);
