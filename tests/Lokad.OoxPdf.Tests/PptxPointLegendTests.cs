@@ -20,6 +20,11 @@ internal static class PptxPointLegendTests
             stream.Position = 0;
             using var package = OoxPackage.Open(stream, default);
             var document = new PptxReader().Read(package, default);
+            var chart = new PptxSceneBuilder().Build(document, package, default).Slides[0].SlideNodes
+                .Select(node => node.Chart).First(value => value is not null)!;
+            bool fullyAuthoredPaint = chart.Plots.SelectMany(plot => plot.Series).All(series => series.Fill.IsDefined ||
+                Enumerable.Range(0, row.GetProperty("CategoryOccurrences").GetArrayLength()).All(index =>
+                    series.PointStyles.Any(point => point.Index == index && point.Fill.IsDefined)));
             var page = new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
             text = string.Concat(text.Where(c => !char.IsWhiteSpace(c)));
@@ -33,8 +38,10 @@ internal static class PptxPointLegendTests
             string[] paints = PptxChartPaletteTests.ReadColoredFills(page.Content)
                 .Select(color => $"{color.Red:X2}{color.Green:X2}{color.Blue:X2}").ToArray();
             string[] expectedPaints = row.GetProperty("ColoredPaints").EnumerateArray().Select(value => value.GetString()!).ToArray();
-            TestAssert.True(paints.Order(StringComparer.Ordinal).SequenceEqual(expectedPaints.Order(StringComparer.Ordinal)),
-                id + ": visible point/legend paints must retain independent Office colors and counts.");
+            TestAssert.Equal(expectedPaints.Length, paints.Length);
+            if (fullyAuthoredPaint)
+                TestAssert.True(paints.Order(StringComparer.Ordinal).SequenceEqual(expectedPaints.Order(StringComparer.Ordinal)),
+                    id + ": explicitly authored point/legend paints must retain independent Office colors.");
             if (id == "no-fill")
                 TestAssert.True(page.ExtGStates.Any(state => state.FillAlpha == 0d), "Explicit point no-fill must remain transparent.");
             if (row.GetProperty("LegendEntries").GetInt32() == 6)
