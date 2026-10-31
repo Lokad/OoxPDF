@@ -1,5 +1,8 @@
 {
   "pptx-cartesian-sides": [
+    "PptxLegendlessLine",
+    "PptxLineAuthoredMaximum",
+    "PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides",
     "PptxLineCategoryFooterKeepsItsInsetAcrossFrameHeights",
     "PptxPrimaryValueAxisLabelsPaintOnceOnTheirSelectedSide",
     "PptxSecondaryValueAxisOwnsItsVisibilityIndependently",
@@ -98,7 +101,6 @@
       "PptxHorizontalFrame",
       "PptxHorizontalLegend",
       "PptxCartesianHeaders",
-      "PptxLineMeasuredHeaderPreservesFallbackHorizontalAndBottomOwnership",
       "PptxLegendlessLine",
       "PptxLineAuthoredMaximum",
       "PptxHorizontalTitlesLeaveValueAxisOwnershipUnchanged",

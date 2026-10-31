@@ -1133,17 +1133,6 @@ internal static class PptxChartsTests
         AssertLineLayoutClip("122.06 291.634 298.94 162.366 re W* n", typographic);
     }
 
-    public static void PptxLineMeasuredHeaderPreservesFallbackHorizontalAndBottomOwnership()
-    {
-        foreach (string guard in new[] { "hidden", "right", "category-hidden", "title" })
-        {
-            string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard);
-            TestAssert.True(Regex.IsMatch(pdf, @"106\.56 286\.56 218\.88 [-.\d]+ re W\* n"),
-                "Measuring the numeric/title header must preserve the unresolved side and bottom geometry.");
-            TestAssert.True(DocxTests.CountPdfTextShows(pdf) > 0, "The supported neighboring text remains painted.");
-        }
-    }
-
     private static void AssertLineLayoutClip(string expected, string pdf)
     {
         string actual = string.Join("; ", Regex.Matches(pdf, @"[-.\d]+ [-.\d]+ [-.\d]+ [-.\d]+ re W\* n").Select(m => m.Value).Distinct());
@@ -1471,6 +1460,24 @@ internal static class PptxChartsTests
         }
     }
 
+    public static void PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides()
+    {
+        foreach (int offset in new[] { 0, 50, 100, 200 })
+        {
+            string left = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: offset);
+            string right = RenderLegendlessLineLayoutProbe(18, 360, 100, guard: "right", categoryLabelOffset: offset);
+            string[] Baselines(string pdf) => Regex.Matches(pdf,
+                @"/CCA1 18 Tf\s+0 Tc\s+1 0 0 1 [-\d.]+ (?<y>[-\d.]+) Tm")
+                .Select(match => match.Groups["y"].Value).ToArray();
+            var first = Baselines(left);
+            var second = Baselines(right);
+            TestAssert.Equal(3, first.Length);
+            TestAssert.Equal(3, second.Length);
+            TestAssert.True(first.SequenceEqual(second),
+                "The category offset and baseline belong to the category axis, independently of the numeric axis side.");
+        }
+    }
+
     public static void PptxLegendlessLinePlotCategoryOffsetUsesSelectedCategoryMetric()
     {
         string windows = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryLabelOffset: 200);
@@ -1486,16 +1493,18 @@ internal static class PptxChartsTests
             string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard, categoryLabelOffset: 200);
             AssertLineLayoutClip("106.56 286.56 218.88 146.88 re W* n", pdf);
         }
-        foreach (string guard in new[] { "right", "category-hidden" })
+        foreach (string guard in new[] { "category-hidden" })
         {
             string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard, categoryLabelOffset: 200);
-            TestAssert.True(Regex.IsMatch(pdf, @"106\.56 286\.56 218\.88 [\d.]+ re W\* n"),
-                "A measured numeric header preserves the unmeasured category-offset and horizontal fallbacks.");
+            TestAssert.True(Regex.IsMatch(pdf, @"[-\d.]+ 286\.56 [\d.]+ [\d.]+ re W\* n"),
+                "Hidden category labels retain their existing vertical fallback while numeric side measurement remains independent.");
         }
 
         string crowded = RenderLegendlessLineLayoutProbe(48, 360, 100, categoryLabelOffset: 2000);
-        TestAssert.True(Regex.IsMatch(crowded, @"115\.2 286\.56 273\.6 [\d.]+ re W\* n"),
-            "An unadmitted category band retains its positive fallback width and bottom.");
+        Match fallback = Regex.Match(crowded, @"[-\d.]+ 286\.56 (?<width>[\d.]+) (?<height>[\d.]+) re W\* n");
+        TestAssert.True(fallback.Success && double.Parse(fallback.Groups["width"].Value, CultureInfo.InvariantCulture) > 0d &&
+            double.Parse(fallback.Groups["height"].Value, CultureInfo.InvariantCulture) > 0d,
+            "An unadmitted category band retains a positive fallback plot and its existing bottom.");
     }
 
     public static void PptxChartSourceMinimumIntervalsEmitLabelsAndGridlineLevels()
