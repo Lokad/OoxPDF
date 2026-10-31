@@ -2504,7 +2504,7 @@ internal sealed partial class DocxLayoutEngine
                             ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), 0d, bodyWidth, placed.Line.X,
                                 line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
                                 index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
-                                index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d),
+                                index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                             ParagraphBeforeSpacing = index == 0 ? spacingProfile.ParagraphBeforeSpacing : 0d,
                             ParagraphAfterSpacing = index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
@@ -2530,7 +2530,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY,
                 spacingProfile,
                 HasFollowingParagraphShading(story.BodyElements, elementIndex),
-                ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile),
+                ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile),
                 textMeasurer,
                 defaultTabStopPoints,
                 pageNumber,
@@ -2581,7 +2581,7 @@ internal sealed partial class DocxLayoutEngine
                 { SourceParagraph = paragraph,
                     ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), 0d, bodyWidth, imageX,
                         imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing,
-                        paragraphLines.Count == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d) });
+                        paragraphLines.Count == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d) });
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 

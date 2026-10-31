@@ -171,6 +171,133 @@
           "PaintedBeforeSpacing": 0
         }
       ]
+    },
+    {
+      "Input": "before-edges.docx",
+      "InputSha256": "029F0905AD5DC2633F4057326829EB1BAC78E7632E9C82CD99AFEE38429939D7",
+      "ReferencePdfSha256": "7CF3E258DDE109F18CA18795D7B784DCAEE438827CE8288C3045CABE8CC74653",
+      "Samples": [
+        {
+          "Label": "ZEROAFTERSAME NEXT",
+          "Page": 1,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            85.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 24
+        },
+        {
+          "Label": "ZEROAFTERDIFFERENT NEXT",
+          "Page": 2,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            85.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 24
+        },
+        {
+          "Label": "CURRENTLEFT NEXT",
+          "Page": 3,
+          "FirstLineRectangle": [
+            88.58399963378906,
+            109.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            90.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 0
+        },
+        {
+          "Label": "PREVIOUSLEFT NEXT",
+          "Page": 4,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            109.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 0
+        },
+        {
+          "Label": "FIRSTLINE NEXT",
+          "Page": 5,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            103.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            90.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        },
+        {
+          "Label": "RIGHTEDGE NEXT",
+          "Page": 6,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            109.82000732421875,
+            523.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 0
+        },
+        {
+          "Label": "SAMELEFT NEXT",
+          "Page": 7,
+          "FirstLineRectangle": [
+            88.58399963378906,
+            103.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            90.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        },
+        {
+          "Label": "CENTER NEXT",
+          "Page": 8,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            103.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            263.69000244140625,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        }
+      ]
     }
   ]
 }

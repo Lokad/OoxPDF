@@ -516,7 +516,7 @@ internal sealed partial class DocxLayoutEngine
                         math.LineHeight, false);
                 lines.Add(CreateStandaloneMathLine(paragraph, math, cellX + paddingLeft, textWidth,
                     cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(bodyElements, elementIndex),
-                    ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile), mathBaselineAnchor));
+                    ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile), mathBaselineAnchor));
                 cursorY -= math.LineHeight * context.ParagraphSpacingScale;
                 pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
                 previousParagraph = paragraph;
@@ -545,7 +545,7 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(bodyElements, elementIndex), cellX + paddingLeft, textWidth, placed.Line.X,
                             line.BaselineInset, line.OccupiedHeight, context.ParagraphSpacingScale,
                             index == orderedLines.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
-                            index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d),
+                            index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
                         AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
                     placedImages.AddRange(placed.Images);
                     placedBoxes.AddRange(placed.TextBoxes);
@@ -707,7 +707,7 @@ internal sealed partial class DocxLayoutEngine
                             cellFirstBaselineInset * context.ParagraphSpacingScale + lineBaselineTransition + extraAbove,
                             lineHeight + extraAbove + extraBelow, context.ParagraphSpacingScale,
                             lineIndex == wrappedLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
-                            firstLine ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d),
+                            firstLine ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
                         SourceBaselineOffset = IsExactLineSpacing(paragraph.EffectiveProperties) || midLinePlan is null ? 0d :
                             Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove),
                         Math = mathWidth > 0d ? inlineMath?.Math : null, IsInlineMath = mathWidth > 0d,
@@ -1029,7 +1029,7 @@ internal sealed partial class DocxLayoutEngine
                 { SourceParagraph = paragraph,
                     ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(bodyElements, elementIndex), cellX + paddingLeft, textWidth, imageX,
                         imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing,
-                        textSpans.Count == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d) });
+                        textSpans.Count == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d) });
                 cursorY -= ResolveCellImageBlockAdvance(image, imageHeight);
             }
 

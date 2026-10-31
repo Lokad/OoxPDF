@@ -20,4 +20,6 @@ unshaded paragraph or at the end of a container. `spacing-office.json` pins twel
 Word fill samples. `before-office.json` adds independent before-spacing controls,
 including `before-boundaries.docx` and held-out `before-containers.docx`. Excess
 before-spacing joins shaded paragraphs through the first placed line; page and
-container starts keep their clear gaps. Image thresholds remain unchanged.
+container starts keep their clear gaps. `before-edges.docx` distinguishes matching
+background edges from changes in paragraph indentation; text alignment may differ.
+Image thresholds remain unchanged.

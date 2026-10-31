@@ -337,7 +337,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 lines.Add(CreateStandaloneMathLine(paragraph, math, x, width, cursorY,
                     paragraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(story.BodyElements, elementIndex),
-                    ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile)) with
+                    ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile)) with
                 {
                     Story = DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                     SingleLineHeight = math.LineHeight
@@ -386,7 +386,7 @@ internal sealed partial class DocxLayoutEngine
                             ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, placed.Line.X,
                                 line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
                                 index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
-                                index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d),
+                                index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
                         images.AddRange(placed.Images);
                         boxes.AddRange(placed.TextBoxes);
@@ -537,7 +537,7 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, lineX,
                             cursorY - staticBaselineY + extraAbove, staticLineHeight + extraAbove,
                             paragraphSpacingScale, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
-                            staticLineIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d) });
+                            staticLineIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d) });
                     // RV06 header-align probe: headers and footers keep one row-end space
                     // beyond authored trailing on the last wrapped line too.
                     if (paragraph.Images.Count == 0 &&
@@ -643,7 +643,7 @@ internal sealed partial class DocxLayoutEngine
                 { SourceParagraph = paragraph,
                     ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, imageX,
                         imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing,
-                        spans.Length == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d) });
+                        spans.Length == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d) });
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
