@@ -103,7 +103,7 @@ internal sealed partial class PptxRenderer
                 Bold = run.Bold, Italic = run.Italic, CharacterSpacing = run.CharacterSpacing
             };
             double advance = await measure.MeasureAsync(run.Text, runStyle).ConfigureAwait(false);
-            var line = await measure.MeasureLineBoxAsync(runStyle, horizontalHeader: true).ConfigureAwait(false);
+            var line = await measure.MeasureTextLineBoxAsync(run.Text, runStyle).ConfigureAwait(false);
             double x = run.X + (run.Alignment switch
             {
                 TextAlignment.Center => Math.Max(0d, run.Width - advance) / 2d,
@@ -119,7 +119,7 @@ internal sealed partial class PptxRenderer
         double horizontal = PptxChartMetricRules.ChartTitleHorizontalPadding;
         double vertical = PptxChartMetricRules.ChartTitleLinePadding;
         // Paint the measured caption box. Text and links retain their existing
-        // frame clip, including glyph overhang; each chart family owns placement.
+        // frame clip, including glyph overhang.
         return new ChartLayoutBox(left - horizontal, bottom - vertical,
             Math.Max(1d, right - left + 2d * horizontal), Math.Max(1d, top - bottom + 2d * vertical));
     }
@@ -557,14 +557,14 @@ internal sealed partial class PptxRenderer
         foreach (ChartTextRunOverride run in ReadChartTitleTextRuns(sceneChart))
         {
             if (string.IsNullOrEmpty(run.Text)) { continue; }
-            var line = await measure.MeasureLineBoxAsync(style.Merge(run.TextStyle), horizontalHeader: true).ConfigureAwait(false);
+            var line = await measure.MeasureTextLineBoxAsync(run.Text, style.Merge(run.TextStyle)).ConfigureAwait(false);
             ascent = Math.Max(ascent, line.Ascent);
             height = Math.Max(height, line.Height);
             hasRuns = true;
         }
         if (!hasRuns)
         {
-            var line = await measure.MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false);
+            var line = await measure.MeasureTextLineBoxAsync(sceneChart.Title.Text ?? string.Empty, style).ConfigureAwait(false);
             return (line.Ascent, line.Height);
         }
         return (ascent, height);

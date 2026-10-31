@@ -321,10 +321,35 @@ internal sealed partial class PptxRenderer
             return (height * 0.8d, height * 0.2d, height);
         }
 
+        public async ValueTask<(double Ascent, double Height)> MeasureTextLineBoxAsync(string text, ChartTextStyle style)
+        {
+            // Use the same embeddable per-glyph faces as advance measurement and
+            // painting, including substitution of unsupported outline formats.
+            double ascent = 0d, height = 0d;
+            foreach (Rune rune in text.EnumerateRunes())
+            {
+                ResolvedGlyphFont? resolved = await estimator.ResolveGlyphFontAsync(
+                    style.FontFamily, style.Bold, style.Italic, rune.Value).ConfigureAwait(false);
+                if (resolved is not null && TryMeasureLineBox(resolved.Font, style,
+                    out double glyphAscent, out _, out double glyphHeight, horizontalHeader: true))
+                {
+                    ascent = Math.Max(ascent, glyphAscent);
+                    height = Math.Max(height, glyphHeight);
+                }
+            }
+            if (height > 0d) return (ascent, height);
+            var line = await MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false);
+            return (line.Ascent, line.Height);
+        }
+
         private bool TryMeasureLineBox(ChartTextStyle style, out double ascent, out double descent, out double height, bool horizontalHeader = false)
+            => TryMeasureLineBox(estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic),
+                style, out ascent, out descent, out height, horizontalHeader);
+
+        private static bool TryMeasureLineBox(OpenTypeFont? font, ChartTextStyle style,
+            out double ascent, out double descent, out double height, bool horizontalHeader)
         {
             ascent = descent = height = 0d;
-            OpenTypeFont? font = estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic);
             if (font is null || font.UnitsPerEm == 0)
             {
                 return false;

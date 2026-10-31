@@ -1,5 +1,11 @@
 {
   "pptx-title-placement": [
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "PptxCffFontSubstitutesFallbackWithDiagnostic",
+    "CffChartUnresolvableRunesSubstituteQuestionMark",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PptxAutomaticTitleShape",
     "PptxManualTitleShape",
     "PptxHorizontalTitleLinks",
