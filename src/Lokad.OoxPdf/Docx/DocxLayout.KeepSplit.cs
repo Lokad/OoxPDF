@@ -359,12 +359,15 @@ internal sealed partial class DocxLayoutEngine
             NormalizeContextualSpacingStyleId(current.StyleId ?? current.ContextualSpacingDefaultStyleId),
             StringComparison.Ordinal));
 
-    internal static bool IsPlainContextualSpacingParagraph(DocxParagraph paragraph,
-        bool allowSourceAffinedImages = false) =>
+    private static bool HasAuthoredParagraphSpacing(DocxParagraph paragraph) =>
         double.IsFinite(paragraph.SpacingBeforePoints) && double.IsFinite(paragraph.SpacingAfterPoints) &&
         paragraph.SpacingBeforePoints >= 0d && paragraph.SpacingAfterPoints >= 0d &&
         paragraph.Spacing.BeforeAutoSpacingValue is null && paragraph.Spacing.BeforeLinesValue is null &&
-        paragraph.Spacing.AfterAutoSpacingValue is null && paragraph.Spacing.AfterLinesValue is null &&
+        paragraph.Spacing.AfterAutoSpacingValue is null && paragraph.Spacing.AfterLinesValue is null;
+
+    internal static bool IsPlainContextualSpacingParagraph(DocxParagraph paragraph,
+        bool allowSourceAffinedImages = false) =>
+        HasAuthoredParagraphSpacing(paragraph) &&
         (paragraph.Images.Count == 0 || allowSourceAffinedImages &&
             paragraph.Runs.Any(r => r.Text.Length != 0) &&
             paragraph.Images.All(i => i.SourceRunIndex >= 0 && i.Revisions.Count == 0 &&

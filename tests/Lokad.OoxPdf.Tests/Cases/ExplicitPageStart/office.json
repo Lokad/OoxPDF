@@ -1,0 +1,1757 @@
+{
+  "Source": "Independent Word16 Final and AllMarkup exports, 2026-10-31. OfficePdf bootstrap; application-view calibration remains open. Authored-point consumption is separate from measured PDF baseline rounding.",
+  "Cases": [
+    {
+      "Id": "PARAGRAPH_B4_A0",
+      "Kind": "paragraph",
+      "Before": 4,
+      "After": 0,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 4
+    },
+    {
+      "Id": "PARAGRAPH_B8_A4",
+      "Kind": "paragraph",
+      "Before": 8,
+      "After": 4,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 4
+    },
+    {
+      "Id": "PARAGRAPH_B4_A8",
+      "Kind": "paragraph",
+      "Before": 4,
+      "After": 8,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "PARAGRAPH_B24_A18",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 6
+    },
+    {
+      "Id": "PARAGRAPH_B24_A0",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 0,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 24
+    },
+    {
+      "Id": "PARAGRAPH_B0_A18",
+      "Kind": "paragraph",
+      "Before": 0,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "RUN_B4_A0",
+      "Kind": "run",
+      "Before": 4,
+      "After": 0,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "RUN_B8_A4",
+      "Kind": "run",
+      "Before": 8,
+      "After": 4,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "RUN_B4_A8",
+      "Kind": "run",
+      "Before": 4,
+      "After": 8,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "RUN_B24_A18",
+      "Kind": "run",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "RUN_B24_A0",
+      "Kind": "run",
+      "Before": 24,
+      "After": 0,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "RUN_B0_A18",
+      "Kind": "run",
+      "Before": 0,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 0
+    },
+    {
+      "Id": "SIZE8",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 8,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 6
+    },
+    {
+      "Id": "SIZE18",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 18,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 6
+    },
+    {
+      "Id": "KEEPLINES",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": "keepLines",
+      "ExpectedConsumedBeforeSpacing": 6
+    },
+    {
+      "Id": "KEEPNEXT",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": "keepNext",
+      "ExpectedConsumedBeforeSpacing": 6
+    },
+    {
+      "Id": "MATH",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 6,
+      "Content": "math"
+    },
+    {
+      "Id": "PICTURE",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 6,
+      "Content": "picture"
+    },
+    {
+      "Id": "TABLE",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 24,
+      "Content": "table"
+    },
+    {
+      "Id": "STATIC",
+      "Kind": "paragraph",
+      "Before": 24,
+      "After": 18,
+      "Size": 12,
+      "Keep": null,
+      "ExpectedConsumedBeforeSpacing": 6,
+      "Content": "plain"
+    }
+  ],
+  "References": [
+    {
+      "Input": "matrix.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "35370930656111A40DA1DA942B73E496B6F35B1EC68132498C39E0EFB4B08D9F",
+      "ReferencePdfSha256": "67BDE73C3C8C9D8927DF8E84356CB0DF5ECCF9E2F057415DB98D3509D809D472",
+      "Pages": 32,
+      "Samples": [
+        {
+          "Id": "PARAGRAPH_B4_A0",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 1,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 2,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 0.04
+        },
+        {
+          "Id": "PARAGRAPH_B8_A4",
+          "Kind": "paragraph",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 3,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 4,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 8.0,
+          "ParentGapError": 4.04
+        },
+        {
+          "Id": "PARAGRAPH_B4_A8",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 5,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 6,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 7,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 8,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A0",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 9,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 10,
+            "X": 72.02400207519531,
+            "Y": 107.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 24.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "PARAGRAPH_B0_A18",
+          "Kind": "paragraph",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 11,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 12,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "RUN_B4_A0",
+          "Kind": "run",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 13,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 14,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "RUN_B8_A4",
+          "Kind": "run",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 15,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 16,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 8.0,
+          "ParentGapError": 8.0
+        },
+        {
+          "Id": "RUN_B4_A8",
+          "Kind": "run",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 17,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 18,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "RUN_B24_A18",
+          "Kind": "run",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 19,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 20,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B24_A0",
+          "Kind": "run",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 21,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 22,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B0_A18",
+          "Kind": "run",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 23,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 24,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "SIZE8",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 8,
+          "Keep": null,
+          "First": {
+            "Page": 25,
+            "X": 72.02400207519531,
+            "Y": 79.58001708984375
+          },
+          "Next": {
+            "Page": 26,
+            "X": 72.02400207519531,
+            "Y": 85.58001708984375
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "SIZE18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 18,
+          "Keep": null,
+          "First": {
+            "Page": 27,
+            "X": 72.02400207519531,
+            "Y": 88.94000244140625
+          },
+          "Next": {
+            "Page": 28,
+            "X": 72.02400207519531,
+            "Y": 94.82000732421875
+          },
+          "WordConsumedBeforeSpacing": 5.88,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.12
+        },
+        {
+          "Id": "KEEPLINES",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepLines",
+          "First": {
+            "Page": 29,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 30,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "KEEPNEXT",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepNext",
+          "First": {
+            "Page": 31,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 32,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        }
+      ]
+    },
+    {
+      "Input": "matrix.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "35370930656111A40DA1DA942B73E496B6F35B1EC68132498C39E0EFB4B08D9F",
+      "ReferencePdfSha256": "060B08F616B2208F887BACE8D6AEED645931038089BDC08C80FE25F06A6D4D42",
+      "Pages": 32,
+      "Samples": [
+        {
+          "Id": "PARAGRAPH_B4_A0",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 1,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 2,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 0.04
+        },
+        {
+          "Id": "PARAGRAPH_B8_A4",
+          "Kind": "paragraph",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 3,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 4,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 0.04
+        },
+        {
+          "Id": "PARAGRAPH_B4_A8",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 5,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 6,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 7,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 8,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A0",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 9,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 10,
+            "X": 72.02400207519531,
+            "Y": 107.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 24.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "PARAGRAPH_B0_A18",
+          "Kind": "paragraph",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 11,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 12,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "RUN_B4_A0",
+          "Kind": "run",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 13,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 14,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "RUN_B8_A4",
+          "Kind": "run",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 15,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 16,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "RUN_B4_A8",
+          "Kind": "run",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 17,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 18,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "RUN_B24_A18",
+          "Kind": "run",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 19,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 20,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B24_A0",
+          "Kind": "run",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 21,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 22,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B0_A18",
+          "Kind": "run",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 23,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 24,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "SIZE8",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 8,
+          "Keep": null,
+          "First": {
+            "Page": 25,
+            "X": 72.02400207519531,
+            "Y": 79.58001708984375
+          },
+          "Next": {
+            "Page": 26,
+            "X": 72.02400207519531,
+            "Y": 85.58001708984375
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "SIZE18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 18,
+          "Keep": null,
+          "First": {
+            "Page": 27,
+            "X": 72.02400207519531,
+            "Y": 88.94000244140625
+          },
+          "Next": {
+            "Page": 28,
+            "X": 72.02400207519531,
+            "Y": 94.82000732421875
+          },
+          "WordConsumedBeforeSpacing": 5.88,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.12
+        },
+        {
+          "Id": "KEEPLINES",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepLines",
+          "First": {
+            "Page": 29,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 30,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "KEEPNEXT",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepNext",
+          "First": {
+            "Page": 31,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 32,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        }
+      ]
+    },
+    {
+      "Input": "matrix-unrelated.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "1E787A119D30C6ED38522D0D88A965125EF18BBDF3112F1B6598D815800E8D05",
+      "ReferencePdfSha256": "82ADD28E7739D61010E969686CF764B72D5664DAC7E7444157DC5461B9589611",
+      "Pages": 32,
+      "Samples": [
+        {
+          "Id": "PARAGRAPH_B4_A0",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 1,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 2,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 0.04
+        },
+        {
+          "Id": "PARAGRAPH_B8_A4",
+          "Kind": "paragraph",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 3,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 4,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 8.0,
+          "ParentGapError": 4.04
+        },
+        {
+          "Id": "PARAGRAPH_B4_A8",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 5,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 6,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 7,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 8,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A0",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 9,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 10,
+            "X": 72.02400207519531,
+            "Y": 107.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 24.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "PARAGRAPH_B0_A18",
+          "Kind": "paragraph",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 11,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 12,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "RUN_B4_A0",
+          "Kind": "run",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 13,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 14,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "RUN_B8_A4",
+          "Kind": "run",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 15,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 16,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 8.0,
+          "ParentGapError": 8.0
+        },
+        {
+          "Id": "RUN_B4_A8",
+          "Kind": "run",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 17,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 18,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "RUN_B24_A18",
+          "Kind": "run",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 19,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 20,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B24_A0",
+          "Kind": "run",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 21,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 22,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B0_A18",
+          "Kind": "run",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 23,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 24,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "SIZE8",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 8,
+          "Keep": null,
+          "First": {
+            "Page": 25,
+            "X": 72.02400207519531,
+            "Y": 79.58001708984375
+          },
+          "Next": {
+            "Page": 26,
+            "X": 72.02400207519531,
+            "Y": 85.58001708984375
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "SIZE18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 18,
+          "Keep": null,
+          "First": {
+            "Page": 27,
+            "X": 72.02400207519531,
+            "Y": 88.94000244140625
+          },
+          "Next": {
+            "Page": 28,
+            "X": 72.02400207519531,
+            "Y": 94.82000732421875
+          },
+          "WordConsumedBeforeSpacing": 5.88,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.12
+        },
+        {
+          "Id": "KEEPLINES",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepLines",
+          "First": {
+            "Page": 29,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 30,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "KEEPNEXT",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepNext",
+          "First": {
+            "Page": 31,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 32,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        }
+      ]
+    },
+    {
+      "Input": "matrix-unrelated.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "1E787A119D30C6ED38522D0D88A965125EF18BBDF3112F1B6598D815800E8D05",
+      "ReferencePdfSha256": "7B7D2401BF1E3331C2BD0E4307415211AC06EA9CF292EB8BF652FB4F53AF32C9",
+      "Pages": 32,
+      "Samples": [
+        {
+          "Id": "PARAGRAPH_B4_A0",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 1,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 2,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 0.04
+        },
+        {
+          "Id": "PARAGRAPH_B8_A4",
+          "Kind": "paragraph",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 3,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 4,
+            "X": 72.02400207519531,
+            "Y": 87.260009765625
+          },
+          "WordConsumedBeforeSpacing": 3.96,
+          "ParentConsumedBeforeSpacing": 8.0,
+          "ParentGapError": 4.04
+        },
+        {
+          "Id": "PARAGRAPH_B4_A8",
+          "Kind": "paragraph",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 5,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 6,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 7,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 8,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "PARAGRAPH_B24_A0",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 9,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 10,
+            "X": 72.02400207519531,
+            "Y": 107.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 24.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "PARAGRAPH_B0_A18",
+          "Kind": "paragraph",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 11,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 12,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "RUN_B4_A0",
+          "Kind": "run",
+          "Before": 4,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 13,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 14,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "RUN_B8_A4",
+          "Kind": "run",
+          "Before": 8,
+          "After": 4,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 15,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 16,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 8.0,
+          "ParentGapError": 8.0
+        },
+        {
+          "Id": "RUN_B4_A8",
+          "Kind": "run",
+          "Before": 4,
+          "After": 8,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 17,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 18,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 4.0,
+          "ParentGapError": 4.0
+        },
+        {
+          "Id": "RUN_B24_A18",
+          "Kind": "run",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 19,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 20,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B24_A0",
+          "Kind": "run",
+          "Before": 24,
+          "After": 0,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 21,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 22,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 24.0
+        },
+        {
+          "Id": "RUN_B0_A18",
+          "Kind": "run",
+          "Before": 0,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 23,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 24,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 0.0,
+          "ParentConsumedBeforeSpacing": 0.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "SIZE8",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 8,
+          "Keep": null,
+          "First": {
+            "Page": 25,
+            "X": 72.02400207519531,
+            "Y": 79.58001708984375
+          },
+          "Next": {
+            "Page": 26,
+            "X": 72.02400207519531,
+            "Y": 85.58001708984375
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "SIZE18",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 18,
+          "Keep": null,
+          "First": {
+            "Page": 27,
+            "X": 72.02400207519531,
+            "Y": 88.94000244140625
+          },
+          "Next": {
+            "Page": 28,
+            "X": 72.02400207519531,
+            "Y": 94.82000732421875
+          },
+          "WordConsumedBeforeSpacing": 5.88,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.12
+        },
+        {
+          "Id": "KEEPLINES",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepLines",
+          "First": {
+            "Page": 29,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 30,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "KEEPNEXT",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": "keepNext",
+          "First": {
+            "Page": 31,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 32,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        }
+      ]
+    },
+    {
+      "Input": "composition.docx",
+      "Mode": "final-preserve",
+      "InputSha256": "AB5EF07859D887D82A8D99CED159883C0EF38487BF8E39A9A4394947C3279EE1",
+      "ReferencePdfSha256": "478171C0237FA74B73E3AB2D14201AF2023A5D1D138231C4FB8ABC603D074BE7",
+      "Pages": 8,
+      "Samples": [
+        {
+          "Id": "MATH",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 1,
+            "X": 72.02400207519531,
+            "Y": 86.41998291015625
+          },
+          "Next": {
+            "Page": 2,
+            "X": 72.02400207519531,
+            "Y": 92.41998291015625
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "PICTURE",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 3,
+            "X": 72.02400207519531,
+            "Y": 92.05999755859375
+          },
+          "Next": {
+            "Page": 4,
+            "X": 72.02400207519531,
+            "Y": 98.05999755859375
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "TABLE",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 5,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 6,
+            "X": 72.02400207519531,
+            "Y": 107.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 24.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "STATIC",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 7,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 8,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        }
+      ]
+    },
+    {
+      "Input": "composition.docx",
+      "Mode": "all-word-compatible",
+      "InputSha256": "AB5EF07859D887D82A8D99CED159883C0EF38487BF8E39A9A4394947C3279EE1",
+      "ReferencePdfSha256": "027FB1B06DB445D0CCFAD0C58AF95E138229E939F7D70A0BB5BDF56418CCA5BB",
+      "Pages": 8,
+      "Samples": [
+        {
+          "Id": "MATH",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 1,
+            "X": 72.02400207519531,
+            "Y": 86.41998291015625
+          },
+          "Next": {
+            "Page": 2,
+            "X": 72.02400207519531,
+            "Y": 92.41998291015625
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "PICTURE",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 3,
+            "X": 72.02400207519531,
+            "Y": 92.05999755859375
+          },
+          "Next": {
+            "Page": 4,
+            "X": 72.02400207519531,
+            "Y": 98.05999755859375
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        },
+        {
+          "Id": "TABLE",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 5,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 6,
+            "X": 72.02400207519531,
+            "Y": 107.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 24.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 0.0
+        },
+        {
+          "Id": "STATIC",
+          "Kind": "paragraph",
+          "Before": 24,
+          "After": 18,
+          "Size": 12,
+          "Keep": null,
+          "First": {
+            "Page": 7,
+            "X": 72.02400207519531,
+            "Y": 83.29998779296875
+          },
+          "Next": {
+            "Page": 8,
+            "X": 72.02400207519531,
+            "Y": 89.29998779296875
+          },
+          "WordConsumedBeforeSpacing": 6.0,
+          "ParentConsumedBeforeSpacing": 24.0,
+          "ParentGapError": 18.0
+        }
+      ]
+    }
+  ]
+}

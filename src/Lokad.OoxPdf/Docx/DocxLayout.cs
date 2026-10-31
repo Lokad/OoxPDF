@@ -348,8 +348,6 @@ internal sealed partial class DocxLayoutEngine
         bool activeColumnHasContent = false;
         int tableIndex = 0;
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
-        bool plainPageStartFrame = requestedGeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && reservePrintScale == 1d &&
-            DocxPlainBodyFrame.IsEligible(document);
         bool UsesPrintedBodyFrame() => scaleBaselineOffsetTransitions &&
             paragraphSpacingScale < 1d && page.ColumnFrames.Count <= 1;
         IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null;
@@ -1451,17 +1449,16 @@ internal sealed partial class DocxLayoutEngine
             DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
             RegisterInFlightFootnotesForSourceBlock(elementIndex);
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
-            if (plainPageStartFrame && pages.Count != 0 &&
+            if (reservePrintScale == 1d && pages.Count != 0 &&
                 !HasCurrentColumnContent() && elementIndex > 0 &&
                 document.BodyElements[elementIndex - 1] is DocxPageBreakElement explicitBreak &&
-                DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(paragraph) &&
-                paragraph.KeepRules.KeepNext != true && paragraph.KeepRules.KeepLines != true)
+                HasAuthoredParagraphSpacing(paragraph) && paragraph.Spacing.ContextualSpacing != true)
             {
                 DocxParagraph? predecessor = elementIndex > 1 &&
                     document.BodyElements[elementIndex - 2] is DocxParagraphElement preceding ? preceding.Paragraph : null;
-                if (predecessor is null || DocxMinimumBodyLineLeading.IsQualifiedExpansionSpacing(predecessor))
+                if (predecessor is null || HasAuthoredParagraphSpacing(predecessor) && predecessor.Spacing.ContextualSpacing != true)
                     spacingProfile = ResolveExplicitPageStartSpacing(spacingProfile, explicitBreak.SourceKind,
-                        predecessor?.SpacingAfterPoints ?? 0d);
+                        (predecessor?.SpacingAfterPoints ?? 0d) * paragraphSpacingScale);
             }
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;

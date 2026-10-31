@@ -12,6 +12,8 @@
 - DOCX: sizes unconstrained automatic tables from content and cell insets,
   preserving fixed/preferred widths. Arithmetic roundoff no longer creates
   spurious text line breaks at an exactly fitting boundary.
+- DOCX: fixes authored spacing after explicit page breaks in unscaled default
+  and markup layouts.
 - DOCX: paints direct and inherited paragraph backgrounds across wrapped flow,
   cells, static stories, equations and pictures, preserving authored foregrounds.
 - DOCX: reports omitted external images, malformed floating drawings and unsupported

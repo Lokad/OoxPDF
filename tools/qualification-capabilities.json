@@ -13050,5 +13050,20 @@
       "MemoryAdmission",
       "StreamLengthsMatchPayloads",
       "XrefTablePointsAtObjectHeaders"
+  ],
+  "docx-page-start-spacing": [
+      "DocxExplicitPageStart",
+      "DocxParagraphShading",
+      "DocxSyntheticPageBreakBeforeStartsNewPage",
+      "DocxColumnBreakParagraphCarriesPitchAndCollapsedSpacingIntoNextFrame",
+      "DocxLayoutStageOwnsSelectedStaticHeaderFooterLines",
+      "DocxPageFootnoteNumbersRestartWithoutChangingAuthoredDigits",
+      "DocxPageFootnoteNumbersDistinguishBreakSpillFromWrapping",
+      "DocxPageFootnoteNumbersRenderLabelsAndDistinctDestinationsTogether",
+      "DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope",
+      "DocxWrappedFootnoteNumbersRestartOnExactEarlyAndLaterSegments",
+      "DocxWrappedFootnoteNumbersRetainActualTargetsAndLayoutPolicies",
+      "StreamLengthsMatchPayloads",
+      "XrefTablePointsAtObjectHeaders"
   ]
 }

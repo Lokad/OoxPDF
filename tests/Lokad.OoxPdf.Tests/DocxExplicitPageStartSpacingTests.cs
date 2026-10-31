@@ -1,14 +1,16 @@
 using System.Xml.Linq;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxExplicitPageStartSpacingTests
 {
-    public static void DocxExplicitPageStartConsumesOnlyTheQualifiedGap()
+    public static void DocxExplicitPageStartConsumesOnlyTheAuthoredGap()
     {
         foreach (bool runBreak in new[] { false, true })
-        foreach (var gap in new[] { (4,0), (8,8), (8,4), (4,8), (8,0) })
+        foreach (var gap in new[] { (4,0), (8,8), (8,4), (4,8), (8,0), (9,4), (24,18), (24,0) })
         {
             var source = Read(runBreak, gap.Item1, gap.Item2);
             var layout = Layout(source);
@@ -24,29 +26,35 @@ internal static class DocxExplicitPageStartSpacingTests
         }
     }
 
-    public static void DocxExplicitPageStartKeepsPreserveAndScaledProfiles()
+    public static void DocxExplicitPageStartSharesAuthoredGapsAcrossUnscaledModes()
+    {
+        foreach (bool runBreak in new[] { false, true })
+        foreach (var geometry in new[] { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout,
+            OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
+        {
+            var source = Read(runBreak, 8, 4);
+            var line = First(Layout(source, geometry), source.Paragraphs[2]);
+            TestAssert.Equal(runBreak ? 0d : 4d, line.AppliedBeforeSpacing!.Value);
+        }
+    }
+
+    public static void DocxExplicitPageStartKeepsScaledProfiles()
     {
         foreach (bool runBreak in new[] { false, true })
         {
             var source = Read(runBreak, 8, 4);
-            foreach (var profile in new[] { (OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout,1d),
-                (OoxPdfDocxMarkupGeometryMode.ReserveMarkupMargin,1d), (OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,.8d) })
-            {
-                var line = First(Layout(source, profile.Item1, profile.Item2), source.Paragraphs[2]);
-                TestAssert.True(Math.Abs(line.AppliedBeforeSpacing!.Value - 8d * profile.Item2) < .000001d,
-                    "Preserve, reserve-only and scaled output keep prior spacing fallback.");
-            }
+            var line = First(Layout(source, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .8d), source.Paragraphs[2]);
+            TestAssert.True(Math.Abs(line.AppliedBeforeSpacing!.Value - 6.4d) < .000001d,
+                "Scaled print keeps its existing spacing fallback until independently qualified.");
         }
     }
 
-    public static void DocxExplicitPageStartRetainsRawSpacingAndKeptFallbacks()
+    public static void DocxExplicitPageStartRetainsNonDistanceSpacingFallbacks()
     {
         Action<XDocument>[] exclusions = [
-            xml => xml.Descendants(W + "spacing").Last().SetAttributeValue(W + "before", "180"),
             xml => xml.Descendants(W + "spacing").Last().SetAttributeValue(W + "beforeLines", "100"),
             xml => xml.Descendants(W + "spacing").Last().SetAttributeValue(W + "beforeAutospacing", "1"),
-            xml => xml.Descendants(W + "pPr").Last().Add(new XElement(W + "contextualSpacing")),
-            xml => xml.Descendants(W + "pPr").Last().Add(new XElement(W + "keepLines"))
+            xml => xml.Descendants(W + "pPr").Last().Add(new XElement(W + "contextualSpacing"))
         ];
         foreach (var exclude in exclusions)
         {
@@ -106,6 +114,59 @@ internal static class DocxExplicitPageStartSpacingTests
                 TestAssert.Equal(plain[i].Destination!.Value.PageIndex,spaced[i].Destination!.Value.PageIndex);
             }
         }
+    }
+
+    public static void DocxExplicitPageStartMatchesWordAcrossModesSizesAndSurroundingContent()
+    {
+        string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ExplicitPageStart"));
+        using var golden = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "office.json")));
+        var cases = golden.RootElement.GetProperty("Cases").EnumerateArray()
+            .ToDictionary(item => item.GetProperty("Id").GetString()!);
+        foreach (var reference in golden.RootElement.GetProperty("References").EnumerateArray())
+        {
+            string input = Path.Combine(directory, reference.GetProperty("Input").GetString()!);
+            TestAssert.Equal(reference.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            bool review = reference.GetProperty("Mode").GetString() == "all-word-compatible";
+            var source = DocxTests.ReadDocx(input, review ? OoxPdfDocxMarkupMode.AllMarkup : OoxPdfDocxMarkupMode.Final);
+            var layout = Layout(source, review ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            TestAssert.Equal(reference.GetProperty("Pages").GetInt32(), layout.Pages.Count);
+            var lines = layout.Pages.SelectMany((page, index) => page.Items.OfType<DocxTextLineLayout>()
+                .Select(line => (Line: line, Page: index + 1))).ToArray();
+            var paragraphs = source.Paragraphs.ToDictionary(paragraph => string.Concat(paragraph.Runs.Select(run => run.Text)).Trim());
+            foreach (var sample in reference.GetProperty("Samples").EnumerateArray())
+            {
+                string id = sample.GetProperty("Id").GetString()!;
+                var spec = cases[id];
+                var first = lines.Single(item => ReferenceEquals(item.Line.SourceParagraph, paragraphs[id + " FIRST"]) && item.Line.SourceLineIndex == 0);
+                var next = lines.Single(item => ReferenceEquals(item.Line.SourceParagraph, paragraphs[id + " NEXT"]) && item.Line.SourceLineIndex == 0);
+                TestAssert.Equal(sample.GetProperty("First").GetProperty("Page").GetInt32(), first.Page);
+                TestAssert.Equal(sample.GetProperty("Next").GetProperty("Page").GetInt32(), next.Page);
+                TestAssert.Equal(spec.GetProperty("ExpectedConsumedBeforeSpacing").GetDouble(), next.Line.AppliedBeforeSpacing!.Value);
+                TestAssert.Equal(spec.GetProperty("Before").GetDouble(), next.Line.ParagraphBeforeSpacing!.Value);
+                TestAssert.Equal(spec.GetProperty("After").GetDouble(), first.Line.SourceParagraph!.SpacingAfterPoints);
+                TestAssert.Equal(0d, next.Line.PendingAfterSpacing!.Value);
+            }
+        }
+    }
+
+    public static void DocxExplicitPageStartPreservesComposedContent()
+    {
+        string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ExplicitPageStart", "composition.docx"));
+        var document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        TestAssert.Equal(2, document.Paragraphs.Sum(paragraph => paragraph.Equations.Count));
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+            OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+        TestAssert.Equal(8, pages.Length);
+        int pictures = pages.Sum(page => System.Text.RegularExpressions.Regex.Matches(page.Content, @"/(?<name>[^\s/]+) Do")
+            .Count(match => page.Images.Any(image => image.ResourceName == match.Groups["name"].Value)));
+        TestAssert.Equal(2, pictures);
+        TestAssert.True(pages.Take(2).All(page => page.Content.Contains(" re f", StringComparison.Ordinal)),
+            "Each composed fraction retains its visible bar on its source page.");
+        string text = string.Concat(pages.SelectMany(DocxCommentsTests.ReadEmbeddedGlyphTextShows).Select(show => show.Text));
+        foreach (string label in new[] { "MATH FIRST", "MATH NEXT", "PICTURE FIRST", "PICTURE NEXT", "TABLECELL", "STATIC NEXT", "Public static header" })
+            TestAssert.True(text.Contains(label, StringComparison.Ordinal), "Supported content survives explicit page starts: " + label);
     }
 
     private static DocxDocument ReadWrapped(bool later,bool runBreak,int before,int after) =>

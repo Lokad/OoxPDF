@@ -123,6 +123,8 @@ Supported within the following constraints:
 - Body paragraphs/runs, common run/paragraph/document defaults and styles,
   margins/page sizes, paragraph spacing/line-height inheritance and basic page
   breaking. Qualified section/page/column breaks retain their explicit limits.
+  Authored point-based spacing at explicit page starts follows local paragraph/run
+  break ownership in unscaled layouts.
 - Latin font resolution through explicit families, themes and font-table alternates.
   Undeclared prose/list families use the documented Times New Roman fallback when
   available, after an explicit resolver document default. Missing faces/glyphs are
@@ -196,7 +198,8 @@ Approximate or restricted:
   See [native equations](docx-equations.md) for the authoritative construct and
   placement limits; support for one construct does not imply unrestricted nesting.
 - Pagination, line leading, kerning, numbering, table/story geometry and complex
-  composition remain approximate. Font/size/document-shape guards protect independently
+  composition remain approximate. Explicit-page-start contextual, automatic, line-based
+  and print-scaled spacing retain existing fallbacks. Font/size/document-shape guards protect independently
   qualified behavior; they are not promises for every combination.
   Bookmarks and unchanged-format hyperlinks preserve qualified plain-body minimum
   line placement; their navigation targets follow the placed content.
