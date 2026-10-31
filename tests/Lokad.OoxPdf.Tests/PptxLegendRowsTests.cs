@@ -9,19 +9,23 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxLegendRowsTests
 {
-    public static void PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame()
+    public static void PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame() => CheckBottomLegendRows("line");
+
+    public static void PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame() => CheckBottomLegendRows("column");
+
+    private static void CheckBottomLegendRows(string kind)
     {
         foreach (int width in new[] { 288, 576 })
         foreach (int size in new[] { 8, 12, 18 })
         foreach (int count in new[] { 6, 9 })
         {
-            var overlay = Render(width, size, count, overlay: true);
-            var reserved = Render(width, size, count, overlay: false);
+            var overlay = Render(width, size, count, overlay: true, kind: kind);
+            var reserved = Render(width, size, count, overlay: false, kind: kind);
             foreach (PdfPage page in new[] { overlay.Page, reserved.Page })
             {
                 int rows = CheckCompleteNamesInFrame(page, width, count);
                 if (width == 288 && size >= 12)
-                    TestAssert.True(rows > 1, "Long line-series names wrap instead of continuing beyond the frame.");
+                    TestAssert.True(rows > 1, "Long series names wrap instead of continuing beyond the frame.");
             }
             TestAssert.True(overlay.Diagnostics.Concat(reserved.Diagnostics).All(item => !item.Message.Contains("overflowing entries", StringComparison.Ordinal)),
                 "These fitting names must not be admitted as clipped overflow.");
@@ -49,7 +53,7 @@ internal static class PptxLegendRowsTests
 
     public static void PptxEmptyLegendLayoutMetadataKeepsWrappedContent()
     {
-        foreach (string kind in new[] { "line", "bar" })
+        foreach (string kind in new[] { "line", "bar", "column" })
         foreach (bool overlay in new[] { false, true })
         {
             var ordinary = Render(288, 12, 6, overlay, kind: kind).Page;
@@ -90,14 +94,15 @@ internal static class PptxLegendRowsTests
               <c:cat><c:strLit><c:pt idx="0"><c:v>Q1</c:v></c:pt><c:pt idx="1"><c:v>Q2</c:v></c:pt></c:strLit></c:cat>
               <c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
             """));
-        bool bar = kind == "bar";
+        bool bar = kind != "line";
+        bool horizontal = kind == "bar";
         string plot = bar ? "barChart" : "lineChart";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{plot}}>{{(bar ? "<c:barDir val=\"bar\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
+              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
                 {{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
-                <c:catAx><c:axId val="1"/><c:axPos val="{{(bar ? "l" : "b")}}"/><c:crossAx val="2"/></c:catAx>
-                <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(bar ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
+                <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/></c:catAx>
+                <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
               </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="b"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
                 <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>
               </c:legend></c:chart>

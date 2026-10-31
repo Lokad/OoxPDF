@@ -59,7 +59,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
                 ChartLegendBox? preparedLegendBox = null;
-                bool measuredHorizontalLegend = UsesMeasuredHorizontalBarLegend(barOptions, sceneChart, chartLayout.Legend);
+                bool measuredHorizontalLegend = UsesMeasuredBarLegend(barOptions, sceneChart, chartLayout.Legend);
                 if (categoryLegend || measuredHorizontalLegend)
                 {
                     var prepared = (await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle, fontResolver, context,

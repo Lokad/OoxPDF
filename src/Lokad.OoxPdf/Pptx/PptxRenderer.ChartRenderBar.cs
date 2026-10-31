@@ -191,12 +191,12 @@ internal sealed partial class PptxRenderer
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
         // Horizontal legend rows are admitted by the legend owner. The baseline
         // plot retains title/axis space; its legend band is applied exactly once.
-        ChartLegendLayout plotLegend = UsesMeasuredHorizontalBarLegend(barOptions, sceneChart, legend)
+        ChartLegendLayout plotLegend = UsesMeasuredBarLegend(barOptions, sceneChart, legend)
             ? legend with { Visible = false } : legend;
         (double Ascent, double Height)? titleLine = null;
         ChartAxisTitleReserveSides axisTitles = ReadDefaultAxisTitleReserveSides(sceneChart);
         if (!string.IsNullOrWhiteSpace(title) && !sceneChart.Title.Layout.HasLayout &&
-            UsesAutomaticHorizontalBarFrame(barOptions, sceneChart, legend) &&
+            barOptions.BarDirection == PptxSceneChartBarDirection.Bar && UsesAutomaticBarFrame(barOptions, sceneChart, legend) &&
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine).ConfigureAwait(false));

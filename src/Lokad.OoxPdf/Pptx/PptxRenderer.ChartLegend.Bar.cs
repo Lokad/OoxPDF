@@ -13,14 +13,24 @@ internal sealed partial class PptxRenderer
     private const double HorizontalLegendFrameInset = 6d;
     private const double HorizontalLegendWrappedHeightTrim = 1.5d;
 
-    private static bool UsesAutomaticHorizontalBarFrame(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
-        options.BarDirection == PptxSceneChartBarDirection.Bar &&
-        !chart.PlotAreaLayout.HasGeometryValues && !legend.Layout.HasGeometryValues &&
-        (!legend.Visible || legend.Overlay ||
-            legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
+    private static bool UsesAutomaticBarFrame(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend)
+    {
+        // Column bottom legends share the measured row owner. Composed plots,
+        // axis-title furniture and other legend sides retain their source layout.
+        if (options.BarDirection != PptxSceneChartBarDirection.Bar)
+        {
+            ChartAxisTitleReserveSides titles = ReadDefaultAxisTitleReserveSides(chart);
+            if (chart.Plots.Count != 1 || legend.PositionKind != PptxSceneChartLegendPosition.Bottom ||
+                titles.HasHorizontalTitle || titles.HasVerticalTitle)
+                return false;
+        }
+        return !chart.PlotAreaLayout.HasGeometryValues && !legend.Layout.HasGeometryValues &&
+            (!legend.Visible || legend.Overlay ||
+                legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
+    }
 
-    private static bool UsesMeasuredHorizontalBarLegend(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
-        UsesAutomaticHorizontalBarFrame(options, chart, legend) && legend.Visible;
+    private static bool UsesMeasuredBarLegend(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
+        UsesAutomaticBarFrame(options, chart, legend) && legend.Visible;
 
     private static bool IsLegendBaselineClipped(ChartLegendBox box, double baseline) =>
         baseline - box.ContentDescent < box.ClipY - 0.001d ||

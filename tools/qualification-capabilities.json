@@ -38,6 +38,7 @@
   "pptx-legend-rows": [
     "PptxEmptyLegendLayoutMetadataKeepsWrappedContent",
     "PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame",
+    "PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame",
     "PptxBottomStrokeLegendKeyKeepsItsOfficeSpanAcrossTextSizes",
     "PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace",
     "PptxOmittedLegendOverlayMatchesPowerPointDefaultAcrossKinds",
