@@ -12759,6 +12759,21 @@
     "DocxStoryOwnershipPreservesCachedNoteXmlAcrossReads",
     "DocxAdjacentTablesKeepCachedSourceAndRevisionOwners",
     "ConvertAsyncCallerOutputFundingSurvivesDeferredPublication",
-    "ConversionResourceSummaryPreservesRouteTimingAndProvenance"
+    "ConversionResourceSummaryPreservesRouteTimingAndProvenance",
+    "PptxWorkbookOptionalParts",
+    "PptxChartWorkbookParsingPreservesRangeMetadata",
+    "PptxChartRawVectorsPreserveWorkbookSidecarPoints",
+    "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
+    "PptxChartSeriesNamesPreserveWorkbookSidecarPoints",
+    "PptxChartEmbeddedWorkbookFormulaOnlyReferencesReportMissingCachedData",
+    "SmallRangeReadsCells",
+    "RangeAtCellBudgetBoundaryPasses",
+    "RangeBeyondCellBudgetThrows",
+    "WorkbookSharedStringsBeyondBudgetThrow",
+    "WorkbookDefinedNamesBeyondBudgetThrow",
+    "WorkbookSheetsBeyondBudgetThrow",
+    "WorkbookCellFormatsBeyondBudgetThrow",
+    "ChartWorkbookSharedAcrossFrames",
+    "CancelledRangeExpansionObservesCancellation"
   ]
 }

@@ -172,4 +172,6 @@ public stream/budget contract without an owned-result API or another buffer laye
 malformed/canceled attempts and independently owned package lifetimes. Four checks
 use caller budgets without asserting the current estimate factors; public DOCX/
 PPTX file and stream refusals preserve destinations. The selection includes package
-I/O/bounds, MCE/strict relationship semantics and cached story/table source owners.
+I/O/bounds, MCE/strict relationship semantics, cached story/table source owners and
+embedded-workbook parsing. The DOCX main part and comment metadata use that same
+package owner; repeated Final/review reads preserve the cached main DOM.

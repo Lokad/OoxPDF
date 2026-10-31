@@ -116,11 +116,14 @@ internal static class DocxAdjacentTableTests
         var headerPart = TestAssert.NotNull(package.GetPart("/word/header1.xml"));
         var header = package.LoadXml(headerPart, default);
         string before = header.ToString(SaveOptions.DisableFormatting);
+        var main = package.LoadXml(TestAssert.NotNull(package.GetPart("/word/document.xml")), default);
+        string mainBefore = main.ToString(SaveOptions.DisableFormatting);
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var document = new DocxReader().Read(package, null, default, mode);
             TestAssert.Equal(4, document.HeaderBodyElementsByType["default"].OfType<DocxTableElement>().Single().Table.Rows.Count);
             TestAssert.Equal(before, header.ToString(SaveOptions.DisableFormatting));
+            TestAssert.Equal(mainBefore, main.ToString(SaveOptions.DisableFormatting));
         }
         using var canceled = new CancellationTokenSource();
         canceled.Cancel();

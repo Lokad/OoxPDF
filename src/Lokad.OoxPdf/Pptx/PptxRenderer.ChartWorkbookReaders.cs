@@ -39,8 +39,7 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        using Stream workbookStream = workbookPart.OpenRead();
-        XDocument workbookXml = SafeXml.Load(workbookStream, cancellationToken);
+        XDocument workbookXml = workbookPackage.LoadXml(workbookPart, cancellationToken);
         ChartWorkbookSharedString[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart, cancellationToken);
         ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart, cancellationToken);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
@@ -75,7 +74,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            ChartWorksheetData worksheetData = ReadWorksheetData(worksheetPart, sharedStrings, cancellationToken);
+            ChartWorksheetData worksheetData = ReadWorksheetData(workbookPackage, worksheetPart, sharedStrings, cancellationToken);
             long totalCells = 0;
             foreach (ChartWorksheetData existing in sheets.Values)
             {
@@ -125,8 +124,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        using Stream stream = sharedStringsPart.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
+        XDocument document = workbookPackage.LoadXml(sharedStringsPart, cancellationToken);
         var sharedStrings = new List<ChartWorkbookSharedString>();
         foreach (XElement item in document.Descendants(SpreadsheetNamespace + "si"))
         {
@@ -223,8 +221,7 @@ internal sealed partial class PptxRenderer
             return ChartWorkbookStyles.Empty;
         }
 
-        using Stream stream = stylesPart.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
+        XDocument document = workbookPackage.LoadXml(stylesPart, cancellationToken);
         var customNumberFormats = new Dictionary<int, string>();
         foreach (XElement numberFormat in document.Root?.Element(SpreadsheetNamespace + "numFmts")?.Elements(SpreadsheetNamespace + "numFmt") ?? [])
         {
@@ -401,10 +398,9 @@ internal sealed partial class PptxRenderer
     private const long MaxWorkbookDefinedNames = 100_000;
     private const long MaxWorkbookStyleRecords = 100_000;
 
-    private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken)
+    private static ChartWorksheetData ReadWorksheetData(OoxPackage workbookPackage, OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken)
     {
-        using Stream stream = worksheetPart.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
+        XDocument document = workbookPackage.LoadXml(worksheetPart, cancellationToken);
         var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
         var hiddenRows = new HashSet<int>();
         var hiddenColumns = new HashSet<int>();
@@ -574,8 +570,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            using Stream stream = tablePart.OpenRead();
-            XDocument tableXml = SafeXml.Load(stream, cancellationToken);
+            XDocument tableXml = workbookPackage.LoadXml(tablePart, cancellationToken);
             XElement? tableElement = tableXml.Root;
             if (tableElement is null)
             {

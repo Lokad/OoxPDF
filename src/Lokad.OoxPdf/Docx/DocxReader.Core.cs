@@ -37,8 +37,7 @@ internal sealed partial class DocxReader
 
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart documentPart = FindDocumentPart(package, cancellationToken);
-        using Stream stream = documentPart.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
+        XDocument document = package.LoadXml(documentPart, cancellationToken);
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name, cancellationToken)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         IReadOnlyDictionary<string, OoxRelationship> internalRelationships = relationships.Values

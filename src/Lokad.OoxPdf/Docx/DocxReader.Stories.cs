@@ -520,8 +520,7 @@ internal sealed partial class DocxReader
             return new Dictionary<string, DocxCommentThreadMetadata>(StringComparer.OrdinalIgnoreCase);
         }
 
-        using Stream stream = part.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
+        XDocument document = package.LoadXml(part, cancellationToken);
         var metadataByParagraphId = new Dictionary<string, DocxCommentThreadMetadata>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement element in document.Root?.Elements(Office2012WordNamespace + "commentEx") ?? [])
         {
