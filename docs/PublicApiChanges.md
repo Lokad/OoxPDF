@@ -301,8 +301,7 @@ boundaries, preferred breaks and the existing overwide fallback remain.
 Staged vector resources now share the content store's memory reservation through
 emission. A governed conversion may refuse earlier when its descriptors, shading
 stops or retained patterns cannot fit; spilling content does not refund still-live
-resources. No public signature changes. Current-page painting/construction remains
-partial; this is coarse admission, not complete heap accounting.
+resources. This is coarse admission, not complete heap accounting.
 
 DOCX/PPTX painting now requests one coarse construction reservation per page
 before graphics creation. A host may refuse before page content is built; the

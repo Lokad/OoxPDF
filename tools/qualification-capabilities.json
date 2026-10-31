@@ -12970,6 +12970,7 @@
   ],
   "page-graphics-construction": [
       "PageMemory",
+    "ModelAdmission",
       "SvgMemory",
       "VectorMemory",
       "MemoryBudgetStaging",
