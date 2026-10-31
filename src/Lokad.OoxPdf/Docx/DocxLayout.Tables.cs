@@ -1916,8 +1916,13 @@ internal sealed partial class DocxLayoutEngine
         ref double cursorY,
         double paragraphSpacingScale)
     {
+        CancellationToken cancellationToken = tableContext.CancellationToken;
+        cancellationToken.ThrowIfCancellationRequested();
+        OoxConversionBudget.Current?.AdmitDocxLayoutPages(getPageNumber());
+        cancellationToken.ThrowIfCancellationRequested();
         foreach ((DocxTableRow headerRow, int headerRowIndex) in headerRows)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             AddTableRowLayout(table, tableContext, headerRow, headerRowIndex, rowHeights, effectiveColumns, scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, paragraphSpacingScale);
         }
     }

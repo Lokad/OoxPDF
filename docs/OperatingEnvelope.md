@@ -49,8 +49,9 @@ coarse capacity through page production, including font/staging awaits; nested
 package disposal does not refund a still-used workbook model. Factory construction
 headroom refunds after construction. Source-shape estimates cover ordinary model/
 placement overlap. Repeated DOCX page/static-story frames now have one additional
-coarse preparation grant, sized from effective section stories and observed page
-count before copying. Its high-water capacity is reused across bounded candidate
+coarse preparation grant, sized from effective section stories, the largest leading
+body-table header and conservative column multiplicity, then grown with observed
+page count before copying. Nested header content contributes to the same summary. Its high-water capacity is reused across bounded candidate
 passes, with headroom for overlapping layouts and continuation/mapped frames; it
 refunds after page production. These estimates neither count every runtime object
 nor prove coverage of all runtime vector/resource expansion. Remaining owners stay

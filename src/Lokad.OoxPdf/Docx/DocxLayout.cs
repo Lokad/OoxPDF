@@ -328,9 +328,10 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
         if (OoxConversionBudget.Current is { Memory: not null } budget)
         {
-            long pageCapacity = EstimatePagePlacementCapacity(finalSectionSettings.PageSettings, cancellationToken);
+            long repeatedHeaders = EstimateRepeatedTableHeaderCapacity(document, cancellationToken);
+            long pageCapacity = EstimatePagePlacementCapacity(finalSectionSettings, repeatedHeaders, cancellationToken);
             foreach (var settings in sectionSettingsByElementIndex.Values)
-                pageCapacity = Math.Max(pageCapacity, EstimatePagePlacementCapacity(settings.PageSettings, cancellationToken));
+                pageCapacity = Math.Max(pageCapacity, EstimatePagePlacementCapacity(settings, repeatedHeaders, cancellationToken));
             budget.AdmitDocxLayoutPages(1, pageCapacity);
             cancellationToken.ThrowIfCancellationRequested();
         }

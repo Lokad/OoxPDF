@@ -107,7 +107,9 @@ models survive their temporary package's disposal. That model group refunds afte
 page production, before serialization; source buffers and PDF resources retain
 their separate emission lifetimes. Existing budgeted inputs can refuse earlier.
 Repeated DOCX page/static-story placement now requests reusable coarse capacity
-before construction, including overlapping candidate/frame copies. It shares the
+before construction, including overlapping candidate/frame copies. Repeated body-
+table headers include nested source content and column multiplicity in that same
+grant; it grows before a continuation header is copied. It shares the
 model producer lifetime and does not charge cumulatively per retry. Existing host
 allowances may therefore refuse documents previously accepted without this storage
 being admitted. A font pack's existing `cacheBudget` now also admits coarse
