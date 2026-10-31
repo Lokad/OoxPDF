@@ -49,7 +49,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxTextLineLayout CreateStandaloneMathLine(DocxParagraph paragraph, DocxPreparedMathParagraph math,
         double x, double textWidth, double top, double scale, int paragraphIndex, DocxParagraphSpacingProfile spacing, bool continuesShading,
-        double baselineAnchor = 0d)
+        double beforeSpacing, double baselineAnchor = 0d)
     {
         double inset = GetParagraphTextStartOffset(paragraph, scale);
         double width = textWidth - inset - GetParagraphRightInset(paragraph, scale);
@@ -74,6 +74,7 @@ internal sealed partial class DocxLayoutEngine
             SourceParagraph: paragraph, LineHeightSource: null, EmitsTerminalParagraphMark: false)
         { Math = math, MathScale = scale, FrameOriginOffsetX = -inset - alignment,
             ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, continuesShading, x, textWidth, x + inset + alignment,
-                top - baseline, math.LineHeight * scale, scale, spacing.ParagraphAfterSpacing) };
+                top - baseline, math.LineHeight * scale, scale, spacing.ParagraphAfterSpacing,
+                beforeSpacing) };
     }
 }

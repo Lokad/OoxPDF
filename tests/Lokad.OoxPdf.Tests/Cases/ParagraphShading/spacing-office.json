@@ -1,5 +1,5 @@
 {
-  "Source": "Independent Word16 Final export, 2026-10-31; OfficePdf bootstrap, application-view calibration remains open. First-line fills only; excess next-before-spacing is an explicit residual.",
+  "Source": "Independent Word16 Final export, 2026-10-31; OfficePdf bootstrap, application-view calibration remains open. First-line fills only; before-spacing continuity is qualified separately in before-office.json.",
   "Controls": [
     {
       "Input": "spacing.docx",

@@ -336,7 +336,8 @@ internal sealed partial class DocxLayoutEngine
             if (TryGetStandaloneMath(paragraph, width, paragraphSpacingScale, mathEquations, out var math))
             {
                 lines.Add(CreateStandaloneMathLine(paragraph, math, x, width, cursorY,
-                    paragraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(story.BodyElements, elementIndex)) with
+                    paragraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(story.BodyElements, elementIndex),
+                    ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile)) with
                 {
                     Story = DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                     SingleLineHeight = math.LineHeight
@@ -384,7 +385,8 @@ internal sealed partial class DocxLayoutEngine
                         lines.Add(placed.Line with { SingleLineHeight = sourceHeight,
                             ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, placed.Line.X,
                                 line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
-                                index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
+                                index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
+                                index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
                         images.AddRange(placed.Images);
                         boxes.AddRange(placed.TextBoxes);
@@ -534,7 +536,8 @@ internal sealed partial class DocxLayoutEngine
                     { OccupiedLineBox = staticOccupiedLineBox,
                         ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, lineX,
                             cursorY - staticBaselineY + extraAbove, staticLineHeight + extraAbove,
-                            paragraphSpacingScale, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
+                            paragraphSpacingScale, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
+                            staticLineIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d) });
                     // RV06 header-align probe: headers and footers keep one row-end space
                     // beyond authored trailing on the last wrapped line too.
                     if (paragraph.Images.Count == 0 &&
@@ -610,8 +613,9 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            foreach (DocxInlineImage image in paragraph.Images)
+            for (int imageIndex = 0; imageIndex < paragraph.Images.Count; imageIndex++)
             {
+                DocxInlineImage image = paragraph.Images[imageIndex];
                 cancellationToken.ThrowIfCancellationRequested();
                 if (placedStaticImages.Any(placed => ReferenceEquals(placed, image)))
                 {
@@ -638,7 +642,8 @@ internal sealed partial class DocxLayoutEngine
                     Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))
                 { SourceParagraph = paragraph,
                     ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, imageX,
-                        imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
+                        imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing,
+                        spans.Length == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d) });
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 

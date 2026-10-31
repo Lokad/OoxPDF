@@ -2503,7 +2503,8 @@ internal sealed partial class DocxLayoutEngine
                         {
                             ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), 0d, bodyWidth, placed.Line.X,
                                 line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
-                                index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
+                                index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
+                                index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                             ParagraphBeforeSpacing = index == 0 ? spacingProfile.ParagraphBeforeSpacing : 0d,
                             ParagraphAfterSpacing = index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
@@ -2529,6 +2530,7 @@ internal sealed partial class DocxLayoutEngine
                 cursorY,
                 spacingProfile,
                 HasFollowingParagraphShading(story.BodyElements, elementIndex),
+                ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile),
                 textMeasurer,
                 defaultTabStopPoints,
                 pageNumber,
@@ -2550,8 +2552,9 @@ internal sealed partial class DocxLayoutEngine
                 cursorY -= ResolveLineHeight(paragraph, fontSize, textMeasurer);
             }
 
-            foreach (DocxInlineImage image in paragraph.Images)
+            for (int imageIndex = 0; imageIndex < paragraph.Images.Count; imageIndex++)
             {
+                DocxInlineImage image = paragraph.Images[imageIndex];
                 cancellationToken.ThrowIfCancellationRequested();
                 if (placedStoryImages.Any(placed => ReferenceEquals(placed.Image, image)))
                 {
@@ -2577,7 +2580,8 @@ internal sealed partial class DocxLayoutEngine
                     SourceParagraphIndex: paragraphIndex, Story: null)
                 { SourceParagraph = paragraph,
                     ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), 0d, bodyWidth, imageX,
-                        imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
+                        imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing,
+                        paragraphLines.Count == 0 && imageIndex == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, spacingProfile) : 0d) });
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 

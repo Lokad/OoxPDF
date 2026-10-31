@@ -231,6 +231,7 @@ internal sealed partial class DocxLayoutEngine
         double cursorY,
         DocxParagraphSpacingProfile spacingProfile,
         bool continuesShading,
+        double beforeSpacing,
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
         int? pageNumber,
@@ -433,7 +434,8 @@ internal sealed partial class DocxLayoutEngine
                 SourceParagraph: paragraph, EmitsTerminalParagraphMark: false)
             { ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, continuesShading, 0d, bodyWidth, lineShape.X,
                 baselineOffset + extraAbove, lineHeight + extraAbove, fixedScale,
-                lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
+                lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
+                lineIndex == 0 ? beforeSpacing : 0d) });
             if (storyMidLinePlan is not null)
             {
                 foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])

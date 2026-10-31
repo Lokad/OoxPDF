@@ -1,0 +1,176 @@
+{
+  "Source": "Independent Word16 Final export, 2026-10-31; OfficePdf bootstrap, application-view calibration remains open. Before-spacing continuity with unshaded, page, wrapped-line and container controls.",
+  "Controls": [
+    {
+      "Input": "spacing.docx",
+      "InputSha256": "F45B26F66F033A459BCFD158A93F656D6A09211BAB560E05784E09F821403A77",
+      "ReferencePdfSha256": "AEE086A078575330DA7E89A8151459F8DC79A0F03472F61873330DE02FE33EFD",
+      "Samples": [
+        {
+          "Label": "DIFFERENTBEFORE NEXT",
+          "Page": 5,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            103.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        },
+        {
+          "Label": "SAMEBEFORE NEXT",
+          "Page": 6,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            103.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        }
+      ]
+    },
+    {
+      "Input": "before-boundaries.docx",
+      "InputSha256": "2057705510925C3D86B1A2F8840F2EB1DAFAE5E58FC55FCDF9496B414EB7FF6A",
+      "ReferencePdfSha256": "1F2B2CCEA1A111366310AA327EB8FFCCE80562F6C386D0686E518207885F9C0B",
+      "Samples": [
+        {
+          "Label": "UNSHADED NEXT",
+          "Page": 1,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            109.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 0
+        },
+        {
+          "Label": "BREAK NEXT",
+          "Page": 3,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            77.99603271484375,
+            541.5339965820312,
+            91.82000732421875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            89.29998779296875
+          ],
+          "PaintedBeforeSpacing": 0
+        },
+        {
+          "Label": "START NEXT",
+          "Page": 4,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            96.02001953125,
+            541.5339965820312,
+            109.82000732421875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            107.29998779296875
+          ],
+          "PaintedBeforeSpacing": 0
+        },
+        {
+          "Label": "WRAPPED NEXT",
+          "Page": 5,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            103.82000732421875,
+            541.5339965820312,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        }
+      ]
+    },
+    {
+      "Input": "before-containers.docx",
+      "InputSha256": "E550BE583626E01BD766F61D1F1AAAC0C90ECF496EB7BAB04DE8B7F9C3640173",
+      "ReferencePdfSha256": "0AECBAF0DD7462639999DB19B90053F44088D3FCA4660F93EA7EA35FB34942B1",
+      "Samples": [
+        {
+          "Label": "HEADER NEXT",
+          "Page": 1,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            49.79998779296875,
+            541.5339965820312,
+            69.5999755859375
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            67.08001708984375
+          ],
+          "PaintedBeforeSpacing": 6
+        },
+        {
+          "Label": "FOOTER NEXT",
+          "Page": 1,
+          "FirstLineRectangle": [
+            70.58399963378906,
+            754.3200073242188,
+            541.5339965820312,
+            774.1199951171875
+          ],
+          "FirstLineOrigin": [
+            72.02400207519531,
+            771.5999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        },
+        {
+          "Label": "CELLSHADE NEXT",
+          "Page": 1,
+          "FirstLineRectangle": [
+            228.0500030517578,
+            103.82000732421875,
+            384.07000732421875,
+            123.6199951171875
+          ],
+          "FirstLineOrigin": [
+            228.52999877929688,
+            121.0999755859375
+          ],
+          "PaintedBeforeSpacing": 6
+        },
+        {
+          "Label": "CELLEND FIRST",
+          "Page": 1,
+          "FirstLineRectangle": [
+            384.07000732421875,
+            96.02001953125,
+            540.0900268554688,
+            109.82000732421875
+          ],
+          "FirstLineOrigin": [
+            384.54998779296875,
+            107.29998779296875
+          ],
+          "PaintedBeforeSpacing": 0
+        }
+      ]
+    }
+  ]
+}
