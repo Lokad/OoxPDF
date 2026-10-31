@@ -1,4 +1,14 @@
 {
+  "pptx-clustered-spacing": [
+    "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
+    "PptxAuthoredTintShade",
+    "PptxAutomaticBarPalettes",
+    "PptxVaryingBarCategoryLegends",
+    "PptxNegativeBar",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-authored-color": [
     "PptxAuthoredTintShade",
     "PptxAutomaticBarPalettes",
@@ -622,7 +632,7 @@
   "pptx-negative-inversion": [
       "PptxNegativeBar",
       "BarScalarOptionsAgreeBetweenSceneAndXml",
-      "PptxSyntheticClusteredBarWidthHonorsNegativeOverlap",
+      "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
       "PptxSyntheticBarLegendKeyUnitLeftCentersOnBar",
       "PptxSyntheticBarLegendKeyOutEndGapLiftsWithFontSize",
       "PptxSyntheticBarLegendKeySwatchAnchorsToText",
@@ -638,6 +648,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
     "PptxAuthoredTintShadeChartsMatchIndependentOfficePaints",
     "PptxAuthoredTintShadeShapesMatchOfficeAndPreserveOrder",
       "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
@@ -12269,7 +12280,7 @@
     "PptxSyntheticChartValueGridlinesExcludeCrossingTick",
     "PptxSyntheticChartValueGridlinesUseOfficeLikeMultiSegmentPath",
     "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips",
-    "PptxSyntheticClusteredBarWidthHonorsNegativeOverlap",
+    "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap",
     "PptxSyntheticDefaultAutofitBulletUsesOfficeWrapTolerance",
     "PptxSyntheticDefaultAxisTitleDefaultsToBoldFace",
     "PptxSyntheticDefaultAxisTitleHorizontalBarReserves",

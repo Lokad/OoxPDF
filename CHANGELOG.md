@@ -20,6 +20,8 @@
   VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
   qualification records framework-specific library and tool identities.
+- PPTX: sizes clustered bars from the actual interseries gaps, preserving single-
+  series widths when overlap changes.
 - PPTX: corrects authored tint/shade colors and transform order in shapes, charts
   and legend keys using the shared color resolver.
 - PPTX: honors series and point negative-bar inversion flags across clustered and
