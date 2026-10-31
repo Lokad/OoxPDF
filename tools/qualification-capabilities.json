@@ -12967,5 +12967,23 @@
       "PageContentStagingRoundTripsAndCleansTemp",
       "StreamLengthsMatchPayloads",
       "XrefTablePointsAtObjectHeaders"
+  ],
+  "page-graphics-construction": [
+      "PageMemory",
+      "SvgMemory",
+      "VectorMemory",
+      "MemoryBudgetStaging",
+      "MemoryAdmission",
+      "DocxSvgImage",
+      "PptxSvg",
+      "PptxSyntheticSvg",
+      "TransparencyGroups",
+      "SharedTransparencyGroups",
+      "VectorSoftMasks",
+      "ShadingPatterns",
+      "StreamLengthsMatchPayloads",
+      "XrefTablePointsAtObjectHeaders",
+      "PortableRenderingStaticPictureOnlyFramesRetainBodyAndResources",
+      "PortableRenderingInlineBoxMathKeepsSourceContentAndResources"
   ]
 }

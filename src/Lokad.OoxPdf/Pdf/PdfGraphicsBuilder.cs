@@ -64,8 +64,8 @@ internal sealed class PdfGraphicsBuilder
         {
             throw new InvalidDataException("SVG transparency groups require balanced vector content.");
         }
-        // Admit once before creating the retained ASCII snapshot. The page
-        // charge covers the invocation; nested payloads have their own admission.
+        // Count nested output once before snapshotting. Producer construction and
+        // staged-resource reservations independently admit their memory lifetimes.
         OoxConversionBudget.Current?.ChargePdfContentBytes(child.builder.Length);
         var group = new PdfTransparencyGroup(bounds, child.builder.ToString(), child.extGStates, child.shadings, child.groups, child.shadingPatterns);
         string name = "Tr" + (groups.Count + 1).ToString(CultureInfo.InvariantCulture);

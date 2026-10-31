@@ -303,3 +303,9 @@ emission. A governed conversion may refuse earlier when its descriptors, shading
 stops or retained patterns cannot fit; spilling content does not refund still-live
 resources. No public signature changes. Current-page painting/construction remains
 partial; this is coarse admission, not complete heap accounting.
+
+DOCX/PPTX painting now requests one coarse construction reservation per page
+before graphics creation. A host may refuse before page content is built; the
+reservation survives pending staging I/O and refunds when page production advances
+or is disposed. The same host capacity can serve later pages. Staged descriptors
+retain separate funding through emission. No new option or public signature.

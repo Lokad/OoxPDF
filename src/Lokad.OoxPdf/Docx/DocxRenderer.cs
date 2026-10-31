@@ -1145,6 +1145,9 @@ internal sealed partial class DocxRenderer
             markupContext = WithPageTextEmissionOffsets(markupContext, layout, pageIndex, separatePlainHeaderOrigins);
             textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
             textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
+            using IMemoryReservation? construction = ReservePageConstruction(layoutPage,
+                drawingPages.Floating.Get(pageIndex).All, drawingPages.Static.Get(pageIndex).All, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             var graphics = new PdfGraphicsBuilder();
             var pageImages = new List<PdfImageResource>();
             int pageNumber = pageIndex + 1;
@@ -1204,6 +1207,7 @@ internal sealed partial class DocxRenderer
                 balloonTextResource,
                 balloonTitleResource,
                 balloonBodyResource,
+                construction,
                 cancellationToken);
 
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)

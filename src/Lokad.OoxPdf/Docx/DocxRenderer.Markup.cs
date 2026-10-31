@@ -250,6 +250,7 @@ internal sealed partial class DocxRenderer
         DocxRunFontResource? balloonTextResource,
         DocxRunFontResource? balloonTitleResource,
         DocxRunFontResource? balloonBodyResource,
+        IMemoryReservation? construction,
         CancellationToken cancellationToken)
     {
         DocxRunFontResource? labelResource = balloonTextResource ?? ResolveMarkupLabelFontResource(fontResources);
@@ -265,7 +266,20 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, titleResource?.Embedded, bodyResource?.Embedded, fontResources, cancellationToken))
+        var placements = BuildMarkupBalloonPlacements(page, relatedStories, floatingDrawings, markupContext, titleResource?.Embedded, bodyResource?.Embedded, fontResources, cancellationToken);
+        if (construction is not null)
+        {
+            long capacity = construction.Bytes;
+            foreach (var placement in placements)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                capacity = checked(capacity + 4096 + 512L * ((long)placement.Title.Length + placement.Body.Length +
+                    (placement.WordCompatibleTitle?.Length ?? 0) + (placement.WordCompatibleBody?.Length ?? 0)));
+            }
+            OoxMemory.Resize(construction, capacity);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        foreach (DocxMarkupBalloonPlacement placement in placements)
         {
             cancellationToken.ThrowIfCancellationRequested();
             RenderMarkupBalloonPlacement(placement, graphics, labelResource, titleResource, bodyResource, fallbackFace, markupContext, cancellationToken);

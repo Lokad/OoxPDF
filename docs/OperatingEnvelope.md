@@ -24,7 +24,14 @@ it after painting or failure. Retained vector/PDF construction resources remain
 partial; render-local scratch does not cover their later lifetime. Staging retains
 coarse vector descriptor/stop/pattern capacity in its existing aggregate reservation
 through emission, including when content spills; cleanup refunds after descriptors
-and storage are released. Earlier painting/construction remains partial. MemoryBudget also admits
+and storage are released. Each page producer also holds one coarse source-sized construction reservation
+through painting, snapshots and staging awaits. It refunds on page advancement or
+iterator disposal; spilled content retains its independent descriptor funding.
+DOCX estimates placed text/math/tables/textboxes/stories and SVG expansion; PPTX
+uses existing slide/master/layout/chart source summaries and SVG bytes. Prepared
+balloon text grows the same page reservation. These estimates cover ordinary
+construction overlap; unusually expanding effects/vector inputs remain unproven.
+MemoryBudget also admits
 PDF content staging, private SFNT/
 subset programs, retained kerning-pair arrays and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression
