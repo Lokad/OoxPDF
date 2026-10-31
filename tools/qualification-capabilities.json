@@ -638,6 +638,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxAuthoredTintShadeChartsMatchIndependentOfficePaints",
+    "PptxAuthoredTintShadeShapesMatchOfficeAndPreserveOrder",
       "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
       "PptxInferredTitleSizeFollowsSourcePrecedence",
       "DocxCustomTableMarginsMatchIndependentWordContentOrigins",
