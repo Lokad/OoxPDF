@@ -15,8 +15,15 @@ internal sealed class OoxPackage : IDisposable
 
     private readonly Dictionary<string, OoxPart> parts;
     private IMemoryScope? storageScope;
+    private IMemoryReservation? xmlStorage;
     private bool disposed;
     private const int ScratchBytes = 81920;
+    // Coarse capacity/headroom, not object accounting or a managed-heap ceiling.
+    // Sparse text and dense elements expand differently. Leave conservative
+    // source-size headroom for cached records and temporary normalization.
+    private const int XmlRetainedFactor = 32;
+    private const int XmlConstructionFactor = 64;
+    private const int XmlReaderHeadroom = 64 * 1024;
 
     // Conversion-local parse caches for LoadXml/relationship consumers. Callers
     // read the shared DOMs or work on detached copies. One conversion owns the
@@ -24,11 +31,12 @@ internal sealed class OoxPackage : IDisposable
     private readonly Dictionary<string, XDocument> xmlCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyDictionary<string, OoxRelationship>> relationshipCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes, IMemoryScope? storageScope)
+    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes, IMemoryScope? storageScope, IMemoryReservation? xmlStorage)
     {
         this.parts = parts;
         ContentTypes = contentTypes;
         this.storageScope = storageScope;
+        this.xmlStorage = xmlStorage;
     }
 
     public OoxContentTypes ContentTypes { get; }
@@ -49,6 +57,7 @@ internal sealed class OoxPackage : IDisposable
         relationshipCache.Clear();
         IMemoryScope? held = storageScope;
         storageScope = null;
+        xmlStorage = null;
         held?.Dispose();
     }
 
@@ -80,6 +89,7 @@ internal sealed class OoxPackage : IDisposable
             var working = OoxMemory.Reserve(memory, ScratchBytes);
             var compressed = OoxMemory.Reserve(memory, 0);
             var retained = OoxMemory.Reserve(memory, 0);
+            var parsedXml = OoxMemory.Reserve(memory, 0);
             cancellationToken.ThrowIfCancellationRequested();
             byte[] scratch = new byte[ScratchBytes];
             if (!stream.CanSeek)
@@ -170,10 +180,14 @@ internal sealed class OoxPackage : IDisposable
                 {
                     contentTypesBytes = await CopyBoundedAsync(contentTypesStream, MaxContentTypesBytes, "[Content_Types].xml", scratch, working, retained, cancellationToken).ConfigureAwait(false);
                 }
+                OoxMemory.Resize(parsedXml, (long)contentTypesBytes.Length * XmlConstructionFactor + XmlReaderHeadroom);
+                cancellationToken.ThrowIfCancellationRequested();
                 using (var contentTypesBuffer = new MemoryStream(contentTypesBytes, writable: false))
                 {
                     contentTypes = OoxContentTypes.Parse(contentTypesBuffer, cancellationToken);
                 }
+                // Content-type lookup records survive the temporary DOM/reader.
+                OoxMemory.Resize(parsedXml, (long)contentTypesBytes.Length * XmlRetainedFactor);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -257,7 +271,7 @@ internal sealed class OoxPackage : IDisposable
             stagedBytes = null;
             OoxMemory.Resize(compressed, 0);
             OoxMemory.Resize(working, 0);
-            OoxPackage result = new OoxPackage(parts, contentTypes, memory);
+            OoxPackage result = new OoxPackage(parts, contentTypes, memory, parsedXml);
             memory = null;
             return result;
         }
@@ -487,10 +501,27 @@ internal sealed class OoxPackage : IDisposable
             return cached;
         }
 
-        using Stream stream = part.OpenRead();
-        XDocument document = SafeXml.Load(stream, cancellationToken);
-        xmlCache[part.Name] = document;
-        return document;
+        long prior = xmlStorage?.Bytes ?? 0;
+        OoxMemory.Resize(xmlStorage, prior + part.Bytes.LongLength * XmlConstructionFactor + XmlReaderHeadroom);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            XDocument document;
+            using (Stream stream = part.OpenRead())
+            {
+                document = SafeXml.Load(stream, cancellationToken);
+            }
+            // One package reservation owns all cached DOMs. Refund construction
+            // headroom only after readers/normalization finish; cache hits reuse it.
+            OoxMemory.Resize(xmlStorage, prior + part.Bytes.LongLength * XmlRetainedFactor);
+            xmlCache[part.Name] = document;
+            return document;
+        }
+        catch
+        {
+            OoxMemory.Resize(xmlStorage, prior);
+            throw;
+        }
     }
 
     private static Dictionary<string, OoxRelationship> ParseRelationshipDocument(XDocument document, string sourcePartName, CancellationToken cancellationToken)

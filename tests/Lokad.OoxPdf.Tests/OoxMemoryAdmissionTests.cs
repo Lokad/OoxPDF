@@ -125,7 +125,7 @@ internal static partial class OoxMemoryAdmissionTests
                     using Stream input = seekable ? File.OpenRead(path) : new ForwardInput(File.ReadAllBytes(path));
                     var package = OoxPackage.Open(input, default);
                     long retained = package.Parts.Sum(part => part.Bytes.LongLength);
-                    TestAssert.Equal(retained, pool.Reserved);
+                    TestAssert.True(pool.Reserved > retained, "Raw parts and retained parsed content-type records are both funded.");
                     TestAssert.True(pool.Peak >= 2 * retained, "The construction buffer and final array overlap before ownership transfer.");
                     package.Dispose();
                     package.Dispose();

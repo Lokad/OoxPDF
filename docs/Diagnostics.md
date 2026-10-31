@@ -162,8 +162,16 @@ reserve storage before allocating it, including old/new buffer overlap, and
 refund after their readers finish. Refusal throws `OoxPdfLimitExceededException`
 with `Kind=MemoryAdmission`, `Scope=Conversion`; it never becomes node recovery,
 cache eviction, storage spilling or omitted content. Existing format/output
-failures retain `DocumentBound`. Current producer coverage is package byte
-storage/intake and PDF content staging, including encoding/readback scratch and
+failures retain `DocumentBound`. Package admission includes encoded intake/parts
+and parsed content-type records/cached XML. One package-owned reservation admits
+coarse construction headroom before parsing, refunds it after parsing, and holds
+retained estimates until package readers finish. Cache hits reuse the same funded
+DOM; malformed/canceled parses refund attempted growth. The current estimates use
+32 times encoded XML size for retained records, and 64 times plus 64 KiB while
+constructing them. These estimates leave margin for dense nodes and normalization;
+they are not measured live bytes or universal heap bounds. Budgeted documents can
+now refuse at parsing where only their encoded bytes were previously funded.
+PDF content staging includes encoding/readback scratch and
 spill buffers, plus private SFNT/subset programs and retained kerning-pair arrays.
 Copied programs and pair arrays stay funded through emission. Sorting scratch is
 admitted during their construction overlap and refunds after sorting; failed

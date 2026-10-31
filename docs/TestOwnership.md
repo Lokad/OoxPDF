@@ -167,3 +167,9 @@ occupied shared capacity; host release makes it available again. File/stream
 summary checks retain timing, provenance and output totals, alongside existing
 throwing-observer, cancellation and publication controls. These use the existing
 public stream/budget contract without an owned-result API or another buffer layer.
+
+`package-xml-admission` owns package parse/cache admission, construction refunds,
+malformed/canceled attempts and independently owned package lifetimes. Four checks
+use caller budgets without asserting the current estimate factors; public DOCX/
+PPTX file and stream refusals preserve destinations. The selection includes package
+I/O/bounds, MCE/strict relationship semantics and cached story/table source owners.

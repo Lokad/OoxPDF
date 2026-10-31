@@ -34,8 +34,8 @@ same pipeline. DOCX awaits font-program acquisition during preparation; measurem
 and painting then use prepared fonts. Default local discovery awaits font-file
 metadata reads before either renderer starts; directory enumeration remains a
 synchronous platform operation. PPTX awaits declared shape/table paragraph
-fonts and their glyph fallback candidates before measurement. Generated bullets
-and chart text still need their remaining acquisition migration. Caller streams
+fonts, generated bullets/chart text, ellipsis and needed glyph fallback candidates
+before measurement, using the shared prepared font owner. Caller streams
 stay open; cancellation waits for outstanding
 I/O before refunding borrowed storage. Input failures escape without preflight retry.
 
@@ -80,7 +80,7 @@ own their own reservations, share the root allowance, and do not dispose the roo
 or other independently created scopes. Dispose/refund only after storage users
 finish. Refusal never triggers eviction, spilling or reduced output.
 
-Producer admission covers package intake, extracted parts and copy buffers,
+Producer admission covers package intake and coarse parsed XML/cache capacity, extracted parts and copy buffers,
 including nested chart workbooks, plus staged PDF content and its fixed encoding/
 readback buffers. Providers own their private backing/buffer admission; the built-in
 file provider adds no duplicate managed file buffer. Package bytes and resident staged content remain funded
@@ -101,8 +101,8 @@ recolor reuses private pixels and leaves encoded input/cache bytes unchanged.
 Models, parsed maps and other PDF resources still need their producer migration.
 This partial coverage is not a complete conversion-memory limit. Null budget
 means ungoverned memory; input/output bounds and cancellation remain independent.
-PPTX font preparation and remaining producer coverage (including discovery
-metadata storage admission) are still open. The removed estimated lease is not a second memory model.
+Remaining producer coverage, including discovery metadata storage admission, is
+still open. The removed estimated lease is not a second memory model.
 
 The package provides .NET 10 and .NET 11 assets. Common Strict DOCX content now
 renders through the existing pipeline. `OOXML_STRICT_DIALECT` remains a warning,

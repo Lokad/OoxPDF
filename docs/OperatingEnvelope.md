@@ -14,7 +14,11 @@ without a provider it fails instead of creating process-temp files. File convers
 selects explicit filesystem backing. Package, staged/output I/O and owned storage
 disposal and selected DOCX/PPTX font acquisition are awaited; CPU layout and
 drawing remain synchronous.
-`MemoryBudget` admits package buffers/parts, PDF content staging, private SFNT/
+`MemoryBudget` admits package buffers/parts and coarse parsed content-type/XML
+cache capacity, with temporary parsing/normalization headroom. One existing package
+scope holds retained estimates through its final readers; failed parsing refunds
+attempted growth and cache hits reuse funding. XML admission is a coarse estimate,
+not an exact graph/heap measurement. It also admits PDF content staging, private SFNT/
 subset programs, retained kerning-pair arrays and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression
 also admits actual output capacity, growth overlap and final copying. Image payloads
