@@ -647,6 +647,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         RgbColor? background = null)
     {
+        background = ResolveParagraphBackground(line, background);
         if (line.Math is { } math && !line.IsInlineMath)
         {
             PaintMath(math, line.X, line.BaselineY, line.MathScale, graphics, markupContext, cancellationToken, background);

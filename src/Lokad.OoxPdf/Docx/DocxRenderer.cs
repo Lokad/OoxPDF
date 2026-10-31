@@ -1178,6 +1178,7 @@ internal sealed partial class DocxRenderer
                 layoutPage.Height);
 
             IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage, markupContext).ToArray();
+            RenderParagraphBackgrounds(staticItems, graphics, markupContext, cancellationToken);
             for (int itemIndex = 0; itemIndex < staticItems.Count; itemIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1187,6 +1188,7 @@ internal sealed partial class DocxRenderer
                 RenderLayoutItem(staticItem, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex);
             }
 
+            RenderParagraphBackgrounds(layoutPage.Items, graphics, markupContext, cancellationToken);
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1759,7 +1761,8 @@ internal sealed partial class DocxRenderer
                 RenderTextLine(textLine, graphics, fontResources, markupContext, pageNumber, pageCount, cancellationToken, background);
                 break;
             case DocxEquationLayout equation:
-                PaintMath(equation.Math, equation.X, equation.BaselineY, equation.Scale, graphics, markupContext, cancellationToken, background);
+                PaintMath(equation.Math, equation.X, equation.BaselineY, equation.Scale, graphics, markupContext, cancellationToken,
+                    ResolveParagraphBackground(equation, background));
                 break;
             case DocxInlineImageLayout image:
                 RenderInlineImage(PlaceInlineImageForPaint(image, markupContext), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);

@@ -13030,5 +13030,23 @@
       "PortableRenderingPptxJustificationPreservesWordAndGlyphGeometry",
       "PortablePptxInspectionUsesTheRenderingFontSource",
       "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
+  "docx-paragraph-shading": [
+      "DocxParagraphShading",
+      "DocxAutomaticColor",
+      "MathFontAutomaticColors",
+      "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",
+      "PortableRenderingStaticPictureOnlyFramesRetainBodyAndResources",
+      "PortableRenderingStaticSvgFramesPreserveBodyAndVectorPaint",
+      "DocxStaticFrameMapping",
+      "DocxStaticHeader",
+      "DocxTableVerticalAlignment",
+      "DocxTableCellTextLinesMemoSharesSplitCells",
+      "MemoReturnsHitForSameKey",
+      "MemoReplaysAtChangedOrigin",
+      "PageMemory",
+      "MemoryAdmission",
+      "StreamLengthsMatchPayloads",
+      "XrefTablePointsAtObjectHeaders"
   ]
 }

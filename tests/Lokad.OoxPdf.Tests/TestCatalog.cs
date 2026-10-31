@@ -12,6 +12,7 @@ internal static class TestCatalog
         .. FromType("api", typeof(TestRunnerTests)),
         .. FromType("rendering-portable", typeof(PortableRenderingTests)),
         .. FromType("rendering-portable", typeof(DocxAutomaticColorTests)),
+        .. FromType("rendering-portable", typeof(DocxParagraphShadingTests)),
         .. FromType("docx-page", typeof(DocxRevisionBarTests)),
         .. FromType("docx-page", typeof(DocxExplicitPageStartSpacingTests)),
         .. FromType("docx-page", typeof(DocxSpacedWrappedFootnoteTests)),

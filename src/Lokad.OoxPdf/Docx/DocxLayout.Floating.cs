@@ -429,7 +429,10 @@ internal sealed partial class DocxLayoutEngine
                 ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                 ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
                 ContextualSpacingSuppressed: firstLine ? spacingProfile.ContextualSpacingSuppressed : null,
-                SourceParagraph: paragraph, EmitsTerminalParagraphMark: false));
+                SourceParagraph: paragraph, EmitsTerminalParagraphMark: false)
+            { ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, 0d, bodyWidth, lineShape.X,
+                baselineOffset + extraAbove, lineHeight + extraAbove, fixedScale,
+                lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
             if (storyMidLinePlan is not null)
             {
                 foreach (DocxMidLineImage placed in storyMidLinePlan.ImagesByLine[lineIndex])

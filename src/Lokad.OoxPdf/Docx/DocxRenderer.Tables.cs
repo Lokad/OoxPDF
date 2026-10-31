@@ -107,6 +107,7 @@ internal sealed partial class DocxRenderer
                 graphics.SaveState();
                 DocxTableCellClipSnapshot clip = ResolveTableCellContentClip(geometryRow, geometryCell);
                 graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
+                RenderParagraphBackgrounds(cellLayout.TextLines.Cast<DocxLayoutItem>().Concat(cellLayout.InlineImages), graphics, markupContext, cancellationToken);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
                     cancellationToken.ThrowIfCancellationRequested();

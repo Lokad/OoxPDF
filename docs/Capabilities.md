@@ -202,10 +202,13 @@ Approximate or restricted:
   line placement; their navigation targets follow the placed content.
   Highlighting and run shading retain these text metrics while painting their
   backgrounds; font-changing and unsupported layout combinations keep fallbacks.
-  Automatic text and equation colors adapt to solid cell/run shading, including
-  nested cells and header/footer tables; explicit foregrounds remain authored.
-  Highlights do not change the automatic choice. Paragraph shading is currently
-  omitted; automatic contrast over patterned shading remains approximate.
+  Automatic text and equation colors adapt to solid paragraph/cell/run shading;
+  explicit foregrounds remain authored and highlights do not change the automatic
+  choice. Paragraph backgrounds use placed line, equation and picture frames in
+  body flow, cells and headers/footers, including wrapping, indents and page
+  fragments. Empty and picture-only paragraphs retain their backgrounds. Pattern,
+  theme-fill, paragraph-border and complex review-frame interactions remain
+  approximate; application-view calibration and remaining geometry gates are open.
   Simple single-line body minimum spacing uses measured font height across sizes,
   bold/mixed faces, kept paragraphs and neighboring tables/wrapped paragraphs.
   Multiline minimum paragraphs, columns, unresolved static frames, unsupported

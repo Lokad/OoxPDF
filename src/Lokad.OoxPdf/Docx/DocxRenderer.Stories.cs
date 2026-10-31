@@ -72,6 +72,7 @@ internal sealed partial class DocxRenderer
             .Concat(story.TableRows)
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
+        RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -266,6 +267,7 @@ internal sealed partial class DocxRenderer
                 : TranslateTableRow(row, contentX, contentTop)))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
+        RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -379,13 +381,14 @@ internal sealed partial class DocxRenderer
             .Concat(box.InlineImages)
             .Concat(box.TableRows)
             .OrderByDescending(ResolveLayoutItemTop)
+            .Select(item => item is DocxTextLineLayout { StaticStoryUsesPhysicalY: true } line
+                ? AdjustStaticTextLine(line, markupContext) : item)
             .ToArray();
+        RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutItem item = items[itemIndex];
-            if (item is DocxTextLineLayout { StaticStoryUsesPhysicalY: true } line)
-                item = AdjustStaticTextLine(line, markupContext);
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, background);

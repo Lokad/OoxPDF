@@ -62,6 +62,7 @@ internal sealed partial class DocxRenderer
                 BaselineY = self.PrecompensateY(originY + line.BaselineY),
                 Width = self.ScaleExtent(line.Width),
                 FrameOriginOffsetX = line.FrameOriginOffsetX * self.PrintScale,
+                ParagraphShadingFrame = line.ParagraphShadingFrame?.Scale(self.PrintScale),
                 MathScale = line.MathScale * self.PrintScale,
                 InlineMathOffsetX = line.InlineMathOffsetX * self.PrintScale,
                 InlineObjectEndOffsetX = line.InlineObjectEndOffsetX * self.PrintScale,
@@ -90,6 +91,7 @@ internal sealed partial class DocxRenderer
             {
                 X = PrecompensateX(image.X), Y = PrecompensateY(image.Y),
                 Width = ScaleExtent(image.Width), Height = ScaleExtent(image.Height), PageIndex = pageIndex,
+                ParagraphShadingFrame = image.ParagraphShadingFrame?.Scale(PrintScale),
                 ClipBounds = image.ClipBounds is { } clip
                     ? new(PrecompensateX(clip.X), PrecompensateY(clip.Y), ScaleExtent(clip.Width), ScaleExtent(clip.Height)) : null,
                 LineFrame = image.LineFrame is { } frame

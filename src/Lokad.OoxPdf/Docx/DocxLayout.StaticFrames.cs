@@ -47,6 +47,7 @@ internal sealed partial class DocxLayoutEngine
                 BaselineY = center + (line.BaselineY - center) * scale,
                 Width = line.Width * scale,
                 FrameOriginOffsetX = line.FrameOriginOffsetX * scale,
+                ParagraphShadingFrame = line.ParagraphShadingFrame?.Scale(scale),
                 Segments = line.Segments.Select(segment =>
                 {
                     token.ThrowIfCancellationRequested();
@@ -82,6 +83,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 X = x + (image.X - x) * scale, Y = center + (image.Y - center) * scale,
                 Width = image.Width * scale, Height = image.Height * scale, StaticStoryUsesPhysicalY = true,
+                ParagraphShadingFrame = image.ParagraphShadingFrame?.Scale(scale),
                 ClipBounds = image.ClipBounds is { } clip ? clip with
                 {
                     X = x + (clip.X - x) * scale, Y = center + (clip.Y - center) * scale,

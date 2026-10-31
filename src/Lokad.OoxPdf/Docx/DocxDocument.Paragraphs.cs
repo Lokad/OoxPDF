@@ -14,6 +14,7 @@ internal sealed record DocxParagraph(
     DocxParagraphKeepRules KeepRules,
     DocxListLabel? ListLabel)
 {
+    public DocxParagraphShading? Shading { get; init; }
     public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];
     public bool? SnapToGrid { get; init; }
@@ -89,7 +90,8 @@ internal sealed record DocxParagraph(
         SnapToGridValue,
         WordWrap,
         WordWrapValue,
-        StyleResolution);
+        StyleResolution,
+        Shading);
 }
 
 internal sealed record DocxNonRenderingRunOwner(int SourceRunIndex, IReadOnlyList<DocxRevisionInfo> Revisions);
@@ -110,7 +112,10 @@ internal sealed record DocxEffectiveParagraphProperties(
     string? SnapToGridValue,
     bool? WordWrap,
     string? WordWrapValue,
-    DocxParagraphStyleResolution StyleResolution);
+    DocxParagraphStyleResolution StyleResolution,
+    DocxParagraphShading? Shading = null);
+
+internal readonly record struct DocxParagraphShading(string? FillHex, string? Value, string? ColorHex);
 
 internal sealed record DocxParagraphStyleResolution(
     string? StyleId,

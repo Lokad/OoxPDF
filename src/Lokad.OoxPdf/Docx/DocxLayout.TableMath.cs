@@ -72,6 +72,8 @@ internal sealed partial class DocxLayoutEngine
             PendingAfterSpacing: spacing.PendingAfterSpacing, ParagraphBeforeSpacing: spacing.ParagraphBeforeSpacing,
             ParagraphAfterSpacing: spacing.ParagraphAfterSpacing, ContextualSpacingSuppressed: spacing.ContextualSpacingSuppressed,
             SourceParagraph: paragraph, LineHeightSource: null, EmitsTerminalParagraphMark: false)
-        { Math = math, MathScale = scale, FrameOriginOffsetX = -inset - alignment };
+        { Math = math, MathScale = scale, FrameOriginOffsetX = -inset - alignment,
+            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, textWidth, x + inset + alignment,
+                top - baseline, math.LineHeight * scale, scale, spacing.ParagraphAfterSpacing) };
     }
 }

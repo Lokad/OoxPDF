@@ -67,7 +67,7 @@ internal static class DocxAutomaticColorTests
         }
     }
 
-    private static string ReadInk(string block)
+    internal static string ReadInk(string block)
     {
         var color = Regex.Match(block, @"(?m)^(?<r>[\d.]+)(?: (?<g>[\d.]+) (?<b>[\d.]+))? (?<op>rg|g)\r?$");
         TestAssert.True(color.Success, "Expected explicit ink in each generated text object.");

@@ -2,17 +2,18 @@
 
 ## 0.3.0 — Unreleased
 
-- Font programs use explicit immutable leases and optional host-funded bounded caches;
-  eviction and shutdown preserve active readers. DOCX awaits program acquisition
-  before synchronous measurement/painting. See caller migration guidance.
-
+- Font programs use explicit immutable leases and optional host-funded bounded
+  caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
+  font acquisition before synchronous measurement and painting.
 - Awaits package, staging and PDF output I/O; synchronous calls share that path.
-  Font acquisition and CPU rendering remain synchronous.
+  .NET 10 stages seekable input to keep BCL ZIP reads off caller streams.
 - Adds host-selected temporary storage. Embedded streams no longer create implicit
   temp files beyond their resident window; file/CLI convenience keeps file backing.
 - DOCX: sizes unconstrained automatic tables from content and cell insets,
   preserving fixed/preferred widths. Arithmetic roundoff no longer creates
   spurious text line breaks at an exactly fitting boundary.
+- DOCX: paints direct and inherited paragraph backgrounds across wrapped flow,
+  cells, static stories, equations and pictures, preserving authored foregrounds.
 - DOCX: reports omitted external images, malformed floating drawings and unsupported
   VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;

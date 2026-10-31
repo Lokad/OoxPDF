@@ -2501,6 +2501,9 @@ internal sealed partial class DocxLayoutEngine
                             size, paragraphSpacingScale, 0, elementIndex, paragraphIndex, index, DocxStoryId.Related(story.Kind));
                         textLines.Add(placed.Line with
                         {
+                            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, 0d, bodyWidth, placed.Line.X,
+                                line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
+                                index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                             ParagraphBeforeSpacing = index == 0 ? spacingProfile.ParagraphBeforeSpacing : 0d,
                             ParagraphAfterSpacing = index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
@@ -2570,7 +2573,10 @@ internal sealed partial class DocxLayoutEngine
                     imageHeight,
                     PageIndex: 0,
                     SourceBlockIndex: elementIndex,
-                    SourceParagraphIndex: paragraphIndex, Story: null));
+                    SourceParagraphIndex: paragraphIndex, Story: null)
+                { SourceParagraph = paragraph,
+                    ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, 0d, bodyWidth, imageX,
+                        imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 

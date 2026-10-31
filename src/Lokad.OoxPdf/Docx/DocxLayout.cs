@@ -1508,7 +1508,10 @@ internal sealed partial class DocxLayoutEngine
                     { "left" => 0d, "right" => areaWidth - boxWidth, _ => (areaWidth - boxWidth) / 2d };
                     currentItems.Add(new DocxEquationLayout(math, x + leftInset + alignment,
                         cursorY - math.BaselineInset * paragraphSpacingScale, paragraphSpacingScale, elementIndex, paragraph)
-                        { FrameOriginOffsetX = -leftInset - alignment });
+                        { FrameOriginOffsetX = -leftInset - alignment,
+                            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, x + leftInset + alignment,
+                                math.BaselineInset * paragraphSpacingScale, math.LineHeight * paragraphSpacingScale,
+                                paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
                     activeColumnHasContent = true;
                     cursorY -= advance;
                     pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
@@ -1602,6 +1605,9 @@ internal sealed partial class DocxLayoutEngine
                             paragraphFontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
                         currentItems.Add(placed.Line with
                         {
+                            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, placed.Line.X,
+                                line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
+                                line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                             SingleLineHeight = lineHeightProfile.SingleLineHeight,
                             EffectiveLineSpacingFactor = lineHeightProfile.EffectiveLineSpacingFactor,
@@ -1831,6 +1837,9 @@ internal sealed partial class DocxLayoutEngine
                         FirstLineInsetPoints: firstLine ? (double?)baselineOffset : null)
                     {
                         FrameOriginOffsetX = x - lineShape.X,
+                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, lineShape.X,
+                            baselineOffset + extraAbove, lineHeight + extraAbove + extraBelow, paragraphSpacingScale,
+                            lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
                         InlineObjectEndOffsetX = lineMath is null ? null : lineMath.X + inlineMath!.Width - lineShape.X,
                         // Baseline transitions already consume printed spacing.
                         // Retain their source-frame displacement so the page
@@ -2059,7 +2068,10 @@ internal sealed partial class DocxLayoutEngine
                     imageHeight,
                     pages.Count + 1,
                     SourceBlockIndex: elementIndex,
-                    SourceParagraphIndex: 0, Story: null));
+                    SourceParagraphIndex: 0, Story: null)
+                { SourceParagraph = paragraph,
+                    ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, imageX,
+                        imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
                 activeColumnHasContent = true;
                 // Paragraph spacing owns the gap after an inline picture line.
                 cursorY -= imageHeight;

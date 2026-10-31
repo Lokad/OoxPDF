@@ -46,6 +46,15 @@ internal abstract record DocxLayoutItem
     public double? FrameOriginOffsetX { get; init; }
     // One shared vertical-frame owner for all items in a mapped static story.
     public bool StaticStoryUsesPhysicalY { get; init; }
+    public DocxParagraphPaintFrame? ParagraphShadingFrame { get; init; }
+}
+
+// Relative to the positioned item's X/baseline so ordinary translations retain
+// the source paragraph's paint extent. Explicit frame scaling scales all distances.
+internal readonly record struct DocxParagraphPaintFrame(double OffsetX, double BaselineInset, double Width, double Height)
+{
+    public DocxParagraphPaintFrame Scale(double scale) =>
+        new(OffsetX * scale, BaselineInset * scale, Width * scale, Height * scale);
 }
 
 internal sealed record DocxEquationLayout(DocxPreparedMathParagraph Math, double X, double BaselineY,
@@ -179,6 +188,7 @@ internal sealed record DocxInlineImageLayout(
     DocxStoryId? Story) : DocxLayoutItem
 {
     public int? SourceLineIndex { get; init; }
+    public DocxParagraph? SourceParagraph { get; init; }
     public PdfRectangle? ClipBounds { get; init; }
     public DocxPictureLineFrame? LineFrame { get; init; }
 

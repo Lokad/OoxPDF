@@ -297,6 +297,7 @@ internal sealed partial class DocxReader
         XElement? snapToGrid = properties?.Element(WordprocessingNamespace + "snapToGrid");
         XElement? pageBreakBefore = properties?.Element(WordprocessingNamespace + "pageBreakBefore");
         XElement? wordWrap = properties?.Element(WordprocessingNamespace + "wordWrap");
+        XElement? shading = properties?.Element(WordprocessingNamespace + "shd");
 
         return new DocxResolvedParagraphProperties(
             alignment,
@@ -314,7 +315,16 @@ internal sealed partial class DocxReader
             ReadOnOff(pageBreakBefore),
             (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(wordWrap),
-            (string?)wordWrap?.Attribute(WordprocessingNamespace + "val"));
+            (string?)wordWrap?.Attribute(WordprocessingNamespace + "val"))
+        {
+            // Word retains inherited paragraph shading for a nil declaration
+            // (independent ParagraphShading flow/cell controls). Other declarations
+            // replace the complete shading value rather than mixing its attributes.
+            Shading = shading is null || string.Equals((string?)shading.Attribute(WordprocessingNamespace + "val"), "nil", StringComparison.OrdinalIgnoreCase)
+                ? null : new((string?)shading.Attribute(WordprocessingNamespace + "fill"),
+                    (string?)shading.Attribute(WordprocessingNamespace + "val"),
+                    (string?)shading.Attribute(WordprocessingNamespace + "color"))
+        };
     }
 
     private static IReadOnlyList<DocxTabStop> ReadParagraphTabStops(XElement? properties)
@@ -618,6 +628,7 @@ internal sealed partial class DocxReader
         bool? WordWrap,
         string? WordWrapValue)
     {
+        public DocxParagraphShading? Shading { get; init; }
         public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null);
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
@@ -643,7 +654,8 @@ internal sealed partial class DocxReader
                 other.PageBreakBefore ?? PageBreakBefore,
                 other.PageBreakBeforeValue ?? PageBreakBeforeValue,
                 other.WordWrap ?? WordWrap,
-                other.WordWrapValue ?? WordWrapValue);
+                other.WordWrapValue ?? WordWrapValue)
+            { Shading = other.Shading ?? Shading };
         }
     }
 }

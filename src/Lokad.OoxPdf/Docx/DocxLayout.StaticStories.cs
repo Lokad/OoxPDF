@@ -382,6 +382,9 @@ internal sealed partial class DocxLayoutEngine
                             size, paragraphSpacingScale, pageNumber, null, paragraphIndex, index,
                             DocxStoryId.HeaderOrFooter(isHeader, story.VariantType));
                         lines.Add(placed.Line with { SingleLineHeight = sourceHeight,
+                            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, placed.Line.X,
+                                line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
+                                index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
                         images.AddRange(placed.Images);
                         boxes.AddRange(placed.TextBoxes);
@@ -528,7 +531,10 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraphIndex: paragraphIndex,
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
                         LineHeightSource: staticLineHeightSource, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false)
-                    { OccupiedLineBox = staticOccupiedLineBox });
+                    { OccupiedLineBox = staticOccupiedLineBox,
+                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, lineX,
+                            cursorY - staticBaselineY + extraAbove, staticLineHeight + extraAbove,
+                            paragraphSpacingScale, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) });
                     // RV06 header-align probe: headers and footers keep one row-end space
                     // beyond authored trailing on the last wrapped line too.
                     if (paragraph.Images.Count == 0 &&
@@ -629,7 +635,10 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber,
                     SourceBlockIndex: null,
                     SourceParagraphIndex: paragraphIndex,
-                    Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType)));
+                    Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))
+                { SourceParagraph = paragraph,
+                    ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, x, width, imageX,
+                        imageHeight, imageHeight, paragraphSpacingScale, spacingProfile.ParagraphAfterSpacing) });
                 cursorY -= imageHeight + InlineImageParagraphGapPoints;
             }
 
