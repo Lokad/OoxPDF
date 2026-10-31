@@ -13,10 +13,14 @@ internal sealed partial class PptxRenderer
     private const double HorizontalLegendFrameInset = 6d;
     private const double HorizontalLegendWrappedHeightTrim = 1.5d;
 
-    private static bool UsesMeasuredHorizontalBarLegend(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
-        options.BarDirection == PptxSceneChartBarDirection.Bar && legend.Visible && !legend.Overlay &&
+    private static bool UsesAutomaticHorizontalBarFrame(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
+        options.BarDirection == PptxSceneChartBarDirection.Bar &&
         !chart.PlotAreaLayout.HasLayout && !legend.Layout.HasLayout &&
-        legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom;
+        (!legend.Visible || legend.Overlay ||
+            legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
+
+    private static bool UsesMeasuredHorizontalBarLegend(ChartBarPlotOptions options, PptxSceneChart chart, ChartLegendLayout legend) =>
+        UsesAutomaticHorizontalBarFrame(options, chart, legend) && legend.Visible && !legend.Overlay;
 
     private static bool IsLegendBaselineClipped(ChartLegendBox box, double baseline) =>
         baseline - box.ContentDescent < box.ClipY - 0.001d ||

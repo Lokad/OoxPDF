@@ -152,6 +152,8 @@ internal sealed partial class PptxRenderer
     private static class PptxChartMetricRules
     {
         public const double TitleFallbackFontSize = 12d;
+        public const double ChartTitleFrameInset = 6d;
+        public const double ChartTitleLinePadding = 1.5d;
         public const double LegendFallbackFontSize = 9d;
         public const double AxisFallbackFontSize = 10d;
         public const double CategoryAxisFallbackFontSize = AxisFallbackFontSize;

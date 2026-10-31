@@ -2,6 +2,8 @@
 
 ## 0.3.0 — Unreleased
 
+- Horizontal chart titles use their rich-run metrics for frame placement; overlay titles leave the plot unreserved and titles retain the measured value-axis strip.
+
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
   font acquisition before synchronous measurement and painting.

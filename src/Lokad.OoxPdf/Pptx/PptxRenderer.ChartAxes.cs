@@ -312,16 +312,16 @@ internal sealed partial class PptxRenderer
         public bool TryMeasureNormalLineHeight(ChartTextStyle style, out double height) =>
             TryMeasureLineBox(style, out _, out _, out height);
 
-        public async ValueTask<(double Ascent, double Descent, double Height)> MeasureLineBoxAsync(ChartTextStyle style)
+        public async ValueTask<(double Ascent, double Descent, double Height)> MeasureLineBoxAsync(ChartTextStyle style, bool horizontalHeader = false)
         {
             await PrepareAsync(string.Empty, style).ConfigureAwait(false);
-            if (TryMeasureLineBox(style, out double ascent, out double descent, out double height))
+            if (TryMeasureLineBox(style, out double ascent, out double descent, out double height, horizontalHeader))
                 return (ascent, descent, height);
             height = style.FontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
             return (height * 0.8d, height * 0.2d, height);
         }
 
-        private bool TryMeasureLineBox(ChartTextStyle style, out double ascent, out double descent, out double height)
+        private bool TryMeasureLineBox(ChartTextStyle style, out double ascent, out double descent, out double height, bool horizontalHeader = false)
         {
             ascent = descent = height = 0d;
             OpenTypeFont? font = estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic);
@@ -332,9 +332,14 @@ internal sealed partial class PptxRenderer
 
             // Match the existing font metric ownership: the authored selection
             // flag chooses typographic metrics; other faces use their Windows box.
-            double units = (font.Os2.SelectionFlags & 0x80) != 0
-                ? font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap
-                : font.Os2.WindowsAscender + font.Os2.WindowsDescender;
+            bool typographic = (font.Os2.SelectionFlags & 0x80) != 0;
+            double ascentUnits = horizontalHeader
+                ? font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap
+                : typographic ? font.Os2.TypographicAscender : font.Os2.WindowsAscender;
+            double descentUnits = horizontalHeader ? -(double)font.Hhea.HorizontalDescender
+                : typographic ? -(double)font.Os2.TypographicDescender : font.Os2.WindowsDescender;
+            double units = horizontalHeader ? ascentUnits + descentUnits
+                : typographic ? ascentUnits + descentUnits + font.Os2.TypographicLineGap : ascentUnits + descentUnits;
             double ratio = units / font.UnitsPerEm;
             if (ratio <= PptxTextMetricRules.MinimumFontLineBoxMetricRatio || ratio > PptxTextMetricRules.MaximumFontLineBoxMetricRatio)
             {
@@ -342,9 +347,8 @@ internal sealed partial class PptxRenderer
             }
 
             height = style.FontSize * ratio;
-            bool typographic = (font.Os2.SelectionFlags & 0x80) != 0;
-            ascent = style.FontSize * Math.Max(0d, typographic ? font.Os2.TypographicAscender : font.Os2.WindowsAscender) / font.UnitsPerEm;
-            descent = style.FontSize * Math.Max(0d, typographic ? -(double)font.Os2.TypographicDescender : font.Os2.WindowsDescender) / font.UnitsPerEm;
+            ascent = style.FontSize * Math.Max(0d, ascentUnits) / font.UnitsPerEm;
+            descent = style.FontSize * Math.Max(0d, descentUnits) / font.UnitsPerEm;
             return true;
         }
 

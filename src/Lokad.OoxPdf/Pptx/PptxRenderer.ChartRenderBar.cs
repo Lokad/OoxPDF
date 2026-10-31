@@ -193,8 +193,17 @@ internal sealed partial class PptxRenderer
         // plot retains title/axis space; its legend band is applied exactly once.
         ChartLegendLayout plotLegend = UsesMeasuredHorizontalBarLegend(barOptions, sceneChart, legend)
             ? legend with { Visible = false } : legend;
-        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false).ConfigureAwait(false));
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
+        (double Ascent, double Height)? titleLine = null;
+        ChartAxisTitleReserveSides axisTitles = ReadDefaultAxisTitleReserveSides(sceneChart);
+        if (!string.IsNullOrWhiteSpace(title) && !sceneChart.Title.Layout.HasLayout &&
+            UsesAutomaticHorizontalBarFrame(barOptions, sceneChart, legend) &&
+            !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
+            titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
+        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine).ConfigureAwait(false));
+        double? titleBaseline = titleLine is { } line
+            ? frame.Y + frame.Height - PptxChartMetricRules.ChartTitleFrameInset - PptxChartMetricRules.ChartTitleLinePadding - line.Ascent
+            : null;
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, AutomaticTitleBaselineY: titleBaseline);
     }
 
     private static double ReadCategoryTitleFontSizeAtPosition(PptxSceneChart sceneChart, PptxSceneChartAxisPosition titlePosition)
@@ -271,7 +280,8 @@ internal sealed partial class PptxRenderer
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
         bool ignoreManualPlotLayout,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        (double Ascent, double Height)? measuredTitle = null)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -327,7 +337,19 @@ internal sealed partial class PptxRenderer
         ChartAxisSource rightReserveCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
         bool rightReserveLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis, rightReserveCategoryAxis.XmlAxis);
         defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
-        if (hasTitle && !sceneChart.Title.Layout.HasLayout && sceneChart.Title.Overlay != true)
+        if (measuredTitle is { } measuredLine)
+        {
+            // Title box and plot gap share the frame with axes and legend rows.
+            // Overlay titles use the same painted baseline and consume no plot space.
+            if (sceneChart.Title.Overlay != true)
+            {
+                double band = PptxChartMetricRules.ChartTitleFrameInset + 2d * PptxChartMetricRules.ChartTitleLinePadding +
+                    measuredLine.Height + PptxChartMetricRules.HorizontalBarPlotTopReserve;
+                double top = frame.Y + frame.Height - band;
+                defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };
+            }
+        }
+        else if (hasTitle && !sceneChart.Title.Layout.HasLayout && sceneChart.Title.Overlay != true)
         {
             // Default placement anchors the title above the plot. The same font
             // metrics used for chart text must fit in the remaining frame band;
@@ -524,7 +546,8 @@ internal sealed partial class PptxRenderer
             bool usesAutomaticTop = usesMeasuredAxisInsets && !hasTitle &&
                 (!hasLegend || legend.PositionKind == PptxSceneChartLegendPosition.Bottom);
             double automaticTop = frame.Y + frame.Height - PptxChartMetricRules.HorizontalBarPlotTopReserve;
-            if (hasTitle || hasLegend || (legend.Visible && !usesMeasuredAxisInsets))
+            bool measuredFrame = usesAutomaticTop || measuredTitle is not null;
+            if ((hasTitle || hasLegend || (legend.Visible && !usesMeasuredAxisInsets)) && measuredTitle is null)
             {
                 return usesAutomaticTop ? plotBox with { Height = Math.Max(1d, automaticTop - plotBox.Y) } : plotBox;
             }
@@ -533,7 +556,7 @@ internal sealed partial class PptxRenderer
             if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
             {
                 double bottom = frame.Y + PptxChartMetricRules.HorizontalBarPlotTopReserve;
-                return usesAutomaticTop ? new ChartPlotBox(plotBox.X, bottom, plotBox.Width, Math.Max(1d, automaticTop - bottom)) : plotBox;
+                return measuredFrame ? new ChartPlotBox(plotBox.X, bottom, plotBox.Width, Math.Max(1d, automaticTop - bottom)) : plotBox;
             }
 
             IReadOnlyList<ChartIndexedNumberVector> topBottomSeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
@@ -564,11 +587,11 @@ internal sealed partial class PptxRenderer
 
             double requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(bottomTickStyle.FontSize);
             double presetBottomReserve = plotBox.Y - frame.Y;
-            double newY = usesAutomaticTop ? frame.Y + requiredBottomReserve : Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
+            double newY = measuredFrame ? frame.Y + requiredBottomReserve : Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
                 ? plotBox.Y
                 : frame.Y + requiredBottomReserve;
             double presetTopReserve = frame.Y + frame.Height - plotBox.Y - plotBox.Height;
-            double newTop = usesAutomaticTop ? automaticTop : Math.Abs(presetTopReserve - PptxChartMetricRules.HorizontalBarPlotTopReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
+            double newTop = measuredFrame ? automaticTop : Math.Abs(presetTopReserve - PptxChartMetricRules.HorizontalBarPlotTopReserve) < PptxChartMetricRules.HorizontalBarPlotFloorSlop
                 ? plotBox.Y + plotBox.Height
                 : frame.Y + frame.Height - PptxChartMetricRules.HorizontalBarPlotTopReserve;
             return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, newTop - newY));
