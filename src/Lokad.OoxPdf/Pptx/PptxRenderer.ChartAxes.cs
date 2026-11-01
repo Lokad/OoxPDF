@@ -221,7 +221,8 @@ internal sealed partial class PptxRenderer
 
     private static bool CanOwnCartesianChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis) =>
         chart is not null && chart.Plots.Count == 1 &&
-        chart.Plots[0].PlotKind is PptxSceneChartPlotKind.Line or PptxSceneChartPlotKind.Area &&
+        (chart.Plots[0].PlotKind is PptxSceneChartPlotKind.Line or PptxSceneChartPlotKind.Area ||
+            chart.Plots[0] is { PlotKind: PptxSceneChartPlotKind.Bar, BarDirectionKind: PptxSceneChartBarDirection.Column }) &&
         chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
         axis is { HasScaling: true, HasLogarithmicScale: false };
 

@@ -57,7 +57,13 @@ internal sealed partial class PptxRenderer
                     RenderInChartPlotAreaClip(
                         graphics,
                         plotClipBox,
-                        () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MinorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: false, valueAxisOptions.GridlineStyle.Minor));
+                        () =>
+                        {
+                            if (valueAxisOptions.TickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals)
+                                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: false, valueAxisOptions.GridlineStyle.Minor, valueAxisOptions.HasMajorGridlineElement, valueAxisOptions.TickPolicy);
+                            else
+                                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MinorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: false, valueAxisOptions.GridlineStyle.Minor);
+                        });
                 }
             }
 
@@ -75,7 +81,13 @@ internal sealed partial class PptxRenderer
                     RenderInChartPlotAreaClip(
                         graphics,
                         plotClipBox,
-                        () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MajorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: true, valueAxisOptions.GridlineStyle.Major));
+                        () =>
+                        {
+                            if (valueAxisOptions.TickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals)
+                                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: true, valueAxisOptions.GridlineStyle.Major, valueAxisOptions.HasMajorGridlineElement, valueAxisOptions.TickPolicy);
+                            else
+                                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, valueAxisOptions.Units.MajorUnit, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, major: true, valueAxisOptions.GridlineStyle.Major);
+                        });
                 }
             }
 
@@ -681,12 +693,14 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), false);
             ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxLabelWidth = 0d;
-            foreach (double tickValue in GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount))
+            // Bounds still reserve their advance when no source interval lands there.
+            foreach (double tickValue in GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents))
+                .Concat(new[] { valueExtents.Min, valueExtents.Max }))
             {
                 string label = FormatSceneOrXmlChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null);
                 if (!string.IsNullOrWhiteSpace(label))
@@ -831,7 +845,8 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(
+            ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(
+                sceneChart,
                 valueAxis.SceneAxis,
                 valueAxis.XmlAxis,
                 GetSharedBarChartValueExtents(barPlot, barChart, grouping, workbook, plotVisibleOnly),
@@ -852,7 +867,8 @@ internal sealed partial class PptxRenderer
                 ChartTextStyle stackedTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 var stackedTextMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double stackedMaxLabelWidth = 0d;
-                foreach (double tickValue in GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount))
+                foreach (double tickValue in GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, percentStacked))
+                    .Concat(new[] { valueExtents.Min, valueExtents.Max }))
                 {
                     string stackedLabel = FormatSceneOrXmlChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat);
                     if (!string.IsNullOrWhiteSpace(stackedLabel))
@@ -1344,7 +1360,9 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-        IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, units.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount);
+        bool percentStacked = sceneChart is { Plots.Count: 1 } && IsPercentStackedChartGrouping(sceneChart.Plots[0].GroupingKind);
+        IEnumerable<double> tickValues = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, sceneAxis, extents, percentStacked))
+            .Concat(new[] { extents.Min, extents.Max });
         await textMeasurer.PrepareAsync(tickValues
             .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
             .DefaultIfEmpty("0"), style).ConfigureAwait(false);

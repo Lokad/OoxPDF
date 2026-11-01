@@ -107,7 +107,7 @@ Approximate or restricted:
   axis ranges and font geometry remain approximate.
   Numeric strips can reserve space for an authored range endpoint even when no
   major tick is painted there; measurement and tick emission have distinct roles.
-  Single line/area plots with one supported value axis share source interval
+  Single column/line/area plots with one supported linear value axis share source interval
   origins across labels, tick marks and grids, including an automatic lower bound
   anchored to an authored maximum and major unit. Automatic step fitting remains
   approximate.
