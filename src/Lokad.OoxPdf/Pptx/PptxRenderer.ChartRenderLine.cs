@@ -690,6 +690,10 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, percentStacked));
                 string[] tickLabels = tickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
+                    // Bounds reserve numeric advance even when the source major
+                    // lattice does not paint a tick there (Office99/103 pairs).
+                    .Concat(new[] { valueExtents.Min, valueExtents.Max }.Select(value =>
+                        FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null)))
                     .ToArray();
                 await textMeasurer.PrepareAsync(tickLabels, valueAxisTextStyle).ConfigureAwait(false);
                 return (tickLabels.Length == 0

@@ -72,12 +72,26 @@ internal static class PptxCartesianIntervalTests
         }
     }
 
+    public static void PptxStandaloneLineAndAreaReserveUnpaintedRangeEndpoints()
+    {
+        foreach (bool area in new[] { false, true })
+        foreach (int size in new[] { 12, 24 })
+        {
+            var below = NumericLabels(Render(99, size, area: area, legend: false));
+            var above = NumericLabels(Render(103, size, area: area, legend: false));
+            TestAssert.True(below.Select(x => x.Text).SequenceEqual(above.Select(x => x.Text)),
+                "Office99/103 controls retain the same painted major labels.");
+            TestAssert.True(above.Single(x => x.Text == "87").X > below.Single(x => x.Text == "87").X + size * .3d,
+                "The numeric strip reserves the authored endpoint independently of the painted major labels.");
+        }
+    }
+
     private static (string Text, double X)[] NumericLabels(PdfPage page) =>
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal))
             .Select(show => (show.Text, show.X)).ToArray();
 
-    private static PdfPage Render(int maximum, int size, bool area = false, int? minimum = 7, bool minorGridlines = false, bool automaticMajorUnit = false)
+    private static PdfPage Render(int maximum, int size, bool area = false, int? minimum = 7, bool minorGridlines = false, bool automaticMajorUnit = false, bool legend = true)
     {
         string kind = area ? "areaChart" : "lineChart";
         string chart = $$"""
@@ -94,7 +108,7 @@ internal static class PptxCartesianIntervalTests
                   {{(minorGridlines ? "<c:minorGridlines><c:spPr><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"00FF00\"/></a:solidFill></a:ln></c:spPr></c:minorGridlines>" : "")}}
                   <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>
                 </c:valAx>
-              </c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend></c:chart>
+              </c:plotArea>{{(legend ? "<c:legend><c:legendPos val=\"r\"/><c:overlay val=\"0\"/></c:legend>" : "")}}</c:chart>
             </c:chartSpace>
             """;
         using var stream = PptxTests.CreateSingleChartPackageStream(chart);
