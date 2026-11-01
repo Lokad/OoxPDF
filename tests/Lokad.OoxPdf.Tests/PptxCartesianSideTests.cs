@@ -120,7 +120,7 @@ internal static class PptxCartesianSideTests
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart>{{title}}<c:autoTitleDeleted val="{{(furniture ? 0 : 1)}}"/><c:plotArea>{{layout}}
-                <c:lineChart>{{series}}<c:axId val="1"/><c:axId val="2"/></c:lineChart>{{additional}}
+                <c:lineChart><c:varyColors val="0"/>{{series}}<c:axId val="1"/><c:axId val="2"/></c:lineChart>{{additional}}
                 <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(right ? "r" : "l")}}"/><c:crossAx val="1"/>
                   <c:crosses val="{{(right ? "max" : "autoZero")}}"/><c:majorGridlines/><c:majorUnit val="1"/><c:tickLblPos val="{{(visible ? "nextTo" : "none")}}"/>

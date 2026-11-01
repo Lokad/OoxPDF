@@ -116,7 +116,7 @@ Approximate or restricted:
   and data-label keys. Explicit point/series strokes and series marker appearance
   retain precedence. Omitted variation follows the qualified enabled default;
   explicit false and multiple series retain series legend entries. Automatic point
-  markers repeat eight symbols; a series marker of `none` suppresses them. Plot
+  markers repeat nine symbols; a series marker of `none` suppresses them. Plot
   marker flags alone do not suppress automatic line markers. Authored/composed
   styles, dense layout, label placement and font geometry remain approximate.
 - Legends without an overlay flag follow PowerPoint's overlay default. Specify

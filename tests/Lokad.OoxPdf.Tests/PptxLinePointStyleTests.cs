@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -94,14 +95,25 @@ internal static class PptxLinePointStyleTests
         }
     }
 
-    private static PdfPage Probe(int count, string? vary, bool keys)
+    public static void PptxLinePointMarkersPreserveNinthDotAcrossPlotAndLegend()
+    {
+        PdfPage page = Probe(19, "1", keys: false, automaticMarkers: true);
+        // Independent19-point Office PDF: points9/18 and their two legend keys
+        // paint data-anchored3.48x1.44pt dot rectangles at the default7pt size.
+        // Inspect actual painted geometry so a shortened automatic cycle fails.
+        int dots = Regex.Matches(page.Content, @"[-\d.]+ [-\d.]+ 3\.48 1\.44 re f").Count;
+        TestAssert.Equal(4, dots);
+        TestAssert.Equal(19, LegendNames(page).Length);
+    }
+
+    private static PdfPage Probe(int count, string? vary, bool keys, bool automaticMarkers = false)
     {
         string labels = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>P{i}</c:v></c:pt>"));
         string values = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea><c:lineChart>
               {{(vary is null ? "" : "<c:varyColors val=\"" + vary + "\"/>")}}
-              <c:ser><c:tx><c:v>Series</c:v></c:tx><c:marker><c:symbol val="none"/></c:marker>
+              <c:ser><c:tx><c:v>Series</c:v></c:tx>{{(automaticMarkers ? "" : "<c:marker><c:symbol val=\"none\"/></c:marker>")}}
                 <c:cat><c:strLit><c:ptCount val="{{count}}"/>{{labels}}</c:strLit></c:cat>
                 <c:val><c:numLit><c:ptCount val="{{count}}"/>{{values}}</c:numLit></c:val></c:ser>
               {{(keys ? "<c:dLbls><c:showLegendKey val=\"1\"/><c:showVal val=\"0\"/></c:dLbls>" : "")}}

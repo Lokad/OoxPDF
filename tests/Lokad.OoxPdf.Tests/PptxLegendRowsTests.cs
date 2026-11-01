@@ -170,7 +170,7 @@ internal static class PptxLegendRowsTests
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
-                {{(categoryLegend ? "<c:varyColors val=\"1\"/>" : "")}}{{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
+                <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
                 <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/>{{(categoryLegend ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
               </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="b"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
