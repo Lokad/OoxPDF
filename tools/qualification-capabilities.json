@@ -4,6 +4,8 @@
     "PptxColumnCategorySourceModesKeepVisibleCaptionBands",
     "PptxClusteredColumnDataUsesTheCategoryOrigin",
     "PptxColumnFontFallbackKeepsCaptionAnchorsInsideTheFrame",
+    "PptxSyntheticChartValueGridlinesExcludeCrossingTick",
+    "PptxSyntheticChartCategoryAxisLineUsesCrossingTick",
     "PptxNumericCrossingOwnsPairedCategorySide",
     "PptxNumericCrossingRetainsUnpairedAndInteriorFallbacks",
     "PptxNumericCrossingMovesTheMeasuredStripWithItsLabels",

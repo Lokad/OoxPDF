@@ -2442,11 +2442,11 @@ internal static class PptxChartsTests
                     <c:axId val="1"/><c:axId val="2"/>
                   </c:barChart>
                   <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/>
+                    <c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:crosses val="max"/>
                   </c:catAx>
                   <c:valAx>
                     <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crosses val="max"/><c:majorUnit val="10"/><c:majorGridlines/>
+                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crossAx val="1"/><c:crosses val="autoZero"/><c:majorUnit val="10"/><c:majorGridlines/>
                   </c:valAx>
                   </c:plotArea></c:chart>
                 </c:chartSpace>
@@ -2468,9 +2468,9 @@ internal static class PptxChartsTests
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
             .Max();
         TestAssert.True(groupY.All(y => Math.Abs(y - categoryAxisY) > 0.001d),
-            "When c:crosses is max, the grouped gridlines should exclude the top crossing tick.");
+            "When the category crossing is max, the grouped gridlines should exclude the top crossing tick.");
         TestAssert.True(groupY.Min() < categoryAxisY,
-            "When c:crosses is max, lower value ticks remain visible as gridlines.");
+            "When the category crossing is max, lower value ticks remain visible as gridlines.");
     }
 
     public static void PptxSyntheticChartCategoryAxisLineUsesCrossingTick()
@@ -2512,11 +2512,11 @@ internal static class PptxChartsTests
                     <c:axId val="1"/><c:axId val="2"/>
                   </c:barChart>
                   <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
+                    <c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:crosses val="max"/><c:tickLblPos val="none"/>
                   </c:catAx>
                   <c:valAx>
                     <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crosses val="max"/>
+                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crossAx val="1"/><c:crosses val="autoZero"/>
                   </c:valAx>
                   </c:plotArea></c:chart>
                 </c:chartSpace>
@@ -2555,7 +2555,7 @@ internal static class PptxChartsTests
         double categoryAxisY = horizontalLines.Max(line => line.Y1);
         double valueAxisTopY = verticalLines.Max(line => Math.Max(line.Y1, line.Y2));
         TestAssert.True(Math.Abs(categoryAxisY - valueAxisTopY) < 0.001d,
-            "When c:crosses is max, the category-axis line should be placed at the value-axis maximum.");
+            "When the category crossing is max, the category-axis line should be placed at the value-axis maximum.");
     }
 
     public static void PptxSyntheticChartValueAxisStrokeUsesAxisPosition()
