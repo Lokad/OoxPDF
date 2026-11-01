@@ -97,8 +97,10 @@ Approximate or restricted:
   value labels retain endpoints and omit overlapping ink; fixed intervals remain
   unchanged. Resolved Cartesian spans below one retain proportional coordinates
   and tick intervals. Negative-only data shares positive-axis bound rounding and
-  preserves authored limits. Dense allocation, reversed category-caption placement,
-  automatic axis ranges and font geometry remain approximate.
+  preserves authored limits. Column captions and measured line layouts follow
+  numeric low/high positions and value direction; axis position does not change
+  column data lengths. Remaining caption placement, dense allocation, automatic
+  axis ranges and font geometry remain approximate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
