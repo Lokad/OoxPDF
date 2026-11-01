@@ -1,0 +1,569 @@
+{
+  "Scope": "Independent Office16 PDF/API for Office-edited single-series line variation and explicit style/multi-series neighbors. Candidate geometry uses pinned portable fonts; segment RGB tolerance1 accounts for three-decimal Office PDF color serialization. This is a semantic paint/legend gate, not a visual pass.",
+  "OfficeVersion": "16.0",
+  "MaxRgbChannelError": 1,
+  "Rows": [
+    {
+      "Id": "native-eight-true",
+      "Input": "native-eight-true.pptx",
+      "InputSha256": "E0A619B7864847693A18514C921B14C0DC9A58C7C877188B1DE4C8B9977C1DE0",
+      "OfficePdfSha256": "566054E6EB2A2A6479611E250EED4128493A56217F71D2C67FBB1A1B0B505725",
+      "OfficeApiSha256": "F2A2E7A41770494CB7BF8642725B782CDB4860C797F5911CA609E28A60601A32",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "A8423F",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "86A44A",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "6E548D",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "3D96AE",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "DA8137",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "8EA5CB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "CE8E8D",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-false",
+      "Input": "native-eight-false.pptx",
+      "InputSha256": "9673F757FD45835CF5B5C9A37F3D05EB824BA4D39E6C71449E93187839329869",
+      "OfficePdfSha256": "86FDE6D86D8A5E613F4107B0BDF76D063C145CCE4C8A74E82A4A44D1F795D85A",
+      "OfficeApiSha256": "59383A93087FA8509AB791FF86696C537E6A5A70871F98FF9420A8872BE3BB3A",
+      "LegendNames": [
+        "Actual"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-omitted",
+      "Input": "native-eight-omitted.pptx",
+      "InputSha256": "1BAE3266880DD151FF30392B70C06B959DAC608E79D61CFC60F36E059EEDCF43",
+      "OfficePdfSha256": "31C64D2607411507EB703B76B6E59189F9E6F2A7BDEB67260B190B7A3EF461E7",
+      "OfficeApiSha256": "6AA82EAD311959C54C28C190F886CA1920CB1903B6BECBB901A636D900EABF92",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "A8423F",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "86A44A",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "6E548D",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "3D96AE",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "DA8137",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "8EA5CB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "CE8E8D",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-series-stroke",
+      "Input": "native-eight-series-stroke.pptx",
+      "InputSha256": "929A0F392C8553939050151CD5DBDAF433E071A7A207D38B1EE8B21ECC4AF720",
+      "OfficePdfSha256": "60443EE837F567C5E7A5159DC949DDCF19853C817ECE1A0D6E102718E1CDAC62",
+      "OfficeApiSha256": "FFD466A399DF2A63B785B0D5B8A2967B5AB78D90BD55E6EAB1898D5ED85E5691",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "156082",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "156082",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "156082",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "156082",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "156082",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "156082",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "156082",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-series-marker",
+      "Input": "native-eight-series-marker.pptx",
+      "InputSha256": "ED0467879E16A8A233DE58B77F38EAC78479CF165CBA158CCEFBBA098A76B6DB",
+      "OfficePdfSha256": "5575B7F33950E646C4C7AA0AEB1F94BEDAB913D3875048BCB6DDB1EE429586A8",
+      "OfficeApiSha256": "9F429C503B710C592BC0F6A1EA5D5D19358F80263E9F70E94B341D0A38C03403",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "A8423F",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "86A44A",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "6E548D",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "3D96AE",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "DA8137",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "8EA5CB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "CE8E8D",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-marker-none",
+      "Input": "native-eight-marker-none.pptx",
+      "InputSha256": "AB866797BEECE52E3259063859D0E528673EF2EABA4B8D3B3032EFF4A9C71DD8",
+      "OfficePdfSha256": "64A996EB3E32DA583255B405BD493DE7E8B461A305B8740C92F26E7885F3392A",
+      "OfficeApiSha256": "BE1C378B8B0F9A1E62F151B3DE26B95C850424E9358357B35BC860AF48027F25",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "A8423F",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "86A44A",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "6E548D",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "3D96AE",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "DA8137",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "8EA5CB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "CE8E8D",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-point-stroke",
+      "Input": "native-eight-point-stroke.pptx",
+      "InputSha256": "8B11E283CF0F3BBEC46355ADAA2713FBF612759EF4C152B15C3137D54021599D",
+      "OfficePdfSha256": "02BA49AA4F2ABC6A7AC980FCC68DE5C735F1330D3A1F5860AEB61E80A60F86AD",
+      "OfficeApiSha256": "8F657E44F1F8C943DBC69EACEED2A6887E7DDD56B92D7BCAD51ED8FC749C3B03",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "A8423F",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "FF00FF",
+          "Width": 3.0
+        },
+        {
+          "Operator": "l",
+          "Color": "6E548D",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "3D96AE",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "DA8137",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "8EA5CB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "CE8E8D",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-two-series-true",
+      "Input": "native-two-series-true.pptx",
+      "InputSha256": "52E3640367166772B6C55F3130A57B0AF6217BAA7C48305ED24AC2C4176978A5",
+      "OfficePdfSha256": "225F7FF3C1DCC6514B8E826257BF14553F0AB2781E93F25348F789E5AFA0B963",
+      "OfficeApiSha256": "16D33FAB06F650407E29D9E4061BFFA17BD782451BCA7173EE50FDF3DE3A2DC2",
+      "LegendNames": [
+        "Actual",
+        "Plan"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "4A7EBB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "BE4B48",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "BE4B48",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "BE4B48",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "BE4B48",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "BE4B48",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "BE4B48",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "BE4B48",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-smooth",
+      "Input": "native-eight-smooth.pptx",
+      "InputSha256": "7045C1670C0A97FB353B6BD7792C92E3C7F83E8D5378B7307DF524CE13D9496E",
+      "OfficePdfSha256": "F45FB8F8878B615449C4C07D437CAE100C2C91D4BC54227274135BC6A07C3DE5",
+      "OfficeApiSha256": "94BD23BB7029274B8727195755797242F05133B49B7B43496B152AF30D7A2294",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "c",
+          "Color": "A8423F",
+          "Width": 2.25
+        },
+        {
+          "Operator": "c",
+          "Color": "86A44A",
+          "Width": 2.25
+        },
+        {
+          "Operator": "c",
+          "Color": "6E548D",
+          "Width": 2.25
+        },
+        {
+          "Operator": "c",
+          "Color": "3D96AE",
+          "Width": 2.25
+        },
+        {
+          "Operator": "c",
+          "Color": "DA8137",
+          "Width": 2.25
+        },
+        {
+          "Operator": "c",
+          "Color": "8EA5CB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "c",
+          "Color": "CE8E8D",
+          "Width": 2.25
+        }
+      ]
+    },
+    {
+      "Id": "native-eight-label-keys",
+      "Input": "native-eight-label-keys.pptx",
+      "InputSha256": "BD1CBFC92131B1019DCB455B29951CE34EC3627AE2F83D866E34374A24A85C66",
+      "OfficePdfSha256": "4D213D9D029D0634488F29043370BCE11FA02DBAEEA1FD238501F8ADEB4A5E09",
+      "OfficeApiSha256": "3B3459A1F03C8A92621E1DAA18F0B97E9EAA8B4F132D79943C966DAB2EBDB19A",
+      "LegendNames": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ],
+      "Segments": [
+        {
+          "Operator": "l",
+          "Color": "A8423F",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "86A44A",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "6E548D",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "3D96AE",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "DA8137",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "8EA5CB",
+          "Width": 2.25
+        },
+        {
+          "Operator": "l",
+          "Color": "CE8E8D",
+          "Width": 2.25
+        }
+      ]
+    }
+  ]
+}

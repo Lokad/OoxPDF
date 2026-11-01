@@ -32,7 +32,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null)
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        Func<int, ChartLinePointAppearance>? pointAppearance = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
@@ -89,8 +90,9 @@ internal sealed partial class PptxRenderer
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
+                    ChartLinePointAppearance? appearance = pointAppearance?.Invoke(i);
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
-                        ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, ChartMarker(seriesIndex, markerStyles))
+                        ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles))
                         : 0d;
                     double effectiveLabelWidth = effectiveOptions.ShowLegendKey
                         ? Math.Max(labelWidth, (await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
@@ -107,9 +109,11 @@ internal sealed partial class PptxRenderer
                     double textWidth = labelBox.Width;
                     if (effectiveOptions.ShowLegendKey)
                     {
-                        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
-                        ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
-                        double consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke);
+                        ChartSeriesStroke stroke = appearance?.Stroke ?? ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
+                        ChartMarkerStyle marker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
+                        if (appearance is { } pointStyle && marker.Stroke is null)
+                            marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
+                        double consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke, appearance?.MarkerColor);
                         textX += consumedWidth;
                         textWidth = Math.Max(1d, textWidth - consumedWidth);
                         alignment = TextAlignment.Left;
@@ -166,13 +170,13 @@ internal sealed partial class PptxRenderer
         return swatchSize + swatchGap;
     }
 
-    private static double RenderStrokeMarkerDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, double fontSize, ChartMarkerStyle marker, ChartSeriesStroke stroke)
+    private static double RenderStrokeMarkerDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, double fontSize, ChartMarkerStyle marker, ChartSeriesStroke stroke, RgbColor? markerColor = null)
     {
         double segmentLength = Math.Max(marker.Size * 2d, fontSize * 1.05d);
         double segmentY = labelBox.Y + labelBox.Height / 2d;
         SetChartStroke(graphics, stroke);
         graphics.StrokeLine(labelBox.X, segmentY, labelBox.X + segmentLength, segmentY);
-        DrawChartMarker(graphics, labelBox.X + segmentLength / 2d, segmentY, marker, stroke.Color, stroke.Color);
+        DrawChartMarker(graphics, labelBox.X + segmentLength / 2d, segmentY, marker, markerColor ?? stroke.Color, stroke.Color);
         return segmentLength + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
     }
 }

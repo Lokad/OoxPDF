@@ -128,7 +128,7 @@ internal sealed partial class PptxRenderer
     // cycle receives a shade/tint spaced over (-70%, +70%); Office truncates
     // the resulting percentage before applying it in linear light. Counts at
     // exact cycle boundaries include the next cycle in the spacing denominator.
-    private static RgbColor ResolveAutomaticBarColor(RgbColor color, int categoryIndex, int valuePointCount)
+    private static RgbColor ResolveAutomaticCategoryColor(RgbColor color, int categoryIndex, int valuePointCount)
     {
         const int accentCount = 6;
         int percentage = (int)(140L * (categoryIndex / accentCount + 1) / (valuePointCount / accentCount + 2));
@@ -143,7 +143,7 @@ internal sealed partial class PptxRenderer
         {
             RgbColor paletteColor = ChartPalette(chartPalette, theme, colorMap, categoryIndex, valuePointCount);
             if (chartPalette.SingleAccent is null)
-                paletteColor = ResolveAutomaticBarColor(paletteColor, categoryIndex, valuePointCount);
+                paletteColor = ResolveAutomaticCategoryColor(paletteColor, categoryIndex, valuePointCount);
 
             return new ChartSeriesFill(paletteColor, 1d, null, null);
         }

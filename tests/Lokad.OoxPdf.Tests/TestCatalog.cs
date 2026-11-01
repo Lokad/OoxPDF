@@ -142,6 +142,7 @@ internal static class TestCatalog
         .. FromType("pptx-charts", typeof(PptxChartTextHyperlinksTests)),
         .. FromType("pptx-charts", typeof(PptxChartsTests)),
         .. FromType("rendering-portable", typeof(PptxChartPaletteTests)),
+        .. FromType("rendering-portable", typeof(PptxLinePointStyleTests)),
         .. FromType("rendering-portable", typeof(PptxAuthoredColorTests)),
         .. FromType("rendering-portable", typeof(PptxChartSpacingTests)),
         .. FromType("rendering-portable", typeof(PptxAutomaticInsetTests)),

@@ -106,14 +106,7 @@ internal sealed partial class PptxRenderer
             // the series defines none (COM-built legend decks show markers even where the
             // plot shows none, and plot marker markup never suppresses gallery forcing -
             // only series-level markup wins); series-explicit markers keep rendering.
-            if (IsGalleryLineChartStyle(chartStyleId) && marker is { } undefinedMarker && undefinedMarker.SymbolKind == PptxSceneChartMarkerSymbol.None && !undefinedMarker.IsDefined)
-            {
-                marker = undefinedMarker with
-                {
-                    SymbolKind = PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(i),
-                    Size = PptxChartMarkerMetricRules.StyleLegendMarkerSize,
-                };
-            }
+            marker = ResolveStrokeLegendMarker(marker, i, chartStyleId);
 
             bool lineHidden = seriesLineHidden is not null && i < seriesLineHidden.Count && seriesLineHidden[i];
             ChartSeriesStroke keyStroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth);
@@ -137,6 +130,12 @@ internal sealed partial class PptxRenderer
 
         return entries;
     }
+
+    private static ChartMarkerStyle? ResolveStrokeLegendMarker(ChartMarkerStyle? marker, int index, int? styleId) =>
+        IsGalleryLineChartStyle(styleId) && marker is { IsDefined: false } automatic
+            ? automatic with { SymbolKind = PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(index),
+                Size = PptxChartMarkerMetricRules.StyleLegendMarkerSize }
+            : marker;
 
     private static IReadOnlyList<ChartSeriesNameRecord> ReadSceneOrXmlChartSeriesNameRecords(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook)
     {
@@ -343,15 +342,16 @@ internal sealed partial class PptxRenderer
                 if (entry.Marker is { } marker)
                 {
                     double markerX = entryX + legendBox.MarkerWidth / 2d;
+                    RgbColor markerColor = entry.MarkerColor ?? stroke.Color;
                     // RV04: gallery legend markers fill with the shared per-marker gradient
                     // (COM-built legend decks gradient-fill diamond/square/triangle keys with
                     // raw 1pt rims); other markers keep the flat path.
                     if (IsGalleryLineChartStyle(entry.ChartStyleId)
                         && marker.Fill is null
-                        && TryGetStyleBarGradientStops(entry.ChartStyleId, new ChartSeriesFill(stroke.Color, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
+                        && TryGetStyleBarGradientStops(entry.ChartStyleId, new ChartSeriesFill(markerColor, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
                         && PaintStyleMarkerGradient(graphics, new ChartPlotBox(markerX - marker.Size / 2d, lineY - marker.Size / 2d, marker.Size, marker.Size), marker.SymbolKind, markerX, lineY, marker.Size, gradientStops))
                     {
-                        ChartSeriesStroke? rim = ChartMarkerOutlineStroke(marker, stroke.Color, PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth);
+                        ChartSeriesStroke? rim = ChartMarkerOutlineStroke(marker, markerColor, PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth);
                         if (rim is not null)
                         {
                             DrawChartMarkerStroke(graphics, markerX, lineY, marker.SymbolKind, marker.Size, rim);
@@ -359,7 +359,7 @@ internal sealed partial class PptxRenderer
                     }
                     else
                     {
-                        DrawChartMarker(graphics, markerX, lineY, marker, stroke.Color, stroke.Color);
+                        DrawChartMarker(graphics, markerX, lineY, marker, markerColor, stroke.Color);
                     }
                 }
             }

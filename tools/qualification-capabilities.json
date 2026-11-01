@@ -1,4 +1,27 @@
 {
+  "pptx-line-point-style": [
+    "PptxLinePoint",
+    "PptxLineAutomaticMarkers",
+    "PptxAutomaticBarPalettesMatchIndependentOfficeAcrossCountsAndThemes",
+    "PptxVaryingBarCategoryLegends",
+    "PptxPointLegendsMatchIndependentOfficeIdentityAndPaint",
+    "PptxSceneLineChartMarkerDefaultsUsePlotMarkerState",
+    "PptxChartMarkerStylesPreserveDefinitionState",
+    "PptxSyntheticLineChart",
+    "LinePlot",
+    "LineSmooth",
+    "LineStyle18",
+    "LineStyle26",
+    "PptxLineCaptionPlacementSurvivesTitlesAndBottomLegends",
+    "PptxVerticalAxisMeasurementMatchesEquivalentAuthoredIntervals",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-line-caption-placement": [
     "PptxVerticalAxisMeasurementMatchesEquivalentAuthoredIntervals",
     "PptxLegendlessLinePlotMeasuresTickLabelsAcrossWidthsAndSizes",

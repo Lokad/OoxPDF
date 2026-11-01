@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false, Func<int, ChartLinePointAppearance>? pointAppearance = null)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -124,6 +124,9 @@ internal sealed partial class PptxRenderer
                 SetChartStroke(graphics, lineStroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
+                List<int>? sourceIndexes = pointAppearance is null ? null : new(values.Count);
+                Func<int, ChartSeriesStroke>? strokeAtPoint = pointAppearance is null ? null :
+                    index => pointAppearance(sourceIndexes![index]).Stroke;
                 // RV04: span-mode smoothing halvings (a chart-edge span start eases at a sixth
                 // whether the first segment spans one hole or several; gap/zero modes leave
                 // every flag false so their paths stay byte-identical).
@@ -141,8 +144,9 @@ internal sealed partial class PptxRenderer
                         {
                             if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
                             {
-                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, true);
+                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, true, strokeAtPoint);
                                 points.Clear();
+                                sourceIndexes?.Clear();
                                 halvePoints.Clear();
                                 fragmentStartsAtGap = true;
                             }
@@ -157,6 +161,7 @@ internal sealed partial class PptxRenderer
                     double plottedValue = stacked ? lower[i] + normalizedValue : value;
                     double pointY = ChartValueToPlotCoordinate(valueExtents, plottedValue, plotY, plotHeight, valueAxisReversed);
                     points.Add((pointX, pointY));
+                    sourceIndexes?.Add(i);
                     markers.Add((pointX, pointY));
                     halvePoints.Add(displayBlanksAs == PptxSceneChartDisplayBlanksAs.Span && ((i > 0 && values[i - 1] is null) || (i + 1 < values.Count && values[i + 1] is null)));
                     if (stacked)
@@ -165,12 +170,21 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, false);
+                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, false, strokeAtPoint);
 
+                int markerSourceIndex = 0;
                 foreach ((double pointX, double pointY) in markers)
                 {
-                    ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
-                    bool smoothForcedMarker = smoothAppearance && !marker.IsDefined;
+                    ChartLinePointAppearance? point = null;
+                    if (pointAppearance is not null)
+                    {
+                        while (markerSourceIndex < values.Count && values[markerSourceIndex] is null && displayBlanksAs != PptxSceneChartDisplayBlanksAs.Zero)
+                            markerSourceIndex++;
+                        point = pointAppearance(markerSourceIndex++);
+                    }
+                    ChartMarkerStyle marker = point?.Marker ?? ChartMarker(seriesIndex, markerStyles);
+                    RgbColor markerColor = point?.MarkerColor ?? stroke.Color;
+                    bool smoothForcedMarker = pointAppearance is null && smoothAppearance && !marker.IsDefined;
                     if (lineStyleGalleryMarkers && !marker.IsDefined)
                     {
                         // RV04: style-18 sizes undefined markers at the 12.96pt gallery size
@@ -210,13 +224,13 @@ internal sealed partial class PptxRenderer
 
                     // RV04: style-18 marker outlines stroke the raw base at 1pt (Office emits
                     // no luminance tint on marker rims); other styles keep the tinted 0.75pt rim.
-                    RgbColor markerOutline = defaultSeriesStroke
+                    RgbColor markerOutline = point?.MarkerOutlineColor ?? (defaultSeriesStroke
                         ? ((chartPalette.SingleAccent is not null || lineStyleGalleryMarkers || smoothForcedMarker) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
-                        : stroke.Color;
+                        : stroke.Color);
                     double? outlineWidth = (lineStyleGalleryMarkers || smoothForcedMarker) ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null;
                     if (lineStyleGalleryMarkers
                         && marker.Fill is null
-                        && TryGetStyleBarGradientStops(chartStyleId, new ChartSeriesFill(stroke.Color, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
+                        && TryGetStyleBarGradientStops(chartStyleId, new ChartSeriesFill(markerColor, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
                         && PaintStyleMarkerGradient(graphics, plotBox, marker.SymbolKind, pointX, pointY, marker.Size, gradientStops))
                     {
                         // RV04: gradient-filled markers skip the flat fill and keep only the
@@ -231,7 +245,7 @@ internal sealed partial class PptxRenderer
                     {
                         // RV04: no loop-top fill color state (DrawChartMarkerInPlotClip sets
                         // the fill itself; Office emits one fill state per marker).
-                        DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, marker, stroke.Color, markerOutline, outlineWidth);
+                        DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, marker, markerColor, markerOutline, outlineWidth);
                     }
                 }
 
@@ -314,22 +328,31 @@ internal sealed partial class PptxRenderer
     // offset (COM-built gap decks); span joints use symmetric mean-thirds offsets and span
     // starts ease at a sixth (COM-built span decks, including consecutive-hole spans); the legacy
     // Catmull-Rom stays for scatter smooth paths only).
-    private static void StrokeStyleLineSmoothPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, IReadOnlyList<bool> halvePoints, bool startIsGap, bool endIsGap)
+    private static void StrokeStyleLineSmoothPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, IReadOnlyList<bool> halvePoints, bool startIsGap, bool endIsGap, Func<int, ChartSeriesStroke>? strokeAtPoint = null)
     {
         if (points.Count < 2)
         {
             return;
         }
 
-        graphics.MoveTo(points[0].X, points[0].Y);
+        if (strokeAtPoint is null) graphics.MoveTo(points[0].X, points[0].Y);
         for (int i = 0; i < points.Count - 1; i++)
         {
+            if (strokeAtPoint is not null)
+            {
+                ChartSeriesStroke stroke = strokeAtPoint(i + 1);
+                graphics.SaveState();
+                graphics.SetAlpha(1d, stroke.Alpha);
+                SetChartStroke(graphics, stroke);
+                graphics.MoveTo(points[i].X, points[i].Y);
+            }
             double dx = points[i + 1].X - points[i].X;
             double startRun = i == 0 ? dx : points[i + 1].X - points[i - 1].X;
             double endRun = i + 2 >= points.Count ? dx : points[i + 2].X - points[i].X;
             if (dx == 0d || startRun == 0d || endRun == 0d)
             {
                 graphics.LineTo(points[i + 1].X, points[i + 1].Y);
+                if (strokeAtPoint is not null) { graphics.StrokeCurrentPath(); graphics.RestoreState(); }
                 continue;
             }
 
@@ -354,19 +377,35 @@ internal sealed partial class PptxRenderer
                 points[i + 1].Y - endOffset * endSlope,
                 points[i + 1].X,
                 points[i + 1].Y);
+            if (strokeAtPoint is not null) { graphics.StrokeCurrentPath(); graphics.RestoreState(); }
         }
 
-        graphics.StrokeCurrentPath();
+        if (strokeAtPoint is null) graphics.StrokeCurrentPath();
     }
 
     // RV04: smoothed series routing: explicit, plot-wide and style-implied smoothing share
     // the end-chord Hermite path (Office draws identical beziers in all three cases);
     // an explicit smooth=false keeps the straight path.
-    private static void StrokeStyleLineSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, IReadOnlyList<bool> halvePoints, bool smooth, bool startIsGap, bool endIsGap)
+    private static void StrokeStyleLineSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, IReadOnlyList<bool> halvePoints, bool smooth, bool startIsGap, bool endIsGap, Func<int, ChartSeriesStroke>? strokeAtPoint = null)
     {
         if (smooth)
         {
-            RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeStyleLineSmoothPath(graphics, points, halvePoints, startIsGap, endIsGap));
+            RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeStyleLineSmoothPath(graphics, points, halvePoints, startIsGap, endIsGap, strokeAtPoint));
+        }
+        else if (strokeAtPoint is not null)
+        {
+            RenderInChartPlotAreaClip(graphics, plotBox, () =>
+            {
+                for (int i = 1; i < points.Count; i++)
+                {
+                    ChartSeriesStroke stroke = strokeAtPoint(i);
+                    graphics.SaveState();
+                    graphics.SetAlpha(1d, stroke.Alpha);
+                    SetChartStroke(graphics, stroke);
+                    graphics.StrokeLine(points[i - 1].X, points[i - 1].Y, points[i].X, points[i].Y);
+                    graphics.RestoreState();
+                }
+            });
         }
         else
         {

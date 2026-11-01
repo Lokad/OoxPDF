@@ -137,6 +137,10 @@ internal sealed partial class PptxSceneBuilder
 
     private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
     {
+        // Office line charts infer automatic markers from the series. The
+        // plot-level marker switch does not suppress them; a series symbol=none
+        // does. Keep the raw plot spelling separately in the scene.
+        chartMarkersEnabled |= plotKind == PptxSceneChartPlotKind.Line;
         XElement? marker = series.Element(ChartNamespace + "marker");
         string symbol = ReadOptionalChartValueAttribute(marker?.Element(ChartNamespace + "symbol")) ??
             ReadDefaultChartMarkerSymbol(plotKind, chartMarkersEnabled, seriesIndex);

@@ -28,17 +28,6 @@ internal sealed partial class PptxRenderer
     // plot-level fallback (absent scene plot) is retained.
     private static ChartBarPlotOptions ReadSceneOrXmlChartBarOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
     {
-        ChartBooleanOption ReadSceneOrXmlChartVaryColors()
-        {
-            if (plot is not null)
-            {
-                return new ChartBooleanOption(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null);
-            }
-    
-            (bool? varyColors, string varyColorsValue) = PptxSceneBuilder.ReadChartPlotVaryColors(chartElement);
-            return new ChartBooleanOption(varyColors ?? true, varyColorsValue, varyColors is not null);
-        }
-
         double ReadSceneOrXmlChartGapWidth()
         {
             // D01: one interpretation - the scene arm normalizes exactly like the
@@ -71,7 +60,7 @@ internal sealed partial class PptxRenderer
         return new ChartBarPlotOptions(
             ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping),
             ReadSceneOrXmlChartBarDirection(plot, chartElement),
-            ReadSceneOrXmlChartVaryColors(),
+            ReadSceneOrXmlChartVaryColors(plot, chartElement),
             ReadSceneOrXmlChartGapWidth(),
             ReadSceneOrXmlChartOverlap(),
             plot is not null
@@ -79,10 +68,19 @@ internal sealed partial class PptxRenderer
                 : chartElement.Elements(ChartNamespace + "ser").Select(PptxSceneBuilder.ReadChartNegativeInversion).ToArray());
     }
 
+    private static ChartBooleanOption ReadSceneOrXmlChartVaryColors(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        if (plot is not null)
+            return new ChartBooleanOption(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null);
+        (bool? value, string raw) = PptxSceneBuilder.ReadChartPlotVaryColors(chartElement);
+        return new ChartBooleanOption(value ?? true, raw, value is not null);
+    }
+
     private readonly record struct ChartLinePlotOptions(
         PptxSceneChartGrouping Grouping,
         bool Stacked,
         bool PercentStacked,
+        ChartBooleanOption VaryColors,
         IReadOnlyList<ChartBooleanOption> SmoothSeries,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
@@ -93,6 +91,7 @@ internal sealed partial class PptxRenderer
             grouping,
             IsStackedChartGrouping(grouping),
             IsPercentStackedChartGrouping(grouping),
+            ReadSceneOrXmlChartVaryColors(plot, chartElement),
             ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: true),
             ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
     }
