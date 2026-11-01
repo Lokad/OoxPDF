@@ -2,6 +2,7 @@
   "pptx-axis-crossing-side": [
     "PptxNumericCrossingOwnsPairedCategorySide",
     "PptxNumericCrossingRetainsUnpairedAndInteriorFallbacks",
+    "PptxNumericCrossingMovesTheMeasuredStripWithItsLabels",
     "PptxVerticalAxisMeasurementMatchesEquivalentAuthoredIntervals",
     "PptxColumnAxisPositionPreservesTheDataZeroOrigin",
     "PptxChartSceneAxesUseSceneOwnedXmlEvidence",

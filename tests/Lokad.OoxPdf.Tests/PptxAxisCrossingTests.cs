@@ -35,14 +35,34 @@ internal static class PptxAxisCrossingTests
         }
     }
 
-    private static void Check(PdfPage page, bool axisRight, string labels, string context)
+    public static void PptxNumericCrossingMovesTheMeasuredStripWithItsLabels()
+    {
+        foreach (string kind in new[] { "line", "area", "column" })
+        {
+            var left = Span(Render(kind, "l", "autoZero", false, "nextTo"));
+            var right = Span(Render(kind, "l", "max", false, "nextTo"));
+            TestAssert.True(left.Left > right.Left + 1d && Math.Abs((left.Right - left.Left) - (right.Right - right.Left)) < .002d &&
+                Math.Abs(left.Left + right.Right - 864d) < .002d,
+                kind + ": move the same measured strip across the720pt frame at X72, alongside the numeric labels.");
+            var low = Span(Render(kind, "l", "max", false, "low"));
+            TestAssert.True(Math.Abs(low.Left - left.Left) < .002d && Math.Abs(low.Right - left.Right) < .002d,
+                "An explicit low label side keeps the measured strip when the physical axis moves right.");
+        }
+    }
+
+    private static (double Left, double Right) Span(PdfPage page)
     {
         var horizontal = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) m ([-\d.]+) ([-\d.]+) l S")
             .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
             .Where(c => Math.Abs(c[1] - c[3]) < .001d && Math.Abs(c[0] - c[2]) > 200d).ToArray();
         TestAssert.True(horizontal.Length > 0, "Inspect the painted plot axis/grid span; a column clip also includes stroke padding.");
-        var span = horizontal.GroupBy(c => (Left: Math.Min(c[0], c[2]), Right: Math.Max(c[0], c[2])))
+        return horizontal.GroupBy(c => (Left: Math.Min(c[0], c[2]), Right: Math.Max(c[0], c[2])))
             .OrderByDescending(group => group.Count()).First().Key;
+    }
+
+    private static void Check(PdfPage page, bool axisRight, string labels, string context)
+    {
+        var span = Span(page);
         double left = span.Left, right = span.Right;
         var paths = new List<string>();
         RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, strokes: true).ToArray();
