@@ -123,8 +123,8 @@ internal static class PptxChartAxesTests
             double anchor = position == "low" ? (reversed ? plotTop : plotBottom) :
                 position == "high" ? (reversed ? plotBottom : plotTop) : zeroAtTop ? plotTop : plotBottom;
             bool above = (position == "high") != reversed;
-            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CCA", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
-            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font)).ToArray();
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(2, captions.Length);
             foreach (var show in captions)
             {
@@ -159,8 +159,8 @@ internal static class PptxChartAxesTests
                 position == "high" ? (reversed ? 0d : 1d) : zeroAtTop ? 1d : 0d;
             double anchor = plot[1] + plot[3] * ratio;
             bool above = (position == "high") != reversed;
-            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CCA", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
-            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font)).ToArray();
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(2, captions.Length);
             TestAssert.True(captions.Select(show => show.Text).Order(StringComparer.Ordinal).SequenceEqual(new[] { "Alfa", "Beta" }), "Keep both source captions.");
             foreach (var show in captions)

@@ -93,11 +93,27 @@ internal static class PptxTests
 
     internal static int CountLineChartSeriesSegments(string pdf, string strokeColorOperation)
     {
-        int colorIndex = pdf.IndexOf(strokeColorOperation, StringComparison.Ordinal);
-        TestAssert.True(colorIndex >= 0, $"Expected series stroke color operation '{strokeColorOperation}'.");
-        int nextColorIndex = pdf.IndexOf(" RG", colorIndex + strokeColorOperation.Length, StringComparison.Ordinal);
-        string seriesScope = nextColorIndex < 0 ? pdf[colorIndex..] : pdf[colorIndex..nextColorIndex];
-        return Regex.Matches(seriesScope, @"[0-9.]+ [0-9.]+ l").Count;
+        int first = pdf.IndexOf(strokeColorOperation, StringComparison.Ordinal);
+        TestAssert.True(first >= 0, $"Expected series stroke color operation '{strokeColorOperation}'.");
+        int start = pdf.LastIndexOf("stream\n", first, StringComparison.Ordinal) + 7;
+        int end = pdf.IndexOf("\nendstream", first, StringComparison.Ordinal);
+        TestAssert.True(start >= 7 && end > first, "Expected a generated ASCII content stream.");
+        bool matching = false, seen = false;
+        var states = new Stack<bool>();
+        int pending = 0, count = 0;
+        foreach (string raw in pdf[start..end].Split('\n'))
+        {
+            string line = raw.Trim();
+            if (line == "q") states.Push(matching);
+            else if (line == "Q") matching = states.Pop();
+            else if (line.EndsWith(" RG", StringComparison.Ordinal)) { matching = line == strokeColorOperation; seen |= matching; }
+            else if (line.EndsWith(" G", StringComparison.Ordinal) || line == "endstream") matching = false;
+            else if (line.EndsWith(" m", StringComparison.Ordinal) || line.EndsWith(" n", StringComparison.Ordinal)) pending = 0;
+            else if (line.EndsWith(" l", StringComparison.Ordinal)) pending++;
+            else if (line is "S" or "s") { if (matching) count += pending; pending = 0; }
+        }
+        TestAssert.True(seen, $"Expected series stroke color operation '{strokeColorOperation}'.");
+        return count;
     }
 
     internal static IReadOnlyList<OoxPdfDiagnostic> ConvertSingleChartAndCollectDiagnostics(string chartXml)

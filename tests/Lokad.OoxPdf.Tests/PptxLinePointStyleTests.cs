@@ -90,7 +90,16 @@ internal static class PptxLinePointStyleTests
               <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/></c:valAx>
             </c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart></c:chartSpace>
             """;
-        using var stream = PptxTests.CreateSingleChartPackageStream(chart);
+        var parts = new Dictionary<string, byte[]>
+        {
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="colors" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors.xml"/></Relationships>
+                """),
+            ["ppt/charts/colors.xml"] = TestFixtures.Utf8("""
+                <cs:colorStyle xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" meth="cycle"><a:srgbClr val="156082"/><a:srgbClr val="E97132"/><a:srgbClr val="196B24"/><a:srgbClr val="0F9ED5"/><a:srgbClr val="A02B93"/><a:srgbClr val="4EA72E"/></cs:colorStyle>
+                """)
+        };
+        using var stream = PptxTests.CreateSingleChartPackageStream(chart, parts);
         using var package = OoxPackage.Open(stream, default);
         return Render(package);
     }
@@ -100,8 +109,9 @@ internal static class PptxLinePointStyleTests
 
     private static string[] LegendNames(PdfPage page)
     {
-        var fonts = page.Fonts.Where(f => f.ResourceName.StartsWith("CL", StringComparison.Ordinal) && f.ResourceName.Length > 2 && char.IsAsciiDigit(f.ResourceName[2])).Select(f => f.Font).ToHashSet();
-        return DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font)).Select(show => show.Text).ToArray();
+        return DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal) && name.Length > 2 && char.IsAsciiDigit(name[2]))
+            .Select(show => show.Text).ToArray();
     }
 
     // These source fixtures have eight slots in a720pt frame. Plot segments

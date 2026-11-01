@@ -382,7 +382,7 @@
       "OfficeApiSha256": "16D33FAB06F650407E29D9E4061BFFA17BD782451BCA7173EE50FDF3DE3A2DC2",
       "LegendNames": [
         "Actual",
-        "Plan"
+        "Target"
       ],
       "Segments": [
         {

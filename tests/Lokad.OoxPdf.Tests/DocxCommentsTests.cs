@@ -8111,7 +8111,8 @@ internal static partial class DocxCommentsTests
         => ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false);
 
     internal static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(
-        PdfPage page, bool usePageCoordinates, bool includeTextTransforms = false, bool honorActualText = true)
+        PdfPage page, bool usePageCoordinates, bool includeTextTransforms = false, bool honorActualText = true,
+        Func<string, bool>? fontResourceFilter = null)
     {
         // Only the generated graphics-state operators are needed here. Keep
         // the default raw-Tm view for existing emission-contract assertions.
@@ -8132,6 +8133,7 @@ internal static partial class DocxCommentsTests
             @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+" + linearTextMatrix + @" (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
             RegexOptions.Singleline))
         {
+            if (fontResourceFilter is not null && !fontResourceFilter(show.Groups["font"].Value)) continue;
             while (actualMarkers is not null && actualIndex < actualMarkers.Count && actualMarkers[actualIndex].Index < show.Index)
             {
                 var marker = actualMarkers[actualIndex++];
