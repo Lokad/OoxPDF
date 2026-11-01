@@ -37,7 +37,7 @@ internal static class PptxColumnCrossingTests
             "Reversed upper numeric crossings keep their stroke while admitting captions into the existing low-side band.");
     }
 
-    public static void PptxColumnDataBaselinesStayIndependentOfCategoryCrossings()
+    public static void PptxClusteredColumnDataUsesTheCategoryOrigin()
     {
         foreach (string crossing in new[] { "autoZero", "interior", "max" })
         {
@@ -47,11 +47,12 @@ internal static class PptxColumnCrossingTests
                 .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
                 .Where(r => r[2] > 20d && r[2] < 200d && r[3] > 20d).ToArray();
             TestAssert.Equal(3, bars.Length);
-            TestAssert.True(bars.All(r => Math.Abs(r[1] - plot[0]) < .002d),
-                "Positive columns retain their zero baseline, independently of the category stroke.");
+            TestAssert.True(bars.All(r => Math.Min(Math.Abs(r[1] - plot[2]), Math.Abs(r[1] + r[3] - plot[2])) < .002d),
+                "Office PDF and direct image controls anchor clustered columns on the category crossing, including outlined bars below it.");
             double[] ratios = bars.Select(r => r[3] / (plot[1] - plot[0])).Order().ToArray();
-            TestAssert.True(ratios.Zip(new[] { .2d, .5d, .8d }).All(p => Math.Abs(p.First - p.Second) < .001d),
-                "Category crossings preserve the source column lengths.");
+            double[] expected = crossing == "interior" ? [.1d, .2d, .4d] : [.2d, .5d, .8d];
+            TestAssert.True(ratios.Zip(expected).All(p => Math.Abs(p.First - p.Second) < .001d),
+                "Column endpoints keep their absolute source values relative to the resolved category origin.");
         }
     }
 

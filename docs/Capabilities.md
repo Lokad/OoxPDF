@@ -121,7 +121,8 @@ Approximate or restricted:
   date/numeric and interior ordinal crossings retain their placement fallback.
   Column category strokes and captions use the category crossing independently
   of the numeric axis crossing. Measured caption bands share line/area placement
-  rules; positive columns retain their zero baseline.
+  rules. Clustered columns use the category origin for lengths and inverted fill;
+  nonzero stacked and horizontal origins retain their existing approximation.
   Authored maximum crossings select the high caption/tick side; a numeric crossing
   at the same bound keeps its numeric placement. Explicit low/high captions retain
   precedence over next-to placement.

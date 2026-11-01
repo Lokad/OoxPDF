@@ -2,7 +2,7 @@
   "pptx-column-crossing": [
     "PptxColumnCategoryGeometryIgnoresNumericCrossingEdits",
     "PptxColumnCategorySourceModesKeepVisibleCaptionBands",
-    "PptxColumnDataBaselinesStayIndependentOfCategoryCrossings",
+    "PptxClusteredColumnDataUsesTheCategoryOrigin",
     "PptxColumnFontFallbackKeepsCaptionAnchorsInsideTheFrame",
     "PptxNumericCrossingOwnsPairedCategorySide",
     "PptxNumericCrossingRetainsUnpairedAndInteriorFallbacks",

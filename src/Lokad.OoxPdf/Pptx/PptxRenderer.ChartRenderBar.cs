@@ -39,7 +39,8 @@ internal sealed partial class PptxRenderer
             bool stacked = IsStackedChartGrouping(plotOptions.Grouping);
             bool percentStacked = IsPercentStackedChartGrouping(plotOptions.Grouping);
             double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisOptions.Reversed);
-            double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
+            double columnOrigin = valueAxisOptions.CrossingValue ?? 0d;
+            double columnOriginY = ChartValueToPlotCoordinate(valueExtents, columnOrigin, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
             double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
             double valueAxisAutoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible, manualPlotLayoutApplied);
             if (valueAxisOptions.MinorGridlines)
@@ -151,18 +152,18 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, value, plotOptions.InvertsNegativePoint(seriesIndex, category));
+                    ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, value - columnOrigin, plotOptions.InvertsNegativePoint(seriesIndex, category));
                     double barX = categoryX + seriesIndex * step;
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
-                    double barY = Math.Min(zeroY, valueY);
-                    double barHeight = Math.Abs(valueY - zeroY);
+                    double barY = Math.Min(columnOriginY, valueY);
+                    double barHeight = Math.Abs(valueY - columnOriginY);
                     bool isStyleDriven = (seriesIndex >= seriesFills.Count || seriesFills[seriesIndex] is null) && !HasExplicitChartPointFill(pointFills, seriesIndex, category);
                     if (!(isStyleDriven && TryGetStyleBarGradientStops(chartStyleId, fill, out IReadOnlyList<PdfShadingStop> stops) && PaintBarGradientRect(graphics, plotClipBox, barX, barY, barWidth, barHeight, stops)))
                     {
                         FillChartRectangleInPlotClip(graphics, plotClipBox, barX, barY, barWidth, barHeight, fill);
                     }
                     PaintStyleColumnOutline(graphics, plotClipBox, chartStyleId, !isStyleDriven, fill, barX, barY, barWidth, barHeight);
-                    StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value, plotOptions.InvertsNegativePoint(seriesIndex, category)));
+                    StrokeChartPointRectangleInPlotClip(graphics, plotClipBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value - columnOrigin, plotOptions.InvertsNegativePoint(seriesIndex, category)));
                 }
             }
         }
