@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -110,6 +111,50 @@ internal static class PptxAreaFrameTests
         }
     }
 
+    public static void PptxAreaFillSharesCrossingAndStackLayerOwnership()
+    {
+        foreach (bool reversed in new[] { false, true })
+        foreach (string mode in new[] { "autoZero", "max", "numeric", "middle" })
+        {
+            PdfPage page = Render(12, reversed: reversed, categoryCrossing: mode);
+            var plot = Plot(page);
+            double value = mode == "autoZero" ? 0d : mode == "middle" ? 5d : 10d;
+            double expected = plot.Y + plot.Height * (reversed ? 1d - value / 10d : value / 10d);
+            TestAssert.True(PolygonY(page, "0 0 1").TakeLast(3).All(y => Math.Abs(y - expected) < .002d),
+                "The standard area closes on the resolved crossing, not an unrelated zero baseline.");
+        }
+        foreach (bool reversed in new[] { false, true })
+        foreach (bool emptyFirst in new[] { false, true })
+        {
+            PdfPage page = Render(12, reversed: reversed, categoryCrossing: "max", stacked: true, emptyFirst: emptyFirst, maximum: 20);
+            var plot = Plot(page);
+            if (!emptyFirst)
+            {
+                double firstBase = reversed ? plot.Y : plot.Y + plot.Height;
+                TestAssert.True(PolygonY(page, "0 0 1").TakeLast(3).All(y => Math.Abs(y - firstBase) < .002d),
+                    "The first stacked source layer closes on the same crossing.");
+            }
+            double[] laterBase = PolygonY(page, "1 0 1").TakeLast(3).Reverse().ToArray();
+            for (int i = 0; i < 3; i++)
+            {
+                double lower = emptyFirst ? 0d : 2d + 2d * i;
+                double expected = plot.Y + plot.Height * (reversed ? 1d - lower / 20d : lower / 20d);
+                TestAssert.True(Math.Abs(expected - laterBase[i]) < .002d,
+                    "Later stack layers retain cumulative lower values and source series identity, even after an empty first series.");
+            }
+        }
+    }
+
+    private static double[] PolygonY(PdfPage page, string color)
+    {
+        Match polygon = Regex.Match(page.Content, Regex.Escape(color) + @" rg\r?\n(?<path>.*?)\s+f(?:\r?\n|$)", RegexOptions.Singleline);
+        TestAssert.True(polygon.Success, "Expected the independently colored area layer.");
+        double[] y = Regex.Matches(polygon.Groups["path"].Value, @"[-\d.]+ (?<y>[-\d.]+) [ml]")
+            .Select(x => double.Parse(x.Groups["y"].Value, CultureInfo.InvariantCulture)).ToArray();
+        TestAssert.Equal(6, y.Length);
+        return y;
+    }
+
     private static void AssertCaptionSide(PdfPage page, double anchor, bool above)
     {
         var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
@@ -145,26 +190,41 @@ internal static class PptxAreaFrameTests
 
     private static PdfPage Render(int size, bool legend = false, bool title = false, bool overlay = false,
         int minimum = 0, bool reversed = false, string caption = "nextTo", bool rightAxis = false,
-        bool line = false, string categoryCrossing = "autoZero")
+        bool line = false, string categoryCrossing = "autoZero", bool stacked = false, bool emptyFirst = false, int maximum = 10)
     {
         string kind = line ? "lineChart" : "areaChart";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart>{{(title ? "<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr sz=\"" + size * 100 + "\"/><a:t>Area</a:t></a:r></a:p></c:rich></c:tx><c:overlay val=\"0\"/></c:title>" : "<c:autoTitleDeleted val=\"1\"/>")}}
-                <c:plotArea><c:{{kind}}><c:grouping val="standard"/><c:varyColors val="0"/><c:ser><c:tx><c:v>Series</c:v></c:tx>
+                <c:plotArea><c:{{kind}}><c:grouping val="{{(stacked ? "stacked" : "standard")}}"/><c:varyColors val="0"/><c:ser><c:tx><c:v>Series</c:v></c:tx>
+                  <c:spPr><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></c:spPr>
                   <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
                   <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>6</c:v></c:pt></c:numLit></c:val>
                 </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
                 <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="{{caption}}"/><c:crossAx val="2"/>
-                  {{(categoryCrossing is "numeric" or "both" ? "<c:crossesAt val=\"10\"/>" : "")}}
-                  {{(categoryCrossing == "numeric" ? "" : "<c:crosses val=\"" + (categoryCrossing == "both" ? "max" : categoryCrossing) + "\"/>")}}
+                  {{(categoryCrossing is "numeric" or "both" or "middle" ? "<c:crossesAt val=\"" + (categoryCrossing == "middle" ? 5 : maximum) + "\"/>" : "")}}
+                  {{(categoryCrossing is "numeric" or "middle" ? "" : "<c:crosses val=\"" + (categoryCrossing == "both" ? "max" : categoryCrossing) + "\"/>")}}
                   <c:majorTickMark val="out"/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></a:ln></c:spPr></c:catAx>
-                <c:valAx><c:axId val="2"/><c:scaling><c:min val="{{minimum}}"/><c:max val="10"/><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling><c:axPos val="{{(rightAxis ? "r" : "l")}}"/><c:crossAx val="1"/><c:crosses val="{{(rightAxis ? "max" : "autoZero")}}"/><c:crossBetween val="between"/><c:majorUnit val="2"/><c:majorGridlines/></c:valAx>
+                <c:valAx><c:axId val="2"/><c:scaling><c:min val="{{minimum}}"/><c:max val="{{maximum}}"/><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling><c:axPos val="{{(rightAxis ? "r" : "l")}}"/><c:crossAx val="1"/><c:crosses val="{{(rightAxis ? "max" : "autoZero")}}"/><c:crossBetween val="between"/><c:majorUnit val="2"/><c:majorGridlines/></c:valAx>
                 <c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
                 </c:plotArea>{{(legend ? "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"" + (overlay ? "1" : "0") + "\"/></c:legend>" : "")}}
               </c:chart><c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>
             </c:chartSpace>
             """;
+        if (stacked)
+        {
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart", a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            XDocument xml = XDocument.Parse(chart);
+            XElement first = xml.Descendants(c + "ser").Single();
+            first.AddFirst(new XElement(c + "idx", new XAttribute("val", "0")), new XElement(c + "order", new XAttribute("val", "0")));
+            XElement second = new(first);
+            second.Element(c + "idx")!.SetAttributeValue("val", "1");
+            second.Element(c + "order")!.SetAttributeValue("val", "1");
+            second.Element(c + "spPr")!.Element(a + "solidFill")!.Element(a + "srgbClr")!.SetAttributeValue("val", "FF00FF");
+            first.AddAfterSelf(second);
+            if (emptyFirst) first.Element(c + "val")!.ReplaceNodes(new XElement(c + "numLit", new XElement(c + "ptCount", new XAttribute("val", "0"))));
+            chart = xml.ToString(SaveOptions.DisableFormatting);
+        }
         using var stream = PptxTests.CreateSingleChartPackageStream(chart);
         using var package = OoxPackage.Open(stream, default);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver())

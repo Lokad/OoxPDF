@@ -1,5 +1,6 @@
 {
   "pptx-maximum-crossing": [
+    "PptxAreaFillSharesCrossingAndStackLayerOwnership",
     "PptxCategoryMaximumCrossingUsesSourceModeAndLabelOverrides",
     "PptxCategoryMaximumTicksFollowTheCrossingSideIndependentlyOfLabels",
     "PptxColumnCaptionsFollowNumericPositionAndValueDirection",

@@ -41,6 +41,7 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
+        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
         void DrawGridlines(bool major, ChartSeriesStroke? stroke)
         {
             // Source intervals share the line grid's major/minor lattice and
@@ -72,11 +73,10 @@ internal sealed partial class PptxRenderer
                     () => DrawGridlines(major: true, gridlineStyle.Major));
             }
 
-            RenderAreaChartSeries(graphics, theme, colorMap, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, displayBlanksAs, categoryPointsOnTickMarks);
+            RenderAreaChartSeries(graphics, theme, colorMap, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, displayBlanksAs, categoryPointsOnTickMarks, valueAxisCrossingY);
 
             ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
             ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
-            double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
             if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
             {
                 SetChartStroke(graphics, categoryAxisStroke);
@@ -102,7 +102,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs, bool categoryPointsOnTickMarks)
+    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs, bool categoryPointsOnTickMarks, double crossingY)
     {
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double[] lower = new double[pointCount];
@@ -132,7 +132,7 @@ internal sealed partial class PptxRenderer
 
                     if (end - start >= 2)
                     {
-                        RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, start, end, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks);
+                        RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, start, end, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks, crossingY);
                     }
 
                     start = Math.Max(end, start + 1);
@@ -141,11 +141,11 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, 0, pointCount, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks);
+            RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, 0, pointCount, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks, crossingY);
         }
     }
 
-    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<double?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<double?>> allSeries, bool categoryPointsOnTickMarks)
+    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<double?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<double?>> allSeries, bool categoryPointsOnTickMarks, double crossingY)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -170,7 +170,11 @@ internal sealed partial class PptxRenderer
             double upperValue = stacked ? lower[i] + normalizedValue : value;
             int segmentIndex = i - startIndex;
             upperPoints[segmentIndex] = (pointX, ChartValueToPlotCoordinate(valueExtents, upperValue, plotY, plotHeight, valueAxisReversed));
-            lowerPoints[segmentIndex] = (pointX, ChartValueToPlotCoordinate(valueExtents, lowerValue, plotY, plotHeight, valueAxisReversed));
+            // Standard areas and the first stacked layer close on the same
+            // resolved crossing used by the axis. Later layers retain their
+            // cumulative lower values, including an empty first source series.
+            lowerPoints[segmentIndex] = (pointX, !stacked || seriesIndex == 0
+                ? crossingY : ChartValueToPlotCoordinate(valueExtents, lowerValue, plotY, plotHeight, valueAxisReversed));
             if (stacked)
             {
                 lower[i] = upperValue;

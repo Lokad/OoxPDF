@@ -119,6 +119,9 @@ Approximate or restricted:
   Authored maximum crossings select the high caption/tick side; a numeric crossing
   at the same bound keeps its numeric placement. Explicit low/high captions retain
   precedence over next-to placement.
+  Standard area fills and the first stacked layer close on the resolved category
+  crossing; later stack layers retain their cumulative lower values and source
+  series positions.
 - Standalone line and area plots follow the source category-slot mode for data
   and captions. Line markers and data labels share those coordinates; category
   ticks delimit slots or coincide with points as specified. Sparse points retain
