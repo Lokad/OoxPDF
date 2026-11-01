@@ -23,7 +23,9 @@ $inspectorHash = (Get-FileHash -LiteralPath $inspector).Hash
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'A fresh portfolio output directory is required' }
 # Resolve every input before any conversion or output publication. A late stale
 # path must not invalidate an otherwise completed batch of expensive conversions.
+$ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 $jobs = @(foreach ($document in @(Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json)) {
+    if (!$ids.Add($document.Id)) { throw ('Duplicate portfolio ID: ' + $document.Id) }
     $inputPath = (Resolve-Path -LiteralPath (Join-Path $repo $document.Input)).Path
     if ((Get-FileHash -LiteralPath $inputPath).Hash -ne $document.Sha256) { throw ('Portfolio input differs: ' + $document.Id) }
     [pscustomobject]@{Document=$document;InputPath=$inputPath}
