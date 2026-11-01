@@ -36,7 +36,8 @@ internal static class PptxChartAxesTests
             foreach (double scale in new[] { .1d, .01d })
             {
                 double[] scaled = Render(scale);
-                TestAssert.Equal(original.Length, scaled.Length);
+                TestAssert.True(original.Length == scaled.Length,
+                    $"Changing units must preserve {sample} operation count at scale {scale}: {original.Length} versus {scaled.Length}.");
                 for (int i = 0; i < original.Length; i++)
                     TestAssert.True(Math.Abs(original[i] - scaled[i]) <= .002d,
                         $"Changing units must preserve {sample.Kind}/{sample.Direction} geometry (scale {scale}, coordinate {i}).");
