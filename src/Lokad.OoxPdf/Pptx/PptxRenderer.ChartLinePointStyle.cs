@@ -14,7 +14,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChart chart, PptxSceneChartPlot? plot, XElement xml,
         PptxTheme theme, PptxColorMap colorMap, ChartColorPalette palette,
         IReadOnlyList<ChartIndexedNumberVector> vectors, ChartLinePlotOptions options,
-        IReadOnlyList<ChartSeriesStroke?> strokes, IReadOnlyList<ChartMarkerStyle> markers, int? styleId)
+        IReadOnlyList<ChartSeriesStroke?> strokes, IReadOnlyList<ChartMarkerStyle> markers, int? styleId, CancellationToken cancellationToken)
     {
         // Office varies by point only for a single-series chart. Composed
         // charts retain their series owners.
@@ -31,6 +31,7 @@ internal sealed partial class PptxRenderer
             : null;
         return index =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             RgbColor color = ChartPalette(palette, theme, colorMap, index, count);
             if (palette.SingleAccent is null) color = ResolveAutomaticCategoryColor(color, index, count);
             RgbColor outline = rawStroke ? color :

@@ -39,7 +39,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, lineChart, theme, colorMap, ResolveLineKindInheritedStrokeWidth(ReadChartStyleId(chartXml)));
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(linePlot, lineChart, theme, colorMap);
                 Func<int, ChartLinePointAppearance>? pointAppearance = ReadLinePointAppearance(sceneChart, linePlot, lineChart,
-                    theme, colorMap, chartPalette, lineSeriesVectors, lineOptions, seriesStrokes, markerStyles, ReadChartStyleId(chartXml));
+                    theme, colorMap, chartPalette, lineSeriesVectors, lineOptions, seriesStrokes, markerStyles, ReadChartStyleId(chartXml), context.CancellationToken);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, linePlot, chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, linePlot, chartXml, lineChart).FirstOrDefault();
