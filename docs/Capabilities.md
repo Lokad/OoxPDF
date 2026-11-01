@@ -88,7 +88,8 @@ Approximate or restricted:
   layouts remain approximate; trendlines are diagnosed and omitted.
 - Automatic chart layout, label strips/baselines, dense intervals, source crossings,
   reversed axes and manual-layout combinations retain their semantic guards.
-  Qualified automatic single-line plots share axis/label placement; authored
+  Qualified automatic single-line plots share axis/label placement, including
+  captions beside source crossings with titles and bottom legends. Authored
   coordinates, composed/secondary plots, unsupported scales and unresolved fonts
   keep their fallbacks. Empty manual metadata retains automatic measurement.
 - Column, line and area category labels share measured rotation, spacing and
@@ -96,7 +97,8 @@ Approximate or restricted:
   within their footer. Authored plot geometry remains fixed. Automatic vertical
   value labels retain endpoints and omit overlapping ink; fixed intervals remain
   unchanged. Vertical numeric strips measure the same automatic interval policy
-  used to emit their labels. Resolved Cartesian spans below one retain proportional coordinates
+  used to emit their labels. Resolved Cartesian spans below one retain proportional
+  coordinates
   and tick intervals. Negative-only data shares positive-axis bound rounding and
   preserves authored limits. Column captions and measured line layouts follow
   numeric low/high positions and value direction; axis position does not change
