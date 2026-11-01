@@ -484,9 +484,11 @@ internal sealed partial class PptxRenderer
             if (ReadSceneOrXmlValueAxisCrossingValue(category.SceneAxis, category.XmlAxis, extents) is not { } crossing || !double.IsFinite(crossing))
                 return null;
             bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, axes[0].XmlAxis);
+            bool maximumCrossing = category.SceneAxis.CrossesAt is null && category.SceneAxis.CrossesKind == PptxSceneChartAxisCrosses.Maximum;
             var (ratio, topSide) = ResolveCategoryLabelPlacement(category.SceneAxis, category.XmlAxis,
-                GetChartValuePlotRatio(extents, crossing, reversed), reversed);
-            return new(crossing, ratio, topSide, reversed);
+                GetChartValuePlotRatio(extents, crossing, reversed), reversed,
+                maximumCrossing: maximumCrossing);
+            return new(crossing, ratio, topSide, maximumCrossing != reversed);
         }
 
         async ValueTask<ChartPlotLayout> GetPlotLayoutAsync()

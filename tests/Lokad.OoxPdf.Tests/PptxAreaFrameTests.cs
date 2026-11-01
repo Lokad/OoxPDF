@@ -58,6 +58,76 @@ internal static class PptxAreaFrameTests
         }
     }
 
+    public static void PptxCategoryMaximumCrossingUsesSourceModeAndLabelOverrides()
+    {
+        foreach (bool line in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string position in new[] { "nextTo", "low", "high" })
+        {
+            PdfPage page = Render(12, reversed: reversed, caption: position, line: line, categoryCrossing: "max");
+            var plot = Plot(page);
+            bool above = (position != "low") != reversed;
+            double anchor = position == "low" ? (reversed ? plot.Y + plot.Height : plot.Y) :
+                reversed ? plot.Y : plot.Y + plot.Height;
+            AssertCaptionSide(page, anchor, above);
+        }
+        foreach (bool line in new[] { false, true })
+        {
+            PdfPage maximum = Render(12, line: line, categoryCrossing: "max");
+            PdfPage numeric = Render(12, line: line, categoryCrossing: "numeric");
+            var maxPlot = Plot(maximum);
+            var numericPlot = Plot(numeric);
+            AssertCaptionSide(numeric, numericPlot.Y + numericPlot.Height, above: false);
+            TestAssert.True(maxPlot.Height < numericPlot.Height - 1d,
+                "Authored maximum captions reserve an outer strip; numeric upper-bound captions stay inside.");
+            TestAssert.Equal(numeric.Content, Render(12, line: line, categoryCrossing: "both").Content);
+        }
+    }
+
+    public static void PptxCategoryMaximumTicksFollowTheCrossingSideIndependentlyOfLabels()
+    {
+        foreach (bool line in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string position in new[] { "nextTo", "low", "high" })
+        {
+            PdfPage page = Render(12, reversed: reversed, caption: position, line: line, categoryCrossing: "max");
+            var plot = Plot(page);
+            double axis = reversed ? plot.Y : plot.Y + plot.Height;
+            var paths = new List<string>();
+            var paints = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, strokes: true).ToArray();
+            var ticks = paints.Select((color, i) => (color, path: paths[i]))
+                .Where(x => x.color == new RgbColor(0, 255, 0))
+                .Select(x => Regex.Match(x.path, @"^(?<x>[-\d.]+) (?<from>[-\d.]+) m \k<x> (?<to>[-\d.]+) l S$"))
+                .Where(x => x.Success).ToArray();
+            TestAssert.Equal(4, ticks.Length);
+            foreach (Match tick in ticks)
+            {
+                double from = double.Parse(tick.Groups["from"].Value, CultureInfo.InvariantCulture);
+                double to = double.Parse(tick.Groups["to"].Value, CultureInfo.InvariantCulture);
+                TestAssert.True(Math.Abs(to - axis) < .002d && (reversed ? from < axis : from > axis),
+                    "Outward maximum-crossing ticks follow value direction, independently of low/high captions.");
+            }
+        }
+    }
+
+    private static void AssertCaptionSide(PdfPage page, double anchor, bool above)
+    {
+        var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+        TestAssert.Equal(3, captions.Length);
+        foreach (var show in captions)
+        {
+            double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+            foreach (char character in show.Text)
+            {
+                TestAssert.True(show.Font.Font.TryGetGlyphBounds(show.Font.Font.MapCodePoint(character), out var box), "Expected pinned caption glyph ink.");
+                bottom = Math.Min(bottom, show.Y + box.YMin * show.Size / show.Font.Font.UnitsPerEm);
+                top = Math.Max(top, show.Y + box.YMax * show.Size / show.Font.Font.UnitsPerEm);
+            }
+            TestAssert.True(above ? bottom > anchor : top < anchor, "Caption ink follows the authored crossing mode and explicit label position.");
+        }
+    }
+
     private static double FirstCaptionY(PdfPage page) =>
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).First().Y;
@@ -74,16 +144,21 @@ internal static class PptxAreaFrameTests
     }
 
     private static PdfPage Render(int size, bool legend = false, bool title = false, bool overlay = false,
-        int minimum = 0, bool reversed = false, string caption = "nextTo", bool rightAxis = false)
+        int minimum = 0, bool reversed = false, string caption = "nextTo", bool rightAxis = false,
+        bool line = false, string categoryCrossing = "autoZero")
     {
+        string kind = line ? "lineChart" : "areaChart";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart>{{(title ? "<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr sz=\"" + size * 100 + "\"/><a:t>Area</a:t></a:r></a:p></c:rich></c:tx><c:overlay val=\"0\"/></c:title>" : "<c:autoTitleDeleted val=\"1\"/>")}}
-                <c:plotArea><c:areaChart><c:grouping val="standard"/><c:ser><c:tx><c:v>Series</c:v></c:tx>
+                <c:plotArea><c:{{kind}}><c:grouping val="standard"/><c:varyColors val="0"/><c:ser><c:tx><c:v>Series</c:v></c:tx>
                   <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
                   <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>6</c:v></c:pt></c:numLit></c:val>
-                </c:ser><c:axId val="1"/><c:axId val="2"/></c:areaChart>
-                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="{{caption}}"/><c:crossAx val="2"/><c:crosses val="autoZero"/></c:catAx>
+                </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
+                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="{{caption}}"/><c:crossAx val="2"/>
+                  {{(categoryCrossing is "numeric" or "both" ? "<c:crossesAt val=\"10\"/>" : "")}}
+                  {{(categoryCrossing == "numeric" ? "" : "<c:crosses val=\"" + (categoryCrossing == "both" ? "max" : categoryCrossing) + "\"/>")}}
+                  <c:majorTickMark val="out"/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></a:ln></c:spPr></c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="{{minimum}}"/><c:max val="10"/><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling><c:axPos val="{{(rightAxis ? "r" : "l")}}"/><c:crossAx val="1"/><c:crosses val="{{(rightAxis ? "max" : "autoZero")}}"/><c:crossBetween val="between"/><c:majorUnit val="2"/><c:majorGridlines/></c:valAx>
                 <c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
                 </c:plotArea>{{(legend ? "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"" + (overlay ? "1" : "0") + "\"/></c:legend>" : "")}}

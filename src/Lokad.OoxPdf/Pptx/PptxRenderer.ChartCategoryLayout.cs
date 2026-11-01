@@ -6,16 +6,20 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     private static (double LabelPlotRatio, bool LabelsTopSide) ResolveCategoryLabelPlacement(
-        PptxSceneChartAxis? axis, XElement? xml, double crossingRatio, bool reversed)
+        PptxSceneChartAxis? axis, XElement? xml, double crossingRatio, bool reversed, bool maximumCrossing = false)
     {
         PptxSceneChartTickLabelPosition position = ResolveChartTickLabelPosition(axis is not null
             ? axis.TickLabelPositionKind
             : PptxSceneBuilder.ParseChartTickLabelPosition(PptxSceneBuilder.ReadChartElementValue(xml, "tickLblPos")));
         // Low/high refer to value direction, so reversing the scale swaps both
-        // the physical edge and the label side. NextTo follows the crossing.
+        // the physical edge and the label side. An authored maximum crossing
+        // selects the high side for next-to captions; a numeric crossesAt at
+        // the same bound keeps the ordinary next-to side.
         double ratio = position == PptxSceneChartTickLabelPosition.Low ? (reversed ? 1d : 0d) :
             position == PptxSceneChartTickLabelPosition.High ? (reversed ? 0d : 1d) : crossingRatio;
-        return (ratio, (position == PptxSceneChartTickLabelPosition.High) != reversed);
+        bool highSide = position == PptxSceneChartTickLabelPosition.High ||
+            position == PptxSceneChartTickLabelPosition.NextTo && maximumCrossing;
+        return (ratio, highSide != reversed);
     }
 
     // Resolve spacing before placing the plot, then paint these same measured

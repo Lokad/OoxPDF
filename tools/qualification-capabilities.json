@@ -1,4 +1,25 @@
 {
+  "pptx-maximum-crossing": [
+    "PptxCategoryMaximumCrossingUsesSourceModeAndLabelOverrides",
+    "PptxCategoryMaximumTicksFollowTheCrossingSideIndependentlyOfLabels",
+    "PptxColumnCaptionsFollowNumericPositionAndValueDirection",
+    "PptxLineCaptionPlacementSurvivesTitlesAndBottomLegends",
+    "PptxLineTitleKeepsNumericFootClearanceSeparateFromHeader",
+    "PptxAreaFrame",
+    "PptxAreaPrimaryValueLabelsUseTheirMeasuredSide",
+    "PptxLegendlessLineCategory",
+    "PptxChartUnknownAxisCrossesUsesSceneAuthoritativeDefault",
+    "PptxChartInvalidAxisCrossesAtUsesSceneAuthoritativeCrosses",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxSyntheticAreaChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-area-frames": [
     "PptxStandaloneLineAndAreaReserveUnpaintedRangeEndpoints",
     "PptxAreaFrame",
