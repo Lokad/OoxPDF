@@ -83,8 +83,8 @@ internal static class PptxAreaFrameTests
                   <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
                   <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>6</c:v></c:pt></c:numLit></c:val>
                 </c:ser><c:axId val="1"/><c:axId val="2"/></c:areaChart>
-                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="{{caption}}"/><c:crossAx val="2"/><c:crosses val="{{(rightAxis ? "max" : "autoZero")}}"/></c:catAx>
-                <c:valAx><c:axId val="2"/><c:scaling><c:min val="{{minimum}}"/><c:max val="10"/><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling><c:axPos val="{{(rightAxis ? "r" : "l")}}"/><c:crossAx val="1"/><c:crossBetween val="between"/><c:majorUnit val="2"/><c:majorGridlines/></c:valAx>
+                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="{{caption}}"/><c:crossAx val="2"/><c:crosses val="autoZero"/></c:catAx>
+                <c:valAx><c:axId val="2"/><c:scaling><c:min val="{{minimum}}"/><c:max val="10"/><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling><c:axPos val="{{(rightAxis ? "r" : "l")}}"/><c:crossAx val="1"/><c:crosses val="{{(rightAxis ? "max" : "autoZero")}}"/><c:crossBetween val="between"/><c:majorUnit val="2"/><c:majorGridlines/></c:valAx>
                 <c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
                 </c:plotArea>{{(legend ? "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"" + (overlay ? "1" : "0") + "\"/></c:legend>" : "")}}
               </c:chart><c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>

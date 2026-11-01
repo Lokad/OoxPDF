@@ -111,6 +111,11 @@ Approximate or restricted:
   origins across labels, tick marks and grids, including an automatic lower bound
   anchored to an authored maximum and major unit. Automatic step fitting remains
   approximate.
+- Single line/area plots share measured numeric strips, title clearance, bottom
+  legend packing and source caption crossings. Overlays retain plot space;
+  authored/composed frames and unsupported scales retain their fallbacks. Range
+  endpoint advance is reserved even without a painted endpoint tick. Automatic
+  font sizing, unusual axis declarations and remaining geometry are approximate.
 - Standalone line and area plots follow the source category-slot mode for data
   and captions. Line markers and data labels share those coordinates; category
   ticks delimit slots or coincide with points as specified. Sparse points retain
