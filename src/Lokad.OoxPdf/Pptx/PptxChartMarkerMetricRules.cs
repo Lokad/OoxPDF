@@ -5,10 +5,10 @@ namespace Lokad.OoxPdf.Pptx;
 internal static class PptxChartMarkerMetricRules
 {
     private static readonly string[] AutoLineChartMarkerSymbols = ["diamond", "square", "triangle", "x", "star", "circle"];
-    // The19-point Office control repeats after plus/dash/dot. The8-point
+    // The19-point Office control repeats after plus/dot/dash. The8-point
     // control establishes the prefix, not the repetition boundary.
     // Keep the existing per-series rule separate from point identity.
-    private static readonly string[] AutoLinePointMarkerSymbols = [.. AutoLineChartMarkerSymbols, "plus", "dash", "dot"];
+    private static readonly string[] AutoLinePointMarkerSymbols = [.. AutoLineChartMarkerSymbols, "plus", "dot", "dash"];
 
     public static PptxSceneChartMarkerSymbol ResolveAutomaticLinePointSymbol(int index) =>
         PptxSceneBuilder.ParseChartMarkerSymbol(AutoLinePointMarkerSymbols[index % AutoLinePointMarkerSymbols.Length]);

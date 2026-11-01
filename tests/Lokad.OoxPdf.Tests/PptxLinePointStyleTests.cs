@@ -95,14 +95,25 @@ internal static class PptxLinePointStyleTests
         }
     }
 
-    public static void PptxLinePointMarkersPreserveNinthDotAcrossPlotAndLegend()
+    public static void PptxLinePointMarkersPreserveDotPositionAcrossPlotAndLegend()
     {
         PdfPage page = Probe(19, "1", keys: false, automaticMarkers: true);
-        // Independent19-point Office PDF: points9/18 and their two legend keys
+        // Independent19-point Office PDF: points8/17 and their two legend keys
         // paint data-anchored3.48x1.44pt dot rectangles at the default7pt size.
         // Inspect actual painted geometry so a shortened automatic cycle fails.
-        int dots = Regex.Matches(page.Content, @"[-\d.]+ [-\d.]+ 3\.48 1\.44 re f").Count;
-        TestAssert.Equal(4, dots);
+        var dots = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) 3\.48 1\.44 re f");
+        TestAssert.Equal(4, dots.Count);
+        var strokes = new List<string>();
+        _ = PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes.Add, strokes: true).ToArray();
+        var incoming = strokes.Take(18).Select(line => line.Split(' ')).ToArray();
+        double Number(string value) => double.Parse(value, CultureInfo.InvariantCulture);
+        foreach (int edge in new[] { 6, 15 })
+        {
+            double x = Number(incoming[edge][3]), y = Number(incoming[edge][4]);
+            TestAssert.True(dots.Cast<Match>().Any(dot => Math.Abs(Number(dot.Groups[1].Value) - x) < .002d &&
+                Math.Abs(Number(dot.Groups[2].Value) - (y - .72d)) < .002d),
+                "Dots follow source points8/17; a nine-symbol cycle must not swap dot and dash.");
+        }
         TestAssert.Equal(19, LegendNames(page).Length);
     }
 
