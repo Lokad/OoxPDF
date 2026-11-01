@@ -50,8 +50,9 @@ internal static class PptxChartAxesTests
                 .Select(m => (A: double.Parse(m.Groups["a"].Value, CultureInfo.InvariantCulture), B: double.Parse(m.Groups["b"].Value, CultureInfo.InvariantCulture))).ToArray();
             double expected = rotation == "-60000000" ? -45d : double.Parse(rotation, CultureInfo.InvariantCulture) / 60000d;
             if (expected != 0d)
-                TestAssert.True(matrices.Count(m => Math.Abs(m.A - Math.Cos(-expected * Math.PI / 180d)) < 0.00001d &&
-                    Math.Abs(m.B - Math.Sin(-expected * Math.PI / 180d)) < 0.00001d) == 12,
+                // PDF numbers are emitted to three decimal places.
+                TestAssert.True(matrices.Count(m => Math.Abs(m.A - Math.Cos(-expected * Math.PI / 180d)) <= 0.0005d &&
+                    Math.Abs(m.B - Math.Sin(-expected * Math.PI / 180d)) <= 0.0005d) == 12,
                     "Each label uses the authored rotation or the automatic measured angle, through the shared PDF transform.");
             PptxSceneChartAxis axis = PptxTests.BuildSingleChartScene(chart)!.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Category);
             TestAssert.Equal(rotation, axis.TextBodyProperties.RotationValue);

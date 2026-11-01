@@ -124,7 +124,7 @@ internal static class PptxCartesianHeaderTests
                         "The category offset changes reserved plot space, rather than being ignored while painting remains fixed.");
                 for (int index = 1; index <= 6; index++)
                     TestAssert.True(actual.Text.Contains("Category " + index, StringComparison.Ordinal),
-                        "Every supported category remains painted after applying its offset.");
+                        $"Every supported category remains painted after applying its offset. Observed: {actual.Text}");
             }
         }
     }
