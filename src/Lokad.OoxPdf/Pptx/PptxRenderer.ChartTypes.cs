@@ -383,7 +383,8 @@ internal sealed partial class PptxRenderer
 
         // Between categories, ticks delimit slots. With midCat, ticks coincide
         // with the data points and captions instead.
-        double[] edges = new double[onTickMarks ? pointCount : pointCount + 1];
+        // A single category still spans two boundary ticks in Office.
+        double[] edges = new double[Math.Max(2, onTickMarks ? pointCount : pointCount + 1)];
         for (int i = 0; i < edges.Length; i++)
         {
             edges[i] = ChartCategoryToPlotCoordinate(i, edges.Length, plotX, plotWidth, onTickMarks: true);

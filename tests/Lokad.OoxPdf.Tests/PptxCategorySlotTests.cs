@@ -26,18 +26,15 @@ internal static class PptxCategorySlotTests
                 AssertPositions(expected, LabelCenters(page, "CLD"), tolerance: .1d);
             }
         }
-        foreach (string mode in new[] { "between", "midCat" })
-        {
-            PdfPage single = Render(1, area: false, mode);
-            AssertPositions(ExpectedPoints(single, 1, mode), Paths(single, "0 1 0", strokes: false).Select(x => (x.Min() + x.Max()) / 2d).ToArray());
-        }
+        PdfPage single = Render(1, area: false, "between");
+        AssertPositions(ExpectedPoints(single, 1, "between"), Paths(single, "0 1 0", strokes: false).Select(x => (x.Min() + x.Max()) / 2d).ToArray());
         TestAssert.Equal(Render(3, area: false, "between").Content, Render(3, area: false, null).Content);
         TestAssert.Equal(Render(3, area: true, "between").Content, Render(3, area: true, null).Content);
     }
 
     public static void PptxCategoryMajorTicksFollowSourceSlotBoundaries()
     {
-        foreach (int count in new[] { 3, 8 })
+        foreach (int count in new[] { 1, 3, 8 })
         foreach (bool area in new[] { false, true })
         foreach (string mode in new[] { "between", "midCat" })
         {
@@ -49,7 +46,7 @@ internal static class PptxCategorySlotTests
                 .Select(x => Regex.Match(x.line, @"^(?<x>[-\d.]+) [-\d.]+ m \k<x> [-\d.]+ l S$"))
                 .Where(x => x.Success).Select(x => Number(x.Groups["x"].Value)).ToArray();
             var (left, right) = PlotEdges(page);
-            int tickCount = mode == "midCat" ? count : count + 1;
+            int tickCount = Math.Max(2, mode == "midCat" ? count : count + 1);
             // Between slots uses n+1 boundary ticks; midCat uses n data ticks.
             AssertPositions(Enumerable.Range(0, tickCount).Select(i => left + (right - left) * i / (tickCount - 1)).ToArray(), ticks);
         }

@@ -116,7 +116,8 @@ Approximate or restricted:
   ticks delimit slots or coincide with points as specified. Sparse points retain
   their source positions. Composed line plots retain their separate placement
   fallback; category direction, automatic spacing and label fitting remain
-  approximate.
+  approximate. A lone `midCat` point and caption still use the centered fallback;
+  Office places them at the left endpoint.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
