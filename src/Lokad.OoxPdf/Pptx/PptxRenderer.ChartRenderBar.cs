@@ -180,7 +180,8 @@ internal sealed partial class PptxRenderer
         ChartBarPlotOptions barOptions,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
-        PresentationFontResolver? fontResolver)
+        PresentationFontResolver? fontResolver,
+        ChartCategoryAxisPlacement? categoryPlacement)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
@@ -196,9 +197,10 @@ internal sealed partial class PptxRenderer
             barOptions.BarDirection == PptxSceneChartBarDirection.Bar && UsesAutomaticBarFrame(barOptions, sceneChart, legend) &&
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
-        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine).ConfigureAwait(false));
+        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
-            plotLayout.AutomaticCategoryLabelOffsetAdjustment);
+            plotLayout.AutomaticCategoryLabelOffsetAdjustment,
+            plotLayout.ManualLayoutTargetKind is null && sceneChart.Plots.Count == 1 ? categoryPlacement : null);
     }
 
     private static double ReadCategoryTitleFontSizeAtPosition(PptxSceneChart sceneChart, PptxSceneChartAxisPosition titlePosition)
@@ -276,12 +278,14 @@ internal sealed partial class PptxRenderer
         bool plotVisibleOnly,
         bool ignoreManualPlotLayout,
         PresentationFontResolver? fontResolver,
-        (double Ascent, double Height)? measuredTitle = null)
+        (double Ascent, double Height)? measuredTitle = null,
+        ChartCategoryAxisPlacement? categoryPlacement = null)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
         double? categoryLabelOffsetAdjustment = null;
+        double? categoryTopReserve = null;
         bool usesMeasuredAxisInsets = !sceneChart.PlotAreaLayout.HasLayout &&
             (!hasLegend || legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
         ChartPlotBox defaultPlotBox;
@@ -321,7 +325,7 @@ internal sealed partial class PptxRenderer
         }
 
         (double Reserve, ChartAxisSource ValueAxis, double NumericClearance)? cartesianHeader = horizontalBars ? null :
-            await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, barChart, chartXml, fontResolver).ConfigureAwait(false);
+            await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, barChart, chartXml, fontResolver, categoryPlacement).ConfigureAwait(false);
         defaultPlotBox = (await AdjustBarChartPlotBoxForVisibleValueAxesAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForStackedValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForSingleValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
@@ -338,7 +342,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
         if (cartesianHeader is { } measuredHeader)
         {
-            double top = frame.Y + frame.Height - measuredHeader.Reserve;
+            double top = frame.Y + frame.Height - Math.Max(measuredHeader.Reserve, categoryTopReserve ?? 0d);
             defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };
         }
         else if (measuredTitle is { } measuredLine)
@@ -775,6 +779,16 @@ internal sealed partial class PptxRenderer
                     }
                 }
             }
+            if (measuredFrame && labelsVisible && categoryPlacement is { } placement)
+            {
+                var header = cartesianHeader!.Value;
+                var reserves = ResolveCartesianCategoryReserves(frame.Height, header.Reserve, requiredBottomReserve, header.NumericClearance, placement);
+                double height = frame.Height - reserves.Top - reserves.Bottom;
+                if (height < 1d) return plotBox;
+                categoryTopReserve = reserves.Top;
+                categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
+                return new(plotBox.X, frame.Y + reserves.Bottom, plotBox.Width, height);
+            }
             double presetBottomReserve = plotBox.Y - frame.Y;
             if (!measuredFrame && Math.Abs(presetBottomReserve - requiredBottomReserve) < PptxChartMetricRules.BarValueAxisPresetFloorSlop)
             {
@@ -989,7 +1003,8 @@ internal sealed partial class PptxRenderer
                 valueAxis.XmlAxis,
                 GetSharedBarChartValueExtents(barPlot, barChart, grouping, workbook, plotVisibleOnly),
                 IsPercentStackedChartGrouping(grouping), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-            double? crossing = ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxis.XmlAxis, valueExtents);
+            ChartAxisSource category = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            double? crossing = ReadSceneOrXmlValueAxisCrossingValue(category.SceneAxis, category.XmlAxis, valueExtents);
             return crossing > valueExtents.Min + PptxChartMetricRules.AxisValueEpsilon &&
                 crossing < valueExtents.Max - PptxChartMetricRules.AxisValueEpsilon;
         }

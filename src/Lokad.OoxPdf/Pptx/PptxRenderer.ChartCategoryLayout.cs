@@ -5,6 +5,47 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private static ChartCategoryAxisPlacement? ReadCategoryAxisPlacement(ChartAxisSource axis, ChartValueExtents extents, bool reversed)
+    {
+        if (axis.SceneAxis is null && axis.XmlAxis is null) return null;
+        if (ReadSceneOrXmlValueAxisCrossingValue(axis.SceneAxis, axis.XmlAxis, extents) is not { } crossing || !double.IsFinite(crossing))
+            return null;
+        double? explicitCrossing = axis.SceneAxis is not null ? axis.SceneAxis.CrossesAt :
+            PptxSceneBuilder.ReadChartElementDoubleWithValue(axis.XmlAxis, "crossesAt").Value;
+        PptxSceneChartAxisCrosses crosses = axis.SceneAxis?.CrossesKind ??
+            PptxSceneBuilder.ParseChartAxisCrosses(PptxSceneBuilder.ReadChartElementValue(axis.XmlAxis, "crosses"));
+        bool maximum = explicitCrossing is null && crosses == PptxSceneChartAxisCrosses.Maximum;
+        double ratio = GetChartValuePlotRatio(extents, crossing, reversed);
+        // Office admits reversed upper numeric next-to captions to the low band;
+        // the stroke keeps its numeric coordinate and explicit low/high still win.
+        if (explicitCrossing is not null && reversed && ratio == 0d) ratio = 1d;
+        var labels = ResolveCategoryLabelPlacement(axis.SceneAxis, axis.XmlAxis, ratio, reversed, maximum);
+        bool axisTop = explicitCrossing is not null
+            ? ResolveSceneOrXmlCategoryAxisTopSide(axis.SceneAxis, axis.XmlAxis, defaultTopSide: false)
+            : maximum != reversed;
+        return new(crossing, labels.LabelPlotRatio, labels.LabelsTopSide, axisTop);
+    }
+
+    private static (double Top, double Bottom) ResolveCartesianCategoryReserves(double frameHeight,
+        double headerReserve, double categoryReserve, double numericReserve, ChartCategoryAxisPlacement placement)
+    {
+        double top = headerReserve, bottom = categoryReserve;
+        double ratio = placement.LabelPlotRatio;
+        if (placement.LabelsTopSide)
+        {
+            bottom = numericReserve;
+            double titleReserve = headerReserve - numericReserve;
+            top = ratio > 0d ? Math.Max(headerReserve,
+                (titleReserve + categoryReserve - (1d - ratio) * (frameHeight - bottom)) / ratio) : headerReserve;
+        }
+        else if (ratio > 0d)
+        {
+            bottom = ratio < 1d ? Math.Max(numericReserve,
+                (categoryReserve - ratio * (frameHeight - top)) / (1d - ratio)) : numericReserve;
+        }
+        return (top, bottom);
+    }
+
     private static (double LabelPlotRatio, bool LabelsTopSide) ResolveCategoryLabelPlacement(
         PptxSceneChartAxis? axis, XElement? xml, double crossingRatio, bool reversed, bool maximumCrossing = false)
     {

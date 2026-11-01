@@ -119,6 +119,9 @@ Approximate or restricted:
   Paired categorical axes use the numeric crossing and category orientation for
   the numeric axis side; explicit low/high labels keep their own side. Unpaired,
   date/numeric and interior ordinal crossings retain their placement fallback.
+  Column category strokes and captions use the category crossing independently
+  of the numeric axis crossing. Measured caption bands share line/area placement
+  rules; positive columns retain their zero baseline.
   Authored maximum crossings select the high caption/tick side; a numeric crossing
   at the same bound keeps its numeric placement. Explicit low/high captions retain
   precedence over next-to placement.

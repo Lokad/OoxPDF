@@ -432,26 +432,8 @@ internal sealed partial class PptxRenderer
                 if (await measure.TryMeasureNormalLineHeightAsync(numericStyle).ConfigureAwait(false) is null)
                     return null;
             }
-            if (ReadSceneOrXmlValueAxisCrossingValue(category.SceneAxis, category.XmlAxis, extents) is not { } crossing || !double.IsFinite(crossing))
-                return null;
             bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, axes[0].XmlAxis);
-            bool maximumCrossing = category.SceneAxis.CrossesAt is null && category.SceneAxis.CrossesKind == PptxSceneChartAxisCrosses.Maximum;
-            double labelCrossingRatio = GetChartValuePlotRatio(extents, crossing, reversed);
-            // Office admits reversed upper numeric next-to captions into the
-            // low-side band. Keep the numeric crossing for the axis and fill;
-            // explicit low/high labels still choose their own band below.
-            if (category.SceneAxis.CrossesAt is not null && reversed && labelCrossingRatio == 0d)
-                labelCrossingRatio = 1d;
-            var (ratio, topSide) = ResolveCategoryLabelPlacement(category.SceneAxis, category.XmlAxis,
-                labelCrossingRatio, reversed,
-                maximumCrossing: maximumCrossing);
-            // Numeric crossings retain the authored physical axis side. Only
-            // implicit crossings mirror outward ticks with value direction;
-            // caption side and fill baseline have their own placement owners.
-            bool axisTopSide = category.SceneAxis.CrossesAt is not null
-                ? ResolveSceneOrXmlCategoryAxisTopSide(category.SceneAxis, category.XmlAxis, defaultTopSide: false)
-                : maximumCrossing != reversed;
-            return new(crossing, ratio, topSide, axisTopSide);
+            return ReadCategoryAxisPlacement(category, extents, reversed);
         }
 
         async ValueTask<ChartPlotLayout> GetPlotLayoutAsync()
@@ -579,25 +561,8 @@ internal sealed partial class PptxRenderer
                 // Measurement and painting consume the same scale placement.
                 if (categoryAxisPlacement is { } placement)
                 {
-                    double labelRatio = placement.LabelPlotRatio;
-                    bool topSide = placement.LabelsTopSide;
-                    double categoryReserve = bottomReserve;
-                    double numericReserve = clearance.NumericClearance;
-                    double titleReserve = clearance.Reserve - clearance.NumericClearance;
-                    if (topSide)
-                    {
-                        bottomReserve = numericReserve;
-                        topReserve = labelRatio > 0d
-                            ? Math.Max(clearance.Reserve, (titleReserve + categoryReserve - (1d - labelRatio) * (frame.Height - bottomReserve)) / labelRatio)
-                            : clearance.Reserve;
-                    }
-                    else if (labelRatio > 0d)
-                    {
-                        bottomReserve = labelRatio < 1d
-                            ? Math.Max(numericReserve, (categoryReserve - labelRatio * (frame.Height - topReserve)) / (1d - labelRatio))
-                            : numericReserve;
-                    }
-
+                    (topReserve, bottomReserve) = ResolveCartesianCategoryReserves(frame.Height,
+                        clearance.Reserve, bottomReserve, clearance.NumericClearance, placement);
                     height = frame.Height - topReserve - bottomReserve;
                     if (height < 1d)
                     {
