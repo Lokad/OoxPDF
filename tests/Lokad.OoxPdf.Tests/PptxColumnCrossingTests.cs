@@ -61,6 +61,7 @@ internal static class PptxColumnCrossingTests
         {
             PdfPage page = Render("autoZero", crossing, reversed, fontProgram: false);
             var captions = Regex.Matches(page.Content, @"(?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*\[?\s*\((?:Alfa|Beta|Gamma)\)");
+            if (captions.Count != 3) File.WriteAllText(Path.Combine(Path.GetTempPath(), "column-fallback-content.txt"), page.Content);
             TestAssert.Equal(3, captions.Count);
             TestAssert.True(captions.All(m => double.Parse(m.Groups["y"].Value, CultureInfo.InvariantCulture) is >= 72d and <= 504d),
                 $"Fallback {crossing} captions, reversal {reversed}, must keep their anchors in the chart frame.");
