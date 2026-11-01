@@ -95,7 +95,9 @@ Approximate or restricted:
   wrapping. Automatic outer captions share height with the plot and may truncate
   within their footer. Authored plot geometry remains fixed. Automatic vertical
   value labels retain endpoints and omit overlapping ink; fixed intervals remain
-  unchanged. Dense allocation, axis ranges and font geometry remain approximate.
+  unchanged. Resolved Cartesian spans below one retain proportional coordinates
+  and tick intervals. Dense allocation, automatic axis ranges and font geometry
+  remain approximate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
