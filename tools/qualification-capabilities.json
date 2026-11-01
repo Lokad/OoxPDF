@@ -1,4 +1,27 @@
 {
+  "pptx-category-slots": [
+    "PptxLineAndAreaDataFollowSourceCategorySlots",
+    "PptxCategoryMajorTicksFollowSourceSlotBoundaries",
+    "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
+    "PptxChartUnknownAxisCrossBetweenUsesSceneAuthoritativeDefault",
+    "PptxLinePoint",
+    "PptxAreaSourceIntervals",
+    "PptxSourceIntervalsShareAutomaticUnitsAcrossLineAndArea",
+    "PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks",
+    "PptxLegendlessLineCategoryTicksFollowValueDirection",
+    "PptxSyntheticLineChartConsumesDisplayBlanksAs",
+    "PptxSyntheticLineChartPreservesSeriesStylesAfterBlankSeries",
+    "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
+    "PptxSyntheticChartValueAxisReversedOrientationMovesLineDataLabels",
+    "PptxSyntheticArea",
+    "PptxSyntheticChartArea",
+    "PptxPercentStackedColumnChartUsesPercentValueAxis",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-cartesian-source-intervals": [
     "PptxRightLegendLineReservesBoundsBeyondPaintedIntervals",
     "PptxAreaSourceIntervals",

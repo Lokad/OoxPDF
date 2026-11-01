@@ -20,6 +20,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedNumberVector> series,
         ChartValueExtents extents,
         bool valueAxisReversed,
+        bool categoryPointsOnTickMarks,
         IReadOnlyList<ChartSeriesStroke?> seriesStrokes,
         IReadOnlyList<ChartMarkerStyle> markerStyles,
         ChartDataLabelOptions labelOptions,
@@ -75,7 +76,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                double pointX = plotBox.X + (pointCount == 1 ? plotBox.Width / 2d : plotBox.Width * i / (pointCount - 1));
+                double pointX = ChartCategoryToPlotCoordinate(i, pointCount, plotBox.X, plotBox.Width, categoryPointsOnTickMarks);
                 double pointY = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
                 if (!effectiveOptions.HasVisibleContent)

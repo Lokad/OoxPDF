@@ -111,6 +111,12 @@ Approximate or restricted:
   origins across labels, tick marks and grids, including an automatic lower bound
   anchored to an authored maximum and major unit. Automatic step fitting remains
   approximate.
+- Standalone line and area plots follow the source category-slot mode for data
+  and captions. Line markers and data labels share those coordinates; category
+  ticks delimit slots or coincide with points as specified. Sparse points retain
+  their source positions. Composed line plots retain their separate placement
+  fallback; category direction, automatic spacing and label fitting remain
+  approximate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary

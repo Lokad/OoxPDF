@@ -224,6 +224,7 @@ internal sealed partial class PptxRenderer
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
                         ChartShapeStyle.Empty,
                         lineValueExtents,
+                        categoryPointsOnTickMarks: false,
                         ReadSceneOrXmlChartTextStyle(theme, sceneChart, comboCategoryAxis.SceneAxis, chartXml, comboCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, barStyleId);
                     await RenderLineDataLabelsAsync(
                         theme,
@@ -234,6 +235,9 @@ internal sealed partial class PptxRenderer
                         lineSeriesVectors,
                         lineValueExtents,
                         lineValueAxisOptions.Reversed,
+                        // Preserve the composed-chart label fallback until its
+                        // secondary-axis/category contract is independently qualified.
+                        categoryPointsOnTickMarks: true,
                         lineSeriesStrokes,
                         lineMarkerStyles,
                         ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),

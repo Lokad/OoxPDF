@@ -70,9 +70,7 @@ internal sealed partial class PptxRenderer
                 foreach (var part in rotatedParts)
                 {
                     if (part.Text.Length == 0) continue;
-                    double center = categoryLabelsOnTickMarks && labels.Count > 1
-                        ? plotBox.X + plotBox.Width * i / (labels.Count - 1)
-                        : plotBox.X + plotBox.Width * (i + 0.5d) / labels.Count;
+                    double center = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks);
                     double axisY = verticalAxisY ?? plotBox.Y;
                     double legacyHeight = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
                     double baselineDistance = categoryLabelsTopSide
@@ -120,9 +118,7 @@ internal sealed partial class PptxRenderer
                 // Skipped categories leave their label space available to the
                 // next visible tick. Keep source tick positions unchanged.
                 width = slotWidth * Math.Min(tickLabelSkip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
-                double labelCenterX = categoryLabelsOnTickMarks && labels.Count > 1
-                    ? plotBox.X + plotBox.Width * i / (labels.Count - 1)
-                    : plotBox.X + slotWidth * (i + 0.5d);
+                double labelCenterX = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks);
                 x = labelCenterX - width / 2d;
                 double axisY = verticalAxisY ?? plotBox.Y;
                 y = categoryLabelsTopSide
