@@ -211,17 +211,19 @@ internal sealed partial class PptxRenderer
 
                     legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, linePlot, comboLineChart, lineSeriesStrokes, lineMarkerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook, chartStyleId: barStyleId));
                     ChartAxisSource comboCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                    // Keep the independently qualified composed-chart defaults while
+                    // sharing the painter's resolved appearance contract.
+                    IReadOnlyList<ChartLineAppearance> lineAppearance = ReadLineSeriesAppearance(
+                        linePlot?.Series ?? ReadXmlChartSeries(comboLineChart, theme, colorMap), lineOptions,
+                        theme, colorMap, chartPalette, barStyleId, themeWidth: null,
+                        pointColors: false, context.CancellationToken);
                     RenderLineChart(
                         graphics,
-                        theme,
-                        colorMap,
-                        chartPalette,
                         chartLayout.PlotAreaBox,
                         plotBox,
                         lineSeriesVectors,
                         lineOptions,
-                        lineSeriesStrokes,
-                        lineMarkerStyles,
+                        lineAppearance,
                         lineValueAxisOptions with { MajorGridlines = false, MinorGridlines = false, GridlineStyle = ChartGridlineStyle.Empty },
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
                         ChartShapeStyle.Empty,

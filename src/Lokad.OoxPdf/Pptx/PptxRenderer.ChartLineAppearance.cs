@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -56,7 +57,7 @@ internal sealed partial class PptxRenderer
                 {
                     SymbolKind = marker.SymbolKind == PptxSceneChartMarkerSymbol.None
                         ? PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(i) : marker.SymbolKind,
-                    Size = styleId is 18 or 118 ? PptxChartMetricRules.StyleLineMarkerSize : PptxChartMarkerMetricRules.SmoothLineMarkerSize
+                    Size = styleId is 18 or 118 ? PptxChartMarkerMetricRules.StyleLineMarkerSize : PptxChartMarkerMetricRules.SmoothLineMarkerSize
                 };
             RgbColor markerColor = themeWidth is null && line.HasLine ? stroke.Color : baseColor;
             RgbColor markerOutline = themeWidth is not null ? ResolveThemeLineColor(theme, colorMap, baseColor) :
