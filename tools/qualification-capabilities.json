@@ -1,4 +1,28 @@
 {
+  "pptx-area-frames": [
+    "PptxAreaFrame",
+    "PptxAreaPrimaryValueLabelsUseTheirMeasuredSide",
+    "PptxLineAndAreaDataFollowSourceCategorySlots",
+    "PptxCategoryMajorTicksFollowSourceSlotBoundaries",
+    "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
+    "PptxAreaSourceIntervals",
+    "PptxSourceIntervalsShareAutomaticUnitsAcrossLineAndArea",
+    "PptxRightLegendLineReservesBoundsBeyondPaintedIntervals",
+    "PptxLineNumericSideStripsFollowLabelsAcrossFrameWidths",
+    "PptxLineCategoryFooterKeepsItsInsetAcrossFrameHeights",
+    "PptxLegendlessLineCategory",
+    "PptxSyntheticArea",
+    "PptxSyntheticChartArea",
+    "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-category-slots": [
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
     "PptxSyntheticLineChartRendersLegendKeyOnlyDataLabels",

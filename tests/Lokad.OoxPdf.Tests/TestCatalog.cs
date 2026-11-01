@@ -145,6 +145,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(PptxLinePointStyleTests)),
         .. FromType("rendering-portable", typeof(PptxCartesianIntervalTests)),
         .. FromType("rendering-portable", typeof(PptxCategorySlotTests)),
+        .. FromType("rendering-portable", typeof(PptxAreaFrameTests)),
         .. FromType("rendering-portable", typeof(PptxAuthoredColorTests)),
         .. FromType("rendering-portable", typeof(PptxChartSpacingTests)),
         .. FromType("rendering-portable", typeof(PptxAutomaticInsetTests)),
