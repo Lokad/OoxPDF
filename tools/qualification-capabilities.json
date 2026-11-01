@@ -46,6 +46,7 @@
     "PptxLinePointMarkersPreserveDotPositionAcrossPlotAndLegend",
     "SeriesSmoothAgreesBetweenSceneAndXml",
     "PptxChartLineOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartAreaOptionsUseSceneAuthoritativeDefaults",
     "PptxChartMarkerStylesPreserveDefinitionState",
     "PptxSyntheticLineChartPreservesSeriesStylesAfterBlankSeries",
     "PptxSyntheticLineChartConsumesDisplayBlanksAs",
