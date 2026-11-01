@@ -16,6 +16,70 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxVerticalAxisMeasurementMatchesEquivalentAuthoredIntervals()
+    {
+        foreach (string kind in new[] { "column", "stacked", "dual-stacked", "line", "right-line", "right-area" })
+        foreach (double maximum in new[] { .5d, 5d, 50d })
+        {
+            PdfPage automatic = Render(authoredUnit: false);
+            PdfPage authored = Render(authoredUnit: true);
+            string[] autoLabels = Labels(automatic), authoredLabels = Labels(authored);
+            TestAssert.True(autoLabels.Length >= 11 && autoLabels.Contains((maximum / 10d).ToString("G", CultureInfo.InvariantCulture)),
+                "The tall fixture must actually emit the selected automatic interval.");
+            TestAssert.True(autoLabels.SequenceEqual(authoredLabels), "Equivalent source intervals must emit the same numeric labels.");
+            string[] autoClips = Clips(automatic), authoredClips = Clips(authored);
+            TestAssert.True(autoClips.Length >= 2, "Expected frame and data plot clips.");
+            TestAssert.True(autoClips.SequenceEqual(authoredClips),
+                $"Measuring emitted {kind} labels must preserve plot geometry for equivalent intervals on0..{maximum}.");
+
+            PdfPage Render(bool authoredUnit)
+            {
+                string N(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+                string Series(int index, double value) => $$"""
+                    <c:ser><c:idx val="{{index}}"/><c:order val="{{index}}"/><c:tx><c:v>Series{{index}}</c:v></c:tx>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>Alfa</c:v></c:pt><c:pt idx="1"><c:v>Beta</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>{{N(value)}}</c:v></c:pt><c:pt idx="1"><c:v>{{N(value)}}</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    """;
+                string Axis(int id, string side) => $$"""
+                    <c:valAx><c:axId val="{{id}}"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/><c:max val="{{N(maximum)}}"/></c:scaling>
+                      <c:axPos val="{{side}}"/><c:crossAx val="1"/>{{(authoredUnit ? "<c:majorUnit val=\"" + N(maximum / 10d) + "\"/>" : "")}}
+                      <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                    </c:valAx>
+                    """;
+                bool stacked = kind is "stacked" or "dual-stacked";
+                string plotKind = kind is "line" or "right-line" ? "line" : kind == "right-area" ? "area" : "bar";
+                string options = (plotKind == "bar" ? "<c:barDir val=\"col\"/>" : "") +
+                    "<c:grouping val=\"" + (stacked ? "stacked" : plotKind == "bar" ? "clustered" : "standard") + "\"/>";
+                string series = stacked ? Series(0, maximum * .4d) + Series(1, maximum * .4d) : Series(0, maximum * .8d);
+                string plot = $"<c:{plotKind}Chart>{options}{series}<c:axId val=\"1\"/><c:axId val=\"2\"/></c:{plotKind}Chart>";
+                if (kind == "dual-stacked") plot += $"<c:barChart>{options}{Series(2, maximum * .3d)}{Series(3, maximum * .3d)}<c:axId val=\"1\"/><c:axId val=\"3\"/></c:barChart>";
+                string chart = $$"""
+                    <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
+                      {{plot}}<c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:crosses val="autoZero"/></c:catAx>{{Axis(2, "l")}}{{(kind == "dual-stacked" ? Axis(3, "r") : "")}}
+                    </c:plotArea>{{(kind.StartsWith("right-", StringComparison.Ordinal) ? "<c:legend><c:legendPos val=\"r\"/></c:legend>" : "")}}</c:chart></c:chartSpace>
+                    """;
+                const string slide = """
+                    <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="5486400" cy="4572000"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
+                    """;
+                using var stream = PptxTests.CreateSingleChartPackageStream(chart, new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
+                using var package = OoxPackage.Open(stream, default);
+                var document = new PptxReader().Read(package, default);
+                return new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            }
+        }
+
+        static string[] Labels(PdfPage page)
+        {
+            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CVA", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
+            return DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font)).Select(show => show.Text).Order(StringComparer.Ordinal).ToArray();
+        }
+
+        static string[] Clips(PdfPage page) => Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W\* n")
+            .Where(m => double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture) > 150d && double.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture) > 50d)
+            .Select(m => m.Value).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+    }
+
     public static void PptxColumnAxisPositionPreservesTheDataZeroOrigin()
     {
         foreach (bool negative in new[] { false, true })

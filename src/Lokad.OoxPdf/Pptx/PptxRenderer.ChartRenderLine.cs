@@ -618,7 +618,7 @@ internal sealed partial class PptxRenderer
                 // requesting their font or constructing a label measurement.
                 if (!IsSceneOrXmlChartAxisLabelVisible(lineValueAxis.SceneAxis, valueAxisForScale)) return (0d, tickStyle);
                 ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueAxis.SceneAxis, valueAxisForScale), percentStacked);
-                IReadOnlyList<double> lineTickValues = GetChartAxisTickValuesCore(lineValueExtents, lineAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, ReadLineChartAxisTickPolicy(sceneChart, lineValueAxis.SceneAxis, lineValueExtents, percentStacked));
+                IReadOnlyList<double> lineTickValues = GetChartAxisTickValuesCore(lineValueExtents, lineAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadLineChartAxisTickPolicy(sceneChart, lineValueAxis.SceneAxis, lineValueExtents, percentStacked));
                 string[] lineTickLabels = lineTickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, lineValueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
                     .ToArray();
@@ -726,7 +726,7 @@ internal sealed partial class PptxRenderer
                 explicitValueAxisScale = HasSceneOrXmlExplicitValueAxisScale(valueAxis.SceneAxis, valueAxisForScale);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
-                IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
+                IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount);
                 ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 string[] tickLabels = tickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
