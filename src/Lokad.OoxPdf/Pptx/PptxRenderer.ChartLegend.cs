@@ -133,7 +133,8 @@ internal sealed partial class PptxRenderer
 
     private static ChartMarkerStyle? ResolveStrokeLegendMarker(ChartMarkerStyle? marker, int index, int? styleId) =>
         IsGalleryLineChartStyle(styleId) && marker is { IsDefined: false } automatic
-            ? automatic with { SymbolKind = PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(index),
+            ? automatic with { SymbolKind = automatic.SymbolKind == PptxSceneChartMarkerSymbol.None
+                    ? PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(index) : automatic.SymbolKind,
                 Size = PptxChartMarkerMetricRules.StyleLegendMarkerSize }
             : marker;
 

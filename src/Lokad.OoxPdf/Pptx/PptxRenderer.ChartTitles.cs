@@ -549,7 +549,8 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<(double Reserve, ChartAxisSource ValueAxis, double NumericClearance)?> TryMeasureCartesianHeaderAsync(
         PptxTheme theme, PptxSceneChart chart, ChartLegendLayout legend,
-        PptxSceneChartPlot? plot, XElement plotElement, XDocument chartXml, PresentationFontResolver? resolver)
+        PptxSceneChartPlot? plot, XElement plotElement, XDocument chartXml, PresentationFontResolver? resolver,
+        ChartCategoryAxisPlacement? categoryPlacement = null)
     {
         // Authored frames and furniture above/beside the plot keep their existing
         // placement owner. This path measures the ordinary numeric-axis header.
@@ -564,7 +565,7 @@ internal sealed partial class PptxRenderer
             axis.PositionKind is not (PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right))
             return null;
         ChartAxisSource category = ReadSceneOrXmlChartCategoryAxisForPlot(chart, plot, chartXml, plotElement);
-        if (IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis) &&
+        if (categoryPlacement is null && IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis) &&
             (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } categoryAxis ||
              categoryAxis.TickLabelPositionKind == PptxSceneChartTickLabelPosition.High ||
              ReadSceneOrXmlValueAxisReversed(axis, axes[0].XmlAxis) && categoryAxis.TickLabelPositionKind != PptxSceneChartTickLabelPosition.Low))

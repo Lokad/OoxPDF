@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
                 authoredStroke ?? new ChartSeriesStroke(outline, 1d, width) with { Cap = 1, Join = 1 };
             ChartMarkerStyle marker = seriesMarker;
             if (!marker.IsDefined || marker.Symbol == "auto")
-                marker = marker with { SymbolKind = PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(index) };
+                marker = marker with { SymbolKind = PptxChartMarkerMetricRules.ResolveAutomaticLinePointSymbol(index) };
             return new(stroke, marker, color, outline);
         };
     }

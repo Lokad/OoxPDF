@@ -1,5 +1,6 @@
 {
   "pptx-line-point-style": [
+    "PptxLineTitleKeepsNumericFootClearanceSeparateFromHeader",
     "PptxLinePoint",
     "PptxColorSaturationPreservesGrayAndTransformOrder",
     "PptxAuthoredTintShade",

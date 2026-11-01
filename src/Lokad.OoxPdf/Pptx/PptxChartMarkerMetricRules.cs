@@ -5,6 +5,12 @@ namespace Lokad.OoxPdf.Pptx;
 internal static class PptxChartMarkerMetricRules
 {
     private static readonly string[] AutoLineChartMarkerSymbols = ["diamond", "square", "triangle", "x", "star", "circle"];
+    // Independent8- and19-point Office controls repeat the point cycle after
+    // plus/dash. Keep the existing per-series rule separate from point identity.
+    private static readonly string[] AutoLinePointMarkerSymbols = [.. AutoLineChartMarkerSymbols, "plus", "dash"];
+
+    public static PptxSceneChartMarkerSymbol ResolveAutomaticLinePointSymbol(int index) =>
+        PptxSceneBuilder.ParseChartMarkerSymbol(AutoLinePointMarkerSymbols[index % AutoLinePointMarkerSymbols.Length]);
 
     public const double DefaultChartMarkerSize = 4d;
     // Explicit markers without a size element draw at the nominal size-5 geometry (COM

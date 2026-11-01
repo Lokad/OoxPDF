@@ -500,9 +500,10 @@ internal sealed partial class PptxRenderer
             else if (hasLineChart &&
                 ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line) is { } lineElement &&
                 await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend,
-                    ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0), lineElement, chartXml, fontResolver).ConfigureAwait(false) is { } header)
+                    ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0), lineElement, chartXml, fontResolver,
+                    categoryPlacement: categoryAxisPlacement).ConfigureAwait(false) is { } header)
             {
-                if (await TryGetMeasuredLinePlotBoxAsync(header.Reserve).ConfigureAwait(false) is { } composedPlotBox)
+                if (await TryGetMeasuredLinePlotBoxAsync((header.Reserve, header.NumericClearance)).ConfigureAwait(false) is { } composedPlotBox)
                 {
                     defaultPlotBox = composedPlotBox;
                 }
@@ -534,7 +535,7 @@ internal sealed partial class PptxRenderer
                 ? manualPlotLayout
                 : ChartPlotLayout.FromPlotBox(defaultPlotBox);
 
-            async ValueTask<ChartPlotBox?> TryGetMeasuredLinePlotBoxAsync(double? headerReserve = null)
+            async ValueTask<ChartPlotBox?> TryGetMeasuredLinePlotBoxAsync((double Reserve, double NumericClearance)? headerClearance = null)
             {
                 // A manual layout owns its source geometry; composed plots and
                 // extra value-axis strips retain their existing layout fallback.
@@ -587,7 +588,8 @@ internal sealed partial class PptxRenderer
                     fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double numericLineHeight = numericLabelsVisible ? await textMeasurer.MeasureNormalLineHeightAsync(tickStyle).ConfigureAwait(false) : 0d;
-                double topReserve = headerReserve ?? (await MeasureCartesianHeaderReserveAsync(theme, sceneChart, fontResolver, numericLineHeight).ConfigureAwait(false)).Reserve;
+                var clearance = headerClearance ?? await MeasureCartesianHeaderReserveAsync(theme, sceneChart, fontResolver, numericLineHeight).ConfigureAwait(false);
+                double topReserve = clearance.Reserve;
                 double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
                 double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
                 double? measuredOffsetAdjustment = await TryMeasureCategoryLabelOffsetAdjustmentAsync(textMeasurer, categoryStyle, labelOffsetScale).ConfigureAwait(false);
@@ -608,13 +610,14 @@ internal sealed partial class PptxRenderer
                     double labelRatio = placement.LabelPlotRatio;
                     bool topSide = placement.LabelsTopSide;
                     double categoryReserve = bottomReserve;
-                    double numericReserve = topReserve;
+                    double numericReserve = clearance.NumericClearance;
+                    double titleReserve = clearance.Reserve - clearance.NumericClearance;
                     if (topSide)
                     {
                         bottomReserve = numericReserve;
                         topReserve = labelRatio > 0d
-                            ? Math.Max(numericReserve, (categoryReserve - (1d - labelRatio) * (frame.Height - bottomReserve)) / labelRatio)
-                            : numericReserve;
+                            ? Math.Max(clearance.Reserve, (titleReserve + categoryReserve - (1d - labelRatio) * (frame.Height - bottomReserve)) / labelRatio)
+                            : clearance.Reserve;
                     }
                     else if (labelRatio > 0d)
                     {

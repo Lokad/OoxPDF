@@ -178,6 +178,24 @@ internal static class PptxChartAxesTests
         }
     }
 
+    public static void PptxLineTitleKeepsNumericFootClearanceSeparateFromHeader()
+    {
+        foreach (bool legend in new[] { false, true })
+        {
+            PdfPage bare = RenderColumnDirectionProbe(false, true, "low", "b", line: true, bottomLegend: legend);
+            PdfPage titled = RenderColumnDirectionProbe(false, true, "low", "b", line: true, title: true, bottomLegend: legend);
+            double[] before = Plot(bare), after = Plot(titled);
+            TestAssert.True(Math.Abs(before[1] - after[1]) <= .001d,
+                "A title above top-side captions must not also consume numeric clearance at the foot.");
+            TestAssert.True(after[3] < before[3], "The title still owns space at the top of the frame.");
+        }
+
+        static double[] Plot(PdfPage page) => Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W\* n")
+            .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+            .Where(rect => rect[2] > 150d && rect[2] < 288d && rect[3] > 50d && rect[3] < 216d)
+            .OrderByDescending(rect => rect[3]).First();
+    }
+
     private static PdfPage RenderColumnDirectionProbe(bool negative, bool reversed, string position, string axisPosition,
         bool line = false, bool title = false, bool bottomLegend = false)
     {
