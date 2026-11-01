@@ -74,10 +74,32 @@ internal static class PptxColumnIntervalTests
 
     private static (RgbColor Color, double[] V)[] Lines(PdfPage page)
     {
-        var paths = new List<string>();
-        var colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, strokes: true).ToArray();
-        return colors.Zip(paths).SelectMany(p => Regex.Matches(p.Second, @"([-\d.]+) ([-\d.]+) m ([-\d.]+) ([-\d.]+) l S")
-            .Select(m => (p.First, m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray()))).ToArray();
+        var result = new List<(RgbColor, double[])>();
+        var saved = new Stack<RgbColor>();
+        RgbColor color = default;
+        string path = "";
+        foreach (string line in page.Content.Split('\n').Select(l => l.Trim()))
+        {
+            if (line == "q") saved.Push(color);
+            else if (line == "Q") color = saved.Pop();
+            else if (line.EndsWith(" RG", StringComparison.Ordinal))
+            {
+                byte[] rgb = line[..^3].Split(' ').Select(s => (byte)Math.Round(double.Parse(s, CultureInfo.InvariantCulture) * 255d)).ToArray();
+                color = new RgbColor(rgb[0], rgb[1], rgb[2]);
+            }
+            else if (line.EndsWith(" G", StringComparison.Ordinal)) color = default;
+            else if (line.EndsWith(" m", StringComparison.Ordinal) || line.EndsWith(" l", StringComparison.Ordinal) || line.EndsWith(" S", StringComparison.Ordinal) || line == "S")
+            {
+                path += line + " ";
+                if (line == "S" || line.EndsWith(" S", StringComparison.Ordinal))
+                {
+                    result.AddRange(Regex.Matches(path, @"([-\d.]+) ([-\d.]+) m\s+([-\d.]+) ([-\d.]+) l")
+                        .Select(m => (color, m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())));
+                    path = "";
+                }
+            }
+        }
+        return result.ToArray();
     }
 
     private static PdfPage Render(int? minimum, int? major, int maximum = 103, bool reversed = false, string grouping = "clustered", bool manual = false, bool grids = false)
