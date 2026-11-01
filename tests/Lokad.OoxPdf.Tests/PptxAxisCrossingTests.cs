@@ -37,11 +37,13 @@ internal static class PptxAxisCrossingTests
 
     private static void Check(PdfPage page, bool axisRight, string labels, string context)
     {
-        var clips = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W\* n")
+        var horizontal = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) m ([-\d.]+) ([-\d.]+) l S")
             .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
-            .Where(c => c[2] > 200d && c[2] < 700d && c[3] > 100d).OrderBy(c => c[2] * c[3]).ToArray();
-        TestAssert.True(clips.Length > 0, "Inspect the actual data plot clip.");
-        double left = clips[0][0], right = left + clips[0][2];
+            .Where(c => Math.Abs(c[1] - c[3]) < .001d && Math.Abs(c[0] - c[2]) > 200d).ToArray();
+        TestAssert.True(horizontal.Length > 0, "Inspect the painted plot axis/grid span; a column clip also includes stroke padding.");
+        var span = horizontal.GroupBy(c => (Left: Math.Min(c[0], c[2]), Right: Math.Max(c[0], c[2])))
+            .OrderByDescending(group => group.Count()).First().Key;
+        double left = span.Left, right = span.Right;
         var paths = new List<string>();
         RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, strokes: true).ToArray();
         var axes = colors.Zip(paths).Where(p => p.First == new RgbColor(255, 0, 0))
