@@ -43,7 +43,8 @@ Supported within the following constraints:
   resolved from each slide's master. Missing master themes retain the existing
   presentation/first-master fallback; theme-override expansion remains unsupported.
 - Authored DrawingML tint/shade transforms share linear-light color resolution
-  across supported solid shapes, chart point fills and legend keys.
+  across supported solid shapes, chart point fills and legend keys. Supported
+  saturation modifiers retain source transform order.
 - Common solid shapes, paths, straight lines, rotation/flips and nested group
   translation/scaling. Advanced/custom geometry and effects remain partial.
 - JPEG/PNG pictures and bounded native SVG paint. Crop/fill clipping, source
@@ -110,6 +111,14 @@ Approximate or restricted:
   color-style methods remain incomplete. Category bar legends share point paint
   and wrap within the chart frame; crowded frames diagnose clipped entries.
   Existing independent Office thresholds still apply.
+- A single-series line plot with point variation shares source-indexed paint
+  across incoming straight/curved segments, markers, category-name legend entries
+  and data-label keys. Explicit point/series strokes and series marker appearance
+  retain precedence. Omitted variation follows the qualified enabled default;
+  explicit false and multiple series retain series legend entries. Automatic point
+  markers repeat eight symbols; a series marker of `none` suppresses them. Plot
+  marker flags alone do not suppress automatic line markers. Authored/composed
+  styles, dense layout, label placement and font geometry remain approximate.
 - Legends without an overlay flag follow PowerPoint's overlay default. Specify
   `<c:overlay val="0"/>` to reserve plot space. Legend geometry remains approximate.
   Bottom line legends share measured wrapping with horizontal bar legends;
