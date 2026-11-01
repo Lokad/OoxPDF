@@ -59,12 +59,25 @@ internal static class PptxCartesianIntervalTests
         return Regex.Matches(path.Groups["body"].Value, @"[-\d.]+ [-\d.]+ l").Count;
     }
 
+    public static void PptxSourceIntervalsShareAutomaticUnitsAcrossLineAndArea()
+    {
+        foreach (bool area in new[] { false, true })
+        {
+            PdfPage page = Render(103, 12, area: area, minorGridlines: true, automaticMajorUnit: true);
+            TestAssert.True(NumericLabels(page).Select(x => x.Text).SequenceEqual(
+                Enumerable.Range(0, 10).Select(i => (7 + 10 * i).ToString(System.Globalization.CultureInfo.InvariantCulture))),
+                "Independent Office selects a10-unit major interval at these source bounds.");
+            TestAssert.Equal(9, PaintedGridLevels(page, "1 0 0"));
+            TestAssert.Equal(39, PaintedGridLevels(page, "0 1 0"));
+        }
+    }
+
     private static (string Text, double X)[] NumericLabels(PdfPage page) =>
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal))
             .Select(show => (show.Text, show.X)).ToArray();
 
-    private static PdfPage Render(int maximum, int size, bool area = false, int? minimum = 7, bool minorGridlines = false)
+    private static PdfPage Render(int maximum, int size, bool area = false, int? minimum = 7, bool minorGridlines = false, bool automaticMajorUnit = false)
     {
         string kind = area ? "areaChart" : "lineChart";
         string chart = $$"""
@@ -76,7 +89,7 @@ internal static class PptxCartesianIntervalTests
                 </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
                 <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling>{{(minimum is { } lower ? "<c:min val=\"" + lower + "\"/>" : "")}}<c:max val="{{maximum}}"/></c:scaling><c:axPos val="l"/>
-                  <c:crossAx val="1"/><c:majorUnit val="20"/>
+                  <c:crossAx val="1"/>{{(automaticMajorUnit ? "" : "<c:majorUnit val=\"20\"/>")}}
                   <c:majorGridlines><c:spPr><a:ln w="12700"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
                   {{(minorGridlines ? "<c:minorGridlines><c:spPr><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"00FF00\"/></a:solidFill></a:ln></c:spPr></c:minorGridlines>" : "")}}
                   <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>

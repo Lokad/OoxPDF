@@ -1410,7 +1410,11 @@ internal sealed partial class PptxRenderer
     private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, bool hasMajorGridlineElement, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints)
     {
         DrawHorizontalChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, reversed, major, gridlineStroke,
-            () => GetChartGridlineValuesCore(extents, units, major, crossingValue, PptxChartMetricRules.AxisNiceTickTargetCount, hasMajorGridlineElement, tickPolicy));
+            () => GetChartGridlineValuesCore(extents, units, major, crossingValue,
+                tickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals
+                    ? PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount
+                    : PptxChartMetricRules.AxisNiceTickTargetCount,
+                hasMajorGridlineElement, tickPolicy));
     }
 
     private static void DrawHorizontalChartGridlinePaths(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, Func<IReadOnlyList<double>> readValues)
