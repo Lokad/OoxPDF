@@ -843,8 +843,8 @@ internal static class PptxModelTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].MarkersEnabled is null, "Expected missing chart-level line marker metadata to remain observable.");
         TestAssert.Equal(string.Empty, slide.SlideNodes[4].Chart?.Plots[2].MarkersEnabledValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.IsDefined == false, "Expected missing line-chart marker metadata to remain distinct from explicit default markers.");
-        TestAssert.Equal("none", slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.Symbol ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartMarkerSymbol.None, slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.SymbolKind);
+        TestAssert.Equal("diamond", slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.Symbol ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartMarkerSymbol.Diamond, slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.SymbolKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Smooth == false, "Expected explicit smooth disable to remain distinct from a missing smooth element.");
         TestAssert.Equal("0", slide.SlideNodes[4].Chart?.Plots[2].Series[0].SmoothValue ?? string.Empty);
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);

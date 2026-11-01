@@ -1,5 +1,6 @@
 {
   "pptx-line-point-style": [
+    "PptxSceneBuilderBuildsResolvedNodeLists",
     "PptxSyntheticChartLegendManualBoxDrivesPlacement",
     "PptxSyntheticChartStyleLegendDefaultsDriveChartLegendRendering",
     "PptxLineNumericSideStripsFollowLabelsAcrossFrameWidths",
