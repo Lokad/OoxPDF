@@ -5,6 +5,19 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private static (double LabelPlotRatio, bool LabelsTopSide) ResolveCategoryLabelPlacement(
+        PptxSceneChartAxis? axis, XElement? xml, double crossingRatio, bool reversed)
+    {
+        PptxSceneChartTickLabelPosition position = ResolveChartTickLabelPosition(axis is not null
+            ? axis.TickLabelPositionKind
+            : PptxSceneBuilder.ParseChartTickLabelPosition(PptxSceneBuilder.ReadChartElementValue(xml, "tickLblPos")));
+        // Low/high refer to value direction, so reversing the scale swaps both
+        // the physical edge and the label side. NextTo follows the crossing.
+        double ratio = position == PptxSceneChartTickLabelPosition.Low ? (reversed ? 1d : 0d) :
+            position == PptxSceneChartTickLabelPosition.High ? (reversed ? 0d : 1d) : crossingRatio;
+        return (ratio, (position == PptxSceneChartTickLabelPosition.High) != reversed);
+    }
+
     // Resolve spacing before placing the plot, then paint these same measured
     // labels. Automatic angles use the outer plot strip; authored angles use
     // the inner plot. Office PDF/API controls distinguish these two owners.

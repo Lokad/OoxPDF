@@ -538,11 +538,7 @@ internal sealed partial class PptxRenderer
                 {
                     bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, valueAxes[0].XmlAxis);
                     double crossingRatio = GetChartValuePlotRatio(extents, crossing, reversed);
-                    PptxSceneChartTickLabelPosition position = categoryAxis.SceneAxis.TickLabelPositionKind;
-                    bool topSide = position == PptxSceneChartTickLabelPosition.High ||
-                        position != PptxSceneChartTickLabelPosition.Low && reversed;
-                    double labelRatio = position == PptxSceneChartTickLabelPosition.Low ? 0d :
-                        position == PptxSceneChartTickLabelPosition.High ? 1d : crossingRatio;
+                    var (labelRatio, topSide) = ResolveCategoryLabelPlacement(categoryAxis.SceneAxis, categoryAxis.XmlAxis, crossingRatio, reversed);
                     double categoryReserve = bottomReserve;
                     double numericReserve = topReserve;
                     if (topSide)

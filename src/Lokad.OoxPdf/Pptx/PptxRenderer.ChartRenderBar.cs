@@ -40,9 +40,6 @@ internal sealed partial class PptxRenderer
             bool percentStacked = IsPercentStackedChartGrouping(plotOptions.Grouping);
             double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisOptions.Reversed);
             double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
-            double columnBaseY = !horizontalBars && axesStyle.CategoryAxisTopSide
-                ? ChartValueToPlotCoordinate(valueExtents, valueExtents.Max, plotY, plotHeight, valueAxisOptions.Reversed)
-                : zeroY;
             double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
             double valueAxisAutoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible, manualPlotLayoutApplied);
             if (valueAxisOptions.MinorGridlines)
@@ -91,7 +88,7 @@ internal sealed partial class PptxRenderer
                     SetChartStroke(graphics, stroke);
                     double axisY = horizontalBars
                         ? (axesStyle.ValueAxisBottomSide ? plotY : plotY + plotHeight)
-                        : (axesStyle.CategoryAxisTopSide ? plotY + plotHeight : valueAxisCrossingY);
+                        : valueAxisCrossingY;
                     RenderInChartPlotAreaClip(graphics, plotClipBox, () => graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY));
                 }
             }
@@ -157,8 +154,8 @@ internal sealed partial class PptxRenderer
                     ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, value, plotOptions.InvertsNegativePoint(seriesIndex, category));
                     double barX = categoryX + seriesIndex * step;
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
-                    double barY = Math.Min(columnBaseY, valueY);
-                    double barHeight = Math.Abs(valueY - columnBaseY);
+                    double barY = Math.Min(zeroY, valueY);
+                    double barHeight = Math.Abs(valueY - zeroY);
                     bool isStyleDriven = (seriesIndex >= seriesFills.Count || seriesFills[seriesIndex] is null) && !HasExplicitChartPointFill(pointFills, seriesIndex, category);
                     if (!(isStyleDriven && TryGetStyleBarGradientStops(chartStyleId, fill, out IReadOnlyList<PdfShadingStop> stops) && PaintBarGradientRect(graphics, plotClipBox, barX, barY, barWidth, barHeight, stops)))
                     {

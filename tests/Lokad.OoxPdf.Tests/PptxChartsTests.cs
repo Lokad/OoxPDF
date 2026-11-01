@@ -1584,7 +1584,8 @@ internal static class PptxChartsTests
         foreach ((string position, bool reversed, string baseline) in new[]
         {
             ("nextTo", false, "331.326"), ("low", false, "262.96"),
-            ("high", false, "445.376"), ("nextTo", true, "377.01")
+            ("high", false, "445.376"), ("nextTo", true, "377.01"),
+            ("low", true, "445.376"), ("high", true, "262.96")
         })
         {
             string pdf = RenderLegendlessLineLayoutProbe(18, 360, 100, categoryCrossesAt: 50d,
@@ -1625,7 +1626,7 @@ internal static class PptxChartsTests
         foreach ((bool reversed, string labelPosition, double crossing, double axisY) in new[]
         {
             (false, "high", 50d, 347.633d),
-            (true, "low", 50d, 372.367d),
+            (true, "low", 50d, 347.633d),
             (true, "nextTo", 0d, 428.366d)
         })
         {

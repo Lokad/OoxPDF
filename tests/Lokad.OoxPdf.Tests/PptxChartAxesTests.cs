@@ -16,6 +16,90 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxColumnAxisPositionPreservesTheDataZeroOrigin()
+    {
+        foreach (bool negative in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        {
+            double[][] bottom = Bars(RenderColumnDirectionProbe(negative, reversed, "none", "b"));
+            double[][] top = Bars(RenderColumnDirectionProbe(negative, reversed, "none", "t"));
+            TestAssert.Equal(2, bottom.Length);
+            TestAssert.Equal(2, top.Length);
+            for (int i = 0; i < 2; i++)
+            {
+                // Authored216pt frame, half-height inner plot, value4/range5.
+                TestAssert.True(Math.Abs(top[i][3] - 86.4d) <= .001d,
+                    "Axis position metadata must not replace zero with the maximum data origin.");
+                for (int coordinate = 0; coordinate < 4; coordinate++)
+                    TestAssert.True(Math.Abs(top[i][coordinate] - bottom[i][coordinate]) <= .001d,
+                        "Changing category axis position must preserve every data rectangle.");
+            }
+        }
+
+        static double[][] Bars(PdfPage page) => Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re f")
+            .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+            .Where(rect => rect[2] > 1d && rect[2] < 100d && rect[3] > 1d).ToArray();
+    }
+
+    public static void PptxColumnCaptionsFollowNumericPositionAndValueDirection()
+    {
+        foreach (bool negative in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string position in new[] { "nextTo", "low", "high" })
+        {
+            PdfPage page = RenderColumnDirectionProbe(negative, reversed, position, "b");
+            var bars = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re f")
+                .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(rect => rect[2] > 1d && rect[2] < 100d && rect[3] > 1d).ToArray();
+            TestAssert.Equal(2, bars.Length);
+            double plotHeight = bars[0][3] * 5d / 4d;
+            bool zeroAtTop = negative != reversed;
+            double plotTop = bars[0][1] + (zeroAtTop ? bars[0][3] : plotHeight);
+            double plotBottom = plotTop - plotHeight;
+            double anchor = position == "low" ? (reversed ? plotTop : plotBottom) :
+                position == "high" ? (reversed ? plotBottom : plotTop) : zeroAtTop ? plotTop : plotBottom;
+            bool above = (position == "high") != reversed;
+            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CCA", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(2, captions.Length);
+            foreach (var show in captions)
+            {
+                double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+                foreach (char character in show.Text)
+                {
+                    TestAssert.True(show.Font.Font.TryGetGlyphBounds(show.Font.Font.MapCodePoint(character), out var box), "Expected pinned glyph ink.");
+                    bottom = Math.Min(bottom, show.Y + box.YMin * show.Size / show.Font.Font.UnitsPerEm);
+                    top = Math.Max(top, show.Y + box.YMax * show.Size / show.Font.Font.UnitsPerEm);
+                }
+                TestAssert.True(above ? bottom > anchor : top < anchor,
+                    $"Caption ink must follow numeric {position} placement (negative={negative}, reversed={reversed}).");
+            }
+        }
+    }
+
+    private static PdfPage RenderColumnDirectionProbe(bool negative, bool reversed, string position, string axisPosition)
+    {
+        string chart = $$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea>
+              <c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.1"/><c:y val="0.1"/><c:w val="0.8"/><c:h val="0.5"/></c:manualLayout></c:layout>
+              <c:barChart><c:barDir val="col"/><c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>Alfa</c:v></c:pt><c:pt idx="1"><c:v>Beta</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>{{(negative ? -4 : 4)}}</c:v></c:pt><c:pt idx="1"><c:v>{{(negative ? -4 : 4)}}</c:v></c:pt></c:numLit></c:val>
+              </c:ser><c:axId val="1"/><c:axId val="2"/></c:barChart>
+              <c:catAx><c:axId val="1"/><c:axPos val="{{axisPosition}}"/><c:tickLblPos val="{{position}}"/>
+                <c:txPr><a:bodyPr rot="0"/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+              </c:catAx>
+              <c:valAx><c:axId val="2"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/><c:min val="{{(negative ? -5 : 0)}}"/><c:max val="{{(negative ? 0 : 5)}}"/></c:scaling><c:tickLblPos val="none"/></c:valAx>
+            </c:plotArea></c:chart></c:chartSpace>
+            """;
+        const string slide = """
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="3657600" cy="2743200"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+            """;
+        using var stream = PptxTests.CreateSingleChartPackageStream(chart, new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
+        using var package = OoxPackage.Open(stream, default);
+        var document = new PptxReader().Read(package, default);
+        return new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+    }
+
     public static void PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds()
     {
         // Office16 columns, horizontal bars and lines agree on these bounds;
