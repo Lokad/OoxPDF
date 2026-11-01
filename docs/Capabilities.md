@@ -95,7 +95,8 @@ Approximate or restricted:
   wrapping. Automatic outer captions share height with the plot and may truncate
   within their footer. Authored plot geometry remains fixed. Automatic vertical
   value labels retain endpoints and omit overlapping ink; fixed intervals remain
-  unchanged. Resolved Cartesian spans below one retain proportional coordinates
+  unchanged. Vertical numeric strips measure the same automatic interval policy
+  used to emit their labels. Resolved Cartesian spans below one retain proportional coordinates
   and tick intervals. Negative-only data shares positive-axis bound rounding and
   preserves authored limits. Column captions and measured line layouts follow
   numeric low/high positions and value direction; axis position does not change
