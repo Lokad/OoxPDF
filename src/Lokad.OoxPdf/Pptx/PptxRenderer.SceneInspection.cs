@@ -298,6 +298,7 @@ internal sealed partial class PptxRenderer
 
         foreach (PptxSceneChartAxis axis in chart.Axes)
         {
+            properties.Add(axis.TextBodyProperties);
             properties.Add(axis.Title.TextBodyProperties);
         }
 

@@ -19,18 +19,18 @@ internal sealed partial class PptxRenderer
         return lineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (offsetScale - 1d);
     }
 
-    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null)
+    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null)
     {
         if (labels.Count == 0)
         {
             return;
         }
 
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+        ChartTextStyle style = prepared?.Style ?? ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         double fontSize = style.FontSize;
         RgbColor color = style.Color;
         double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(sceneAxis, categoryAxis);
-        int tickLabelSkip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(sceneAxis, categoryAxis);
+        int tickLabelSkip = prepared?.TickLabelSkip ?? ResolveSceneOrXmlCategoryAxisTickLabelSkip(sceneAxis, categoryAxis);
         double widestCategoryLabel = 0d;
         if (horizontalBars)
         {
@@ -62,6 +62,41 @@ internal sealed partial class PptxRenderer
             string? label = labels[i]?.Text;
             if (string.IsNullOrWhiteSpace(label))
             {
+                continue;
+            }
+
+            if (prepared is { RotationDegrees: not 0d } rotated && rotated.Labels.TryGetValue(i, out var rotatedParts))
+            {
+                foreach (var part in rotatedParts)
+                {
+                    if (part.Text.Length == 0) continue;
+                    double center = categoryLabelsOnTickMarks && labels.Count > 1
+                        ? plotBox.X + plotBox.Width * i / (labels.Count - 1)
+                        : plotBox.X + plotBox.Width * (i + 0.5d) / labels.Count;
+                    double axisY = verticalAxisY ?? plotBox.Y;
+                    double legacyHeight = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
+                    double baselineDistance = categoryLabelsTopSide
+                        ? legacyHeight * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor
+                        : legacyHeight * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor;
+                    baselineDistance = automaticLabelOffsetAdjustment is { } extra ? baselineDistance + extra : baselineDistance * labelOffsetScale;
+                    double gap = Math.Max(0d, baselineDistance - (categoryLabelsTopSide ? rotated.Descent : rotated.Ascent));
+                    double radians = -rotated.RotationDegrees * Math.PI / 180d;
+                    double sin = Math.Sin(radians), cos = Math.Cos(radians);
+                    double pivotX = center + (rotated.Ascent - rotated.Descent) * sin / 2d;
+                    double pivotY = categoryLabelsTopSide ? axisY + gap + rotated.Descent * cos : axisY - gap - rotated.Ascent * cos;
+                    bool rightAnchor = (radians > 0d) != categoryLabelsTopSide;
+                    double localX = rightAnchor ? pivotX - part.Width : pivotX;
+                    double clipLeft = pivotX + (rightAnchor ? -part.Width * cos : 0d) +
+                        (sin >= 0d ? -rotated.Ascent * sin : rotated.Descent * sin);
+                    double clipRight = pivotX + (rightAnchor ? 0d : part.Width * cos) +
+                        (sin >= 0d ? rotated.Descent * sin : -rotated.Ascent * sin);
+                    double extent = part.Width * Math.Abs(sin) + rotated.LineHeight * cos;
+                    double clipBottom = categoryLabelsTopSide ? axisY + gap : axisY - gap - extent;
+                    TextRun rotatedRun = CreateChartTextRun(part.Text, localX, pivotY, part.Width, rotated.LineHeight,
+                        clipLeft, clipBottom, Math.Max(1d, clipRight - clipLeft), extent,
+                        style with { Alpha = 1d }, TextAlignment.Left, kerningEnabled: false);
+                    runs.Add(rotatedRun with { RotationDegrees = rotated.RotationDegrees, RotationCenterX = pivotX, RotationCenterY = pivotY });
+                }
                 continue;
             }
 
@@ -101,7 +136,7 @@ internal sealed partial class PptxRenderer
             }
 
             double labelWidth = Math.Max(1d, width);
-            runs.Add(new TextRun(
+            TextRun run = new TextRun(
                 label,
                 x,
                 y,
@@ -128,7 +163,16 @@ internal sealed partial class PptxRenderer
                 RotationCenterX: 0d,
                 RotationCenterY: 0d,
                 FlipHorizontal: false,
-                FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
+                FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false);
+            if (prepared is not null && prepared.Labels.TryGetValue(i, out var parts))
+            {
+                for (int lineIndex = 0; lineIndex < parts.Length; lineIndex++)
+                {
+                    double shift = lineIndex * prepared.LineHeight * (categoryLabelsTopSide ? 1d : -1d);
+                    runs.Add(run with { Text = parts[lineIndex].Text, Y = run.Y + shift, ClipY = run.ClipY + shift });
+                }
+            }
+            else runs.Add(run);
         }
 
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CCA", fontResolver, diagnosticSink).ConfigureAwait(false);

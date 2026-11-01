@@ -432,7 +432,13 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartCategoryAxisPlacement(double CrossingValue, double LabelPlotRatio, bool LabelsTopSide, bool AxisTopSide);
 
-    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null, ChartCategoryAxisPlacement? AutomaticCategoryAxisPlacement = null);
+    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null, ChartCategoryAxisPlacement? AutomaticCategoryAxisPlacement = null)
+    {
+        public ChartCategoryLabelLayout? CategoryLabels { get; init; }
+    }
+
+    private sealed record ChartCategoryLabelLayout(ChartTextStyle Style, double RotationDegrees, int TickLabelSkip,
+        double Ascent, double Descent, double LineHeight, IReadOnlyDictionary<int, ChartTextRunLayout[]> Labels);
 
     private readonly record struct ChartFrameBox(double X, double Y, double Width, double Height);
 

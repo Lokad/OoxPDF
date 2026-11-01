@@ -1,4 +1,27 @@
 {
+  "pptx-category-layout": [
+    "PptxCategoryLabelRotationPreservesContentAcrossPlotKinds",
+    "PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks",
+    "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
+    "PptxChartCategoryAxisLabelPolicyUsesSceneAuthoritativeDefaults",
+    "PptxSyntheticChartCategoryAxisLabelOffsetRender",
+    "PptxColumnCategoryOffsetsKeepCompleteInkInsideTheirFrame",
+    "PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides",
+    "PptxLegendlessLineCategoryLabelsFollowCrossingAndSourceSide",
+    "PptxLegendlessLineCategoryPlacementRetainsSourceLayoutFallbacks",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels",
+    "PptxSceneBuilderBuildsResolvedNodeLists",
+    "PptxUnsupportedTextDiagnosticsUseSceneChartTextBodyProperties",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-category-spacing": [
     "PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks",
     "PptxSyntheticChartCategoryAxisTickLabelSkipRender",

@@ -16,6 +16,50 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxCategoryLabelRotationPreservesContentAcrossPlotKinds()
+    {
+        foreach (string kind in new[] { "bar", "line", "area" })
+        foreach (string rotation in new[] { "-60000000", "-5400000", "-2700000", "2700000", "0" })
+        {
+            string direction = kind == "bar" ? "<c:barDir val=\"col\"/>" : string.Empty;
+            string names = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>Depot{i:D2}</c:v></c:pt>"));
+            string values = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:{{kind}}Chart>{{direction}}
+                    <c:ser><c:cat><c:strLit>{{names}}</c:strLit></c:cat><c:val><c:numLit>{{values}}</c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:{{kind}}Chart>
+                  <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblSkip val="1"/>
+                    <c:txPr><a:bodyPr rot="{{rotation}}" vert="horz" vertOverflow="ellipsis"/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                  </c:catAx>
+                  <c:valAx><c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>
+                  </c:valAx></c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            using var stream = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
+            TestAssert.True(shows.Select(show => show.Text).SequenceEqual(Enumerable.Range(0, 12).Select(i => $"Depot{i:D2}")),
+                $"Authored spacing retains every complete category in {kind}, rotation {rotation}.");
+            var matrices = Regex.Matches(page.Content, @"(?m)^(?<a>[-\d.]+) (?<b>[-\d.]+) (?<c>[-\d.]+) (?<d>[-\d.]+) [-\d.]+ [-\d.]+ cm\r?$")
+                .Select(m => (A: double.Parse(m.Groups["a"].Value, CultureInfo.InvariantCulture), B: double.Parse(m.Groups["b"].Value, CultureInfo.InvariantCulture))).ToArray();
+            double expected = rotation == "-60000000" ? -45d : double.Parse(rotation, CultureInfo.InvariantCulture) / 60000d;
+            if (expected != 0d)
+                TestAssert.True(matrices.Count(m => Math.Abs(m.A - Math.Cos(-expected * Math.PI / 180d)) < 0.00001d &&
+                    Math.Abs(m.B - Math.Sin(-expected * Math.PI / 180d)) < 0.00001d) == 12,
+                    "Each label uses the authored rotation or the automatic measured angle, through the shared PDF transform.");
+            PptxSceneChartAxis axis = PptxTests.BuildSingleChartScene(chart)!.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Category);
+            TestAssert.Equal(rotation, axis.TextBodyProperties.RotationValue);
+            TestAssert.Equal("horz", axis.TextBodyProperties.OrientationValue);
+            TestAssert.Equal("ellipsis", axis.TextBodyProperties.VerticalOverflowValue);
+        }
+    }
+
     public static void PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks()
     {
         foreach (string kind in new[] { "bar", "line" })

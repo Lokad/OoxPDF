@@ -543,7 +543,10 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap, null, "", null),
-                hasLogarithmicScale: hasLogarithmicScale));
+                hasLogarithmicScale: hasLogarithmicScale) with
+            {
+                TextBodyProperties = ReadChartTextBodyProperties(axis)
+            });
         }
 
         return axes;

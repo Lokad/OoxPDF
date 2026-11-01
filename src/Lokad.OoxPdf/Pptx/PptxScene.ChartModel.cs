@@ -1022,6 +1022,8 @@ internal sealed record PptxSceneChartAxis
 
     public PptxSceneChartTextStyleOverride TextStyle { get; }
 
+    public PptxSceneChartTextBodyProperties TextBodyProperties { get; init; }
+
     public PptxSceneChartTickLabelPosition TickLabelPositionKind { get; }
 
     public string TickLabelPosition { get; }
