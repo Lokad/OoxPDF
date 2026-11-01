@@ -40,6 +40,18 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
+        void DrawGridlines(bool major, ChartSeriesStroke? stroke)
+        {
+            // Source intervals share the line grid's major/minor lattice and
+            // subdivision ownership. Other area scales retain their fallback.
+            if (valueAxisOptions.TickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals)
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents,
+                    axisUnits, valueAxisCrossingValue, valueAxisReversed, major, stroke,
+                    valueAxisOptions.HasMajorGridlineElement, valueAxisOptions.TickPolicy);
+            else
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents,
+                    major ? axisUnits.MajorUnit : axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major, stroke);
+        }
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         {
@@ -48,7 +60,7 @@ internal sealed partial class PptxRenderer
                 RenderInChartPlotAreaClip(
                     graphics,
                     plotBox,
-                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor));
+                    () => DrawGridlines(major: false, gridlineStyle.Minor));
             }
 
             if (majorGridlines)
@@ -56,7 +68,7 @@ internal sealed partial class PptxRenderer
                 RenderInChartPlotAreaClip(
                     graphics,
                     plotBox,
-                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major));
+                    () => DrawGridlines(major: true, gridlineStyle.Major));
             }
 
             RenderAreaChartSeries(graphics, theme, colorMap, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, displayBlanksAs);

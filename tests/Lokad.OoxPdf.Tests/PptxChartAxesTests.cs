@@ -1033,7 +1033,7 @@ internal static class PptxChartAxesTests
             PptxSceneChartAxis axis = chart.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value);
             TestAssert.Equal(log.Length != 0, axis.HasLogarithmicScale);
             const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-            var method = typeof(PptxRenderer).GetMethod("ReadLineChartAxisTickPolicy", flags) ?? throw new InvalidOperationException("Expected source policy.");
+            var method = typeof(PptxRenderer).GetMethod("ReadCartesianChartAxisTickPolicy", flags) ?? throw new InvalidOperationException("Expected source policy.");
             Type extentsType = typeof(PptxRenderer).GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic)!;
             object extents = Activator.CreateInstance(extentsType, [7d, 107d])!;
             TestAssert.Equal(log.Length == 0 ? "SourceMinimumIntervals" : "ZeroAlignedWithEndpoints", method.Invoke(null, [chart, axis, extents, false])!.ToString());

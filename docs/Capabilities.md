@@ -105,6 +105,12 @@ Approximate or restricted:
   numeric low/high positions and value direction; axis position does not change
   column data lengths. Remaining caption placement, dense allocation, automatic
   axis ranges and font geometry remain approximate.
+  Numeric strips can reserve space for an authored range endpoint even when no
+  major tick is painted there; measurement and tick emission have distinct roles.
+  Single line/area plots with one supported value axis share source interval
+  origins across labels, tick marks and grids, including an automatic lower bound
+  anchored to an authored maximum and major unit. Automatic step fitting remains
+  approximate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary

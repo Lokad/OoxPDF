@@ -175,37 +175,37 @@ internal sealed partial class PptxRenderer
             : axisUnits;
     }
 
-    private static ChartAxisTickPolicy ReadLineChartAxisTickPolicy(PptxSceneChart? chart, PptxSceneChartAxis? axis, ChartValueExtents extents, bool percentStacked = false)
+    private static ChartAxisTickPolicy ReadCartesianChartAxisTickPolicy(PptxSceneChart? chart, PptxSceneChartAxis? axis, ChartValueExtents extents, bool percentStacked = false)
     {
         // Bounds were resolved once before measurement/emission. Recomputing
         // ceiling arithmetic here could shift a fractional origin a second time.
-        return CanOwnLineChartSourceRange(chart, axis) &&
+        return CanOwnCartesianChartSourceRange(chart, axis) &&
             (axis!.Minimum is { } minimum
                 ? double.IsFinite(minimum) && minimum == extents.Min
-                : !percentStacked && TryGetLineChartMaximumInterval(axis, extents, out _, out _))
+                : !percentStacked && TryGetCartesianChartMaximumInterval(axis, extents, out _, out _))
             ? ChartAxisTickPolicy.SourceMinimumIntervals
             : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
     }
 
-    private static ChartValueExtents ReadLineChartValueAxisExtents(PptxSceneChart? chart, PptxSceneChartAxis? axis,
+    private static ChartValueExtents ReadCartesianChartValueAxisExtents(PptxSceneChart? chart, PptxSceneChartAxis? axis,
         XElement? valueAxis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
     {
         ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(axis, valueAxis, fallback, percentStacked,
             useNearMaximumHeadroom, nearMaximumHeadroomRatio);
-        return !percentStacked && TryResolveLineChartSourceRange(chart, axis, extents, out ChartValueExtents owned)
+        return !percentStacked && TryResolveCartesianChartSourceRange(chart, axis, extents, out ChartValueExtents owned)
             ? owned : extents;
     }
 
-    private static bool TryResolveLineChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis,
+    private static bool TryResolveCartesianChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis,
         ChartValueExtents extents, out ChartValueExtents owned)
     {
         owned = extents;
-        if (!CanOwnLineChartSourceRange(chart, axis)) return false;
+        if (!CanOwnCartesianChartSourceRange(chart, axis)) return false;
         if (axis!.Minimum is { } minimum)
         {
             return double.IsFinite(minimum) && minimum == extents.Min;
         }
-        if (!TryGetLineChartMaximumInterval(axis, extents, out double maximum, out double unit)) return false;
+        if (!TryGetCartesianChartMaximumInterval(axis, extents, out double maximum, out double unit)) return false;
         // An authored upper bound anchors whole source intervals down to the
         // automatic lower bound. This also gives labels and minor subdivisions
         // the same origin; no new tick iteration or allocation is needed here.
@@ -219,12 +219,13 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool CanOwnLineChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis) =>
-        chart is not null && chart.Plots.Count == 1 && chart.Plots[0].PlotKind == PptxSceneChartPlotKind.Line &&
+    private static bool CanOwnCartesianChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis) =>
+        chart is not null && chart.Plots.Count == 1 &&
+        chart.Plots[0].PlotKind is PptxSceneChartPlotKind.Line or PptxSceneChartPlotKind.Area &&
         chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
         axis is { HasScaling: true, HasLogarithmicScale: false };
 
-    private static bool TryGetLineChartMaximumInterval(PptxSceneChartAxis axis, ChartValueExtents extents,
+    private static bool TryGetCartesianChartMaximumInterval(PptxSceneChartAxis axis, ChartValueExtents extents,
         out double maximum, out double unit)
     {
         maximum = axis.Maximum ?? double.NaN;
