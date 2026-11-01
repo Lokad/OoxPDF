@@ -3,7 +3,6 @@
     "PptxLinePoint",
     "PptxColorSaturationPreservesGrayAndTransformOrder",
     "PptxAuthoredTintShade",
-    "PptxSyntheticConnectorUsesStyleLineReference",
     "PptxSyntheticConnectorExplicitLineWidthInheritsStyleLineColor",
     "PptxSyntheticTextBoxResolvesDrawingMlColorForms",
     "PptxLineAutomaticMarkers",
