@@ -51,6 +51,7 @@ internal static class PptxChartLegendsTests
                   <c:chart>
                     <c:plotArea>
                       <c:lineChart>
+                        <c:varyColors val="0"/>
                         <c:ser>
                           <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Manual Legend</c:v></c:pt></c:strCache></c:strRef></c:tx>
                           <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
@@ -67,7 +68,7 @@ internal static class PptxChartLegendsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 338\.4 Tm"), "Expected explicit chart legend manualLayout to drive the legend text baseline.");
@@ -115,6 +116,7 @@ internal static class PptxChartLegendsTests
                     <c:legend><c:legendPos val="r"/></c:legend>
                     <c:plotArea>
                       <c:lineChart>
+                        <c:varyColors val="0"/>
                         <c:ser>
                           <c:tx><c:v>Styled Legend</c:v></c:tx>
                           <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
