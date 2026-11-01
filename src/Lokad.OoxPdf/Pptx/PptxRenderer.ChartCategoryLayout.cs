@@ -32,7 +32,9 @@ internal sealed partial class PptxRenderer
         // Keep emission at its existing size; this is the spacing measurement.
         ChartTextStyle policyStyle = style with { FontSize = Math.Round(style.FontSize * 20d, MidpointRounding.AwayFromZero) / 20d };
         var line = await measure.MeasureLineBoxAsync(style).ConfigureAwait(false);
-        double policyHeight = await measure.MeasureNormalLineHeightAsync(policyStyle).ConfigureAwait(false);
+        // Tick spacing includes the horizontal-header line gap. Selecting the
+        // OS/2 ink box instead admits too many Arial/Times labels (Office controls).
+        double policyHeight = (await measure.MeasureLineBoxAsync(policyStyle, horizontalHeader: true).ConfigureAwait(false)).Height;
         double widestWord = 0d;
         foreach (var label in labels)
         {
