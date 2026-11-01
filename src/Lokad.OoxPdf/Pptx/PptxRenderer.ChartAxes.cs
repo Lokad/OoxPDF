@@ -346,6 +346,22 @@ internal sealed partial class PptxRenderer
             => TryMeasureLineBox(estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic),
                 style, out ascent, out descent, out height, horizontalHeader);
 
+        public async ValueTask<(double Bottom, double Top)?> TryMeasureInkBoundsAsync(string text, ChartTextStyle style)
+        {
+            double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+            foreach (Rune rune in text.EnumerateRunes())
+            {
+                ResolvedGlyphFont? resolved = await estimator.ResolveGlyphFontAsync(
+                    style.FontFamily, style.Bold, style.Italic, rune.Value).ConfigureAwait(false);
+                if (resolved is null || !resolved.Font.TryGetGlyphBounds(resolved.Font.MapCodePoint(rune.Value), out var bounds))
+                    return null;
+                double scale = style.FontSize / resolved.Font.UnitsPerEm;
+                bottom = Math.Min(bottom, bounds.YMin * scale);
+                top = Math.Max(top, bounds.YMax * scale);
+            }
+            return double.IsFinite(bottom) && double.IsFinite(top) ? (bottom, top) : null;
+        }
+
         private static bool TryMeasureLineBox(OpenTypeFont? font, ChartTextStyle style,
             out double ascent, out double descent, out double height, bool horizontalHeader)
         {

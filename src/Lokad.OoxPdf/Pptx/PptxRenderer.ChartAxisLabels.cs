@@ -265,6 +265,37 @@ internal sealed partial class PptxRenderer
                 FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
         }
 
+        if (!horizontalBars && axisUnits.MajorUnit is null && runs.Count > 2)
+        {
+            // Automatic labels may be thinned when the actual glyph ink would
+            // overlap. Preserve both range endpoints and authored intervals.
+            // Grid/scale ownership remains with the existing axis calculation.
+            var ink = new List<(int Index, double Bottom, double Top)>();
+            ChartTextStyle emissionStyle = style with { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize) };
+            for (int index = 0; index < runs.Count; index++)
+            {
+                if (await textMeasurer.TryMeasureInkBoundsAsync(runs[index].Text, emissionStyle).ConfigureAwait(false) is not { } bounds)
+                {
+                    ink.Clear();
+                    break;
+                }
+                ink.Add((index, runs[index].Y + bounds.Bottom, runs[index].Y + bounds.Top));
+            }
+            if (ink.Count == runs.Count)
+            {
+                ink.Sort((left, right) => runs[left.Index].Y.CompareTo(runs[right.Index].Y));
+                var admitted = new HashSet<int> { ink[0].Index, ink[^1].Index };
+                double previousTop = ink[0].Top;
+                foreach (var candidate in ink.Skip(1).SkipLast(1))
+                {
+                    if (candidate.Bottom < previousTop || candidate.Top > ink[^1].Bottom) continue;
+                    admitted.Add(candidate.Index);
+                    previousTop = candidate.Top;
+                }
+                if (admitted.Count != runs.Count)
+                    runs = runs.Where((_, index) => admitted.Contains(index)).ToList();
+            }
+        }
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CVA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 

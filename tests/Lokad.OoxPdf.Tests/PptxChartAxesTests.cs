@@ -16,6 +16,57 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames()
+    {
+        foreach (bool authoredInterval in new[] { false, true })
+        {
+            string categories = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>NorthWarehouseDistrictWithLongCaption{i:D2}</c:v></c:pt>"));
+            string values = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
+            using var stream = PptxTests.CreateSingleChartPackageStream($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:barChart><c:barDir val="col"/>
+                    <c:ser><c:cat><c:strLit>{{categories}}</c:strLit></c:cat><c:val><c:numLit>{{values}}</c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:barChart>
+                  <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblSkip val="1"/>
+                    <c:txPr><a:bodyPr rot="-5400000" vertOverflow="ellipsis"/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                  </c:catAx>
+                  <c:valAx><c:axId val="2"/><c:axPos val="l"/>
+                    <c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>{{(authoredInterval ? "<c:majorUnit val=\"0.5\"/>" : "")}}
+                    <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                  </c:valAx></c:plotArea></c:chart>
+                </c:chartSpace>
+                """);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CVA", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font)).OrderBy(show => show.Y).ToArray();
+            TestAssert.True(shows.Any(show => show.Text == "0") && shows.Any(show => show.Text == "5"),
+                "Both range endpoints remain visible after automatic text admission.");
+            if (authoredInterval)
+            {
+                TestAssert.Equal(11, shows.Length);
+                continue;
+            }
+            TestAssert.True(shows.Length >= 2 && shows.Length < 6, "A crowded automatic axis admits fewer labels, retaining its scale.");
+            double previousTop = double.NegativeInfinity;
+            foreach (var show in shows)
+            {
+                double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+                foreach (char character in show.Text)
+                {
+                    TestAssert.True(show.Font.Font.TryGetGlyphBounds(show.Font.Font.MapCodePoint(character), out var bounds), "Expected pinned numeric glyph bounds.");
+                    bottom = Math.Min(bottom, show.Y + bounds.YMin * show.Size / show.Font.Font.UnitsPerEm);
+                    top = Math.Max(top, show.Y + bounds.YMax * show.Size / show.Font.Font.UnitsPerEm);
+                }
+                TestAssert.True(bottom >= previousTop - 0.002d, "Admitted numeric glyph ink must not overlap.");
+                previousTop = top;
+            }
+        }
+    }
+
     public static void PptxCategoryLabelRotationPreservesContentAcrossPlotKinds()
     {
         foreach (string kind in new[] { "bar", "line", "area" })
