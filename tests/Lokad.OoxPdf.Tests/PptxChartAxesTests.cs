@@ -1129,7 +1129,7 @@ internal static class PptxChartAxesTests
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartLineOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart line-option resolver.");
-        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved line options.");
+        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard, false]) ?? throw new InvalidOperationException("Expected resolved line options.");
         Type optionsType = options.GetType();
         object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
 
@@ -1175,7 +1175,7 @@ internal static class PptxChartAxesTests
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartAreaOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart area-option resolver.");
-        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved area options.");
+        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard, false]) ?? throw new InvalidOperationException("Expected resolved area options.");
         Type optionsType = options.GetType();
 
         TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));

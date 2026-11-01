@@ -1029,53 +1029,36 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartMarkerStyle> ReadSceneOrXmlMarkerStyles(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
     {
-        if (plot is not null)
-        {
-            return plot.Series
-                .Select(series => new ChartMarkerStyle(
-                    series.Marker.SymbolKind,
-                    series.Marker.Symbol,
-                    series.Marker.SizeValue,
-                    series.Marker.Size,
-                    series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha, null, null) : null,
-                    ToChartSeriesStroke(series.Marker.Line, ChartMarkerInheritedStrokeWidth),
-                    series.Marker.IsDefined))
-                .ToArray();
-        }
-
-        return ReadXmlChartSeries(chartElement, theme, colorMap)
-            .Select(series => new ChartMarkerStyle(
-                series.Marker.SymbolKind,
-                series.Marker.Symbol,
-                series.Marker.SizeValue,
-                series.Marker.Size,
-                series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha, null, null) : null,
-                ToChartSeriesStroke(series.Marker.Line, ChartMarkerInheritedStrokeWidth),
-                series.Marker.IsDefined))
-            .ToArray();
+        return (plot?.Series ?? ReadXmlChartSeries(chartElement, theme, colorMap))
+            .Select(series => ToChartMarkerStyle(series.Marker)).ToArray();
     }
+
+    private static ChartMarkerStyle ToChartMarkerStyle(PptxSceneChartMarker marker) => new(
+        marker.SymbolKind, marker.Symbol, marker.SizeValue, marker.Size,
+        marker.Fill.HasFill ? new ChartSeriesFill(marker.Fill.Color, marker.Fill.Alpha, null, null) : null,
+        ToChartSeriesStroke(marker.Line, ChartMarkerInheritedStrokeWidth), marker.IsDefined);
 
     // RV04: plot-level smooth applies to series without their own smooth element on line
     // charts (COM plot-smooth-only probe smooths every series); series-explicit values win.
     // Scatter keeps the series-only legacy path (plot-level scatter smoothing unprobed).
-    private static IReadOnlyList<ChartBooleanOption> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement, bool applyPlotFallback)
+    private static IReadOnlyList<ChartBooleanOption> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement, bool applyPlotFallback, bool defaultValue = false)
     {
         (bool? plotSmooth, string plotSmoothValue) = applyPlotFallback
             ? PptxSceneBuilder.ReadChartSeriesSmooth(chartElement)
             : (null, string.Empty);
         return plot is not null
-            ? plot.Series.Select(series => ResolveSmoothOption(series.Smooth, series.SmoothValue, plotSmooth, plotSmoothValue)).ToArray()
+            ? plot.Series.Select(series => ResolveSmoothOption(series.Smooth, series.SmoothValue, plotSmooth, plotSmoothValue, defaultValue)).ToArray()
             : chartElement
                 .Elements(ChartNamespace + "ser")
                 .Select(series =>
                 {
                     (bool? smooth, string smoothValue) = PptxSceneBuilder.ReadChartSeriesSmooth(series);
-                    return ResolveSmoothOption(smooth, smoothValue, plotSmooth, plotSmoothValue);
+                    return ResolveSmoothOption(smooth, smoothValue, plotSmooth, plotSmoothValue, defaultValue);
                 })
                 .ToArray();
     }
 
-    private static ChartBooleanOption ResolveSmoothOption(bool? seriesSmooth, string seriesSmoothValue, bool? plotSmooth, string plotSmoothValue)
+    private static ChartBooleanOption ResolveSmoothOption(bool? seriesSmooth, string seriesSmoothValue, bool? plotSmooth, string plotSmoothValue, bool defaultValue)
     {
         if (seriesSmooth is not null)
         {
@@ -1087,7 +1070,7 @@ internal sealed partial class PptxRenderer
         // with the full package when one series carries smooth=1 under plot smooth=0).
         // Only series-explicit markup defines the option, so only it keeps straight series
         // straight under a smoothed plot.
-        return new ChartBooleanOption(plotSmooth ?? false, plotSmooth is not null ? plotSmoothValue : seriesSmoothValue, false);
+        return new ChartBooleanOption(plotSmooth ?? defaultValue, plotSmooth is not null ? plotSmoothValue : seriesSmoothValue, false);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)

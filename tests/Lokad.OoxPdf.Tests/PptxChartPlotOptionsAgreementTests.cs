@@ -71,13 +71,14 @@ internal static class PptxChartPlotOptionsAgreementTests
     public static void SeriesSmoothAgreesBetweenSceneAndXml()
     {
         string[] smooths = new[] { "<c:smooth/>", "<c:smooth val=\"0\"/>", "<c:smooth val=\"1\"/>", "<c:smooth val=\"bogus\"/>", "" };
+        foreach (bool defaultValue in new[] { false, true })
         foreach (bool plotFallback in new[] { false, true })
         {
             foreach (string smooth in smooths)
             {
                 (object? plot, XElement element) = LoadPlot("barChart", smooth);
-                object? xml = Invoke("ReadSceneOrXmlSmoothSeries", new[] { typeof(PptxSceneChartPlot), typeof(XElement), typeof(bool) }, new object?[] { null, element, plotFallback });
-                object? scene = Invoke("ReadSceneOrXmlSmoothSeries", new[] { typeof(PptxSceneChartPlot), typeof(XElement), typeof(bool) }, new object?[] { plot, element, plotFallback });
+                object? xml = Invoke("ReadSceneOrXmlSmoothSeries", new[] { typeof(PptxSceneChartPlot), typeof(XElement), typeof(bool), typeof(bool) }, new object?[] { null, element, plotFallback, defaultValue });
+                object? scene = Invoke("ReadSceneOrXmlSmoothSeries", new[] { typeof(PptxSceneChartPlot), typeof(XElement), typeof(bool), typeof(bool) }, new object?[] { plot, element, plotFallback, defaultValue });
                 TestAssert.True(SequenceEqual(xml, scene), "Smooth must agree for ser XML: " + smooth + " fallback=" + plotFallback);
             }
         }

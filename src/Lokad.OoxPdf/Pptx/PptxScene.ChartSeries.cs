@@ -243,8 +243,9 @@ internal sealed partial class PptxSceneBuilder
             return default(PptxSceneLineStyle) with { NoFill = true };
         }
 
+        if (shapeProperties is null) return default;
         bool widthSpecified = line?.Attribute("w") is not null;
-        return shapeProperties is not null &&
+        return
             PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double lineWidth, out double alpha, fallbackLineWidth: inheritedWidth)
                 ? new PptxSceneLineStyle(
                     true,
@@ -265,7 +266,7 @@ internal sealed partial class PptxSceneBuilder
                     ReadLineJoin(shapeProperties),
                     ReadLineJoinValue(shapeProperties),
                     widthSpecified)
-                : default;
+                : widthSpecified ? default(PptxSceneLineStyle) with { Width = lineWidth, WidthSpecified = true } : default;
     }
 
     internal static (bool? Value, string RawValue) ReadChartSeriesSmooth(XElement series)

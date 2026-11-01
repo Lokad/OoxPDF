@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool categoryPointsOnTickMarks, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false, Func<int, ChartLinePointAppearance>? pointAppearance = null)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartLineAppearance> seriesAppearance, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool categoryPointsOnTickMarks, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false, Func<int, ChartLineAppearance>? pointAppearance = null)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -28,10 +28,9 @@ internal sealed partial class PptxRenderer
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
-        // Existing style18/26 geometry also controls smoothing. Keep that contract
-        // separate from whether the resolved palette needs an additional paint tint.
-        bool lineStyleSkipsUnstyledTint = chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
-        bool lineStyleGalleryMarkers = chartStyleId == 18 || chartStyleId == 118;
+        // Preserve the gallery's plot-level smoothing fallback independently of paint.
+        bool gallerySmooth = IsGalleryLineChartStyle(chartStyleId);
+        bool plotSmoothed = smoothSeries.Any(static option => option.Value);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = 0;
         double valueAxisCrossingY = 0d;
@@ -98,30 +97,16 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                bool explicitSmooth = IsSmoothSeries(seriesIndex, smoothSeries);
                 bool explicitStraight = seriesIndex < smoothSeries.Count && smoothSeries[seriesIndex].IsDefined && !smoothSeries[seriesIndex].Value;
-                bool styleSmooth = !explicitSmooth && !explicitStraight && lineStyleSkipsUnstyledTint;
-                // RV04: smoothed appearance applies plot-wide without a gallery style: any
-                // series smooth=1 smooths every series without explicit-straight markup
-                // (Office smooths all three series and marks them all on the default-style
-                // smooth probe when a single series carries smooth=1; a PowerPoint round-trip
-                // materializes smooth=1 on every series). Explicit-straight series keep the
-                // legacy package.
-                bool plotSmoothed = smoothSeries.Any(static option => option.Value);
-                bool smoothCurve = ((explicitSmooth || plotSmoothed) && !explicitStraight) || styleSmooth;
-                bool smoothAppearance = plotSmoothed && !lineStyleSkipsUnstyledTint && !explicitStraight;
-                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, ResolveStyleLineSeriesWidth(chartStyleId, plotSmoothed && !explicitStraight));
-                if (stroke.Alpha < 1d)
+                bool smoothCurve = !explicitStraight && (plotSmoothed || gallerySmooth);
+                ChartLineAppearance seriesStyle = seriesAppearance[seriesIndex];
+                ChartSeriesStroke stroke = seriesStyle.Stroke;
+                if (stroke.Alpha > .001d && stroke.Alpha < 1d)
                 {
                     graphics.SaveState();
                     graphics.SetAlpha(1d, stroke.Alpha);
                 }
-
-                // Unstyled series lines default to round caps/joins (Office line forensics);
-                // explicitly styled lines keep DrawingML attr defaults (combo contract).
-                bool defaultSeriesStroke = seriesIndex >= seriesStrokes.Count || seriesStrokes[seriesIndex] is null;
-                ChartSeriesStroke lineStroke = defaultSeriesStroke ? stroke with { Cap = stroke.Cap ?? 1, Join = stroke.Join ?? 1, Color = (chartPalette.SingleAccent is not null || lineStyleSkipsUnstyledTint || smoothAppearance) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color) } : stroke;
-                SetChartStroke(graphics, lineStroke);
+                SetChartStroke(graphics, stroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
                 List<int>? sourceIndexes = pointAppearance is null ? null : new(values.Count);
@@ -144,7 +129,8 @@ internal sealed partial class PptxRenderer
                         {
                             if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
                             {
-                                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, true, strokeAtPoint);
+                                if (stroke.Alpha > .001d || strokeAtPoint is not null)
+                                    StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, true, strokeAtPoint);
                                 points.Clear();
                                 sourceIndexes?.Clear();
                                 halvePoints.Clear();
@@ -170,50 +156,23 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, false, strokeAtPoint);
+                if (stroke.Alpha > .001d || strokeAtPoint is not null)
+                    StrokeStyleLineSegmentInPlotClip(graphics, plotBox, points, halvePoints, smoothCurve, fragmentStartsAtGap, false, strokeAtPoint);
+                if (stroke.Alpha > .001d && stroke.Alpha < 1d) graphics.RestoreState();
 
                 int markerSourceIndex = 0;
                 foreach ((double pointX, double pointY) in markers)
                 {
-                    ChartLinePointAppearance? point = null;
+                    ChartLineAppearance? point = null;
                     if (pointAppearance is not null)
                     {
                         while (markerSourceIndex < values.Count && values[markerSourceIndex] is null && displayBlanksAs != PptxSceneChartDisplayBlanksAs.Zero)
                             markerSourceIndex++;
                         point = pointAppearance(markerSourceIndex++);
                     }
-                    ChartMarkerStyle marker = point?.Marker ?? ChartMarker(seriesIndex, markerStyles);
-                    RgbColor markerColor = point?.MarkerColor ?? stroke.Color;
-                    bool smoothForcedMarker = pointAppearance is null && smoothAppearance && !marker.IsDefined;
-                    if (lineStyleGalleryMarkers && !marker.IsDefined)
-                    {
-                        // RV04: style-18 sizes undefined markers at the 12.96pt gallery size
-                        // and forces auto symbols when markup defines none (Office draws 12.96
-                        // with no marker markup and with plot-level marker=1; the plot-level
-                        // marker element never suppresses gallery forcing, only series-level
-                        // markup wins). Series-explicit markers keep winning.
-                        marker = marker with
-                        {
-                            SymbolKind = marker.SymbolKind == PptxSceneChartMarkerSymbol.None
-                                ? PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(seriesIndex)
-                                : marker.SymbolKind,
-                            Size = PptxChartMarkerMetricRules.StyleLineMarkerSize,
-                        };
-                    }
-                    else if (smoothForcedMarker)
-                    {
-                        // RV04: smoothed series force flat auto markers past any marker
-                        // markup (Office draws 9pt flat markers with raw rims on the
-                        // marker=0 smooth probe); series-explicit markers keep rendering.
-                        marker = marker with
-                        {
-                            SymbolKind = marker.SymbolKind == PptxSceneChartMarkerSymbol.None
-                                ? PptxChartMarkerMetricRules.ResolveForcedLineMarkerSymbol(seriesIndex)
-                                : marker.SymbolKind,
-                            Size = PptxChartMarkerMetricRules.SmoothLineMarkerSize,
-                        };
-                    }
-
+                    ChartLineAppearance appearance = point ?? seriesStyle;
+                    ChartMarkerStyle marker = appearance.Marker;
+                    RgbColor markerColor = appearance.MarkerColor;
                     if (chartStyleId == 26 || chartStyleId == 126)
                     {
                         // RV04: style-26 draws no line markers at all (Office renders none
@@ -222,13 +181,9 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    // RV04: style-18 marker outlines stroke the raw base at 1pt (Office emits
-                    // no luminance tint on marker rims); other styles keep the tinted 0.75pt rim.
-                    RgbColor markerOutline = point?.MarkerOutlineColor ?? (defaultSeriesStroke
-                        ? ((chartPalette.SingleAccent is not null || lineStyleGalleryMarkers || smoothForcedMarker) ? stroke.Color : ApplyUnstyledLineStrokeTint(stroke.Color))
-                        : stroke.Color);
-                    double? outlineWidth = (lineStyleGalleryMarkers || smoothForcedMarker) ? PptxChartMarkerMetricRules.StyleLineMarkerOutlineWidth : null;
-                    if (lineStyleGalleryMarkers
+                    RgbColor markerOutline = appearance.MarkerOutlineColor;
+                    double? outlineWidth = appearance.MarkerOutlineWidth;
+                    if (chartStyleId is 18 or 118
                         && marker.Fill is null
                         && TryGetStyleBarGradientStops(chartStyleId, new ChartSeriesFill(markerColor, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
                         && PaintStyleMarkerGradient(graphics, plotBox, marker.SymbolKind, pointX, pointY, marker.Size, gradientStops))
@@ -249,10 +204,6 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                if (stroke.Alpha < 1d)
-                {
-                    graphics.RestoreState();
-                }
             }
         }
         if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)

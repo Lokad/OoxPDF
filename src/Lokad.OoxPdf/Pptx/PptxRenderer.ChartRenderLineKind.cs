@@ -35,11 +35,15 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, lineChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(lineSeriesVectors) != 0)
             {
-                ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, chartXml, lineChart, PptxSceneChartGrouping.Standard);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, lineChart, theme, colorMap, ResolveLineKindInheritedStrokeWidth(ReadChartStyleId(chartXml)));
-                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(linePlot, lineChart, theme, colorMap);
-                Func<int, ChartLinePointAppearance>? pointAppearance = ReadLinePointAppearance(sceneChart, linePlot, lineChart,
-                    theme, colorMap, chartPalette, lineSeriesVectors, lineOptions, seriesStrokes, markerStyles, ReadChartStyleId(chartXml), context.CancellationToken);
+                double? themeLineWidth = ReadChartLineThemeWidth(theme);
+                ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, chartXml, lineChart, PptxSceneChartGrouping.Standard, defaultSmooth: themeLineWidth is not null);
+                IReadOnlyList<PptxSceneChartSeries> sourceSeries = linePlot?.Series ?? ReadXmlChartSeries(lineChart, theme, colorMap);
+                IReadOnlyList<ChartLineAppearance> seriesAppearance = ReadLineSeriesAppearance(sourceSeries, lineOptions,
+                    theme, colorMap, chartPalette, ReadChartStyleId(chartXml), themeLineWidth,
+                    sceneChart.Plots.Count == 1 && lineSeriesVectors.Count == 1 && lineOptions.VaryColors.Value, context.CancellationToken);
+                Func<int, ChartLineAppearance>? pointAppearance = ReadLinePointAppearance(sceneChart, linePlot, lineChart,
+                    theme, colorMap, chartPalette, lineSeriesVectors, lineOptions, sourceSeries, seriesAppearance,
+                    ReadChartStyleId(chartXml), themeLineWidth, context.CancellationToken);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, linePlot, chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, linePlot, chartXml, lineChart).FirstOrDefault();
@@ -51,7 +55,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = (await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver, resolvedValueExtents: valueExtents).ConfigureAwait(false));
                 IReadOnlyList<ChartLegendEntry> legendEntries = pointAppearance is not null
                     ? BuildLinePointLegendEntries(linePlot, lineChart, workbook, plotVisibleOnly, lineSeriesVectors[0].DensePointCount(), ReadChartStyleId(chartXml), pointAppearance)
-                    : BuildStrokeLegendEntries(theme, colorMap, chartPalette, linePlot, lineChart, seriesStrokes, markerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook, chartStyleId: ReadChartStyleId(chartXml));
+                    : BuildLineSeriesLegendEntries(linePlot, lineChart, workbook, seriesAppearance, sourceSeries, themeLineWidth, lineOptions.Stacked, ReadChartStyleId(chartXml));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
                 ChartLegendBox? preparedLegendBox = null;
                 if (chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
@@ -76,7 +80,7 @@ internal sealed partial class PptxRenderer
                         fontResolver, preparedLegendBox).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, theme, colorMap, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions, seriesStrokes, markerStyles, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, categoryPointsOnTickMarks,
+                RenderLineChart(graphics, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions, seriesAppearance, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, categoryPointsOnTickMarks,
                     ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, ReadChartStyleId(chartXml), categoryTicksTopSide: chartLayout.AutomaticCategoryAxisPlacement?.AxisTopSide ?? false, pointAppearance: pointAppearance);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
@@ -130,12 +134,12 @@ internal sealed partial class PptxRenderer
                     valueExtents,
                     valueAxisOptions.Reversed,
                     categoryPointsOnTickMarks,
-                    seriesStrokes,
-                    markerStyles,
+                    [],
+                    [],
                     ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
                     ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook, plotVisibleOnly),
-                    ReadSharedChartSeriesNames(linePlot, lineChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointAppearance).ConfigureAwait(false);
+                    ReadSharedChartSeriesNames(linePlot, lineChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointAppearance, seriesAppearance: seriesAppearance).ConfigureAwait(false);
                 return true;
             }
         }

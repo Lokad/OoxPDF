@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartBooleanOption> SmoothSeries,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
-    private static ChartLinePlotOptions ReadSceneOrXmlChartLineOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
+    private static ChartLinePlotOptions ReadSceneOrXmlChartLineOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, XElement chartElement, PptxSceneChartGrouping defaultGrouping, bool defaultSmooth = false)
     {
         PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping);
         return new ChartLinePlotOptions(
@@ -92,7 +92,7 @@ internal sealed partial class PptxRenderer
             IsStackedChartGrouping(grouping),
             IsPercentStackedChartGrouping(grouping),
             ReadSceneOrXmlChartVaryColors(plot, chartElement),
-            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: true),
+            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: true, defaultValue: defaultSmooth),
             ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
     }
 

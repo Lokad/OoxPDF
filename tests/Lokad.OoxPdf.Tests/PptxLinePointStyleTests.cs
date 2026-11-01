@@ -11,6 +11,102 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxLinePointStyleTests
 {
+    public static void PptxLineDefaultsInheritThemeAndPreserveDeclaredSmoothing()
+    {
+        foreach (double basis in new[] { .5d, .75d, 1d })
+        foreach (int style in new[] { 2, 18, 26 })
+        foreach (int count in new[] { 3, 8 })
+        foreach (string? smooth in new string?[] { null, "0", "1" })
+        {
+            PdfPage page = DefaultProbe(basis, style, count, smooth);
+            var segments = NativeSegments(page.Content).ToArray();
+            TestAssert.Equal(count - 1, segments.Length);
+            foreach (var segment in segments)
+            {
+                TestAssert.Equal(smooth == "0" ? "l" : "c", segment.Operator);
+                TestAssert.Equal(new RgbColor(74, 126, 187), segment.Color);
+                double width = basis * (style == 18 ? 5d : style == 26 ? 7d : 3d);
+                TestAssert.True(Math.Abs(segment.Width - width) < .001d,
+                    "The source theme line supplies the stroke basis; smoothing changes geometry, not paint.");
+            }
+        }
+    }
+
+    public static void PptxLinePartialStrokeAndNoFillPreserveAutomaticMarkersAndKeys()
+    {
+        foreach (string declaration in new[] { "color", "width", "both", "none" })
+        {
+            PdfPage page = DefaultProbe(.75d, 2, 8, null, declaration);
+            var segments = NativeSegments(page.Content).ToArray();
+            TestAssert.Equal(declaration == "none" ? 0 : 7, segments.Length);
+            foreach (var segment in segments)
+            {
+                TestAssert.Equal("c", segment.Operator);
+                TestAssert.Equal(declaration is "color" or "both" ? new RgbColor(255, 0, 0) : new RgbColor(74, 126, 187), segment.Color);
+                TestAssert.True(Math.Abs(segment.Width - (declaration is "width" or "both" ? 4d : 2.25d)) < .001d,
+                    "Authored width wins while an omitted width inherits the theme, including color-only lines.");
+            }
+            var fills = PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: false).ToArray();
+            TestAssert.Equal(9, fills.Count(c => c == new RgbColor(79, 129, 189)));
+            TestAssert.True(LegendNames(page).SequenceEqual(new[] { "Series" }),
+                "Keep eight automatic markers and the named key when the line is suppressed or independently colored.");
+        }
+    }
+
+    public static void PptxLineMissingThemeRetainsItsExistingFallback()
+    {
+        foreach (string? smooth in new string?[] { null, "0", "1" })
+        {
+            var segments = NativeSegments(DefaultProbe(null, 2, 3, smooth).Content).ToArray();
+            TestAssert.Equal(2, segments.Length);
+            TestAssert.True(segments.All(s => s.Operator == (smooth == "1" ? "c" : "l") &&
+                Math.Abs(s.Width - (smooth == "1" ? 3d : 2.25d)) < .001d),
+                "Office refuses the missing-theme controls; preserve the established library fallback.");
+        }
+    }
+
+    private static PdfPage DefaultProbe(double? basis, int style, int count, string? smooth, string? declaration = null)
+    {
+        string shape = declaration is null ? "" : "<c:spPr><a:ln" + (declaration is "width" or "both" ? " w=\"50800\"" : "") + ">" +
+            (declaration is "color" or "both" ? "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>" : "") +
+            (declaration == "none" ? "<a:noFill/>" : "") + "</a:ln></c:spPr>";
+        string chart = $$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:style val="{{style}}"/><c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:lineChart><c:varyColors val="0"/>
+                <c:ser><c:tx><c:v>Series</c:v></c:tx>{{shape}}
+                  <c:cat><c:strLit>{{string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>P{i}</c:v></c:pt>"))}}</c:strLit></c:cat>
+                  <c:val><c:numLit>{{string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>{i % 3 + 1}</c:v></c:pt>"))}}</c:numLit></c:val>
+                  {{(smooth is null ? "" : "<c:smooth val=\"" + smooth + "\"/>")}}
+                </c:ser><c:axId val="1"/><c:axId val="2"/></c:lineChart>
+                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/></c:catAx>
+                <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/></c:valAx>
+              </c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
+            </c:chartSpace>
+            """;
+        var parts = new Dictionary<string, byte[]>
+        {
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="457200"/><a:ext cx="9144000" cy="5486400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
+                """)
+        };
+        if (basis is { } width)
+        {
+            parts["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship().Replace("</Relationships>",
+                "<Relationship Id=\"theme\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/></Relationships>", StringComparison.Ordinal));
+            parts["ppt/theme/theme1.xml"] = TestFixtures.Utf8($$"""
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Probe"><a:themeElements>
+                  <a:clrScheme name="Probe"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:accent1><a:srgbClr val="4F81BD"/></a:accent1></a:clrScheme>
+                  <a:fontScheme name="Probe"><a:majorFont><a:latin typeface="DejaVu Sans"/></a:majorFont><a:minorFont><a:latin typeface="DejaVu Sans"/></a:minorFont></a:fontScheme>
+                  <a:fmtScheme name="Probe"><a:lnStyleLst><a:ln w="{{(long)(width * 12700)}}"><a:solidFill><a:schemeClr val="phClr"><a:shade val="95000"/><a:satMod val="105000"/></a:schemeClr></a:solidFill></a:ln></a:lnStyleLst></a:fmtScheme>
+                </a:themeElements></a:theme>
+                """);
+        }
+        using var stream = PptxTests.CreateSingleChartPackageStream(chart, parts);
+        using var package = OoxPackage.Open(stream, default);
+        return Render(package);
+    }
+
     public static void PptxColorSaturationPreservesGrayAndTransformOrder()
     {
         RgbColor Transform(string source, string transforms)

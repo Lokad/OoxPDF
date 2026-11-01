@@ -34,7 +34,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        Func<int, ChartLinePointAppearance>? pointAppearance = null)
+        Func<int, ChartLineAppearance>? pointAppearance = null, IReadOnlyList<ChartLineAppearance>? seriesAppearance = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
@@ -91,7 +91,7 @@ internal sealed partial class PptxRenderer
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
-                    ChartLinePointAppearance? appearance = pointAppearance?.Invoke(i);
+                    ChartLineAppearance? appearance = pointAppearance?.Invoke(i) ?? seriesAppearance?[seriesIndex];
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
                         ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles))
                         : 0d;
@@ -113,7 +113,7 @@ internal sealed partial class PptxRenderer
                         ChartSeriesStroke stroke = appearance?.Stroke ?? ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
                         ChartMarkerStyle marker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
                         if (appearance is { } pointStyle && marker.Stroke is null)
-                            marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
+                            marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, pointStyle.MarkerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
                         double consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke, appearance?.MarkerColor);
                         textX += consumedWidth;
                         textWidth = Math.Max(1d, textWidth - consumedWidth);

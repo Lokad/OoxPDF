@@ -134,6 +134,11 @@ Approximate or restricted:
   fallback; category direction, automatic spacing and label fitting remain
   approximate. A lone `midCat` point and caption still use the centered fallback;
   Office places them at the left endpoint.
+- Standalone line plots with resolved theme defaults inherit curve, stroke and
+  automatic-marker paint independently of explicit smoothing. Theme line widths
+  and color transforms feed the plot and legend; authored line width/color and
+  no-fill overrides remain distinct from automatic marker paint. Missing themes
+  retain the existing approximate fallback; composed/scatter defaults stay separate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
