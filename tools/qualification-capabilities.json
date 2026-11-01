@@ -3,6 +3,7 @@
     "PptxColumnCategoryGeometryIgnoresNumericCrossingEdits",
     "PptxColumnCategorySourceModesKeepVisibleCaptionBands",
     "PptxColumnDataBaselinesStayIndependentOfCategoryCrossings",
+    "PptxColumnFontFallbackKeepsCaptionAnchorsInsideTheFrame",
     "PptxNumericCrossingOwnsPairedCategorySide",
     "PptxNumericCrossingRetainsUnpairedAndInteriorFallbacks",
     "PptxNumericCrossingMovesTheMeasuredStripWithItsLabels",

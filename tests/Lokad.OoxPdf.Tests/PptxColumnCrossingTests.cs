@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -53,6 +54,19 @@ internal static class PptxColumnCrossingTests
         }
     }
 
+    public static void PptxColumnFontFallbackKeepsCaptionAnchorsInsideTheFrame()
+    {
+        foreach (bool reversed in new[] { false, true })
+        foreach (string crossing in new[] { "autoZero", "max", "interior", "upper" })
+        {
+            PdfPage page = Render("autoZero", crossing, reversed, fontProgram: false);
+            var captions = Regex.Matches(page.Content, @"(?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*\[?\s*\((?:Alfa|Beta|Gamma)\)");
+            TestAssert.Equal(3, captions.Count);
+            TestAssert.True(captions.All(m => double.Parse(m.Groups["y"].Value, CultureInfo.InvariantCulture) is >= 72d and <= 504d),
+                $"Fallback {crossing} captions, reversal {reversed}, must keep their anchors in the chart frame.");
+        }
+    }
+
     private static double[] Geometry(PdfPage page)
     {
         var paths = new List<string>();
@@ -68,7 +82,7 @@ internal static class PptxColumnCrossingTests
         return [Math.Min(axis[1], axis[3]), Math.Max(axis[1], axis[3]), category[1], labels[0].Y];
     }
 
-    private static PdfPage Render(string numericCrossing, string categoryCrossing, bool reversed = false, string labels = "nextTo", int minimum = 0)
+    private static PdfPage Render(string numericCrossing, string categoryCrossing, bool reversed = false, string labels = "nextTo", int minimum = 0, bool fontProgram = true)
     {
         double maximum = minimum == 0 ? 5d : 103d;
         string N(double v) => v.ToString("R", CultureInfo.InvariantCulture);
@@ -94,6 +108,14 @@ internal static class PptxColumnCrossingTests
         using var stream = PptxTests.CreateSingleChartPackageStream(chart, new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
         using var package = OoxPackage.Open(stream, default);
         var document = new PptxReader().Read(package, default);
-        return new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        IFontResolver resolver = fontProgram ? new PortableRenderingTests.PinnedResolver() : new EmptyProgramResolver();
+        return new PptxRenderer(resolver).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+    }
+
+    private sealed class EmptyProgramResolver : IFontResolver
+    {
+        private static readonly MemoryFontProgramSource Source = new("column-empty-font", ReadOnlyMemory<byte>.Empty);
+        public FontFaceResolution Resolve(FontRequest request) =>
+            new(request.FamilyName, "Helvetica", new FontStyleKey(request.Bold, request.Italic), Source, IsFallback: true);
     }
 }
