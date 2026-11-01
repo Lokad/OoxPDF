@@ -485,8 +485,14 @@ internal sealed partial class PptxRenderer
                 return null;
             bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, axes[0].XmlAxis);
             bool maximumCrossing = category.SceneAxis.CrossesAt is null && category.SceneAxis.CrossesKind == PptxSceneChartAxisCrosses.Maximum;
+            double labelCrossingRatio = GetChartValuePlotRatio(extents, crossing, reversed);
+            // Office admits reversed upper numeric next-to captions into the
+            // low-side band. Keep the numeric crossing for the axis and fill;
+            // explicit low/high labels still choose their own band below.
+            if (category.SceneAxis.CrossesAt is not null && reversed && labelCrossingRatio == 0d)
+                labelCrossingRatio = 1d;
             var (ratio, topSide) = ResolveCategoryLabelPlacement(category.SceneAxis, category.XmlAxis,
-                GetChartValuePlotRatio(extents, crossing, reversed), reversed,
+                labelCrossingRatio, reversed,
                 maximumCrossing: maximumCrossing);
             // Numeric crossings retain the authored physical axis side. Only
             // implicit crossings mirror outward ticks with value direction;

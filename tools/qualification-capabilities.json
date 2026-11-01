@@ -1,6 +1,7 @@
 {
   "pptx-maximum-crossing": [
     "PptxAreaFillSharesCrossingAndStackLayerOwnership",
+    "PptxReversedNumericUpperCaptionsReuseLowSideGeometry",
     "PptxCategoryMaximumCrossingUsesSourceModeAndLabelOverrides",
     "PptxCategoryTickSidesDistinguishNumericAndImplicitCrossings",
     "PptxLegendlessLineNumericCrossingKeepsSourceTickSide",

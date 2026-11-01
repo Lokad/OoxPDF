@@ -120,9 +120,10 @@ Approximate or restricted:
   at the same bound keeps its numeric placement. Explicit low/high captions retain
   precedence over next-to placement.
   Numeric-crossing ticks retain the authored physical axis side; implicit
-  crossings mirror that side with value direction. Reversed numeric crossings at
-  or beyond the upper bound still have substantial caption/axis-coordinate
-  differences from Office.
+  crossings mirror that side with value direction. Next-to captions at or beyond
+  a reversed numeric upper bound reuse the measured low-side band. Office's
+  displaced ticks for that combination remain approximate; the numerical axis
+  stroke and fill retain their separate, independently validated coordinates.
   Standard area fills and the first stacked layer close on the resolved category
   crossing; later stack layers retain their cumulative lower values and source
   series positions.

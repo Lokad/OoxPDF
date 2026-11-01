@@ -114,6 +114,29 @@ internal static class PptxAreaFrameTests
         }
     }
 
+    public static void PptxReversedNumericUpperCaptionsReuseLowSideGeometry()
+    {
+        foreach (int size in new[] { 12, 24 })
+        foreach (bool line in new[] { false, true })
+        foreach ((int minimum, int maximum, double crossing) in new[] { (0, 10, 10d), (0, 10, 11d), (-10, -1, -1d), (-10, -1, 0d) })
+        {
+            PdfPage RenderPosition(string position, double value) => Render(size, minimum: minimum, maximum: maximum,
+                reversed: true, caption: position, line: line, categoryCrossing: "numeric", numericCrossing: value);
+            PdfPage next = RenderPosition("nextTo", crossing), low = RenderPosition("low", crossing), high = RenderPosition("high", crossing);
+            var nextPlot = Plot(next);
+            var lowPlot = Plot(low);
+            var highPlot = Plot(high);
+            TestAssert.True(Math.Abs(FirstCaptionY(next) - FirstCaptionY(low)) < .002d &&
+                Math.Abs(nextPlot.Y - lowPlot.Y) < .002d && Math.Abs(nextPlot.Height - lowPlot.Height) < .002d,
+                "Reversed upper numeric next-to captions reuse the independently validated low-side band and frame.");
+            AssertCaptionSide(next, nextPlot.Y + nextPlot.Height, above: true);
+            AssertCaptionSide(high, highPlot.Y, above: false);
+            PdfPage inside = RenderPosition("nextTo", maximum - 1d);
+            TestAssert.True(Plot(inside).Height > nextPlot.Height + 1d && FirstCaptionY(inside) < FirstCaptionY(next) - 1d,
+                "An interior numeric crossing retains its interpolated label position instead of the endpoint fallback.");
+        }
+    }
+
     public static void PptxAreaFillSharesCrossingAndStackLayerOwnership()
     {
         foreach (bool reversed in new[] { false, true })
@@ -193,7 +216,8 @@ internal static class PptxAreaFrameTests
 
     private static PdfPage Render(int size, bool legend = false, bool title = false, bool overlay = false,
         int minimum = 0, bool reversed = false, string caption = "nextTo", bool rightAxis = false,
-        bool line = false, string categoryCrossing = "autoZero", bool stacked = false, bool emptyFirst = false, int maximum = 10)
+        bool line = false, string categoryCrossing = "autoZero", bool stacked = false, bool emptyFirst = false, int maximum = 10,
+        double? numericCrossing = null)
     {
         string kind = line ? "lineChart" : "areaChart";
         string chart = $$"""
@@ -205,7 +229,7 @@ internal static class PptxAreaFrameTests
                   <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>6</c:v></c:pt></c:numLit></c:val>
                 </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
                 <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="{{caption}}"/><c:crossAx val="2"/>
-                  {{(categoryCrossing is "numeric" or "both" or "middle" ? "<c:crossesAt val=\"" + (categoryCrossing == "middle" ? 5 : maximum) + "\"/>" : "")}}
+                  {{(categoryCrossing is "numeric" or "both" or "middle" ? "<c:crossesAt val=\"" + (categoryCrossing == "middle" ? 5d : numericCrossing ?? maximum).ToString(CultureInfo.InvariantCulture) + "\"/>" : "")}}
                   {{(categoryCrossing is "numeric" or "middle" ? "" : "<c:crosses val=\"" + (categoryCrossing == "both" ? "max" : categoryCrossing) + "\"/>")}}
                   <c:majorTickMark val="out"/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></a:ln></c:spPr></c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="{{minimum}}"/><c:max val="{{maximum}}"/><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling><c:axPos val="{{(rightAxis ? "r" : "l")}}"/><c:crossAx val="1"/><c:crosses val="{{(rightAxis ? "max" : "autoZero")}}"/><c:crossBetween val="between"/><c:majorUnit val="2"/><c:majorGridlines/></c:valAx>
