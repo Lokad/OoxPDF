@@ -440,7 +440,7 @@ internal sealed partial class PptxRenderer
         ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
         // Line and area callers supply their already resolved source scale.
         // Scatter and composed/unsupported layouts keep the existing fallback.
-        PptxSceneChartPlotKind categoryPlotKind = sceneChart.Plots.Count == 1 && sceneChart.Plots[0].Kind == PptxSceneChartPlotKind.Area
+        PptxSceneChartPlotKind categoryPlotKind = sceneChart.Plots.Count == 1 && sceneChart.Plots[0].PlotKind == PptxSceneChartPlotKind.Area
             ? PptxSceneChartPlotKind.Area : PptxSceneChartPlotKind.Line;
         XElement? categoryPlotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, categoryPlotKind);
         PptxSceneChartPlot? categoryPlot = ReadSceneChartPlot(sceneChart, categoryPlotKind, 0);
