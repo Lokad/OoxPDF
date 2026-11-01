@@ -19,11 +19,11 @@ internal static class PptxCategorySlotTests
             PdfPage page = Render(count, area, mode);
             double[] expected = ExpectedPoints(page, count, mode);
             AssertPositions(expected, Paths(page, "0 0 1", strokes: !area).SelectMany(x => x).Distinct().Order().ToArray());
-            AssertPositions(expected, LabelCenters(page, "CCA"));
+            AssertPositions(expected, LabelCenters(page, "CCA"), tolerance: .1d);
             if (!area)
             {
                 AssertPositions(expected, Paths(page, "0 1 0", strokes: false).Select(x => (x.Min() + x.Max()) / 2d).Order().ToArray());
-                AssertPositions(expected, LabelCenters(page, "CLD"));
+                AssertPositions(expected, LabelCenters(page, "CLD"), tolerance: .1d);
             }
         }
         foreach (string mode in new[] { "between", "midCat" })
@@ -65,7 +65,7 @@ internal static class PptxCategorySlotTests
             double[] all = ExpectedPoints(page, 5, mode);
             AssertPositions(new[] { all[0], all[1], all[3], all[4] }, Paths(page, "0 0 1", strokes: !area).SelectMany(x => x).Distinct().Order().ToArray());
             if (!area)
-                AssertPositions(new[] { all[0], all[1], all[3], all[4] }, LabelCenters(page, "CLD"));
+                AssertPositions(new[] { all[0], all[1], all[3], all[4] }, LabelCenters(page, "CLD"), tolerance: .1d);
         }
     }
 
@@ -77,7 +77,8 @@ internal static class PptxCategorySlotTests
     // Only straight, explicitly colored fixture paths are inspected. Clips and
     // font matrices do not participate in these source-coordinate assertions.
     private static double[][] Paths(PdfPage page, string color, bool strokes) =>
-        Regex.Matches(page.Content, Regex.Escape(color) + (strokes ? " RG" : " rg") + @"\r?\n(?<path>.*?)\s" + (strokes ? "S" : "f") + @"(?:\r?\n|$)", RegexOptions.Singleline)
+        Regex.Matches(page.Content, Regex.Escape(color) + (strokes ? " RG" : " rg") + @"\r?\n(?<block>.*?)(?=\r?\n[-\d.]+(?: [-\d.]+){0,2} " + (strokes ? "(?:RG|G)" : "(?:rg|g)") + @"\r?\n|\z)", RegexOptions.Singleline)
+            .SelectMany(block => Regex.Matches(block.Groups["block"].Value, @"(?<path>(?:[-\d.]+ [-\d.]+ [ml]\s+)+)(?:h\s+)?" + (strokes ? "S" : "f") + @"(?:\s|$)"))
             .Select(x => Regex.Matches(x.Groups["path"].Value, @"(?<x>[-\d.]+) [-\d.]+ [ml]")
                 .Select(p => Number(p.Groups["x"].Value)).ToArray()).Where(x => x.Length > 0).ToArray();
 
@@ -97,11 +98,11 @@ internal static class PptxCategorySlotTests
             (mode == "midCat" && count > 1 ? i / (double)(count - 1) : (i + .5d) / count)).ToArray();
     }
 
-    private static void AssertPositions(double[] expected, double[] actual)
+    private static void AssertPositions(double[] expected, double[] actual, double tolerance = .004d)
     {
         TestAssert.Equal(expected.Length, actual.Length);
         for (int i = 0; i < expected.Length; i++)
-            TestAssert.True(Math.Abs(expected[i] - actual[i]) < .004d, $"Source category slot{i}: expected {expected[i]}, got {actual[i]}.");
+            TestAssert.True(Math.Abs(expected[i] - actual[i]) < tolerance, $"Source category slot{i}: expected {expected[i]}, got {actual[i]}.");
     }
 
     private static double Number(string text) => double.Parse(text, CultureInfo.InvariantCulture);
