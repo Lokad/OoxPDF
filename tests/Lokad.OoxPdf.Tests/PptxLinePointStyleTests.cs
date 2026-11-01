@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -9,6 +10,25 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxLinePointStyleTests
 {
+    public static void PptxColorSaturationPreservesGrayAndTransformOrder()
+    {
+        RgbColor Transform(string source, string transforms)
+        {
+            XElement color = XElement.Parse($"<a:srgbClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"{source}\">{transforms}</a:srgbClr>");
+            TestAssert.True(RgbColor.TryParse(source, out var initial), "Expected RGB fixture.");
+            return PptxColorResolver.ApplyColorTransforms(color, initial);
+        }
+        TestAssert.Equal(new RgbColor(128, 128, 128), Transform("808080", "<a:satMod val=\"500000\"/>"));
+        TestAssert.Equal(new RgbColor(127, 127, 127), Transform("FE0000", "<a:satMod val=\"0\"/>"));
+        TestAssert.Equal(new RgbColor(255, 65, 65), Transform("C08080", "<a:satMod val=\"500000\"/>"));
+        TestAssert.Equal(Transform("335577", ""), Transform("335577", "<a:satMod val=\"100000\"/>"));
+        RgbColor shadeFirst = Transform("FE0000", "<a:shade val=\"50000\"/><a:satMod val=\"0\"/>");
+        RgbColor saturationFirst = Transform("FE0000", "<a:satMod val=\"0\"/><a:shade val=\"50000\"/>");
+        TestAssert.True(shadeFirst.Red == shadeFirst.Green && shadeFirst.Green == shadeFirst.Blue &&
+            saturationFirst.Red == saturationFirst.Green && saturationFirst.Green == saturationFirst.Blue && shadeFirst != saturationFirst,
+            "Preserve ordered transformations and HSL lightness when saturation changes.");
+    }
+
     public static void PptxLinePointPaintAndLegendNamesMatchIndependentOffice()
     {
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "LinePointStyles"));
@@ -139,6 +159,12 @@ internal static class PptxLinePointStyleTests
                 double next = N(op == "c" ? 4 : 0);
                 if (Math.Abs(next - x) > 40d) edges.Add(op);
                 x = next;
+            }
+            else if (words.Length == 7 && words[2] == "m" && words[5] == "l" && op == "S")
+            {
+                if (Math.Abs(N(3) - N(0)) > 40d && color is { } ink && (ink.Red != ink.Green || ink.Green != ink.Blue))
+                    yield return (ink, width, "l");
+                edges.Clear();
             }
             else if (op is "S" or "s")
             {

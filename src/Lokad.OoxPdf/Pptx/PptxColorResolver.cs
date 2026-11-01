@@ -145,7 +145,7 @@ internal static class PptxColorResolver
         return (byte)Math.Clamp((int)rounded, 0, 255);
     }
 
-    private static RgbColor ApplyColorTransforms(XElement? colorElement, RgbColor color)
+    public static RgbColor ApplyColorTransforms(XElement? colorElement, RgbColor color)
     {
         if (colorElement is null)
         {
@@ -179,6 +179,20 @@ internal static class PptxColorResolver
                     red = TransformLinearLight(red, value, 1d - value);
                     green = TransformLinearLight(green, value, 1d - value);
                     blue = TransformLinearLight(blue, value, 1d - value);
+                    break;
+                case "satMod":
+                    double maximum = Math.Max(red, Math.Max(green, blue));
+                    double minimum = Math.Min(red, Math.Min(green, blue));
+                    double chroma = maximum - minimum;
+                    if (chroma > 0d)
+                    {
+                        double luminosity = (maximum + minimum) / 2d;
+                        double limit = Math.Max(0d, 255d - Math.Abs(maximum + minimum - 255d));
+                        double scale = Math.Clamp(chroma * value, 0d, limit) / chroma;
+                        red = luminosity + (red - luminosity) * scale;
+                        green = luminosity + (green - luminosity) * scale;
+                        blue = luminosity + (blue - luminosity) * scale;
+                    }
                     break;
             }
         }

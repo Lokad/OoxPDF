@@ -110,6 +110,7 @@ internal static class PptxTests
             else if (line.EndsWith(" G", StringComparison.Ordinal) || line == "endstream") matching = false;
             else if (line.EndsWith(" m", StringComparison.Ordinal) || line.EndsWith(" n", StringComparison.Ordinal)) pending = 0;
             else if (line.EndsWith(" l", StringComparison.Ordinal)) pending++;
+            else if (line.EndsWith(" l S", StringComparison.Ordinal)) { if (matching) count++; pending = 0; }
             else if (line is "S" or "s") { if (matching) count += pending; pending = 0; }
         }
         TestAssert.True(seen, $"Expected series stroke color operation '{strokeColorOperation}'.");

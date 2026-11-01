@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -25,11 +26,18 @@ internal sealed partial class PptxRenderer
         ChartMarkerStyle seriesMarker = ChartMarker(0, markers);
         bool rawStroke = palette.SingleAccent is not null || styleId is 18 or 118 or 26 or 126;
         double width = ResolveStyleLineSeriesWidth(styleId, smoothed: false);
+        XElement? lineColor = theme.TryGetLineStyle(1, out var themeLine)
+            ? themeLine.Element(DrawingNamespace + "solidFill")?.Elements().FirstOrDefault(PptxColorResolver.IsDrawingColorElement)
+            : null;
         return index =>
         {
             RgbColor color = ChartPalette(palette, theme, colorMap, index, count);
             if (palette.SingleAccent is null) color = ResolveAutomaticCategoryColor(color, index, count);
-            RgbColor outline = rawStroke ? color : ApplyUnstyledLineStrokeTint(color);
+            RgbColor outline = rawStroke ? color :
+                lineColor?.Name == DrawingNamespace + "schemeClr" && (string?)lineColor.Attribute("val") == "phClr"
+                    ? PptxColorResolver.ApplyColorTransforms(lineColor, color)
+                    : lineColor is not null && PptxColorResolver.TryReadSolidColorWithAlpha(lineColor, theme, colorMap, out var resolved, out _)
+                        ? resolved : ApplyUnstyledLineStrokeTint(color);
             ChartSeriesStroke stroke = pointStrokes.TryGetValue(index, out var pointStroke) ? pointStroke :
                 authoredStroke ?? new ChartSeriesStroke(outline, 1d, width) with { Cap = 1, Join = 1 };
             ChartMarkerStyle marker = seriesMarker;

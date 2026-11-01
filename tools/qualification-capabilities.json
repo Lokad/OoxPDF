@@ -1,6 +1,11 @@
 {
   "pptx-line-point-style": [
     "PptxLinePoint",
+    "PptxColorSaturationPreservesGrayAndTransformOrder",
+    "PptxAuthoredTintShade",
+    "PptxSyntheticConnectorUsesStyleLineReference",
+    "PptxSyntheticConnectorExplicitLineWidthInheritsStyleLineColor",
+    "PptxSyntheticTextBoxResolvesDrawingMlColorForms",
     "PptxLineAutomaticMarkers",
     "PptxAutomaticBarPalettesMatchIndependentOfficeAcrossCountsAndThemes",
     "PptxVaryingBarCategoryLegends",
