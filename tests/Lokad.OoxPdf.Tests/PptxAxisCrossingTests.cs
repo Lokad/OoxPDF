@@ -21,7 +21,7 @@ internal static class PptxAxisCrossingTests
             PdfPage right = Render(kind, "r", crossing, reversed, labels);
             TestAssert.True(left.Content == right.Content,
                 $"Paired {kind} crossing {crossing ?? "default"}, reversal {reversed}, labels {labels} must survive an axPos-only edit.");
-            Check(left, (crossing == "max") != reversed, labels);
+            Check(left, (crossing == "max") != reversed, labels, $"{kind}/{crossing ?? "default"}/{reversed}/{labels}");
         }
     }
 
@@ -31,11 +31,11 @@ internal static class PptxAxisCrossingTests
         foreach (string position in new[] { "l", "r" })
         {
             PdfPage page = Render("line", position, "max", false, "nextTo", fallback);
-            Check(page, position == "r", "nextTo");
+            Check(page, position == "r", "nextTo", fallback + "/" + position);
         }
     }
 
-    private static void Check(PdfPage page, bool axisRight, string labels)
+    private static void Check(PdfPage page, bool axisRight, string labels, string context)
     {
         var clips = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W\* n")
             .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
@@ -50,7 +50,7 @@ internal static class PptxAxisCrossingTests
             .Where(c => Math.Abs(c[0] - c[2]) < .001d && Math.Abs(c[1] - c[3]) > 100d).ToArray();
         TestAssert.Equal(1, axes.Length);
         TestAssert.True(Math.Abs(axes[0][0] - (axisRight ? right : left)) < .002d,
-            "The colored physical numeric axis follows the paired categorical crossing.");
+            $"{context}: colored numeric axis X={axes[0][0]}, plot {left}..{right}, expected right={axisRight}.");
         var values = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal)).ToArray();
         TestAssert.True(values.Length >= 2, "Keep the numeric labels.");
