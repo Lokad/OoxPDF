@@ -597,8 +597,8 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartAxisStroke(valueAxis, valueAxisElement, theme),
             ReadSceneOrXmlChartAxisStroke(secondaryValueAxis, secondaryValueAxisElement, theme),
             ReadSceneOrXmlChartAxisStroke(categoryAxis, categoryAxisElement, theme),
-            ResolveSceneOrXmlValueAxisRightSide(valueAxis, valueAxisElement, defaultRightSide: false),
-            ResolveSceneOrXmlValueAxisRightSide(secondaryValueAxis, secondaryValueAxisElement, defaultRightSide: true),
+            ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis, valueAxisElement, defaultRightSide: false),
+            ResolveSceneOrXmlValueAxisRightSide(sceneChart, secondaryValueAxis, secondaryValueAxisElement, defaultRightSide: true),
             ResolveSceneOrXmlValueAxisBottomSide(valueAxis, valueAxisElement, defaultBottomSide: true),
             ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis, categoryAxisElement, defaultRightSide: false),
             valueAxis is null ? !IsChartAxisDeleted(valueAxisElement) : valueAxis.IsDeleted != true,
@@ -640,24 +640,48 @@ internal sealed partial class PptxRenderer
             : position;
     }
 
-    private static bool ResolveSceneOrXmlValueAxisRightSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
+    private static bool ResolveSceneOrXmlValueAxisRightSide(PptxSceneChart? chart, PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
     {
-        if (sceneAxis is not null)
-        {
-            return sceneAxis.PositionKind switch
-            {
-                PptxSceneChartAxisPosition.Right => true,
-                PptxSceneChartAxisPosition.Left => false,
-                _ => defaultRightSide
-            };
-        }
-
-        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
-        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
+        PptxSceneChartAxisPosition position = sceneAxis?.PositionKind ??
+            PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos"));
+        bool declaredSide = position switch
         {
             PptxSceneChartAxisPosition.Right => true,
             PptxSceneChartAxisPosition.Left => false,
             _ => defaultRightSide
+        };
+        string? id = sceneAxis?.Id ?? ReadChartAxisId(axis);
+        string? crossId = sceneAxis?.CrossAxisId ?? PptxSceneBuilder.ReadChartElementValue(axis, "crossAx");
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(crossId)) return declaredSide;
+
+        // A paired ordinal axis can resolve a crossing to a physical edge.
+        // Unpaired, date/numeric and interior crossings retain their declared fallback.
+        ChartAxisSource category;
+        if (sceneAxis is not null)
+        {
+            category = new(chart?.Axes.FirstOrDefault(candidate => candidate.AxisKind == PptxSceneChartAxisKind.Category &&
+                candidate.Id == crossId && candidate.CrossAxisId == id), null);
+        }
+        else
+        {
+            // An authoritative scene with no axis must not acquire one from fallback XML.
+            if (chart is not null) return declaredSide;
+            category = new(null, axis?.Parent?.Elements(ChartNamespace + "catAx").FirstOrDefault(candidate =>
+                ReadChartAxisId(candidate) == crossId && PptxSceneBuilder.ReadChartElementValue(candidate, "crossAx") == id));
+        }
+        if (category.SceneAxis is null && category.XmlAxis is null) return declaredSide;
+        double? crossing = sceneAxis is not null ? sceneAxis.CrossesAt :
+            PptxSceneBuilder.ReadChartElementDoubleWithValue(axis, "crossesAt").Value;
+        if (crossing is not null) return declaredSide;
+        string raw = sceneAxis?.Crosses ?? PptxSceneBuilder.ReadChartElementValue(axis, "crosses");
+        PptxSceneChartAxisCrosses crosses = string.IsNullOrEmpty(raw) ? PptxSceneChartAxisCrosses.AutoZero :
+            sceneAxis?.CrossesKind ?? PptxSceneBuilder.ParseChartAxisCrosses(raw);
+        bool reversed = ReadSceneOrXmlValueAxisReversed(category.SceneAxis, category.XmlAxis);
+        return crosses switch
+        {
+            PptxSceneChartAxisCrosses.Maximum => !reversed,
+            PptxSceneChartAxisCrosses.Minimum or PptxSceneChartAxisCrosses.AutoZero => reversed,
+            _ => declaredSide
         };
     }
 

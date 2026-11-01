@@ -945,7 +945,7 @@ internal sealed partial class PptxRenderer
                 bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(
                     valueAxis.SceneAxis,
                     valueAxis.XmlAxis,
-                    ResolveSceneOrXmlValueAxisRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+                    ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
                 if (labelsRight)
                 {
                     rightStripWidth = Math.Max(rightStripWidth, stripWidth);

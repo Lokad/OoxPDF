@@ -116,6 +116,9 @@ Approximate or restricted:
   authored/composed frames and unsupported scales retain their fallbacks. Range
   endpoint advance is reserved even without a painted endpoint tick. Automatic
   font sizing, unusual axis declarations and remaining geometry are approximate.
+  Paired categorical axes use the numeric crossing and category orientation for
+  the numeric axis side; explicit low/high labels keep their own side. Unpaired,
+  date/numeric and interior ordinal crossings retain their placement fallback.
   Authored maximum crossings select the high caption/tick side; a numeric crossing
   at the same bound keeps its numeric placement. Explicit low/high captions retain
   precedence over next-to placement.
