@@ -781,8 +781,8 @@ internal sealed partial class PptxRenderer
             }
             if (measuredFrame && labelsVisible && categoryPlacement is { } placement)
             {
-                var header = cartesianHeader!.Value;
-                var reserves = ResolveCartesianCategoryReserves(frame.Height, header.Reserve, requiredBottomReserve, header.NumericClearance, placement);
+                var headerMetrics = cartesianHeader!.Value;
+                var reserves = ResolveCartesianCategoryReserves(frame.Height, headerMetrics.Reserve, requiredBottomReserve, headerMetrics.NumericClearance, placement);
                 double height = frame.Height - reserves.Top - reserves.Bottom;
                 if (height < 1d) return plotBox;
                 categoryTopReserve = reserves.Top;
