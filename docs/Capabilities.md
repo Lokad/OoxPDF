@@ -119,6 +119,10 @@ Approximate or restricted:
   Authored maximum crossings select the high caption/tick side; a numeric crossing
   at the same bound keeps its numeric placement. Explicit low/high captions retain
   precedence over next-to placement.
+  Numeric-crossing ticks retain the authored physical axis side; implicit
+  crossings mirror that side with value direction. Reversed numeric crossings at
+  or beyond the upper bound still have substantial caption/axis-coordinate
+  differences from Office.
   Standard area fills and the first stacked layer close on the resolved category
   crossing; later stack layers retain their cumulative lower values and source
   series positions.

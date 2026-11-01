@@ -488,7 +488,13 @@ internal sealed partial class PptxRenderer
             var (ratio, topSide) = ResolveCategoryLabelPlacement(category.SceneAxis, category.XmlAxis,
                 GetChartValuePlotRatio(extents, crossing, reversed), reversed,
                 maximumCrossing: maximumCrossing);
-            return new(crossing, ratio, topSide, maximumCrossing != reversed);
+            // Numeric crossings retain the authored physical axis side. Only
+            // implicit crossings mirror outward ticks with value direction;
+            // caption side and fill baseline have their own placement owners.
+            bool axisTopSide = category.SceneAxis.CrossesAt is not null
+                ? ResolveSceneOrXmlCategoryAxisTopSide(category.SceneAxis, category.XmlAxis, defaultTopSide: false)
+                : maximumCrossing != reversed;
+            return new(crossing, ratio, topSide, axisTopSide);
         }
 
         async ValueTask<ChartPlotLayout> GetPlotLayoutAsync()

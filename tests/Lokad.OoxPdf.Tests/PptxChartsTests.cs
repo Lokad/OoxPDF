@@ -1621,7 +1621,7 @@ internal static class PptxChartsTests
         }
     }
 
-    public static void PptxLegendlessLineCategoryTicksFollowValueDirection()
+    public static void PptxLegendlessLineNumericCrossingKeepsSourceTickSide()
     {
         foreach ((bool reversed, string labelPosition, double crossing, double axisY) in new[]
         {
@@ -1639,8 +1639,8 @@ internal static class PptxChartsTests
             foreach (Match tick in ticks)
             {
                 double start = double.Parse(tick.Groups["from"].Value, CultureInfo.InvariantCulture);
-                TestAssert.True(reversed ? start > axisY : start < axisY,
-                    "Outward category ticks must follow value-axis direction independently of low/high label placement.");
+                TestAssert.True(start < axisY,
+                    "Numeric crossings retain the authored bottom tick side independently of value direction and low/high captions.");
             }
         }
     }

@@ -85,15 +85,18 @@ internal static class PptxAreaFrameTests
         }
     }
 
-    public static void PptxCategoryMaximumTicksFollowTheCrossingSideIndependentlyOfLabels()
+    public static void PptxCategoryTickSidesDistinguishNumericAndImplicitCrossings()
     {
         foreach (bool line in new[] { false, true })
         foreach (bool reversed in new[] { false, true })
         foreach (string position in new[] { "nextTo", "low", "high" })
+        foreach (string mode in new[] { "middle", "autoZero", "min", "max" })
         {
-            PdfPage page = Render(12, reversed: reversed, caption: position, line: line, categoryCrossing: "max");
+            PdfPage page = Render(12, reversed: reversed, caption: position, line: line, categoryCrossing: mode);
             var plot = Plot(page);
-            double axis = reversed ? plot.Y : plot.Y + plot.Height;
+            double crossing = mode == "middle" ? .5d : mode == "max" ? 1d : 0d;
+            double axis = plot.Y + plot.Height * (reversed ? 1d - crossing : crossing);
+            bool topSide = mode != "middle" && (mode == "max") != reversed;
             var paths = new List<string>();
             var paints = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add, strokes: true).ToArray();
             var ticks = paints.Select((color, i) => (color, path: paths[i]))
@@ -105,8 +108,8 @@ internal static class PptxAreaFrameTests
             {
                 double from = double.Parse(tick.Groups["from"].Value, CultureInfo.InvariantCulture);
                 double to = double.Parse(tick.Groups["to"].Value, CultureInfo.InvariantCulture);
-                TestAssert.True(Math.Abs(to - axis) < .002d && (reversed ? from < axis : from > axis),
-                    "Outward maximum-crossing ticks follow value direction, independently of low/high captions.");
+                TestAssert.True(Math.Abs(to - axis) < .002d && (topSide ? from > axis : from < axis),
+                    "Numeric crossings retain the authored bottom tick side; implicit crossings mirror with value direction independently of captions.");
             }
         }
     }
