@@ -311,7 +311,13 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <007C>"), "Expected line-chart data labels to include the custom separator between series, category, and value text.");
         TestAssert.Contains("1 0.918 0.8 rg", pdf);
         TestAssert.Contains("0.067 0.133 0.2 RG", pdf);
-        TestAssert.Contains("79.2 357.525 28.8 13.5 re f", pdf);
+        Match labelShape = Regex.Match(pdf, @"(?m)^(?<x>[-\d.]+) 357\.525 28\.8 13\.5 re f\r?$");
+        Match firstMarker = Regex.Match(pdf, @"0 0 0\.667 rg\s+(?<x>[-\d.]+) [-\d.]+ 8 8 re f");
+        TestAssert.True(labelShape.Success && firstMarker.Success,
+            "Expected the styled label background and its first source point marker.");
+        TestAssert.True(Math.Abs(double.Parse(labelShape.Groups["x"].Value, CultureInfo.InvariantCulture) + 14.4d -
+            (double.Parse(firstMarker.Groups["x"].Value, CultureInfo.InvariantCulture) + 4d)) < .001d,
+            "The automatic label box stays centered on its plotted category point inside the authored plot frame.");
         TestAssert.Contains("0.8 0.933 1 rg", pdf);
         TestAssert.Contains("214.56 373.995 14.4 8.64 re f", pdf);
         TestAssert.Contains("0.4 0 0.8 rg", pdf);
@@ -334,7 +340,7 @@ internal static class PptxChartRenderingTests
         TestAssert.Contains("/ItalicAngle -12", pdf);
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
         TestAssert.Contains("/CLD1 9.96 Tf", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 357.525 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 " + labelShape.Groups["x"].Value + " 357.525 Tm", pdf);
         // Auto pie labels emit no leaders (Office draws none for the styled auto labels
         // on the auto-radius reference); only the factor-manual label below keeps one.
         TestAssert.DoesNotContain("0.267 0.8 0.533 RG", pdf);

@@ -1,5 +1,9 @@
 {
   "pptx-category-slots": [
+    "PptxSyntheticLineAndPieChartsRenderNativeCharts",
+    "PptxSyntheticLineChartRendersLegendKeyOnlyDataLabels",
+    "PptxSyntheticLineChartSeriesLineWithoutWidthUsesOfficeDefault",
+    "PptxSyntheticLineChartMarkerLineWithoutWidthUsesMarkerDefault",
     "PptxLineAndAreaDataFollowSourceCategorySlots",
     "PptxCategoryMajorTicksFollowSourceSlotBoundaries",
     "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
