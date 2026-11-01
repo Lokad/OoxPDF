@@ -74,7 +74,12 @@ internal static class PptxChartAxesTests
                 var document = new PptxReader().Read(package, default);
                 PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
                     .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
-                return Regex.Matches(page.Content, @"-?\d+(?:\.\d+)?")
+                // Compare painted paths. Numeric label text changes with units,
+                // so its glyph operands and text clipping boxes are not geometry
+                // invariants (scatter/bubble currently emit those labels here).
+                string paths = string.Join("\n", page.Content.Split('\n').Where(line =>
+                    Regex.IsMatch(line, @"(?:^| )(?:m|l|c|re)(?: [fS]\*?)?\r?$")));
+                return Regex.Matches(paths, @"-?\d+(?:\.\d+)?")
                     .Select(match => double.Parse(match.Value, CultureInfo.InvariantCulture)).ToArray();
             }
         }
