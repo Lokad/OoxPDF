@@ -35,7 +35,7 @@ internal sealed partial class PptxRenderer
         {
             resolver.CancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(label?.Text)) continue;
-            foreach (string word in label.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            foreach (string word in label.Value.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                 widestWord = Math.Max(widestWord, await measure.MeasureAsync(word, policyStyle).ConfigureAwait(false));
         }
         double availableWidth = automaticAngle && !layout.ManualPlotLayoutApplied
@@ -72,7 +72,7 @@ internal sealed partial class PptxRenderer
         {
             resolver.CancellationToken.ThrowIfCancellationRequested();
             if (i % skip != 0 || string.IsNullOrWhiteSpace(labels[i]?.Text)) continue;
-            string text = labels[i]!.Text;
+            string text = labels[i]!.Value.Text;
             double width = await measure.MeasureAsync(text, style).ConfigureAwait(false);
             var lines = new List<ChartTextRunLayout>();
             if (angle == 0d && automaticSkip && width > flatWidth)

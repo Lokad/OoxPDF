@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
                     chartLayout = await PrepareCategoryLabelLayoutAsync(chartLayout, theme, sceneChart, chartXml, categoryAxis, categoryLabels,
                         ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis),
                         ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultTopSide: false),
-                        axesStyle.CategoryAxisTopSide ? 1d : GetChartValuePlotRatio(valueExtents, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed),
+                        axesStyle.CategoryAxisTopSide ? 1d : GetChartValuePlotRatio(valueExtents, valueAxisOptions.CrossingValue ?? 0d, valueAxisOptions.Reversed),
                         fontResolver, preparedLegendBox).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
