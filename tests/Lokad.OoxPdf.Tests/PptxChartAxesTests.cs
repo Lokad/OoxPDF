@@ -141,7 +141,45 @@ internal static class PptxChartAxesTests
         }
     }
 
-    private static PdfPage RenderColumnDirectionProbe(bool negative, bool reversed, string position, string axisPosition)
+    public static void PptxLineCaptionPlacementSurvivesTitlesAndBottomLegends()
+    {
+        foreach (bool negative in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string position in new[] { "nextTo", "low", "high" })
+        foreach (string furniture in new[] { "none", "title", "legend", "both" })
+        {
+            PdfPage page = RenderColumnDirectionProbe(negative, reversed, position, "b", line: true,
+                title: furniture is "title" or "both", bottomLegend: furniture is "legend" or "both");
+            double[] plot = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W\* n")
+                .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(rect => rect[2] > 150d && rect[2] < 288d && rect[3] > 50d && rect[3] < 216d)
+                .OrderByDescending(rect => rect[3]).First();
+            bool zeroAtTop = negative != reversed;
+            double ratio = position == "low" ? (reversed ? 1d : 0d) :
+                position == "high" ? (reversed ? 0d : 1d) : zeroAtTop ? 1d : 0d;
+            double anchor = plot[1] + plot[3] * ratio;
+            bool above = (position == "high") != reversed;
+            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CCA", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font)).ToArray();
+            TestAssert.Equal(2, captions.Length);
+            TestAssert.True(captions.Select(show => show.Text).Order(StringComparer.Ordinal).SequenceEqual(new[] { "Alfa", "Beta" }), "Keep both source captions.");
+            foreach (var show in captions)
+            {
+                double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+                foreach (char character in show.Text)
+                {
+                    TestAssert.True(show.Font.Font.TryGetGlyphBounds(show.Font.Font.MapCodePoint(character), out var box), "Expected pinned glyph ink.");
+                    bottom = Math.Min(bottom, show.Y + box.YMin * show.Size / show.Font.Font.UnitsPerEm);
+                    top = Math.Max(top, show.Y + box.YMax * show.Size / show.Font.Font.UnitsPerEm);
+                }
+                TestAssert.True(above ? bottom > anchor : top < anchor,
+                    $"Line captions must retain numeric {position} placement with {furniture} (negative={negative}, reversed={reversed}).");
+            }
+        }
+    }
+
+    private static PdfPage RenderColumnDirectionProbe(bool negative, bool reversed, string position, string axisPosition,
+        bool line = false, bool title = false, bool bottomLegend = false)
     {
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea>
@@ -155,6 +193,23 @@ internal static class PptxChartAxesTests
               <c:valAx><c:axId val="2"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/><c:min val="{{(negative ? -5 : 0)}}"/><c:max val="{{(negative ? 0 : 5)}}"/></c:scaling><c:tickLblPos val="none"/></c:valAx>
             </c:plotArea></c:chart></c:chartSpace>
             """;
+        if (line)
+        {
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            XDocument parsed = XDocument.Parse(chart);
+            XElement area = parsed.Descendants(c + "plotArea").Single();
+            area.Element(c + "layout")!.Remove();
+            XElement plot = area.Element(c + "barChart")!;
+            plot.Name = c + "lineChart";
+            plot.Element(c + "barDir")!.Remove();
+            area.Element(c + "catAx")!.Add(new XElement(c + "crossAx", new XAttribute("val", "2")), new XElement(c + "crosses", new XAttribute("val", "autoZero")));
+            area.Element(c + "valAx")!.Add(new XElement(c + "axPos", new XAttribute("val", "l")), new XElement(c + "crossAx", new XAttribute("val", "1")));
+            if (title) parsed.Descendants(c + "chart").Single().AddFirst(new XElement(c + "title", new XElement(c + "tx", new XElement(c + "rich",
+                new XElement(a + "bodyPr"), new XElement(a + "p", new XElement(a + "r", new XElement(a + "t", "Direction title")))))));
+            if (bottomLegend) parsed.Descendants(c + "chart").Single().Add(new XElement(c + "legend", new XElement(c + "legendPos", new XAttribute("val", "b"))));
+            chart = parsed.ToString(SaveOptions.DisableFormatting);
+        }
         const string slide = """
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="3657600" cy="2743200"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
             """;

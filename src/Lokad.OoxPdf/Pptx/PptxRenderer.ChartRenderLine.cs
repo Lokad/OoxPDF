@@ -392,7 +392,7 @@ internal sealed partial class PptxRenderer
         return Math.Min(presetRight, frameRight - reserveWidth);
     }
 
-    private static async ValueTask<ChartLayout> GetLineChartLayoutAsync(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, PptxColorMap colorMap, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static async ValueTask<ChartLayout> GetLineChartLayoutAsync(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, PptxColorMap colorMap, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartValueExtents? resolvedLineExtents = null)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
@@ -400,10 +400,48 @@ internal sealed partial class PptxRenderer
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
         ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
         double? categoryLabelOffsetAdjustment = null;
-        ChartCategoryAxisPlacement? categoryAxisPlacement = null;
-        ChartValueExtents? measuredLineExtents = null;
+        ChartCategoryAxisPlacement? categoryAxisPlacement = await ReadAutomaticLineCategoryPlacementAsync().ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetLineChartPlotLayoutAsync().ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement);
+
+        async ValueTask<ChartCategoryAxisPlacement?> ReadAutomaticLineCategoryPlacementAsync()
+        {
+            // Caption side/crossing belongs to the scale, independently of
+            // whether the title/header can use measured plot placement.
+            // Keep authored/composed frames, unsupported scales and unresolved
+            // font boxes on their existing fallback.
+            if (resolvedLineExtents is not { } extents || sceneChart.PlotAreaLayout.HasGeometryValues || sceneChart.Plots.Count != 1)
+                return null;
+            PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
+            XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
+            if (plotElement is null) return null;
+            IReadOnlyList<ChartAxisSource> axes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
+            if (axes.Count != 1 || axes[0].SceneAxis is not { HasLogarithmicScale: false } valueAxis ||
+                valueAxis.PositionKind is not (PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right))
+                return null;
+            ChartAxisSource category = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, plotElement);
+            if (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } ||
+                !IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis))
+                return null;
+            var measure = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
+            ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, category.SceneAxis, chartXml, category.XmlAxis,
+                PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
+            if (await measure.TryMeasureNormalLineHeightAsync(categoryStyle).ConfigureAwait(false) is null)
+                return null;
+            if (IsSceneOrXmlChartAxisLabelVisible(valueAxis, axes[0].XmlAxis))
+            {
+                ChartTextStyle numericStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis, chartXml, axes[0].XmlAxis,
+                    PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+                if (await measure.TryMeasureNormalLineHeightAsync(numericStyle).ConfigureAwait(false) is null)
+                    return null;
+            }
+            if (ReadSceneOrXmlValueAxisCrossingValue(category.SceneAxis, category.XmlAxis, extents) is not { } crossing || !double.IsFinite(crossing))
+                return null;
+            bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, axes[0].XmlAxis);
+            var (ratio, topSide) = ResolveCategoryLabelPlacement(category.SceneAxis, category.XmlAxis,
+                GetChartValuePlotRatio(extents, crossing, reversed), reversed);
+            return new(crossing, ratio, topSide, reversed);
+        }
 
         async ValueTask<ChartPlotLayout> GetLineChartPlotLayoutAsync()
         {
@@ -525,20 +563,11 @@ internal sealed partial class PptxRenderer
                     return null;
                 }
 
-                // The category axis owns its crossing on the value scale. Its
-                // label side/position also owns the clearance; low/high labels
-                // stay at the plot edge while nextTo labels follow the crossing.
-                // Keep unsupported scales and unresolved font boxes on the
-                // existing layout/emission fallback.
-                if (!valueAxis.HasLogarithmicScale && measuredLineExtents is { } extents &&
-                    (!numericLabelsVisible || textMeasurer.TryMeasureNormalLineHeight(tickStyle, out _)) &&
-                    (await textMeasurer.TryMeasureNormalLineHeightAsync(categoryStyle).ConfigureAwait(false)) is not null &&
-                    ReadSceneOrXmlValueAxisCrossingValue(categoryAxis.SceneAxis, categoryAxis.XmlAxis, extents) is { } crossing &&
-                    double.IsFinite(crossing))
+                // Measurement and painting consume the same scale placement.
+                if (categoryAxisPlacement is { } placement)
                 {
-                    bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, valueAxes[0].XmlAxis);
-                    double crossingRatio = GetChartValuePlotRatio(extents, crossing, reversed);
-                    var (labelRatio, topSide) = ResolveCategoryLabelPlacement(categoryAxis.SceneAxis, categoryAxis.XmlAxis, crossingRatio, reversed);
+                    double labelRatio = placement.LabelPlotRatio;
+                    bool topSide = placement.LabelsTopSide;
                     double categoryReserve = bottomReserve;
                     double numericReserve = topReserve;
                     if (topSide)
@@ -560,7 +589,6 @@ internal sealed partial class PptxRenderer
                     {
                         return null;
                     }
-                    categoryAxisPlacement = new ChartCategoryAxisPlacement(crossing, labelRatio, topSide, reversed);
                 }
 
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
@@ -610,8 +638,7 @@ internal sealed partial class PptxRenderer
 
                 ChartAxisSource lineValueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement).FirstOrDefault();
                 XElement? valueAxisForScale = ResolveXmlValueAxisForSource(sceneChart, lineValueAxis, chartXml);
-                ChartValueExtents lineValueExtents = ReadLineChartValueAxisExtents(sceneChart, lineValueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-                measuredLineExtents = lineValueExtents;
+                ChartValueExtents lineValueExtents = resolvedLineExtents ?? ReadLineChartValueAxisExtents(sceneChart, lineValueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartTextStyle lineValueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, lineValueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 tickStyle = lineValueAxisTextStyle;
                 // Hidden labels still supply scale/crossing data, without
