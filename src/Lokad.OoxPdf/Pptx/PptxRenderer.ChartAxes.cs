@@ -197,8 +197,9 @@ internal sealed partial class PptxRenderer
 
     private static ChartAxisUnits ResolveBubbleAxisUnits(ChartAxisUnits axisUnits, ChartValueExtents extents, double tickTargetCount = PptxChartMetricRules.BubbleAxisNiceTickTargetCount)
     {
+        double span = extents.Max - extents.Min;
         return axisUnits.MajorUnit is null
-            ? axisUnits with { MajorUnit = ChooseChartAxisMajorUnit(Math.Max(1d, extents.Max - extents.Min), tickTargetCount) }
+            ? axisUnits with { MajorUnit = ChooseChartAxisMajorUnit(span > 0d ? span : 1d, tickTargetCount) }
             : axisUnits;
     }
 

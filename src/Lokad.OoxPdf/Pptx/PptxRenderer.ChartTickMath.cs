@@ -36,7 +36,7 @@ internal sealed partial class PptxRenderer
             throw new OoxPdfLimitExceededException("Chart axis tick bounds are not a finite ordered range.");
         }
 
-        double range = Math.Max(1d, span);
+        double range = span > 0d ? span : 1d;
         double unit = ResolveChartAxisTickUnit(range, explicitUnit, autoTickTargetCount);
 
         // Ticks expand source ranges just like dense chart slots. Reuse their
@@ -125,7 +125,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<double> majorValues = hasMajorGridlineElement
             ? GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, autoTickTargetCount, tickPolicy)
             : Array.Empty<double>();
-        double majorUnit = ResolveChartAxisTickUnit(Math.Max(1d, extents.Max - extents.Min), units.MajorUnit, autoTickTargetCount);
+        double span = extents.Max - extents.Min;
+        double majorUnit = ResolveChartAxisTickUnit(span > 0d ? span : 1d, units.MajorUnit, autoTickTargetCount);
         double minorUnit = units.MinorUnit is { } authored && double.IsFinite(authored) && authored > 0d ? authored : majorUnit / 5d;
         IReadOnlyList<double> minorValues = GetChartAxisTickValuesCore(extents, minorUnit, includeEndpoints: true, autoTickTargetCount, tickPolicy);
         var values = new List<double>(minorValues.Count);
@@ -152,7 +153,10 @@ internal sealed partial class PptxRenderer
 
     private static double GetChartValuePlotRatio(ChartValueExtents extents, double value, bool reversed)
     {
-        double range = Math.Max(1d, extents.Max - extents.Min);
+        // A resolved fractional axis still occupies the complete plot. Only a
+        // degenerate range needs the existing unit-span fallback.
+        double span = extents.Max - extents.Min;
+        double range = span > 0d ? span : 1d;
         double boundedValue = Math.Clamp(value, extents.Min, extents.Max);
         double ratio = (boundedValue - extents.Min) / range;
         return reversed ? 1d - ratio : ratio;

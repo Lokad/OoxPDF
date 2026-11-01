@@ -179,8 +179,8 @@ internal sealed partial class PptxRenderer
         ChartValueExtents yExtents,
         double maxBubbleSize)
     {
-        double xRange = Math.Max(1d, xExtents.Max - xExtents.Min);
-        double yRange = Math.Max(1d, yExtents.Max - yExtents.Min);
+        double xRange = xExtents.Max > xExtents.Min ? xExtents.Max - xExtents.Min : 1d;
+        double yRange = yExtents.Max > yExtents.Min ? yExtents.Max - yExtents.Min : 1d;
         double pointX = plotBox.X + (point.X - xExtents.Min) / xRange * plotBox.Width;
         double pointY = plotBox.Y + (point.Y - yExtents.Min) / yRange * plotBox.Height;
         double radius = bubble

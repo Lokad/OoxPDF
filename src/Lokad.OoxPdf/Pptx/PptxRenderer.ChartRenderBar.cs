@@ -1432,7 +1432,6 @@ internal sealed partial class PptxRenderer
 
         // Office defaults gridlines to round joins (caps stay butt).
         SetChartStroke(graphics, stroke with { Join = stroke.Join ?? 1 });
-        double range = Math.Max(1d, extents.Max - extents.Min);
         bool hasPath = false;
         foreach (double value in readValues())
         {
@@ -1469,7 +1468,6 @@ internal sealed partial class PptxRenderer
 
         // Office defaults gridlines to round joins (caps stay butt).
         SetChartStroke(graphics, stroke with { Join = stroke.Join ?? 1 });
-        double range = Math.Max(1d, extents.Max - extents.Min);
         bool hasPath = false;
         foreach (double value in GetChartGridlineValues(extents, explicitUnit, crossingValue, autoTickTargetCount))
         {

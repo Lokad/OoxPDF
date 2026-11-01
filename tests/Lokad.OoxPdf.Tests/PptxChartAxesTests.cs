@@ -16,6 +16,85 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxAuthoredAxisGeometrySurvivesChangesOfUnits()
+    {
+        foreach (var sample in new[]
+        {
+            (Kind: "bar", Direction: "col", Min: 0d, Max: 5d, Reversed: false, Units: false),
+            (Kind: "bar", Direction: "col", Min: -5d, Max: 0d, Reversed: false, Units: true),
+            (Kind: "bar", Direction: "col", Min: -2d, Max: 3d, Reversed: true, Units: false),
+            (Kind: "bar", Direction: "bar", Min: 0d, Max: 5d, Reversed: true, Units: true),
+            (Kind: "line", Direction: "", Min: 0d, Max: 5d, Reversed: false, Units: true),
+            (Kind: "area", Direction: "", Min: -2d, Max: 3d, Reversed: false, Units: false),
+            (Kind: "scatter", Direction: "", Min: 0d, Max: 5d, Reversed: false, Units: true),
+            (Kind: "scatter", Direction: "", Min: -2d, Max: 3d, Reversed: false, Units: false),
+            (Kind: "bubble", Direction: "", Min: 0d, Max: 5d, Reversed: false, Units: false)
+        })
+        {
+            double[] original = Render(1d);
+            TestAssert.True(original.Length > 40, "Expected painted chart geometry.");
+            foreach (double scale in new[] { .1d, .01d })
+            {
+                double[] scaled = Render(scale);
+                TestAssert.Equal(original.Length, scaled.Length);
+                for (int i = 0; i < original.Length; i++)
+                    TestAssert.True(Math.Abs(original[i] - scaled[i]) <= .002d,
+                        $"Changing units must preserve {sample.Kind}/{sample.Direction} geometry (scale {scale}, coordinate {i}).");
+            }
+
+            double[] Render(double scale)
+            {
+                string N(double value) => (value * scale).ToString("R", CultureInfo.InvariantCulture);
+                string values = $"<c:pt idx=\"0\"><c:v>{N(sample.Min + 1d)}</c:v></c:pt><c:pt idx=\"1\"><c:v>{N(sample.Max - 1d)}</c:v></c:pt>";
+                bool numericX = sample.Kind is "scatter" or "bubble";
+                string source = numericX
+                    ? $"<c:xVal><c:numLit>{values}</c:numLit></c:xVal><c:yVal><c:numLit>{values}</c:numLit></c:yVal>"
+                    : $"<c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt><c:pt idx=\"1\"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit>{values}</c:numLit></c:val>";
+                if (sample.Kind == "bubble") source += "<c:bubbleSize><c:numLit><c:pt idx=\"0\"><c:v>1</c:v></c:pt><c:pt idx=\"1\"><c:v>4</c:v></c:pt></c:numLit></c:bubbleSize>";
+                string units = sample.Units ? $"<c:majorUnit val=\"{N(2d)}\"/><c:minorUnit val=\"{N(.25d)}\"/>" : "";
+                string Axis(string id, string position) => $$"""
+                    <c:valAx><c:axId val="{{id}}"/><c:scaling><c:orientation val="{{(sample.Reversed ? "maxMin" : "minMax")}}"/><c:min val="{{N(sample.Min)}}"/><c:max val="{{N(sample.Max)}}"/></c:scaling>
+                      <c:axPos val="{{position}}"/><c:majorGridlines/><c:minorGridlines/><c:tickLblPos val="none"/>{{units}}
+                    </c:valAx>
+                    """;
+                string firstAxis = numericX ? Axis("1", "b") : "<c:catAx><c:axId val=\"1\"/><c:axPos val=\"b\"/><c:tickLblPos val=\"none\"/></c:catAx>";
+                string options = sample.Kind == "bar" ? $"<c:barDir val=\"{sample.Direction}\"/>" : sample.Kind == "scatter" ? "<c:scatterStyle val=\"lineMarker\"/>" : "";
+                string chart = $$"""
+                    <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                      <c:chart><c:plotArea><c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.1"/><c:y val="0.1"/><c:w val="0.8"/><c:h val="0.7"/></c:manualLayout></c:layout>
+                        <c:{{sample.Kind}}Chart>{{options}}<c:ser><c:idx val="0"/><c:order val="0"/>
+                          <c:spPr><a:solidFill><a:srgbClr val="CC2200"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="CC2200"/></a:solidFill></a:ln></c:spPr>{{source}}
+                        </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{sample.Kind}}Chart>{{firstAxis}}{{Axis("2", "l")}}
+                      </c:plotArea></c:chart>
+                    </c:chartSpace>
+                    """;
+                using var stream = PptxTests.CreateSingleChartPackageStream(chart);
+                using var package = OoxPackage.Open(stream, default);
+                var document = new PptxReader().Read(package, default);
+                PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                    .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+                return Regex.Matches(page.Content, @"-?\d+(?:\.\d+)?")
+                    .Select(match => double.Parse(match.Value, CultureInfo.InvariantCulture)).ToArray();
+            }
+        }
+    }
+
+    public static void PptxAutomaticIntervalsScaleWithSubUnitBounds()
+    {
+        double[] ticks = ReadBoundedAxisTicks(-2d, 3d, null).ToArray();
+        double[] minors = ReadMinorGridlineValues(5d, null, null).ToArray();
+        foreach (double scale in new[] { .1d, .01d })
+        {
+            double[] scaledTicks = ReadBoundedAxisTicks(-2d * scale, 3d * scale, null).ToArray();
+            double[] scaledMinors = ReadMinorGridlineValues(5d * scale, null, null).ToArray();
+            TestAssert.Equal(ticks.Length, scaledTicks.Length);
+            TestAssert.Equal(minors.Length, scaledMinors.Length);
+            for (int i = 0; i < ticks.Length; i++) TestAssert.True(Math.Abs(ticks[i] * scale - scaledTicks[i]) < 1e-10, "Automatic major intervals must scale with their resolved bounds.");
+            for (int i = 0; i < minors.Length; i++) TestAssert.True(Math.Abs(minors[i] * scale - scaledMinors[i]) < 1e-10, "Automatic minor intervals must subdivide the same scaled major interval.");
+        }
+        TestAssert.Equal(0, ReadBoundedAxisTicks(0d, 0d, null, includeEndpoints: false).Count);
+    }
+
     public static void PptxCrowdedCategoryCaptionsPreservePlotSpaceAcrossFrameSizes()
     {
         foreach (int height in new[] { 120, 240, 420 })

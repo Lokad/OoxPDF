@@ -43,12 +43,6 @@ internal sealed partial class PptxRenderer
         double plotHeight = plotBox.Height;
         ChartValueExtents xExtents = xValueExtents ?? GetScatterDataXExtents();
         ChartValueExtents yExtents = yValueExtents ?? GetScatterDataYExtents();
-        double minX = xExtents.Min;
-        double maxX = xExtents.Max;
-        double minY = yExtents.Min;
-        double maxY = yExtents.Max;
-        double xRange = Math.Max(1d, maxX - minX);
-        double yRange = Math.Max(1d, maxY - minY);
         double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Size));
 
         graphics.SetStrokeRgb(90, 90, 90);
