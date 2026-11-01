@@ -96,8 +96,9 @@ Approximate or restricted:
   within their footer. Authored plot geometry remains fixed. Automatic vertical
   value labels retain endpoints and omit overlapping ink; fixed intervals remain
   unchanged. Resolved Cartesian spans below one retain proportional coordinates
-  and tick intervals. Dense allocation, automatic axis ranges and font geometry
-  remain approximate.
+  and tick intervals. Negative-only data shares positive-axis bound rounding and
+  preserves authored limits. Dense allocation, reversed category-caption placement,
+  automatic axis ranges and font geometry remain approximate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
