@@ -76,67 +76,39 @@ internal sealed partial class PptxRenderer
             [];
     }
 
-    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
-    {
-        return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.AxisNiceTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
-    }
-
-    private static ChartValueExtents ReadBubbleChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
-    {
-        return ReadChartValueAxisExtents(valueAxis, fallback, boundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio, preferUnitOneOverTwo);
-    }
-
     private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
     {
-        if (axis is null)
-        {
-            return ReadBubbleChartValueAxisExtents(valueAxis, fallback, boundsTickTargetCount, preferUnitOneOverTwo);
-        }
-
-        if (!axis.HasScaling)
-        {
-            return fallback;
-        }
-
-        double min = axis.Minimum ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio, preferUnitOneOverTwo);
-        return max > min
-            ? new ChartValueExtents(min, max)
-            : fallback;
+        return ReadSceneOrXmlChartValueAxisExtents(axis, valueAxis, fallback, useNearMaximumHeadroom: true,
+            nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio,
+            boundsTickTargetCount: boundsTickTargetCount, preferUnitOneOverTwo: preferUnitOneOverTwo);
     }
 
-    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio, bool preferUnitOneOverTwo = false)
+    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio, double boundsTickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount, bool preferUnitOneOverTwo = false)
     {
-        XElement? scaling = valueAxis?.Element(ChartNamespace + "scaling");
-        if (valueAxis is null || scaling is null)
-        {
-            return fallback;
-        }
-
-        double min = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "min").Value ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "max").Value ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio, preferUnitOneOverTwo);
-        return max > min
-            ? new ChartValueExtents(min, max)
-            : fallback;
-    }
-
-    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
-    {
+        double? minimum, maximum;
         if (axis is null)
         {
-            return ReadChartValueAxisExtents(valueAxis, fallback, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+            if (valueAxis?.Element(ChartNamespace + "scaling") is null) return fallback;
+            minimum = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "min").Value;
+            maximum = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "max").Value;
         }
-
-        if (!axis.HasScaling)
+        else
         {
-            return fallback;
+            if (!axis.HasScaling) return fallback;
+            minimum = axis.Minimum;
+            maximum = axis.Maximum;
         }
 
-        double min = axis.Minimum ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, PptxChartMetricRules.AxisNiceTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
-        return max > min
-            ? new ChartValueExtents(min, max)
-            : fallback;
+        // Negative-only data uses the same outer rounding as positive data.
+        // Reflect authored bounds too, so a partial bound keeps its owner.
+        // Mixed-sign and degenerate inputs retain the existing rounding path.
+        bool reflect = fallback.Max <= 0d && fallback.Min < 0d;
+        ChartValueExtents data = reflect ? new ChartValueExtents(-fallback.Max, -fallback.Min) : fallback;
+        if (reflect) (minimum, maximum) = (-maximum, -minimum);
+        double min = minimum ?? GetNiceChartAxisMin(data.Min, data.Max);
+        double max = maximum ?? GetNiceChartAxisMax(data.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio, preferUnitOneOverTwo);
+        if (max > min) return reflect ? new ChartValueExtents(-max, -min) : new ChartValueExtents(min, max);
+        return fallback;
     }
 
     private static ChartValueExtents ReadPercentStackedAwareValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)

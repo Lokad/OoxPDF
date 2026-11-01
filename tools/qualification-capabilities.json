@@ -1,5 +1,13 @@
 {
   "pptx-axis-range": [
+    "PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds",
+    "PptxChartRangeConsolidationKeepsSceneAuthorityAndXmlFallback",
+    "PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence",
+    "PptxSyntheticChartLineAxisNearMaximumKeepsOfficeHeadroom",
+    "PptxSyntheticChartScatterAxisNearMaximumKeepsOfficeHeadroom",
+    "PptxSyntheticScatterAxisMaxPrefersUnitOneOverTwo",
+    "PptxSyntheticScatterXAxisUnitHalvesEarlierThanY",
+    "PptxLineAuthoredMaximum",
     "PptxAuthoredAxisGeometrySurvivesChangesOfUnits",
     "PptxAutomaticIntervalsScaleWithSubUnitBounds",
     "PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames",

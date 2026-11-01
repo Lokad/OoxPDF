@@ -16,6 +16,81 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds()
+    {
+        // Office16 columns, horizontal bars and lines agree on these bounds;
+        // the retained scaled/partial-bound probes exercise the same reflection.
+        foreach (string kind in new[] { "column", "bar", "line" })
+        foreach (var bounds in new[]
+        {
+            (Minimum: (double?)null, Maximum: (double?)null, ExpectedMin: -4.5d, ExpectedMax: 0d),
+            (Minimum: (double?)-5d, Maximum: (double?)null, ExpectedMin: -5d, ExpectedMax: 0d),
+            (Minimum: (double?)null, Maximum: (double?)-1d, ExpectedMin: -4.5d, ExpectedMax: -1d),
+            (Minimum: (double?)null, Maximum: (double?)1d, ExpectedMin: -5d, ExpectedMax: 1d),
+            (Minimum: (double?)-5d, Maximum: (double?)1d, ExpectedMin: -5d, ExpectedMax: 1d)
+        })
+        foreach (double scale in new[] { 1d, .1d, .01d })
+        {
+            string N(double value) => (value * scale).ToString("R", CultureInfo.InvariantCulture);
+            string axisBounds = (bounds.Minimum is { } min ? $"<c:min val=\"{N(min)}\"/>" : "") +
+                (bounds.Maximum is { } max ? $"<c:max val=\"{N(max)}\"/>" : "");
+            string plot = kind == "line" ? "line" : "bar";
+            string direction = kind == "line" ? "" : $"<c:barDir val=\"{(kind == "bar" ? "bar" : "col")}\"/>";
+            string manual = kind == "line" ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:x val=\"0.1\"/><c:y val=\"0.1\"/><c:w val=\"0.8\"/><c:h val=\"0.7\"/></c:manualLayout></c:layout>" : "";
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  <c:chart><c:plotArea>{{manual}}<c:{{plot}}Chart>{{direction}}<c:ser>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>{{N(-4d)}}</c:v></c:pt><c:pt idx="1"><c:v>{{N(-4d)}}</c:v></c:pt></c:numLit></c:val>
+                  </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{plot}}Chart>
+                  <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>
+                  <c:valAx><c:axId val="2"/><c:scaling><c:orientation val="{{(kind == "bar" ? "maxMin" : "minMax")}}"/>{{axisBounds}}</c:scaling><c:axPos val="l"/><c:crossAx val="1"/></c:valAx>
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            using var stream = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CVA", StringComparison.Ordinal)).Select(font => font.Font).ToHashSet();
+            double[] labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Where(show => fonts.Contains(show.Font))
+                .Select(show => double.Parse(show.Text, CultureInfo.InvariantCulture)).ToArray();
+            TestAssert.True(labels.Length >= 2, "Expected both value-axis endpoints.");
+            TestAssert.True(Math.Abs(labels.Min() - bounds.ExpectedMin * scale) < 1e-9 && Math.Abs(labels.Max() - bounds.ExpectedMax * scale) < 1e-9,
+                $"Negative-only {kind} must retain Office bounds with source {bounds}, scale {scale}; got {labels.Min()}..{labels.Max()}.");
+        }
+    }
+
+    public static void PptxChartRangeConsolidationKeepsSceneAuthorityAndXmlFallback()
+    {
+        var resolve = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlChartValueAxisExtents",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var fallback = new PptxRenderer.ChartValueExtents(-4d, 0d);
+        XElement Xml(string scaling) => XElement.Parse($"<c:valAx xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\">{scaling}</c:valAx>");
+        XElement contradictory = Xml("<c:scaling><c:min val=\"-100\"/><c:max val=\"100\"/></c:scaling>");
+        foreach (var sample in new[]
+        {
+            (Scaling: "<c:scaling/>", Minimum: -4.5d, Maximum: 0d),
+            (Scaling: "<c:scaling><c:min val=\"-6\"/></c:scaling>", Minimum: -6d, Maximum: 0d),
+            (Scaling: "", Minimum: -4d, Maximum: 0d),
+            (Scaling: "<c:scaling><c:min val=\"-1\"/><c:max val=\"-5\"/></c:scaling>", Minimum: -4d, Maximum: 0d)
+        })
+        {
+            PptxSceneChart chart = PptxTests.BuildSingleChartScene($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea>
+                  <c:lineChart><c:axId val="2"/></c:lineChart><c:valAx><c:axId val="2"/>{{sample.Scaling}}</c:valAx>
+                </c:plotArea></c:chart></c:chartSpace>
+                """)!;
+            var sceneResult = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [chart.Axes.Single(), contradictory, fallback, true, .96d, 9d, false])!;
+            var xmlResult = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [null, Xml(sample.Scaling), fallback, true, .96d, 9d, false])!;
+            TestAssert.Equal(new PptxRenderer.ChartValueExtents(sample.Minimum, sample.Maximum), sceneResult);
+            TestAssert.Equal(sceneResult, xmlResult);
+        }
+        var explicitXml = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [null, contradictory, fallback, true, .96d, 9d, false])!;
+        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-100d, 100d), explicitXml);
+    }
+
     public static void PptxAuthoredAxisGeometrySurvivesChangesOfUnits()
     {
         foreach (var sample in new[]
