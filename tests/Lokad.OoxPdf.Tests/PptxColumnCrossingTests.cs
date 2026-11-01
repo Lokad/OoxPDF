@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -60,10 +61,15 @@ internal static class PptxColumnCrossingTests
         foreach (string crossing in new[] { "autoZero", "max", "interior", "upper" })
         {
             PdfPage page = Render("autoZero", crossing, reversed, fontProgram: false);
-            var captions = Regex.Matches(page.Content, @"(?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*\[?\s*\((?:Alfa|Beta|Gamma)\)");
-            if (captions.Count != 3) File.WriteAllText(Path.Combine(Path.GetTempPath(), "column-fallback-content.txt"), page.Content);
-            TestAssert.Equal(3, captions.Count);
-            TestAssert.True(captions.All(m => double.Parse(m.Groups["y"].Value, CultureInfo.InvariantCulture) is >= 72d and <= 504d),
+            // Base14 fallback emits eight-bit hex glyphs; inspect the emitted
+            // text blocks without requiring an embedded-font CMap or glyph grouping.
+            var captions = Regex.Matches(page.Content, @"BT(?<body>.*?)ET", RegexOptions.Singleline)
+                .Select(m => (Body: m.Groups["body"].Value, Text: string.Concat(Regex.Matches(m.Groups["body"].Value, @"<(?<hex>[0-9A-F]+)> Tj")
+                    .Select(c => Encoding.Latin1.GetString(Convert.FromHexString(c.Groups["hex"].Value))))))
+                .Where(b => b.Text is "Alfa" or "Beta" or "Gamma").ToArray();
+            TestAssert.Equal(3, captions.Length);
+            TestAssert.True(captions.SelectMany(b => Regex.Matches(b.Body, @"[-\d.]+ (?<y>[-\d.]+) Tm"))
+                .All(m => double.Parse(m.Groups["y"].Value, CultureInfo.InvariantCulture) is >= 72d and <= 504d),
                 $"Fallback {crossing} captions, reversal {reversed}, must keep their anchors in the chart frame.");
         }
     }
