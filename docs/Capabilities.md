@@ -91,6 +91,10 @@ Approximate or restricted:
   Qualified automatic single-line plots share axis/label placement; authored
   coordinates, composed/secondary plots, unsupported scales and unresolved fonts
   keep their fallbacks. Empty manual metadata retains automatic measurement.
+- Column, line and area category labels share measured rotation, spacing and
+  wrapping. Crowded captions may truncate within their footer. Automatic vertical
+  value labels retain endpoints and omit overlapping ink; fixed intervals remain
+  unchanged. Dense allocation, axis ranges and font geometry remain approximate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,
   markers and automatic six-accent bar palettes are implemented. Classic/composed
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
