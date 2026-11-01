@@ -16,6 +16,56 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks()
+    {
+        foreach (string kind in new[] { "bar", "line" })
+        foreach (int skip in new[] { 4, int.MaxValue })
+        {
+            string barDirection = kind == "bar" ? "<c:barDir val=\"col\"/>" : string.Empty;
+            string categories = string.Concat(Enumerable.Range(0, 12).Select(i =>
+                $"<c:pt idx=\"{i}\"><c:v>NorthDepot{i:D2}</c:v></c:pt>"));
+            string values = string.Concat(Enumerable.Range(0, 12).Select(i =>
+                $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
+            using var stream = PptxTests.CreateSingleChartPackageStream($$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:{{kind}}Chart>{{barDirection}}
+                    <c:ser><c:cat><c:strLit>{{categories}}</c:strLit></c:cat>
+                      <c:val><c:numLit>{{values}}</c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:{{kind}}Chart>
+                  <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblSkip val="{{skip}}"/>
+                    <c:txPr><a:bodyPr rot="0"/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                  </c:catAx>
+                  <c:valAx><c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>
+                  </c:valAx></c:plotArea></c:chart>
+                </c:chartSpace>
+                """);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
+            string[] expected = Enumerable.Range(0, 12).Where(i => i % skip == 0)
+                .Select(i => $"NorthDepot{i:D2}").ToArray();
+            TestAssert.True(shows.Select(show => show.Text).SequenceEqual(expected),
+                "Explicit tick spacing preserves complete selected labels and suppresses the intervening labels.");
+            var clips = Regex.Matches(page.Content,
+                @"(?<x>[-\d.]+) [-\d.]+ (?<width>[\d.]+) [\d.]+ re W\* n\s+BT\s+(?<body>.*?)ET",
+                RegexOptions.Singleline).Where(match => match.Groups["body"].Value.Contains("/CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(shows.Length, clips.Length);
+            for (int i = 0; i < shows.Length; i++)
+            {
+                double left = double.Parse(clips[i].Groups["x"].Value, CultureInfo.InvariantCulture);
+                double width = double.Parse(clips[i].Groups["width"].Value, CultureInfo.InvariantCulture);
+                double advance = shows[i].Font.MeasureTextPoints(shows[i].Text, shows[i].Size, kerningEnabled: false);
+                TestAssert.True(shows[i].X >= left - 0.002d && shows[i].X + advance <= left + width + 0.002d,
+                    "The emitted complete label fits its actual PDF clip, rather than being present only in extracted text.");
+            }
+        }
+    }
+
     public static void PptxChartSceneAxesUseSceneOwnedXmlEvidence()
     {
         PptxSceneChart chart = PptxTests.BuildSingleChartScene("""

@@ -1,4 +1,22 @@
 {
+  "pptx-category-spacing": [
+    "PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks",
+    "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
+    "PptxChartCategoryAxisLabelPolicyUsesSceneAuthoritativeDefaults",
+    "PptxSyntheticChartCategoryAxisLabelOffsetRender",
+    "PptxColumnCategoryOffsetsKeepCompleteInkInsideTheirFrame",
+    "PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides",
+    "PptxLegendlessLineCategoryLabelsFollowCrossingAndSourceSide",
+    "PptxLegendlessLineCategoryPlacementRetainsSourceLayoutFallbacks",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "ConvertAsyncPptxReturnsWhileFallbackFontAcquisitionIsPending",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-legend-admission": [
     "PptxCrowdedLegendsPreservePlotSpaceAndDiagnoseUnadmittedRows",
     "PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame",

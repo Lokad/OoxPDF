@@ -82,7 +82,9 @@ internal sealed partial class PptxRenderer
             else
             {
                 double slotWidth = plotBox.Width / labels.Count;
-                width = slotWidth * PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
+                // Skipped categories leave their label space available to the
+                // next visible tick. Keep source tick positions unchanged.
+                width = slotWidth * Math.Min(tickLabelSkip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
                 double labelCenterX = categoryLabelsOnTickMarks && labels.Count > 1
                     ? plotBox.X + plotBox.Width * i / (labels.Count - 1)
                     : plotBox.X + slotWidth * (i + 0.5d);
