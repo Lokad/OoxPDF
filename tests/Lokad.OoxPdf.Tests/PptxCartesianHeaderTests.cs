@@ -170,10 +170,10 @@ internal static class PptxCartesianHeaderTests
               <c:chart>{{titleXml}}<c:autoTitleDeleted val="{{(title ? 0 : 1)}}"/><c:plotArea>
                 {{(manualPlot ? "<c:layout><c:manualLayout><c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\"0.12\"/><c:y val=\"0.16\"/><c:w val=\"0.76\"/><c:h val=\"0.68\"/></c:manualLayout></c:layout>" : "")}}
                 {{plot}}
-                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/>
+                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:tickLblSkip val="1"/>
                   {{(categoryLabels ? "" : "<c:tickLblPos val=\"none\"/>")}}
                   {{(categoryOffset is { } offset ? "<c:lblOffset val=\"" + offset + "\"/>" : "")}}
-                  {{(categorySize is { } size ? "<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz=\"" + size * 100 + "\"/></a:pPr></a:p></c:txPr>" : "")}}
+                  <c:txPr><a:bodyPr rot="0"/><a:p>{{(categorySize is { } size ? "<a:pPr><a:defRPr sz=\"" + size * 100 + "\"/></a:pPr>" : "")}}</a:p></c:txPr>
                 </c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/>
                   <c:majorGridlines/><c:majorUnit val="1"/><c:tickLblPos val="{{(valueLabels ? "nextTo" : "none")}}"/>

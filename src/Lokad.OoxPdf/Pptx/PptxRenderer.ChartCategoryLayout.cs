@@ -19,7 +19,10 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, axis.SceneAxis, xml, axis.XmlAxis,
             PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
         PptxSceneChartTextBodyProperties body = axis.SceneAxis?.TextBodyProperties ?? PptxSceneBuilder.ReadChartTextBodyProperties(axis.XmlAxis);
-        bool automaticAngle = body.RotationValue == "-60000000";
+        // Empty axis body properties inherit Office's automatic orientation.
+        // An authored horizontal orientation with omitted rotation means zero.
+        bool automaticAngle = body.RotationValue == "-60000000" ||
+            string.IsNullOrEmpty(body.RotationValue) && string.IsNullOrEmpty(body.OrientationValue);
         double angle = body.RotationDegrees is >= -90d and <= 90d ? body.RotationDegrees.Value : 0d;
         string skipSpelling = axis.SceneAxis?.TickLabelSkipValue ?? PptxSceneBuilder.ReadChartElementIntWithValue(axis.XmlAxis, "tickLblSkip").RawValue;
         bool automaticSkip = string.IsNullOrEmpty(skipSpelling);

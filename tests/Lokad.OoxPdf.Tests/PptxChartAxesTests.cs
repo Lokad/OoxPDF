@@ -19,9 +19,10 @@ internal static class PptxChartAxesTests
     public static void PptxCategoryLabelRotationPreservesContentAcrossPlotKinds()
     {
         foreach (string kind in new[] { "bar", "line", "area" })
-        foreach (string rotation in new[] { "-60000000", "-5400000", "-2700000", "2700000", "0" })
+        foreach (string rotation in new[] { "-60000000", "-5400000", "-2700000", "2700000", "0", "missing" })
         {
             string direction = kind == "bar" ? "<c:barDir val=\"col\"/>" : string.Empty;
+            string body = rotation == "missing" ? "" : $"rot=\"{rotation}\" vert=\"horz\"";
             string names = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>Depot{i:D2}</c:v></c:pt>"));
             string values = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
             string chart = $$"""
@@ -31,7 +32,7 @@ internal static class PptxChartAxesTests
                     <c:axId val="1"/><c:axId val="2"/>
                   </c:{{kind}}Chart>
                   <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblSkip val="1"/>
-                    <c:txPr><a:bodyPr rot="{{rotation}}" vert="horz" vertOverflow="ellipsis"/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                    <c:txPr><a:bodyPr {{body}} vertOverflow="ellipsis"/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
                   </c:catAx>
                   <c:valAx><c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
                     <c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>
@@ -48,15 +49,15 @@ internal static class PptxChartAxesTests
                 $"Authored spacing retains every complete category in {kind}, rotation {rotation}.");
             var matrices = Regex.Matches(page.Content, @"(?m)^(?<a>[-\d.]+) (?<b>[-\d.]+) (?<c>[-\d.]+) (?<d>[-\d.]+) [-\d.]+ [-\d.]+ cm\r?$")
                 .Select(m => (A: double.Parse(m.Groups["a"].Value, CultureInfo.InvariantCulture), B: double.Parse(m.Groups["b"].Value, CultureInfo.InvariantCulture))).ToArray();
-            double expected = rotation == "-60000000" ? -45d : double.Parse(rotation, CultureInfo.InvariantCulture) / 60000d;
+            double expected = rotation is "-60000000" or "missing" ? -45d : double.Parse(rotation, CultureInfo.InvariantCulture) / 60000d;
             if (expected != 0d)
                 // PDF numbers are emitted to three decimal places.
                 TestAssert.True(matrices.Count(m => Math.Abs(m.A - Math.Cos(-expected * Math.PI / 180d)) <= 0.0005d &&
                     Math.Abs(m.B - Math.Sin(-expected * Math.PI / 180d)) <= 0.0005d) == 12,
                     "Each label uses the authored rotation or the automatic measured angle, through the shared PDF transform.");
             PptxSceneChartAxis axis = PptxTests.BuildSingleChartScene(chart)!.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Category);
-            TestAssert.Equal(rotation, axis.TextBodyProperties.RotationValue);
-            TestAssert.Equal("horz", axis.TextBodyProperties.OrientationValue);
+            TestAssert.Equal(rotation == "missing" ? "" : rotation, axis.TextBodyProperties.RotationValue);
+            TestAssert.Equal(rotation == "missing" ? "" : "horz", axis.TextBodyProperties.OrientationValue);
             TestAssert.Equal("ellipsis", axis.TextBodyProperties.VerticalOverflowValue);
         }
     }

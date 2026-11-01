@@ -5,7 +5,7 @@
     "PptxSyntheticChartCategoryAxisTickLabelSkipRender",
     "PptxChartCategoryAxisLabelPolicyUsesSceneAuthoritativeDefaults",
     "PptxSyntheticChartCategoryAxisLabelOffsetRender",
-    "PptxColumnCategoryOffsetsKeepCompleteInkInsideTheirFrame",
+    "PptxColumnCategory",
     "PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides",
     "PptxLegendlessLineCategoryLabelsFollowCrossingAndSourceSide",
     "PptxLegendlessLineCategoryPlacementRetainsSourceLayoutFallbacks",
