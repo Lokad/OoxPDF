@@ -102,8 +102,9 @@ internal sealed partial class PptxRenderer
         double sin = Math.Sin(Math.Abs(angle) * Math.PI / 180d);
         double cos = Math.Cos(angle * Math.PI / 180d);
         double requested = angle == 0d ? (maxLines - 1) * line.Height : Math.Max(0d, widest * sin + line.Height * cos - line.Height);
-        // Keep one measured plot line when labels exceed the remaining frame.
-        // This is an explicit fit fallback, not a claim of Office pixel parity.
+        // A caption band must not become taller than the plot it describes.
+        // For extra height e, line.Height + e <= plot.Height - e. Office
+        // controls support this admission constraint, not an exact allocation.
         bool atEdge = topSide ? axisRatio == 1d : axisRatio == 0d;
         double freeEdge = topSide ? layout.Frame.Y + layout.Frame.Height : layout.Frame.Y;
         if (legendBox is { } legend && layout.Legend.Visible && !layout.Legend.Overlay &&
@@ -113,7 +114,7 @@ internal sealed partial class PptxRenderer
         double existingExtra = layout.ManualPlotLayoutApplied || !atEdge
             ? Math.Max(0d, (topSide ? freeEdge - axisY : axisY - freeEdge) - ComputeCartesianLabelStripBottomReserve(style.FontSize)) : 0d;
         double admitted = layout.ManualPlotLayoutApplied || !atEdge ? 0d :
-            Math.Min(requested, Math.Max(0d, layout.PlotBox.Height - line.Height));
+            Math.Min(requested, Math.Max(0d, (layout.PlotBox.Height - line.Height) / 2d));
         if (admitted > 0d)
         {
             double shift = topSide ? 0d : admitted;

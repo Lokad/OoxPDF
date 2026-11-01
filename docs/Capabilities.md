@@ -92,7 +92,8 @@ Approximate or restricted:
   coordinates, composed/secondary plots, unsupported scales and unresolved fonts
   keep their fallbacks. Empty manual metadata retains automatic measurement.
 - Column, line and area category labels share measured rotation, spacing and
-  wrapping. Crowded captions may truncate within their footer. Automatic vertical
+  wrapping. Automatic outer captions share height with the plot and may truncate
+  within their footer. Authored plot geometry remains fixed. Automatic vertical
   value labels retain endpoints and omit overlapping ink; fixed intervals remain
   unchanged. Dense allocation, axis ranges and font geometry remain approximate.
 - Qualified gallery defaults, authored stroke/fill precedence, line smoothing,

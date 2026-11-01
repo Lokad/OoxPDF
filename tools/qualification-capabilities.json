@@ -1,5 +1,6 @@
 {
   "pptx-category-layout": [
+    "PptxCrowdedCategoryCaptionsPreservePlotSpaceAcrossFrameSizes",
     "PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames",
     "PptxCategoryLabelRotationPreservesContentAcrossPlotKinds",
     "PptxSkippedCategoryLabelsUseSpaceBetweenVisibleTicks",

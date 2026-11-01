@@ -16,12 +16,95 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartAxesTests
 {
+    public static void PptxCrowdedCategoryCaptionsPreservePlotSpaceAcrossFrameSizes()
+    {
+        foreach (int height in new[] { 120, 240, 420 })
+        foreach (int rotation in new[] { -90, -45, 45 })
+        {
+            var automatic = Render(height, rotation, manual: false, longNames: true);
+            double plotHeight = automatic.Bars[0][3] * 5d / 4d; // Authored0..5, all values4.
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(automatic.Page).ToArray();
+            TestAssert.Equal(12, shows.Length);
+            foreach (var show in shows)
+            {
+                double sin = Math.Sin(-rotation * Math.PI / 180d), cos = Math.Cos(rotation * Math.PI / 180d);
+                double cursor = 0d, bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+                foreach (Rune rune in show.Text.EnumerateRunes())
+                {
+                    var font = show.Font.Font;
+                    ushort glyph = font.MapCodePoint(rune.Value);
+                    TestAssert.True(font.TryGetGlyphBounds(glyph, out var box), "Expected pinned caption glyph bounds.");
+                    double scale = show.Size / font.UnitsPerEm;
+                    foreach (double x in new[] { box.XMin * scale, box.XMax * scale })
+                    foreach (double y in new[] { box.YMin * scale, box.YMax * scale })
+                    {
+                        double projected = (cursor + x) * sin + y * cos;
+                        bottom = Math.Min(bottom, projected);
+                        top = Math.Max(top, projected);
+                    }
+                    // Positions use the authored10pt advance; glyph ink uses
+                    // the PDF's emitted size, which can be rounded separately.
+                    cursor += font.GetAdvanceWidth(glyph) * 10d / font.UnitsPerEm;
+                }
+                TestAssert.True(top - bottom <= plotHeight + 0.1d,
+                    "Caption ink must not consume more height than its plot in an automatic frame.");
+            }
+            var manualLong = Render(height, rotation, manual: true, longNames: true);
+            var manualShort = Render(height, rotation, manual: true, longNames: false);
+            TestAssert.True(manualLong.Bars.SelectMany(bar => bar).SequenceEqual(manualShort.Bars.SelectMany(bar => bar)),
+                "Changing captions must preserve the authored plot rectangle and every source bar.");
+        }
+
+        static (PdfPage Page, double[][] Bars) Render(int height, int rotation, bool manual, bool longNames)
+        {
+            string names = string.Concat(Enumerable.Range(0, 12).Select(i =>
+                $"<c:pt idx=\"{i}\"><c:v>{(longNames ? "NorthWarehouseDistrictWithLongCaption" : "Q")}{i:D2}</c:v></c:pt>"));
+            string values = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
+            string layout = manual ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\"0.1\"/><c:y val=\"0.1\"/><c:w val=\"0.8\"/><c:h val=\"0.4\"/></c:manualLayout></c:layout>" : "";
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea>{{layout}}<c:barChart><c:barDir val="col"/>
+                    <c:ser><c:cat><c:strLit>{{names}}</c:strLit></c:cat><c:val><c:numLit>{{values}}</c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:barChart>
+                  <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:tickLblSkip val="1"/>
+                    <c:txPr><a:bodyPr rot="{{rotation * 60000}}" vertOverflow="ellipsis"/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
+                  </c:catAx>
+                  <c:valAx><c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:min val="0"/><c:max val="5"/></c:scaling>
+                  </c:valAx></c:plotArea></c:chart>
+                </c:chartSpace>
+                """;
+            string slide = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="3657600" cy="{{height * 12700}}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+                </p:sld>
+                """;
+            using var stream = PptxTests.CreateSingleChartPackageStream(chart, new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            double[][] bars = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re f")
+                .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(rect => rect[2] > 0d && rect[2] < 20d).ToArray();
+            TestAssert.Equal(12, bars.Length);
+            return (page, bars);
+        }
+    }
+
     public static void PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames()
     {
+        foreach (int height in new[] { 72, 216 })
         foreach (bool authoredInterval in new[] { false, true })
         {
             string categories = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>NorthWarehouseDistrictWithLongCaption{i:D2}</c:v></c:pt>"));
             string values = string.Concat(Enumerable.Range(0, 12).Select(i => $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
+            string slide = $$"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="{{height * 12700}}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
+                </p:sld>
+                """;
             using var stream = PptxTests.CreateSingleChartPackageStream($$"""
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart><c:plotArea><c:barChart><c:barDir val="col"/>
@@ -36,7 +119,7 @@ internal static class PptxChartAxesTests
                     <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr>
                   </c:valAx></c:plotArea></c:chart>
                 </c:chartSpace>
-                """);
+                """, new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
             using var package = OoxPackage.Open(stream, default);
             var document = new PptxReader().Read(package, default);
             PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
@@ -50,7 +133,7 @@ internal static class PptxChartAxesTests
                 TestAssert.Equal(11, shows.Length);
                 continue;
             }
-            TestAssert.True(shows.Length >= 2 && shows.Length < 6, "A crowded automatic axis admits fewer labels, retaining its scale.");
+            TestAssert.True(shows.Length >= 2 && (height != 72 || shows.Length < 6), "A crowded automatic axis admits fewer labels, retaining its scale.");
             double previousTop = double.NegativeInfinity;
             foreach (var show in shows)
             {
