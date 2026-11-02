@@ -75,8 +75,10 @@ internal static partial class PptxChartLabelDefaultsTests
         {
             var page = AreaPage([[null, null, null], [3d, 2d, 4d]], "stacked", crossing: crossing);
             TestAssert.Equal("324", AreaLabelText(page));
-            TestAssert.True(!Regex.IsMatch(page.Content, @"0 0 1 rg\r?\n.*?\s+f(?:\r?\n|$)", RegexOptions.Singleline),
-                "An empty first series does not create an area between zero and a nonzero crossing.");
+            var first = AreaPolygon(page, "0 0 1");
+            var second = AreaPolygon(page, "1 0 0");
+            TestAssert.True(second.TakeLast(3).All(p => p.Y == first[0].Y),
+                "Later layers keep the declared empty source layer and its zero values, rather than taking first-layer crossing behavior.");
         }
     }
 
@@ -158,8 +160,10 @@ internal static partial class PptxChartLabelDefaultsTests
             series.Element(C + "idx")!.SetAttributeValue("val", i);
             series.Element(C + "order")!.SetAttributeValue("val", i);
             series.AddFirst(new XElement(C + "spPr", new XElement(a + "solidFill", new XElement(a + "srgbClr", new XAttribute("val", i == 0 ? "0000FF" : "FF0000")))));
-            series.Element(C + "val")!.Element(C + "numLit")!.ReplaceNodes(values[i].Select((v, index) => v is null ? null :
-                new XElement(C + "pt", new XAttribute("idx", index), new XElement(C + "v", v.Value.ToString(CultureInfo.InvariantCulture)))));
+            series.Element(C + "val")!.Element(C + "numLit")!.ReplaceNodes(
+                new XElement(C + "ptCount", new XAttribute("val", values[i].Length)),
+                values[i].Select((v, index) => v is null ? null :
+                    new XElement(C + "pt", new XAttribute("idx", index), new XElement(C + "v", v.Value.ToString(CultureInfo.InvariantCulture)))));
             if (hideFirst && i == 0) series.Add(new XElement(C + "dLbls", XElement.Parse("<c:dLbls xmlns:c=\"" + C + "\">" + disabled + "</c:dLbls>").Elements()));
             plot.Add(series);
         }

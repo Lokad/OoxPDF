@@ -107,7 +107,7 @@ internal sealed partial class PptxRenderer
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
             IReadOnlyList<double?> values = series[seriesIndex];
-            if (values.Count == 0 || !values.Any(value => value is not null))
+            if (values.Count == 0)
             {
                 continue;
             }
