@@ -563,9 +563,18 @@ internal sealed partial class PptxRenderer
         ChartValueExtents extents,
         double tickTargetCount = PptxChartMetricRules.BubbleAxisNiceTickTargetCount)
     {
+        double? minimum = sceneAxis is null
+            ? (xmlAxis is null ? null : PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xmlAxis, "min").Value)
+            : sceneAxis.Minimum;
+        // An authored minimum is the interval origin, independently of how the
+        // other bound and unit were resolved. Rejected bounds keep the fallback.
+        bool logarithmic = sceneAxis?.HasLogarithmicScale ?? xmlAxis?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
+        ChartAxisTickPolicy tickPolicy = !logarithmic && minimum is { } value && double.IsFinite(value) && value == extents.Min
+            ? ChartAxisTickPolicy.SourceMinimumIntervals
+            : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
         return new ChartBubbleValueAxisOptions(
             ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(sceneAxis, xmlAxis), extents, tickTargetCount),
-            ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme));
+            ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme), tickPolicy);
     }
 
     private static ChartSeriesStroke? ReadSceneOrXmlChartGridlineStroke(PptxSceneChartAxis? sceneAxis, PptxSceneLineStyle sceneLine, PptxSceneLineStyle sceneStyleLine, XElement? gridlines, PptxTheme theme)

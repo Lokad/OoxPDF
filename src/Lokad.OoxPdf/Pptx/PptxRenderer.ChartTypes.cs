@@ -440,7 +440,7 @@ internal sealed partial class PptxRenderer
         SourceMinimumIntervals
     }
 
-    private readonly record struct ChartBubbleValueAxisOptions(ChartAxisUnits Units, ChartGridlineStyle GridlineStyle);
+    private readonly record struct ChartBubbleValueAxisOptions(ChartAxisUnits Units, ChartGridlineStyle GridlineStyle, ChartAxisTickPolicy TickPolicy);
 
     private readonly record struct ChartCategoryAxisPlacement(double CrossingValue, double LabelPlotRatio, bool LabelsTopSide, bool AxisTopSide);
 

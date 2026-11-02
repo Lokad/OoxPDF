@@ -72,7 +72,7 @@ internal static class PptxColumnIntervalTests
     private static string[] Labels(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
         fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal)).Select(l => l.Text).ToArray();
 
-    private static (RgbColor Color, double[] V)[] Lines(PdfPage page)
+    internal static (RgbColor Color, double[] V)[] Lines(PdfPage page)
     {
         var result = new List<(RgbColor, double[])>();
         var saved = new Stack<RgbColor>();
