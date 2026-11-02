@@ -75,10 +75,30 @@ internal sealed partial class PptxRenderer
                     xExtents,
                     yExtents,
                     maxBubbleSize);
+                // Office defaults scatter/bubble labels to the right. Bubble
+                // placement uses the circle edge on the requested side; center
+                // placement remains at the data point.
+                PptxSceneChartDataLabelPosition position = effectiveOptions.PositionKind == PptxSceneChartDataLabelPosition.Unknown
+                    ? PptxSceneChartDataLabelPosition.Right
+                    : effectiveOptions.PositionKind;
+                double anchorX = pointX;
+                double anchorY = pointY;
+                if (bubble)
+                {
+                    switch (position)
+                    {
+                        case PptxSceneChartDataLabelPosition.Left: anchorX -= radius; break;
+                        case PptxSceneChartDataLabelPosition.Right: anchorX += radius; break;
+                        case PptxSceneChartDataLabelPosition.Bottom: anchorY -= radius; break;
+                        case PptxSceneChartDataLabelPosition.Center:
+                        case PptxSceneChartDataLabelPosition.BestFit: break;
+                        default: anchorY += radius; break;
+                    }
+                }
                 (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
-                    effectiveOptions.PositionKind,
-                    pointX,
-                    bubble ? pointY + radius : pointY,
+                    position,
+                    anchorX,
+                    anchorY,
                     labelWidth,
                     labelHeight);
                 ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
@@ -131,11 +151,16 @@ internal sealed partial class PptxRenderer
             return options.CustomText;
         }
 
-        var parts = new List<string>(3);
+        var parts = new List<string>(4);
         string seriesName = GetActiveSeriesName(seriesNames, seriesIndex);
         if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
         {
             parts.Add(seriesName);
+        }
+
+        if (options.ShowCategoryName)
+        {
+            parts.Add(FormatChartDataLabelValue(point.X, options, point.XWorkbookPoint ?? point.XPoint, point.XFormatCode));
         }
 
         if (options.ShowValue)

@@ -28,6 +28,7 @@ internal sealed partial class PptxRenderer
         ChartIndexedNumberPoint? XWorkbookPoint,
         ChartIndexedNumberPoint? YWorkbookPoint,
         ChartIndexedNumberPoint? BubbleSizeWorkbookPoint,
+        string? XFormatCode,
         string? YFormatCode,
         string? BubbleSizeFormatCode);
 

@@ -122,6 +122,66 @@ internal static class PptxChartLabelDefaultsTests
         }
     }
 
+    public static void PptxScatterLabelsPreserveFormattedXValues()
+    {
+        foreach (bool bubble in new[] { false, true })
+        {
+            var page = RenderScatterPage(bubble, null, xOnly: true);
+            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+                fontResourceFilter: resource => resource.StartsWith("CSD", StringComparison.Ordinal)).Select(show => show.Text));
+            TestAssert.Equal("1.252.503.75", text);
+        }
+    }
+
+    public static void PptxScatterAndBubbleLabelsDefaultToRight()
+    {
+        // Independent Office exports have identical page streams for an absent
+        // position and explicit r, for both scatter and bubble controls.
+        foreach (bool bubble in new[] { false, true })
+            TestAssert.Equal(RenderScatterPage(bubble, "r").Content, RenderScatterPage(bubble, null).Content);
+    }
+
+    public static void PptxBubbleLabelPlacementFollowsCircleEdgeAndKeepsCenter()
+    {
+        foreach (string position in new[] { "ctr", "r", "l", "t", "b" })
+        {
+            (double X, double Y) Origin(double size)
+            {
+                string content = RenderScatterPage(true, position, firstSize: size).Content;
+                Match show = Regex.Match(content, @"/CSD\S+ [\d.]+ Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm");
+                TestAssert.True(show.Success, "Expected a bubble label text origin.");
+                return (double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture),
+                    double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture));
+            }
+            var small = Origin(.25d);
+            var large = Origin(1d);
+            if (position == "ctr") TestAssert.Equal(small, large);
+            else if (position == "r") TestAssert.True(large.X > small.X && large.Y == small.Y);
+            else if (position == "l") TestAssert.True(large.X < small.X && large.Y == small.Y);
+            else if (position == "t") TestAssert.True(large.Y > small.Y && large.X == small.X);
+            else TestAssert.True(large.Y < small.Y && large.X == small.X);
+        }
+    }
+
+    private static PdfPage RenderScatterPage(bool bubble, string? position, bool xOnly = false, double firstSize = 1d)
+    {
+        string labels = "<c:dLbls>" + string.Concat(Components.Select(c =>
+            $"<c:{c.Element} val=\"{(c.Property == (xOnly ? "ShowCategoryName" : "ShowValue") ? 1 : 0)}\"/>")) +
+            (position is null ? "" : $"<c:dLblPos val=\"{position}\"/>") + "</c:dLbls>";
+        var (_, plot) = Source(labels);
+        plot.Name = C + (bubble ? "bubbleChart" : "scatterChart");
+        XElement series = plot.Element(C + "ser")!;
+        series.Element(C + "cat")!.ReplaceWith(XElement.Parse($$"""
+            <c:xVal xmlns:c="{{C}}"><c:numLit><c:formatCode>0.00</c:formatCode><c:pt idx="0"><c:v>1.25</c:v></c:pt><c:pt idx="1"><c:v>2.5</c:v></c:pt><c:pt idx="2"><c:v>3.75</c:v></c:pt></c:numLit></c:xVal>
+            """));
+        series.Element(C + "val")!.Name = C + "yVal";
+        if (bubble)
+            series.Add(XElement.Parse($$"""
+                <c:bubbleSize xmlns:c="{{C}}"><c:numLit><c:pt idx="0"><c:v>{{firstSize.ToString(CultureInfo.InvariantCulture)}}</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:bubbleSize>
+                """));
+        return RenderChartPage(new XDocument(plot.Document!));
+    }
+
     private static PdfPage RenderLabelPage(string labels, string name, bool atMaximum = false)
     {
         var (_, plot) = Source(labels);
@@ -133,7 +193,11 @@ internal static class PptxChartLabelDefaultsTests
             plot.Parent!.Add(XElement.Parse("<c:catAx xmlns:c=\"" + C + "\"><c:axId val=\"1\"/><c:axPos val=\"b\"/><c:crossAx val=\"2\"/><c:tickLblPos val=\"none\"/></c:catAx>"));
             plot.Parent.Add(XElement.Parse("<c:valAx xmlns:c=\"" + C + "\"><c:axId val=\"2\"/><c:scaling><c:min val=\"0\"/><c:max val=\"4\"/></c:scaling><c:axPos val=\"l\"/><c:crossAx val=\"1\"/><c:tickLblPos val=\"none\"/></c:valAx>"));
         }
-        var xml = new XDocument(plot.Document!);
+        return RenderChartPage(new XDocument(plot.Document!));
+    }
+
+    private static PdfPage RenderChartPage(XDocument xml)
+    {
         const string slide = """
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="457200"/><a:ext cx="9144000" cy="5486400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
             """;

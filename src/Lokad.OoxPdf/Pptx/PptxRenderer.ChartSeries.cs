@@ -830,6 +830,7 @@ internal sealed partial class PptxRenderer
                 xWorkbook.TryGetValue(xPoint.Index, out ChartIndexedNumberPoint xWorkbookPoint) ? xWorkbookPoint : null,
                 yWorkbook.TryGetValue(yPoint.Index, out ChartIndexedNumberPoint yWorkbookPoint) ? yWorkbookPoint : null,
                 bubbleSizePoint is { } point && bubbleWorkbook.TryGetValue(point.Index, out ChartIndexedNumberPoint bubbleWorkbookPoint) ? bubbleWorkbookPoint : null,
+                series.XValues.FormatCode,
                 series.YValues.FormatCode,
                 series.BubbleSizes.FormatCode));
         }
