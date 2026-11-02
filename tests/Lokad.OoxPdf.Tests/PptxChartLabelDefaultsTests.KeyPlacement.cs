@@ -47,7 +47,7 @@ internal static partial class PptxChartLabelDefaultsTests
         }
     }
 
-    public static void PptxPointLabelBackgroundContainsBaselineAndKey()
+    public static void PptxPointLabelBackgroundContainsTextAndExcludesKey()
     {
         foreach (string position in new[] { "t", "b", "l", "r", "ctr" })
         {
@@ -61,8 +61,8 @@ internal static partial class PptxChartLabelDefaultsTests
             var key = MarkerRectangles(page, new RgbColor(255, 0, 0)).Last();
             TestAssert.True(background.Y < origin.Y && origin.Y < background.Y + background.Height,
                 "The background owns occupied line bounds on both sides of its text baseline.");
-            TestAssert.True(key.Y >= background.Y && key.Y + key.Height <= background.Y + background.Height,
-                "Measured text and key geometry share the same physical label frame.");
+            TestAssert.True(key.X + key.Width < background.X,
+                "Native label backgrounds own text and its padding; the key paints alongside that frame.");
         }
     }
 

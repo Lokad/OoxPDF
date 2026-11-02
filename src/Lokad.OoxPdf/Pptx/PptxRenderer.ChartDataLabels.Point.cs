@@ -116,14 +116,18 @@ internal sealed partial class PptxRenderer
                     double pointMarkerRadius = areaOptions is null ? labelMarker.Size / 2d : 0d;
                     labelMarker = labelMarker with { Size = PptxChartMarkerMetricRules.QuantizeMarkerExtent(Math.Min(labelMarker.Size, PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit)) };
                     double strokeKeyLength = lineBox.Height * PptxChartMetricRules.CategoryPointLabelStrokeKeyLengthFactor;
+                    double strokeKeyInset = fontSize * PptxChartMetricRules.CategoryPointLabelKeyInsetFactor;
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
                         ? areaOptions is not null
                             ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
-                            : strokeKeyLength + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor
+                            : strokeKeyInset + strokeKeyLength + PptxChartMetricRules.CategoryPointLabelKeyTextGap
                         : 0d;
-                    double effectiveLabelWidth = Math.Max(labelWidth,
-                        (await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)) + legendKeyWidth +
-                        (effectiveOptions.ShowLegendKey ? fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor : 0d));
+                    double textWidth = await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false);
+                    double textPadding = effectiveOptions.Layout.HasLayout ? 0d : PptxChartMetricRules.CategoryPointLabelHorizontalTextPadding;
+                    double effectiveLabelWidth = effectiveOptions.Layout.HasLayout
+                        ? Math.Max(labelWidth, textWidth + legendKeyWidth +
+                            (effectiveOptions.ShowLegendKey ? fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor : 0d))
+                        : textWidth + textPadding * 2d + legendKeyWidth;
                     PptxSceneChartDataLabelPosition position = effectiveOptions.PositionKind;
                     if (position == PptxSceneChartDataLabelPosition.Unknown)
                         position = areaOptions is not null ? PptxSceneChartDataLabelPosition.Center
@@ -136,19 +140,23 @@ internal sealed partial class PptxRenderer
                         : ResolveCategoryPointLabelPosition(position, pointX, pointY, effectiveLabelWidth,
                             lineBox.Ascent, lineBox.Height, pointMarkerRadius, fontSize);
                     ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, effectiveLabelWidth, labelHeight);
-                    RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y - descent, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
-                    double textX = labelBox.X;
-                    double textWidth = labelBox.Width;
+                    double verticalPadding = effectiveOptions.Layout.HasLayout ? 0d : PptxChartMetricRules.CategoryPointLabelVerticalTextPadding;
+                    ChartLayoutBox textBox = effectiveOptions.Layout.HasLayout ? labelBox : new ChartLayoutBox(
+                        labelBox.X + legendKeyWidth, labelBox.Y - descent - verticalPadding,
+                        Math.Max(1d, labelBox.Width - legendKeyWidth), lineBox.Height + verticalPadding * 2d);
+                    RenderChartShapeStyle(graphics, textBox.X, textBox.Y, textBox.Width, textBox.Height, effectiveOptions.ShapeStyle);
+                    double textX = labelBox.X + legendKeyWidth + textPadding;
+                    double textRunWidth = Math.Max(1d, labelBox.Width - legendKeyWidth - textPadding * 2d);
                     if (effectiveOptions.ShowLegendKey)
                     {
                         ChartLayoutBox keyBox = labelBox with
                         {
+                            X = labelBox.X + (areaOptions is null ? strokeKeyInset : 0d),
                             Y = labelBox.Y + lineBox.Ascent - lineBox.Height / 2d - labelBox.Height / 2d
                         };
-                        double consumedWidth;
                         if (areaOptions is not null)
                         {
-                            consumedWidth = RenderFillDataLabelLegendKey(graphics, keyBox, fontSize,
+                            RenderFillDataLabelLegendKey(graphics, keyBox, fontSize,
                                 ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, areaSeriesFills ?? [], 1d));
                         }
                         else
@@ -157,10 +165,8 @@ internal sealed partial class PptxRenderer
                             ChartMarkerStyle marker = labelMarker;
                             if (appearance is { } pointStyle && marker.Stroke is null)
                                 marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, pointStyle.MarkerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
-                            consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, keyBox, fontSize, marker, stroke, strokeKeyLength, appearance?.MarkerColor);
+                            RenderStrokeMarkerDataLabelLegendKey(graphics, keyBox, marker, stroke, strokeKeyLength, appearance?.MarkerColor);
                         }
-                        textX += consumedWidth;
-                        textWidth = Math.Max(1d, textWidth - consumedWidth);
                         alignment = TextAlignment.Left;
                     }
 
@@ -172,12 +178,12 @@ internal sealed partial class PptxRenderer
                             effectiveOptions,
                             textX,
                             labelBox.Y,
-                            textWidth,
+                            textRunWidth,
                             labelBox.Height,
                             plotBox,
                             style,
                             alignment,
-                            fontResolver, labelLinks, descent).ConfigureAwait(false);
+                            fontResolver, labelLinks, descent + verticalPadding).ConfigureAwait(false);
                     }
                 }
             }
@@ -211,12 +217,11 @@ internal sealed partial class PptxRenderer
         return swatchSize + swatchGap;
     }
 
-    private static double RenderStrokeMarkerDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, double fontSize, ChartMarkerStyle marker, ChartSeriesStroke stroke, double segmentLength, RgbColor? markerColor = null)
+    private static void RenderStrokeMarkerDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, ChartMarkerStyle marker, ChartSeriesStroke stroke, double segmentLength, RgbColor? markerColor = null)
     {
         double segmentY = labelBox.Y + labelBox.Height / 2d;
         SetChartStroke(graphics, stroke);
         graphics.StrokeLine(labelBox.X, segmentY, labelBox.X + segmentLength, segmentY);
         DrawChartMarker(graphics, labelBox.X + segmentLength / 2d, segmentY, marker, markerColor ?? stroke.Color, stroke.Color);
-        return segmentLength + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
     }
 }

@@ -101,7 +101,7 @@
     "PptxLinePointPaintAndLegendNamesMatchIndependentOffice",
     "PptxPercentStackedColumnChartUsesPercentValueAxis",
     "PptxPointAppearanceControlsLegendIdentityWithoutChangingSeriesColors",
-    "PptxPointLabelBackgroundContainsBaselineAndKey",
+    "PptxPointLabelBackgroundContainsTextAndExcludesKey",
     "PptxPointLabelKeysAlignWithMeasuredTextAcrossSizes",
     "PptxPointLabelManualOffsetsKeepTheirAuthoredFrame",
     "PptxPointMarkerDefaultsDoNotInheritSeriesSizeOrEmptyContainers",

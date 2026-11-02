@@ -528,6 +528,12 @@ internal sealed partial class PptxRenderer
         // Native Calibri/Arial/Cambria controls and9/18/36pt text use the
         // font line box for segment extent, independently of point-marker size.
         public const double CategoryPointLabelStrokeKeyLengthFactor = 0.875d;
+        public const double CategoryPointLabelKeyInsetFactor = 1d / 3d;
+        public const double CategoryPointLabelKeyTextGap = 1.5d;
+        // Native label backgrounds enclose text and its insets; keys paint
+        // alongside that frame. These are point distances, not font regimes.
+        public const double CategoryPointLabelHorizontalTextPadding = 3d;
+        public const double CategoryPointLabelVerticalTextPadding = 1.5d;
         public const double LineDataLabelSideGap = 2d;
         public const double LineDataLabelBelowOffsetFactor = 1.25d;
         public const double LineDataLabelAboveOffsetFactor = 0.35d;

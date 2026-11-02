@@ -316,13 +316,17 @@ internal static class PptxChartRenderingTests
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <007C>"), "Expected line-chart data labels to include the custom separator between series, category, and value text.");
         TestAssert.Contains("1 0.918 0.8 rg", pdf);
         TestAssert.Contains("0.067 0.133 0.2 RG", pdf);
-        Match labelShape = Regex.Match(pdf, @"(?m)^(?<x>[-\d.]+) 357\.525 (?<width>[\d.]+) 13\.5 re f\r?$");
-        Match firstMarker = Regex.Match(pdf, @"0 0 0\.667 rg\s+(?<x>[-\d.]+) [-\d.]+ 8 8 re f");
+        Match labelShape = Regex.Match(pdf, @"1 0\.918 0\.8 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<width>[\d.]+) (?<height>[\d.]+) re f");
+        Match firstMarker = Regex.Match(pdf, @"0 0 0\.667 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) 8 8 re f");
         TestAssert.True(labelShape.Success && firstMarker.Success,
             "Expected the styled label background and its first source point marker.");
         double labelWidth = double.Parse(labelShape.Groups["width"].Value, CultureInfo.InvariantCulture);
         TestAssert.True(labelWidth >= 28.8d && labelWidth <= 144d,
             "The automatic box admits its composed text inside the authored plot width; the old span minimum is not a text-width limit.");
+        double labelTop = double.Parse(labelShape.Groups["y"].Value, CultureInfo.InvariantCulture) +
+            double.Parse(labelShape.Groups["height"].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(labelTop < double.Parse(firstMarker.Groups["y"].Value, CultureInfo.InvariantCulture),
+            "The source-authored bottom position reserves the first marker extent and places its occupied text frame below it.");
         TestAssert.True(Math.Abs(double.Parse(labelShape.Groups["x"].Value, CultureInfo.InvariantCulture) + labelWidth / 2d -
             (double.Parse(firstMarker.Groups["x"].Value, CultureInfo.InvariantCulture) + 4d)) < .001d,
             "The automatic label box stays centered on its plotted category point inside the authored plot frame.");
