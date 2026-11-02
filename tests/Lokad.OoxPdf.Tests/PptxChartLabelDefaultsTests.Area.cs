@@ -93,6 +93,17 @@ internal static partial class PptxChartLabelDefaultsTests
         TestAssert.Equal("", AreaLabelText(page));
     }
 
+    public static void PptxAreaZeroSlotsKeepCategoryIdentityAndVisibleEquivalence()
+    {
+        foreach (string grouping in new[] { "standard", "stacked", "percentStacked" })
+        {
+            var missing = AreaPage([[2d, null, 3d]], grouping, displayBlanksAs: "zero", categories: true);
+            var explicitZero = AreaPage([[2d, 0d, 3d]], grouping, displayBlanksAs: "zero", categories: true);
+            TestAssert.Equal("W1, 2W2, 0W3, 3", AreaLabelText(missing));
+            TestAssert.Equal(explicitZero.Content, missing.Content);
+        }
+    }
+
     public static void PptxAreaCustomLabelLinksFollowSharedTextGeometry()
     {
         var (_, plot) = Source("", """
@@ -144,11 +155,13 @@ internal static partial class PptxChartLabelDefaultsTests
     private static double Number(string value) => double.Parse(value, CultureInfo.InvariantCulture);
 
     private static PdfPage AreaPage(double?[][] values, string grouping = "standard", bool reversed = false,
-        bool categoryReversed = false, bool hideFirst = false, double minimum = 0d, double crossing = 0d, bool labels = true)
+        bool categoryReversed = false, bool hideFirst = false, double minimum = 0d, double crossing = 0d, bool labels = true,
+        string displayBlanksAs = "gap", bool categories = false)
     {
         const string background = "<c:spPr><a:solidFill><a:srgbClr val=\"123456\"/></a:solidFill></c:spPr>";
         string disabled = string.Concat(Components.Select(c => $"<c:{c.Element} val=\"0\"/>"));
         string labelXml = labels ? "<c:dLbls>" + disabled.Replace("<c:showVal val=\"0\"/>", "<c:showVal val=\"1\"/>", StringComparison.Ordinal) + background + "</c:dLbls>" : "";
+        if (categories) labelXml = labelXml.Replace("<c:showCatName val=\"0\"/>", "<c:showCatName val=\"1\"/>", StringComparison.Ordinal);
         var (_, plot) = Source(labelXml);
         plot.Name = C + "areaChart";
         plot.AddFirst(new XElement(C + "grouping", new XAttribute("val", grouping)));
@@ -175,7 +188,7 @@ internal static partial class PptxChartLabelDefaultsTests
         plot.Parent.Add(XElement.Parse($$"""
             <c:valAx xmlns:c="{{C}}"><c:axId val="2"/><c:scaling><c:min val="{{minimum.ToString(CultureInfo.InvariantCulture)}}"/><c:max val="{{(grouping == "percentStacked" ? "1" : "10")}}"/><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/><c:tickLblPos val="none"/></c:valAx>
             """));
-        plot.Parent.Parent!.Add(new XElement(C + "dispBlanksAs", new XAttribute("val", "gap")));
+        plot.Parent.Parent!.Add(new XElement(C + "dispBlanksAs", new XAttribute("val", displayBlanksAs)));
         return RenderChartPage(new XDocument(plot.Document!));
     }
 }
