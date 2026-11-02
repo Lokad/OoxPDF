@@ -25,8 +25,10 @@ internal static partial class PptxScatterIntervalTests
 
         static (double X, double Y) Label(PdfPage page)
         {
-            var show = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
-                fontResourceFilter: name => name.StartsWith("CSD", StringComparison.Ordinal)).Single(s => s.Text == "79");
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+                fontResourceFilter: name => name.StartsWith("CSD", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(shows.Any(s => s.Text == "79"), "Expected the authored value-only label; visible labels: " + string.Join("|", shows.Select(s => s.Text)));
+            var show = shows.Single(s => s.Text == "79");
             return (show.X, show.Y);
         }
     }

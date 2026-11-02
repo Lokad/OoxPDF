@@ -96,7 +96,7 @@ internal static partial class PptxScatterIntervalTests
                 <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>8</c:v></c:pt></c:numLit></c:xVal>
                 <c:yVal><c:numLit><c:pt idx="0"><c:v>20</c:v></c:pt><c:pt idx="1"><c:v>79</c:v></c:pt></c:numLit></c:yVal>
                 {{(bubble ? "<c:bubbleSize><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt><c:pt idx=\"1\"><c:v>3</c:v></c:pt></c:numLit></c:bubbleSize>" : "")}}
-                {{(labels ? "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>" : "")}}
+                {{(labels ? "<c:dLbls><c:showLegendKey val=\"0\"/><c:showVal val=\"1\"/><c:showCatName val=\"0\"/><c:showSerName val=\"0\"/><c:showPercent val=\"0\"/><c:showBubbleSize val=\"0\"/></c:dLbls>" : "")}}
               </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
               {{Axis("1", "b", "2", xMin.ToString(CultureInfo.InvariantCulture), "8.5", "1.25", "00FF00", reverseX, labelPosition, horizontalCrossing)}}
               {{Axis("2", "l", "1", yMin.ToString(CultureInfo.InvariantCulture), yMax.ToString(CultureInfo.InvariantCulture), "25", "0000FF", reverseY, labelPosition, verticalCrossing)}}
