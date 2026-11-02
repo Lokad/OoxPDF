@@ -270,7 +270,7 @@ internal sealed partial class PptxRenderer
         async ValueTask AddPolarChartLabelRunsAsync(IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartTextStyle style, TextAlignment alignment, List<ChartTextRunLayout[]>? wrapLines, double wrapLongest, bool bottomAnchor = false)
         {
             var textMeasurer = new ChartTextMeasurer(fontResolver);
-            ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
+            ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, x, y, width, height);
             if (bottomAnchor)
             {
                 int pieAnchorLines = wrapLines is not null && wrapLines.Count > 1 ? wrapLines.Count : 1;
