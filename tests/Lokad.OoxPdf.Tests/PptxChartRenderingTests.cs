@@ -357,7 +357,13 @@ internal static class PptxChartRenderingTests
             "The bold-italic series labels must request both styles together.");
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
         TestAssert.Contains("/CLD1 9.96 Tf", pdf);
-        TestAssert.Contains("1 0 0 1 " + labelShape.Groups["x"].Value + " 357.525 Tm", pdf);
+        Match labelText = Regex.Match(pdf, @"/CLD1 9\.96 Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm");
+        TestAssert.True(labelText.Success &&
+            double.Parse(labelText.Groups["x"].Value, CultureInfo.InvariantCulture) > double.Parse(labelShape.Groups["x"].Value, CultureInfo.InvariantCulture) &&
+            double.Parse(labelText.Groups["x"].Value, CultureInfo.InvariantCulture) < double.Parse(labelShape.Groups["x"].Value, CultureInfo.InvariantCulture) + labelWidth &&
+            double.Parse(labelText.Groups["y"].Value, CultureInfo.InvariantCulture) > double.Parse(labelShape.Groups["y"].Value, CultureInfo.InvariantCulture) &&
+            double.Parse(labelText.Groups["y"].Value, CultureInfo.InvariantCulture) < labelTop,
+            "The composed source label baseline lies inside its padded text background.");
         // Auto pie labels emit no leaders (Office draws none for the styled auto labels
         // on the auto-radius reference); only the factor-manual label below keeps one.
         TestAssert.DoesNotContain("0.267 0.8 0.533 RG", pdf);
