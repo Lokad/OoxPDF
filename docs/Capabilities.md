@@ -84,6 +84,9 @@ Supported within the following constraints:
   Automatic line labels default to Right; area labels default to Center.
   Measured font line boxes and authored marker extents determine baseline and
   outside clearance. Text backgrounds enclose padded text, with keys alongside.
+  Offset-only line/area label layouts translate that measured frame: factor
+  offsets and edge origins use the outer chart frame. Authored label width/height
+  and multiline fitting retain their approximate sizing fallback.
   Defined point labels own component defaults; a defined series owns its point
   declarations. Fully disabled Cartesian plots suppress plot-point requests,
   while series and pie/doughnut points retain independent label scope.
