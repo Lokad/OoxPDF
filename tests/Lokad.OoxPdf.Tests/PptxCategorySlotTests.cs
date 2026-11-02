@@ -114,7 +114,7 @@ internal static class PptxCategorySlotTests
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{kind}}><c:grouping val="{{(stacked ? "stacked" : "standard")}}"/><c:varyColors val="0"/>
                 <c:ser><c:spPr><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></c:spPr>
                   <c:marker><c:symbol val="diamond"/><c:size val="8"/><c:spPr><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></a:ln></c:spPr></c:marker>
-                  <c:dLbls><c:dLblPos val="t"/><c:showVal val="0"/><c:showCatName val="1"/></c:dLbls>
+                  <c:dLbls><c:dLblPos val="t"/><c:showVal val="0"/><c:showCatName val="1"/><c:showSerName val="0"/><c:showLegendKey val="0"/></c:dLbls>
                   <c:cat><c:strLit><c:ptCount val="{{count}}"/>{{labels}}</c:strLit></c:cat>
                   <c:val><c:numLit><c:ptCount val="{{count}}"/>{{values}}</c:numLit></c:val>
                 </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>

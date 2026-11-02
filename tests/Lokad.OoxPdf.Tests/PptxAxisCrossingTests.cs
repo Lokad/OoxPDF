@@ -30,7 +30,9 @@ internal static class PptxAxisCrossingTests
     public static void PptxLineCategoryDirectionKeepsSparseLabelsAndPointPaint()
     {
         const string paint = "<c:marker><c:symbol val=\"square\"/><c:size val=\"7\"/></c:marker><c:smooth val=\"0\"/><c:dPt><c:idx val=\"3\"/><c:spPr><a:ln><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></a:ln></c:spPr></c:dPt>";
-        const string labels = "<c:varyColors val=\"1\"/><c:dLbls><c:dLblPos val=\"t\"/><c:showVal val=\"0\"/><c:showCatName val=\"1\"/></c:dLbls>";
+        // This source-direction oracle requests category-only labels; component
+        // default behavior is covered independently by the label-default tests.
+        const string labels = "<c:varyColors val=\"1\"/><c:dLbls><c:dLblPos val=\"t\"/><c:showVal val=\"0\"/><c:showCatName val=\"1\"/><c:showSerName val=\"0\"/><c:showLegendKey val=\"0\"/></c:dLbls>";
         RgbColor[]? previous = null;
         foreach (bool reversed in new[] { false, true })
         {
