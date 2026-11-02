@@ -586,10 +586,12 @@ internal sealed partial class PptxRenderer
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
             !string.IsNullOrWhiteSpace(CustomText) ||
-            Overrides.Values.Any(label => label.ShowValue == true || label.ShowPercent == true || label.ShowCategoryName == true || label.ShowSeriesName == true || label.ShowBubbleSize == true || !string.IsNullOrWhiteSpace(label.CustomText));
+            Overrides.Values.Any(label => label.IsDeleted != true &&
+                (label.ShowValue != false || label.ShowPercent != false || label.ShowCategoryName != false ||
+                 label.ShowSeriesName != false || label.ShowBubbleSize != false || !string.IsNullOrWhiteSpace(label.CustomText)));
 
         public bool HasVisibleContent => HasVisibleText || ShowLegendKey ||
-            Overrides.Values.Any(label => label.ShowLegendKey == true);
+            Overrides.Values.Any(label => label.IsDeleted != true && label.ShowLegendKey != false);
     }
 
     private readonly record struct ChartDataLabelLeaderLines(bool IsDefined, ChartSeriesStroke? Stroke)

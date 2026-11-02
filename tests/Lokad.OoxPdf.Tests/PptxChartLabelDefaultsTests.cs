@@ -1,6 +1,9 @@
 using System.Reflection;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -46,12 +49,12 @@ internal static class PptxChartLabelDefaultsTests
         }
     }
 
-    public static void PptxLabelDefaultsFollowPlotSeriesAndPointPrecedence()
+    public static void PptxLabelContainersOwnComponentDefaultsAcrossSeriesAndPoints()
     {
         string disabled = "<c:dLbls>" + string.Concat(Components.Select(c => $"<c:{c.Element} val=\"0\"/>")) + "</c:dLbls>";
         const string series = """
             <c:dLbls><c:dLbl><c:idx val="0"/><c:showSerName val="1"/></c:dLbl>
-              <c:dLbl><c:idx val="1"/><c:delete val="1"/></c:dLbl><c:showVal val="1"/></c:dLbls>
+              <c:dLbl><c:idx val="1"/><c:delete val="1"/></c:dLbl><c:showVal val="0"/><c:showSerName val="0"/></c:dLbls>
             """;
         foreach (string plotLabels in new[] { "", disabled })
         foreach (string seriesLabels in new[] { "<c:dLbls/>", series })
@@ -64,15 +67,25 @@ internal static class PptxChartLabelDefaultsTests
                     scene ? chart.Plots[0] : null, plot, PptxTheme.Empty, PptxColorMap.Default);
                 object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
                 foreach (var component in Components)
-                    TestAssert.Equal(plotLabels.Length == 0 || (seriesLabels == series && component.Property == "ShowValue"), Flag(merged, component.Property));
+                    TestAssert.Equal(!(seriesLabels == series && component.Property is "ShowValue" or "ShowSeriesName"), Flag(merged, component.Property));
                 if (seriesLabels == series)
                 {
                     object point = Invoke("ResolveChartDataLabelOptions", merged, 0);
                     TestAssert.True(Flag(point, "ShowSeriesName"), "The point's explicit true overrides an inherited false.");
+                    TestAssert.True(Flag(point, "ShowValue"), "A defined point takes its own missing-component defaults.");
                     object deleted = Invoke("ResolveChartDataLabelOptions", merged, 1);
                     TestAssert.True(!Flag(deleted, "HasVisibleContent"), "Deleted labels remain absent.");
                 }
             }
+        }
+        foreach (bool deleted in new[] { false, true })
+        {
+            string point = "<c:dLbl><c:idx val=\"0\"/>" + (deleted ? "<c:delete val=\"1\"/>" : "") + "</c:dLbl>";
+            var (chart, plot) = Source("", disabled.Replace("<c:dLbls>", "<c:dLbls>" + point, StringComparison.Ordinal));
+            object options = Read(chart, plot, true);
+            object perSeries = Invoke("ReadSceneOrXmlSeriesDataLabelOptions", chart, chart.Plots[0], plot, PptxTheme.Empty, PptxColorMap.Default);
+            object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
+            TestAssert.Equal(!deleted, Flag(merged, "HasVisibleContent"));
         }
     }
 
@@ -81,23 +94,53 @@ internal static class PptxChartLabelDefaultsTests
         foreach (bool keys in new[] { false, true })
         {
             const string name = "A longer source series";
-            string labels = $"<c:dLbls><c:showLegendKey val=\"{(keys ? 1 : 0)}\"/></c:dLbls>";
-            var (_, plot) = Source(labels);
-            plot.Name = C + "lineChart";
-            plot.Descendants(C + "tx").First().Element(C + "v")!.Value = name;
-            var xml = new XDocument(plot.Document!);
-            // Use the authored 720pt frame from the independent origin portfolio.
-            const string slide = """
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="457200"/><a:ext cx="9144000" cy="5486400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
-                """;
-            using var stream = PptxTests.CreateSingleChartPackageStream(xml.ToString(), new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
-            using var package = OoxPackage.Open(stream, default);
-            var document = new PptxReader().Read(package, default);
-            var page = new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            var page = RenderLabelPage($"<c:dLbls><c:showLegendKey val=\"{(keys ? 1 : 0)}\"/></c:dLbls>", name);
             string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
                 fontResourceFilter: resource => resource.StartsWith("CLD", StringComparison.Ordinal)).Select(show => show.Text));
             TestAssert.Equal($"{name}, W1, 2{name}, W2, 4{name}, W3, 3", text);
         }
+    }
+
+    public static void PptxAutomaticLabelTextOwnsItsClippingRegion()
+    {
+        const string labels = "<c:dLbls><c:dLblPos val=\"t\"/><c:showLegendKey val=\"0\"/><c:showVal val=\"1\"/><c:showCatName val=\"1\"/><c:showSerName val=\"1\"/></c:dLbls>";
+        var page = RenderLabelPage(labels, "Actual", atMaximum: true);
+        var clips = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W n").Cast<Match>().ToArray();
+        var shows = Regex.Matches(page.Content, @"/CLD\S+ [\d.]+ Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm").Cast<Match>().ToArray();
+        TestAssert.Equal(3, shows.Length);
+        foreach (Match show in shows)
+        {
+            // Inspect the generated text's active clip, not merely its encoded
+            // characters: a clipped label can still be present in PDF text data.
+            var clip = clips.Last(match => match.Index < show.Index);
+            double[] bounds = clip.Groups.Cast<Group>().Skip(1).Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray();
+            double x = double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture);
+            double y = double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture);
+            TestAssert.True(x >= bounds[0] - .001d && x <= bounds[0] + bounds[2] + .001d &&
+                y >= bounds[1] - .001d && y <= bounds[1] + bounds[3] + .001d,
+                "An automatic label baseline beyond the data plot remains inside its own text clip.");
+        }
+    }
+
+    private static PdfPage RenderLabelPage(string labels, string name, bool atMaximum = false)
+    {
+        var (_, plot) = Source(labels);
+        plot.Name = C + "lineChart";
+        plot.Descendants(C + "tx").First().Element(C + "v")!.Value = name;
+        if (atMaximum)
+        {
+            plot.Add(new XElement(C + "axId", new XAttribute("val", 1)), new XElement(C + "axId", new XAttribute("val", 2)));
+            plot.Parent!.Add(XElement.Parse("<c:catAx xmlns:c=\"" + C + "\"><c:axId val=\"1\"/><c:axPos val=\"b\"/><c:crossAx val=\"2\"/><c:tickLblPos val=\"none\"/></c:catAx>"));
+            plot.Parent.Add(XElement.Parse("<c:valAx xmlns:c=\"" + C + "\"><c:axId val=\"2\"/><c:scaling><c:min val=\"0\"/><c:max val=\"4\"/></c:scaling><c:axPos val=\"l\"/><c:crossAx val=\"1\"/><c:tickLblPos val=\"none\"/></c:valAx>"));
+        }
+        var xml = new XDocument(plot.Document!);
+        const string slide = """
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="457200"/><a:ext cx="9144000" cy="5486400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
+            """;
+        using var stream = PptxTests.CreateSingleChartPackageStream(xml.ToString(), new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
+        using var package = OoxPackage.Open(stream, default);
+        var document = new PptxReader().Read(package, default);
+        return new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
     }
 
     private static readonly XNamespace C = "http://schemas.openxmlformats.org/drawingml/2006/chart";

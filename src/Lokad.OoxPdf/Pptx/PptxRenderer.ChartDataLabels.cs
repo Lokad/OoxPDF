@@ -125,6 +125,7 @@ internal sealed partial class PptxRenderer
             return ChartDataLabelOptions.None;
         }
 
+        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, overrideDefined: true);
         ChartTextStyleOverride textStyle = new(
             dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
             dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
@@ -139,13 +140,13 @@ internal sealed partial class PptxRenderer
             dataLabel.TextStyle.FontFamily is null ? options.TextStyle.TypefaceSource : dataLabel.TextStyle.TypefaceSource);
         return options with
         {
-            ShowValue = dataLabel.ShowValue ?? options.ShowValue,
-            ShowPercent = dataLabel.ShowPercent ?? options.ShowPercent,
-            ShowCategoryName = dataLabel.ShowCategoryName ?? options.ShowCategoryName,
-            ShowSeriesName = dataLabel.ShowSeriesName ?? options.ShowSeriesName,
+            ShowValue = ChartDataLabelFlagValue(flags, "showVal", labelsDefined: true),
+            ShowPercent = ChartDataLabelFlagValue(flags, "showPercent", labelsDefined: true),
+            ShowCategoryName = ChartDataLabelFlagValue(flags, "showCatName", labelsDefined: true),
+            ShowSeriesName = ChartDataLabelFlagValue(flags, "showSerName", labelsDefined: true),
             ShowLeaderLines = dataLabel.ShowLeaderLines ?? options.ShowLeaderLines,
-            ShowLegendKey = dataLabel.ShowLegendKey ?? options.ShowLegendKey,
-            ShowBubbleSize = dataLabel.ShowBubbleSize ?? options.ShowBubbleSize,
+            ShowLegendKey = ChartDataLabelFlagValue(flags, "showLegendKey", labelsDefined: true),
+            ShowBubbleSize = ChartDataLabelFlagValue(flags, "showBubbleSize", labelsDefined: true),
             LeaderLines = dataLabel.LeaderLines.IsDefined ? dataLabel.LeaderLines : options.LeaderLines,
             CustomText = string.IsNullOrEmpty(dataLabel.CustomText) ? options.CustomText : dataLabel.CustomText,
             CustomTextRuns = dataLabel.CustomTextRuns.Count == 0 ? options.CustomTextRuns : dataLabel.CustomTextRuns,
@@ -158,7 +159,7 @@ internal sealed partial class PptxRenderer
             TextStyle = textStyle,
             TextBodyProperties = IsChartTextBodyPropertiesEmpty(dataLabel.TextBodyProperties) ? options.TextBodyProperties : dataLabel.TextBodyProperties,
             ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
-            FlagOptions = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions),
+            FlagOptions = flags,
             Overrides = EmptyChartDataLabelOverrides
         };
     }
@@ -175,7 +176,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartDataLabelOptions MergeChartDataLabelOptions(ChartDataLabelOptions baseOptions, ChartDataLabelOptions overrideOptions)
     {
-        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(baseOptions.FlagOptions, overrideOptions.FlagOptions);
+        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(baseOptions.FlagOptions, overrideOptions.FlagOptions, overrideOptions.IsDefined);
         bool labelsDefined = baseOptions.IsDefined || overrideOptions.IsDefined;
         ChartTextStyleOverride textStyle = new(
             overrideOptions.TextStyle.FontFamily ?? baseOptions.TextStyle.FontFamily,
@@ -223,11 +224,14 @@ internal sealed partial class PptxRenderer
             return option.Value;
 
         // Office supplies components and keys for a defined label container.
-        // Apply these defaults after inheritance so an explicit false survives.
+        // Each defined plot/series/point container owns its component defaults;
+        // explicit false in that active container survives. Styles still inherit.
         // The leader-line controls do not establish its default; keep that fallback.
-        return labelsDefined && name is ("showVal" or "showPercent" or "showCatName" or
-            "showSerName" or "showLegendKey" or "showBubbleSize");
+        return labelsDefined && IsChartDataLabelComponentFlag(name);
     }
+
+    private static bool IsChartDataLabelComponentFlag(string name) => name is
+        "showVal" or "showPercent" or "showCatName" or "showSerName" or "showLegendKey" or "showBubbleSize";
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> MergeChartDataLabelOverrides(IReadOnlyDictionary<int, ChartDataLabelOverride> baseOverrides, IReadOnlyDictionary<int, ChartDataLabelOverride> overrideOverrides)
     {
@@ -268,7 +272,7 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask AddChartLabelRunsAsync(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks)
     {
-        ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
+        ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, x, y, width, height);
         if (options.CustomTextRuns.Count == 0)
         {
             runs.Add(CreateChartTextRun(text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment));
@@ -278,13 +282,10 @@ internal sealed partial class PptxRenderer
         await AddChartRichTextRunsAsync(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver, labelLinks).ConfigureAwait(false);
     }
 
-    private static ChartLayoutBox ResolveDataLabelTextClipBox(ChartPlotBox plotBox, ChartDataLabelOptions options, double x, double y, double width, double height)
+    private static ChartLayoutBox ResolveDataLabelTextClipBox(ChartPlotBox plotBox, double x, double y, double width, double height)
     {
-        if (!options.Layout.HasLayout)
-        {
-            return new ChartLayoutBox(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
-        }
-
+        // Labels paint in their own geometry, including automatic labels beyond
+        // the data plot. Painting and link clipping use the same admitted region.
         double left = Math.Min(plotBox.X, x);
         double top = Math.Min(plotBox.Y, y);
         double right = Math.Max(plotBox.X + plotBox.Width, x + width);
@@ -607,7 +608,8 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyDictionary<string, ChartBooleanOption> ResolveChartDataLabelFlagOptions(
         IReadOnlyDictionary<string, ChartBooleanOption> baseFlags,
-        IReadOnlyDictionary<string, ChartBooleanOption> overrideFlags)
+        IReadOnlyDictionary<string, ChartBooleanOption> overrideFlags,
+        bool overrideDefined)
     {
         if (overrideFlags.Count == 0)
         {
@@ -617,7 +619,12 @@ internal sealed partial class PptxRenderer
         var resolved = new Dictionary<string, ChartBooleanOption>(ChartDataLabelFlagNames.Length, StringComparer.Ordinal);
         foreach (string flagName in ChartDataLabelFlagNames)
         {
-            if (overrideFlags.TryGetValue(flagName, out ChartBooleanOption overrideOption) && overrideOption.IsDefined)
+            if (overrideDefined && IsChartDataLabelComponentFlag(flagName))
+            {
+                resolved[flagName] = overrideFlags.TryGetValue(flagName, out ChartBooleanOption scopedOption)
+                    ? scopedOption : new ChartBooleanOption(false, string.Empty, false);
+            }
+            else if (overrideFlags.TryGetValue(flagName, out ChartBooleanOption overrideOption) && overrideOption.IsDefined)
             {
                 resolved[flagName] = overrideOption;
             }
