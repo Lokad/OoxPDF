@@ -156,10 +156,10 @@ internal static class PptxChartLabelDefaultsTests
             var small = Origin(.25d);
             var large = Origin(1d);
             if (position == "ctr") TestAssert.Equal(small, large);
-            else if (position == "r") TestAssert.True(large.X > small.X && large.Y == small.Y);
-            else if (position == "l") TestAssert.True(large.X < small.X && large.Y == small.Y);
-            else if (position == "t") TestAssert.True(large.Y > small.Y && large.X == small.X);
-            else TestAssert.True(large.Y < small.Y && large.X == small.X);
+            else if (position == "r") TestAssert.True(large.X > small.X && large.Y == small.Y, "Right labels follow the right circle edge.");
+            else if (position == "l") TestAssert.True(large.X < small.X && large.Y == small.Y, "Left labels follow the left circle edge.");
+            else if (position == "t") TestAssert.True(large.Y > small.Y && large.X == small.X, "Top labels follow the top circle edge.");
+            else TestAssert.True(large.Y < small.Y && large.X == small.X, "Bottom labels follow the bottom circle edge.");
         }
     }
 
