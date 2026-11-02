@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartLineAppearance> seriesAppearance, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool categoryPointsOnTickMarks, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false, Func<int, ChartLineAppearance>? pointAppearance = null, bool categoryAxisReversed = false)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartLineAppearance> seriesAppearance, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool categoryPointsOnTickMarks, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false, Func<int, int, ChartLineAppearance>? pointAppearance = null, bool categoryAxisReversed = false, bool varyPointColors = false)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -109,9 +109,9 @@ internal sealed partial class PptxRenderer
                 SetChartStroke(graphics, stroke);
                 var points = new List<(double X, double Y)>(values.Count);
                 var markers = new List<(double X, double Y)>(values.Count);
-                List<int>? sourceIndexes = pointAppearance is null ? null : new(values.Count);
-                Func<int, ChartSeriesStroke>? strokeAtPoint = pointAppearance is null ? null :
-                    index => pointAppearance(sourceIndexes![index]).Stroke;
+                List<int>? sourceIndexes = !varyPointColors || pointAppearance is null ? null : new(values.Count);
+                Func<int, ChartSeriesStroke>? strokeAtPoint = sourceIndexes is null ? null :
+                    index => pointAppearance!(seriesIndex, sourceIndexes[index]).Stroke;
                 // RV04: span-mode smoothing halvings (a chart-edge span start eases at a sixth
                 // whether the first segment spans one hole or several; gap/zero modes leave
                 // every flag false so their paths stay byte-identical).
@@ -168,7 +168,7 @@ internal sealed partial class PptxRenderer
                     {
                         while (markerSourceIndex < values.Count && values[markerSourceIndex] is null && displayBlanksAs != PptxSceneChartDisplayBlanksAs.Zero)
                             markerSourceIndex++;
-                        point = pointAppearance(markerSourceIndex++);
+                        point = pointAppearance(seriesIndex, markerSourceIndex++);
                     }
                     ChartLineAppearance appearance = point ?? seriesStyle;
                     ChartMarkerStyle marker = appearance.Marker;

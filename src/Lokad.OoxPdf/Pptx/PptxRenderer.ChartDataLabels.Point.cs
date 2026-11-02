@@ -34,7 +34,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        Func<int, ChartLineAppearance>? pointAppearance = null, IReadOnlyList<ChartLineAppearance>? seriesAppearance = null, bool categoryAxisReversed = false,
+        Func<int, int, ChartLineAppearance>? pointAppearance = null, IReadOnlyList<ChartLineAppearance>? seriesAppearance = null, bool categoryAxisReversed = false,
         ChartAreaPlotOptions? areaOptions = null, IReadOnlyList<ChartSeriesFill?>? areaSeriesFills = null, double? areaCrossingValue = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
@@ -108,11 +108,13 @@ internal sealed partial class PptxRenderer
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(hasPoint ? point.Index : i, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
-                    ChartLineAppearance? appearance = pointAppearance?.Invoke(i) ?? seriesAppearance?[seriesIndex];
+                    ChartLineAppearance? appearance = pointAppearance?.Invoke(seriesIndex, i) ?? seriesAppearance?[seriesIndex];
+                    ChartMarkerStyle labelMarker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
+                    labelMarker = labelMarker with { Size = Math.Min(labelMarker.Size, PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit) };
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
                         ? areaOptions is not null
                             ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
-                            : GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles))
+                            : GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, labelMarker)
                         : 0d;
                     double effectiveLabelWidth = Math.Max(labelWidth,
                         (await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)) + legendKeyWidth +
@@ -139,7 +141,7 @@ internal sealed partial class PptxRenderer
                         else
                         {
                             ChartSeriesStroke stroke = appearance?.Stroke ?? ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
-                            ChartMarkerStyle marker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
+                            ChartMarkerStyle marker = labelMarker;
                             if (appearance is { } pointStyle && marker.Stroke is null)
                                 marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, pointStyle.MarkerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
                             consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke, appearance?.MarkerColor);

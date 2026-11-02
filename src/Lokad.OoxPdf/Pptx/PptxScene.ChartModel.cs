@@ -912,7 +912,10 @@ internal sealed record PptxSceneChartMarker(
     string? SizeValue,
     double Size,
     PptxSceneFillStyle Fill,
-    PptxSceneLineStyle Line);
+    PptxSceneLineStyle Line)
+{
+    public bool SymbolSpecified { get; init; }
+}
 
 internal enum PptxSceneChartMarkerSymbol
 {
@@ -941,6 +944,12 @@ internal sealed record PptxSceneChartPointStyle(
 {
     // An explicit empty appearance also gives this point a category identity.
     public bool HasShapeProperties { get; init; }
+
+    public PptxSceneChartMarker? Marker { get; init; }
+
+    public bool HasMarkerAppearance => Marker is { } marker &&
+        (marker.SymbolSpecified || marker.SizeValue is not null || marker.Fill.HasFill ||
+         marker.Line.HasLine || marker.Line.NoFill || marker.Line.WidthSpecified);
 }
 
 // T02: axis kind/position/crossing/orientation/tick enums derive from their raw

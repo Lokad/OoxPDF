@@ -56,6 +56,9 @@ internal static class PptxChartMarkerMetricRules
     // and style-26 legend decks: diamonds/triangles 9.84, squares 9.96; shipped as a
     // uniform 9.9 since the per-shape spread is sub-pixel dust on single-deck evidence).
     public const double StyleLegendMarkerSize = 9.9d;
+    // Independent point-size12 controls retain nominal10 label-key markers at
+    // label fonts9,18 and36. Plot marker dimensions keep the authored size.
+    public const double DataLabelMarkerSizeLimit = 10d;
     // Smoothed default-style markers without marker markup draw flat at 9pt with raw
     // 1pt rims (COM-built default-style smooth deck: squares measure 9.0; diamond and
     // triangle paths measure 8.88, recorded as a watch item rather than a per-shape rule

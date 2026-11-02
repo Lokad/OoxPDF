@@ -38,11 +38,12 @@ internal sealed partial class PptxRenderer
                 double? themeLineWidth = ReadChartLineThemeWidth(theme);
                 ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, chartXml, lineChart, PptxSceneChartGrouping.Standard, defaultSmooth: themeLineWidth is not null);
                 IReadOnlyList<PptxSceneChartSeries> sourceSeries = linePlot?.Series ?? ReadXmlChartSeries(lineChart, theme, colorMap);
+                bool varyPointColors = sceneChart.Plots.Count == 1 && lineSeriesVectors.Count == 1 && lineOptions.VaryColors.Value;
                 IReadOnlyList<ChartLineAppearance> seriesAppearance = ReadLineSeriesAppearance(sourceSeries, lineOptions,
                     theme, colorMap, chartPalette, ReadChartStyleId(chartXml), themeLineWidth,
-                    sceneChart.Plots.Count == 1 && lineSeriesVectors.Count == 1 && lineOptions.VaryColors.Value, context.CancellationToken);
-                Func<int, ChartLineAppearance>? pointAppearance = ReadLinePointAppearance(sceneChart, linePlot, lineChart,
-                    theme, colorMap, chartPalette, lineSeriesVectors, lineOptions, sourceSeries, seriesAppearance,
+                    varyPointColors, context.CancellationToken);
+                Func<int, int, ChartLineAppearance>? pointAppearance = ReadLinePointAppearance(
+                    theme, colorMap, chartPalette, lineSeriesVectors, varyPointColors, sourceSeries, seriesAppearance,
                     ReadChartStyleId(chartXml), themeLineWidth, context.CancellationToken);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, linePlot, chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
@@ -53,7 +54,8 @@ internal sealed partial class PptxRenderer
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxisForScale, theme, valueExtents, lineOptions.PercentStacked) with
                 { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, lineOptions.PercentStacked) };
                 ChartLayout chartLayout = (await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver, resolvedValueExtents: valueExtents).ConfigureAwait(false));
-                IReadOnlyList<ChartLegendEntry> legendEntries = pointAppearance is not null
+                bool pointLegend = sceneChart.Plots.Count == 1 && sourceSeries.Count == 1 && pointAppearance is not null;
+                IReadOnlyList<ChartLegendEntry> legendEntries = pointLegend && pointAppearance is not null
                     ? BuildLinePointLegendEntries(linePlot, lineChart, workbook, plotVisibleOnly, lineSeriesVectors[0].DensePointCount(), ReadChartStyleId(chartXml), pointAppearance)
                     : BuildLineSeriesLegendEntries(linePlot, lineChart, workbook, seriesAppearance, sourceSeries, themeLineWidth, lineOptions.Stacked, ReadChartStyleId(chartXml));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
@@ -82,7 +84,7 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 RenderLineChart(graphics, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions, seriesAppearance, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, categoryPointsOnTickMarks,
-                    ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, ReadChartStyleId(chartXml), categoryTicksTopSide: chartLayout.AutomaticCategoryAxisPlacement?.AxisTopSide ?? false, pointAppearance: pointAppearance, categoryAxisReversed: categoryAxisReversed);
+                    ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, ReadChartStyleId(chartXml), categoryTicksTopSide: chartLayout.AutomaticCategoryAxisPlacement?.AxisTopSide ?? false, pointAppearance: pointAppearance, categoryAxisReversed: categoryAxisReversed, varyPointColors: varyPointColors);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
                     ChartCategoryAxisPlacement? labelPlacement = chartLayout.AutomaticCategoryAxisPlacement;
@@ -140,7 +142,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
                     ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook, plotVisibleOnly),
-                    ReadSharedChartSeriesNames(linePlot, lineChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointAppearance, seriesAppearance: seriesAppearance, categoryAxisReversed: categoryAxisReversed).ConfigureAwait(false);
+                    ReadSharedChartSeriesNames(linePlot, lineChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointLegend ? pointAppearance : null, seriesAppearance: seriesAppearance, categoryAxisReversed: categoryAxisReversed).ConfigureAwait(false);
                 return true;
             }
         }

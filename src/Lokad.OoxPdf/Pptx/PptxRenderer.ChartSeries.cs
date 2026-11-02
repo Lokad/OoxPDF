@@ -1037,7 +1037,8 @@ internal sealed partial class PptxRenderer
     private static ChartMarkerStyle ToChartMarkerStyle(PptxSceneChartMarker marker) => new(
         marker.SymbolKind, marker.Symbol, marker.SizeValue, marker.Size,
         marker.Fill.HasFill ? new ChartSeriesFill(marker.Fill.Color, marker.Fill.Alpha, null, null) : null,
-        ToChartSeriesStroke(marker.Line, ChartMarkerInheritedStrokeWidth), marker.IsDefined);
+        marker.Line.NoFill ? new ChartSeriesStroke(default, 0d, ChartMarkerInheritedStrokeWidth)
+            : ToChartSeriesStroke(marker.Line, ChartMarkerInheritedStrokeWidth), marker.IsDefined);
 
     // RV04: plot-level smooth applies to series without their own smooth element on line
     // charts (COM plot-smooth-only probe smooths every series); series-explicit values win.
