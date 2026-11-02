@@ -72,6 +72,7 @@
     "PptxScatterLabelsPreserveFormattedXValues",
     "PptxScatterAndBubbleLabelsDefaultToRight",
     "PptxBubbleLabelPlacementFollowsCircleEdgeAndKeepsCenter",
+    "PptxBubbleMaxRadiusMatchesOfficePlotRatio",
     "PptxLineCategoryDirectionKeepsSparseLabelsAndPointPaint",
     "PptxLineAndAreaDataFollowSourceCategorySlots",
     "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",

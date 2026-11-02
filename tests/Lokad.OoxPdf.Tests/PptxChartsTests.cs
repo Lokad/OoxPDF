@@ -4526,9 +4526,9 @@ internal static class PptxChartsTests
             object result = geometry.Invoke(null, [plot, point, true, extents, extents, 16d]) ?? throw new InvalidOperationException("Expected geometry result.");
             return (double)(result.GetType().GetField("Item3")?.GetValue(result) ?? 0d);
         }
-        object maxPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 16d, 0, indexed, indexed, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected max point.");
+        object maxPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 16d, 0, indexed, indexed, null, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected max point.");
         TestAssert.True(System.Math.Abs(RadiusOf(maxPoint) - 13.1d) < 1e-9, "Max bubble radius drifts from the Office 0.131 plot ratio.");
-        object quarterPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 4d, 0, indexed, indexed, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected quarter point.");
+        object quarterPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 4d, 0, indexed, indexed, null, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected quarter point.");
         TestAssert.True(System.Math.Abs(RadiusOf(quarterPoint) - 6.55d) < 1e-9, "Bubble sqrt sizing must halve radius at quarter size.");
     }
 }
