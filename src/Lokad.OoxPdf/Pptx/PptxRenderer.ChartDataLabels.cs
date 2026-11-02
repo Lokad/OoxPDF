@@ -96,7 +96,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    // Manual chart-label offsets retain the existing source coordinate contract.
+    // Authored label sizes retain the existing approximate placement fallback.
     private static (double X, double Y, TextAlignment Alignment) ResolveLineDataLabelPosition(PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth, double labelHeight)
     {
         position = ResolveChartDataLabelPosition(position);

@@ -16,6 +16,7 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         ChartColorPalette chartPalette,
         PdfGraphicsBuilder graphics,
+        ChartFrameBox chartFrame,
         ChartPlotBox plotBox,
         IReadOnlyList<ChartIndexedNumberVector> series,
         ChartValueExtents extents,
@@ -105,7 +106,10 @@ internal sealed partial class PptxRenderer
                 double fontSize = style.FontSize;
                 var lineBox = await textMeasurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
                 double descent = lineBox.Height - lineBox.Ascent;
-                double labelHeight = effectiveOptions.Layout.HasLayout
+                // Authored extents retain the existing sizing fallback. Offset-only
+                // layouts translate the same measured frame as automatic labels.
+                bool authoredSize = effectiveOptions.Layout.Width.HasValue || effectiveOptions.Layout.Height.HasValue;
+                double labelHeight = authoredSize
                     ? fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor : lineBox.Height;
                 bool hasPoint = densePointIndexes[seriesIndex].TryGetValue(i, out ChartIndexedNumberPoint point);
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(hasPoint ? point.Index : i, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
@@ -123,27 +127,40 @@ internal sealed partial class PptxRenderer
                             : strokeKeyInset + strokeKeyLength + PptxChartMetricRules.CategoryPointLabelKeyTextGap
                         : 0d;
                     double textWidth = await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false);
-                    double textPadding = effectiveOptions.Layout.HasLayout ? 0d : PptxChartMetricRules.CategoryPointLabelHorizontalTextPadding;
-                    double effectiveLabelWidth = effectiveOptions.Layout.HasLayout
+                    double textPadding = authoredSize ? 0d : PptxChartMetricRules.CategoryPointLabelHorizontalTextPadding;
+                    double effectiveLabelWidth = authoredSize
                         ? Math.Max(labelWidth, textWidth + legendKeyWidth +
                             (effectiveOptions.ShowLegendKey ? fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor : 0d))
                         : textWidth + textPadding * 2d + legendKeyWidth;
                     PptxSceneChartDataLabelPosition position = effectiveOptions.PositionKind;
                     if (position == PptxSceneChartDataLabelPosition.Unknown)
                         position = areaOptions is not null ? PptxSceneChartDataLabelPosition.Center
-                            : effectiveOptions.Layout.HasLayout ? position : PptxSceneChartDataLabelPosition.Right;
-                    // Authored manual offsets retain their independently validated
-                    // coordinate convention. Automatic placement uses measured
-                    // occupied bounds, with text and keys sharing one baseline.
-                    (double labelX, double labelY, TextAlignment alignment) = effectiveOptions.Layout.HasLayout
+                            : authoredSize ? position : PptxSceneChartDataLabelPosition.Right;
+                    (double labelX, double labelY, TextAlignment alignment) = authoredSize
                         ? ResolveLineDataLabelPosition(position, pointX, pointY, effectiveLabelWidth, labelHeight)
                         : ResolveCategoryPointLabelPosition(position, pointX, pointY, effectiveLabelWidth,
                             lineBox.Ascent, lineBox.Height, pointMarkerRadius, fontSize);
-                    ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, effectiveLabelWidth, labelHeight);
-                    double verticalPadding = effectiveOptions.Layout.HasLayout ? 0d : PptxChartMetricRules.CategoryPointLabelVerticalTextPadding;
-                    ChartLayoutBox textBox = effectiveOptions.Layout.HasLayout ? labelBox : new ChartLayoutBox(
+                    ChartLayoutBox labelBox = authoredSize
+                        ? ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, effectiveLabelWidth, labelHeight)
+                        : new ChartLayoutBox(labelX, labelY, effectiveLabelWidth, labelHeight);
+                    double verticalPadding = authoredSize ? 0d : PptxChartMetricRules.CategoryPointLabelVerticalTextPadding;
+                    ChartLayoutBox textBox = authoredSize ? labelBox : new ChartLayoutBox(
                         labelBox.X + legendKeyWidth, labelBox.Y - descent - verticalPadding,
                         Math.Max(1d, labelBox.Width - legendKeyWidth), lineBox.Height + verticalPadding * 2d);
+                    if (!authoredSize && effectiveOptions.Layout.HasLayout)
+                    {
+                        // Office applies factor offsets to automatic occupied bounds
+                        // in the outer chart frame. Edge coordinates locate that
+                        // frame's top-left; translate text, key, paint and links alike.
+                        ChartLayoutBox occupied = new(labelBox.X, textBox.Y, labelBox.Width, textBox.Height);
+                        if (TryBuildManualLayoutBox(effectiveOptions.Layout, chartFrame, occupied,
+                            out ChartLayoutBox manual, clampToFrame: false, missingPositionModesAreFactor: true))
+                        {
+                            double dx = manual.X - occupied.X, dy = manual.Y - occupied.Y;
+                            labelBox = labelBox with { X = labelBox.X + dx, Y = labelBox.Y + dy };
+                            textBox = textBox with { X = textBox.X + dx, Y = textBox.Y + dy };
+                        }
+                    }
                     RenderChartShapeStyle(graphics, textBox.X, textBox.Y, textBox.Width, textBox.Height, effectiveOptions.ShapeStyle);
                     double textX = labelBox.X + legendKeyWidth + textPadding;
                     double textRunWidth = Math.Max(1d, labelBox.Width - legendKeyWidth - textPadding * 2d);
@@ -183,7 +200,7 @@ internal sealed partial class PptxRenderer
                             plotBox,
                             style,
                             alignment,
-                            fontResolver, labelLinks, effectiveOptions.Layout.HasLayout ? 0d : descent + verticalPadding).ConfigureAwait(false);
+                            fontResolver, labelLinks, authoredSize ? 0d : descent + verticalPadding).ConfigureAwait(false);
                     }
                 }
             }

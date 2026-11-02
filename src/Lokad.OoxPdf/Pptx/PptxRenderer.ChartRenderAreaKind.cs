@@ -141,7 +141,7 @@ internal sealed partial class PptxRenderer
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, legendTextStyle, fontResolver, ChartLegendPlacement.AreaRightLegend, fonts, preparedBox: preparedLegendBox).ConfigureAwait(false);
                 await RenderCategoryPointDataLabelsAsync(
-                    theme, colorMap, chartPalette, graphics, plotBox, areaSeriesVectors, valueExtents,
+                    theme, colorMap, chartPalette, graphics, chartLayout.Frame, plotBox, areaSeriesVectors, valueExtents,
                     valueAxisOptions.Reversed, categoryPointsOnTickMarks, seriesStrokes, [],
                     ReadSceneOrXmlDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),

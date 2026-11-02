@@ -242,6 +242,7 @@ internal sealed partial class PptxRenderer
                         colorMap,
                         chartPalette,
                         graphics,
+                        chartLayout.Frame,
                         plotBox,
                         lineSeriesVectors,
                         lineValueExtents,
