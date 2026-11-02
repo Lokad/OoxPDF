@@ -67,6 +67,11 @@ Supported within the following constraints:
   formula-only data without cached values and unsupported chart kinds are diagnosed.
   Optional workbook styles and shared strings follow that workbook's own
   relationships; unreferenced parts do not affect cached chart rendering.
+  Defined label containers use Office-observed component defaults while retaining
+  explicit false values, deletion, custom text and number formatting. Series and
+  their point labels own component defaults independently of inherited text style.
+  Scatter/bubble category labels include the formatted X value; automatic labels
+  retain their own text clipping region outside the data plot.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
@@ -87,6 +92,9 @@ Approximate or restricted:
 - Clustered/stacked bar/column, line-with-markers and plain pie are closer-parity
   targets. Area, scatter/bubble, secondary axes, percent-stacked and leader-label
   layouts remain approximate; trendlines are diagnosed and omitted.
+  Area data labels are not yet painted. Label baselines, legend-key shapes and
+  spacing, polar label formatting and plot-level point-label fallback retain
+  known differences from Office; restored text can still fail image thresholds.
 - Automatic chart layout, label strips/baselines, dense intervals, source crossings,
   reversed axes and manual-layout combinations retain their semantic guards.
   Qualified automatic single-line plots share axis/label placement, including
