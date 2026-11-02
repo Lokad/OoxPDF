@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
@@ -12,46 +13,117 @@ internal static partial class OoxMemoryAdmissionTests
 {
     public static void PptxSparseChartConstructionAdmissionFollowsSlotExpansion()
     {
-        var compact = Observe(2);
-        var sparse = Observe(100_000);
+        var compact = ObserveSparseChartConstruction(2);
+        var sparse = ObserveSparseChartConstruction(100_000);
+        Console.WriteLine($"Chart slot grant/allocation: compact {compact.Request}/{compact.Allocated}, sparse {sparse.Request}/{sparse.Allocated} bytes.");
         TestAssert.True(sparse.Allocated >= 8L * 100_000, "Exercise significant dense construction from the sparse source.");
         TestAssert.True(sparse.Request >= 8L * 100_000 && sparse.Request > compact.Request,
             $"Page capacity must cover significant slot expansion: compact grant/allocation {compact.Request}/{compact.Allocated}, sparse {sparse.Request}/{sparse.Allocated} bytes.");
+    }
 
-        static (long Request, long Allocated) Observe(int slots)
+    private static (long Request, long Allocated) ObserveSparseChartConstruction(int slots, int frames = 1)
+    {
+        using var input = SparseChartConstructionPackage(slots, frames);
+        using var package = OoxPackage.Open(input, default);
+        var document = new PptxReader().Read(package, default);
+        var budget = new PageMemoryBudget();
+        long request, allocated;
+        using (var operation = OoxConversionBudget.BeginScope(null, budget))
         {
-            string chart = $$"""
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
-                  <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
-                    <c:marker><c:symbol val="none"/></c:marker>
-                    <c:cat><c:strLit><c:ptCount val="{{slots}}"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="{{slots-1}}"><c:v>Z</c:v></c:pt></c:strLit></c:cat>
-                    <c:val><c:numLit><c:ptCount val="{{slots}}"/><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="{{slots-1}}"><c:v>4</c:v></c:pt></c:numLit></c:val><c:smooth val="0"/>
-                  </c:ser><c:axId val="1"/><c:axId val="2"/></c:lineChart>
-                  <c:catAx><c:axId val="1"/><c:delete val="1"/><c:crossAx val="2"/></c:catAx>
-                  <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:delete val="1"/><c:crossAx val="1"/></c:valAx>
-                </c:plotArea><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>
-                """;
-            using var input = PptxTests.CreateSingleChartPackageStream(chart);
-            using var package = OoxPackage.Open(input, default);
-            var document = new PptxReader().Read(package, default);
-            var budget = new PageMemoryBudget();
-            long request, allocated;
-            using (var operation = OoxConversionBudget.BeginScope(null, budget))
+            var reader = new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).GetAsyncEnumerator();
+            try
             {
-                var reader = new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).GetAsyncEnumerator();
-                try
-                {
-                    long before = GC.GetTotalAllocatedBytes(precise: true);
-                    TestAssert.True(reader.MoveNextAsync().AsTask().GetAwaiter().GetResult(), "Render the source chart through the real page producer.");
-                    allocated = GC.GetTotalAllocatedBytes(precise: true) - before;
-                    request = budget.LargestLiveGrant().Bytes;
-                    TestAssert.True(reader.Current.Content.Length > 0, "Exercise the chart graphics path.");
-                }
-                finally { reader.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+                long before = GC.GetTotalAllocatedBytes(precise: true);
+                TestAssert.True(reader.MoveNextAsync().AsTask().GetAwaiter().GetResult(), "Render the source chart through the real page producer.");
+                allocated = GC.GetTotalAllocatedBytes(precise: true) - before;
+                request = budget.LargestLiveGrant().Bytes;
+                TestAssert.True(reader.Current.Content.Length > 0, "Exercise the chart graphics path.");
             }
+            finally { reader.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        }
+        TestAssert.Equal(0L, budget.Pool.Reserved);
+        TestAssert.Equal(budget.Pool.ScopesCreated, budget.Pool.ScopesDisposed);
+        return (request, allocated);
+    }
+
+    private static MemoryStream SparseChartConstructionPackage(int slots, int frames = 1)
+    {
+        string chart = $$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
+              <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
+                <c:marker><c:symbol val="none"/></c:marker>
+                <c:cat><c:strLit><c:ptCount val="{{slots}}"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="{{slots-1}}"><c:v>Z</c:v></c:pt></c:strLit></c:cat>
+                <c:val><c:numLit><c:ptCount val="{{slots}}"/><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="{{slots-1}}"><c:v>4</c:v></c:pt></c:numLit></c:val><c:smooth val="0"/>
+              </c:ser><c:axId val="1"/><c:axId val="2"/></c:lineChart>
+              <c:catAx><c:axId val="1"/><c:delete val="1"/><c:crossAx val="2"/></c:catAx>
+              <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:delete val="1"/><c:crossAx val="1"/></c:valAx>
+            </c:plotArea><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>
+            """;
+        MemoryStream original = PptxTests.CreateSingleChartPackageStream(chart);
+        if (frames == 1) return original;
+        using (original)
+        using (var archive = new ZipArchive(original, ZipArchiveMode.Read, leaveOpen: true))
+        using (var source = archive.GetEntry("ppt/slides/slide1.xml")!.Open())
+        {
+            var slide = XDocument.Load(source);
+            XNamespace presentation = "http://schemas.openxmlformats.org/presentationml/2006/main";
+            var tree = slide.Descendants(presentation + "spTree").Single();
+            var frame = tree.Elements(presentation + "graphicFrame").Single();
+            for (int i = 1; i < frames; i++)
+            {
+                var copy = new XElement(frame);
+                copy.Descendants(presentation + "cNvPr").FirstOrDefault()?.SetAttributeValue("id", 100 + i);
+                tree.Add(copy);
+            }
+            return PptxTests.CreateSingleChartPackageStream(chart,
+                new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide.ToString()) });
+        }
+    }
+
+    public static void PptxSparseChartFramesShareOneConstructionWindow()
+    {
+        long one = ObserveSparseChartConstruction(100_000).Request;
+        long two = ObserveSparseChartConstruction(100_000, frames: 2).Request;
+        TestAssert.True(two >= one && two < one + one / 2,
+            $"Sequential chart frames share construction headroom: {one} versus {two} bytes.");
+    }
+
+    public static void PptxSparseChartRefusalAndCancellationPreservePublication()
+    {
+        long request = ObserveSparseChartConstruction(100_000).Request;
+        using var sourcePackage = SparseChartConstructionPackage(100_000);
+        byte[] bytes = sourcePackage.ToArray();
+        string inputPath = Path.Combine(Path.GetTempPath(), "sparse-source-" + Guid.NewGuid().ToString("N") + ".pptx");
+        File.WriteAllBytes(inputPath, bytes);
+        foreach (bool cancel in new[] { false, true })
+        foreach (bool file in new[] { false, true })
+        {
+            using var cancellation = new CancellationTokenSource();
+            var budget = new PageMemoryBudget { MatchBytes = request, Cancel = cancel ? cancellation : null };
+            string target = Path.Combine(Path.GetTempPath(), "sparse-chart-" + Guid.NewGuid().ToString("N") + ".pdf");
+            File.WriteAllBytes(target, [7, 8, 9]);
+            using var input = new MemoryStream(bytes);
+            using var output = new MemoryStream();
+            var options = new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx, FontResolver = new TestFaceFontResolver(), MemoryBudget = budget };
+            void Convert()
+            {
+                if (file) OoxPdfConverter.Convert(inputPath, target, options, cancellation.Token);
+                else OoxPdfConverter.Convert(input, output, options, cancellation.Token);
+            }
+            if (cancel) TestAssert.Throws<OperationCanceledException>(Convert);
+            else
+            {
+                OoxPdfLimitExceededException? refused = null;
+                try { Convert(); } catch (OoxPdfLimitExceededException ex) { refused = ex; }
+                TestAssert.True(refused is { Kind: OoxPdfLimitKind.MemoryAdmission, Scope: OoxPdfLimitScope.Conversion }, "Refusal stays structured and terminal.");
+            }
+            TestAssert.True(budget.Reached, "Select the observed chart construction request.");
+            TestAssert.Equal(1, budget.MatchCount);
+            TestAssert.Equal(0L, output.Length);
+            TestAssert.True(File.ReadAllBytes(target).SequenceEqual(new byte[] { 7, 8, 9 }), "Preserve the existing destination.");
             TestAssert.Equal(0L, budget.Pool.Reserved);
             TestAssert.Equal(budget.Pool.ScopesCreated, budget.Pool.ScopesDisposed);
-            return (request, allocated);
+            TestAssert.Equal(0, budget.Pool.CallerDisposals);
         }
     }
 
@@ -220,6 +292,7 @@ internal static partial class OoxMemoryAdmissionTests
         public long MatchBytes;
         public CancellationTokenSource? Cancel;
         public bool Reached;
+        public int MatchCount;
         public IMemoryReservation LargestLiveGrant() => direct.Where(item => item.Bytes > 0).MaxBy(item => item.Bytes)
             ?? throw new InvalidOperationException("The producer must hold a page construction reservation.");
         public bool TryReserve(long bytes, out IMemoryReservation? reservation) => Pool.TryReserve(bytes, out reservation);
@@ -233,6 +306,7 @@ internal static partial class OoxMemoryAdmissionTests
                 if (selected)
                 {
                     owner.Reached = true;
+                    owner.MatchCount++;
                     if (owner.Cancel is null) { reservation = null; return false; }
                 }
                 bool accepted = inner.TryReserve(bytes, out reservation);
