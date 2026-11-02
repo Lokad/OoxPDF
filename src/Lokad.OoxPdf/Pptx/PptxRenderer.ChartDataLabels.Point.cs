@@ -179,11 +179,11 @@ internal sealed partial class PptxRenderer
                             textX,
                             labelBox.Y,
                             textRunWidth,
-                            labelBox.Height,
+                            textBox.Height,
                             plotBox,
                             style,
                             alignment,
-                            fontResolver, labelLinks, descent + verticalPadding).ConfigureAwait(false);
+                            fontResolver, labelLinks, effectiveOptions.Layout.HasLayout ? 0d : descent + verticalPadding).ConfigureAwait(false);
                     }
                 }
             }
