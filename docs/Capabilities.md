@@ -146,8 +146,15 @@ Approximate or restricted:
   approximate.
   Scatter/bubble axes with a retained authored minimum share that interval origin
   across numeric labels, major ticks and grids; only aligned upper endpoints are
-  ticks. Automatic ranges/steps, reversed placement, crossings and bubble plot
-  padding remain approximate. Logarithmic axes retain their existing fallback.
+  ticks. Numeric pairs share direction across connecting paths, markers/bubbles,
+  labels and grids. Crossings use the perpendicular scale; explicit numeric
+  crossings, range edges and low/high/next-to labels retain distinct placement.
+  An explicit `between` declaration shifts a numeric crossing by half a value
+  unit; midpoint/omitted declarations and minimum/maximum edges keep their own
+  meaning. Fixed-bound scatter controls match Office axis coordinates and reversal
+  movements within0.05pt. Automatic ranges/steps, bubble plot padding, tick paint
+  and remaining text geometry are approximate. Logarithmic axes retain their
+  existing fallback.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.
