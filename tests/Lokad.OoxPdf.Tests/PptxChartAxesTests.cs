@@ -1505,11 +1505,13 @@ internal static class PptxChartAxesTests
         object seriesOptions = readSeriesOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected series label options.");
         object resolvedSeriesOptions = resolveSeriesOptions.Invoke(null, [plotOptions, seriesOptions, 0]) ?? throw new InvalidOperationException("Expected resolved series label options.");
         object seriesShowValue = PptxTests.ChartDataLabelFlagOption(resolvedSeriesOptions, "showVal");
-        TestAssert.True(PptxTests.ChartBooleanOptionValue(seriesShowValue), "Expected missing series showVal to inherit the plot-level explicit showVal.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(seriesShowValue), "Expected inherited plot-level showVal presence to remain explicit.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionValue(seriesShowValue), "Missing series showVal retains its raw source value.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(seriesShowValue), "Missing series showVal remains absent in the active source container.");
+        TestAssert.True((bool)resolvedSeriesOptions.GetType().GetProperty("ShowValue")!.GetValue(resolvedSeriesOptions)!, "The defined series supplies its own enabled value default.");
         object seriesShowPercent = PptxTests.ChartDataLabelFlagOption(resolvedSeriesOptions, "showPercent");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(seriesShowPercent), "Expected missing series showPercent to inherit the plot-level explicit false.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(seriesShowPercent), "Expected inherited plot-level showPercent presence to remain explicit.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionValue(seriesShowPercent), "Missing series showPercent retains its raw source value.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(seriesShowPercent), "A parent explicit false does not become a present series flag.");
+        TestAssert.True((bool)resolvedSeriesOptions.GetType().GetProperty("ShowPercent")!.GetValue(resolvedSeriesOptions)!, "The defined series supplies its own enabled percentage default.");
         object seriesShowLegendKey = PptxTests.ChartDataLabelFlagOption(resolvedSeriesOptions, "showLegendKey");
         TestAssert.True(PptxTests.ChartBooleanOptionValue(seriesShowLegendKey), "Expected series-level showLegendKey to override the plot-level default.");
         TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(seriesShowLegendKey), "Expected series-level showLegendKey presence to remain explicit.");
