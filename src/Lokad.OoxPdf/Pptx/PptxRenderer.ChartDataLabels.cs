@@ -72,6 +72,28 @@ internal sealed partial class PptxRenderer
         return (negativeStart, negativeValues[category]);
     }
 
+    private static (double X, double Y, TextAlignment Alignment) ResolveCategoryPointLabelPosition(
+        PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth,
+        double ascent, double height, double markerRadius, double fontSize)
+    {
+        double centeredBaseline = pointY + height / 2d - ascent;
+        double horizontalGap = fontSize * PptxChartMetricRules.CategoryPointLabelHorizontalGapFactor + markerRadius;
+        double verticalGap = fontSize * PptxChartMetricRules.CategoryPointLabelVerticalGapFactor + markerRadius;
+        return position switch
+        {
+            PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.OutsideEnd =>
+                (pointX - labelWidth / 2d, pointY + verticalGap + height - ascent, TextAlignment.Center),
+            PptxSceneChartDataLabelPosition.Bottom =>
+                (pointX - labelWidth / 2d, pointY - verticalGap - ascent, TextAlignment.Center),
+            PptxSceneChartDataLabelPosition.Left =>
+                (pointX - horizontalGap - labelWidth, centeredBaseline, TextAlignment.Right),
+            PptxSceneChartDataLabelPosition.Right =>
+                (pointX + horizontalGap, centeredBaseline, TextAlignment.Left),
+            _ => (pointX - labelWidth / 2d, centeredBaseline, TextAlignment.Center)
+        };
+    }
+
+    // Manual chart-label offsets retain the existing source coordinate contract.
     private static (double X, double Y, TextAlignment Alignment) ResolveLineDataLabelPosition(PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth, double labelHeight)
     {
         position = ResolveChartDataLabelPosition(position);
@@ -270,9 +292,9 @@ internal sealed partial class PptxRenderer
         return CreateChartTextRun(text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment, kerningEnabled);
     }
 
-    private static async ValueTask AddChartLabelRunsAsync(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks)
+    private static async ValueTask AddChartLabelRunsAsync(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? labelLinks, double descent = 0d)
     {
-        ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, x, y, width, height);
+        ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, x, y - descent, width, height);
         if (options.CustomTextRuns.Count == 0)
         {
             runs.Add(CreateChartTextRun(text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment));
