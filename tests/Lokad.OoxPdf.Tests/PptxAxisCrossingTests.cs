@@ -24,14 +24,14 @@ internal static class PptxAxisCrossingTests
             var points = Regex.Matches(blue.Groups["body"].Value, @"([-\d.]+) ([-\d.]+) [ml]")
                 .Select(m => (X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), Y: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture))).ToArray();
             TestAssert.True(points.Length >= 2 && (reversed ? points[0].X > points[1].X : points[0].X < points[1].X) && points[0].Y < points[1].Y,
-                "Source values2 and4 keep their identities while the line/area's physical X coordinates mirror.");
+                $"{kind}, reversed {reversed}, blue block {blue.Success}, points {string.Join(';', points)}: source values2 and4 keep their identities while physical X coordinates mirror.");
         }
     }
 
     public static void PptxLineCategoryDirectionKeepsSparseLabelsAndPointPaint()
     {
-        const string paint = "<c:marker><c:symbol val=\"square\"/><c:size val=\"7\"/></c:marker><c:smooth val=\"0\"/><c:dPt><c:idx val=\"2\"/><c:marker><c:symbol val=\"square\"/><c:spPr><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></c:spPr></c:marker></c:dPt>";
-        const string labels = "<c:dLbls><c:dLblPos val=\"t\"/><c:showVal val=\"0\"/><c:showCatName val=\"1\"/></c:dLbls>";
+        const string paint = "<c:marker><c:symbol val=\"square\"/><c:size val=\"7\"/></c:marker><c:smooth val=\"0\"/><c:dPt><c:idx val=\"3\"/><c:spPr><a:ln><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></a:ln></c:spPr></c:dPt>";
+        const string labels = "<c:varyColors val=\"1\"/><c:dLbls><c:dLblPos val=\"t\"/><c:showVal val=\"0\"/><c:showCatName val=\"1\"/></c:dLbls>";
         RgbColor[]? previous = null;
         foreach (bool reversed in new[] { false, true })
         {
@@ -44,7 +44,9 @@ internal static class PptxAxisCrossingTests
             TestAssert.True(data.Select(c => c.Text).SequenceEqual(new[] { "Alfa", "Gamma", "Delta" }), "Retain original indices around the missing second value.");
             TestAssert.True(reversed ? data[0].X > data[^1].X : data[0].X < data[^1].X, "Data labels follow the same physical direction as their source points.");
             RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content).ToArray();
-            TestAssert.True(colors.Contains(new RgbColor(255, 0, 0)), "The authored marker at logical index2 remains visible.");
+            TestAssert.True(colors.Distinct().Count() >= 3, "The three source points retain their varied marker paint around the missing value.");
+            TestAssert.True(PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: true).Count(c => c == new RgbColor(255, 0, 0)) >= 2,
+                "The authored incoming stroke at logical index3 remains visible alongside the red numeric axis.");
             if (previous is not null) TestAssert.True(previous.SequenceEqual(colors), "Mirroring coordinates preserves logical point paint and marker order.");
             previous = colors;
         }
