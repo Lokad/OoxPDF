@@ -1866,7 +1866,8 @@ internal static class PptxChartLegendsTests
                 """)
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output);
+        // Keep semantic chart geometry independent of the installed font universe.
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ 264\.8 Tm").Count == 2, "Expected both bottom-legend entries at the frame-anchored baseline.");
     }
