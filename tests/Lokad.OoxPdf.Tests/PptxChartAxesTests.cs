@@ -1434,8 +1434,10 @@ internal static class PptxChartAxesTests
         TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(resolvedSceneShowValue), "Expected resolved scene-backed override showVal=0 presence to remain explicit.");
         TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(resolvedSceneShowValue));
         object resolvedSceneShowPercent = PptxTests.ChartDataLabelFlagOption(resolvedSceneOptions, "showPercent");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to inherit base showPercent=0.");
-        TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to retain base explicit state.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionValue(resolvedSceneShowPercent), "Missing point showPercent retains its raw source value.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(resolvedSceneShowPercent), "A parent explicit false does not become a present point flag.");
+        TestAssert.True((bool)resolvedSceneOptions.GetType().GetProperty("ShowPercent")!.GetValue(resolvedSceneOptions)!,
+            "The defined point supplies its own enabled percentage default.");
         object resolvedSceneLeaderLines = PptxTests.ChartDataLabelLeaderLines(resolvedSceneOptions);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(resolvedSceneLeaderLines), "Expected resolved scene-backed leader-line source to remain defined.");
         TestAssert.Equal(new RgbColor(68, 85, 102), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartDataLabelLeaderLinesStroke(resolvedSceneLeaderLines)));

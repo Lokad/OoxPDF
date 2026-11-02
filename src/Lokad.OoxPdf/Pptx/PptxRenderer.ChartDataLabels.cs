@@ -142,7 +142,7 @@ internal sealed partial class PptxRenderer
     {
         if (!options.Overrides.TryGetValue(index, out ChartDataLabelOverride dataLabel))
         {
-            return options;
+            return options with { Overrides = EmptyChartDataLabelOverrides };
         }
 
         if (dataLabel.IsDeleted == true)
