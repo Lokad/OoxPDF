@@ -77,6 +77,10 @@ Supported within the following constraints:
   values retain labels; stacked areas preserve and label zero slots through
   missing values, including an explicitly requested Gap, as observed in Office.
   Standard areas using Zero also label missing slots as zero; Gap retains holes.
+  Line point markers retain source symbols, sizes, fills and outlines across
+  series and sparse data. Formatting-only overrides keep series geometry;
+  explicit symbols own marker defaults. Legend/key ownership follows the series
+  or point appearance, with marker keys bounded independently of text size.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
