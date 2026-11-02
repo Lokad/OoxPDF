@@ -125,7 +125,7 @@ internal sealed partial class PptxRenderer
             return ChartDataLabelOptions.None;
         }
 
-        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, overrideDefined: true);
+        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, dataLabel.OwnsComponentDefaults);
         ChartTextStyleOverride textStyle = new(
             dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
             dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
@@ -453,7 +453,7 @@ internal sealed partial class PptxRenderer
     {
         PptxSceneChartDataLabels labels = PptxSceneBuilder.ReadChartDataLabels(chartElement, theme, colorMap);
         return labels.IsDefined
-            ? ToChartDataLabelOptions(sceneChart: null, labels, chartElement)
+            ? ToChartDataLabelOptions(sceneChart: null, labels, chartElement, seriesScope: chartElement.Name == ChartNamespace + "ser")
             : ChartDataLabelOptions.None;
     }
 
@@ -469,7 +469,7 @@ internal sealed partial class PptxRenderer
         if (plot is not null)
         {
             return plot.Series
-                .Select(series => ToChartDataLabelOptions(sceneChart, series.DataLabels, chartElement))
+                .Select(series => ToChartDataLabelOptions(sceneChart, series.DataLabels, chartElement, seriesScope: true))
                 .ToArray();
         }
 
@@ -479,7 +479,7 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels, XElement? chartElement = null)
+    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels, XElement? chartElement = null, bool seriesScope = false)
     {
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ToChartDataLabelFlagOptions(labels);
         return new ChartDataLabelOptions(
@@ -503,7 +503,7 @@ internal sealed partial class PptxRenderer
             labels.TextBodyProperties,
             ToChartShapeStyle(labels.ShapeStyle),
             flags,
-            ToChartDataLabelOverrides(labels.Overrides),
+            ToChartDataLabelOverrides(labels.Overrides, seriesScope),
             labels.IsDefined,
             Date1904: sceneChart?.Options.Date1904 == true || ResolveChartSpaceDate1904(chartElement));
     }
@@ -520,7 +520,7 @@ internal sealed partial class PptxRenderer
         return ToChartTextStyleOverride(labels.TextStyle);
     }
 
-    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides)
+    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides, bool seriesScope)
     {
         if (overrides.Count == 0)
         {
@@ -551,7 +551,8 @@ internal sealed partial class PptxRenderer
                 ToChartTextStyleOverride(dataLabel.TextStyle),
                 dataLabel.TextBodyProperties,
                 ToChartShapeStyle(dataLabel.ShapeStyle),
-                ToChartDataLabelOverrideFlagOptions(dataLabel));
+                ToChartDataLabelOverrideFlagOptions(dataLabel),
+                OwnsComponentDefaults: seriesScope);
         }
 
         return result;

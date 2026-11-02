@@ -105,7 +105,7 @@ internal static class PptxChartLabelDefaultsTests
     {
         const string labels = "<c:dLbls><c:dLblPos val=\"t\"/><c:showLegendKey val=\"0\"/><c:showVal val=\"1\"/><c:showCatName val=\"1\"/><c:showSerName val=\"1\"/></c:dLbls>";
         var page = RenderLabelPage(labels, "Actual", atMaximum: true);
-        var clips = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W n").Cast<Match>().ToArray();
+        var clips = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re W\*? n").Cast<Match>().ToArray();
         var shows = Regex.Matches(page.Content, @"/CLD\S+ [\d.]+ Tf\s+\S+ Tc\s+1 0 0 1 (?<x>[-\d.]+) (?<y>[-\d.]+) Tm").Cast<Match>().ToArray();
         TestAssert.Equal(3, shows.Length);
         foreach (Match show in shows)

@@ -586,12 +586,10 @@ internal sealed partial class PptxRenderer
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
             !string.IsNullOrWhiteSpace(CustomText) ||
-            Overrides.Values.Any(label => label.IsDeleted != true &&
-                (label.ShowValue != false || label.ShowPercent != false || label.ShowCategoryName != false ||
-                 label.ShowSeriesName != false || label.ShowBubbleSize != false || !string.IsNullOrWhiteSpace(label.CustomText)));
+            Overrides.Values.Any(label => label.HasVisibleText);
 
         public bool HasVisibleContent => HasVisibleText || ShowLegendKey ||
-            Overrides.Values.Any(label => label.IsDeleted != true && label.ShowLegendKey != false);
+            Overrides.Values.Any(label => label.HasVisibleContent);
     }
 
     private readonly record struct ChartDataLabelLeaderLines(bool IsDefined, ChartSeriesStroke? Stroke)
@@ -605,7 +603,18 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartTextRunLayout(string Text, ChartTextStyle Style, double Width, string? HyperlinkClickId = null, string? HyperlinkClickAction = null);
 
-    private readonly record struct ChartDataLabelOverride(bool? IsDeleted, bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions);
+    private readonly record struct ChartDataLabelOverride(bool? IsDeleted, bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions, bool OwnsComponentDefaults)
+    {
+        // Native series points own component defaults. Plot-level point records
+        // retain the existing fallback; native all-disabled controls ignored them.
+        public bool HasVisibleText => IsDeleted != true &&
+            ((ShowValue ?? OwnsComponentDefaults) || (ShowPercent ?? OwnsComponentDefaults) ||
+             (ShowCategoryName ?? OwnsComponentDefaults) || (ShowSeriesName ?? OwnsComponentDefaults) ||
+             (ShowBubbleSize ?? OwnsComponentDefaults) || !string.IsNullOrWhiteSpace(CustomText));
+
+        public bool HasVisibleContent => HasVisibleText ||
+            (IsDeleted != true && (ShowLegendKey ?? OwnsComponentDefaults));
+    }
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
 
