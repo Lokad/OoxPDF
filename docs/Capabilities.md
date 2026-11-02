@@ -82,8 +82,9 @@ Supported within the following constraints:
   explicit symbols own marker defaults. Legend/key ownership follows the series
   or point appearance, with marker keys bounded independently of text size.
   Automatic line labels default to Right; area labels default to Center.
-  Measured font line boxes and authored marker extents determine baseline and
-  outside clearance. Text backgrounds enclose padded text, with keys alongside.
+  Measured line boxes determine baseline; occupied frames keep three-point
+  clearance from authored marker extents independently of font size. Text
+  backgrounds enclose padded text, with keys alongside.
   Line/area label layouts use the outer chart frame for factor offsets, edge
   origins and factor-sized extents. Sized labels center text, retain measured
   baselines and fit before offsets; zero or missing extents leave no label.
@@ -92,6 +93,9 @@ Supported within the following constraints:
   Defined point labels own component defaults; a defined series owns its point
   declarations. Fully disabled Cartesian plots suppress plot-point requests,
   while series and pie/doughnut points retain independent label scope.
+  Defined point and series text styles combine chart defaults with local
+  formatting; unoverridden labels retain their container style. Font provenance
+  and raw source presence remain inspectable.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
