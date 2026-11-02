@@ -10,6 +10,51 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class OoxMemoryAdmissionTests
 {
+    public static void PptxSparseChartConstructionAdmissionFollowsSlotExpansion()
+    {
+        var compact = Observe(2);
+        var sparse = Observe(100_000);
+        TestAssert.True(sparse.Allocated >= 8L * 100_000, "Exercise significant dense construction from the sparse source.");
+        TestAssert.True(sparse.Request >= 8L * 100_000 && sparse.Request > compact.Request,
+            $"Page capacity must cover significant slot expansion: compact grant/allocation {compact.Request}/{compact.Allocated}, sparse {sparse.Request}/{sparse.Allocated} bytes.");
+
+        static (long Request, long Allocated) Observe(int slots)
+        {
+            string chart = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
+                  <c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/>
+                    <c:marker><c:symbol val="none"/></c:marker>
+                    <c:cat><c:strLit><c:ptCount val="{{slots}}"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="{{slots-1}}"><c:v>Z</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:ptCount val="{{slots}}"/><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="{{slots-1}}"><c:v>4</c:v></c:pt></c:numLit></c:val><c:smooth val="0"/>
+                  </c:ser><c:axId val="1"/><c:axId val="2"/></c:lineChart>
+                  <c:catAx><c:axId val="1"/><c:delete val="1"/><c:crossAx val="2"/></c:catAx>
+                  <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:delete val="1"/><c:crossAx val="1"/></c:valAx>
+                </c:plotArea><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>
+                """;
+            using var input = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(input, default);
+            var document = new PptxReader().Read(package, default);
+            var budget = new PageMemoryBudget();
+            long request, allocated;
+            using (var operation = OoxConversionBudget.BeginScope(null, budget))
+            {
+                var reader = new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).GetAsyncEnumerator();
+                try
+                {
+                    long before = GC.GetTotalAllocatedBytes(precise: true);
+                    TestAssert.True(reader.MoveNextAsync().AsTask().GetAwaiter().GetResult(), "Render the source chart through the real page producer.");
+                    allocated = GC.GetTotalAllocatedBytes(precise: true) - before;
+                    request = budget.LargestLiveGrant().Bytes;
+                    TestAssert.True(reader.Current.Content.Length > 0, "Exercise the chart graphics path.");
+                }
+                finally { reader.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+            }
+            TestAssert.Equal(0L, budget.Pool.Reserved);
+            TestAssert.Equal(budget.Pool.ScopesCreated, budget.Pool.ScopesDisposed);
+            return (request, allocated);
+        }
+    }
+
     public static void PageMemoryConstructionFollowsPageAdvanceAndEarlyDisposal()
     {
         foreach (var kind in new[] { OoxPdfInputKind.Docx, OoxPdfInputKind.Pptx })
