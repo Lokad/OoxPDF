@@ -1404,7 +1404,7 @@ internal static class PptxChartAxesTests
         TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(sceneShowPercent), "Expected scene-backed showPercent=0 presence to remain explicit.");
         TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(sceneShowPercent));
         object sceneShowLegendKey = PptxTests.ChartDataLabelFlagOption(sceneOptions, "showLegendKey");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(sceneShowLegendKey), "Expected missing scene showLegendKey to use the renderer default false, not fallback XML.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionValue(sceneShowLegendKey), "Expected absent scene showLegendKey to keep its raw source value, not consume fallback XML.");
         TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(sceneShowLegendKey), "Expected missing scene showLegendKey to remain distinct from explicit false.");
         object sceneLeaderLines = PptxTests.ChartDataLabelLeaderLines(sceneOptions);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(sceneLeaderLines), "Expected scene-backed data-label leader-line source to remain defined.");

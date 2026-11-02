@@ -95,9 +95,9 @@ internal sealed partial class PptxRenderer
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
                         ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles))
                         : 0d;
-                    double effectiveLabelWidth = effectiveOptions.ShowLegendKey
-                        ? Math.Max(labelWidth, (await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
-                        : labelWidth;
+                    double effectiveLabelWidth = Math.Max(labelWidth,
+                        (await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)) + legendKeyWidth +
+                        (effectiveOptions.ShowLegendKey ? fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor : 0d));
                     (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
                         effectiveOptions.PositionKind,
                         pointX,
