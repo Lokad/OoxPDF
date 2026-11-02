@@ -60,7 +60,10 @@ internal static class PptxCategorySlotTests
         {
             PdfPage page = Render(5, area, mode, gap: true, stacked: stacked);
             double[] all = ExpectedPoints(page, 5, mode);
-            AssertPositions(new[] { all[0], all[1], all[3], all[4] }, Paths(page, "0 0 1", strokes: !area).SelectMany(x => x).Distinct().Order().ToArray());
+            // Independent Office Gap/Zero controls retain the empty source slot
+            // in stacked area polygons; the missing value still has no label.
+            double[] paintedSlots = area && stacked ? all : [all[0], all[1], all[3], all[4]];
+            AssertPositions(paintedSlots, Paths(page, "0 0 1", strokes: !area).SelectMany(x => x).Distinct().Order().ToArray());
             if (!area)
                 AssertPositions(new[] { all[0], all[1], all[3], all[4] }, LabelCenters(page, "CLD"), tolerance: .1d);
         }

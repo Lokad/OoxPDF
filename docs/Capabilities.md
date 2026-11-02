@@ -72,6 +72,10 @@ Supported within the following constraints:
   their point labels own component defaults independently of inherited text style.
   Scatter/bubble category labels include the formatted X value; automatic labels
   retain their own text clipping region outside the data plot.
+  Area labels share category-point text, links and formatting with line labels,
+  using the center of each standard, stacked or percentage layer. Sparse source
+  values retain labels; stacked areas preserve zero slots through missing values,
+  including an explicitly requested Gap, as observed in Office.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
@@ -92,7 +96,7 @@ Approximate or restricted:
 - Clustered/stacked bar/column, line-with-markers and plain pie are closer-parity
   targets. Area, scatter/bubble, secondary axes, percent-stacked and leader-label
   layouts remain approximate; trendlines are diagnosed and omitted.
-  Area data labels are not yet painted. Label baselines, legend-key shapes and
+  Area label layout remains approximate. Label baselines, legend-key shapes and
   spacing, polar label formatting and plot-level point-label fallback retain
   known differences from Office; restored text can still fail image thresholds.
 - Automatic chart layout, label strips/baselines, dense intervals, source crossings,
