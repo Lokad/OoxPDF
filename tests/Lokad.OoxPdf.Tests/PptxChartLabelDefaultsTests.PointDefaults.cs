@@ -107,6 +107,24 @@ internal static partial class PptxChartLabelDefaultsTests
                 }
             }
         }
+        foreach (string point in new[] { PointDefaultsCustomText,
+            "<c:spPr><a:solidFill><a:srgbClr val=\"00FF00\"/></a:solidFill></c:spPr>" })
+        {
+            XDocument xml = PointDefaultsRenderSource(false, point);
+            var original = RenderChartPage(xml);
+            if (point == PointDefaultsCustomText)
+                TestAssert.Equal("Pinned", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(original, false,
+                    fontResourceFilter: resource => resource.StartsWith("CLD", StringComparison.Ordinal)).Select(s => s.Text)));
+            else
+                TestAssert.Equal(1, MarkerRectangles(original, new RgbColor(0, 255, 0)).Length);
+            xml.Descendants(C + "ser").Single().Element(C + "cat")!.AddBeforeSelf(new XElement(C + "dLbls"));
+            var page = RenderChartPage(xml);
+            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+                fontResourceFilter: resource => resource.StartsWith("CLD", StringComparison.Ordinal)).Select(s => s.Text));
+            TestAssert.Equal("Actual, W1, 2Actual, W2, 4Actual, W3, 3", text);
+            TestAssert.Equal(0, MarkerRectangles(page, new RgbColor(0, 255, 0)).Length);
+            TestAssert.Equal(2, MarkerRectangles(page, new RgbColor(255, 0, 0)).Length);
+        }
     }
 
     public static void PptxPlotPointDefaultRenderingRestoresCompleteContentAndKey()
