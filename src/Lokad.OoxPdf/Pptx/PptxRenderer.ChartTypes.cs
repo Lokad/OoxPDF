@@ -604,17 +604,17 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartTextRunLayout(string Text, ChartTextStyle Style, double Width, string? HyperlinkClickId = null, string? HyperlinkClickAction = null);
 
-    private readonly record struct ChartDataLabelOverride(bool? IsDeleted, bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions, bool OwnsComponentDefaults)
+    private readonly record struct ChartDataLabelOverride(bool? IsDeleted, bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions)
     {
-        // Native series points own component defaults. Plot-level point records
-        // retain the existing fallback; native all-disabled controls ignored them.
+        // A defined point owns defaults; container admission is resolved once
+        // before materializing these rendering options. Raw source stays nullable.
         public bool HasVisibleText => IsDeleted != true &&
-            ((ShowValue ?? OwnsComponentDefaults) || (ShowPercent ?? OwnsComponentDefaults) ||
-             (ShowCategoryName ?? OwnsComponentDefaults) || (ShowSeriesName ?? OwnsComponentDefaults) ||
-             (ShowBubbleSize ?? OwnsComponentDefaults) || !string.IsNullOrWhiteSpace(CustomText));
+            ((ShowValue ?? true) || (ShowPercent ?? true) ||
+             (ShowCategoryName ?? true) || (ShowSeriesName ?? true) ||
+             (ShowBubbleSize ?? true) || !string.IsNullOrWhiteSpace(CustomText));
 
         public bool HasVisibleContent => HasVisibleText ||
-            (IsDeleted != true && (ShowLegendKey ?? OwnsComponentDefaults));
+            (IsDeleted != true && (ShowLegendKey ?? true));
     }
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);

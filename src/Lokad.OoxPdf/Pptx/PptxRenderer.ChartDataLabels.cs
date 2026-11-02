@@ -150,7 +150,7 @@ internal sealed partial class PptxRenderer
             return ChartDataLabelOptions.None;
         }
 
-        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, dataLabel.OwnsComponentDefaults);
+        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, overrideDefined: true);
         ChartTextStyleOverride textStyle = new(
             dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
             dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
@@ -238,7 +238,9 @@ internal sealed partial class PptxRenderer
             TextBodyProperties = IsChartTextBodyPropertiesEmpty(overrideOptions.TextBodyProperties) ? baseOptions.TextBodyProperties : overrideOptions.TextBodyProperties,
             ShapeStyle = overrideOptions.ShapeStyle.IsEmpty ? baseOptions.ShapeStyle : overrideOptions.ShapeStyle,
             FlagOptions = flags,
-            Overrides = MergeChartDataLabelOverrides(baseOptions.Overrides, overrideOptions.Overrides),
+            // A defined series owns its point declarations as well as its
+            // component defaults; plot point requests do not leak into it.
+            Overrides = overrideOptions.IsDefined ? overrideOptions.Overrides : baseOptions.Overrides,
             IsDefined = labelsDefined
         };
     }
@@ -257,27 +259,6 @@ internal sealed partial class PptxRenderer
 
     private static bool IsChartDataLabelComponentFlag(string name) => name is
         "showVal" or "showPercent" or "showCatName" or "showSerName" or "showLegendKey" or "showBubbleSize";
-
-    private static IReadOnlyDictionary<int, ChartDataLabelOverride> MergeChartDataLabelOverrides(IReadOnlyDictionary<int, ChartDataLabelOverride> baseOverrides, IReadOnlyDictionary<int, ChartDataLabelOverride> overrideOverrides)
-    {
-        if (baseOverrides.Count == 0)
-        {
-            return overrideOverrides;
-        }
-
-        if (overrideOverrides.Count == 0)
-        {
-            return baseOverrides;
-        }
-
-        var merged = new Dictionary<int, ChartDataLabelOverride>(baseOverrides);
-        foreach (KeyValuePair<int, ChartDataLabelOverride> item in overrideOverrides)
-        {
-            merged[item.Key] = item.Value;
-        }
-
-        return merged;
-    }
 
     private static bool IsChartTextBodyPropertiesEmpty(PptxSceneChartTextBodyProperties properties)
     {
@@ -504,10 +485,10 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels, XElement? chartElement = null, bool seriesScope = false)
+    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels, XElement chartElement, bool seriesScope = false)
     {
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ToChartDataLabelFlagOptions(labels);
-        return new ChartDataLabelOptions(
+        var options = new ChartDataLabelOptions(
             ChartDataLabelFlagValue(flags, "showVal", labels.IsDefined),
             ChartDataLabelFlagValue(flags, "showPercent", labels.IsDefined),
             ChartDataLabelFlagValue(flags, "showCatName", labels.IsDefined),
@@ -528,9 +509,17 @@ internal sealed partial class PptxRenderer
             labels.TextBodyProperties,
             ToChartShapeStyle(labels.ShapeStyle),
             flags,
-            ToChartDataLabelOverrides(labels.Overrides, seriesScope),
+            EmptyChartDataLabelOverrides,
             labels.IsDefined,
             Date1904: sceneChart?.Options.Date1904 == true || ResolveChartSpaceDate1904(chartElement));
+        // A plot-wide Cartesian disable suppresses its point requests. Series
+        // and sector plots have independent point-label scope. Within an active
+        // scope, each defined point owns defaults for its absent components.
+        bool independentPoints = seriesScope || chartElement.Name == ChartNamespace + "pieChart" ||
+            chartElement.Name == ChartNamespace + "doughnutChart";
+        return independentPoints || options.HasVisibleContent
+            ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides) }
+            : options;
     }
 
     private static ChartTextStyleOverride ToChartDataLabelTextStyleOverride(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels)
@@ -545,7 +534,7 @@ internal sealed partial class PptxRenderer
         return ToChartTextStyleOverride(labels.TextStyle);
     }
 
-    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides, bool seriesScope)
+    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides)
     {
         if (overrides.Count == 0)
         {
@@ -576,8 +565,7 @@ internal sealed partial class PptxRenderer
                 ToChartTextStyleOverride(dataLabel.TextStyle),
                 dataLabel.TextBodyProperties,
                 ToChartShapeStyle(dataLabel.ShapeStyle),
-                ToChartDataLabelOverrideFlagOptions(dataLabel),
-                OwnsComponentDefaults: seriesScope);
+                ToChartDataLabelOverrideFlagOptions(dataLabel));
         }
 
         return result;
