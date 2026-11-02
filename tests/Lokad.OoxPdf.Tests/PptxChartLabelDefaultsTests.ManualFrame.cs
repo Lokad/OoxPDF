@@ -67,11 +67,15 @@ internal static partial class PptxChartLabelDefaultsTests
                         new XElement(a + "t", "Point link"))))));
             return RenderChartPage(xml, parts);
         }
-        var plain = Render(null); var moved = Render(ManualFrameLayout("factor", .08d, .1d));
-        var before = plain.Annotations.Single(); var after = moved.Annotations.Single();
-        TestAssert.Equal("https://example.invalid/manual-label", after.Uri);
-        TestAssert.True(Math.Abs(after.X - before.X - 57.6d) < .002d && Math.Abs(after.Y - before.Y + 43.2d) < .002d &&
-            before.Width == after.Width && before.Height == after.Height, "Link geometry follows the same admitted translation as painted text.");
+        foreach (bool sized in new[] { false, true })
+        {
+            var plain = Render(sized ? SizedFrameLayout() : null);
+            var moved = Render(sized ? SizedFrameLayout(.08d, .1d) : ManualFrameLayout("factor", .08d, .1d));
+            var before = plain.Annotations.Single(); var after = moved.Annotations.Single();
+            TestAssert.Equal("https://example.invalid/manual-label", after.Uri);
+            TestAssert.True(Math.Abs(after.X - before.X - 57.6d) < .002d && Math.Abs(after.Y - before.Y + 43.2d) < .002d &&
+                before.Width == after.Width && before.Height == after.Height, "Link geometry follows the same admitted translation as painted text.");
+        }
     }
 
     private static XElement ManualFrameLayout(string? mode, double x, double y) => new(C + "layout", new XElement(C + "manualLayout",

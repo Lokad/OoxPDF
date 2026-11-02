@@ -74,7 +74,7 @@ internal sealed partial class PptxRenderer
 
     private static (double X, double Y, TextAlignment Alignment) ResolveCategoryPointLabelPosition(
         PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth,
-        double ascent, double height, double markerRadius, double fontSize)
+        double ascent, double height, double markerRadius, double fontSize, double verticalExpansion)
     {
         double centeredBaseline = pointY + height / 2d - ascent;
         // Side clearance is measured to text; its frame already includes the
@@ -85,9 +85,9 @@ internal sealed partial class PptxRenderer
         return position switch
         {
             PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.OutsideEnd =>
-                (pointX - labelWidth / 2d, pointY + verticalGap + height - ascent, TextAlignment.Center),
+                (pointX - labelWidth / 2d, pointY + verticalGap + height - ascent + verticalExpansion, TextAlignment.Center),
             PptxSceneChartDataLabelPosition.Bottom =>
-                (pointX - labelWidth / 2d, pointY - verticalGap - ascent, TextAlignment.Center),
+                (pointX - labelWidth / 2d, pointY - verticalGap - ascent - verticalExpansion, TextAlignment.Center),
             PptxSceneChartDataLabelPosition.Left =>
                 (pointX - horizontalGap - labelWidth, centeredBaseline, TextAlignment.Right),
             PptxSceneChartDataLabelPosition.Right =>
