@@ -144,6 +144,10 @@ Approximate or restricted:
   origins across labels, tick marks and grids, including an automatic lower bound
   anchored to an authored maximum and major unit. Automatic step fitting remains
   approximate.
+  Scatter/bubble axes with a retained authored minimum share that interval origin
+  across numeric labels, major ticks and grids; only aligned upper endpoints are
+  ticks. Automatic ranges/steps, reversed placement, crossings and bubble plot
+  padding remain approximate. Logarithmic axes retain their existing fallback.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.
