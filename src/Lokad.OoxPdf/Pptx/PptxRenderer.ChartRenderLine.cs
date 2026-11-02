@@ -1152,7 +1152,7 @@ internal sealed partial class PptxRenderer
 
     private static void DrawChartMarkerStroke(PdfGraphicsBuilder graphics, double x, double y, PptxSceneChartMarkerSymbol symbol, double size, ChartSeriesStroke? stroke)
     {
-        if (stroke is not { } markerStroke)
+        if (stroke is not { } markerStroke || markerStroke.Alpha <= .001d)
         {
             return;
         }

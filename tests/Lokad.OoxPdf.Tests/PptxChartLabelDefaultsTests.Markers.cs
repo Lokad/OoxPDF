@@ -18,9 +18,9 @@ internal static partial class PptxChartLabelDefaultsTests
             TestAssert.True(point.Marker is { IsDefined: true }, "Even an ignored empty marker retains container presence.");
             TestAssert.Equal(marker.Contains("symbol", StringComparison.Ordinal), point.Marker!.SymbolSpecified);
             TestAssert.Equal(marker is not ("" or "<c:spPr/>"), point.HasMarkerAppearance);
-            TestAssert.Equal(marker.Contains("size", StringComparison.Ordinal) ? 12d : 5d, point.Marker.Size);
+            TestAssert.Equal(marker.Contains("size", StringComparison.Ordinal) ? 12d : point.Marker.SymbolSpecified ? 5d : 7d, point.Marker.Size);
             TestAssert.Equal(marker.Contains("size", StringComparison.Ordinal) ? "12" : null, point.Marker.SizeValue);
-            if (!marker.Contains("symbol", StringComparison.Ordinal)) TestAssert.Equal(PptxSceneChartMarkerSymbol.Diamond, point.Marker.SymbolKind);
+            if (!marker.Contains("symbol", StringComparison.Ordinal)) TestAssert.Equal(PptxSceneChartMarkerSymbol.Square, point.Marker.SymbolKind);
         }
     }
 
@@ -45,6 +45,7 @@ internal static partial class PptxChartLabelDefaultsTests
             foreach (string empty in new[] { "", "<c:spPr/>" })
                 TestAssert.Equal(plain.Content, RenderChartPage(MarkerSource([PointMarker(1, empty)], seriesSize: size, legend: true)).Content);
             var own = RenderChartPage(MarkerSource([PointMarker(1, RedMarker)], seriesSize: size));
+            TestAssert.Equal(2, MarkerRectangles(own, new RgbColor(255, 0, 0)).Length);
             TestAssert.True(MarkerRectangles(own, new RgbColor(255, 0, 0)).All(r => Math.Abs(r.Width - 5.04d) < .002d),
                 "A defined point marker owns the default size rather than borrowing the series size.");
         }

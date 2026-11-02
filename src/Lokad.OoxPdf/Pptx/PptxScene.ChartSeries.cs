@@ -23,6 +23,7 @@ internal sealed partial class PptxSceneBuilder
             (int? bubbleSizePointCount, string bubbleSizePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "bubbleSize");
             (bool? smooth, string smoothValue) = ReadChartSeriesSmooth(seriesElement);
             XElement? shapeProperties = seriesElement.Element(ChartNamespace + "spPr");
+            PptxSceneChartMarker seriesMarker = ReadChartMarker(seriesElement, theme, colorMap, plotKind, chartMarkersEnabled, seriesIndex);
             series.Add(new PptxSceneChartSeries(
                 index,
                 indexValue,
@@ -59,8 +60,8 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartSeriesPatternFill(seriesElement, theme, colorMap),
                 ReadChartSeriesLine(seriesElement, theme, colorMap),
                 ReadChartEffects(shapeProperties),
-                ReadChartMarker(seriesElement, theme, colorMap, plotKind, chartMarkersEnabled, seriesIndex),
-                ReadChartPointStyles(seriesElement, theme, colorMap, plotKind, seriesIndex),
+                seriesMarker,
+                ReadChartPointStyles(seriesElement, theme, colorMap, plotKind, seriesIndex, seriesMarker),
                 ReadRejectedChartNonNegativeIndexValues(seriesElement, "dPt"),
                 explosion,
                 explosionValue,
@@ -171,7 +172,7 @@ internal sealed partial class PptxSceneBuilder
         return PptxChartMarkerMetricRules.ResolveDefaultSymbol(plotKind, chartMarkersEnabled, seriesIndex);
     }
 
-    private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, int seriesIndex)
+    private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, int seriesIndex, PptxSceneChartMarker seriesMarker)
     {
         var styles = new List<PptxSceneChartPointStyle>();
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
@@ -189,7 +190,9 @@ internal sealed partial class PptxSceneBuilder
                 marker = marker with
                 {
                     Size = plotKind == PptxSceneChartPlotKind.Line && marker.SizeValue is null
-                        ? PptxChartMarkerMetricRules.UnsetMarkerSize : marker.Size,
+                        ? marker.SymbolSpecified ? PptxChartMarkerMetricRules.UnsetMarkerSize : seriesMarker.Size : marker.Size,
+                    SymbolKind = plotKind == PptxSceneChartPlotKind.Line && !marker.SymbolSpecified ? seriesMarker.SymbolKind : marker.SymbolKind,
+                    Symbol = plotKind == PptxSceneChartPlotKind.Line && !marker.SymbolSpecified ? seriesMarker.Symbol : marker.Symbol,
                     Fill = ReadChartPointFill(markerElement!.Element(ChartNamespace + "spPr"), theme, colorMap)
                 };
             }

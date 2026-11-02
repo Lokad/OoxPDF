@@ -51,11 +51,22 @@ internal sealed partial class PptxRenderer
                 result = new(stroke, marker, color, outline, result.MarkerOutlineWidth);
             }
             if (pointMarkers[seriesIndex] is { } markers && markers.TryGetValue(index, out var ownMarker))
+            {
+                ChartMarkerStyle marker = ToChartMarkerStyle(ownMarker);
+                if (!ownMarker.SymbolSpecified)
+                    marker = marker with
+                    {
+                        SymbolKind = result.Marker.SymbolKind,
+                        Symbol = result.Marker.Symbol,
+                        Size = ownMarker.SizeValue is null ? result.Marker.Size : marker.Size
+                    };
+                marker = marker with { Size = PptxChartMarkerMetricRules.QuantizeMarkerExtent(marker.Size) };
                 result = result with
                 {
-                    Marker = ToChartMarkerStyle(ownMarker),
+                    Marker = marker,
                     MarkerOutlineWidth = ownMarker.Line.WidthSpecified ? ownMarker.Line.Width : result.MarkerOutlineWidth
                 };
+            }
             return result;
         };
     }

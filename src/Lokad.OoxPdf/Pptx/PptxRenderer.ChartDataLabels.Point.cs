@@ -110,7 +110,7 @@ internal sealed partial class PptxRenderer
                 {
                     ChartLineAppearance? appearance = pointAppearance?.Invoke(seriesIndex, i) ?? seriesAppearance?[seriesIndex];
                     ChartMarkerStyle labelMarker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
-                    labelMarker = labelMarker with { Size = Math.Min(labelMarker.Size, PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit) };
+                    labelMarker = labelMarker with { Size = PptxChartMarkerMetricRules.QuantizeMarkerExtent(Math.Min(labelMarker.Size, PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit)) };
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
                         ? areaOptions is not null
                             ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
