@@ -1,4 +1,9 @@
 {
+  "pptx-chart-oracle-portability": [
+    "PptxSyntheticChartAxisTickLabelOptionsRender",
+    "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics",
+    "PptxSyntheticBottomLegendBaselineRidesFrame"
+  ],
   "pptx-line-area-source-direction": [
     "PptxLineAndAreaCategoriesSharePhysicalSourceDirection",
     "PptxLineCategoryDirectionKeepsSparseLabelsAndPointPaint",

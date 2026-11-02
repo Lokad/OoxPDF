@@ -312,6 +312,18 @@ internal static class PptxChartsTests
 
     public static void PptxSyntheticChartAxisTickLabelOptionsRender()
     {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution face = resolver.Resolve(new FontRequest("Arial"));
+        if (face.IsFallback || !string.Equals(face.ResolvedFamily, "Arial", StringComparison.OrdinalIgnoreCase))
+            TestAssert.Skip("The font-specific323.014pt assertion requires installed Arial; portable tick-label semantics are checked separately.");
+        CheckSyntheticChartAxisTickLabelOptions(resolver, compareArialCoordinate: true);
+    }
+
+    public static void PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics() =>
+        CheckSyntheticChartAxisTickLabelOptions(new TestFaceFontResolver(), compareArialCoordinate: false);
+
+    private static void CheckSyntheticChartAxisTickLabelOptions(IFontResolver resolver, bool compareArialCoordinate)
+    {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
@@ -364,8 +376,7 @@ internal static class PptxChartsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        // Keep semantic chart geometry independent of the installed font universe.
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.667 0 rg", pdf);
@@ -373,7 +384,20 @@ internal static class PptxChartsTests
         TestAssert.Contains("<0024>", pdf);
         // Value labels moved with the plot edge, which now rests on the preset floor since
         // the recalibrated label reserve (frame indent plus font-relative gap) fits inside it.
-        TestAssert.Contains("323.014", pdf);
+        if (compareArialCoordinate) TestAssert.Contains("323.014", pdf);
+        else
+        {
+            var axes = Regex.Matches(pdf, @"([-\d.]+) ([-\d.]+) m ([-\d.]+) ([-\d.]+) l S")
+                .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(p => Math.Abs(p[1] - p[3]) < .001d && Math.Abs(p[0] - p[2]) > 100d).ToArray();
+            TestAssert.True(axes.Length > 0, "Inspect the painted plot extent.");
+            double right = axes.Max(p => Math.Max(p[0], p[2]));
+            var labels = Regex.Matches(pdf, @"BT(?<body>.*?)ET", RegexOptions.Singleline)
+                .Where(m => m.Groups["body"].Value.Contains("/CVA", StringComparison.Ordinal))
+                .Select(m => Regex.Match(m.Groups["body"].Value, @"1 0 0 1 (?<x>[-\d.]+) [-\d.]+ Tm")).ToArray();
+            TestAssert.True(labels.Length == 3 && labels.All(m => m.Success && double.Parse(m.Groups["x"].Value, CultureInfo.InvariantCulture) > right),
+                "The three formatted value labels use the authored high side of the plot with the pinned portable face.");
+        }
     }
 
     public static void PptxSyntheticChartCategoryAxisLabelOffsetRender()
