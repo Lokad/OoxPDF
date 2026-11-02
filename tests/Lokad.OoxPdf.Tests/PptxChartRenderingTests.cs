@@ -242,7 +242,7 @@ internal static class PptxChartRenderingTests
                       <c:pt idx="0"><c:v>35</c:v></c:pt>
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
                       <c:pt idx="2"><c:v>40</c:v></c:pt>
-                    </c:numLit></c:val><c:dLbls><c:showLegendKey val="0"/><c:showVal val="1"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:dLbl><c:idx val="1"/><c:layout><c:manualLayout><c:xMode val="factor"/><c:yMode val="factor"/><c:x val="0.1"/><c:y val="0.1"/></c:manualLayout></c:layout><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="CC11AA"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbl></c:dLbls></c:ser>
+                    </c:numLit></c:val><c:dLbls><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:dLbl><c:idx val="1"/><c:layout><c:manualLayout><c:xMode val="factor"/><c:yMode val="factor"/><c:x val="0.1"/><c:y val="0.1"/></c:manualLayout></c:layout><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="CC11AA"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbl></c:dLbls></c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """),
