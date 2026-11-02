@@ -60,22 +60,33 @@ internal static partial class PptxChartLabelDefaultsTests
 
     public static void PptxAreaLabelsKeepSparseIsolatedSourcePoints()
     {
-        var page = AreaPage([[2d, null, 3d], [3d, 2d, 4d]], "stacked");
-        TestAssert.Equal("23324", AreaLabelText(page));
-        var boxes = AreaLabelBoxes(page);
-        TestAssert.Equal(5, boxes.Length);
-        var second = AreaPolygon(page, "1 0 0");
-        for (int i = 0; i < 3; i++)
-            TestAssert.True(Math.Abs(boxes[2 + i].Y + boxes[2 + i].Height / 2d - (second[i].Y + second[5 - i].Y) / 2d) < .002d,
-                "An isolated lower source value remains part of the higher layer's label span.");
+        foreach (string grouping in new[] { "standard", "stacked", "percentStacked" })
+        {
+            var page = AreaPage([[2d, null, 3d], [3d, 2d, 4d]], grouping);
+            TestAssert.Equal("23324", AreaLabelText(page));
+            var boxes = AreaLabelBoxes(page);
+            TestAssert.Equal(5, boxes.Length);
+            var second = AreaPolygon(page, "1 0 0");
+            for (int i = 0; i < 3; i++)
+                TestAssert.True(Math.Abs(boxes[2 + i].Y + boxes[2 + i].Height / 2d - (second[i].Y + second[5 - i].Y) / 2d) < .002d,
+                    "An isolated lower source value remains part of the higher layer's label span.");
+        }
+        foreach (double crossing in new[] { 0d, 3d })
+        {
+            var page = AreaPage([[null, null, null], [3d, 2d, 4d]], "stacked", crossing: crossing);
+            TestAssert.Equal("324", AreaLabelText(page));
+            TestAssert.True(!Regex.IsMatch(page.Content, @"0 0 1 rg\r?\n.*?\s+f(?:\r?\n|$)", RegexOptions.Singleline),
+                "An empty first series does not create an area between zero and a nonzero crossing.");
+        }
     }
 
     public static void PptxStackedAreaPaintKeepsIsolatedLowerContributions()
     {
         var page = AreaPage([[2d, null, 3d], [3d, 2d, 4d]], "stacked", labels: false);
         var second = AreaPolygon(page, "1 0 0");
+        TestAssert.Equal(6, AreaPolygon(page, "0 0 1").Length);
         TestAssert.True(second[5].Y > second[4].Y && second[3].Y > second[4].Y,
-            "Higher area layers stack on isolated lower source values even when that lower series has no two-point polygon.");
+            "Stacked areas preserve isolated source contributions and fill through missing slots, matching the independent Gap/Zero controls.");
         TestAssert.Equal("", AreaLabelText(page));
     }
 

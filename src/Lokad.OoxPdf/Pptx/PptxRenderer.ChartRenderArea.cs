@@ -107,12 +107,14 @@ internal sealed partial class PptxRenderer
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
             IReadOnlyList<double?> values = series[seriesIndex];
-            if (values.Count == 0)
+            if (values.Count == 0 || !values.Any(value => value is not null))
             {
                 continue;
             }
 
-            if (areaOptions.DisplayBlanksAs == PptxSceneChartDisplayBlanksAs.Gap)
+            // Office stacks source slots through missing values, even when Gap
+            // is explicitly requested. Standard areas retain separate segments.
+            if (!areaOptions.Stacked && areaOptions.DisplayBlanksAs == PptxSceneChartDisplayBlanksAs.Gap)
             {
                 int start = 0;
                 while (start < pointCount)
