@@ -260,7 +260,7 @@ internal static class PptxChartRenderingTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var collector = new DiagnosticCollector();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add, FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
