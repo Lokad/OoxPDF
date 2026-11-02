@@ -84,6 +84,9 @@ Supported within the following constraints:
   Automatic line labels default to Right; area labels default to Center.
   Measured font line boxes and authored marker extents determine baseline and
   outside clearance. Text backgrounds enclose padded text, with keys alongside.
+  Defined point labels own component defaults; a defined series owns its point
+  declarations. Fully disabled Cartesian plots suppress plot-point requests,
+  while series and pie/doughnut points retain independent label scope.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
@@ -107,8 +110,7 @@ Approximate or restricted:
   Area label layout remains approximate. Label baselines, legend-key shapes and
   spacing, polar label formatting and plot-level point-label fallback retain
   known differences from Office; restored text can still fail image thresholds.
-  Manual point-label coordinates, inherited display flags and multiline label
-  wrapping remain approximate; combinations can still omit label components.
+  Manual point-label coordinates and multiline label wrapping remain approximate.
 - Automatic chart layout, label strips/baselines, dense intervals, source crossings,
   reversed axes and manual-layout combinations retain their semantic guards.
   Qualified automatic single-line plots share axis/label placement, including
