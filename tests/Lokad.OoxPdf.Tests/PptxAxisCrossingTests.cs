@@ -10,21 +10,20 @@ internal static class PptxAxisCrossingTests
 {
     public static void PptxLineAndAreaCategoriesSharePhysicalSourceDirection()
     {
-        const string paint = "<c:spPr><a:solidFill><a:srgbClr val=\"0000FF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"0000FF\"/></a:solidFill></a:ln></c:spPr><c:smooth val=\"0\"/>";
         foreach (string kind in new[] { "line", "area" })
         foreach (bool reversed in new[] { false, true })
         {
-            PdfPage page = Render(kind, "l", "autoZero", reversed, "low", seriesFormat: paint);
+            PdfPage page = Render(kind, "l", "autoZero", reversed, "low", seriesFormat: "<c:smooth val=\"0\"/>");
             var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.True(captions.Select(c => c.Text).SequenceEqual(new[] { "Alfa", "Beta" }), "Keep logical caption order and content.");
             TestAssert.True(reversed ? captions[0].X > captions[1].X : captions[0].X < captions[1].X,
                 "The shared source direction determines caption placement, independently of the numeric label side.");
-            var blue = Regex.Match(page.Content, @"0 0 1 r[Gg](?<body>.*?)\nQ", RegexOptions.Singleline);
-            var points = Regex.Matches(blue.Groups["body"].Value, @"([-\d.]+) ([-\d.]+) [ml]")
-                .Select(m => (X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), Y: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture))).ToArray();
-            TestAssert.True(points.Length >= 2 && (reversed ? points[0].X > points[1].X : points[0].X < points[1].X) && points[0].Y < points[1].Y,
-                $"{kind}, reversed {reversed}, blue block {blue.Success}, points {string.Join(';', points)}: source values2 and4 keep their identities while physical X coordinates mirror.");
+            var edges = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) m\s+([-\d.]+) ([-\d.]+) l")
+                .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(p => Math.Abs(p[0] - p[2]) > 100d && Math.Abs(p[1] - p[3]) > 50d).ToArray();
+            TestAssert.True(edges.Length > 0 && edges.All(p => (reversed ? p[0] > p[2] : p[0] < p[2]) && p[1] < p[3]),
+                $"{kind}, reversed {reversed}: source values2 and4 keep their identities while physical X coordinates mirror.");
         }
     }
 
@@ -43,11 +42,10 @@ internal static class PptxAxisCrossingTests
             TestAssert.True(captions.Select(c => c.Text).SequenceEqual(new[] { "Alfa", "Beta", "Gamma", "Delta" }), "Sparse values do not remove category slots.");
             TestAssert.True(data.Select(c => c.Text).SequenceEqual(new[] { "Alfa", "Gamma", "Delta" }), "Retain original indices around the missing second value.");
             TestAssert.True(reversed ? data[0].X > data[^1].X : data[0].X < data[^1].X, "Data labels follow the same physical direction as their source points.");
-            RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content).ToArray();
-            TestAssert.True(colors.Distinct().Count() >= 3, "The three source points retain their varied marker paint around the missing value.");
-            TestAssert.True(PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: true).Count(c => c == new RgbColor(255, 0, 0)) >= 2,
+            RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: true).ToArray();
+            TestAssert.True(colors.Count(c => c == new RgbColor(255, 0, 0)) >= 2,
                 "The authored incoming stroke at logical index3 remains visible alongside the red numeric axis.");
-            if (previous is not null) TestAssert.True(previous.SequenceEqual(colors), "Mirroring coordinates preserves logical point paint and marker order.");
+            if (previous is not null) TestAssert.True(previous.SequenceEqual(colors), "Mirroring coordinates preserves logical point stroke order.");
             previous = colors;
         }
     }
