@@ -86,6 +86,46 @@ internal static partial class PptxScatterIntervalTests
         }
     }
 
+    public static void PptxScatterMeasurementsRetainTranslatedAndSubunitDataExtrema()
+    {
+        const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
+        var read = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlScatterSeries", flags)!;
+        foreach (bool bubble in new[] { false, true })
+        foreach (double scale in new[] { 1d, .01d })
+        foreach (double shift in new[] { -100d, 0d, 100d })
+        {
+            string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+            string kind = bubble ? "bubbleChart" : "scatterChart";
+            string Values(string name, double first, double last) => $"<c:{name}><c:numLit><c:pt idx=\"0\"><c:v>{Number(first)}</c:v></c:pt><c:pt idx=\"1\"><c:v>{Number(last)}</c:v></c:pt></c:numLit></c:{name}>";
+            string source = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea><c:{{kind}}>
+                  <c:ser><c:idx val="0"/><c:order val="0"/>
+                    {{Values("xVal", shift+scale, shift+8d*scale)}}{{Values("yVal", shift+2d*scale, shift+79d*scale)}}
+                    {{(bubble ? Values("bubbleSize", 1d, 4d) : "")}}
+                  </c:ser></c:{{kind}}></c:plotArea></c:chart></c:chartSpace>
+                """;
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            var scene = PptxTests.BuildSingleChartScene(source)!;
+            object series = read.Invoke(null, [scene.Plots.Single(), XDocument.Parse(source).Descendants(c+kind).Single(), bubble, null, true])!;
+            foreach (var axis in new[] { ("X", 1d, 8d), ("Y", 2d, 79d) })
+            {
+                var extents = (PptxRenderer.ChartValueExtents)typeof(PptxRenderer).GetMethod("GetScatter"+axis.Item1+"ValueExtents", flags)!.Invoke(null, [series])!;
+                TestAssert.True(Math.Abs(extents.Min-(shift+axis.Item2*scale))<1e-10d && Math.Abs(extents.Max-(shift+axis.Item3*scale))<1e-10d,
+                    "Measured extrema follow source translation/scaling without inserting zero or a unit-sized range.");
+            }
+        }
+    }
+
+    public static void PptxPointAxisFallbackOwnsLegacyZeroAndUnitBounds()
+    {
+        var reader = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlBubbleChartValueAxisExtents", BindingFlags.NonPublic|BindingFlags.Static)!;
+        foreach (var test in new[] { (90d, 99d, 0d, 99d), (.01d, .08d, 0d, 1d), (-8d, -1d, -8d, 1d), (-3d, 2d, -3d, 2d) })
+        {
+            var actual = (PptxRenderer.ChartValueExtents)reader.Invoke(null, [null, null, new PptxRenderer.ChartValueExtents(test.Item1,test.Item2), 5d, true])!;
+            TestAssert.Equal(new PptxRenderer.ChartValueExtents(test.Item3,test.Item4), actual);
+        }
+    }
+
     private static PdfPage Render(bool bubble, double xMin, double yMin, double yMax, bool reverseX = false, bool reverseY = false,
         string? labelPosition = null, double? horizontalCrossing = null, double? verticalCrossing = null, bool labels = false,
         string? crossBetween = null, bool verticalMaximum = false)

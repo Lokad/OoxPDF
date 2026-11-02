@@ -76,8 +76,11 @@ internal sealed partial class PptxRenderer
             [];
     }
 
-    private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
+    private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents dataExtents, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
     {
+        // Measurement keeps the actual extrema. The existing point-chart
+        // range fallback owns zero inclusion and its minimum unit-sized span.
+        ChartValueExtents fallback = new(Math.Min(0d, dataExtents.Min), Math.Max(1d, dataExtents.Max));
         return ReadSceneOrXmlChartValueAxisExtents(axis, valueAxis, fallback, useNearMaximumHeadroom: true,
             nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio,
             boundsTickTargetCount: boundsTickTargetCount, preferUnitOneOverTwo: preferUnitOneOverTwo);

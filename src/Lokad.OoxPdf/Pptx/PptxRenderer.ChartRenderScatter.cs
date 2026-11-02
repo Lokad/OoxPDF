@@ -13,26 +13,16 @@ internal sealed partial class PptxRenderer
 {
     private static ChartValueExtents GetScatterXValueExtents(IReadOnlyList<ScatterSeries> series)
     {
-        double maxX = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.X));
-        double minX = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.X));
+        double maxX = series.SelectMany(item => item.Points).Max(point => point.X);
+        double minX = series.SelectMany(item => item.Points).Min(point => point.X);
         return new ChartValueExtents(minX, maxX);
     }
 
     private static ChartValueExtents GetScatterYValueExtents(IReadOnlyList<ScatterSeries> series)
     {
-        double maxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
-        double minY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
+        double maxY = series.SelectMany(item => item.Points).Max(point => point.Y);
+        double minY = series.SelectMany(item => item.Points).Min(point => point.Y);
         return new ChartValueExtents(minY, maxY);
-    }
-
-    private static ChartValueExtents GetBubbleXValueExtents(IReadOnlyList<ScatterSeries> series)
-    {
-        return GetScatterXValueExtents(series);
-    }
-
-    private static ChartValueExtents GetBubbleYValueExtents(IReadOnlyList<ScatterSeries> series)
-    {
-        return GetScatterYValueExtents(series);
     }
 
     private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions)
