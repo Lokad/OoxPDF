@@ -74,8 +74,9 @@ Supported within the following constraints:
   retain their own text clipping region outside the data plot.
   Area labels share category-point text, links and formatting with line labels,
   using the center of each standard, stacked or percentage layer. Sparse source
-  values retain labels; stacked areas preserve zero slots through missing values,
-  including an explicitly requested Gap, as observed in Office.
+  values retain labels; stacked areas preserve and label zero slots through
+  missing values, including an explicitly requested Gap, as observed in Office.
+  Standard areas using Zero also label missing slots as zero; Gap retains holes.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 

@@ -63,18 +63,19 @@ internal static partial class PptxChartLabelDefaultsTests
         foreach (string grouping in new[] { "standard", "stacked", "percentStacked" })
         {
             var page = AreaPage([[2d, null, 3d], [3d, 2d, 4d]], grouping);
-            TestAssert.Equal("23324", AreaLabelText(page));
+            TestAssert.Equal(grouping == "standard" ? "23324" : "203324", AreaLabelText(page));
             var boxes = AreaLabelBoxes(page);
-            TestAssert.Equal(5, boxes.Length);
+            int firstLabels = grouping == "standard" ? 2 : 3;
+            TestAssert.Equal(firstLabels + 3, boxes.Length);
             var second = AreaPolygon(page, "1 0 0");
             for (int i = 0; i < 3; i++)
-                TestAssert.True(Math.Abs(boxes[2 + i].Y + boxes[2 + i].Height / 2d - (second[i].Y + second[5 - i].Y) / 2d) < .002d,
+                TestAssert.True(Math.Abs(boxes[firstLabels + i].Y + boxes[firstLabels + i].Height / 2d - (second[i].Y + second[5 - i].Y) / 2d) < .002d,
                     "An isolated lower source value remains part of the higher layer's label span.");
         }
         foreach (double crossing in new[] { 0d, 3d })
         {
             var page = AreaPage([[null, null, null], [3d, 2d, 4d]], "stacked", crossing: crossing);
-            TestAssert.Equal("324", AreaLabelText(page));
+            TestAssert.Equal("000324", AreaLabelText(page));
             var first = AreaPolygon(page, "0 0 1");
             var second = AreaPolygon(page, "1 0 0");
             TestAssert.True(second.TakeLast(3).All(p => p.Y == first[0].Y),

@@ -71,14 +71,19 @@ internal sealed partial class PptxRenderer
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         for (int seriesIndex = 0; seriesIndex < denseValueSeries.Count; seriesIndex++)
         {
-            context.CancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<double?> values = denseValueSeries[seriesIndex];
             for (int i = 0; i < values.Count; i++)
             {
-                if (values[i] is not double value)
+                context.CancellationToken.ThrowIfCancellationRequested();
+                double value;
+                if (values[i] is { } sourceValue) value = sourceValue;
+                else if (areaOptions is { } missingArea && (missingArea.Stacked || missingArea.DisplayBlanksAs == PptxSceneChartDisplayBlanksAs.Zero))
                 {
-                    continue;
+                    // Zero-valued logical slots are visible labels in Office;
+                    // retain the absent cached point in source inspection.
+                    value = 0d;
                 }
+                else continue;
 
                 double pointX = ChartCategoryToPlotCoordinate(i, pointCount, plotBox.X, plotBox.Width, categoryPointsOnTickMarks, categoryAxisReversed);
                 double pointY = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
@@ -99,8 +104,8 @@ internal sealed partial class PptxRenderer
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, colorMap, effectiveOptions);
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(i, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
-                string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
+                bool hasPoint = densePointIndexes[seriesIndex].TryGetValue(i, out ChartIndexedNumberPoint point);
+                string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(hasPoint ? point.Index : i, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
                     ChartLineAppearance? appearance = pointAppearance?.Invoke(i) ?? seriesAppearance?[seriesIndex];
