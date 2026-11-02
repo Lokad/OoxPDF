@@ -461,6 +461,32 @@ internal sealed partial class PptxRenderer
         return TryBuildManualPlotLayout(PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml), frame, defaultPlotBox, out plotLayout);
     }
 
+    private static ChartPlotLayout CenterCartesianInnerFactorPlot(PptxSceneChartManualLayout source, ChartFrameBox frame, ChartPlotLayout layout)
+    {
+        if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner)
+            return layout;
+
+        // Office positions an authored inner rectangle around the frame center,
+        // then applies factor offsets and admits the rectangle inside the frame.
+        // Its origin therefore does not depend on an automatic label/title inset.
+        // Edge/mixed modes and absent sizes retain their existing placement.
+        ChartPlotBox plot = layout.PlotBox;
+        double x = plot.X;
+        double y = plot.Y;
+        if (source.XModeKind == PptxSceneChartManualLayoutMode.Factor && source.X is { } xFactor &&
+            source.WidthModeKind == PptxSceneChartManualLayoutMode.Factor && source.Width is not null)
+            x = frame.X + Math.Clamp((frame.Width - plot.Width) / 2d + xFactor * frame.Width, 0d, Math.Max(0d, frame.Width - plot.Width));
+        if (source.YModeKind == PptxSceneChartManualLayoutMode.Factor && source.Y is { } yFactor &&
+            source.HeightModeKind == PptxSceneChartManualLayoutMode.Factor && source.Height is not null)
+            y = frame.Y + Math.Clamp((frame.Height - plot.Height) / 2d - yFactor * frame.Height, 0d, Math.Max(0d, frame.Height - plot.Height));
+
+        return layout with
+        {
+            PlotBox = plot with { X = x, Y = y },
+            PlotAreaBox = layout.PlotAreaBox with { X = x, Y = y }
+        };
+    }
+
     private static bool TryBuildManualPlotLayout(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
     {
         plotLayout = default;

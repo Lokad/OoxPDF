@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -8,6 +10,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxCartesianSideTests
 {
+    public static void PptxInnerFactorPlotOriginsMatchIndependentOfficeControls()
+    {
+        string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ManualInnerPlots"));
+        using var expected = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "office-origins.json")));
+        foreach (var row in expected.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(directory, row.GetProperty("Input").GetString()!);
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString()!, Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            using var package = OoxPackage.Open(input, default);
+            var document = new PptxReader().Read(package, default);
+            var page = new PptxRenderer(new TestFaceFontResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+            bool horizontal = row.GetProperty("Horizontal").GetBoolean();
+            var lines = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) m\s+([-\d.]+) ([-\d.]+) l(?: S)?")
+                .Select(match => match.Groups.Cast<Group>().Skip(1).Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(v => horizontal
+                    ? Math.Abs(v[1] - v[3]) < .001d && Math.Abs(v[0] - v[2]) > 100d
+                    : Math.Abs(v[0] - v[2]) < .001d && Math.Abs(v[1] - v[3]) > 100d).ToArray();
+            TestAssert.Equal(1, lines.Length);
+            var line = lines[0];
+            double[] actual = horizontal
+                ? [page.Height - line[1], Math.Min(line[0], line[2]), Math.Max(line[0], line[2])]
+                : [line[0], page.Height - Math.Max(line[1], line[3]), page.Height - Math.Min(line[1], line[3])];
+            double[] office = row.GetProperty("OfficeAxis").EnumerateArray().Select(value => value.GetDouble()).ToArray();
+            for (int i = 0; i < actual.Length; i++)
+                TestAssert.True(Math.Abs(actual[i] - office[i]) < .002d,
+                    $"{Path.GetFileName(input)} axis coordinate {i}: {actual[i]} differs from Office {office[i]}.");
+        }
+    }
+
     public static void PptxPrimaryValueAxisLabelsPaintOnceOnTheirSelectedSide()
     {
         foreach (bool right in new[] { false, true })

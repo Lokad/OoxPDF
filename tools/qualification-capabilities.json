@@ -1,4 +1,27 @@
 {
+  "pptx-inner-factor-origin": [
+    "PptxInnerFactorPlotOriginsMatchIndependentOfficeControls",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+    "PptxSyntheticAreaChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticRadarChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticPieChartManualPlotBoxUsesPolarPath",
+    "PptxScenePreservesChartManualLayoutNumericOptionTokens",
+    "PptxSceneAbsentChartManualLayoutHasUnknownDefaults",
+    "PptxLegendlessLineEmptyManualLayoutKeepsAutomaticGeometry",
+    "PptxChartManualLayoutSeparatesPresenceFromGeometryValues",
+    "PptxSyntheticChartManualLayoutEdgeModesRender",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithManualBoxUseOfficeSparseTicks",
+    "PptxAutomaticTitlePlacementIgnoresManualPlotBox",
+    "PptxSyntheticChartLegendManualBoxDrivesPlacement",
+    "PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts",
+    "PptxSyntheticLineAndPieChartsRenderNativeCharts",
+    "PptxSyntheticScatterChartConsumesChartWideDataLabelManualBox",
+    "PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles",
+    "PptxLineAndAreaDataFollowSourceCategorySlots"
+  ],
   "pptx-chart-slot-storage": [
     "PptxSparseChartConstructionAdmissionFollowsSlotExpansion",
     "PptxSparseChartFramesShareOneConstructionWindow",

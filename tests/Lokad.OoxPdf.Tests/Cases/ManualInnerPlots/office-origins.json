@@ -1,0 +1,115 @@
+{
+  "Scope": "Independent PowerPoint16 PDF value-axis endpoints in top-left points; position only, no full visual parity claim.",
+  "Rows": [
+    {
+      "Input": "factor-zero.pptx",
+      "InputSha256": "CCB61FE98408D77BB8BB34662991AF588076ABFDE236DD2E255556586A415531",
+      "Horizontal": false,
+      "OfficeAxis": [
+        151.1999969482422,
+        96.48001098632812,
+        407.52001953125
+      ],
+      "OfficePdfSha256": "D2F54EE423C87CDBA7ACF5A1B0F628B3B1872AC565F9827300C036019E9A9112"
+    },
+    {
+      "Input": "factor-small.pptx",
+      "InputSha256": "58A746A43ACD97AEB96F27747952744540FFA7E2368363A8B2F89FCF5E7EC9F6",
+      "Horizontal": false,
+      "OfficeAxis": [
+        180.0,
+        109.44000244140625,
+        420.4800109863281
+      ],
+      "OfficePdfSha256": "B79451825E7354D1CA597453DC9FF9355A402692075225ED750AF3DA4E3EBDF9"
+    },
+    {
+      "Input": "factor-negative.pptx",
+      "InputSha256": "9ABB9EB85988415D75A58DCAC65C92560D80BD7E528D5213BD1520FD5AB8D521",
+      "Horizontal": false,
+      "OfficeAxis": [
+        122.4000015258789,
+        83.51998901367188,
+        394.55999755859375
+      ],
+      "OfficePdfSha256": "5D86382B981BB1C27E503BF4CF405D87778E1B9D23F23AC6B567AC631A7DDAF6"
+    },
+    {
+      "Input": "factor-narrow-zero.pptx",
+      "InputSha256": "72C4AA285BB7BB7D1F5D8E91E92AEA54988530BD330A5A2A91B859961654A07A",
+      "Horizontal": false,
+      "OfficeAxis": [
+        216.0,
+        144.0,
+        360.0
+      ],
+      "OfficePdfSha256": "5165E990BFCD16116CAFCB4712E7BA262336A059F8C42976299413A40135E44F"
+    },
+    {
+      "Input": "factor-narrow-small.pptx",
+      "InputSha256": "11ACF746F14F504A599B36D0F2F71DFC021AF71340C9FF937B9475C9CDB88103",
+      "Horizontal": false,
+      "OfficeAxis": [
+        244.8000030517578,
+        156.95999145507812,
+        372.96002197265625
+      ],
+      "OfficePdfSha256": "81CB19120B939C577534DADD0F5740F1496F5644ABE6D709098BDB0B77DA74DE"
+    },
+    {
+      "Input": "horizontal-factor-small.pptx",
+      "InputSha256": "6E9AF661D95F174AC9202C49F8CFEEC7E66AFBFC6D1F02FD7F5837E22B1AF95C",
+      "Horizontal": true,
+      "OfficeAxis": [
+        420.4800109863281,
+        180.0,
+        741.5999755859375
+      ],
+      "OfficePdfSha256": "346A98003529043C6307DEDB43A8EE61B824228D5DD408AC54135004809615A4"
+    },
+    {
+      "Input": "line-factor-small.pptx",
+      "InputSha256": "3E8D51FF4A0E44C7E1C7E423DA5BA7E825760885F3189F5B5C364EC705E12CF7",
+      "Horizontal": false,
+      "OfficeAxis": [
+        180.0,
+        109.44000244140625,
+        420.4800109863281
+      ],
+      "OfficePdfSha256": "EF89528045633665B95B84D7F01C586F6B10592416E41A1C4578D6C2EE94B873"
+    },
+    {
+      "Input": "area-factor-small.pptx",
+      "InputSha256": "C7080B619D0170FCF067EF51E1F1CB1517CB399AEA4A69F232D333695D9B0065",
+      "Horizontal": false,
+      "OfficeAxis": [
+        180.0,
+        109.44000244140625,
+        420.4800109863281
+      ],
+      "OfficePdfSha256": "29DD8C7B74BB3510A628D65C38CF986B90C480494BE7DE8394773AB0672D0964"
+    },
+    {
+      "Input": "scatter-factor-small.pptx",
+      "InputSha256": "7A462276A76817DDEAE4F11E7C885B42D32596BA09FBA38EBE394B29F368E91A",
+      "Horizontal": false,
+      "OfficeAxis": [
+        180.0,
+        109.44000244140625,
+        420.4800109863281
+      ],
+      "OfficePdfSha256": "A9A6AF5A26CA3A3CBA415D6C4939C48CFAA1D9120756B4C6C80E2AAC6136576E"
+    },
+    {
+      "Input": "column-interval-manual.pptx",
+      "InputSha256": "304111847B90254E609FBB36F57DAD9543B8FE0DCC0A64A7E2466B9E42896352",
+      "Horizontal": false,
+      "OfficeAxis": [
+        230.39999389648438,
+        139.67999267578125,
+        450.7200012207031
+      ],
+      "OfficePdfSha256": "518CC85EE605EE4248A093D812FB37E9DCF859ACD96DCADA213923BA01C267F8"
+    }
+  ]
+}
