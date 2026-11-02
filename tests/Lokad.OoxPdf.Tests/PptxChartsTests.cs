@@ -3249,7 +3249,7 @@ internal static class PptxChartsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         var labelMatrices = Regex.Matches(pdf, @"1 0 0 1 (?<x>[0-9.]+) (?<y>[0-9.]+) Tm")
@@ -3261,7 +3261,7 @@ internal static class PptxChartsTests
             })
             .OrderBy(matrix => matrix.X)
             .ToArray();
-        TestAssert.True(labelMatrices.Length >= 2, "Expected two line data-label text matrices.");
+        TestAssert.Equal(2, labelMatrices.Length);
         TestAssert.True(labelMatrices[0].Y > labelMatrices[1].Y,
             "Line data-label anchors should follow maxMin value-axis orientation.");
     }
