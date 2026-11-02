@@ -77,7 +77,10 @@ internal sealed partial class PptxRenderer
         double ascent, double height, double markerRadius, double fontSize)
     {
         double centeredBaseline = pointY + height / 2d - ascent;
-        double horizontalGap = fontSize * PptxChartMetricRules.CategoryPointLabelHorizontalGapFactor + markerRadius;
+        // Side clearance is measured to text; its frame already includes the
+        // horizontal inset. Top/bottom similarly use baseline line metrics.
+        double horizontalGap = fontSize * PptxChartMetricRules.CategoryPointLabelHorizontalGapFactor + markerRadius
+            - PptxChartMetricRules.CategoryPointLabelHorizontalTextPadding;
         double verticalGap = fontSize * PptxChartMetricRules.CategoryPointLabelVerticalGapFactor + markerRadius;
         return position switch
         {
