@@ -260,7 +260,12 @@ internal static class PptxChartRenderingTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var collector = new DiagnosticCollector();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add, FontResolver = new TestFaceFontResolver() });
+        var requestedFonts = new List<FontRequest>();
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            DiagnosticSink = collector.Add,
+            FontResolver = new TestFaceFontResolver(requestedFonts.Add)
+        });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         OoxPackage package = OoxPackage.Open(input, CancellationToken.None);
@@ -337,7 +342,12 @@ internal static class PptxChartRenderingTests
             "Expected per-label custom rich text to be emitted in the chart data label ToUnicode map.");
         TestAssert.Contains("0 0.4 0.667 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 8\.04 Tf"), "Expected second-series data labels to consume the series-level font size.");
-        TestAssert.Contains("/ItalicAngle -12", pdf);
+        // The portable face has regular outlines. Check the chart's style requests
+        // rather than an installed Arial file's particular post-table angle.
+        TestAssert.True(requestedFonts.Any(request => request.FamilyName == "Arial" && request.Italic && !request.Bold),
+            "The italic legend and custom label run must request the italic face.");
+        TestAssert.True(requestedFonts.Any(request => request.FamilyName == "Arial" && request.Italic && request.Bold),
+            "The bold-italic series labels must request both styles together.");
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
         TestAssert.Contains("/CLD1 9.96 Tf", pdf);
         TestAssert.Contains("1 0 0 1 " + labelShape.Groups["x"].Value + " 357.525 Tm", pdf);

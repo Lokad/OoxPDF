@@ -80,6 +80,7 @@
     "PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds"
   ],
   "pptx-chart-oracle-portability": [
+    "PptxSyntheticLineAndPieChartsRenderNativeCharts",
     "PptxSyntheticChartAxisTickLabelOptionsRender",
     "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics",
     "PptxSyntheticBottomLegendBaselineRidesFrame"
