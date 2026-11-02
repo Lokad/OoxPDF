@@ -369,12 +369,15 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1, null);
 
-    private static double ChartCategoryToPlotCoordinate(int index, int count, double origin, double length, bool onTickMarks) =>
-        onTickMarks && count > 1
-            ? origin + length * index / (count - 1)
-            : origin + length * (index + 0.5d) / count;
+    private static double ChartCategoryToPlotCoordinate(int index, int count, double origin, double length, bool onTickMarks, bool reversed = false)
+    {
+        double offset = onTickMarks && count > 1
+            ? length * index / (count - 1)
+            : length * (index + 0.5d) / count;
+        return origin + (reversed ? length - offset : offset);
+    }
 
-    private static void DrawCartesianChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark, double tickFontSize, bool onTickMarks, bool topSide = false)
+    private static void DrawCartesianChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark, double tickFontSize, bool onTickMarks, bool topSide = false, bool reversed = false)
     {
         if (pointCount <= 0)
         {
@@ -387,7 +390,7 @@ internal sealed partial class PptxRenderer
         double[] edges = new double[Math.Max(2, onTickMarks ? pointCount : pointCount + 1)];
         for (int i = 0; i < edges.Length; i++)
         {
-            edges[i] = ChartCategoryToPlotCoordinate(i, edges.Length, plotX, plotWidth, onTickMarks: true);
+            edges[i] = ChartCategoryToPlotCoordinate(i, edges.Length, plotX, plotWidth, onTickMarks: true, reversed);
         }
 
         StrokeMajorTickSegments(graphics, edges, axisY, verticalSegments: true, outwardIsLowSide: !topSide, majorTickMark, tickFontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);

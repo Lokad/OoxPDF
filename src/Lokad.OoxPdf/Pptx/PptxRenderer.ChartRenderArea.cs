@@ -26,7 +26,8 @@ internal sealed partial class PptxRenderer
         ChartValueAxisRenderOptions valueAxisOptions,
         ChartAxesStyle axesStyle,
         ChartShapeStyle plotAreaStyle,
-        ChartValueExtents valueExtents)
+        ChartValueExtents valueExtents,
+        bool categoryAxisReversed = false)
     {
         bool stacked = areaOptions.Stacked;
         bool percentStacked = areaOptions.PercentStacked;
@@ -73,7 +74,7 @@ internal sealed partial class PptxRenderer
                     () => DrawGridlines(major: true, gridlineStyle.Major));
             }
 
-            RenderAreaChartSeries(graphics, theme, colorMap, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, displayBlanksAs, categoryPointsOnTickMarks, valueAxisCrossingY);
+            RenderAreaChartSeries(graphics, theme, colorMap, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, displayBlanksAs, categoryPointsOnTickMarks, valueAxisCrossingY, categoryAxisReversed);
 
             ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
             ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
@@ -102,7 +103,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs, bool categoryPointsOnTickMarks, double crossingY)
+    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs, bool categoryPointsOnTickMarks, double crossingY, bool categoryAxisReversed)
     {
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double[] lower = new double[pointCount];
@@ -132,7 +133,7 @@ internal sealed partial class PptxRenderer
 
                     if (end - start >= 2)
                     {
-                        RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, start, end, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks, crossingY);
+                        RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, start, end, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks, crossingY, categoryAxisReversed);
                     }
 
                     start = Math.Max(end, start + 1);
@@ -141,11 +142,11 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, 0, pointCount, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks, crossingY);
+            RenderAreaChartSeriesSegment(graphics, theme, colorMap, chartPalette, plotBox, values, 0, pointCount, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series, categoryPointsOnTickMarks, crossingY, categoryAxisReversed);
         }
     }
 
-    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<double?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<double?>> allSeries, bool categoryPointsOnTickMarks, double crossingY)
+    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<double?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<double?>> allSeries, bool categoryPointsOnTickMarks, double crossingY, bool categoryAxisReversed)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -162,7 +163,7 @@ internal sealed partial class PptxRenderer
         var lowerPoints = new (double X, double Y)[segmentPointCount];
         for (int i = startIndex; i < endIndex; i++)
         {
-            double pointX = ChartCategoryToPlotCoordinate(i, pointCount, plotX, plotWidth, categoryPointsOnTickMarks);
+            double pointX = ChartCategoryToPlotCoordinate(i, pointCount, plotX, plotWidth, categoryPointsOnTickMarks, categoryAxisReversed);
             double value = i < values.Count && values[i] is { } indexedValue ? indexedValue : 0d;
             double lowerValue = stacked ? lower[i] : 0d;
             double positiveTotal = GetCategoryPositiveTotal(allSeries, i, percentStacked);

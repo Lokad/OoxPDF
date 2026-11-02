@@ -8,6 +8,48 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxAxisCrossingTests
 {
+    public static void PptxLineAndAreaCategoriesSharePhysicalSourceDirection()
+    {
+        const string paint = "<c:spPr><a:solidFill><a:srgbClr val=\"0000FF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"0000FF\"/></a:solidFill></a:ln></c:spPr><c:smooth val=\"0\"/>";
+        foreach (string kind in new[] { "line", "area" })
+        foreach (bool reversed in new[] { false, true })
+        {
+            PdfPage page = Render(kind, "l", "autoZero", reversed, "low", seriesFormat: paint);
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(captions.Select(c => c.Text).SequenceEqual(new[] { "Alfa", "Beta" }), "Keep logical caption order and content.");
+            TestAssert.True(reversed ? captions[0].X > captions[1].X : captions[0].X < captions[1].X,
+                "The shared source direction determines caption placement, independently of the numeric label side.");
+            var blue = Regex.Match(page.Content, @"0 0 1 r[Gg](?<body>.*?)\nQ", RegexOptions.Singleline);
+            var points = Regex.Matches(blue.Groups["body"].Value, @"([-\d.]+) ([-\d.]+) [ml]")
+                .Select(m => (X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), Y: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture))).ToArray();
+            TestAssert.True(points.Length >= 2 && (reversed ? points[0].X > points[1].X : points[0].X < points[1].X) && points[0].Y < points[1].Y,
+                "Source values2 and4 keep their identities while the line/area's physical X coordinates mirror.");
+        }
+    }
+
+    public static void PptxLineCategoryDirectionKeepsSparseLabelsAndPointPaint()
+    {
+        const string paint = "<c:marker><c:symbol val=\"square\"/><c:size val=\"7\"/></c:marker><c:smooth val=\"0\"/><c:dPt><c:idx val=\"2\"/><c:marker><c:symbol val=\"square\"/><c:spPr><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></c:spPr></c:marker></c:dPt>";
+        const string labels = "<c:dLbls><c:dLblPos val=\"t\"/><c:showVal val=\"0\"/><c:showCatName val=\"1\"/></c:dLbls>";
+        RgbColor[]? previous = null;
+        foreach (bool reversed in new[] { false, true })
+        {
+            PdfPage page = Render("line", "l", "autoZero", reversed, "low", seriesFormat: paint, plotFormat: labels, sparse: true);
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            var data = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CLD", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(captions.Select(c => c.Text).SequenceEqual(new[] { "Alfa", "Beta", "Gamma", "Delta" }), "Sparse values do not remove category slots.");
+            TestAssert.True(data.Select(c => c.Text).SequenceEqual(new[] { "Alfa", "Gamma", "Delta" }), "Retain original indices around the missing second value.");
+            TestAssert.True(reversed ? data[0].X > data[^1].X : data[0].X < data[^1].X, "Data labels follow the same physical direction as their source points.");
+            RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content).ToArray();
+            TestAssert.True(colors.Contains(new RgbColor(255, 0, 0)), "The authored marker at logical index2 remains visible.");
+            if (previous is not null) TestAssert.True(previous.SequenceEqual(colors), "Mirroring coordinates preserves logical point paint and marker order.");
+            previous = colors;
+        }
+    }
+
     public static void PptxNumericCrossingOwnsPairedCategorySide()
     {
         // Independent Office matrix: numeric crosses owns the stroke/next-to
@@ -81,7 +123,7 @@ internal static class PptxAxisCrossingTests
             "Measurement and painting share the numeric side; explicit low/high labels remain independent.");
     }
 
-    private static PdfPage Render(string kind, string position, string? crossing, bool reversed, string labels, string? fallback = null)
+    private static PdfPage Render(string kind, string position, string? crossing, bool reversed, string labels, string? fallback = null, string? seriesFormat = null, string? plotFormat = null, bool sparse = false)
     {
         string plot = kind == "column" ? "bar" : kind;
         string category = fallback == "date" ? "dateAx" : "catAx";
@@ -91,8 +133,8 @@ internal static class PptxAxisCrossingTests
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{plot}}Chart>
                 {{(kind == "column" ? "<c:barDir val=\"col\"/><c:grouping val=\"clustered\"/>" : "")}}
-                <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>Alfa</c:v></c:pt><c:pt idx="1"><c:v>Beta</c:v></c:pt></c:strLit></c:cat>
-                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
+                <c:ser>{{seriesFormat}}<c:cat><c:strLit><c:pt idx="0"><c:v>Alfa</c:v></c:pt><c:pt idx="1"><c:v>Beta</c:v></c:pt>{{(sparse ? "<c:pt idx=\"2\"><c:v>Gamma</c:v></c:pt><c:pt idx=\"3\"><c:v>Delta</c:v></c:pt>" : "")}}</c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt>{{(sparse ? "<c:pt idx=\"2\"><c:v>4</c:v></c:pt><c:pt idx=\"3\"><c:v>1</c:v></c:pt>" : "<c:pt idx=\"1\"><c:v>4</c:v></c:pt>")}}</c:numLit></c:val></c:ser>{{plotFormat}}
                 <c:axId val="1"/><c:axId val="2"/></c:{{plot}}Chart>
                 <c:{{category}}><c:axId val="1"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling>
                   <c:axPos val="b"/><c:crossAx val="{{(fallback == "unpaired" ? "other" : "2")}}"/><c:crosses val="autoZero"/></c:{{category}}>

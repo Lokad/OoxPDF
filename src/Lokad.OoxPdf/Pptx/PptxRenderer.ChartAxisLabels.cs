@@ -19,7 +19,7 @@ internal sealed partial class PptxRenderer
         return lineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (offsetScale - 1d);
     }
 
-    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null)
+    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null, bool categoryAxisReversed = false)
     {
         if (labels.Count == 0)
         {
@@ -70,7 +70,7 @@ internal sealed partial class PptxRenderer
                 foreach (var part in rotatedParts)
                 {
                     if (part.Text.Length == 0) continue;
-                    double center = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks);
+                    double center = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
                     double axisY = verticalAxisY ?? plotBox.Y;
                     double legacyHeight = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
                     double baselineDistance = categoryLabelsTopSide
@@ -118,7 +118,7 @@ internal sealed partial class PptxRenderer
                 // Skipped categories leave their label space available to the
                 // next visible tick. Keep source tick positions unchanged.
                 width = slotWidth * Math.Min(tickLabelSkip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
-                double labelCenterX = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks);
+                double labelCenterX = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
                 x = labelCenterX - width / 2d;
                 double axisY = verticalAxisY ?? plotBox.Y;
                 y = categoryLabelsTopSide

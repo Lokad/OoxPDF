@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartLineAppearance> seriesAppearance, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool categoryPointsOnTickMarks, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false, Func<int, ChartLineAppearance>? pointAppearance = null)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, ChartLinePlotOptions lineOptions, IReadOnlyList<ChartLineAppearance> seriesAppearance, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool categoryPointsOnTickMarks, double categoryTickFontSize, int? chartStyleId, bool categoryTicksTopSide = false, Func<int, ChartLineAppearance>? pointAppearance = null, bool categoryAxisReversed = false)
     {
         bool stacked = lineOptions.Stacked;
         bool percentStacked = lineOptions.PercentStacked;
@@ -141,7 +141,7 @@ internal sealed partial class PptxRenderer
                         }
                     }
 
-                    double pointX = ChartCategoryToPlotCoordinate(i, pointCount, plotX, plotWidth, categoryPointsOnTickMarks);
+                    double pointX = ChartCategoryToPlotCoordinate(i, pointCount, plotX, plotWidth, categoryPointsOnTickMarks, categoryAxisReversed);
                     double positiveTotal = GetCategoryPositiveTotal(denseSeries, i, percentStacked);
                     double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
                     double plottedValue = stacked ? lower[i] + normalizedValue : value;
@@ -209,7 +209,7 @@ internal sealed partial class PptxRenderer
         if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
         {
             SetChartStroke(graphics, categoryAxisStroke);
-            DrawCartesianChartCategoryAxisMajorTicks(graphics, plotX, plotWidth, pointCount, valueAxisCrossingY, axesStyle.CategoryAxisMajorTickMark, categoryTickFontSize, categoryPointsOnTickMarks, categoryTicksTopSide);
+            DrawCartesianChartCategoryAxisMajorTicks(graphics, plotX, plotWidth, pointCount, valueAxisCrossingY, axesStyle.CategoryAxisMajorTickMark, categoryTickFontSize, categoryPointsOnTickMarks, categoryTicksTopSide, categoryAxisReversed);
         }
     }
 

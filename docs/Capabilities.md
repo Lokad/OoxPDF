@@ -111,6 +111,9 @@ Approximate or restricted:
   origins across labels, tick marks and grids, including an automatic lower bound
   anchored to an authored maximum and major unit. Automatic step fitting remains
   approximate.
+  Line/area captions, data points and line data labels share category direction
+  while retaining source indices and point formatting. Bar/column and composed
+  category-direction behavior remains approximate.
 - Single line/area plots share measured numeric strips, title clearance, bottom
   legend packing and source caption crossings. Overlays retain plot space;
   authored/composed frames and unsupported scales retain their fallbacks. Range
