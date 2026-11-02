@@ -74,6 +74,23 @@ internal static partial class PptxScatterIntervalTests
         }
     }
 
+    public static void PptxScatterBetweenCrossingsKeepValueUnitsAndMaximumOwnership()
+    {
+        foreach (bool bubble in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string? between in new[] { null, "midCat", "between" })
+        {
+            var axes = Axes(Render(bubble, .5d, 7d, 103d, reversed, reversed,
+                horizontalCrossing: 50d, verticalCrossing: 4d, crossBetween: between));
+            double xValue = between == "between" ? 3.5d : 4d;
+            double yValue = between == "between" ? 49.5d : 50d;
+            Near(axes.Left + (reversed ? 1d-(xValue-.5d)/8d : (xValue-.5d)/8d) * (axes.Right-axes.Left), axes.VerticalX);
+            Near(axes.Bottom + (reversed ? 1d-(yValue-7d)/96d : (yValue-7d)/96d) * (axes.Top-axes.Bottom), axes.HorizontalY);
+            var maximum = Axes(Render(bubble, .5d, 7d, 103d, reversed, reversed, crossBetween: between, verticalMaximum: true));
+            Near(reversed ? maximum.Left : maximum.Right, maximum.VerticalX);
+        }
+    }
+
     private static (double Left, double Right, double Bottom, double Top, double HorizontalY, double VerticalX) Axes(PdfPage page)
     {
         var lines = PptxColumnIntervalTests.Lines(page);

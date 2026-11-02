@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Fonts;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -15,6 +16,15 @@ internal sealed partial class PptxRenderer
         PptxSceneChartAxisCrosses crosses = axis.SceneAxis?.CrossesKind ??
             PptxSceneBuilder.ParseChartAxisCrosses(PptxSceneBuilder.ReadChartElementValue(axis.XmlAxis, "crosses"));
         bool maximum = explicitCrossing is null && crosses == PptxSceneChartAxisCrosses.Maximum;
+        bool numeric = axis.SceneAxis is { } scene ? scene.AxisKind == PptxSceneChartAxisKind.Value
+            : axis.XmlAxis?.Name == ChartNamespace + "valAx";
+        PptxSceneChartAxisCrossBetween between = axis.SceneAxis?.CrossBetweenKind ??
+            PptxSceneBuilder.ParseChartAxisCrossBetween(PptxSceneBuilder.ReadChartElementValue(axis.XmlAxis, "crossBetween"));
+        // On numeric pairs, explicit between uses half a value unit, even when
+        // the source range, data or major unit changes. Omitted/midpoint modes
+        // keep the numeric crossing; min/max enums still own their range edge.
+        bool edge = explicitCrossing is null && crosses is PptxSceneChartAxisCrosses.Minimum or PptxSceneChartAxisCrosses.Maximum;
+        if (numeric && between == PptxSceneChartAxisCrossBetween.Between && !edge) crossing -= .5d;
         double ratio = GetChartValuePlotRatio(extents, crossing, reversed);
         // Office admits reversed upper numeric next-to captions to the low band;
         // the stroke keeps its numeric coordinate and explicit low/high still win.

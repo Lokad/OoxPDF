@@ -1,5 +1,6 @@
 {
   "pptx-scatter-direction": [
+    "PptxScatterBetweenCrossingsKeepValueUnitsAndMaximumOwnership",
     "PptxScatterDirectionsMoveDataLabelsWithTheirPoints",
     "PptxScatterDirectionsShareCrossingsLabelsAndTickSides",
     "PptxBubbleMaxRadiusMatchesOfficePlotRatio",

@@ -87,7 +87,8 @@ internal static partial class PptxScatterIntervalTests
     }
 
     private static PdfPage Render(bool bubble, double xMin, double yMin, double yMax, bool reverseX = false, bool reverseY = false,
-        string? labelPosition = null, double? horizontalCrossing = null, double? verticalCrossing = null, bool labels = false)
+        string? labelPosition = null, double? horizontalCrossing = null, double? verticalCrossing = null, bool labels = false,
+        string? crossBetween = null, bool verticalMaximum = false)
     {
         string kind = bubble ? "bubbleChart" : "scatterChart";
         string chart = $$"""
@@ -98,8 +99,8 @@ internal static partial class PptxScatterIntervalTests
                 {{(bubble ? "<c:bubbleSize><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt><c:pt idx=\"1\"><c:v>3</c:v></c:pt></c:numLit></c:bubbleSize>" : "")}}
                 {{(labels ? "<c:dLbls><c:showLegendKey val=\"0\"/><c:showVal val=\"1\"/><c:showCatName val=\"0\"/><c:showSerName val=\"0\"/><c:showPercent val=\"0\"/><c:showBubbleSize val=\"0\"/></c:dLbls>" : "")}}
               </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
-              {{Axis("1", "b", "2", xMin.ToString(CultureInfo.InvariantCulture), "8.5", "1.25", "00FF00", reverseX, labelPosition, horizontalCrossing)}}
-              {{Axis("2", "l", "1", yMin.ToString(CultureInfo.InvariantCulture), yMax.ToString(CultureInfo.InvariantCulture), "25", "0000FF", reverseY, labelPosition, verticalCrossing)}}
+              {{Axis("1", "b", "2", xMin.ToString(CultureInfo.InvariantCulture), "8.5", "1.25", "00FF00", reverseX, labelPosition, horizontalCrossing, crossBetween)}}
+              {{Axis("2", "l", "1", yMin.ToString(CultureInfo.InvariantCulture), yMax.ToString(CultureInfo.InvariantCulture), "25", "0000FF", reverseY, labelPosition, verticalCrossing, crossBetween, verticalMaximum)}}
             </c:plotArea></c:chart></c:chartSpace>
             """;
         using var stream = PptxTests.CreateSingleChartPackageStream(chart);
@@ -108,11 +109,12 @@ internal static partial class PptxScatterIntervalTests
     }
 
     private static string Axis(string id, string side, string cross, string min, string max, string major, string color,
-        bool reversed = false, string? labelPosition = null, double? crossing = null) => $$"""
+        bool reversed = false, string? labelPosition = null, double? crossing = null, string? crossBetween = null, bool maximum = false) => $$"""
         <c:valAx xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:axId val="{{id}}"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/><c:min val="{{min}}"/><c:max val="{{max}}"/></c:scaling>
           <c:axPos val="{{side}}"/><c:majorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="{{color}}"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
           <c:majorTickMark val="out"/>{{(labelPosition is null ? "" : $"<c:tickLblPos val=\"{labelPosition}\"/>")}}<c:crossAx val="{{cross}}"/>
-          {{(crossing is { } value ? $"<c:crossesAt val=\"{value.ToString(CultureInfo.InvariantCulture)}\"/>" : "<c:crosses val=\"autoZero\"/>")}}<c:majorUnit val="{{major}}"/>
+          {{(crossing is { } value ? $"<c:crossesAt val=\"{value.ToString(CultureInfo.InvariantCulture)}\"/>" : $"<c:crosses val=\"{(maximum ? "max" : "autoZero")}\"/>")}}
+          {{(crossBetween is null ? "" : $"<c:crossBetween val=\"{crossBetween}\"/>")}}<c:majorUnit val="{{major}}"/>
         </c:valAx>
         """;
 }
