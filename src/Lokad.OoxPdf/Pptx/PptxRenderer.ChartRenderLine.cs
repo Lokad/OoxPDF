@@ -1099,6 +1099,7 @@ internal sealed partial class PptxRenderer
 
     private static void DrawChartMarkerFill(PdfGraphicsBuilder graphics, double x, double y, PptxSceneChartMarkerSymbol symbol, double size, ChartSeriesFill fill)
     {
+        if (fill.Alpha <= .001d) return;
         if (!IsLineOnlyChartMarker(symbol))
         {
             if (fill.Alpha < 1d)

@@ -48,6 +48,12 @@ internal static partial class PptxChartLabelDefaultsTests
             TestAssert.Equal(2, MarkerRectangles(own, new RgbColor(255, 0, 0)).Length);
             TestAssert.True(MarkerRectangles(own, new RgbColor(255, 0, 0)).All(r => Math.Abs(r.Width - 5.04d) < .002d),
                 "A defined point marker owns the default size rather than borrowing the series size.");
+            string formatOnly = RedMarker.Replace("<c:symbol val=\"square\"/>", "", StringComparison.Ordinal);
+            var inherited = RenderChartPage(MarkerSource([PointMarker(1, formatOnly)], seriesSize: size));
+            double[] dimensions = MarkerRectangles(inherited, new RgbColor(255, 0, 0)).Select(r => r.Width).Order().ToArray();
+            TestAssert.Equal(2, dimensions.Length);
+            TestAssert.True(Math.Abs(dimensions[0] - (size == 7 ? 6.96d : 9.96d)) < .002d && Math.Abs(dimensions[1] - (size == 7 ? 6.96d : 18d)) < .002d,
+                "Formatting without a point symbol keeps series geometry; key bounds stay independent.");
         }
     }
 
