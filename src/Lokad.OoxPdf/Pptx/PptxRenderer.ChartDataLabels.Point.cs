@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static async ValueTask RenderLineDataLabelsAsync(
+    private static async ValueTask RenderCategoryPointDataLabelsAsync(
         PptxTheme theme,
         PptxColorMap colorMap,
         ChartColorPalette chartPalette,
@@ -34,7 +34,8 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
-        Func<int, ChartLineAppearance>? pointAppearance = null, IReadOnlyList<ChartLineAppearance>? seriesAppearance = null, bool categoryAxisReversed = false)
+        Func<int, ChartLineAppearance>? pointAppearance = null, IReadOnlyList<ChartLineAppearance>? seriesAppearance = null, bool categoryAxisReversed = false,
+        ChartAreaPlotOptions? areaOptions = null, IReadOnlyList<ChartSeriesFill?>? areaSeriesFills = null, double? areaCrossingValue = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
@@ -60,6 +61,8 @@ internal sealed partial class PptxRenderer
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
 
         int pointCount = Math.Max(1, denseValueSeries.Max(values => values.Count));
+        double[]? areaLower = areaOptions is { Stacked: true } ? new double[pointCount] : null;
+        double crossingY = ChartValueToPlotCoordinate(extents, areaCrossingValue, plotBox.Y, plotBox.Height, valueAxisReversed);
         double labelWidth = Math.Max(
             PptxChartMetricRules.CartesianDataLabelMinimumWidth,
             plotBox.Width / Math.Max(PptxChartMetricRules.LineDataLabelMinimumPointSpan, pointCount * PptxChartMetricRules.LineDataLabelPointWidthFactor));
@@ -68,6 +71,7 @@ internal sealed partial class PptxRenderer
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         for (int seriesIndex = 0; seriesIndex < denseValueSeries.Count; seriesIndex++)
         {
+            context.CancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<double?> values = denseValueSeries[seriesIndex];
             for (int i = 0; i < values.Count; i++)
             {
@@ -78,6 +82,14 @@ internal sealed partial class PptxRenderer
 
                 double pointX = ChartCategoryToPlotCoordinate(i, pointCount, plotBox.X, plotBox.Width, categoryPointsOnTickMarks, categoryAxisReversed);
                 double pointY = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
+                if (areaOptions is { } area)
+                {
+                    var span = ResolveAreaPointVerticalSpan(plotBox, extents, area, valueAxisReversed,
+                        seriesIndex, value, areaLower?[i] ?? 0d,
+                        GetCategoryPositiveTotal(denseValueSeries, i, area.PercentStacked), crossingY);
+                    pointY = (span.LowerY + span.UpperY) / 2d;
+                    if (areaLower is not null) areaLower[i] = span.UpperValue;
+                }
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
                 if (!effectiveOptions.HasVisibleContent)
                 {
@@ -93,13 +105,16 @@ internal sealed partial class PptxRenderer
                 {
                     ChartLineAppearance? appearance = pointAppearance?.Invoke(i) ?? seriesAppearance?[seriesIndex];
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
-                        ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles))
+                        ? areaOptions is not null
+                            ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
+                            : GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles))
                         : 0d;
                     double effectiveLabelWidth = Math.Max(labelWidth,
                         (await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)) + legendKeyWidth +
                         (effectiveOptions.ShowLegendKey ? fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor : 0d));
                     (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
-                        effectiveOptions.PositionKind,
+                        areaOptions is not null && effectiveOptions.PositionKind == PptxSceneChartDataLabelPosition.Unknown
+                            ? PptxSceneChartDataLabelPosition.Center : effectiveOptions.PositionKind,
                         pointX,
                         pointY,
                         effectiveLabelWidth,
@@ -110,11 +125,20 @@ internal sealed partial class PptxRenderer
                     double textWidth = labelBox.Width;
                     if (effectiveOptions.ShowLegendKey)
                     {
-                        ChartSeriesStroke stroke = appearance?.Stroke ?? ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
-                        ChartMarkerStyle marker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
-                        if (appearance is { } pointStyle && marker.Stroke is null)
-                            marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, pointStyle.MarkerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
-                        double consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke, appearance?.MarkerColor);
+                        double consumedWidth;
+                        if (areaOptions is not null)
+                        {
+                            consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize,
+                                ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, areaSeriesFills ?? [], 1d));
+                        }
+                        else
+                        {
+                            ChartSeriesStroke stroke = appearance?.Stroke ?? ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, 1.2d);
+                            ChartMarkerStyle marker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
+                            if (appearance is { } pointStyle && marker.Stroke is null)
+                                marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, pointStyle.MarkerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
+                            consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke, appearance?.MarkerColor);
+                        }
                         textX += consumedWidth;
                         textWidth = Math.Max(1d, textWidth - consumedWidth);
                         alignment = TextAlignment.Left;

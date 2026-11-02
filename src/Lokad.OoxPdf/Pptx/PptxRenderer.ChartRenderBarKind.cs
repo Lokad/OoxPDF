@@ -237,7 +237,7 @@ internal sealed partial class PptxRenderer
                         lineValueExtents,
                         categoryPointsOnTickMarks: false,
                         ReadSceneOrXmlChartTextStyle(theme, sceneChart, comboCategoryAxis.SceneAxis, chartXml, comboCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, barStyleId);
-                    await RenderLineDataLabelsAsync(
+                    await RenderCategoryPointDataLabelsAsync(
                         theme,
                         colorMap,
                         chartPalette,

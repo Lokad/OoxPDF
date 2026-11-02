@@ -140,6 +140,16 @@ internal sealed partial class PptxRenderer
                 }
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, legendTextStyle, fontResolver, ChartLegendPlacement.AreaRightLegend, fonts, preparedBox: preparedLegendBox).ConfigureAwait(false);
+                await RenderCategoryPointDataLabelsAsync(
+                    theme, colorMap, chartPalette, graphics, plotBox, areaSeriesVectors, valueExtents,
+                    valueAxisOptions.Reversed, categoryPointsOnTickMarks, seriesStrokes, [],
+                    ReadSceneOrXmlDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),
+                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),
+                    ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook, plotVisibleOnly),
+                    ReadSharedChartSeriesNames(areaPlot, areaChart, workbook), fontResolver, fonts, context,
+                    sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
+                    categoryAxisReversed: categoryAxisReversed, areaOptions: areaOptions,
+                    areaSeriesFills: seriesFills, areaCrossingValue: valueAxisOptions.CrossingValue).ConfigureAwait(false);
                 return true;
             }
         }

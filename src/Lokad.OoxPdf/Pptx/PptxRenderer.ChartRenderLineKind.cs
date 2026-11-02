@@ -125,7 +125,7 @@ internal sealed partial class PptxRenderer
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend,
                     legendTextStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts,
                     preparedBox: preparedLegendBox).ConfigureAwait(false);
-                await RenderLineDataLabelsAsync(
+                await RenderCategoryPointDataLabelsAsync(
                     theme,
                     colorMap,
                     chartPalette,
