@@ -46,11 +46,6 @@ internal sealed partial class PptxSceneBuilder
         return MergeChartTextStyleOverride(style, elementTextStyle);
     }
 
-    internal static PptxSceneChartTextStyleOverride ResolveChartDataLabelTextStyleOverride(PptxSceneChart chart, PptxSceneChartDataLabels labels)
-    {
-        return ResolveChartElementTextStyleOverride(chart, labels.TextStyle, "dataLabel");
-    }
-
     internal static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyleOverride(PptxSceneChartStyle stylePart, string role)
     {
         PptxSceneChartStyleEntry entry = stylePart.Entries.FirstOrDefault(item => item.Role == role);

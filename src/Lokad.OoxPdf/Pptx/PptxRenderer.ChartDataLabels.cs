@@ -151,18 +151,6 @@ internal sealed partial class PptxRenderer
         }
 
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, overrideDefined: true);
-        ChartTextStyleOverride textStyle = new(
-            dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
-            dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
-            dataLabel.TextStyle.CharacterSpacing ?? options.TextStyle.CharacterSpacing,
-            dataLabel.TextStyle.Color ?? options.TextStyle.Color,
-            dataLabel.TextStyle.Alpha ?? options.TextStyle.Alpha,
-            dataLabel.TextStyle.Bold ?? options.TextStyle.Bold,
-            dataLabel.TextStyle.Italic ?? options.TextStyle.Italic,
-            dataLabel.TextStyle.Underline ?? options.TextStyle.Underline,
-            dataLabel.TextStyle.Strike ?? options.TextStyle.Strike,
-            dataLabel.TextStyle.FontFamily is null ? options.TextStyle.RequestedTypeface : dataLabel.TextStyle.RequestedTypeface,
-            dataLabel.TextStyle.FontFamily is null ? options.TextStyle.TypefaceSource : dataLabel.TextStyle.TypefaceSource);
         return options with
         {
             ShowValue = ChartDataLabelFlagValue(flags, "showVal", labelsDefined: true),
@@ -181,7 +169,7 @@ internal sealed partial class PptxRenderer
             NumberFormat = string.IsNullOrEmpty(dataLabel.NumberFormat) ? options.NumberFormat : dataLabel.NumberFormat,
             NumberFormatInfo = dataLabel.NumberFormatInfo.IsDefined ? dataLabel.NumberFormatInfo : options.NumberFormatInfo,
             Layout = dataLabel.Layout.HasLayout ? dataLabel.Layout : options.Layout,
-            TextStyle = textStyle,
+            TextStyle = dataLabel.TextStyle,
             TextBodyProperties = IsChartTextBodyPropertiesEmpty(dataLabel.TextBodyProperties) ? options.TextBodyProperties : dataLabel.TextBodyProperties,
             ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
             FlagOptions = flags,
@@ -203,19 +191,6 @@ internal sealed partial class PptxRenderer
     {
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(baseOptions.FlagOptions, overrideOptions.FlagOptions, overrideOptions.IsDefined);
         bool labelsDefined = baseOptions.IsDefined || overrideOptions.IsDefined;
-        ChartTextStyleOverride textStyle = new(
-            overrideOptions.TextStyle.FontFamily ?? baseOptions.TextStyle.FontFamily,
-            overrideOptions.TextStyle.FontSize ?? baseOptions.TextStyle.FontSize,
-            overrideOptions.TextStyle.CharacterSpacing ?? baseOptions.TextStyle.CharacterSpacing,
-            overrideOptions.TextStyle.Color ?? baseOptions.TextStyle.Color,
-            overrideOptions.TextStyle.Alpha ?? baseOptions.TextStyle.Alpha,
-            overrideOptions.TextStyle.Bold ?? baseOptions.TextStyle.Bold,
-            overrideOptions.TextStyle.Italic ?? baseOptions.TextStyle.Italic,
-            overrideOptions.TextStyle.Underline ?? baseOptions.TextStyle.Underline,
-            overrideOptions.TextStyle.Strike ?? baseOptions.TextStyle.Strike,
-            overrideOptions.TextStyle.FontFamily is null ? baseOptions.TextStyle.RequestedTypeface : overrideOptions.TextStyle.RequestedTypeface,
-            overrideOptions.TextStyle.FontFamily is null ? baseOptions.TextStyle.TypefaceSource : overrideOptions.TextStyle.TypefaceSource);
-
         return baseOptions with
         {
             ShowValue = ChartDataLabelFlagValue(flags, "showVal", labelsDefined),
@@ -234,7 +209,9 @@ internal sealed partial class PptxRenderer
             NumberFormat = string.IsNullOrEmpty(overrideOptions.NumberFormat) ? baseOptions.NumberFormat : overrideOptions.NumberFormat,
             NumberFormatInfo = overrideOptions.NumberFormatInfo.IsDefined ? overrideOptions.NumberFormatInfo : baseOptions.NumberFormatInfo,
             Layout = overrideOptions.Layout.HasLayout ? overrideOptions.Layout : baseOptions.Layout,
-            TextStyle = textStyle,
+            // Each defined container already owns chart defaults plus its local
+            // style. Missing properties request those defaults, not plot style.
+            TextStyle = overrideOptions.TextStyle,
             TextBodyProperties = IsChartTextBodyPropertiesEmpty(overrideOptions.TextBodyProperties) ? baseOptions.TextBodyProperties : overrideOptions.TextBodyProperties,
             ShapeStyle = overrideOptions.ShapeStyle.IsEmpty ? baseOptions.ShapeStyle : overrideOptions.ShapeStyle,
             FlagOptions = flags,
@@ -459,7 +436,8 @@ internal sealed partial class PptxRenderer
     {
         PptxSceneChartDataLabels labels = PptxSceneBuilder.ReadChartDataLabels(chartElement, theme, colorMap);
         return labels.IsDefined
-            ? ToChartDataLabelOptions(sceneChart: null, labels, chartElement, seriesScope: chartElement.Name == ChartNamespace + "ser")
+            ? ToChartDataLabelOptions(labels, chartElement, ResolveDataLabelTextDefaults(null, chartElement, theme, colorMap),
+                seriesScope: chartElement.Name == ChartNamespace + "ser")
             : ChartDataLabelOptions.None;
     }
 
@@ -467,15 +445,18 @@ internal sealed partial class PptxRenderer
     {
         return plot is null
             ? ReadChartDataLabelOptions(chartElement, theme, colorMap)
-            : ToChartDataLabelOptions(sceneChart, plot.DataLabels, chartElement);
+            : ToChartDataLabelOptions(plot.DataLabels, chartElement, ResolveDataLabelTextDefaults(sceneChart, chartElement, theme, colorMap),
+                date1904: sceneChart?.Options.Date1904 == true);
     }
 
     private static IReadOnlyList<ChartDataLabelOptions> ReadSceneOrXmlSeriesDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
     {
         if (plot is not null)
         {
+            PptxSceneChartTextStyleOverride defaults = ResolveDataLabelTextDefaults(sceneChart, chartElement, theme, colorMap);
             return plot.Series
-                .Select(series => ToChartDataLabelOptions(sceneChart, series.DataLabels, chartElement, seriesScope: true))
+                .Select(series => ToChartDataLabelOptions(series.DataLabels, chartElement, defaults,
+                    date1904: sceneChart?.Options.Date1904 == true, seriesScope: true))
                 .ToArray();
         }
 
@@ -485,7 +466,15 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels, XElement chartElement, bool seriesScope = false)
+    private static PptxSceneChartTextStyleOverride ResolveDataLabelTextDefaults(PptxSceneChart? sceneChart, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
+    {
+        return sceneChart is not null
+            ? PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, default, "dataLabel")
+            : PptxSceneBuilder.ReadChartTextStyleOverride(chartElement.AncestorsAndSelf(ChartNamespace + "chartSpace").FirstOrDefault(), theme, colorMap);
+    }
+
+    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels, XElement chartElement,
+        PptxSceneChartTextStyleOverride defaults, bool date1904 = false, bool seriesScope = false)
     {
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ToChartDataLabelFlagOptions(labels);
         var options = new ChartDataLabelOptions(
@@ -505,36 +494,25 @@ internal sealed partial class PptxRenderer
             labels.NumberFormat,
             ToChartNumberFormat(labels.NumberFormatInfo),
             labels.Layout,
-            ToChartDataLabelTextStyleOverride(sceneChart, labels),
+            ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(defaults, labels.TextStyle)),
             labels.TextBodyProperties,
             ToChartShapeStyle(labels.ShapeStyle),
             flags,
             EmptyChartDataLabelOverrides,
             labels.IsDefined,
-            Date1904: sceneChart?.Options.Date1904 == true || ResolveChartSpaceDate1904(chartElement));
+            Date1904: date1904 || ResolveChartSpaceDate1904(chartElement));
         // A plot-wide Cartesian disable suppresses its point requests. Series
         // and sector plots have independent point-label scope. Within an active
         // scope, each defined point owns defaults for its absent components.
         bool independentPoints = seriesScope || chartElement.Name == ChartNamespace + "pieChart" ||
             chartElement.Name == ChartNamespace + "doughnutChart";
         return independentPoints || options.HasVisibleContent
-            ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides) }
+            ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides, defaults) }
             : options;
     }
 
-    private static ChartTextStyleOverride ToChartDataLabelTextStyleOverride(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels)
-    {
-        ChartTextStyleOverride style = ChartTextStyleOverride.Empty;
-        if (sceneChart is not null)
-        {
-            style = ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartDataLabelTextStyleOverride(sceneChart, labels));
-            return style;
-        }
-
-        return ToChartTextStyleOverride(labels.TextStyle);
-    }
-
-    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides)
+    private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
+        PptxSceneChartTextStyleOverride defaults)
     {
         if (overrides.Count == 0)
         {
@@ -562,7 +540,10 @@ internal sealed partial class PptxRenderer
                 dataLabel.NumberFormat,
                 ToChartNumberFormat(dataLabel.NumberFormatInfo),
                 dataLabel.Layout,
-                ToChartTextStyleOverride(dataLabel.TextStyle),
+                // A defined point owns text defaults independently of its label
+                // container. Resolve once from chart defaults and the point itself;
+                // nullable source fields remain untouched in the scene model.
+                ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(defaults, dataLabel.TextStyle)),
                 dataLabel.TextBodyProperties,
                 ToChartShapeStyle(dataLabel.ShapeStyle),
                 ToChartDataLabelOverrideFlagOptions(dataLabel));
