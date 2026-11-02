@@ -521,10 +521,9 @@ internal sealed partial class PptxRenderer
         public const double VerticalBarDataLabelWidthRatio = 0.86d;
         public const double LineDataLabelMinimumPointSpan = 5d;
         public const double LineDataLabelPointWidthFactor = 1.5d;
-        // Native line-label position controls at5/12pt marker sizes retain
-        // proportional text clearance outside the authored marker extent.
-        public const double CategoryPointLabelHorizontalGapFactor = 1d / 3d;
-        public const double CategoryPointLabelVerticalGapFactor = 0.25d;
+        // Independent9/12/18/36pt controls keep the occupied label frame three
+        // points from the authored marker boundary, including a none symbol.
+        public const double CategoryPointLabelMarkerClearance = 3d;
         // Native Calibri/Arial/Cambria controls and9/18/36pt text use the
         // font line box for segment extent, independently of point-marker size.
         public const double CategoryPointLabelStrokeKeyLengthFactor = 0.875d;

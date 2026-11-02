@@ -1,5 +1,6 @@
 {
   "pptx-label-text-scopes": [
+    "PptxPointLabelOccupiedClearanceDoesNotScaleWithFont",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "PptxActivePlotPointsOwnDefaultsWithoutChangingRawFlags",
     "PptxAreaCustomLabelLinksFollowSharedTextGeometry",

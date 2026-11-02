@@ -163,7 +163,7 @@ internal sealed partial class PptxRenderer
                     (double labelX, double labelY, TextAlignment alignment) = edgeSize
                         ? ResolveLineDataLabelPosition(position, pointX, pointY, effectiveLabelWidth, labelHeight)
                         : ResolveCategoryPointLabelPosition(position, pointX, pointY, effectiveLabelWidth,
-                            lineBox.Ascent, lineBox.Height, pointMarkerRadius, fontSize, verticalExpansion);
+                            lineBox.Ascent, lineBox.Height, pointMarkerRadius, verticalExpansion);
                     if (authoredSize && !edgeSize)
                     {
                         labelX += legendKeyWidth / 2d;

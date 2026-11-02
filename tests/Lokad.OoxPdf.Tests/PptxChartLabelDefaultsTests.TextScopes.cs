@@ -76,6 +76,29 @@ internal static partial class PptxChartLabelDefaultsTests
         TestAssert.Equal(Render(TextScopeParent), Render(TextScopeOtherParent));
     }
 
+    public static void PptxPointLabelOccupiedClearanceDoesNotScaleWithFont()
+    {
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        foreach (int font in new[] { 9, 12, 18, 36 })
+        foreach (string position in new[] { "r", "l", "t", "b" })
+        {
+            var xml = ManualFrameSource(null, false, position: position);
+            xml.Root!.Element(C + "txPr")!.Descendants(a + "defRPr").Single().SetAttributeValue("sz", font * 100);
+            var page = RenderChartPage(xml);
+            var marker = MarkerRectangles(page, new RgbColor(255, 0, 0)).Single();
+            var box = MarkerRectangles(page, new RgbColor(0, 255, 0)).Single();
+            double gap = position switch
+            {
+                "r" => box.X - marker.X - marker.Width,
+                "l" => marker.X - box.X - box.Width,
+                "t" => box.Y - marker.Y - marker.Height,
+                _ => marker.Y - box.Y - box.Height
+            };
+            TestAssert.True(Math.Abs(gap - 3d) < .002d,
+                "Measured occupied bounds keep the same marker clearance across font sizes and outside positions.");
+        }
+    }
+
     private const string TextScopeParent = """
         <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="2000" b="1" i="1" u="sng" strike="sngStrike" spc="150"><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="30000"/></a:srgbClr></a:solidFill><a:latin typeface="Plot Face"/></a:defRPr></a:pPr></a:p></c:txPr>
         """;

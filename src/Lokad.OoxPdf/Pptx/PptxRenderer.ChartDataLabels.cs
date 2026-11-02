@@ -74,14 +74,13 @@ internal sealed partial class PptxRenderer
 
     private static (double X, double Y, TextAlignment Alignment) ResolveCategoryPointLabelPosition(
         PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth,
-        double ascent, double height, double markerRadius, double fontSize, double verticalExpansion)
+        double ascent, double height, double markerRadius, double verticalExpansion)
     {
         double centeredBaseline = pointY + height / 2d - ascent;
-        // Side clearance is measured to text; its frame already includes the
-        // horizontal inset. Top/bottom similarly use baseline line metrics.
-        double horizontalGap = fontSize * PptxChartMetricRules.CategoryPointLabelHorizontalGapFactor + markerRadius
-            - PptxChartMetricRules.CategoryPointLabelHorizontalTextPadding;
-        double verticalGap = fontSize * PptxChartMetricRules.CategoryPointLabelVerticalGapFactor + markerRadius;
+        // The occupied frame keeps a physical clearance from the authored
+        // marker extent. Font metrics determine baseline and height, not this gap.
+        double horizontalGap = markerRadius + PptxChartMetricRules.CategoryPointLabelMarkerClearance;
+        double verticalGap = horizontalGap + PptxChartMetricRules.CategoryPointLabelVerticalTextPadding;
         return position switch
         {
             PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.OutsideEnd =>
