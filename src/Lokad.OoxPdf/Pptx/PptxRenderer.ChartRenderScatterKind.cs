@@ -50,11 +50,16 @@ internal sealed partial class PptxRenderer
                 // Y-style prefer-unit-one nicing would miss (13 instead of 14 at range 12).
                 ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetScatterXValueExtents(scatterSeries), PptxChartMetricRules.ScatterXAxisNiceTickTargetCount, preferUnitOneOverTwo: false);
                 ChartValueExtents yExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(yValueAxis.SceneAxis, yValueAxis.XmlAxis, GetScatterYValueExtents(scatterSeries));
-                ChartBubbleValueAxisOptions xAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents, PptxChartMetricRules.ScatterXAxisNiceTickTargetCount);
-                ChartBubbleValueAxisOptions yAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(yValueAxis.SceneAxis, yValueAxis.XmlAxis, theme, yExtents);
+                ChartValueAxisRenderOptions xAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents, PptxChartMetricRules.ScatterXAxisNiceTickTargetCount);
+                ChartValueAxisRenderOptions yAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(yValueAxis.SceneAxis, yValueAxis.XmlAxis, theme, yExtents);
+                ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
+                ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
+                // Each axis declares its crossing in the perpendicular scale.
+                xAxisOptions = xAxisOptions with { CrossingValue = Math.Clamp(yPlacement.CrossingValue, xExtents.Min, xExtents.Max) };
+                yAxisOptions = yAxisOptions with { CrossingValue = Math.Clamp(xPlacement.CrossingValue, yExtents.Min, yExtents.Max) };
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
-                DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisOptions.Units, crossingValue: null, reversed: false, major: true, yAxisOptions.GridlineStyle.Major, hasMajorGridlineElement: true, yAxisOptions.TickPolicy);
-                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, scatterSeries, scatterOptions.ConnectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, scatterOptions.SmoothSeries, seriesLineHidden, xExtents, yExtents);
+                DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisOptions.Units, yAxisOptions.CrossingValue, yAxisOptions.Reversed, major: true, yAxisOptions.GridlineStyle.Major, hasMajorGridlineElement: true, yAxisOptions.TickPolicy);
+                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, scatterSeries, scatterOptions.ConnectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, scatterOptions.SmoothSeries, seriesLineHidden, xExtents, yExtents, xAxisOptions, yAxisOptions);
                 await RenderScatterDataLabelsAsync(
                     theme,
                     colorMap,
@@ -64,14 +69,16 @@ internal sealed partial class PptxRenderer
                     bubble: false,
                     xExtents,
                     yExtents,
+                    xAxisOptions.Reversed,
+                    yAxisOptions.Reversed,
                     seriesFills,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, scatterPlot, scatterChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, scatterPlot, scatterChart, theme, colorMap),
                     ReadSharedChartSeriesNames(scatterPlot, scatterChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, valueAxisReversed: false, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts, tickPolicy: xAxisOptions.TickPolicy).ConfigureAwait(false);
-                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, valueAxisReversed: false, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts, tickPolicy: yAxisOptions.TickPolicy).ConfigureAwait(false);
+                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, xAxisOptions.Reversed, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts, tickPolicy: xAxisOptions.TickPolicy, placement: xPlacement).ConfigureAwait(false);
+                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, yAxisOptions.Reversed, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts, tickPolicy: yAxisOptions.TickPolicy, placement: yPlacement).ConfigureAwait(false);
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions);
+                RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, xPlacement, yPlacement);
                 double scatterLegendLeadExtra = 0.5d * (await MeasureScatterLastXLabelWidthAsync(theme, sceneChart, chartXml, scatterPlot, scatterChart, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, scatterPlot, scatterChart, seriesStrokes, markerStyles, reverseOrder: false, workbook: workbook, seriesLineHidden: seriesLineHidden), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, legendLeadExtra: scatterLegendLeadExtra, scatterLegend: true).ConfigureAwait(false);
                 return true;
@@ -97,7 +104,7 @@ internal sealed partial class PptxRenderer
 
     // Shared scatter/bubble major ticks (Office honors out/in/cross at both value axes
     // with the same font-relative length as bars and lines).
-    private static void RenderScatterBubbleMajorTicks(PdfGraphicsBuilder graphics, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartPlotBox plotBox, ChartAxisSource xValueAxis, ChartAxisSource yValueAxis, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartBubbleValueAxisOptions xAxisOptions, ChartBubbleValueAxisOptions yAxisOptions)
+    private static void RenderScatterBubbleMajorTicks(PdfGraphicsBuilder graphics, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartPlotBox plotBox, ChartAxisSource xValueAxis, ChartAxisSource yValueAxis, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions, ChartAxisPlacement xPlacement, ChartAxisPlacement yPlacement)
     {
                 PptxSceneChartAxisTickMark xTickMark = ReadSceneOrXmlChartAxisMajorTickMark(xValueAxis.SceneAxis, xValueAxis.XmlAxis);
                 if (xTickMark != PptxSceneChartAxisTickMark.None)
@@ -110,11 +117,12 @@ internal sealed partial class PptxRenderer
                         double[] xTickEdges = new double[xTickValues.Count];
                         for (int xTickIndex = 0; xTickIndex < xTickValues.Count; xTickIndex++)
                         {
-                            xTickEdges[xTickIndex] = ChartValueToPlotCoordinate(xExtents, xTickValues[xTickIndex], plotBox.X, plotBox.Width, false);
+                            xTickEdges[xTickIndex] = ChartValueToPlotCoordinate(xExtents, xTickValues[xTickIndex], plotBox.X, plotBox.Width, xAxisOptions.Reversed);
                         }
 
                         SetChartStroke(graphics, xTickStroke);
-                        StrokeMajorTickSegments(graphics, xTickEdges, plotBox.Y, verticalSegments: true, outwardIsLowSide: true, xTickMark, xTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+                        double axisY = ChartValueToPlotCoordinate(yExtents, yAxisOptions.CrossingValue, plotBox.Y, plotBox.Height, yAxisOptions.Reversed);
+                        StrokeMajorTickSegments(graphics, xTickEdges, axisY, verticalSegments: true, outwardIsLowSide: !xPlacement.AxisHighSide, xTickMark, xTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
                     }
                 }
 
@@ -129,11 +137,12 @@ internal sealed partial class PptxRenderer
                         double[] yTickEdges = new double[yTickValues.Count];
                         for (int yTickIndex = 0; yTickIndex < yTickValues.Count; yTickIndex++)
                         {
-                            yTickEdges[yTickIndex] = ChartValueToPlotCoordinate(yExtents, yTickValues[yTickIndex], plotBox.Y, plotBox.Height, false);
+                            yTickEdges[yTickIndex] = ChartValueToPlotCoordinate(yExtents, yTickValues[yTickIndex], plotBox.Y, plotBox.Height, yAxisOptions.Reversed);
                         }
 
                         SetChartStroke(graphics, yTickStroke);
-                        StrokeMajorTickSegments(graphics, yTickEdges, plotBox.X, verticalSegments: false, outwardIsLowSide: true, yTickMark, yTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+                        double axisX = ChartValueToPlotCoordinate(xExtents, xAxisOptions.CrossingValue, plotBox.X, plotBox.Width, xAxisOptions.Reversed);
+                        StrokeMajorTickSegments(graphics, yTickEdges, axisX, verticalSegments: false, outwardIsLowSide: !yPlacement.AxisHighSide, yTickMark, yTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
                     }
                 }
     }
@@ -172,10 +181,14 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : xValueAxis;
                 ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetBubbleXValueExtents(bubbleSeries));
                 ChartValueExtents yExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(yValueAxis.SceneAxis, yValueAxis.XmlAxis, GetBubbleYValueExtents(bubbleSeries));
-                ChartBubbleValueAxisOptions xAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents);
-                ChartBubbleValueAxisOptions yAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(yValueAxis.SceneAxis, yValueAxis.XmlAxis, theme, yExtents);
-                DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisOptions.Units, crossingValue: null, reversed: false, major: true, yAxisOptions.GridlineStyle.Major, hasMajorGridlineElement: true, yAxisOptions.TickPolicy);
-                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], [], xExtents, yExtents);
+                ChartValueAxisRenderOptions xAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents);
+                ChartValueAxisRenderOptions yAxisOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(yValueAxis.SceneAxis, yValueAxis.XmlAxis, theme, yExtents);
+                ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
+                ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
+                xAxisOptions = xAxisOptions with { CrossingValue = Math.Clamp(yPlacement.CrossingValue, xExtents.Min, xExtents.Max) };
+                yAxisOptions = yAxisOptions with { CrossingValue = Math.Clamp(xPlacement.CrossingValue, yExtents.Min, yExtents.Max) };
+                DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisOptions.Units, yAxisOptions.CrossingValue, yAxisOptions.Reversed, major: true, yAxisOptions.GridlineStyle.Major, hasMajorGridlineElement: true, yAxisOptions.TickPolicy);
+                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], [], xExtents, yExtents, xAxisOptions, yAxisOptions);
                 await RenderScatterDataLabelsAsync(
                     theme,
                     colorMap,
@@ -185,14 +198,16 @@ internal sealed partial class PptxRenderer
                     bubble: true,
                     xExtents,
                     yExtents,
+                    xAxisOptions.Reversed,
+                    yAxisOptions.Reversed,
                     seriesFills,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, bubblePlot, bubbleChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, bubblePlot, bubbleChart, theme, colorMap),
                     ReadSharedChartSeriesNames(bubblePlot, bubbleChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, valueAxisReversed: false, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: xAxisOptions.TickPolicy).ConfigureAwait(false);
-                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, valueAxisReversed: false, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: yAxisOptions.TickPolicy).ConfigureAwait(false);
+                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, xAxisOptions.Reversed, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: xAxisOptions.TickPolicy, placement: xPlacement).ConfigureAwait(false);
+                await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, yAxisOptions.Reversed, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: yAxisOptions.TickPolicy, placement: yPlacement).ConfigureAwait(false);
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions);
+                RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, xPlacement, yPlacement);
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.BubbleTitleRightLegend, chartFonts: fonts).ConfigureAwait(false);
                 return true;
             }

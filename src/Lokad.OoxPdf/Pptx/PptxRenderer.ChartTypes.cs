@@ -440,11 +440,9 @@ internal sealed partial class PptxRenderer
         SourceMinimumIntervals
     }
 
-    private readonly record struct ChartBubbleValueAxisOptions(ChartAxisUnits Units, ChartGridlineStyle GridlineStyle, ChartAxisTickPolicy TickPolicy);
+    private readonly record struct ChartAxisPlacement(double CrossingValue, double LabelPlotRatio, bool LabelsHighSide, bool AxisHighSide);
 
-    private readonly record struct ChartCategoryAxisPlacement(double CrossingValue, double LabelPlotRatio, bool LabelsTopSide, bool AxisTopSide);
-
-    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null, ChartCategoryAxisPlacement? AutomaticCategoryAxisPlacement = null)
+    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null, ChartAxisPlacement? AutomaticCategoryAxisPlacement = null)
     {
         public ChartCategoryLabelLayout? CategoryLabels { get; init; }
     }

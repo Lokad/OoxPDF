@@ -556,7 +556,7 @@ internal sealed partial class PptxRenderer
             sceneAxis?.HasMajorGridlineElement ?? xmlAxis?.Element(ChartNamespace + "majorGridlines") is not null);
     }
 
-    private static ChartBubbleValueAxisOptions ReadSceneOrXmlChartBubbleValueAxisOptions(
+    private static ChartValueAxisRenderOptions ReadSceneOrXmlChartBubbleValueAxisOptions(
         PptxSceneChartAxis? sceneAxis,
         XElement? xmlAxis,
         PptxTheme theme,
@@ -572,9 +572,12 @@ internal sealed partial class PptxRenderer
         ChartAxisTickPolicy tickPolicy = !logarithmic && minimum is { } value && double.IsFinite(value) && value == extents.Min
             ? ChartAxisTickPolicy.SourceMinimumIntervals
             : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
-        return new ChartBubbleValueAxisOptions(
-            ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(sceneAxis, xmlAxis), extents, tickTargetCount),
-            ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme), tickPolicy);
+        ChartValueAxisRenderOptions options = ReadSceneOrXmlChartValueAxisRenderOptions(sceneAxis, xmlAxis, theme, extents, percentStacked: false);
+        return options with
+        {
+            Units = ResolveBubbleAxisUnits(options.Units, extents, tickTargetCount),
+            TickPolicy = tickPolicy
+        };
     }
 
     private static ChartSeriesStroke? ReadSceneOrXmlChartGridlineStroke(PptxSceneChartAxis? sceneAxis, PptxSceneLineStyle sceneLine, PptxSceneLineStyle sceneStyleLine, XElement? gridlines, PptxTheme theme)

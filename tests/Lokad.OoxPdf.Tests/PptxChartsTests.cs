@@ -4521,14 +4521,24 @@ internal static class PptxChartsTests
         object indexed = System.Activator.CreateInstance(indexedPointType, [0, indexSource, null, "", false, cell]) ?? throw new InvalidOperationException("Expected indexed point.");
         object plot = System.Activator.CreateInstance(plotBoxType, [0d, 0d, 200d, 100d]) ?? throw new InvalidOperationException("Expected plot box.");
         object extents = System.Activator.CreateInstance(extentsType, [0d, 10d]) ?? throw new InvalidOperationException("Expected extents.");
-        double RadiusOf(object point)
+        double RadiusOf(object point, bool reversed = false)
         {
-            object result = geometry.Invoke(null, [plot, point, true, extents, extents, 16d]) ?? throw new InvalidOperationException("Expected geometry result.");
+            object result = geometry.Invoke(null, [plot, point, true, extents, extents, 16d, reversed, reversed]) ?? throw new InvalidOperationException("Expected geometry result.");
             return (double)(result.GetType().GetField("Item3")?.GetValue(result) ?? 0d);
         }
         object maxPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 16d, 0, indexed, indexed, null, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected max point.");
         TestAssert.True(System.Math.Abs(RadiusOf(maxPoint) - 13.1d) < 1e-9, "Max bubble radius drifts from the Office 0.131 plot ratio.");
         object quarterPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 4d, 0, indexed, indexed, null, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected quarter point.");
         TestAssert.True(System.Math.Abs(RadiusOf(quarterPoint) - 6.55d) < 1e-9, "Bubble sqrt sizing must halve radius at quarter size.");
+        TestAssert.Equal(RadiusOf(maxPoint), RadiusOf(maxPoint, reversed: true));
+        object outside = System.Activator.CreateInstance(pointType, [-5d, 15d, 16d, 0, indexed, indexed, null, null, null, null, null, null, null])!;
+        foreach (bool reversed in new[] { false, true })
+        {
+            object result = geometry.Invoke(null, [plot, outside, true, extents, extents, 16d, reversed, reversed])!;
+            double x = (double)result.GetType().GetField("Item1")!.GetValue(result)!;
+            double y = (double)result.GetType().GetField("Item2")!.GetValue(result)!;
+            TestAssert.Equal(reversed ? 300d : -100d, x);
+            TestAssert.Equal(reversed ? -50d : 150d, y);
+        }
     }
 }

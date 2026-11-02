@@ -1,4 +1,19 @@
 {
+  "pptx-scatter-direction": [
+    "PptxScatterDirectionsMoveDataLabelsWithTheirPoints",
+    "PptxScatterDirectionsShareCrossingsLabelsAndTickSides",
+    "PptxBubbleMaxRadiusMatchesOfficePlotRatio",
+    "PptxCategoryMaximumCrossingUsesSourceModeAndLabelOverrides",
+    "PptxCategoryTickSidesDistinguishNumericAndImplicitCrossings",
+    "PptxNumericCrossingOwnsPairedCategorySide",
+    "PptxNumericCrossingRetainsUnpairedAndInteriorFallbacks",
+    "PptxNumericCrossingMovesTheMeasuredStripWithItsLabels",
+    "PptxReversedNumericUpperCaptionsReuseLowSideGeometry",
+    "PptxAreaFrameAndCaptionsShareTheSourceCrossing",
+    "PptxLineCaptionPlacementSurvivesTitlesAndBottomLegends",
+    "PptxLineTitleKeepsNumericFootClearanceSeparateFromHeader",
+    "PptxSyntheticChartValueAxisReversedOrientationInvertsLineGeometry"
+  ],
   "pptx-scatter-intervals": [
     "PptxScatterAndBubbleIntervalsUseAuthoredMinima",
     "PptxScatterAndBubbleMarksAndGridsShareSourceIntervals",

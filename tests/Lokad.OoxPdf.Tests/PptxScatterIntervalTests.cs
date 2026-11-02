@@ -7,7 +7,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxScatterIntervalTests
+internal static partial class PptxScatterIntervalTests
 {
     public static void PptxScatterAndBubbleIntervalsUseAuthoredMinima()
     {
@@ -46,7 +46,7 @@ internal static class PptxScatterIntervalTests
             var yLines = lines.Where(p => p.Color == new RgbColor(0, 0, 255) && Math.Abs(p.V[1] - p.V[3]) < .001d).ToArray();
             Check(xTicks, Enumerable.Range(0, xMinimum < 0d ? 8 : 7).Select(i => xMinimum + 1.25d * i).ToArray());
             Check(yLines.Where(p => Math.Abs(p.V[0] - p.V[2]) < 20d).Select(p => YValue(p.V[1])).ToArray(), [7d, 32d, 57d, 82d]);
-            Check(yLines.Where(p => Math.Abs(p.V[0] - p.V[2]) > 100d).Select(p => YValue(p.V[1])).ToArray(), [7d, 32d, 57d, 82d]);
+            Check(yLines.Where(p => Math.Abs(p.V[0] - p.V[2]) > 100d).Select(p => YValue(p.V[1])).ToArray(), [32d, 57d, 82d]);
         }
 
         static void Check(double[] actual, double[] expected) => TestAssert.True(actual.Length == expected.Length &&
@@ -86,7 +86,8 @@ internal static class PptxScatterIntervalTests
         }
     }
 
-    private static PdfPage Render(bool bubble, double xMin, double yMin, double yMax)
+    private static PdfPage Render(bool bubble, double xMin, double yMin, double yMax, bool reverseX = false, bool reverseY = false,
+        string? labelPosition = null, double? horizontalCrossing = null, double? verticalCrossing = null, bool labels = false)
     {
         string kind = bubble ? "bubbleChart" : "scatterChart";
         string chart = $$"""
@@ -95,9 +96,10 @@ internal static class PptxScatterIntervalTests
                 <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>8</c:v></c:pt></c:numLit></c:xVal>
                 <c:yVal><c:numLit><c:pt idx="0"><c:v>20</c:v></c:pt><c:pt idx="1"><c:v>79</c:v></c:pt></c:numLit></c:yVal>
                 {{(bubble ? "<c:bubbleSize><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt><c:pt idx=\"1\"><c:v>3</c:v></c:pt></c:numLit></c:bubbleSize>" : "")}}
+                {{(labels ? "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>" : "")}}
               </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
-              {{Axis("1", "b", "2", xMin.ToString(CultureInfo.InvariantCulture), "8.5", "1.25", "00FF00")}}
-              {{Axis("2", "l", "1", yMin.ToString(CultureInfo.InvariantCulture), yMax.ToString(CultureInfo.InvariantCulture), "25", "0000FF")}}
+              {{Axis("1", "b", "2", xMin.ToString(CultureInfo.InvariantCulture), "8.5", "1.25", "00FF00", reverseX, labelPosition, horizontalCrossing)}}
+              {{Axis("2", "l", "1", yMin.ToString(CultureInfo.InvariantCulture), yMax.ToString(CultureInfo.InvariantCulture), "25", "0000FF", reverseY, labelPosition, verticalCrossing)}}
             </c:plotArea></c:chart></c:chartSpace>
             """;
         using var stream = PptxTests.CreateSingleChartPackageStream(chart);
@@ -105,10 +107,12 @@ internal static class PptxScatterIntervalTests
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
     }
 
-    private static string Axis(string id, string side, string cross, string min, string max, string major, string color) => $$"""
-        <c:valAx xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:axId val="{{id}}"/><c:scaling><c:orientation val="minMax"/><c:min val="{{min}}"/><c:max val="{{max}}"/></c:scaling>
+    private static string Axis(string id, string side, string cross, string min, string max, string major, string color,
+        bool reversed = false, string? labelPosition = null, double? crossing = null) => $$"""
+        <c:valAx xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:axId val="{{id}}"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/><c:min val="{{min}}"/><c:max val="{{max}}"/></c:scaling>
           <c:axPos val="{{side}}"/><c:majorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="{{color}}"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
-          <c:majorTickMark val="out"/><c:crossAx val="{{cross}}"/><c:crosses val="autoZero"/><c:majorUnit val="{{major}}"/>
+          <c:majorTickMark val="out"/>{{(labelPosition is null ? "" : $"<c:tickLblPos val=\"{labelPosition}\"/>")}}<c:crossAx val="{{cross}}"/>
+          {{(crossing is { } value ? $"<c:crossesAt val=\"{value.ToString(CultureInfo.InvariantCulture)}\"/>" : "<c:crosses val=\"autoZero\"/>")}}<c:majorUnit val="{{major}}"/>
         </c:valAx>
         """;
 }

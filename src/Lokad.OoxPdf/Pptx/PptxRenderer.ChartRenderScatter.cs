@@ -35,20 +35,20 @@ internal sealed partial class PptxRenderer
         return GetScatterYValueExtents(series);
     }
 
-    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents? xValueExtents, ChartValueExtents? yValueExtents)
+    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        ChartValueExtents xExtents = xValueExtents ?? GetScatterDataXExtents();
-        ChartValueExtents yExtents = yValueExtents ?? GetScatterDataYExtents();
         double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Size));
 
         graphics.SetStrokeRgb(90, 90, 90);
         graphics.SetLineWidth(0.75d);
-        graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
-        graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+        double xAxisY = ChartValueToPlotCoordinate(yExtents, yAxisOptions.CrossingValue, plotY, plotHeight, yAxisOptions.Reversed);
+        double yAxisX = ChartValueToPlotCoordinate(xExtents, xAxisOptions.CrossingValue, plotX, plotWidth, xAxisOptions.Reversed);
+        graphics.StrokeLine(plotX, xAxisY, plotX + plotWidth, xAxisY);
+        graphics.StrokeLine(yAxisX, plotY, yAxisX, plotY + plotHeight);
 
         {
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
                 var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
                 foreach (ScatterPoint point in series[seriesIndex].Points)
                 {
-                    (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
+                    (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed);
                     points.Add((pointX, pointY));
                 }
 
@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
 
                 foreach (ScatterPoint point in series[seriesIndex].Points)
                 {
-                    (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
+                    (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed);
                     if (bubble)
                     {
                         FillBubbleInPlotClip(pointX, pointY, radius);
@@ -113,19 +113,6 @@ internal sealed partial class PptxRenderer
             RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.FillEllipseEvenOdd(pointX - radius, pointY - radius, radius * 2d, radius * 2d));
         }
 
-        ChartValueExtents GetScatterDataXExtents()
-        {
-            double dataMaxX = series.SelectMany(item => item.Points).Max(point => point.X);
-            double dataMinX = series.SelectMany(item => item.Points).Min(point => point.X);
-            return new ChartValueExtents(dataMinX, dataMaxX);
-        }
-
-        ChartValueExtents GetScatterDataYExtents()
-        {
-            double dataMaxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
-            double dataMinY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
-            return new ChartValueExtents(dataMinY, dataMaxY);
-        }
     }
 
     private static void StrokeScatterChartPathInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, bool smooth)

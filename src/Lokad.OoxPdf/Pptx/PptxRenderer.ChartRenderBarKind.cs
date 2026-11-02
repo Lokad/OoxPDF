@@ -50,12 +50,12 @@ internal sealed partial class PptxRenderer
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme, valueExtents, percentStacked);
                 valueAxisOptions = valueAxisOptions with { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueSceneAxis, valueExtents, percentStacked) };
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
-                ChartCategoryAxisPlacement? resolvedCategory = horizontalBars ? null :
-                    ReadCategoryAxisPlacement(categoryAxis, valueExtents, valueAxisOptions.Reversed);
+                ChartAxisPlacement? resolvedCategory = horizontalBars ? null :
+                    ReadChartAxisPlacement(categoryAxis, valueExtents, valueAxisOptions.Reversed);
                 if (resolvedCategory is { } resolved)
                 {
                     valueAxisOptions = valueAxisOptions with { CrossingValue = resolved.CrossingValue };
-                    axesStyle = axesStyle with { CategoryAxisTopSide = resolved.AxisTopSide };
+                    axesStyle = axesStyle with { CategoryAxisTopSide = resolved.AxisHighSide };
                 }
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(barPlot, barChart, theme, colorMap, ChartFilledSeriesInheritedStrokeWidth);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme, colorMap);
@@ -77,13 +77,13 @@ internal sealed partial class PptxRenderer
                     preparedLegendBox = prepared.Box;
                 }
                 var categoryLabels = ReadSharedCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly);
-                var categoryPlacement = resolvedCategory is { } placed ? (placed.LabelPlotRatio, placed.LabelsTopSide) :
-                    ResolveCategoryLabelPlacement(categoryAxis.SceneAxis, categoryAxis.XmlAxis,
+                var categoryPlacement = resolvedCategory is { } placed ? (placed.LabelPlotRatio, placed.LabelsHighSide) :
+                    ResolveChartAxisLabelPlacement(categoryAxis.SceneAxis, categoryAxis.XmlAxis,
                         GetChartValuePlotRatio(valueExtents, valueAxisOptions.CrossingValue ?? 0d, valueAxisOptions.Reversed), valueAxisOptions.Reversed);
                 if (!horizontalBars && axesStyle.CategoryAxisVisible)
                     chartLayout = await PrepareCategoryLabelLayoutAsync(chartLayout, theme, sceneChart, chartXml, categoryAxis, categoryLabels,
                         ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis),
-                        categoryPlacement.LabelsTopSide, categoryPlacement.LabelPlotRatio,
+                        categoryPlacement.LabelsHighSide, categoryPlacement.LabelPlotRatio,
                         fontResolver, preparedLegendBox).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
@@ -264,7 +264,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelAxisY = horizontalBars
                         ? null
                         : plotBox.Y + plotBox.Height * categoryPlacement.LabelPlotRatio;
-                    await RenderChartCategoryLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), categoryLabelsTopSide: categoryPlacement.LabelsTopSide, fontResolver: fontResolver, chartFonts: fonts, automaticLabelOffsetAdjustment: chartLayout.AutomaticCategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels).ConfigureAwait(false);
+                    await RenderChartCategoryLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), categoryLabelsTopSide: categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, automaticLabelOffsetAdjustment: chartLayout.AutomaticCategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels).ConfigureAwait(false);
                 }
 
                 if (axesStyle.ValueAxisVisible)

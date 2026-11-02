@@ -194,7 +194,7 @@ internal sealed partial class PptxRenderer
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
         PresentationFontResolver? fontResolver,
-        ChartCategoryAxisPlacement? categoryPlacement)
+        ChartAxisPlacement? categoryPlacement)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
@@ -292,7 +292,7 @@ internal sealed partial class PptxRenderer
         bool ignoreManualPlotLayout,
         PresentationFontResolver? fontResolver,
         (double Ascent, double Height)? measuredTitle = null,
-        ChartCategoryAxisPlacement? categoryPlacement = null)
+        ChartAxisPlacement? categoryPlacement = null)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;

@@ -397,11 +397,11 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? categoryPlot = ReadSceneChartPlot(sceneChart, categoryPlotKind, 0);
         bool canMeasureCategoryPlot = categoryPlotElement is not null && resolvedValueExtents is not null;
         double? categoryLabelOffsetAdjustment = null;
-        ChartCategoryAxisPlacement? categoryAxisPlacement = await ReadAutomaticCategoryPlacementAsync().ConfigureAwait(false);
+        ChartAxisPlacement? categoryAxisPlacement = await ReadAutomaticCategoryPlacementAsync().ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetPlotLayoutAsync().ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement);
 
-        async ValueTask<ChartCategoryAxisPlacement?> ReadAutomaticCategoryPlacementAsync()
+        async ValueTask<ChartAxisPlacement?> ReadAutomaticCategoryPlacementAsync()
         {
             // Caption side/crossing belongs to the scale, independently of
             // whether the title/header can use measured plot placement.
@@ -433,7 +433,7 @@ internal sealed partial class PptxRenderer
                     return null;
             }
             bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, axes[0].XmlAxis);
-            return ReadCategoryAxisPlacement(category, extents, reversed);
+            return ReadChartAxisPlacement(category, extents, reversed);
         }
 
         async ValueTask<ChartPlotLayout> GetPlotLayoutAsync()
@@ -892,7 +892,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetScatterXValueExtents(ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly)), PptxChartMetricRules.ScatterXAxisNiceTickTargetCount, preferUnitOneOverTwo: false);
-        ChartBubbleValueAxisOptions xOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents, PptxChartMetricRules.ScatterXAxisNiceTickTargetCount);
+        ChartValueAxisRenderOptions xOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents, PptxChartMetricRules.ScatterXAxisNiceTickTargetCount);
         IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(xExtents, xOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: true, manualPlotLayoutApplied: false), xOptions.TickPolicy);
         if (tickValues.Count == 0)
         {

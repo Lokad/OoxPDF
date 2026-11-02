@@ -78,20 +78,20 @@ internal sealed partial class PptxRenderer
                 if (axesStyle.CategoryAxisVisible)
                     chartLayout = await PrepareCategoryLabelLayoutAsync(chartLayout, theme, sceneChart, chartXml, categoryAxis, categoryLabels,
                         categoryPointsOnTickMarks,
-                        chartLayout.AutomaticCategoryAxisPlacement?.LabelsTopSide ?? false,
+                        chartLayout.AutomaticCategoryAxisPlacement?.LabelsHighSide ?? false,
                         chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
                         fontResolver, preparedLegendBox).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 RenderLineChart(graphics, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions, seriesAppearance, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, categoryPointsOnTickMarks,
-                    ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, ReadChartStyleId(chartXml), categoryTicksTopSide: chartLayout.AutomaticCategoryAxisPlacement?.AxisTopSide ?? false, pointAppearance: pointAppearance, categoryAxisReversed: categoryAxisReversed, varyPointColors: varyPointColors);
+                    ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, ReadChartStyleId(chartXml), categoryTicksTopSide: chartLayout.AutomaticCategoryAxisPlacement?.AxisHighSide ?? false, pointAppearance: pointAppearance, categoryAxisReversed: categoryAxisReversed, varyPointColors: varyPointColors);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    ChartCategoryAxisPlacement? labelPlacement = chartLayout.AutomaticCategoryAxisPlacement;
+                    ChartAxisPlacement? labelPlacement = chartLayout.AutomaticCategoryAxisPlacement;
                     double? labelAxisY = labelPlacement is { } placement
                         ? plotBox.Y + plotBox.Height * placement.LabelPlotRatio
                         : null;
-                    await RenderChartCategoryLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars: false, verticalAxisY: labelAxisY, categoryLabelsOnTickMarks: categoryPointsOnTickMarks, categoryLabelsTopSide: labelPlacement?.LabelsTopSide ?? false, fontResolver: fontResolver, chartFonts: fonts, automaticLabelOffsetAdjustment: chartLayout.AutomaticCategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: categoryAxisReversed).ConfigureAwait(false);
+                    await RenderChartCategoryLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars: false, verticalAxisY: labelAxisY, categoryLabelsOnTickMarks: categoryPointsOnTickMarks, categoryLabelsTopSide: labelPlacement?.LabelsHighSide ?? false, fontResolver: fontResolver, chartFonts: fonts, automaticLabelOffsetAdjustment: chartLayout.AutomaticCategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: categoryAxisReversed).ConfigureAwait(false);
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))

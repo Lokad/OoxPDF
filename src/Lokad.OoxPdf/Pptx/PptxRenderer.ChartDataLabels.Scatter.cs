@@ -20,6 +20,8 @@ internal sealed partial class PptxRenderer
         bool bubble,
         ChartValueExtents xExtents,
         ChartValueExtents yExtents,
+        bool xReversed,
+        bool yReversed,
         IReadOnlyList<ChartSeriesFill?> seriesFills,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
@@ -74,7 +76,7 @@ internal sealed partial class PptxRenderer
                     bubble,
                     xExtents,
                     yExtents,
-                    maxBubbleSize);
+                    maxBubbleSize, xReversed, yReversed);
                 // Office defaults scatter/bubble labels to the right. Bubble
                 // placement uses the circle edge on the requested side; center
                 // placement remains at the data point.
@@ -202,12 +204,18 @@ internal sealed partial class PptxRenderer
         bool bubble,
         ChartValueExtents xExtents,
         ChartValueExtents yExtents,
-        double maxBubbleSize)
+        double maxBubbleSize,
+        bool xReversed,
+        bool yReversed)
     {
         double xRange = xExtents.Max > xExtents.Min ? xExtents.Max - xExtents.Min : 1d;
         double yRange = yExtents.Max > yExtents.Min ? yExtents.Max - yExtents.Min : 1d;
-        double pointX = plotBox.X + (point.X - xExtents.Min) / xRange * plotBox.Width;
-        double pointY = plotBox.Y + (point.Y - yExtents.Min) / yRange * plotBox.Height;
+        // Keep off-plot points outside the clip; clamping them would create
+        // spurious edge markers and change the connecting path.
+        double xRatio = (point.X - xExtents.Min) / xRange;
+        double yRatio = (point.Y - yExtents.Min) / yRange;
+        double pointX = plotBox.X + (xReversed ? 1d - xRatio : xRatio) * plotBox.Width;
+        double pointY = plotBox.Y + (yReversed ? 1d - yRatio : yRatio) * plotBox.Height;
         double radius = bubble
             ? Math.Sqrt(Math.Max(0d, point.Size) / Math.Max(1d, maxBubbleSize)) * Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.BubbleRadiusPlotRatio
             : 3d;

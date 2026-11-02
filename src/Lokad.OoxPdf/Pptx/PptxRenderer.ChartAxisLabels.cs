@@ -174,7 +174,7 @@ internal sealed partial class PptxRenderer
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CCA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
-    private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints)
+    private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
@@ -206,12 +206,17 @@ internal sealed partial class PptxRenderer
             {
                 width = plotBox.Width / PptxChartMetricRules.HorizontalValueAxisSlotCount;
                 x = plotBox.X + plotBox.Width * offset - width / 2d;
-                y = plotBox.Y - height * PptxChartMetricRules.HorizontalValueAxisTopOffsetFactor;
+                double axisY = plotBox.Y + plotBox.Height * (placement?.LabelPlotRatio ?? 0d);
+                y = placement?.LabelsHighSide == true
+                    ? axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor
+                    : axisY - height * PptxChartMetricRules.HorizontalValueAxisTopOffsetFactor;
                 alignment = TextAlignment.Center;
             }
             else
             {
-                bool labelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneAxis, valueAxis, rightSide);
+                bool labelsRightSide = placement?.LabelsHighSide ?? ResolveSceneOrXmlValueAxisLabelsRightSide(sceneAxis, valueAxis, rightSide);
+                double axisX = placement is { } resolved ? plotBox.X + plotBox.Width * resolved.LabelPlotRatio
+                    : labelsRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                 width = useTextSizedWidth ? valueAxisLabelWidth : plotBox.Width * PptxChartMetricRules.VerticalValueAxisWidthRatio;
                 double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
                 // Outer same-side strips anchor to the inner strip ink edge: Office keeps a
@@ -219,10 +224,10 @@ internal sealed partial class PptxRenderer
                 // text-sized slot boxes (three dual-column probes agree within 0.13 with zero fitting).
                 // Right-side and deeper slots keep the legacy slot boxes (unobserved).
                 x = labelsRightSide
-                    ? plotBox.X + plotBox.Width + sideGap + axisSideSlot * (width + sideGap)
+                    ? axisX + sideGap + axisSideSlot * (width + sideGap)
                     : innerStripInkEdge.HasValue && axisSideSlot == 1
                         ? innerStripInkEdge.Value - sideGap - PptxChartMetricRules.BarDualValueAxisInterAxisGap - width
-                        : Math.Max(0d, plotBox.X - (axisSideSlot + 1) * (width + sideGap));
+                        : Math.Max(0d, axisX - (axisSideSlot + 1) * (width + sideGap));
                 y = plotBox.Y + plotBox.Height * offset - height * PptxChartMetricRules.VerticalValueAxisBaselineRatio;
                 alignment = labelsRightSide ? TextAlignment.Left : TextAlignment.Right;
             }

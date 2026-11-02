@@ -550,7 +550,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<(double Reserve, ChartAxisSource ValueAxis, double NumericClearance)?> TryMeasureCartesianHeaderAsync(
         PptxTheme theme, PptxSceneChart chart, ChartLegendLayout legend,
         PptxSceneChartPlot? plot, XElement plotElement, XDocument chartXml, PresentationFontResolver? resolver,
-        ChartCategoryAxisPlacement? categoryPlacement = null)
+        ChartAxisPlacement? categoryPlacement = null)
     {
         // Authored frames and furniture above/beside the plot keep their existing
         // placement owner. This path measures the ordinary numeric-axis header.
