@@ -43,6 +43,25 @@ internal static class PptxChartDensifyTests
         TestAssert.True(InvokeBool(vectorType, vector, "HasAnyDenseSlot"), "A text vector must report dense slots.");
     }
 
+    public static void SparseTextSlotsPreservePointsWithoutDuplicatingEmptyProvenance()
+    {
+        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Expected text vector type.");
+        var denseMethod = vectorType.GetMethod("DensePoints") ?? throw new InvalidOperationException("Expected dense text slots.");
+        denseMethod.Invoke(BuildTextVector(vectorType, [(0, "warm", true)], 2), null);
+        object source = BuildTextVector(vectorType, [(0, "first", true), (99_999, "last", true), (0, "replacement", true)], 100_000);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        var slots = (Array)(denseMethod.Invoke(source, null) ?? throw new InvalidOperationException("Expected dense text slots."));
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        TestAssert.Equal(100_000, slots.Length);
+        TestAssert.True(slots.GetValue(1) is null, "Retain the missing source slot.");
+        string Text(int index) => (string)(slots.GetValue(index)!.GetType().GetProperty("Text")!.GetValue(slots.GetValue(index))!);
+        TestAssert.Equal("replacement", Text(0));
+        TestAssert.Equal("last", Text(99_999));
+        TestAssert.True(allocated < 32L * slots.Length,
+            $"Empty slots must not duplicate the large workbook provenance record: {allocated} bytes for {slots.Length} slots.");
+    }
+
     public static void PresenceChecksPreserveDenseCaps()
     {
         Type vectorType = NumberVectorType();

@@ -321,7 +321,8 @@ internal sealed partial class PptxRenderer
     }
 
     // R16: internal so the per-frame shared dense label memo carries the point type.
-    internal readonly record struct ChartIndexedTextPoint(
+    // Dense slots share immutable source provenance; empty slots own no record.
+    internal sealed record ChartIndexedTextPoint(
         int Index,
         ChartPointIndexSource IndexSource,
         string Text,
