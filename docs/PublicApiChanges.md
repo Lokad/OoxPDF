@@ -87,6 +87,10 @@ own their own reservations, share the root allowance, and do not dispose the roo
 or other independently created scopes. Dispose/refund only after storage users
 finish. Refusal never triggers eviction, spilling or reduced output.
 
+Sparse cached chart ranges now contribute to the existing page construction grant.
+A budget may refuse ranges whose slot storage was previously underestimated; this
+remains a terminal `MemoryAdmission` failure with no partial publication.
+
 Producer admission covers package intake and coarse parsed XML/cache capacity, extracted parts and copy buffers,
 including nested chart workbooks, plus staged PDF content and its fixed encoding/
 readback buffers. Providers own their private backing/buffer admission; the built-in
