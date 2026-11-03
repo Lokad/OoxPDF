@@ -161,6 +161,12 @@ All original color, operator-count and geometry assertions remain. The earlier
 Ubuntu failures with an empty local catalog are retained; font-specific Office
 baselines and independent visual thresholds remain separate checks.
 
+`pptx-text-oracle-portability` checks no-break wrapping and ellipse text-rectangle
+origins alongside clipping and composed-content controls. The wrapping fixture
+uses pinned DejaVu Sans, including U+202F; the ellipse fixture uses the existing
+synthetic face. Both retain their original assertions and run in Ubuntu CI.
+These semantic checks do not qualify installed-font Office typography.
+
 `host-output-lifetime` checks both formats with a caller-funded fixed output
 buffer held through a delayed publication borrow. A second conversion sees the
 occupied shared capacity; host release makes it available again. File/stream
