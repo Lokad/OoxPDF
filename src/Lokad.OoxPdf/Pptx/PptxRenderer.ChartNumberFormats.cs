@@ -143,7 +143,11 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            string numberFormat = (thousands ? "#,##0" : "0") +
+            int integerEnd = decimalPoint >= 0 ? decimalPoint : view.Length;
+            int integerDigits = 0;
+            for (int i = 0; i < integerEnd; i++)
+                if (view[i] == '0') integerDigits++;
+            string numberFormat = (thousands ? "#,##" : string.Empty) + new string('0', Math.Max(1, integerDigits)) +
                 (decimals > 0 ? "." + new string('0', decimals) : string.Empty);
             text = emitValue.ToString(numberFormat, numberCulture);
         }

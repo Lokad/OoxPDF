@@ -9,6 +9,18 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxScatterIntervalTests
 {
+    public static void PptxScatterRequiredIntegerDigitsReachNumericCaptions()
+    {
+        foreach (AutoCase sample in AutoCases().Where(c => c.NumberFormat == "0000000000"))
+        {
+            string[] actual = AutoLabels(RenderAuto(sample, AutoChart(sample)));
+            string[] expected = sample.Id == "auto-x-width-360-long-format"
+                ? ["0000000000", "0000000002", "0000000004", "0000000006", "0000000008", "0000000010", "7", "32", "57", "82"]
+                : ["0000000000", "0000000001", "0000000002", "0000000003", "0000000004", "0000000005", "0000000006", "0000000007", "0000000008", "0000000009", "7", "32", "57", "82"];
+            TestAssert.Equal(string.Join(",", expected), string.Join(",", actual));
+        }
+    }
+
     public static void PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry()
     {
         foreach (AutoCase sample in AutoCases())

@@ -5,6 +5,34 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxChartNumberFormatsTests
 {
+    public static void PptxChartNumberRequiredIntegerDigitsPreservePadding()
+    {
+        TestAssert.Equal("0000000000", FormatChartNumber(0d, "0000000000"));
+        TestAssert.Equal("0000000002", FormatChartNumber(2d, "0000000000"));
+        TestAssert.Equal("0000000010", FormatChartNumber(10d, "0000000000"));
+        TestAssert.Equal("0007", FormatChartNumber(7d, "0000"));
+        TestAssert.Equal("12345", FormatChartNumber(12345d, "0000"));
+        TestAssert.Equal("-0007", FormatChartNumber(-7d, "0000"));
+        TestAssert.Equal("0010", FormatChartNumber(9.9d, "0000"));
+        TestAssert.Equal("007.25", FormatChartNumber(7.25d, "000.00"));
+        TestAssert.Equal("(0007)", FormatChartNumber(-7d, "0000;(0000)"));
+        TestAssert.Equal("0000", FormatChartNumber(0d, "0;-0;0000"));
+        TestAssert.Equal("013%", FormatChartNumber(.126d, "000%"));
+        TestAssert.Equal("002", FormatChartNumber(2000d, "000,"));
+        TestAssert.Equal("0,007", FormatChartNumber(7d, "#,##0000"));
+    }
+
+    public static void PptxChartNumberIntegerPaddingExcludesLiteralZeros()
+    {
+        TestAssert.Equal("07", FormatChartNumber(7d, "\\00"));
+        TestAssert.Equal("07", FormatChartNumber(7d, "\"0\"0"));
+        TestAssert.Equal("700", FormatChartNumber(7d, "0\"00\""));
+        TestAssert.Equal("007", FormatChartNumber(7d, "_0000"));
+        TestAssert.Equal("007", FormatChartNumber(7d, "*0000"));
+        TestAssert.Equal("007", FormatChartNumber(7d, "[>=5]000;00"));
+        TestAssert.Equal("03", FormatChartNumber(3d, "[>=5]000;00"));
+    }
+
     public static void PptxChartNumberScalingCommasDivideDisplayValue()
     {
         TestAssert.Equal("1,500", FormatChartNumber(1500000d, "#,##0,"));

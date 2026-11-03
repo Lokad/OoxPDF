@@ -1,4 +1,15 @@
 {
+  "pptx-chart-integer-padding": [
+    "PptxChartNumber",
+    "PptxChartAxisNumberFormatUsesSceneAuthoritativeAbsence",
+    "PptxScenePreservesChartNumberFormatMetadata",
+    "PptxScatterRequiredIntegerDigitsReachNumericCaptions",
+    "PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry",
+    "PptxScatterAutomaticIntervalsPreserveSourceUnitsAndRejectedDeclarations",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-scatter-automatic-intervals": [
     "PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry",
     "PptxScatterAutomaticIntervalsPreserveSourceUnitsAndRejectedDeclarations",
