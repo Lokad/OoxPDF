@@ -168,8 +168,16 @@ Approximate or restricted:
   bound is authored, across tested frame heights and label sizes. Existing fully
   automatic clustered axes retain their interval density. Crossing coordinates
   agree within0.005pt. This does not establish exact curve
-  shaping or application-view parity. Bubble bounds, missing scaling and rejected
-  or logarithmic declarations retain their existing fallback.
+  shaping or application-view parity. Missing scaling and rejected or logarithmic
+  declarations retain their existing fallback.
+  Area-sized bubbles with authored horizontal bounds and a positive major
+  interval share measured outer and inner containers, circle sizes, axis ranges,
+  labels, clipping and circular legend keys. Source `bubbleScale` percentages,
+  including zero, and subunit sizes are preserved in this scope. Independent
+  font/frame/scale/title/series controls match native radii within0.005pt;
+  caption, center and legend placement remain approximate. Automatic horizontal
+  intervals, authored container geometry, composed plots, width-sized and negative
+  bubbles retain the existing fallback.
   Automatic scatter X intervals use the available authored inner factor width
   and axis font size; numeric captions, marks and legend measurement share the
   resolved scale. Automatic/outer/edge X plot widths and bubble automatic
