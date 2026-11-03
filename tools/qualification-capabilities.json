@@ -1,5 +1,7 @@
 {
   "pptx-scatter-smoothing": [
+    "PptxChartScatterOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartSmoothOptionsPreserveRawBooleanState",
     "PptxScatterSmoothingKeepsSourceAuthorityAndExplicitFalse",
     "PptxScatterSmoothingDefaultsPaintCurvesAndKeepStraightAndHiddenLines",
     "ScatterStyleAgreesBetweenSceneAndXml",

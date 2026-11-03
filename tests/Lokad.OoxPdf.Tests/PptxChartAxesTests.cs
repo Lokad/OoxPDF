@@ -1255,7 +1255,7 @@ internal static class PptxChartAxesTests
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:scatterChart>
                 <c:scatterStyle val="lineMarker"/>
-                <c:ser><c:smooth val="1"/></c:ser>
+                <c:ser><c:smooth val="0"/></c:ser>
               </c:scatterChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "scatterChart").Single();
@@ -1268,7 +1268,7 @@ internal static class PptxChartAxesTests
 
         TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, (PptxSceneChartScatterStyle)(optionsType.GetProperty("ScatterStyle")?.GetValue(options) ?? default(PptxSceneChartScatterStyle)));
         TestAssert.True((bool)(optionsType.GetProperty("ConnectLines")?.GetValue(options) ?? true) == false, "Expected unknown scene scatterStyle to keep the no-line default, not fallback XML lineMarker.");
-        TestAssert.True(smoothSeries.Length == 1 && !PptxTests.ChartBooleanOptionValue(smoothSeries[0]), "Expected missing scene scatter smooth flag to use the scene default, not fallback XML smooth=1.");
+        TestAssert.True(smoothSeries.Length == 1 && PptxTests.ChartBooleanOptionValue(smoothSeries[0]), "Expected missing scene scatter smooth flag to use Office's true default, not fallback XML smooth=0.");
         TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(smoothSeries[0]), "Expected missing scene scatter smooth state to remain distinguishable from an explicit false token.");
     }
 
@@ -1300,7 +1300,7 @@ internal static class PptxChartAxesTests
         TestAssert.True(!PptxTests.ChartBooleanOptionValue(smoothSeries[1]), "Expected explicit smooth=0 to resolve false.");
         TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(smoothSeries[1]), "Expected explicit smooth=0 presence to remain explicit.");
         TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(smoothSeries[1]));
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(smoothSeries[2]), "Expected missing smooth element to use the renderer default false.");
+        TestAssert.True(PptxTests.ChartBooleanOptionValue(smoothSeries[2]), "Expected missing scatter smooth element to use Office's true default.");
         TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(smoothSeries[2]), "Expected missing smooth element to remain distinct from explicit false.");
         TestAssert.Equal(string.Empty, PptxTests.ChartBooleanOptionRawValue(smoothSeries[2]));
     }
