@@ -70,8 +70,12 @@ internal static partial class PptxColumnIntervalTests
         PdfPage Center(string position) => LabelGroupPage(position: position, extra: labels => labels.Add(XElement.Parse(
             "<c:layout xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:manualLayout><c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\".2\"/><c:y val=\".3\"/><c:w val=\".4\"/><c:h val=\".15\"/></c:manualLayout></c:layout>")));
         TestAssert.Equal(Center("ctr").Content, Center("outEnd").Content);
-        PdfPage custom = LabelGroupPage(extra: labels => labels.Add(XElement.Parse(
-            "<c:tx xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"/><a:t>Custom </a:t></a:r><a:r><a:rPr sz=\"1800\" b=\"1\"/><a:t>label</a:t></a:r></a:p></c:rich></c:tx>")));
+        PdfPage custom = LabelGroupPage(extra: labels =>
+        {
+            for (int index = 0; index < 2; index++) labels.Add(new XElement(CrossingC + "dLbl",
+                new XElement(CrossingC + "idx", new XAttribute("val", index)), XElement.Parse(
+                "<c:tx xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1200\"/><a:t>Custom </a:t></a:r><a:r><a:rPr sz=\"1800\" b=\"1\"/><a:t>label</a:t></a:r></a:p></c:rich></c:tx>")));
+        });
         string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(custom, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).Select(p => p.Text));
         TestAssert.Equal("Custom labelCustom label", text);
@@ -112,14 +116,32 @@ internal static partial class PptxColumnIntervalTests
     private static double[][] LabelGroupRectangles(PdfPage page, string selectedColor)
     {
         var result = new List<double[]>();var colors = new Stack<string>();string color = "";
+        var points = new List<double[]>();var pending = new List<double[]>();
         foreach (string line in page.Content.Split('\n').Select(s => s.Trim()))
         {
             if (line == "q") colors.Push(color);else if (line == "Q") color=colors.Pop();
             else if (line.EndsWith(" rg",StringComparison.Ordinal) || line.EndsWith(" g",StringComparison.Ordinal)) color=line;
-            else if (color == selectedColor)
+            else
             {
                 var match=Regex.Match(line,@"^([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re f$");
-                if (match.Success) result.Add(match.Groups.Cast<Group>().Skip(1).Select(g=>double.Parse(g.Value,CultureInfo.InvariantCulture)).ToArray());
+                if (match.Success && color == selectedColor) result.Add(match.Groups.Cast<Group>().Skip(1).Select(g=>double.Parse(g.Value,CultureInfo.InvariantCulture)).ToArray());
+                var point=Regex.Match(line,@"^([-\d.]+) ([-\d.]+) [ml]$");
+                if (point.Success) points.Add([double.Parse(point.Groups[1].Value,CultureInfo.InvariantCulture),double.Parse(point.Groups[2].Value,CultureInfo.InvariantCulture)]);
+                else if (line == "h")
+                {
+                    if (points.Count == 4)
+                    {
+                        double left=points.Min(p=>p[0]),bottom=points.Min(p=>p[1]);
+                        pending.Add([left,bottom,points.Max(p=>p[0])-left,points.Max(p=>p[1])-bottom]);
+                    }
+                    points.Clear();
+                }
+                else if (line is "f" or "f*")
+                {
+                    if (color == selectedColor) result.AddRange(pending);
+                    pending.Clear();points.Clear();
+                }
+                else if (line is "n" or "S") {pending.Clear();points.Clear();}
             }
         }
         return result.ToArray();
