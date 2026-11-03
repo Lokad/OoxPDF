@@ -77,6 +77,12 @@ layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures
 and unavailable checks retain their explicit classifications.
 
+`docx-mixed-terminal-paragraphs` covers comment paragraph counts, wrapping,
+resolved aliases, unavailable mark fonts, actual missing-body-font fallback and
+cancellation. Painted text/font advances and origins replace two incidental
+PDF-byte/font-number oracles. Independent Word origins and complete-page images
+remain separate gates; harness repairs reuse unchanged renderer assets and passes.
+
 `DocxTableLookTests` pins independent Word fills for bitmask, explicit, partial and
 absent/default declarations, preserving raw source tokens in both DOCX modes.
 The exact old adjacent-table source pins Word's single logical table, thirteen

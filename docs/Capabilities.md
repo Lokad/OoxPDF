@@ -392,8 +392,10 @@ Approximate or restricted:
   does not turn a failed visual threshold into a pass.
   Plain comment paragraphs share measured rows without a five-paragraph limit;
   independent Office controls cover two through seven paragraphs and middle-row
-  wrapping. Mixed terminal formatting and explicit paragraph-spacing combinations
-  retain their qualified fallbacks; whole-page parity remains unresolved.
+  wrapping. Supported fitting/wrapped terminal font pairs now use the same
+  count-independent leading rows; names resolving to one face retain paragraph
+  boundaries. Existing glyph, style, width and spacing fallbacks remain;
+  whole-page parity is unresolved.
 - SVG gradients follow Office-visible centered focal geometry and smooth preview
   transparency. Broader SVG composition, transformed picture-link combinations
   and some alpha/color effects retain restrictions and explicit residuals.

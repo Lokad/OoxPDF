@@ -85,7 +85,8 @@
 - PPTX: preserves cells following horizontal table merges, sharing source grid
   positions across styles, row-height measurement, text and link placement.
 - DOCX: preserves plain comment paragraph breaks beyond five paragraphs, using
-  shared measured rows for balloon height and painting.
+  shared measured rows for balloon height and painting, including supported
+  terminal font pairs and resolved font aliases.
 - DOCX: minimum-line placement uses measured local slots across fonts, styles
   and neighboring tables/wrapped text; links and background paint retain geometry.
 - DOCX: continuation pages use their own body print origins, keeping text,
