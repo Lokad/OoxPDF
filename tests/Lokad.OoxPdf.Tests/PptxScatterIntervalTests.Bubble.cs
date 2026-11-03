@@ -87,9 +87,9 @@ internal static partial class PptxScatterIntervalTests
             XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
             foreach (XElement valueAxis in xml.Descendants(CurveC + "valAx"))
             {
-                valueAxis.Element(CurveC + "spPr")?.Remove();
-                valueAxis.Add(new XElement(CurveC + "spPr", new XElement(a + "ln", new XElement(a + "solidFill",
-                    new XElement(a + "srgbClr", new XAttribute("val", valueAxis.Element(CurveC + "axPos")!.Attribute("val")!.Value == "b" ? "00FF00" : "FF0000"))))));
+                valueAxis.Element(CurveC + "majorGridlines")?.Remove();
+                valueAxis.Add(new XElement(CurveC + "majorGridlines", new XElement(CurveC + "spPr", new XElement(a + "ln",
+                    new XElement(a + "solidFill", new XElement(a + "srgbClr", new XAttribute("val", "0000FF")))))));
             }
             XElement axis = xml.Descendants(CurveC + "valAx").Last();
             axis.Element(CurveC + "scaling")!.Add(new XElement(CurveC + "min", new XAttribute("val", "-7")),
@@ -150,15 +150,15 @@ internal static partial class PptxScatterIntervalTests
     // Only the fixture's four-arc filled circles are inspected. This is not a
     // general PDF parser; coordinates include the full path before plot clipping.
     private static (double X, double Y, double Radius)[] BubbleCircles(PdfPage page) =>
-        Regex.Matches(page.Content, @"(?<path>[-\d.]+ [-\d.]+ m(?:\s+[-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ c){4})\s+(?:h\s+)?f\*")
+        Regex.Matches(page.Content, @"(?<path>[-\d.]+ [-\d.]+ m(?:\s+[-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ [-\d.]+ c){4})\s+(?:h\s+)?f(?:\*)?")
             .Select(m => Regex.Matches(m.Groups["path"].Value, @"-?\d+(?:\.\d+)?").Select(n => double.Parse(n.Value, CultureInfo.InvariantCulture)).ToArray())
             .Select(v => { var x = v.Where((_, i) => i % 2 == 0).ToArray(); var y = v.Where((_, i) => i % 2 != 0).ToArray();
                 return ((x.Min() + x.Max()) / 2d, (y.Min() + y.Max()) / 2d, (x.Max() - x.Min()) / 2d); }).ToArray();
     private static (double Left, double Bottom, double Width, double Height) BubblePlot(PdfPage page)
     {
         var lines = PptxColumnIntervalTests.Lines(page);
-        var x = lines.Single(p => p.Color == new RgbColor(0, 255, 0) && Math.Abs(p.V[1] - p.V[3]) < .001d && Math.Abs(p.V[0] - p.V[2]) > 100d).V;
-        var y = lines.Single(p => p.Color == new RgbColor(255, 0, 0) && Math.Abs(p.V[0] - p.V[2]) < .001d && Math.Abs(p.V[1] - p.V[3]) > 100d).V;
+        var x = lines.Single(p => p.Color == default && Math.Abs(p.V[1] - p.V[3]) < .001d && Math.Abs(p.V[0] - p.V[2]) > 100d).V;
+        var y = lines.Single(p => p.Color == default && Math.Abs(p.V[0] - p.V[2]) < .001d && Math.Abs(p.V[1] - p.V[3]) > 100d).V;
         return (x[0], y[1], x[2] - x[0], y[3] - y[1]);
     }
 }

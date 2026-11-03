@@ -24,8 +24,11 @@ internal sealed partial class PptxRenderer
             fallback.Legend.Visible && (fallback.Legend.Overlay || fallback.Legend.PositionKind != PptxSceneChartLegendPosition.Right) ||
             !string.IsNullOrEmpty(plot.BubbleSizeRepresents) && !plot.BubbleSizeRepresents.Equals("area", StringComparison.OrdinalIgnoreCase) ||
             !string.IsNullOrEmpty(plot.ShowNegativeBubblesValue) && plot.ShowNegativeBubblesValue is not ("0" or "false") ||
-            ReadChartPointAxisDeclaration(xAxis) is not { } xSource || ReadChartPointAxisDeclaration(yAxis) is not { } ySource)
+            ReadChartPointAxisDeclaration(xAxis) is not { } xSource || ReadChartPointAxisDeclaration(yAxis) is not { } ySource ||
+            xSource.Minimum is null || xSource.Maximum is null || xSource.MajorUnit is null)
             return null;
+        // Automatic horizontal interval density is unresolved. Keep its whole
+        // geometry on the prior path rather than mixing two range owners.
         double scale = 1d;
         if (plot.BubbleScale is { } authoredScale)
         {
