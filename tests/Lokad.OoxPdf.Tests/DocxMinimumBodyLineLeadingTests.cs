@@ -25,6 +25,38 @@ internal static class DocxMinimumBodyLineLeadingTests
         TestAssert.True(ReferenceEquals(a.Segments, z.Segments), "Horizontal positioning and glyph plans remain the same.");
     }
 
+    public static void DocxMinimumBodyLineLeadingShadesNaturalLineWithoutChangingOccupiedSlots()
+    {
+        foreach (int minimum in new[] { 400, 560 })
+        foreach (int after in new[] { 0, 80 })
+        {
+            var document = ReadFixture((xml, _) =>
+            {
+                var paragraph = Target(xml);
+                var properties = paragraph.Element(Word + "pPr")!;
+                properties.Add(new XElement(Word + "shd", new XAttribute(Word + "val", "clear"), new XAttribute(Word + "fill", "224466")));
+                var spacing = properties.Element(Word + "spacing")!;
+                spacing.SetAttributeValue(Word + "line", minimum);
+                spacing.SetAttributeValue(Word + "after", after);
+                var next = paragraph.ElementsAfterSelf(Word + "p").First();
+                var nextProperties = next.Element(Word + "pPr")!;
+                nextProperties.Add(new XElement(Word + "shd", new XAttribute(Word + "val", "clear"), new XAttribute(Word + "fill", "552233")));
+            });
+            var before = Layout(document);
+            TestAssert.True(DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var placed), "A shaded minimum paragraph retains the existing placement policy.");
+            var original = Minimum(before); var actual = Minimum(placed);
+            var paint = actual.ParagraphShadingFrame!.Value;
+            TestAssert.True(Math.Abs(paint.Height - actual.SingleLineHeight!.Value - after / 20d) < .00001d,
+                "Independent Word minimum-slot controls shade the natural line and joined after-spacing, leaving minimum leading unpainted.");
+            TestAssert.Equal(original.LineHeight, actual.LineHeight);
+            TestAssert.Equal(original.ParagraphShadingFrame!.Value.BaselineInset, paint.BaselineInset);
+            TestAssert.True(Math.Abs(original.BaselineY + original.FirstLineInsetPoints!.Value - actual.BaselineY - actual.FirstLineInsetPoints!.Value) < .00001d,
+                "The occupied paragraph top remains fixed while the background follows the natural line.");
+            TestAssert.True(ReferenceEquals(original.Segments, actual.Segments) && ReferenceEquals(before.RelatedStories, placed.RelatedStories),
+                "Shading changes no text advance, note geometry or resource ownership.");
+        }
+    }
+
     public static void DocxMinimumBodyLineLeadingKeepsRuleMarkerAndSlotGuards()
     {
         Action<XDocument, XDocument>[] guards = [

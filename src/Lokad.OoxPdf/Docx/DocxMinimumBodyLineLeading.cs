@@ -47,6 +47,10 @@ internal static class DocxMinimumBodyLineLeading
                 replacements.Add(line, line with {
                     BaselineY = line.BaselineY - excess,
                     FirstLineInsetPoints = line.FirstLineInsetPoints + excess,
+                    // Word shades the natural line at the lowered baseline;
+                    // the extra minimum leading stays outside its background.
+                    ParagraphShadingFrame = line.ParagraphShadingFrame is { } paint
+                        ? paint with { Height = Math.Max(0d, paint.Height - excess) } : null,
                     // Generated markers retain the original source slot top.
                     BodyLineBoxBaselineInsetPoints = marked ? line.FirstLineInsetPoints + excess : line.BodyLineBoxBaselineInsetPoints,
                     BodyLineBoxHeightPoints = marked ? line.LineHeight : line.BodyLineBoxHeightPoints
