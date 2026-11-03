@@ -171,9 +171,13 @@ Approximate or restricted:
   resolved scale. Automatic/outer/edge plot widths and bubble/vertical automatic
   intervals retain their approximation. Required integer-zero placeholders retain
   padding across the shared number formatter's existing sections, literal masks,
-  grouping and scaling. Source axis paint and remaining caption-driven plot
-  placement remain approximate; correct intervals and formatted values do not
-  establish complete chart parity.
+  grouping and scaling. Source-owned inner factor plots admit measured endpoint
+  and side captions inside the chart frame, preserving width when possible and
+  shrinking when required. Hidden series lines do not change caption admission;
+  numeric captions stay centered on ticks even when wider than their nominal slot.
+  Independent controls match Office X-axis coordinates within0.04pt. Vertical
+  admission, other plot layouts, source axis paint and remaining typography retain
+  their approximation; this does not establish complete chart parity.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.
