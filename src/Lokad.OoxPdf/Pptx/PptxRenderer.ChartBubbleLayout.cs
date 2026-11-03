@@ -170,15 +170,27 @@ internal sealed partial class PptxRenderer
         double textX = textRight - textWidth;
         double markerX = textX - 1.5d * markerSize;
         double clipHeight = entries.Count * rowHeight;
+        double ascent = 0d, descent = 0d;
         var frames = new List<ChartLegendEntryFrame>(entries.Count);
         for (int i = 0; i < entries.Count; i++)
         {
             double rowCenter = center + ((entries.Count - 1d) / 2d - i) * rowHeight;
             var ink = await measure.TryMeasureInkBoundsAsync(entries[i].Name, style).ConfigureAwait(false);
+            if (ink is { } extent)
+            {
+                ascent = Math.Max(ascent, extent.Top);
+                descent = Math.Max(descent, -extent.Bottom);
+            }
+            else
+            {
+                var line = await measure.MeasureLineBoxAsync(style).ConfigureAwait(false);
+                ascent = Math.Max(ascent, line.Ascent);
+                descent = Math.Max(descent, line.Descent);
+            }
             double baseline = rowCenter - (ink is { } bounds ? (bounds.Bottom + bounds.Top) / 2d : style.FontSize * .3d);
             frames.Add(new(markerX, baseline, markerSize * 1.5d + textWidth, rowCenter - markerSize / 2d));
         }
         return new(markerX, center - clipHeight / 2d, textRight - markerX + PptxChartMetricRules.ChartContentFrameInset,
-            clipHeight, frames[0].Y, rowHeight, markerSize, markerSize, markerSize / 2d, false, false, frames);
+            clipHeight, frames[0].Y, rowHeight, markerSize, markerSize, markerSize / 2d, false, false, frames, ascent, descent);
     }
 }

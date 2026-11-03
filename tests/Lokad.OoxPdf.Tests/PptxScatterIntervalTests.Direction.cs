@@ -15,11 +15,16 @@ internal static partial class PptxScatterIntervalTests
             foreach (bool reverseX in new[] { false, true })
             foreach (bool reverseY in new[] { false, true })
             {
-                var actual = Label(Render(bubble, .5d, 7d, 103d, reverseX, reverseY, labels: true));
+                PdfPage reversed = Render(bubble, .5d, 7d, 103d, reverseX, reverseY, labels: true);
+                var actual = Label(reversed);
+                var placed = Axes(reversed);
                 // X=8 in .5..8.5 and Y=79 in7..103; default right labels
                 // retain the same occupied offset from their reflected point.
-                Near(reverseX ? -.875d * (axes.Right-axes.Left) : 0d, actual.X-origin.X);
-                Near(reverseY ? -.5d * (axes.Top-axes.Bottom) : 0d, actual.Y-origin.Y);
+                // Caption admission can move the plot when the side changes.
+                Near(placed.Left + (reverseX ? .0625d : .9375d) * (placed.Right-placed.Left) -
+                    (axes.Left + .9375d * (axes.Right-axes.Left)), actual.X-origin.X);
+                Near(placed.Bottom + (reverseY ? .25d : .75d) * (placed.Top-placed.Bottom) -
+                    (axes.Bottom + .75d * (axes.Top-axes.Bottom)), actual.Y-origin.Y);
             }
         }
 
