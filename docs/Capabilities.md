@@ -145,7 +145,11 @@ Approximate or restricted:
   horizontal bars; only aligned upper
   endpoints become ticks. Single column/line/area plots with one supported value
   axis also anchor an automatic lower bound to an authored maximum and major
-  unit. Automatic step fitting and remaining horizontal frame geometry stay
+  unit. An authored major unit governs their automatic bounds and headroom,
+  including signed, zero and fractional data. Translated lower bounds retain the
+  same interval count. Labels, tick marks and grids share those source intervals;
+  automatic minor grids subdivide a major interval into five unless overridden.
+  Automatic step fitting and remaining horizontal frame geometry stay
   approximate. Composed/secondary interval ownership retains its fallback.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain

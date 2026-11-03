@@ -1330,6 +1330,9 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-cartesian-source-intervals": [
+    "PptxAuthoredUnitsOwnAutomaticCartesianBounds",
+    "PptxAuthoredUnitBoundsShareTicksGridsAndBarGeometry",
+    "PptxSourceUnitBoundsPreserveSceneAuthorityAndFallbacks",
     "PptxRightLegendLineReservesBoundsBeyondPaintedIntervals",
     "PptxAreaSourceIntervals",
     "PptxChartSourceMinimum",
