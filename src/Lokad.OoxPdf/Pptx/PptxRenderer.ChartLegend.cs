@@ -302,13 +302,14 @@ internal sealed partial class PptxRenderer
                     ? PptxChartMetricRules.LegendSideFillMarkerBaselineFactor
                     : PptxChartMetricRules.LegendMarkerBaselineFactor;
             double markerY = entryFrame?.MarkerY ?? y +
-                (legendBox.MarkerBaselineOffset ?? legendBox.LineHeight * markerBaselineFactor);
+                (legendBox.MarkerOffset?.Y ?? legendBox.LineHeight * markerBaselineFactor);
             if (entry.Fill is { } fill)
             {
+                double keyX = entryX + (legendBox.MarkerOffset?.X ?? 0d);
                 if (entry.Marker is { } fillMarker)
-                    DrawChartMarkerFill(graphics, entryX + legendBox.MarkerSize / 2d, markerY + legendBox.MarkerSize / 2d,
+                    DrawChartMarkerFill(graphics, keyX + legendBox.MarkerSize / 2d, markerY + legendBox.MarkerSize / 2d,
                         fillMarker.SymbolKind, legendBox.MarkerSize, fill);
-                else FillChartRectangle(graphics, entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize, fill);
+                else FillChartRectangle(graphics, keyX, markerY, legendBox.MarkerSize, legendBox.MarkerSize, fill);
                 if (entry.Stroke is { } fillStroke && fillStroke.Alpha > 0d)
                 {
                     if (fillStroke.Alpha < 1d)
@@ -326,9 +327,9 @@ internal sealed partial class PptxRenderer
 
                     SetChartStroke(graphics, ResolveFilledLegendKeyStroke());
                     if (entry.Marker is { } outlinedMarker)
-                        DrawChartMarkerStroke(graphics, entryX + legendBox.MarkerSize / 2d, markerY + legendBox.MarkerSize / 2d,
+                        DrawChartMarkerStroke(graphics, keyX + legendBox.MarkerSize / 2d, markerY + legendBox.MarkerSize / 2d,
                             outlinedMarker.SymbolKind, legendBox.MarkerSize, ResolveFilledLegendKeyStroke());
-                    else graphics.StrokeRectangle(entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize);
+                    else graphics.StrokeRectangle(keyX, markerY, legendBox.MarkerSize, legendBox.MarkerSize);
                     if (fillStroke.Alpha < 1d)
                     {
                         graphics.RestoreState();
@@ -472,14 +473,17 @@ internal sealed partial class PptxRenderer
         double center = frame.Y + frame.Height / 2d;
         // The mixed-ink Office control keeps one font baseline per row.
         // Preserve its legacy offset while key size and row placement use the
-        // measured line box; the remaining baseline/gap residuals stay explicit.
+        // measured line box; the remaining baseline residuals stay explicit.
         double baselineOffset = style.FontSize * PptxChartMetricRules.LegendSideFillBaselineCenterOffsetFactor;
         double height = entryCount * row;
         return box with { X = x, Width = box.X + box.Width - x, MarkerSize = marker,
             MarkerWidth = marker, TextGap = marker / 2d, LineHeight = row,
             FirstY = center - baselineOffset + (entryCount - 1d) * row / 2d,
             ClipY = center - height / 2d, ClipHeight = height,
-            MarkerBaselineOffset = baselineOffset - marker / 2d };
+            // Native entry/key paint insets, confirmed on unseen fonts/sizes,
+            // move the key inside its slot without moving text or clip frames.
+            // The available text gap bounds the inset for very small keys.
+            MarkerOffset = (Math.Min(.25d, marker / 2d), baselineOffset - marker / 2d) };
     }
 
     private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false)

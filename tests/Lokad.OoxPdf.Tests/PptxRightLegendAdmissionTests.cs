@@ -10,6 +10,26 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxRightLegendAdmissionTests
 {
+    public static void PptxAreaSideLegendPaintInsetPreservesTextGapAndFrameOwnership()
+    {
+        foreach (ushort ascender in new ushort[] { 900, 1300 })
+        foreach (int size in new[] { 12, 24, 1 })
+        foreach (bool frame in new[] { false, true })
+        {
+            PdfPage page = Render(true, "high", false, legendFontSize: size,
+                resolver: new LegendLineBoxResolver(ascender), legendNames: ["Revenue", "gyp"], legendFrame: frame);
+            var keys = Keys(page);
+            TestAssert.Equal(2, keys.Length);
+            foreach (var (key, name) in keys.Zip(new[] { "Revenue", "gyp" }))
+            {
+                double gap = TextOrigin(page, name).X - key.X - key.Size;
+                TestAssert.True(gap >= -.002d && Math.Abs(gap - Math.Max(0d, key.Size / 2d - .25d)) < .002d,
+                    "The painted key uses its measured slot and fixed native inset without overlapping its label.");
+            }
+            TestAssert.Equal(1, DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Count(s => s.Text == "gyp"));
+        }
+    }
+
     public static void PptxAreaSideLegendPaintedKeysAndRowsUseThePreparedLineBox()
     {
         PdfPage shortFont = Render(true, "high", false, legendFontSize: 18,
@@ -48,11 +68,11 @@ internal static class PptxRightLegendAdmissionTests
         AssertText(page, 3, "W");
     }
 
-    private static (double Size, double CenterY)[] Keys(PdfPage page) =>
+    private static (double X, double Size, double CenterY)[] Keys(PdfPage page) =>
         Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re f\*?")
             .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
-            .Where(r => r[0] > 600d && r[2] is > 1d and < 20d && Math.Abs(r[2] - r[3]) < .002d)
-            .Select(r => (Size: r[2], CenterY: r[1] + r[3] / 2d)).OrderByDescending(r => r.CenterY).ToArray();
+            .Where(r => r[0] > 600d && r[2] is > 0d and < 20d && Math.Abs(r[2] - r[3]) < .002d)
+            .Select(r => (X: r[0], Size: r[2], CenterY: r[1] + r[3] / 2d)).OrderByDescending(r => r.CenterY).ToArray();
 
     public static void PptxAreaRightLegendUsesFontLineBoxWhenAdvancesStayFixed()
     {
@@ -175,7 +195,7 @@ internal static class PptxRightLegendAdmissionTests
 
     private static PdfPage Render(bool area, string side, bool reversed, int count = 3, bool between = false,
         int fontSize = 18, string caption = "W", string? fallback = null,
-        int? legendFontSize = null, IFontResolver? resolver = null, IReadOnlyList<string>? legendNames = null)
+        int? legendFontSize = null, IFontResolver? resolver = null, IReadOnlyList<string>? legendNames = null, bool legendFrame = false)
     {
         string categories = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>{caption}{i + 1}</c:v></c:pt>"));
         string values = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>{2 + i % 3}</c:v></c:pt>"));
@@ -185,6 +205,7 @@ internal static class PptxRightLegendAdmissionTests
             $"<c:cat><c:strLit>{categories}</c:strLit></c:cat><c:val><c:numLit>{values}</c:numLit></c:val><c:smooth val=\"0\"/></c:ser>"));
         string legendBody = legendFontSize is { } size
             ? $"<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz=\"{size * 100}\"><a:latin typeface=\"LegendFace\"/></a:defRPr></a:pPr><a:endParaRPr/></a:p></c:txPr>" : "";
+        string legendShape = legendFrame ? "<c:spPr><a:solidFill><a:srgbClr val=\"FFF5E0\"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>" : "";
         string manual = fallback == "manual" ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:xMode val=\"factor\"/><c:yMode val=\"factor\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\"0.15\"/><c:y val=\"0.1\"/><c:w val=\"0.65\"/><c:h val=\"0.7\"/></c:manualLayout></c:layout>" : "";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -196,7 +217,7 @@ internal static class PptxRightLegendAdmissionTests
                 </c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling>{{(fallback == "log" ? "<c:logBase val=\"10\"/>" : "")}}<c:min val="1"/><c:max val="5"/></c:scaling><c:axPos val="l"/>
                   <c:tickLblPos val="{{side}}"/><c:crossAx val="1"/><c:crosses val="autoZero"/><c:crossBetween val="{{(between ? "between" : "midCat")}}"/><c:majorUnit val="1"/>
-                </c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/>{{legendBody}}</c:legend></c:chart>
+                </c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/>{{legendBody}}{{legendShape}}</c:legend></c:chart>
             </c:chartSpace>
             """;
         const string slide = """

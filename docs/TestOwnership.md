@@ -214,8 +214,11 @@ with authored/rotated/unpaired/logarithmic fallback and neighboring axis tests.
 advances fixed, checks area/line fallback ownership, and includes measured
 bubble, numeric-side and PDF-structure neighbors.
 
-`pptx-area-legend-paint` adds measured key/row geometry and mixed-ink row
-baselines to those neighboring checks; all run as one exact method set.
+`pptx-area-legend-paint` adds measured key/row geometry, the independently
+confirmed key inset and mixed-ink row baselines. The existing marker offset
+carries both coordinates while text/clip frames retain their own geometry;
+tiny keys consume at most the available text gap. Baseline differences remain
+approximate. All neighboring checks run as one exact method set.
 
 `pptx-typography-oracle-portability` binds the same pinned font resolver to
 layout/flow and glyph inspection for Unicode manual breaks and hidden spaces,
@@ -265,3 +268,4 @@ their independent font and geometry requirements.
 semantics. The original four-row balloon control requires actual Times New Roman
 and retains its Office0.05pt gate; a two-font portable control checks all24 words
 and painted row extents without substituting another fixed row count.
+
