@@ -888,7 +888,8 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartScatterOptions(plot, plotElement), ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
         var (xExtents, xOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, scatterXTickTargetCount);
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, chartXml, xValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-        var captions = await MeasureChartValueAxisCaptionsAsync(new ChartTextMeasurer(fontResolver, kerningEnabled: false), style,
+        var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
+        var captions = await MeasureChartValueAxisCaptionsAsync(measurer, style,
             xValueAxis, xExtents, xOptions.Units, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: true, manualPlotLayoutApplied: false),
             xOptions.TickPolicy, defaultNumberFormat: null, reserveEndpoints: false).ConfigureAwait(false);
         IReadOnlyList<double> tickValues = captions.Values;
@@ -903,7 +904,7 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        return (await new ChartTextMeasurer(fontResolver, kerningEnabled: false).MeasureAsync(lastLabel, style).ConfigureAwait(false));
+        return measurer.Measure(lastLabel, style);
     }
 
     private static async ValueTask<double> ResolveRightLegendWidthAsync(IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver, double lastCategoryLabelWidth, double lastXLabelWidth = 0d)

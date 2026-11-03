@@ -180,10 +180,9 @@ internal sealed partial class PptxRenderer
     {
         IReadOnlyList<double> values = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, target, policy);
         IEnumerable<double> measured = reserveEndpoints ? values.Append(extents.Min).Append(extents.Max) : values;
-        string[] labels = measured.Select(value => FormatSceneOrXmlChartAxisLabel(value, source.SceneAxis, source.XmlAxis, defaultNumberFormat))
-            .DefaultIfEmpty("0").ToArray();
-        await measurer.PrepareAsync(labels, style).ConfigureAwait(false);
-        double maximum = labels.Max(label => measurer.Measure(label, style));
+        double maximum = 0d;
+        foreach (string label in measured.Select(value => FormatSceneOrXmlChartAxisLabel(value, source.SceneAxis, source.XmlAxis, defaultNumberFormat)).DefaultIfEmpty("0"))
+            maximum = Math.Max(maximum, await measurer.MeasureAsync(label, style).ConfigureAwait(false));
         return (values, maximum, Math.Max(style.FontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
             maximum + style.FontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor));
     }
