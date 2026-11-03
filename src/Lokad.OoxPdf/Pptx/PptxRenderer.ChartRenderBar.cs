@@ -646,7 +646,7 @@ internal sealed partial class PptxRenderer
 
             if (usesMeasuredAxisInsets && categoryPlacement is { } placement)
             {
-                double left = PptxChartMetricRules.ColumnPlotRightReserve, right = left;
+                double endpointLeft = PptxChartMetricRules.ColumnPlotRightReserve, endpointRight = endpointLeft;
                 ChartAxisSource value = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
                 if (IsSceneOrXmlChartAxisLabelVisible(value.SceneAxis, value.XmlAxis))
                 {
@@ -658,11 +658,11 @@ internal sealed partial class PptxRenderer
                     double first = await textMeasurer.MeasureAsync(FormatSceneOrXmlChartAxisLabel(extents.Min, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
                     double last = await textMeasurer.MeasureAsync(FormatSceneOrXmlChartAxisLabel(extents.Max, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
                     if (ReadSceneOrXmlValueAxisReversed(value.SceneAxis, value.XmlAxis)) (first, last) = (last, first);
-                    left = Math.Max(left, first / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
-                    right = Math.Max(right, last / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
+                    endpointLeft = Math.Max(endpointLeft, first / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
+                    endpointRight = Math.Max(endpointRight, last / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
                 }
                 double side = maxCategoryWidth > 0d ? ComputeCartesianAxisLabelSideReserve(maxCategoryWidth, tickStyle.FontSize) : 0d;
-                return AdmitChartPlotCaptionReserves(frame, plotBox, left, right, side, placement);
+                return AdmitChartPlotCaptionReserves(frame, plotBox, endpointLeft, endpointRight, side, placement);
             }
 
             if (maxCategoryWidth <= 0d)
