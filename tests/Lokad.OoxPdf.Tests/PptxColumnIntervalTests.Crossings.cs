@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
