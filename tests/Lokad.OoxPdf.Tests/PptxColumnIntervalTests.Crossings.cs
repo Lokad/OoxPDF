@@ -123,6 +123,29 @@ internal static partial class PptxColumnIntervalTests
     private static void NearHorizontal(double actual, double expected) => TestAssert.True(Math.Abs(actual - expected) < .002d,
         $"Expected horizontal coordinate {expected:R}, got {actual:R}.");
 
+    public static void PptxHorizontalOriginRelativeInversionKeepsPaintAndSwatchesTogether()
+    {
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        foreach (bool reversed in new[] { false, true })
+        foreach (bool invert in new[] { false, true })
+        {
+            PdfPage page = Render(7, 25, reversed: reversed, horizontal: true, editChart: xml =>
+            {
+                xml.Descendants(CrossingC + "catAx").Single().Element(CrossingC + "crosses")!.SetAttributeValue("val", "max");
+                var series = xml.Descendants(CrossingC + "ser").Single();
+                series.Add(new XElement(CrossingC + "spPr", new XElement(a + "solidFill", new XElement(a + "srgbClr", new XAttribute("val", "3366CC")))),
+                    new XElement(CrossingC + "invertIfNegative", new XAttribute("val", invert ? "1" : "0")));
+                xml.Descendants(CrossingC + "barChart").Single().Add(new XElement(CrossingC + "dLbls",
+                    new XElement(CrossingC + "dLblPos", new XAttribute("val", "ctr")),
+                    new XElement(CrossingC + "showVal", new XAttribute("val", "1")),
+                    new XElement(CrossingC + "showLegendKey", new XAttribute("val", "1"))));
+            });
+            TestAssert.Equal(invert ? 0 : 4, PptxChartNegativeInversionTests.CountSeriesColorPaint(page.Content));
+            TestAssert.Equal("82,96", string.Join(",", DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).Select(p => p.Text)));
+        }
+    }
+
     private static (double Left, double Right, double Axis, double[] Labels, double[][] Ticks) HorizontalGeometry(PdfPage page)
     {
         var lines = Lines(page);

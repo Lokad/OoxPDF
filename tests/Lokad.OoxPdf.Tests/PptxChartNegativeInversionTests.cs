@@ -107,7 +107,7 @@ internal static class PptxChartNegativeInversionTests
     }
 
     // Assert painted source color, independent of rectangle/path grouping and IDs.
-    private static int CountSeriesColorPaint(string content)
+    internal static int CountSeriesColorPaint(string content)
     {
         string color = "";
         var saved = new Stack<string>();

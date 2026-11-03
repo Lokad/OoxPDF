@@ -15020,6 +15020,8 @@
     "PptxSyntheticChartComboLineUsesOwnValueAxisScale"
   ],
   "pptx-horizontal-crossing": [
+    "PptxHorizontalOriginRelativeInversionKeepsPaintAndSwatchesTogether",
+    "PptxNegativeBar",
     "PptxHorizontalClusteredDataAndLabelsShareTheCategoryOrigin",
     "PptxHorizontalCategoryCrossingsFollowTheNumericScale",
     "PptxHorizontalCategoryLabelSidesKeepTheirStrokeCrossing",
