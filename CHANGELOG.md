@@ -18,6 +18,8 @@
   horizontal scales and manual/composed layouts retain their approximation.
 - PPTX: chart number formats preserve required leading integer zeros, including
   sections, literal masking, grouping and scaling.
+- PPTX: horizontal value-axis labels, ticks and grids start intervals at the
+  authored minimum and omit unaligned upper endpoints.
 
 - PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
   explicit non-overlay legends retain their plot-space reservation. Bottom line
