@@ -2,6 +2,10 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: scatter axes with authored major intervals measure connected curve
+  overshoot and share resolved bounds across layout, labels, ticks and grids.
+  Automatic interval fitting and bubble bounds retain their existing fallback.
+
 - PPTX: scatter connections follow series line visibility across omitted and
   marker-only styles, preserving PowerPoint's smoothing default and explicit
   straight lines.

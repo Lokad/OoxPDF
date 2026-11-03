@@ -159,7 +159,13 @@ Approximate or restricted:
   line and smooth styles. Missing series smoothing follows PowerPoint's true
   default; explicit false keeps straight segments and series line noFill hides
   connections. Unknown/rejected styles retain their fallback. Curve fitting and
-  automatic bounds around curves remain approximate.
+  automatic interval fitting remain approximate. Scatter axes with authored
+  positive major intervals measure curve overshoot and share resolved bounds
+  across measurement, labels, marks/grids and placement. Independent controls
+  cover partial bounds, fractional/negative ranges, constants and point order;
+  crossing coordinates agree within0.005pt. This does not establish exact curve
+  shaping or application-view parity. Bubble bounds, missing scaling and rejected
+  or logarithmic declarations retain their existing fallback.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.
