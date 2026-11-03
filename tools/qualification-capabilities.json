@@ -1506,6 +1506,9 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-category-layout": [
+    "PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames",
+    "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
+    "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",
     "PptxCrowdedCategoryCaptionsPreservePlotSpaceAcrossFrameSizes",
     "PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames",
     "PptxCategoryLabelRotationPreservesContentAcrossPlotKinds",
