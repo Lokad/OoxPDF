@@ -2,6 +2,10 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: automatic scatter X intervals respond to authored inner plot width and
+  axis font size, sharing scale selection with legend measurement. Other plot
+  layouts and bubble/vertical automatic scales retain their existing fallback.
+
 - PPTX: scatter axes with authored major intervals measure connected curve
   overshoot and share resolved bounds across layout, labels, ticks and grids.
   Automatic interval fitting and bubble bounds retain their existing fallback.

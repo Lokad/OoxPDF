@@ -166,6 +166,12 @@ Approximate or restricted:
   crossing coordinates agree within0.005pt. This does not establish exact curve
   shaping or application-view parity. Bubble bounds, missing scaling and rejected
   or logarithmic declarations retain their existing fallback.
+  Automatic scatter X intervals use the available authored inner factor width
+  and axis font size; numeric captions, marks and legend measurement share the
+  resolved scale. Automatic/outer/edge plot widths and bubble/vertical automatic
+  intervals retain their approximation. Numeric zero-padding, source axis paint
+  and remaining caption-driven plot placement are not yet qualified as matching
+  Office; correct numeric intervals do not establish complete chart parity.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.
