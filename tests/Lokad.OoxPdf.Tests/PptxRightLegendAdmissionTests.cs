@@ -26,6 +26,13 @@ internal static class PptxRightLegendAdmissionTests
                 TestAssert.True(gap >= -.002d && Math.Abs(gap - Math.Max(0d, key.Size / 2d - .25d)) < .002d,
                     "The painted key uses its measured slot and fixed native inset without overlapping its label.");
             }
+            if (frame)
+            {
+                double[] background = FilledRectangles(page).Single(r => r[0] > 600d &&
+                    r[2] > keys[0].Size + .01d && r[3] > keys[0].Size + .01d);
+                TestAssert.True(Math.Abs(background[0] + 1.5d * keys[0].Size - TextOrigin(page, "Revenue").X) < .002d,
+                    "The admitted legend frame remains anchored to text while the key paints inside its slot.");
+            }
             TestAssert.Equal(1, DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Count(s => s.Text == "gyp"));
         }
     }
@@ -68,9 +75,12 @@ internal static class PptxRightLegendAdmissionTests
         AssertText(page, 3, "W");
     }
 
-    private static (double X, double Size, double CenterY)[] Keys(PdfPage page) =>
+    private static IEnumerable<double[]> FilledRectangles(PdfPage page) =>
         Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re f\*?")
-            .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+            .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray());
+
+    private static (double X, double Size, double CenterY)[] Keys(PdfPage page) =>
+        FilledRectangles(page)
             .Where(r => r[0] > 600d && r[2] is > 0d and < 20d && Math.Abs(r[2] - r[3]) < .002d)
             .Select(r => (X: r[0], Size: r[2], CenterY: r[1] + r[3] / 2d)).OrderByDescending(r => r.CenterY).ToArray();
 
