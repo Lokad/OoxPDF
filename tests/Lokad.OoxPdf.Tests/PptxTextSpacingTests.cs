@@ -200,8 +200,8 @@ internal static class PptxTextSpacingTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
-        // Bind the semantic geometry assertions to a fixed embeddable test face.
-        var fonts = new PresentationFontResolver(new TestFaceFontResolver());
+        // The pinned Unicode face includes the narrow no-break space in this fixture.
+        var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
 
         PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: fonts)
             .Frames
