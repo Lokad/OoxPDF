@@ -7,7 +7,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxLegendRowsTests
+internal static partial class PptxLegendRowsTests
 {
     public static void PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame() => CheckBottomLegendRows("line");
 
@@ -149,7 +149,7 @@ internal static class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false)
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null)
     {
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
             <c:ser><c:idx val="{{i - 1}}"/><c:order val="{{i - 1}}"/><c:tx><c:v>North West Region {{i}}</c:v></c:tx>
@@ -159,7 +159,7 @@ internal static class PptxLegendRowsTests
         if (categoryLegend)
         {
             string categories = string.Concat(Enumerable.Range(0, count).Select(i =>
-                $"<c:pt idx=\"{i}\"><c:v>Category {i + 1}</c:v></c:pt>"));
+                $"<c:pt idx=\"{i}\"><c:v>{System.Security.SecurityElement.Escape(categoryNames?[i] ?? $"Category {i + 1}")}</c:v></c:pt>"));
             string values = string.Concat(Enumerable.Range(0, count).Select(i =>
                 $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
             series = $"<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:cat><c:strLit><c:ptCount val=\"{count}\"/>{categories}</c:strLit></c:cat><c:val><c:numLit><c:ptCount val=\"{count}\"/>{values}</c:numLit></c:val></c:ser>";

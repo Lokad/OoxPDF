@@ -83,22 +83,78 @@ internal sealed partial class PptxRenderer
         double availableWidth = layout.Legend.Layout.HasGeometryValues ? box.Width : Math.Min(layout.Frame.Width, maximumRowWidth);
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
-        int start = 0;
-        double width = 0d;
+        bool automaticLegend = !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
+        bool measuredFillGrid = measuredBand && bottom && automaticLegend && entries.All(entry => entry.Fill is not null);
+        double naturalWidth = 0d, widestCell = 0d;
         for (int i = 0; i < entries.Count; i++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
             widths[i] = GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, measure, box.MarkerWidth, gap, padding);
-            if (i > start && width + widths[i] - padding > availableWidth)
+            if (measuredFillGrid)
             {
-                rows.Add((start, i, Math.Max(0d, width - padding)));
-                start = i;
-                width = 0d;
+                double cell = measure.Measure(entries[i].Name, style) + box.MarkerWidth + box.MarkerSize;
+                naturalWidth += cell;
+                widestCell = Math.Max(widestCell, cell);
             }
-            width += widths[i];
         }
-        rows.Add((start, entries.Count, Math.Max(0d, width - padding)));
-        if (measuredBand && rows.Count > 1 && widths.Max() <= availableWidth + padding)
+        if (measuredFillGrid)
+        {
+            // Office's automatic fill legend first admits a natural single row.
+            // Wrapped rows use equal cells, including the incomplete last row;
+            // alternating short/long names still occupy the widest cell. The
+            // independently observed frame limit also owns one-row admission.
+            availableWidth = Math.Min(availableWidth, layout.Frame.Width * 0.9d);
+            if (naturalWidth <= availableWidth)
+            {
+                double packedWidth = widths.Sum() - padding;
+                if (entries.Count > 1 && packedWidth > availableWidth)
+                {
+                    // Keep preferred spacing while it fits. When it does not,
+                    // share the remaining whitespace between the measured keys
+                    // and text, so a naturally fitting row cannot lose names.
+                    double reduction = (packedWidth - availableWidth) / (entries.Count - 1);
+                    padding -= reduction;
+                    for (int i = 0; i < widths.Length; i++)
+                    {
+                        context.CancellationToken.ThrowIfCancellationRequested();
+                        widths[i] -= reduction;
+                    }
+                    packedWidth = availableWidth;
+                }
+                rows.Add((0, entries.Count, Math.Max(0d, packedWidth)));
+            }
+            else
+            {
+                int capacity = (int)Math.Min(entries.Count, Math.Max(1d, Math.Floor(availableWidth / widestCell)));
+                int rowCount = (entries.Count - 1) / capacity + 1;
+                int columns = (entries.Count - 1) / rowCount + 1;
+                Array.Fill(widths, widestCell);
+                padding = 0d;
+                for (int start = 0; start < entries.Count; start += columns)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+                    rows.Add((start, Math.Min(entries.Count, start + columns), columns * widestCell));
+                }
+            }
+        }
+        else
+        {
+            int start = 0;
+            double width = 0d;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+                if (i > start && width + widths[i] - padding > availableWidth)
+                {
+                    rows.Add((start, i, Math.Max(0d, width - padding)));
+                    start = i;
+                    width = 0d;
+                }
+                width += widths[i];
+            }
+            rows.Add((start, entries.Count, Math.Max(0d, width - padding)));
+        }
+        if (!measuredFillGrid && measuredBand && rows.Count > 1 && widths.Max() <= availableWidth + padding)
         {
             // Greedy packing establishes the required row count. Minimize its
             // widest row so wrapped legends stay balanced without reordering.
@@ -123,8 +179,8 @@ internal sealed partial class PptxRenderer
                 if (CountRows(middle) <= rowCount) { upper = middle; } else { lower = middle; }
             }
             rows.Clear();
-            start = 0;
-            width = 0d;
+            int start = 0;
+            double width = 0d;
             for (int i = 0; i < entries.Count; i++)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
@@ -140,7 +196,6 @@ internal sealed partial class PptxRenderer
         }
         // Office limits automatic legends to whole rows within half the chart
         // height, including overlay legends. Authored geometry keeps its bounds.
-        bool automaticLegend = !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
         int admittedRowCount = automaticLegend
             ? (int)Math.Min(rows.Count, Math.Max(0d, Math.Floor(layout.Frame.Height / (2d * box.LineHeight))))
             : rows.Count;

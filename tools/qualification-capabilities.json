@@ -1572,7 +1572,9 @@
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingPptxPreservesCompositeChartAndText",
     "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "XrefTablePointsAtObjectHeaders",
+    "PptxWrappedFillLegendsShareColumnsAndPreserveSourceOrder",
+    "PptxNaturallyFittingFillLegendKeepsUnequalNamesOnOneRow"
   ],
   "pptx-line-label-palette": [
     "PptxLineDataLabelKeysMatchIndependentOfficePalette",
@@ -1718,7 +1720,9 @@
     "XrefTablePointsAtObjectHeaders",
     "PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers",
     "PptxCffSubstitutionMatchesTrueTypeRendering",
-    "CffChartUnresolvableRunesSubstituteQuestionMark"
+    "CffChartUnresolvableRunesSubstituteQuestionMark",
+    "PptxWrappedFillLegendsShareColumnsAndPreserveSourceOrder",
+    "PptxNaturallyFittingFillLegendKeepsUnequalNamesOnOneRow"
   ],
   "pptx-legend-defaults": [
     "PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace",
