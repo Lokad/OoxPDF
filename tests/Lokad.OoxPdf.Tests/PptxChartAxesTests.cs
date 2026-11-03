@@ -938,7 +938,7 @@ internal static class PptxChartAxesTests
         System.Reflection.MethodInfo method = renderer.GetMethod("GetChartMinorGridlineValuesCore", flags) ?? throw new InvalidOperationException("Expected shared minor interval resolver.");
         try
         {
-            return (IReadOnlyList<double>)(method.Invoke(null, [extents, units, crossing, targetCount, hasMajorElement, policy]) ?? throw new InvalidOperationException("Expected minor levels."));
+            return (IReadOnlyList<double>)(method.Invoke(null, [extents, units, crossing, targetCount, hasMajorElement, policy, null]) ?? throw new InvalidOperationException("Expected minor levels."));
         }
         catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is { } inner)
         {
