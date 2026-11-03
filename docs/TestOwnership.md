@@ -194,3 +194,14 @@ staged-summary boundary. It includes package/XML/workbook neighbors, budgeted
 fonts/images/staging/publication, and count-retry preparation. The workbook refusal
 control selects a known retained payload rather than depending on scope ordinals.
 Repeated-layout/cached-font assertions remain distinct from new admission checks.
+
+`pptx-layout-oracle-portability` pins the existing synthetic face for manual chart
+title frames/styles, signed middle-anchor overflow and theme-default logo wrapping.
+The original fixture and assertion bytes are retained. Neighboring visible-line
+advance, title-diagnostic and composed-content checks share the exact selection.
+Installed-font Office comparisons remain independent.
+
+`docx-mixed-terminal-portable` keeps paragraph-count, resolved-alias, missing-body-
+font and cancellation coverage in Ubuntu CI. It is a four-method subset of the
+already-qualified mixed-terminal capability, with the same assertions and font
+owners; broad rendering and visual qualification are separate.

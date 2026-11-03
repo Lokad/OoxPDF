@@ -15076,5 +15076,19 @@
     "MissingFontsPreserveWordCompatibleBalloonText",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-layout-oracle-portability": [
+    "PptxSyntheticChartTitleManualBoxDrivesPlacement",
+    "PptxSyntheticMiddleAnchorUsesSignedActualSlackWhenWrappedTextOverflows",
+    "PptxSyntheticCenteredLogoBoxWrapsDefaultTypefaceText",
+    "PptxSyntheticVerticalAnchorUsesLineAdvanceForVisibleLines",
+    "PptxSyntheticChartDefaultAxisTitleRendersWithoutUnsupportedDiagnostic",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
+  "docx-mixed-terminal-portable": [
+    "DocxMixedTerminalParagraphsKeepBreaksAndPhysicalFacesAcrossCounts",
+    "DocxWordCompatibleBalloonFontAliasesUseResolvedParagraphFaces",
+    "MissingFontsPreserveWordCompatibleBalloonText",
+    "DocxReviewCommentAuthorsKeepTextOwnershipCaseAndCancellation"
   ]
 }

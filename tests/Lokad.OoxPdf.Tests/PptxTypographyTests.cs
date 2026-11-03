@@ -1700,8 +1700,10 @@ internal static class PptxTypographyTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        // Pin advances so wrapping/anchoring assertions are independent of installed fonts.
+        var fonts = new PresentationFontResolver(new TestFaceFontResolver());
 
-        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: fonts)
             .Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)

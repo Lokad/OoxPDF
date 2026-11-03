@@ -3870,7 +3870,8 @@ internal static class PptxChartsTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
-        OoxPdfConverter.Convert(input, output);
+        // Manual frame/style semantics do not require a machine-installed face.
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = new TestFaceFontResolver() });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.729 0.855 0.333 rg", pdf);
