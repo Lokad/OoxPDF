@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -7,6 +8,20 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxScatterIntervalTests
 {
+    public static void PptxScatterAutomaticYKeepsNativeClusteredIntervals()
+    {
+        // The independent clustered-scatter reference has Y0..6/unit1.
+        // Inferring from ten intervals instead of the shared nine chooses0.5,
+        // shrinks the range and shifts the measured side strip.
+        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "pptx-ladder-11-chart-scatter-clusters-port.pptx"));
+        using var stream = File.OpenRead(path);
+        using var package = OoxPackage.Open(stream, default);
+        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(
+            new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
+        TestAssert.Equal("0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6", string.Join(",", AutoLabels(page)));
+    }
+
     public static void PptxScatterAutomaticYMatchesIndependentOfficeBoundsAndUnits()
     {
         foreach (RangeCase sample in AutomaticYCases())

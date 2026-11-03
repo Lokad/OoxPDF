@@ -105,7 +105,7 @@ internal sealed partial class PptxRenderer
         ChartAxisUnits sourceUnits = ReadSceneOrXmlChartValueAxisUnits(axis, xml);
         string rawMajor = axis?.MajorUnitValue ?? (xml is null ? string.Empty : PptxSceneBuilder.ReadChartAxisUnitValueWithValue(xml, "majorUnit").RawValue);
         double? automaticTarget = !bubble && !horizontal
-            ? PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount : automaticTickTargetCount;
+            ? PptxChartMetricRules.AxisNiceTickTargetCount : automaticTickTargetCount;
         bool automaticUnit = !bubble && automaticTarget is { } count && count >= 2d && double.IsFinite(count) &&
             sourceUnits.MajorUnit is null && string.IsNullOrEmpty(rawMajor) && occupied.Max > occupied.Min;
         // Authored units, inferred vertical units and measured source X plots
