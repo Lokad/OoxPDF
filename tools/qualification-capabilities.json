@@ -15073,6 +15073,7 @@
     "DocxWordCompatibleMixedBalloonMovesPreservedFifthClosingRunToOwnRow",
     "DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently",
     "DocxReviewCommentAuthorsKeepTextOwnershipCaseAndCancellation",
+    "MissingFontsPreserveWordCompatibleBalloonText",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
   ]

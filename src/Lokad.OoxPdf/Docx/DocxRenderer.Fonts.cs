@@ -35,7 +35,7 @@ internal sealed partial class DocxRenderer
             ? await DocxFontPlanTextMeasurer.CreateAsync(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache, resolveSourceAdvances: true).ConfigureAwait(false)
             : null;
         await ReportMissingGlyphsAsync(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken).ConfigureAwait(false);
-        Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(plan, runResources, diagnosticSink, cancellationToken);
+        Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(document, plan, runResources, diagnosticSink, cancellationToken);
         List<PdfFallbackFontResource> fallbackFontResources = fallbackFaces.Values
             .DistinctBy(face => face.Font.ResourceKey, StringComparer.Ordinal)
             .OrderBy(face => face.ResourceName, StringComparer.Ordinal)
@@ -284,6 +284,7 @@ internal sealed partial class DocxRenderer
     // resource names follow fixed face order (FF1 regular, FF2 bold, FF3 oblique,
     // FF4 bold-oblique) so output stays deterministic.
     private static Dictionary<DocxTextRun, PdfFallbackFontResource> PrepareMissingFontFallback(
+        DocxDocument document,
         DocxFontPlan plan,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -291,6 +292,7 @@ internal sealed partial class DocxRenderer
     {
         var faces = new Dictionary<DocxTextRun, PdfFallbackFontResource>();
         var reportedFamilies = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<DocxTextRun>? commentMarks = null;
         foreach (DocxResolvedRunTypeface resolved in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -298,6 +300,14 @@ internal sealed partial class DocxRenderer
             {
                 continue;
             }
+
+            // Balloon paragraph marks are metrics/advance inputs only when an
+            // embedded face is usable. An unavailable mark is never painted by
+            // the fallback path and must not select a fallback for body text.
+            commentMarks ??= new(document.RelatedStories.Where(story => story.Kind == DocxRelatedStoryKind.Comment)
+                .SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs)
+                .Select(paragraph => paragraph.ParagraphMarkRun).OfType<DocxTextRun>(), ReferenceEqualityComparer.Instance);
+            if (commentMarks.Contains(resolved.Run)) { continue; }
 
             DocxEffectiveRunProperties effective = resolved.Run.EffectiveProperties;
             PdfFallbackFont face = PdfFallbackFont.ForStyle(effective.Bold, effective.Italic);
