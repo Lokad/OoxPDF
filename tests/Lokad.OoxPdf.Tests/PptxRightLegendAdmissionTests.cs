@@ -10,6 +10,50 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxRightLegendAdmissionTests
 {
+    public static void PptxAreaSideLegendPaintedKeysAndRowsUseThePreparedLineBox()
+    {
+        PdfPage shortFont = Render(true, "high", false, legendFontSize: 18,
+            resolver: new LegendLineBoxResolver(900), legendNames: ["Revenue", "gyp"]);
+        PdfPage tallFont = Render(true, "high", false, legendFontSize: 18,
+            resolver: new LegendLineBoxResolver(1300), legendNames: ["Revenue", "gyp"]);
+        var shortKeys = Keys(shortFont);
+        var tallKeys = Keys(tallFont);
+        TestAssert.Equal(2, shortKeys.Length);
+        TestAssert.Equal(2, tallKeys.Length);
+        TestAssert.True(tallKeys[0].Size - shortKeys[0].Size is > 3d and < 4d,
+            "Identical glyph advances at the same font size still require keys from the selected font line box.");
+        double shortPitch = shortKeys[0].CenterY - shortKeys[1].CenterY;
+        double tallPitch = tallKeys[0].CenterY - tallKeys[1].CenterY;
+        TestAssert.True(tallPitch - shortPitch is > 7d and < 8d,
+            "Prepared rows follow normal line metrics instead of a scalar font-size regime.");
+        TestAssert.True(Math.Abs(TextOrigin(shortFont, "Revenue").X - TextOrigin(tallFont, "Revenue").X) < .002d,
+            "Measured key/row geometry preserves the anchored text advance.");
+        foreach (var page in new[] { shortFont, tallFont })
+        {
+            AssertText(page, 3, "W");
+            TestAssert.Equal(1, DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Count(s => s.Text == "gyp"));
+        }
+    }
+
+    public static void PptxAreaSideLegendRowsKeepOneFontBaselineAcrossDifferentInk()
+    {
+        PdfPage page = Render(true, "high", false, legendFontSize: 18, legendNames: ["Revenue", "gyp"]);
+        var keys = Keys(page);
+        TestAssert.Equal(2, keys.Length);
+        var first = TextOrigin(page, "Revenue");
+        var last = TextOrigin(page, "gyp");
+        TestAssert.True(Math.Abs(first.X - last.X) < .002d &&
+            Math.Abs(first.Y - last.Y - (keys[0].CenterY - keys[1].CenterY)) < .002d,
+            "Independent Office mixed-ink rows retain the same font baseline offset; descenders do not recenter each entry.");
+        AssertText(page, 3, "W");
+    }
+
+    private static (double Size, double CenterY)[] Keys(PdfPage page) =>
+        Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re f\*?")
+            .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+            .Where(r => r[0] > 600d && r[2] is > 1d and < 20d && Math.Abs(r[2] - r[3]) < .002d)
+            .Select(r => (Size: r[2], CenterY: r[1] + r[3] / 2d)).OrderByDescending(r => r.CenterY).ToArray();
+
     public static void PptxAreaRightLegendUsesFontLineBoxWhenAdvancesStayFixed()
     {
         PdfPage shortFont = Render(true, "high", false, legendFontSize: 18, resolver: new LegendLineBoxResolver(900));
@@ -35,6 +79,7 @@ internal static class PptxRightLegendAdmissionTests
             PdfPage shortFont = Render(area, "high", false, fallback: fallback, legendFontSize: 18, resolver: new LegendLineBoxResolver(900));
             PdfPage tallFont = Render(area, "high", false, fallback: fallback, legendFontSize: 18, resolver: new LegendLineBoxResolver(1300));
             TestAssert.Equal(Span(shortFont), Span(tallFont));
+            TestAssert.True(Keys(shortFont).SequenceEqual(Keys(tallFont)), "Fallback key geometry keeps its existing owner.");
             AssertText(shortFont, 3, "W");
             AssertText(tallFont, 3, "W");
         }
@@ -130,20 +175,21 @@ internal static class PptxRightLegendAdmissionTests
 
     private static PdfPage Render(bool area, string side, bool reversed, int count = 3, bool between = false,
         int fontSize = 18, string caption = "W", string? fallback = null,
-        int? legendFontSize = null, IFontResolver? resolver = null)
+        int? legendFontSize = null, IFontResolver? resolver = null, IReadOnlyList<string>? legendNames = null)
     {
         string categories = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>{caption}{i + 1}</c:v></c:pt>"));
         string values = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>{2 + i % 3}</c:v></c:pt>"));
         string plot = area ? "area" : "line";
+        string series = string.Concat((legendNames ?? ["Revenue"]).Select((name, index) =>
+            $"<c:ser><c:idx val=\"{index}\"/><c:order val=\"{index}\"/><c:tx><c:v>{name}</c:v></c:tx>" +
+            $"<c:cat><c:strLit>{categories}</c:strLit></c:cat><c:val><c:numLit>{values}</c:numLit></c:val><c:smooth val=\"0\"/></c:ser>"));
         string legendBody = legendFontSize is { } size
             ? $"<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz=\"{size * 100}\"><a:latin typeface=\"LegendFace\"/></a:defRPr></a:pPr><a:endParaRPr/></a:p></c:txPr>" : "";
         string manual = fallback == "manual" ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:xMode val=\"factor\"/><c:yMode val=\"factor\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\"0.15\"/><c:y val=\"0.1\"/><c:w val=\"0.65\"/><c:h val=\"0.7\"/></c:manualLayout></c:layout>" : "";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{manual}}<c:{{plot}}Chart><c:varyColors val="0"/>
-                <c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>Revenue</c:v></c:tx>
-                  <c:cat><c:strLit>{{categories}}</c:strLit></c:cat><c:val><c:numLit>{{values}}</c:numLit></c:val><c:smooth val="0"/>
-                </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{plot}}Chart>
+                {{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}Chart>
                 <c:catAx><c:axId val="1"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/></c:scaling>
                   <c:axPos val="b"/><c:crossAx val="{{(fallback == "unpaired" ? "other" : "2")}}"/><c:crosses val="autoZero"/>
                   <c:txPr><a:bodyPr rot="{{(fallback == "rotated" ? "-2700000" : "0")}}" vert="horz"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{{fontSize * 100}}"/></a:pPr><a:endParaRPr/></a:p></c:txPr>

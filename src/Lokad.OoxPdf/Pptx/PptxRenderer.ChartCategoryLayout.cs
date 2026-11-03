@@ -41,6 +41,7 @@ internal sealed partial class PptxRenderer
             if (await MeasureSideLegendFrameAsync(measure, legendStyle, entries).ConfigureAwait(false) is not { } frame) return (layout, null);
             outerRight = layout.Frame.X + layout.Frame.Width - margin -
                 PptxChartMetricRules.ChartContentFrameInset - frame.Width;
+            legend = PrepareAreaSideLegend(legend, layout.Frame, entries.Count, legendStyle, frame.LineHeight);
         }
         double available = outerRight - outerLeft;
         double numericBand = IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis)

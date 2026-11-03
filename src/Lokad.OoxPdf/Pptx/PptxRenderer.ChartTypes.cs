@@ -471,7 +471,8 @@ internal sealed partial class PptxRenderer
         bool Horizontal,
         bool SideStrokeLegend,
         IReadOnlyList<ChartLegendEntryFrame>? EntryFrames = null,
-        double? ContentAscent = null, double ContentDescent = 0d);
+        double? ContentAscent = null, double ContentDescent = 0d,
+        double? MarkerBaselineOffset = null);
 
     private readonly record struct ChartLegendEntryFrame(double X, double Y, double Width, double? MarkerY = null);
 

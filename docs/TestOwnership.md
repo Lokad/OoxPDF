@@ -214,6 +214,9 @@ with authored/rotated/unpaired/logarithmic fallback and neighboring axis tests.
 advances fixed, checks area/line fallback ownership, and includes measured
 bubble, numeric-side and PDF-structure neighbors.
 
+`pptx-area-legend-paint` adds measured key/row geometry and mixed-ink row
+baselines to those neighboring checks; all run as one exact method set.
+
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
 controls combine reversal with explicit low/high labels; next-to crossings,

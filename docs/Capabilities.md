@@ -224,7 +224,8 @@ Approximate or restricted:
   horizontal, unwrapped category captions and numeric labels together, keeping
   the measured legend anchor. Area and supported bubble plots share side-legend
   allocation from actual text advances and the selected font's normal line box;
-  swatch geometry and baseline residuals remain approximate. Rotated/wrapped captions retain their prior
+  area key size and row spacing use that line box too. Painted key positions,
+  text baselines and remaining gap residuals stay approximate. Rotated/wrapped captions retain their prior
   layout, as do authored/composed frames and unsupported scales.
   Column category strokes and captions use the category crossing independently
   of the numeric axis crossing. Measured caption bands share line/area placement

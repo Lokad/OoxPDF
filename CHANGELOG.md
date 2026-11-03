@@ -5,6 +5,8 @@
 - PPTX: automatic line/area plots with horizontal, unwrapped categories admit
   caption and numeric-label space beside right legends without moving the legend.
   Area plots share the font-line-box side-legend allocation used by bubble plots.
+  Their legend keys and row spacing also follow measured font line metrics;
+  text baselines and key-gap residuals remain approximate.
   Authored, composed, rotated and wrapped layouts retain their existing paths.
 
 - PPTX: explicit numeric-axis low/high labels follow paired category direction,

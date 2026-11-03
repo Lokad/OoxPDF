@@ -301,7 +301,8 @@ internal sealed partial class PptxRenderer
                 : entry.Fill is not null
                     ? PptxChartMetricRules.LegendSideFillMarkerBaselineFactor
                     : PptxChartMetricRules.LegendMarkerBaselineFactor;
-            double markerY = entryFrame?.MarkerY ?? y + legendBox.LineHeight * markerBaselineFactor;
+            double markerY = entryFrame?.MarkerY ?? y +
+                (legendBox.MarkerBaselineOffset ?? legendBox.LineHeight * markerBaselineFactor);
             if (entry.Fill is { } fill)
             {
                 if (entry.Marker is { } fillMarker)
@@ -459,6 +460,26 @@ internal sealed partial class PptxRenderer
         foreach (var entry in entries)
             width = Math.Max(width, await measure.MeasureAsync(entry.Name, style).ConfigureAwait(false));
         return (width + .9d * line + HorizontalLegendRowPadding, line);
+    }
+
+    private static ChartLegendBox PrepareAreaSideLegend(ChartLegendBox box, ChartFrameBox frame,
+        int entryCount, ChartTextStyle style, double normalLineHeight)
+    {
+        double marker = .45d * normalLineHeight;
+        double row = HorizontalLegendLineBoxScale * normalLineHeight + HorizontalLegendRowPadding;
+        double textX = box.X + box.MarkerWidth + box.TextGap;
+        double x = textX - 1.5d * marker;
+        double center = frame.Y + frame.Height / 2d;
+        // The mixed-ink Office control keeps one font baseline per row.
+        // Preserve its legacy offset while key size and row placement use the
+        // measured line box; the remaining baseline/gap residuals stay explicit.
+        double baselineOffset = style.FontSize * PptxChartMetricRules.LegendSideFillBaselineCenterOffsetFactor;
+        double height = entryCount * row;
+        return box with { X = x, Width = box.X + box.Width - x, MarkerSize = marker,
+            MarkerWidth = marker, TextGap = marker / 2d, LineHeight = row,
+            FirstY = center - baselineOffset + (entryCount - 1d) * row / 2d,
+            ClipY = center - height / 2d, ClipHeight = height,
+            MarkerBaselineOffset = baselineOffset - marker / 2d };
     }
 
     private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false)

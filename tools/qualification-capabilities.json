@@ -15158,6 +15158,23 @@
     "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-area-legend-paint": [
+    "PptxAreaSideLegend",
+    "PptxAreaRightLegend",
+    "PptxRightLegendAdmission",
+    "PptxBubbleMeasuredScalesPreserveNativeIntervalsAndContent",
+    "PptxBubbleSubunitMeasuresKeepPhysicalCircles",
+    "PptxBubbleCompoundSeriesShareGeometryAndCircularKeys",
+    "PptxBubbleSceneScaleAndRejectedDeclarationsKeepOwnership",
+    "PptxBubbleFixedBoundsAndReversalSharePreparedPlacement",
+    "PptxNumericCrossing",
+    "PptxSyntheticAreaChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
+    "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
+    "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 
 }
