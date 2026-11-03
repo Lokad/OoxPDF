@@ -269,6 +269,14 @@ internal sealed record PptxSceneChartPlot
 
     public string ScatterStyle { get; }
 
+    public double? BubbleScale { get; }
+
+    public string BubbleScaleValue { get; }
+
+    public string BubbleSizeRepresents { get; }
+
+    public string ShowNegativeBubblesValue { get; }
+
     public PptxSceneChartRadarStyle RadarStyleKind { get; }
 
     public string RadarStyle { get; }
@@ -330,7 +338,11 @@ internal sealed record PptxSceneChartPlot
         double? firstSliceAngle,
         string firstSliceAngleValue,
         PptxSceneChartDataLabels dataLabels,
-        XElement source)
+        XElement source,
+        double? bubbleScale,
+        string bubbleScaleValue,
+        string bubbleSizeRepresents,
+        string showNegativeBubblesValue)
     {
         PlotKind = plotKind;
         Kind = kind;
@@ -345,6 +357,10 @@ internal sealed record PptxSceneChartPlot
         BarDirection = barDirection;
         ScatterStyleKind = scatterStyleKind;
         ScatterStyle = scatterStyle;
+        BubbleScale = bubbleScale;
+        BubbleScaleValue = bubbleScaleValue;
+        BubbleSizeRepresents = bubbleSizeRepresents;
+        ShowNegativeBubblesValue = showNegativeBubblesValue;
         RadarStyleKind = radarStyleKind;
         RadarStyle = radarStyle;
         MarkersEnabled = markersEnabled;
@@ -389,6 +405,7 @@ internal sealed record PptxSceneChartPlot
         PptxSceneChartDataLabels dataLabels,
         XElement source)
     {
+        var bubbleScale = PptxSceneBuilder.ReadChartElementDoubleWithValue(source, "bubbleScale");
         return new PptxSceneChartPlot(
             PptxSceneBuilder.ParseChartPlotKind(kind),
             kind,
@@ -418,7 +435,11 @@ internal sealed record PptxSceneChartPlot
             firstSliceAngle,
             firstSliceAngleValue,
             dataLabels,
-            source);
+            source,
+            bubbleScale.Value,
+            bubbleScale.RawValue,
+            PptxSceneBuilder.ReadChartElementValue(source, "sizeRepresents"),
+            PptxSceneBuilder.ReadChartElementValue(source, "showNegBubbles"));
     }
 }
 

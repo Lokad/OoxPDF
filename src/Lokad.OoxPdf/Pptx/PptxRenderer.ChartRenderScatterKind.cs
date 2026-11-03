@@ -222,12 +222,29 @@ internal sealed partial class PptxRenderer
                 var measured = MeasureScatterChartExtents(bubbleSeries, null, null, context.CancellationToken);
                 var (xExtents, xAxisOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: true, horizontal: true);
                 var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale(theme, yValueAxis, measured.DataY, measured.PathY, bubble: true, horizontal: false);
+                IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart,
+                    seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook);
+                ChartBubbleSizing? bubbleSizing = null;
+                ChartLegendBox? preparedLegend = null;
+                if (await TryPrepareBubbleGeometryAsync(theme, sceneChart, chartXml, chartLayout, bubblePlot, bubbleSeries,
+                        legendEntries, xValueAxis, yValueAxis, measured.DataX, measured.DataY, fontResolver).ConfigureAwait(false) is { } prepared)
+                {
+                    chartLayout = prepared.Layout;
+                    plotBox = chartLayout.PlotBox;
+                    (xExtents, yExtents, xAxisOptions, yAxisOptions) = (prepared.X, prepared.Y, prepared.XOptions, prepared.YOptions);
+                    bubbleSizing = prepared.Sizing;
+                    preparedLegend = prepared.LegendBox;
+                    legendEntries = legendEntries.Select(entry => entry with
+                    {
+                        Marker = new ChartMarkerStyle(PptxSceneChartMarkerSymbol.Circle, "circle", null, 0d, entry.Fill, entry.Stroke, true)
+                    }).ToArray();
+                }
                 ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
                 ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
                 xAxisOptions = xAxisOptions with { CrossingValue = Math.Clamp(yPlacement.CrossingValue, xExtents.Min, xExtents.Max) };
                 yAxisOptions = yAxisOptions with { CrossingValue = Math.Clamp(xPlacement.CrossingValue, yExtents.Min, yExtents.Max) };
                 DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisOptions.Units, yAxisOptions.CrossingValue, yAxisOptions.Reversed, major: true, yAxisOptions.GridlineStyle.Major, hasMajorGridlineElement: true, yAxisOptions.TickPolicy);
-                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], [], xExtents, yExtents, xAxisOptions, yAxisOptions);
+                RenderScatterChart(graphics, theme, colorMap, chartPalette, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], [], xExtents, yExtents, xAxisOptions, yAxisOptions, bubbleSizing);
                 await RenderScatterDataLabelsAsync(
                     theme,
                     colorMap,
@@ -242,12 +259,15 @@ internal sealed partial class PptxRenderer
                     seriesFills,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, bubblePlot, bubbleChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, bubblePlot, bubbleChart, theme, colorMap),
-                    ReadSharedChartSeriesNames(bubblePlot, bubbleChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+                    ReadSharedChartSeriesNames(bubblePlot, bubbleChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
+                    bubbleSizing: bubbleSizing).ConfigureAwait(false);
                 await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, xAxisOptions.Reversed, horizontalBars: true, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: xAxisOptions.TickPolicy, placement: xPlacement).ConfigureAwait(false);
                 await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, yAxisOptions.Reversed, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: yAxisOptions.TickPolicy, placement: yPlacement).ConfigureAwait(false);
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, xPlacement, yPlacement);
-                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.BubbleTitleRightLegend, chartFonts: fonts).ConfigureAwait(false);
+                await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend,
+                    ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver,
+                    ChartLegendPlacement.BubbleTitleRightLegend, chartFonts: fonts, preparedBox: preparedLegend).ConfigureAwait(false);
                 return true;
             }
         }

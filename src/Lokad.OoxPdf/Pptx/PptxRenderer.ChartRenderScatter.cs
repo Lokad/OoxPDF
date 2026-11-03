@@ -79,7 +79,7 @@ internal sealed partial class PptxRenderer
 
     private static bool IsLineHiddenSeries(int index, IReadOnlyList<bool>? hidden) => hidden is not null && index < hidden.Count && hidden[index];
 
-    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions)
+    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions, ChartBubbleSizing? bubbleSizing = null)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -117,7 +117,7 @@ internal sealed partial class PptxRenderer
                 var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
                 foreach (ScatterPoint point in series[seriesIndex].Points)
                 {
-                    (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed);
+                    (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed, bubbleSizing);
                     points.Add((pointX, pointY));
                 }
 
@@ -128,10 +128,10 @@ internal sealed partial class PptxRenderer
 
                 foreach (ScatterPoint point in series[seriesIndex].Points)
                 {
-                    (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed);
+                    (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize, xAxisOptions.Reversed, yAxisOptions.Reversed, bubbleSizing);
                     if (bubble)
                     {
-                        FillBubbleInPlotClip(pointX, pointY, radius);
+                        if (radius > 0d) FillBubbleInPlotClip(pointX, pointY, radius);
                     }
                     else
                     {

@@ -96,32 +96,53 @@ internal sealed partial class PptxRenderer
             scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, !scatterX);
         PptxSceneChartAxis? axis = source.SceneAxis;
         XElement? xml = source.XmlAxis;
-        bool hasScaling = axis?.HasScaling ?? xml?.Element(ChartNamespace + "scaling") is not null;
-        bool logarithmic = axis?.HasLogarithmicScale ?? xml?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
-        (double? minimum, string rawMinimum) = axis is not null ? (axis.Minimum, axis.MinimumValue) :
-            xml is null ? (null, string.Empty) : PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xml, "min");
-        (double? maximum, string rawMaximum) = axis is not null ? (axis.Maximum, axis.MaximumValue) :
-            xml is null ? (null, string.Empty) : PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xml, "max");
-        ChartAxisUnits sourceUnits = ReadSceneOrXmlChartValueAxisUnits(axis, xml);
-        string rawMajor = axis?.MajorUnitValue ?? (xml is null ? string.Empty : PptxSceneBuilder.ReadChartAxisUnitValueWithValue(xml, "majorUnit").RawValue);
+        ChartPointAxisDeclaration? declaration = ReadChartPointAxisDeclaration(source);
         double? automaticTarget = !bubble && !horizontal
             ? PptxChartMetricRules.AxisNiceTickTargetCount : automaticTickTargetCount;
         bool automaticUnit = !bubble && automaticTarget is { } count && count >= 2d && double.IsFinite(count) &&
-            sourceUnits.MajorUnit is null && string.IsNullOrEmpty(rawMajor) && occupied.Max > occupied.Min;
+            declaration is { MajorUnit: null } && occupied.Max > occupied.Min;
         // Authored units, inferred vertical units and measured source X plots
         // share bounds and emitted intervals. Other automatic X layouts and
         // bubbles keep their existing fallback.
         ChartValueExtents owned = default;
         double unit = 0d;
-        bool resolvedIntervals = !bubble && hasScaling && !logarithmic &&
-            (minimum is not null || string.IsNullOrEmpty(rawMinimum)) &&
-            (maximum is not null || string.IsNullOrEmpty(rawMaximum)) &&
-            (automaticUnit || sourceUnits.MajorUnit is { } declared && declared > 0d && double.IsFinite(declared)) &&
-            TryResolvePointAxisRange(occupied, minimum, maximum, sourceUnits.MajorUnit, automaticTarget ?? target, out owned, out unit);
+        bool resolvedIntervals = !bubble && declaration is { } declared &&
+            (automaticUnit || declared.MajorUnit is not null) &&
+            TryResolvePointAxisRange(occupied, declared.Minimum, declared.Maximum, declared.MajorUnit, automaticTarget ?? target, out owned, out unit);
         if (resolvedIntervals) extents = owned;
         ChartValueAxisRenderOptions options = ReadSceneOrXmlChartBubbleValueAxisOptions(axis, xml, theme, extents, target);
         if (resolvedIntervals) options = options with { Units = options.Units with { MajorUnit = unit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
         return (extents, options);
+    }
+
+    private readonly record struct ChartPointAxisDeclaration(double? Minimum, double? Maximum, double? MajorUnit);
+
+    private static ChartPointAxisDeclaration? ReadChartPointAxisDeclaration(ChartAxisSource source)
+    {
+        PptxSceneChartAxis? axis = source.SceneAxis;
+        XElement? xml = source.XmlAxis;
+        if (!(axis?.HasScaling ?? xml?.Element(ChartNamespace + "scaling") is not null) ||
+            (axis?.HasLogarithmicScale ?? xml?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null)) return null;
+        var minimum = axis is not null ? (axis.Minimum, axis.MinimumValue) :
+            PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xml!, "min");
+        var maximum = axis is not null ? (axis.Maximum, axis.MaximumValue) :
+            PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xml!, "max");
+        var major = axis is not null ? (axis.MajorUnit, axis.MajorUnitValue) :
+            PptxSceneBuilder.ReadChartAxisUnitValueWithValue(xml!, "majorUnit");
+        if (minimum.Item1 is null && !string.IsNullOrEmpty(minimum.Item2) ||
+            maximum.Item1 is null && !string.IsNullOrEmpty(maximum.Item2) ||
+            major.Item1 is null && !string.IsNullOrEmpty(major.Item2) ||
+            minimum.Item1 is { } low && !double.IsFinite(low) || maximum.Item1 is { } high && !double.IsFinite(high) ||
+            major.Item1 is { } unit && (!(unit > 0d) || !double.IsFinite(unit))) return null;
+        return new(minimum.Item1, maximum.Item1, major.Item1);
+    }
+
+    private static ChartValueExtents IncludePointAxisZero(ChartValueExtents occupied, double? minimum, double? maximum)
+    {
+        double lower = minimum ?? occupied.Min, upper = maximum ?? occupied.Max;
+        if (minimum is null && lower >= 0d && upper > 0d && (occupied.Min == occupied.Max || lower / upper < 5d / 6d)) lower = 0d;
+        if (maximum is null && upper <= 0d && lower < 0d && (occupied.Min == occupied.Max || upper / lower < 5d / 6d)) upper = 0d;
+        return new(lower, upper);
     }
 
     private static double? ReadScatterSourceIntervalTarget(PptxTheme theme, PptxSceneChart? chart, XDocument xml,
@@ -143,7 +164,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryResolvePointAxisRange(ChartValueExtents occupied, double? minimum, double? maximum,
-        double? declaredUnit, double tickTargetCount, out ChartValueExtents result, out double unit)
+        double? declaredUnit, double tickTargetCount, out ChartValueExtents result, out double unit, double headroomRatio = .05d)
     {
         result = default;
         unit = declaredUnit ?? 0d;
@@ -155,9 +176,7 @@ internal sealed partial class PptxRenderer
             if (high > low && declaredUnit is null) unit = ChooseChartAxisMajorUnit(high - low, tickTargetCount);
             return high > low && unit > 0d && double.IsFinite(unit);
         }
-        double lower = minimum ?? occupied.Min, upper = maximum ?? occupied.Max;
-        if (minimum is null && lower >= 0d && upper > 0d && (occupied.Min == occupied.Max || lower / upper < 5d / 6d)) lower = 0d;
-        if (maximum is null && upper <= 0d && lower < 0d && (occupied.Min == occupied.Max || upper / lower < 5d / 6d)) upper = 0d;
+        var (lower, upper) = IncludePointAxisZero(occupied, minimum, maximum);
         if (lower == 0d && upper == 0d && minimum is null && maximum is null)
         {
             if (declaredUnit is null) unit = ChooseChartAxisMajorUnit(1d, tickTargetCount);
@@ -170,8 +189,8 @@ internal sealed partial class PptxRenderer
         if (!(unit > 0d) || !double.IsFinite(unit)) return false;
         // Office fixed-unit controls retain zero for wide single-sign data;
         // other automatic ends reserve five percent around occupied geometry.
-        double paddedLower = minimum ?? (lower == 0d ? 0d : lower - .05d * span);
-        double paddedUpper = maximum ?? (upper == 0d ? 0d : upper + .05d * span);
+        double paddedLower = minimum ?? (lower == 0d ? 0d : lower - headroomRatio * span);
+        double paddedUpper = maximum ?? (upper == 0d ? 0d : upper + headroomRatio * span);
         if (minimum is { } origin) paddedUpper = origin + Math.Ceiling((paddedUpper - origin) / unit) * unit;
         else if (maximum is { } end) paddedLower = end - Math.Ceiling((end - paddedLower) / unit) * unit;
         else

@@ -301,10 +301,13 @@ internal sealed partial class PptxRenderer
                 : entry.Fill is not null
                     ? PptxChartMetricRules.LegendSideFillMarkerBaselineFactor
                     : PptxChartMetricRules.LegendMarkerBaselineFactor;
-            double markerY = y + legendBox.LineHeight * markerBaselineFactor;
+            double markerY = entryFrame?.MarkerY ?? y + legendBox.LineHeight * markerBaselineFactor;
             if (entry.Fill is { } fill)
             {
-                FillChartRectangle(graphics, entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize, fill);
+                if (entry.Marker is { } fillMarker)
+                    DrawChartMarkerFill(graphics, entryX + legendBox.MarkerSize / 2d, markerY + legendBox.MarkerSize / 2d,
+                        fillMarker.SymbolKind, legendBox.MarkerSize, fill);
+                else FillChartRectangle(graphics, entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize, fill);
                 if (entry.Stroke is { } fillStroke && fillStroke.Alpha > 0d)
                 {
                     if (fillStroke.Alpha < 1d)
@@ -321,7 +324,10 @@ internal sealed partial class PptxRenderer
                     }
 
                     SetChartStroke(graphics, ResolveFilledLegendKeyStroke());
-                    graphics.StrokeRectangle(entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize);
+                    if (entry.Marker is { } outlinedMarker)
+                        DrawChartMarkerStroke(graphics, entryX + legendBox.MarkerSize / 2d, markerY + legendBox.MarkerSize / 2d,
+                            outlinedMarker.SymbolKind, legendBox.MarkerSize, ResolveFilledLegendKeyStroke());
+                    else graphics.StrokeRectangle(entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize);
                     if (fillStroke.Alpha < 1d)
                     {
                         graphics.RestoreState();

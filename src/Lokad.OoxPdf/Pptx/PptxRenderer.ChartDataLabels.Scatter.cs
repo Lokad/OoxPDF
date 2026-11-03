@@ -32,7 +32,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null)
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        ChartBubbleSizing? bubbleSizing = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
@@ -76,7 +77,7 @@ internal sealed partial class PptxRenderer
                     bubble,
                     xExtents,
                     yExtents,
-                    maxBubbleSize, xReversed, yReversed);
+                    maxBubbleSize, xReversed, yReversed, bubbleSizing);
                 // Office defaults scatter/bubble labels to the right. Bubble
                 // placement uses the circle edge on the requested side; center
                 // placement remains at the data point.
@@ -206,7 +207,8 @@ internal sealed partial class PptxRenderer
         ChartValueExtents yExtents,
         double maxBubbleSize,
         bool xReversed,
-        bool yReversed)
+        bool yReversed,
+        ChartBubbleSizing? bubbleSizing = null)
     {
         double xRange = xExtents.Max > xExtents.Min ? xExtents.Max - xExtents.Min : 1d;
         double yRange = yExtents.Max > yExtents.Min ? yExtents.Max - yExtents.Min : 1d;
@@ -217,7 +219,9 @@ internal sealed partial class PptxRenderer
         double pointX = plotBox.X + (xReversed ? 1d - xRatio : xRatio) * plotBox.Width;
         double pointY = plotBox.Y + (yReversed ? 1d - yRatio : yRatio) * plotBox.Height;
         double radius = bubble
-            ? Math.Sqrt(Math.Max(0d, point.Size) / Math.Max(1d, maxBubbleSize)) * Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.BubbleRadiusPlotRatio
+            ? bubbleSizing is { } prepared
+                ? Math.Sqrt(Math.Max(0d, point.Size) / prepared.MaximumSize) * prepared.Radius
+                : Math.Sqrt(Math.Max(0d, point.Size) / Math.Max(1d, maxBubbleSize)) * Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.BubbleRadiusPlotRatio
             : 3d;
         return (pointX, pointY, radius);
     }

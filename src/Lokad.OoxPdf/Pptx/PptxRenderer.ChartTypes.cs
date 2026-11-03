@@ -471,7 +471,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartLegendEntryFrame>? EntryFrames = null,
         double? ContentAscent = null, double ContentDescent = 0d);
 
-    private readonly record struct ChartLegendEntryFrame(double X, double Y, double Width);
+    private readonly record struct ChartLegendEntryFrame(double X, double Y, double Width, double? MarkerY = null);
 
     private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, XElement? XmlAxis);
 

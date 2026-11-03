@@ -4503,11 +4503,10 @@ internal static class PptxChartsTests
         TestAssert.True(gallery.Invoke(null, [null]) is null, "Gallery default must not touch style-less charts.");
     }
 
-    public static void PptxBubbleMaxRadiusMatchesOfficePlotRatio()
+    public static void PptxBubbleFallbackRadiusKeepsLegacyGeometry()
     {
-        // Office renders the largest bubble at 0.131 of the smaller plot dimension
-        // (bubble port: Office max diameter 89.22 over plot min 341.52; relative sqrt
-        // sizing already exact across all four bubbles).
+        // Unresolved/manual containers retain the old approximation. Prepared
+        // automatic containers are covered through actual source-to-page tests.
         System.Type renderer = typeof(PptxRenderer);
         System.Type plotBoxType = renderer.GetNestedType("ChartPlotBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
         System.Type extentsType = renderer.GetNestedType("ChartValueExtents", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents.");
@@ -4523,18 +4522,18 @@ internal static class PptxChartsTests
         object extents = System.Activator.CreateInstance(extentsType, [0d, 10d]) ?? throw new InvalidOperationException("Expected extents.");
         double RadiusOf(object point, bool reversed = false)
         {
-            object result = geometry.Invoke(null, [plot, point, true, extents, extents, 16d, reversed, reversed]) ?? throw new InvalidOperationException("Expected geometry result.");
+            object result = geometry.Invoke(null, [plot, point, true, extents, extents, 16d, reversed, reversed, null]) ?? throw new InvalidOperationException("Expected geometry result.");
             return (double)(result.GetType().GetField("Item3")?.GetValue(result) ?? 0d);
         }
         object maxPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 16d, 0, indexed, indexed, null, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected max point.");
-        TestAssert.True(System.Math.Abs(RadiusOf(maxPoint) - 13.1d) < 1e-9, "Max bubble radius drifts from the Office 0.131 plot ratio.");
+        TestAssert.True(System.Math.Abs(RadiusOf(maxPoint) - 13.1d) < 1e-9, "Keep the unresolved-container radius approximation.");
         object quarterPoint = System.Activator.CreateInstance(pointType, [1d, 2d, 4d, 0, indexed, indexed, null, null, null, null, null, null, null]) ?? throw new InvalidOperationException("Expected quarter point.");
         TestAssert.True(System.Math.Abs(RadiusOf(quarterPoint) - 6.55d) < 1e-9, "Bubble sqrt sizing must halve radius at quarter size.");
         TestAssert.Equal(RadiusOf(maxPoint), RadiusOf(maxPoint, reversed: true));
         object outside = System.Activator.CreateInstance(pointType, [-5d, 15d, 16d, 0, indexed, indexed, null, null, null, null, null, null, null])!;
         foreach (bool reversed in new[] { false, true })
         {
-            object result = geometry.Invoke(null, [plot, outside, true, extents, extents, 16d, reversed, reversed])!;
+            object result = geometry.Invoke(null, [plot, outside, true, extents, extents, 16d, reversed, reversed, null])!;
             double x = (double)result.GetType().GetField("Item1")!.GetValue(result)!;
             double y = (double)result.GetType().GetField("Item2")!.GetValue(result)!;
             TestAssert.Equal(reversed ? 300d : -100d, x);
