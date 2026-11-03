@@ -183,24 +183,29 @@ internal sealed partial class PptxRenderer
 
                     RgbColor markerOutline = appearance.MarkerOutlineColor;
                     double? outlineWidth = appearance.MarkerOutlineWidth;
+                    // Categorical endpoints own the full marker horizontally;
+                    // the numeric axis keeps its existing vertical clip.
+                    double markerExtent = marker.Size / 2d
+                        + (marker.Stroke?.Width ?? outlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) / 2d;
+                    ChartPlotBox markerClip = plotBox with { X = plotX - markerExtent, Width = plotWidth + 2d * markerExtent };
                     if (chartStyleId is 18 or 118
                         && marker.Fill is null
                         && TryGetStyleBarGradientStops(chartStyleId, new ChartSeriesFill(markerColor, 1d, null, null), out IReadOnlyList<PdfShadingStop> gradientStops)
-                        && PaintStyleMarkerGradient(graphics, plotBox, marker.SymbolKind, pointX, pointY, marker.Size, gradientStops))
+                        && PaintStyleMarkerGradient(graphics, markerClip, marker.SymbolKind, pointX, pointY, marker.Size, gradientStops))
                     {
                         // RV04: gradient-filled markers skip the flat fill and keep only the
                         // rim, matching the Office fill-plus-outline marker passes.
                         ChartSeriesStroke? rim = ChartMarkerOutlineStroke(marker, markerOutline, outlineWidth);
                         if (rim is not null)
                         {
-                            RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerStroke(graphics, pointX, pointY, marker.SymbolKind, marker.Size, rim));
+                            RenderInChartPlotAreaClip(graphics, markerClip, () => DrawChartMarkerStroke(graphics, pointX, pointY, marker.SymbolKind, marker.Size, rim));
                         }
                     }
                     else
                     {
                         // RV04: no loop-top fill color state (DrawChartMarkerInPlotClip sets
                         // the fill itself; Office emits one fill state per marker).
-                        DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, marker, markerColor, markerOutline, outlineWidth);
+                        DrawChartMarkerInPlotClip(graphics, markerClip, pointX, pointY, marker, markerColor, markerOutline, outlineWidth);
                     }
                 }
 

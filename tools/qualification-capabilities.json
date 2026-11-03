@@ -15092,6 +15092,7 @@
     "DocxReviewCommentAuthorsKeepTextOwnershipCaseAndCancellation"
   ],
   "pptx-single-category-origin": [
+    "PptxLineCategoryBoundaryMarkersKeepHorizontalInkAndNumericClipping",
     "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
     "PptxLineAndAreaDataFollowSourceCategorySlots",
     "PptxCategoryMajorTicksFollowSourceSlotBoundaries",

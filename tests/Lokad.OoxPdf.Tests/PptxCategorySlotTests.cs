@@ -98,6 +98,33 @@ internal static class PptxCategorySlotTests
         }
     }
 
+    public static void PptxLineCategoryBoundaryMarkersKeepHorizontalInkAndNumericClipping()
+    {
+        foreach (int count in new[] { 1, 3, 8 })
+        foreach (bool reversed in new[] { false, true })
+        foreach (bool overflow in new[] { false, true })
+        {
+            PdfPage page = Render(count, area: false, "midCat", reversed: reversed, firstValue: overflow ? 20 : null);
+            const string rectangle = @"(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re W\* n";
+            Match numericClip = Regex.Match(page.Content, rectangle);
+            TestAssert.True(numericClip.Success, "Expected the authored numeric plot range to have a clip.");
+            Match[] markerClips = Regex.Matches(page.Content, rectangle + @"\s+0 1 0 rg").ToArray();
+            double[][] markers = Paths(page, "0 1 0", strokes: false);
+            TestAssert.Equal(count, markerClips.Length);
+            TestAssert.Equal(count, markers.Length);
+            for (int index = 0; index < count; index++)
+            {
+                Match clip = markerClips[index];
+                double left = Number(clip.Groups["x"].Value);
+                double right = left + Number(clip.Groups["w"].Value);
+                TestAssert.True(left < markers[index].Min() && right > markers[index].Max(),
+                    "Category boundary clips must retain the complete marker, including its outline.");
+                TestAssert.Equal(numericClip.Groups["y"].Value, clip.Groups["y"].Value);
+                TestAssert.Equal(numericClip.Groups["h"].Value, clip.Groups["h"].Value);
+            }
+        }
+    }
+
     private static double[] LabelCenters(PdfPage page, string role) =>
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith(role, StringComparison.Ordinal))
@@ -136,11 +163,11 @@ internal static class PptxCategorySlotTests
 
     private static double Number(string text) => double.Parse(text, CultureInfo.InvariantCulture);
 
-    private static PdfPage Render(int count, bool area, string? mode, bool gap = false, bool stacked = false, bool reversed = false)
+    private static PdfPage Render(int count, bool area, string? mode, bool gap = false, bool stacked = false, bool reversed = false, int? firstValue = null)
     {
         string kind = area ? "areaChart" : "lineChart";
         string labels = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>Q{i}</c:v></c:pt>"));
-        string values = string.Concat(Enumerable.Range(0, count).Where(i => !gap || i != 2).Select(i => $"<c:pt idx=\"{i}\"><c:v>{2 + i % 4}</c:v></c:pt>"));
+        string values = string.Concat(Enumerable.Range(0, count).Where(i => !gap || i != 2).Select(i => $"<c:pt idx=\"{i}\"><c:v>{(i == 0 && firstValue is not null ? firstValue.Value : 2 + i % 4)}</c:v></c:pt>"));
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{kind}}><c:grouping val="{{(stacked ? "stacked" : "standard")}}"/><c:varyColors val="0"/>

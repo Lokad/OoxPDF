@@ -3,7 +3,8 @@
 ## 0.3.0 — Unreleased
 
 - PPTX line/area charts place a single tick-centered category at its source
-  endpoint, including reversal; captions and line markers share that origin.
+  endpoint, including reversal; captions and line markers share that origin. Horizontal marker admission preserves
+  full edge markers while retaining numeric-axis clipping.
 
 - Host memory admission covers workbook-derived chart range construction, reusing
   the existing page reservation across sequential chart frames.

@@ -239,7 +239,9 @@ Approximate or restricted:
   their source positions. Composed line plots retain their separate placement
   fallback; category direction, automatic spacing and label fitting remain
   approximate. A lone `midCat` point and caption use the source endpoint, moving
-  to the opposite end under reversal; between-slot categories remain centered.
+  to the opposite end under reversal; between-slot categories remain centered. Line
+  markers retain their full horizontal extent at category edges; numeric-axis
+  clipping remains active.
 - Standalone line plots with resolved theme defaults inherit curve, stroke and
   automatic-marker paint independently of explicit smoothing. Theme line widths
   and color transforms feed the plot and legend; authored line width/color and
