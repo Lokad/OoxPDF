@@ -106,8 +106,12 @@ internal static class PptxCategorySlotTests
         {
             PdfPage page = Render(count, area: false, "midCat", reversed: reversed, firstValue: overflow ? 20 : null);
             const string rectangle = @"(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re W\* n";
-            Match numericClip = Regex.Match(page.Content, rectangle);
-            TestAssert.True(numericClip.Success, "Expected the authored numeric plot range to have a clip.");
+            var (plotLeft, plotRight) = PlotEdges(page);
+            double[] numericGridY = Regex.Matches(page.Content, @"(?<left>[-\d.]+) (?<y>[-\d.]+) m\s+(?<right>[-\d.]+) \k<y> l S")
+                .Where(line => Math.Abs(Number(line.Groups["left"].Value) - plotLeft) < .004d
+                    && Math.Abs(Number(line.Groups["right"].Value) - plotRight) < .004d)
+                .Select(line => Number(line.Groups["y"].Value)).ToArray();
+            TestAssert.True(numericGridY.Length > 1, "Expected the authored numeric range to span the plot grids and crossing axis.");
             Match[] markerClips = Regex.Matches(page.Content, rectangle + @"\s+0 1 0 rg").ToArray();
             double[][] markers = Paths(page, "0 1 0", strokes: false);
             TestAssert.Equal(count, markerClips.Length);
@@ -119,8 +123,10 @@ internal static class PptxCategorySlotTests
                 double right = left + Number(clip.Groups["w"].Value);
                 TestAssert.True(left < markers[index].Min() && right > markers[index].Max(),
                     "Category boundary clips must retain the complete marker, including its outline.");
-                TestAssert.Equal(numericClip.Groups["y"].Value, clip.Groups["y"].Value);
-                TestAssert.Equal(numericClip.Groups["h"].Value, clip.Groups["h"].Value);
+                TestAssert.True(Math.Abs(Number(clip.Groups["y"].Value) - numericGridY.Min()) < .004d,
+                    "Marker clipping must retain the numeric lower boundary.");
+                TestAssert.True(Math.Abs(Number(clip.Groups["h"].Value) - (numericGridY.Max() - numericGridY.Min())) < .004d,
+                    "Marker clipping must retain the numeric range height, including overflowing values.");
             }
         }
     }
