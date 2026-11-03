@@ -104,6 +104,15 @@ internal static partial class PptxScatterIntervalTests
         xml.Descendants(CurveC + "x").Single().SetAttributeValue("val", xFactor.ToString("R", CultureInfo.InvariantCulture));
         xml.Descendants(CurveC + "w").Single().SetAttributeValue("val", width.ToString("R", CultureInfo.InvariantCulture));
         xml.Descendants(CurveC + "wMode").Single().SetAttributeValue("val", widthMode);
+        // Distinguish grids from axes for the existing lightweight line reader,
+        // which groups grayscale strokes. Native coordinate vectors are unchanged.
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        foreach (var grid in xml.Descendants(CurveC + "majorGridlines"))
+        {
+            grid.Element(CurveC + "spPr")?.Remove();
+            grid.Add(new XElement(CurveC + "spPr", new XElement(a + "ln", new XElement(a + "solidFill",
+                new XElement(a + "srgbClr", new XAttribute("val", "0000FF"))))));
+        }
         return xml;
     }
     private static PdfPage RenderEdge(XDocument source)
