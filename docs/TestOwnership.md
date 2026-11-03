@@ -255,3 +255,8 @@ controls combine reversal with explicit low/high labels; next-to crossings,
 scene authority, unpaired/date/interior fallbacks and marker/source neighbors
 remain distinct checks. The fixed physical-side premise in the earlier synthetic
 matrix is corrected against those independent exports.
+
+`docx-comment-font-oracles` uses the existing pinned DejaVu Sans resolver for font-independent
+print-scale, marker-label omission and synthetic-title coverage assertions. All
+original fixtures and assertions remain; Office-specific row counts/heights keep
+their independent font and geometry requirements.

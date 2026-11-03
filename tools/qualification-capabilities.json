@@ -15267,6 +15267,14 @@
     "MemoryBudgetImageRefusalAndCancellationReleaseConstruction",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "docx-comment-font-oracles": [
+    "DocxWordCompatibleAllMarkupScalesLargeBodyTextWithoutCap",
+    "DocxWordCompatibleAllMarkupOmitsInlineCommentMarkerLabels",
+    "DocxBalloonTextResourceCoversSyntheticTitleGlyphs",
+    "DocxBalloonBodyEmissionCoversItsOwnFontSubset",
+    "DocxWordCompatibleAllMarkupScalesBodySpacing",
+    "DocxGlyphlessFloatingImagePaintsWithoutFontPrograms"
   ]
 
 }

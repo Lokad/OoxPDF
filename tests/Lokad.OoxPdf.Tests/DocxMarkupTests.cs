@@ -1309,10 +1309,10 @@ internal static class DocxMarkupTests
         };
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
-        DocxTextEmissionSnapshot preserve = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+        DocxTextEmissionSnapshot preserve = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .InspectTextEmission(document);
         DocxTextEmissionSnapshot wordCompatible = new DocxRenderer(
-                fontResolver: null,
+                fontResolver: new PortableRenderingTests.PinnedResolver(),
                 markupMode: OoxPdfDocxMarkupMode.AllMarkup,
                 markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectTextEmission(document);
