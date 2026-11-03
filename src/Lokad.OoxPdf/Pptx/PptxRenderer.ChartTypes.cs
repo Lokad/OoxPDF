@@ -373,8 +373,10 @@ internal sealed partial class PptxRenderer
 
     private static double ChartCategoryToPlotCoordinate(int index, int count, double origin, double length, bool onTickMarks, bool reversed = false)
     {
-        double offset = onTickMarks && count > 1
-            ? length * index / (count - 1)
+        // Tick-centered categories start at the source origin, including a sole
+        // category. Between-slot categories occupy the center of each slot.
+        double offset = onTickMarks
+            ? length * index / Math.Max(1, count - 1)
             : length * (index + 0.5d) / count;
         return origin + (reversed ? length - offset : offset);
     }

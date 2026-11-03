@@ -15090,5 +15090,21 @@
     "DocxWordCompatibleBalloonFontAliasesUseResolvedParagraphFaces",
     "MissingFontsPreserveWordCompatibleBalloonText",
     "DocxReviewCommentAuthorsKeepTextOwnershipCaseAndCancellation"
+  ],
+  "pptx-single-category-origin": [
+    "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
+    "PptxLineAndAreaDataFollowSourceCategorySlots",
+    "PptxCategoryMajorTicksFollowSourceSlotBoundaries",
+    "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
+    "PptxLineAndAreaCategoriesSharePhysicalSourceDirection",
+    "PptxLineCategoryDirectionKeepsSparseLabelsAndPointPaint",
+    "PptxChartUnknownAxisCrossBetweenUsesSceneAuthoritativeDefault",
+    "PptxSyntheticAreaChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
+    "PptxSyntheticChartValueAxisReversedOrientationMovesLineDataLabels",
+    "PptxSyntheticLineChartConsumesDisplayBlanksAs",
+    "PptxSyntheticLineAndPieChartsRenderNativeCharts",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 }

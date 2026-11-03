@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX line/area charts place a single tick-centered category at its source
+  endpoint, including reversal; captions and line markers share that origin.
+
 - Host memory admission covers workbook-derived chart range construction, reusing
   the existing page reservation across sequential chart frames.
 - PPTX: scatter connections follow series visibility and smoothing defaults.

@@ -52,6 +52,35 @@ internal static class PptxCategorySlotTests
         }
     }
 
+    public static void PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether()
+    {
+        // Independent Office line/area reopens place midCat's one category at
+        // the first endpoint; reversing the source moves it to the other end.
+        // Between-slot placement stays centered and both modes keep two ticks.
+        foreach (bool area in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string mode in new[] { "between", "midCat" })
+        {
+            PdfPage page = Render(1, area, mode, reversed: reversed);
+            var (left, right) = PlotEdges(page);
+            double expected = mode == "between" ? (left + right) / 2d : reversed ? right : left;
+            AssertPositions([expected], LabelCenters(page, "CCA"), tolerance: .1d);
+            if (!area)
+            {
+                AssertPositions([expected], Paths(page, "0 1 0", strokes: false)
+                    .Select(path => (path.Min() + path.Max()) / 2d).ToArray());
+                AssertPositions([expected], LabelCenters(page, "CLD"), tolerance: .1d);
+            }
+            var lines = new List<string>();
+            RgbColor[] colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, lines.Add, strokes: true).ToArray();
+            double[] ticks = colors.Select((color, index) => (color, line: lines[index]))
+                .Where(item => item.color == new RgbColor(255, 0, 0))
+                .Select(item => Regex.Match(item.line, @"^(?<x>[-\d.]+) [-\d.]+ m \k<x> [-\d.]+ l S$"))
+                .Where(match => match.Success).Select(match => Number(match.Groups["x"].Value)).Order().ToArray();
+            AssertPositions([left, right], ticks);
+        }
+    }
+
     public static void PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors()
     {
         foreach (bool area in new[] { false, true })
@@ -107,7 +136,7 @@ internal static class PptxCategorySlotTests
 
     private static double Number(string text) => double.Parse(text, CultureInfo.InvariantCulture);
 
-    private static PdfPage Render(int count, bool area, string? mode, bool gap = false, bool stacked = false)
+    private static PdfPage Render(int count, bool area, string? mode, bool gap = false, bool stacked = false, bool reversed = false)
     {
         string kind = area ? "areaChart" : "lineChart";
         string labels = string.Concat(Enumerable.Range(0, count).Select(i => $"<c:pt idx=\"{i}\"><c:v>Q{i}</c:v></c:pt>"));
@@ -121,7 +150,7 @@ internal static class PptxCategorySlotTests
                   <c:cat><c:strLit><c:ptCount val="{{count}}"/>{{labels}}</c:strLit></c:cat>
                   <c:val><c:numLit><c:ptCount val="{{count}}"/>{{values}}</c:numLit></c:val>
                 </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{kind}}>
-                <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:majorTickMark val="out"/>
+                <c:catAx><c:axId val="1"/>{{(reversed ? "<c:scaling><c:orientation val=\"maxMin\"/></c:scaling>" : "")}}<c:axPos val="b"/><c:crossAx val="2"/><c:majorTickMark val="out"/>
                   <c:spPr><a:ln w="12700"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="10"/></c:scaling><c:axPos val="l"/><c:crossAx val="1"/><c:majorUnit val="2"/>
                   {{(mode is null ? "" : "<c:crossBetween val=\"" + mode + "\"/>")}}

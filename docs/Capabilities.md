@@ -238,8 +238,8 @@ Approximate or restricted:
   ticks delimit slots or coincide with points as specified. Sparse points retain
   their source positions. Composed line plots retain their separate placement
   fallback; category direction, automatic spacing and label fitting remain
-  approximate. A lone `midCat` point and caption still use the centered fallback;
-  Office places them at the left endpoint.
+  approximate. A lone `midCat` point and caption use the source endpoint, moving
+  to the opposite end under reversal; between-slot categories remain centered.
 - Standalone line plots with resolved theme defaults inherit curve, stroke and
   automatic-marker paint independently of explicit smoothing. Theme line widths
   and color transforms feed the plot and legend; authored line width/color and
