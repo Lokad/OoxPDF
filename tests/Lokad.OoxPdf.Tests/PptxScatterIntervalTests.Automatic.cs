@@ -56,13 +56,13 @@ internal static partial class PptxScatterIntervalTests
             xml.Descendants(CurveC + "layout").Single().Remove();
             TestAssert.Equal(string.Join(",", AutoLabels(RenderAuto(sample, xml.ToString()))), string.Join(",", source));
         }
-        foreach (string fallback in new[] { "outer", "edge", "NaN", "log", "scaling" })
+        foreach (string fallback in new[] { "outer", "unknown-width", "NaN", "log", "scaling" })
         {
             XDocument xml = XDocument.Parse(AutoChart(sample));
             XElement xAxis = xml.Descendants(CurveC + "valAx").First();
             XElement layout = xml.Descendants(CurveC + "manualLayout").Single();
             if (fallback == "outer") layout.Element(CurveC + "layoutTarget")!.SetAttributeValue("val", "outer");
-            if (fallback == "edge") layout.Element(CurveC + "wMode")!.SetAttributeValue("val", "edge");
+            if (fallback == "unknown-width") layout.Element(CurveC + "wMode")!.SetAttributeValue("val", "unknown");
             if (fallback == "NaN") layout.Element(CurveC + "w")!.SetAttributeValue("val", "NaN");
             if (fallback == "log") xAxis.Element(CurveC + "scaling")!.Add(new XElement(CurveC + "logBase", new XAttribute("val", "10")));
             if (fallback == "scaling") xAxis.Element(CurveC + "scaling")!.Remove();

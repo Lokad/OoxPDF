@@ -1,4 +1,23 @@
 {
+  "pptx-scatter-edge-width": [
+    "PptxScatterEdgeWidth",
+    "PptxScatterEquivalentWidthDeclarationsPreserveContent",
+    "PptxInnerFactorPlotOriginsMatchIndependentOfficeControls",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxSyntheticChartManualLayout",
+    "PptxSyntheticAreaChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticRadarChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticPieChartManualPlotBoxUsesPolarPath",
+    "PptxScenePreservesChartManualLayoutNumericOptionTokens",
+    "PptxSceneAbsentChartManualLayoutHasUnknownDefaults",
+    "PptxLegendlessLineEmptyManualLayoutKeepsAutomaticGeometry",
+    "PptxChartManualLayoutSeparatesPresenceFromGeometryValues",
+    "PptxAutomaticTitlePlacementIgnoresManualPlotBox",
+    "PptxPointLabelSizedEdgesPlaceOccupiedBounds",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-workbook-range-storage": [
     "PptxWorkbookRangeConstructionFollowsResolvedSourceAndRefunds",
     "PptxWorkbookRangeFramesReusePageCapacity",

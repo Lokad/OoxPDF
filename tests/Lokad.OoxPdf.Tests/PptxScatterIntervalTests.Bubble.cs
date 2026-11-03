@@ -63,7 +63,7 @@ internal static partial class PptxScatterIntervalTests
     public static void PptxBubbleSceneScaleAndRejectedDeclarationsKeepOwnership()
     {
         BubbleCase sample = BubbleCases().Single(c => c.Id == "bubble-query-base");
-        var parts = BubbleParts(sample.Input);
+        var parts = ReadChartParts(sample.Input);
         string name = parts.Keys.Single(p => p.StartsWith("ppt/charts/chart", StringComparison.Ordinal) && p.EndsWith(".xml", StringComparison.Ordinal));
         var chart = PptxTests.BuildSingleChartScene(System.Text.Encoding.UTF8.GetString(parts[name]))!;
         var plot = chart.Plots.Single();
@@ -116,13 +116,13 @@ internal static partial class PptxScatterIntervalTests
 
     private static BubbleCase[] BubbleCases()
     {
-        using var json = JsonDocument.Parse(File.ReadAllText(BubbleCasePath("bubble-measured-office.json")));
+        using var json = JsonDocument.Parse(File.ReadAllText(ChartCasePath("bubble-measured-office.json")));
         return JsonSerializer.Deserialize<BubbleCase[]>(json.RootElement.GetProperty("Cases").GetRawText())!;
     }
-    private static string BubbleCasePath(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name));
-    private static Dictionary<string, byte[]> BubbleParts(string name)
+    private static string ChartCasePath(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name));
+    private static Dictionary<string, byte[]> ReadChartParts(string name)
     {
-        using var input = File.OpenRead(BubbleCasePath(name));
+        using var input = File.OpenRead(ChartCasePath(name));
         using var archive = new ZipArchive(input);
         return archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)).ToDictionary(e => e.FullName, e => {
             using var source = e.Open(); using var buffer = new MemoryStream(); source.CopyTo(buffer); return buffer.ToArray();
@@ -130,7 +130,7 @@ internal static partial class PptxScatterIntervalTests
     }
     private static PdfPage RenderBubble(BubbleCase sample, Action<XDocument>? transform = null)
     {
-        var parts = BubbleParts(sample.Input);
+        var parts = ReadChartParts(sample.Input);
         string name = parts.Keys.Single(p => p.StartsWith("ppt/charts/chart", StringComparison.Ordinal) && p.EndsWith(".xml", StringComparison.Ordinal));
         XDocument xml = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts[name]));
         xml.Descendants(CurveC + "bubbleScale").Single().SetAttributeValue("val", sample.Scale.ToString(CultureInfo.InvariantCulture));

@@ -1,0 +1,59 @@
+{
+  "Cases": [
+    {
+      "Id": "width-edge-inner",
+      "XFactor": 0.04,
+      "RightEdge": 0.82,
+      "ExpectedMajorUnit": 2.0,
+      "ExpectedXAxis": [
+        202.0,
+        420.4800109863281,
+        482.0,
+        420.4800109863281
+      ],
+      "ExpectedYAxis": [
+        202.0,
+        420.4800109863281,
+        202.0,
+        109.44000244140625
+      ]
+    },
+    {
+      "Id": "width-edge-equivalent",
+      "XFactor": 0.04,
+      "RightEdge": 0.93,
+      "ExpectedMajorUnit": 1.0,
+      "ExpectedXAxis": [
+        147.0,
+        420.4800109863281,
+        537.0,
+        420.4800109863281
+      ],
+      "ExpectedYAxis": [
+        147.0,
+        420.4800109863281,
+        147.0,
+        109.44000244140625
+      ]
+    },
+    {
+      "Id": "width-edge-shifted",
+      "XFactor": 0.1,
+      "RightEdge": 0.82,
+      "ExpectedMajorUnit": 2.0,
+      "ExpectedXAxis": [
+        262.0,
+        420.4800109863281,
+        482.0,
+        420.4800109863281
+      ],
+      "ExpectedYAxis": [
+        262.0,
+        420.4800109863281,
+        262.0,
+        109.44000244140625
+      ]
+    }
+  ],
+  "Scope": "Independent PowerPoint16 PDF axes/scales; unchanged0.04pt coordinate gate. Seed package is the retained500pt factor-width source; authored edge variants are applied by tests."
+}

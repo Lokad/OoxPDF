@@ -401,7 +401,7 @@ internal sealed partial class PptxRenderer
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment };
         }
 
-        manualPlotLayout = CenterCartesianInnerFactorPlot(sceneChart.PlotAreaLayout, frame, manualPlotLayout);
+        manualPlotLayout = ResolveCartesianInnerPlot(sceneChart.PlotAreaLayout, frame, manualPlotLayout);
         return (await ResolveBarManualPlotLayoutTargetAsync(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars, frame, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
 
         ChartPlotBox GetHorizontalBarManualLayoutTargetDefaultPlotBox(ChartPlotBox defaultPlotBox)

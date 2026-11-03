@@ -486,7 +486,7 @@ internal sealed partial class PptxRenderer
                 }
             }
             return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
-                ? CenterCartesianInnerFactorPlot(sceneChart.PlotAreaLayout, frame, manualPlotLayout)
+                ? ResolveCartesianInnerPlot(sceneChart.PlotAreaLayout, frame, manualPlotLayout)
                 : ChartPlotLayout.FromPlotBox(defaultPlotBox);
 
             async ValueTask<ChartPlotBox?> TryGetMeasuredCategoryPlotBoxAsync((double Reserve, double NumericClearance)? headerClearance = null)

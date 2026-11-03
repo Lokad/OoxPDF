@@ -461,29 +461,61 @@ internal sealed partial class PptxRenderer
         return TryBuildManualPlotLayout(PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml), frame, defaultPlotBox, out plotLayout);
     }
 
-    private static ChartPlotLayout CenterCartesianInnerFactorPlot(PptxSceneChartManualLayout source, ChartFrameBox frame, ChartPlotLayout layout)
+    private static ChartPlotLayout ResolveCartesianInnerPlot(PptxSceneChartManualLayout source, ChartFrameBox frame, ChartPlotLayout layout)
     {
         if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner)
             return layout;
 
         // Resolve the source inner rectangle around the frame center. Containers
-        // that measure caption slots admit those separately. Edge/mixed modes
-        // and absent sizes retain their existing placement.
+        // that measure caption slots admit those separately. Position and width
+        // can be coupled when one is a center offset and the other a right edge.
         ChartPlotBox plot = layout.PlotBox;
-        double x = plot.X;
+        if (TryResolveCartesianInnerPlotWidth(source, frame, plot, out var horizontal)) plot = horizontal;
         double y = plot.Y;
-        if (source.XModeKind == PptxSceneChartManualLayoutMode.Factor && source.X is { } xFactor &&
-            source.WidthModeKind == PptxSceneChartManualLayoutMode.Factor && source.Width is not null)
-            x = frame.X + Math.Clamp((frame.Width - plot.Width) / 2d + xFactor * frame.Width, 0d, Math.Max(0d, frame.Width - plot.Width));
         if (source.YModeKind == PptxSceneChartManualLayoutMode.Factor && source.Y is { } yFactor &&
             source.HeightModeKind == PptxSceneChartManualLayoutMode.Factor && source.Height is not null)
             y = frame.Y + Math.Clamp((frame.Height - plot.Height) / 2d - yFactor * frame.Height, 0d, Math.Max(0d, frame.Height - plot.Height));
 
         return layout with
         {
-            PlotBox = plot with { X = x, Y = y },
-            PlotAreaBox = layout.PlotAreaBox with { X = x, Y = y }
+            PlotBox = plot with { Y = y },
+            PlotAreaBox = layout.PlotAreaBox with { X = plot.X, Y = y, Width = plot.Width }
         };
+    }
+
+    private static bool TryResolveCartesianInnerPlotWidth(PptxSceneChartManualLayout source, ChartFrameBox frame,
+        ChartPlotBox fallback, out ChartPlotBox plot)
+    {
+        plot = fallback;
+        if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner || source.Width is not { } size)
+            return false;
+        if (source.WidthModeKind is not (PptxSceneChartManualLayoutMode.Factor or PptxSceneChartManualLayoutMode.Edge))
+            return false;
+
+        double width = fallback.Width;
+        bool factorPosition = source.XModeKind == PptxSceneChartManualLayoutMode.Factor && source.X is { };
+        if (source.WidthModeKind == PptxSceneChartManualLayoutMode.Edge)
+        {
+            if (!double.IsFinite(size) || source.X is not { } position || !double.IsFinite(position)) return false;
+            double right = Math.Clamp(size, 0d, 1d) * frame.Width;
+            if (factorPosition)
+            {
+                // The factor position offsets the centered default rectangle;
+                // its right edge is center + width/2, not left + a fixed width.
+                double center = frame.Width / 2d + position * frame.Width;
+                width = 2d * (right - center);
+            }
+            else if (source.XModeKind == PptxSceneChartManualLayoutMode.Edge)
+                width = right - Math.Clamp(position, 0d, 1d) * frame.Width;
+            else return false;
+        }
+        if (!(width > 0d) || !double.IsFinite(width)) return false;
+        width = Math.Min(width, frame.Width);
+        double x = factorPosition ? frame.X + Math.Clamp((frame.Width - width) / 2d + source.X!.Value * frame.Width,
+            0d, Math.Max(0d, frame.Width - width)) : fallback.X;
+        if (!double.IsFinite(x)) return false;
+        plot = fallback with { X = x, Width = width };
+        return true;
     }
 
     private static ChartPlotBox AdmitChartPlotCaptions(ChartFrameBox frame, ChartPlotBox source,

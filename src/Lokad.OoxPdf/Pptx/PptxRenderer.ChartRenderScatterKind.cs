@@ -93,8 +93,8 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver fontResolver)
     {
         PptxSceneChartManualLayout source = chart.PlotAreaLayout;
-        if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner || source.X is null || source.Width is null ||
-            source.XModeKind != PptxSceneChartManualLayoutMode.Factor || source.WidthModeKind != PptxSceneChartManualLayoutMode.Factor)
+        if (source.X is null || source.XModeKind != PptxSceneChartManualLayoutMode.Factor ||
+            !TryResolveCartesianInnerPlotWidth(source, layout.Frame, layout.PlotBox, out _))
             return layout;
         var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         double firstWidth = 0d, lastWidth = 0d, sideWidth = 0d;
