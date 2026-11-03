@@ -140,12 +140,13 @@ Approximate or restricted:
   axis ranges and font geometry remain approximate.
   Numeric strips can reserve space for an authored range endpoint even when no
   major tick is painted there; measurement and tick emission have distinct roles.
-  Cartesian primary value axes share a retained authored linear minimum across
-  labels, tick marks and grids, including horizontal bars; only aligned upper
+  Standalone Cartesian plots with one supported value axis share a retained
+  authored linear minimum across labels, tick marks and grids, including
+  horizontal bars; only aligned upper
   endpoints become ticks. Single column/line/area plots with one supported value
   axis also anchor an automatic lower bound to an authored maximum and major
   unit. Automatic step fitting and remaining horizontal frame geometry stay
-  approximate.
+  approximate. Composed/secondary interval ownership retains its fallback.
   Scatter/bubble axes with a retained authored minimum share that interval origin
   across numeric labels, major ticks and grids; only aligned upper endpoints are
   ticks. Numeric pairs share direction across connecting paths, markers/bubbles,
