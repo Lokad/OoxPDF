@@ -217,6 +217,11 @@ Approximate or restricted:
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.
+- Automatic bottom fill legends admit naturally fitting names on one row and
+  align wrapped rows in uniform columns, including the incomplete final row.
+  Whole-row height admission retains a source-ordered prefix and diagnoses
+  clipped overflow. Manual frames retain their authored bounds. Spacing and
+  absolute placement remain approximate.
 - Single line/area plots share measured numeric strips, title clearance, bottom
   legend packing and source caption crossings. Overlays retain plot space;
   authored/composed frames and unsupported scales retain their fallbacks. Range
