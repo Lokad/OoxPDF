@@ -3616,9 +3616,13 @@ internal static partial class DocxCommentsTests
                     Runs = paragraph.Runs.Select(run => run with { FontFamily = "CommentFace" }).ToArray()
                 })).ToArray()
             };
-            TestAssert.True(PaintedBalloonText(renderer, document).SequenceEqual(
-                PaintedBalloonText(renderer, document with { RelatedStories = [canonicalStory] })),
-                "Resolved aliases retain canonical paragraph text and geometry; unavailable marks retain semantic fallback.");
+            var actualPaint = PaintedBalloonText(renderer, document);
+            var expectedPaint = PaintedBalloonText(renderer, document with { RelatedStories = [canonicalStory] });
+            int difference = Enumerable.Range(0, Math.Min(actualPaint.Length, expectedPaint.Length))
+                .FirstOrDefault(index => actualPaint[index] != expectedPaint[index], -1);
+            TestAssert.True(actualPaint.SequenceEqual(expectedPaint),
+                $"Resolved aliases retain canonical paragraph text and geometry; unavailable marks retain semantic fallback. Count={count}, mask={mask}, unloaded={unloadedMark}, lengths={actualPaint.Length}/{expectedPaint.Length}, difference={difference}: " +
+                (difference < 0 ? "none" : $"{actualPaint[difference]} versus {expectedPaint[difference]}"));
         }
     }
 
