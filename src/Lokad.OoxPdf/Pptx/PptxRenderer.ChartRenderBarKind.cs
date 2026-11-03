@@ -370,7 +370,7 @@ internal sealed partial class PptxRenderer
                         if (horizontalValueTickStroke.Alpha > 0.001d)
                         {
                             ChartTextStyle horizontalValueTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickValueAxis.SceneAxis, chartXml, tickValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-                            IReadOnlyList<double> horizontalTickValues = GetChartAxisTickValues(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: valueAxisLabelsVisible, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied));
+                            IReadOnlyList<double> horizontalTickValues = GetChartAxisTickValuesCore(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: valueAxisLabelsVisible, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied), valueAxisOptions.TickPolicy);
                             double[] horizontalTickEdges = new double[horizontalTickValues.Count];
                             for (int horizontalTickIndex = 0; horizontalTickIndex < horizontalTickValues.Count; horizontalTickIndex++)
                             {

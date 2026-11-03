@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxColumnIntervalTests
+internal static partial class PptxColumnIntervalTests
 {
     public static void PptxColumnIntervalsShareOfficeSourceMinimums()
     {
@@ -102,20 +102,20 @@ internal static class PptxColumnIntervalTests
         return result.ToArray();
     }
 
-    private static PdfPage Render(int? minimum, int? major, int maximum = 103, bool reversed = false, string grouping = "clustered", bool manual = false, bool grids = false)
+    private static PdfPage Render(int? minimum, int? major, int maximum = 103, bool reversed = false, string grouping = "clustered", bool manual = false, bool grids = false, bool horizontal = false)
     {
         string Grid(string name, string color) => grids ? $"<c:{name}><c:spPr><a:ln><a:solidFill><a:srgbClr val=\"{color}\"/></a:solidFill></a:ln></c:spPr></c:{name}>" : "";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
               {{(manual ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:xMode val=\"factor\"/><c:yMode val=\"factor\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\".12\"/><c:y val=\".1\"/><c:w val=\".78\"/><c:h val=\".72\"/></c:manualLayout></c:layout>" : "")}}
-              <c:barChart><c:barDir val="col"/><c:grouping val="{{grouping}}"/><c:ser><c:idx val="0"/><c:order val="0"/>
+              <c:barChart><c:barDir val="{{(horizontal ? "bar" : "col")}}"/><c:grouping val="{{grouping}}"/><c:ser><c:idx val="0"/><c:order val="0"/>
                 <c:cat><c:strLit><c:pt idx="0"><c:v>First</c:v></c:pt><c:pt idx="1"><c:v>Last</c:v></c:pt></c:strLit></c:cat>
                 <c:val><c:numLit><c:pt idx="0"><c:v>82</c:v></c:pt><c:pt idx="1"><c:v>96</c:v></c:pt></c:numLit></c:val>
               </c:ser><c:axId val="1"/><c:axId val="2"/></c:barChart>
-              <c:catAx><c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:crosses val="autoZero"/></c:catAx>
+              <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/><c:crosses val="autoZero"/></c:catAx>
               <c:valAx><c:axId val="2"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/>
                 {{(minimum is { } min ? $"<c:min val=\"{min}\"/>" : "")}}<c:max val="{{maximum}}"/></c:scaling>
-                <c:axPos val="l"/><c:crossAx val="1"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/>
+                <c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/>
                 {{(major is { } unit ? $"<c:majorUnit val=\"{unit}\"/>" : "")}}{{(grids ? "<c:minorUnit val=\"5\"/>" : "")}}
                 {{Grid("majorGridlines", "0000FF")}}{{Grid("minorGridlines", "FF00FF")}}
                 <c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>

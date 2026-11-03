@@ -15007,5 +15007,15 @@
       "DocxWrappedFootnoteNumbersRetainActualTargetsAndLayoutPolicies",
       "StreamLengthsMatchPayloads",
       "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-horizontal-intervals": [
+    "PptxHorizontalIntervalsShareOfficeSourceMinimums",
+    "PptxHorizontalIntervalsSurvivePlacementAndStacking",
+    "PptxHorizontalTicksAndBothGridKindsUseTheLabelIntervals",
+    "PptxAuthoredIntervalOriginKeepsRejectedAndMissingScaleFallbacks",
+    "PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence",
+    "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition",
+    "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips",
+    "PptxSyntheticChartComboLineUsesOwnValueAxisScale"
   ]
 }

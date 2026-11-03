@@ -298,13 +298,15 @@ internal sealed partial class PptxRenderer
     {
         // Bounds were resolved once before measurement/emission. Recomputing
         // ceiling arithmetic here could shift a fractional origin a second time.
-        return CanOwnCartesianChartSourceRange(chart, axis) &&
-            (axis!.Minimum is { } minimum
-                ? double.IsFinite(minimum) && minimum == extents.Min
-                : !percentStacked && TryGetCartesianChartMaximumInterval(axis, extents, out _, out _))
+        return UsesAuthoredChartMinimumIntervals(axis?.Minimum, axis?.HasLogarithmicScale ?? false, extents) ||
+            (axis?.Minimum is null && !percentStacked && CanOwnCartesianChartSourceRange(chart, axis) &&
+                TryGetCartesianChartMaximumInterval(axis!, extents, out _, out _))
             ? ChartAxisTickPolicy.SourceMinimumIntervals
             : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
     }
+
+    private static bool UsesAuthoredChartMinimumIntervals(double? minimum, bool logarithmic, ChartValueExtents extents) =>
+        !logarithmic && minimum is { } value && double.IsFinite(value) && value == extents.Min;
 
     private static ChartValueExtents ReadCartesianChartValueAxisExtents(PptxSceneChart? chart, PptxSceneChartAxis? axis,
         XElement? valueAxis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
@@ -688,7 +690,7 @@ internal sealed partial class PptxRenderer
         // An authored minimum is the interval origin, independently of how the
         // other bound and unit were resolved. Rejected bounds keep the fallback.
         bool logarithmic = sceneAxis?.HasLogarithmicScale ?? xmlAxis?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
-        ChartAxisTickPolicy tickPolicy = !logarithmic && minimum is { } value && double.IsFinite(value) && value == extents.Min
+        ChartAxisTickPolicy tickPolicy = UsesAuthoredChartMinimumIntervals(minimum, logarithmic, extents)
             ? ChartAxisTickPolicy.SourceMinimumIntervals
             : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
         ChartValueAxisRenderOptions options = ReadSceneOrXmlChartValueAxisRenderOptions(sceneAxis, xmlAxis, theme, extents, percentStacked: false);
