@@ -315,30 +315,39 @@ internal sealed partial class PptxRenderer
     {
         ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(axis, valueAxis, fallback, percentStacked,
             useNearMaximumHeadroom, nearMaximumHeadroomRatio);
-        return !percentStacked && TryResolveCartesianChartSourceRange(chart, axis, extents, out ChartValueExtents owned)
+        return !percentStacked && TryResolveCartesianChartSourceRange(chart, axis, fallback, extents, nearMaximumHeadroomRatio, out ChartValueExtents owned)
             ? owned : extents;
     }
 
     private static bool TryResolveCartesianChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis,
-        ChartValueExtents extents, out ChartValueExtents owned)
+        ChartValueExtents data, ChartValueExtents extents, double nearMaximumHeadroomRatio, out ChartValueExtents owned)
     {
         owned = extents;
         if (!CanOwnCartesianChartSourceRange(chart, axis)) return false;
-        if (axis!.Minimum is { } minimum)
+        if (axis!.MajorUnit is not { } unit || !double.IsFinite(unit) || unit <= 0d)
         {
-            return double.IsFinite(minimum) && minimum == extents.Min;
+            return axis.Minimum is { } minimum && double.IsFinite(minimum) && minimum == extents.Min;
         }
-        if (!TryGetCartesianChartMaximumInterval(axis, extents, out double maximum, out double unit)) return false;
-        // An authored upper bound anchors whole source intervals down to the
-        // automatic lower bound. This also gives labels and minor subdivisions
-        // the same origin; no new tick iteration or allocation is needed here.
-        double intervals = Math.Ceiling((maximum - extents.Min) / unit);
-        double lower = maximum - intervals * unit;
-        if (!double.IsFinite(intervals) || !double.IsFinite(lower) || lower >= maximum || lower > extents.Min)
+
+        // The authored major interval owns automatic limits too. Either fixed
+        // bound anchors the lattice; otherwise zero does. Measure headroom in
+        // that range, so translating an authored minimum and its data together
+        // cannot change the interval count. Manual placement changes no scale.
+        double origin = axis.Minimum ?? axis.Maximum ?? 0d;
+        double lower = axis.Minimum ?? origin + Math.Floor((data.Min - origin) / unit) * unit;
+        double upper = axis.Maximum ?? origin + Math.Ceiling((data.Max - origin) / unit) * unit;
+        double span = upper - lower;
+        bool extendLower = axis.Minimum is null && lower != 0d &&
+            (lower >= data.Min || span > 0d && (upper - data.Min) / span >= nearMaximumHeadroomRatio);
+        bool extendUpper = axis.Maximum is null && (upper != 0d || lower == 0d) &&
+            (upper <= data.Max || span > 0d && (data.Max - lower) / span >= nearMaximumHeadroomRatio);
+        if (extendLower) lower -= unit;
+        if (extendUpper) upper += unit;
+        if (!double.IsFinite(lower) || !double.IsFinite(upper) || upper <= lower)
         {
             return false;
         }
-        owned = new ChartValueExtents(lower, maximum);
+        owned = new ChartValueExtents(lower, upper);
         return true;
     }
 
