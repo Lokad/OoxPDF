@@ -15177,6 +15177,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-typography-oracle-portability": [
+    "PptxPortableTrailingEmphasisKeepsItsLineEndGlyphOperation",
     "PptxTextOfficeTrailingEmphasisRunOwnsLineEndGlyphOperation",
     "PptxTextManualBreakSameStyleLineCoalesces",
     "PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance",

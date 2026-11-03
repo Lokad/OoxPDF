@@ -218,9 +218,10 @@ bubble, numeric-side and PDF-structure neighbors.
 baselines to those neighboring checks; all run as one exact method set.
 
 `pptx-typography-oracle-portability` binds the same pinned font resolver to
-layout/flow and glyph inspection for trailing emphasis, manual breaks and hidden
-spaces. Original wrapping, glyph-operation and advance assertions remain;
-these semantic checks do not establish Cambria/Arial Office visual parity.
+layout/flow and glyph inspection for manual breaks and hidden spaces, with a
+two-face portable trailing-emphasis control. The original Cambria Math Office
+wrap test keeps every assertion and declares its real font prerequisite.
+Portable semantic checks do not establish Cambria/Arial Office visual parity.
 
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
