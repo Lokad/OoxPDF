@@ -532,8 +532,10 @@ internal static class PptxTextLayoutTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
+        // Bind the semantic geometry assertions to a fixed embeddable test face.
+        var fonts = new PresentationFontResolver(new TestFaceFontResolver());
 
-        PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
+        PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: fonts)
             .Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
@@ -545,7 +547,7 @@ internal static class PptxTextLayoutTests
             "Expected ellipse text to start inside the preset geometry text rectangle. Actual start: " + line.StartX.ToString("0.###", CultureInfo.InvariantCulture) +
             "; expected: " + expectedTextX.ToString("0.###", CultureInfo.InvariantCulture));
 
-        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: fonts);
         TestAssert.Equal(1, glyphRuns.Count);
         TestAssert.True(
             Math.Abs(glyphRuns[0].X - expectedTextX) < 0.01d,

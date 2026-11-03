@@ -15047,5 +15047,11 @@
     "PptxSyntheticBarChartRendersLegendKeyOnlyDataLabels",
     "PptxPointLabelKeysAlignWithMeasuredTextAcrossSizes",
     "PptxLineLabelsReserveAuthoredMarkerExtentInEachPosition"
+  ],
+  "pptx-text-oracle-portability": [
+    "PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether",
+    "PptxSyntheticEllipseTextUsesPresetTextRectangle",
+    "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
   ]
 }
