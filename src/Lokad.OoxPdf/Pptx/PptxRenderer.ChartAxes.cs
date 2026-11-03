@@ -302,7 +302,7 @@ internal sealed partial class PptxRenderer
         if (!CanUseCartesianChartSourceIntervals(chart, axis)) return ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
         return UsesAuthoredChartMinimumIntervals(axis?.Minimum, axis?.HasLogarithmicScale ?? false, extents) ||
             (axis?.Minimum is null && !percentStacked && CanOwnCartesianChartSourceRange(chart, axis) &&
-                TryGetCartesianChartMaximumInterval(axis!, extents, out _, out _))
+                axis?.MajorUnit is { } unit && double.IsFinite(unit) && unit > 0d)
             ? ChartAxisTickPolicy.SourceMinimumIntervals
             : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
     }
@@ -315,12 +315,12 @@ internal sealed partial class PptxRenderer
     {
         ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(axis, valueAxis, fallback, percentStacked,
             useNearMaximumHeadroom, nearMaximumHeadroomRatio);
-        return !percentStacked && TryResolveCartesianChartSourceRange(chart, axis, fallback, extents, nearMaximumHeadroomRatio, out ChartValueExtents owned)
+        return !percentStacked && TryResolveCartesianChartSourceRange(chart, axis, fallback, extents, out ChartValueExtents owned)
             ? owned : extents;
     }
 
     private static bool TryResolveCartesianChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis,
-        ChartValueExtents data, ChartValueExtents extents, double nearMaximumHeadroomRatio, out ChartValueExtents owned)
+        ChartValueExtents data, ChartValueExtents extents, out ChartValueExtents owned)
     {
         owned = extents;
         if (!CanOwnCartesianChartSourceRange(chart, axis)) return false;
@@ -337,10 +337,13 @@ internal sealed partial class PptxRenderer
         double lower = axis.Minimum ?? origin + Math.Floor((data.Min - origin) / unit) * unit;
         double upper = axis.Maximum ?? origin + Math.Ceiling((data.Max - origin) / unit) * unit;
         double span = upper - lower;
-        bool extendLower = axis.Minimum is null && lower != 0d &&
-            (lower >= data.Min || span > 0d && (upper - data.Min) / span >= nearMaximumHeadroomRatio);
+        // A fixed maximum owns the downward lattice without extra headroom.
+        // Source intervals use one shared padding decision across plot kinds;
+        // automatic-unit scales retain their existing rounding policy above.
+        bool extendLower = axis.Minimum is null && axis.Maximum is null && lower != 0d &&
+            (lower >= data.Min || span > 0d && (upper - data.Min) / span >= PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
         bool extendUpper = axis.Maximum is null && (upper != 0d || lower == 0d) &&
-            (upper <= data.Max || span > 0d && (data.Max - lower) / span >= nearMaximumHeadroomRatio);
+            (upper <= data.Max || span > 0d && (data.Max - lower) / span >= PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
         if (extendLower) lower -= unit;
         if (extendUpper) upper += unit;
         if (!double.IsFinite(lower) || !double.IsFinite(upper) || upper <= lower)
@@ -364,15 +367,6 @@ internal sealed partial class PptxRenderer
                 BarDirectionKind: PptxSceneChartBarDirection.Column or PptxSceneChartBarDirection.Bar }) &&
         chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
         axis is { HasScaling: true, HasLogarithmicScale: false };
-
-    private static bool TryGetCartesianChartMaximumInterval(PptxSceneChartAxis axis, ChartValueExtents extents,
-        out double maximum, out double unit)
-    {
-        maximum = axis.Maximum ?? double.NaN;
-        unit = axis.MajorUnit ?? double.NaN;
-        return string.IsNullOrEmpty(axis.MinimumValue) && double.IsFinite(maximum) && maximum == extents.Max &&
-            double.IsFinite(unit) && unit > 0d && double.IsFinite(extents.Min) && maximum > extents.Min;
-    }
 
     private sealed class ChartTextMeasurer
     {

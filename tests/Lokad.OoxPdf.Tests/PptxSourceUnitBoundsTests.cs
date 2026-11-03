@@ -39,8 +39,9 @@ internal static class PptxSourceUnitBoundsTests
     {
         foreach (bool reversed in new[] { false, true })
         foreach (bool manual in new[] { false, true })
+        foreach (bool authoredMinor in new[] { false, true })
         {
-            PdfPage page = Render(new([4, 4, 4], 2, null, 0, 6), "bar", reversed, manual);
+            PdfPage page = Render(new([4, 4, 4], 2, null, 0, 6), "bar", reversed, manual, authoredMinor ? .6 : null);
             var lines = PptxColumnIntervalTests.Lines(page);
             double[] axis = lines.Single(p => p.Color == new RgbColor(255, 0, 0) &&
                 Math.Abs(p.V[0] - p.V[2]) < .001 && Math.Abs(p.V[1] - p.V[3]) > 50).V;
@@ -56,7 +57,8 @@ internal static class PptxSourceUnitBoundsTests
             Check(Labels(page), [0, 2, 4, 6]);
             Check(Levels(new(255, 0, 0), true), [0, 2, 4, 6]);
             Check(Levels(new(0, 0, 255), false), [2, 4, 6]);
-            Check(Levels(new(255, 0, 255), false), Enumerable.Range(1, 14).Where(i => i % 5 != 0).Select(i => i * .4).ToArray());
+            Check(Levels(new(255, 0, 255), false), authoredMinor ? Enumerable.Range(1, 9).Select(i => i * .6).ToArray()
+                : Enumerable.Range(1, 14).Where(i => i % 5 != 0).Select(i => i * .4).ToArray());
             var rectangles = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re f")
                 .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray());
             TestAssert.True(3 == rectangles.Count(r => Math.Abs(r[3] - height * 4 / 6) < .003),
@@ -102,15 +104,15 @@ internal static class PptxSourceUnitBoundsTests
         fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal))
         .Select(show => double.Parse(show.Text, CultureInfo.InvariantCulture)).ToArray();
 
-    private static PdfPage Render(Sample sample, string kind, bool reversed = false, bool manual = false)
+    private static PdfPage Render(Sample sample, string kind, bool reversed = false, bool manual = false, double? minorUnit = null)
     {
-        using var stream = PptxTests.CreateSingleChartPackageStream(Chart(sample, kind, reversed, manual));
+        using var stream = PptxTests.CreateSingleChartPackageStream(Chart(sample, kind, reversed, manual, minorUnit));
         using var package = OoxPackage.Open(stream, default);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
             .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
     }
 
-    private static string Chart(Sample sample, string kind, bool reversed, bool manual)
+    private static string Chart(Sample sample, string kind, bool reversed, bool manual, double? minorUnit = null)
     {
         string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
         string points = string.Concat(sample.Values.Select((value, i) => $"<c:pt idx=\"{i}\"><c:v>{Number(value)}</c:v></c:pt>"));
@@ -126,6 +128,7 @@ internal static class PptxSourceUnitBoundsTests
               <c:valAx><c:axId val="2"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/>
                 {{(sample.Minimum is { } min ? "<c:min val=\"" + Number(min) + "\"/>" : "")}}</c:scaling><c:axPos val="l"/>
                 <c:numFmt formatCode="0.00" sourceLinked="0"/><c:crossAx val="1"/><c:majorUnit val="{{Number(sample.Unit)}}"/><c:majorTickMark val="out"/>
+                {{(minorUnit is { } minor ? "<c:minorUnit val=\"" + Number(minor) + "\"/>" : "")}}
                 <c:majorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
                 <c:minorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="FF00FF"/></a:solidFill></a:ln></c:spPr></c:minorGridlines>
                 <c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
