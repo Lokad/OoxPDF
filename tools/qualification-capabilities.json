@@ -15250,6 +15250,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-glyphless-anchors": [
+    "DocxLayoutStageConsumesEmptyParagraphLineBox",
     "DocxGlyphlessFloatingImagePaintsWithoutFontPrograms",
     "DocxGlyphlessFloatingFramesMatchAnExplicitFontControl",
     "DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks",

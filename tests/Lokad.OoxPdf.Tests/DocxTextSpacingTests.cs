@@ -455,13 +455,20 @@ internal static class DocxTextSpacingTests
             [new DocxParagraphElement(first), new DocxParagraphElement(empty), new DocxParagraphElement(second)],
             []);
 
-        DocxTextLineLayout[] lines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+        DocxTextLineLayout[] allLines = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)
             .Pages[0]
             .Items
             .OfType<DocxTextLineLayout>()
             .ToArray();
 
+        TestAssert.Equal(3, allLines.Length);
+        DocxTextLineLayout emptyLine = allLines.Single(line => line.SourceBlockIndex == 1);
+        TestAssert.Equal(string.Empty, emptyLine.Text);
+        TestAssert.Equal(0, emptyLine.Segments.Count);
+        TestAssert.Equal(10d, emptyLine.LineHeight ?? -1d);
+        TestAssert.True(ReferenceEquals(empty, emptyLine.SourceParagraph), "The consumed blank slot retains its source anchor.");
+        DocxTextLineLayout[] lines = allLines.Where(line => line.Text.Length != 0).ToArray();
         TestAssert.Equal(2, lines.Length);
         TestAssert.Equal("Alpha", lines[0].Text);
         TestAssert.Equal("Beta", lines[1].Text);
