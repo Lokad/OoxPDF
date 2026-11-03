@@ -11,19 +11,73 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static ChartValueExtents GetScatterXValueExtents(IReadOnlyList<ScatterSeries> series)
+    private static (ChartValueExtents DataX, ChartValueExtents DataY, ChartValueExtents PathX, ChartValueExtents PathY)
+        MeasureScatterChartExtents(IReadOnlyList<ScatterSeries> series, ChartScatterPlotOptions? connections,
+            IReadOnlyList<bool>? hidden, CancellationToken cancellationToken)
     {
-        double maxX = series.SelectMany(item => item.Points).Max(point => point.X);
-        double minX = series.SelectMany(item => item.Points).Min(point => point.X);
-        return new ChartValueExtents(minX, maxX);
+        ScatterPoint first = series.SelectMany(item => item.Points).First();
+        double minX = first.X, maxX = first.X, minY = first.Y, maxY = first.Y;
+        foreach (ScatterSeries item in series)
+        foreach (ScatterPoint point in item.Points)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            minX = Math.Min(minX, point.X); maxX = Math.Max(maxX, point.X);
+            minY = Math.Min(minY, point.Y); maxY = Math.Max(maxY, point.Y);
+        }
+        ChartValueExtents x = new(minX, maxX), y = new(minY, maxY);
+        return (x, y, CurveExtents(x, horizontal: true), CurveExtents(y, horizontal: false));
+
+        ChartValueExtents CurveExtents(ChartValueExtents data, bool horizontal)
+        {
+            double span = data.Max - data.Min;
+            if (connections is not { ConnectLines: true } options || !(span > 0d) || !double.IsFinite(span)) return data;
+            // Normalize before solving derivatives, so large source coordinates
+            // do not overflow polynomial coefficients. No per-point buffer.
+            double lower = 0d, upper = 1d;
+            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+            {
+                if (!IsSmoothSeries(seriesIndex, options.SmoothSeries) || IsLineHiddenSeries(seriesIndex, hidden)) continue;
+                IReadOnlyList<ScatterPoint> points = series[seriesIndex].Points;
+                for (int i = 0; i + 1 < points.Count; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    double Value(int index) => ((horizontal ? points[index].X : points[index].Y) - data.Min) / span;
+                    double start = Value(i), end = Value(i + 1);
+                    (double c1, double c2) = SmoothChartControls(Value(Math.Max(0, i - 1)), start, end, Value(Math.Min(points.Count - 1, i + 2)));
+                    ExtendCubicChartExtents(start, c1, c2, end, ref lower, ref upper);
+                }
+            }
+            double minimum = data.Min + lower * span, maximum = data.Min + upper * span;
+            return double.IsFinite(minimum) && double.IsFinite(maximum) ? new(minimum, maximum) : data;
+        }
     }
 
-    private static ChartValueExtents GetScatterYValueExtents(IReadOnlyList<ScatterSeries> series)
+    private static void ExtendCubicChartExtents(double start, double c1, double c2, double end, ref double minimum, ref double maximum)
     {
-        double maxY = series.SelectMany(item => item.Points).Max(point => point.Y);
-        double minY = series.SelectMany(item => item.Points).Min(point => point.Y);
-        return new ChartValueExtents(minY, maxY);
+        double a = -start + 3d * c1 - 3d * c2 + end;
+        double b = 2d * (start - 2d * c1 + c2);
+        double c = c1 - start;
+        if (a == 0d)
+        {
+            if (b != 0d) Extend(-c / b, ref minimum, ref maximum);
+            return;
+        }
+        double discriminant = b * b - 4d * a * c;
+        if (discriminant < 0d) return;
+        double q = -.5d * (b + Math.CopySign(Math.Sqrt(discriminant), b));
+        Extend(q / a, ref minimum, ref maximum);
+        if (q != 0d) Extend(c / q, ref minimum, ref maximum);
+
+        void Extend(double t, ref double min, ref double max)
+        {
+            if (!(t > 0d && t < 1d)) return;
+            double u = 1d - t;
+            double value = u * u * u * start + 3d * u * u * t * c1 + 3d * u * t * t * c2 + t * t * t * end;
+            min = Math.Min(min, value); max = Math.Max(max, value);
+        }
     }
+
+    private static bool IsLineHiddenSeries(int index, IReadOnlyList<bool>? hidden) => hidden is not null && index < hidden.Count && hidden[index];
 
     private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, IReadOnlyList<bool> seriesLineHidden, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions)
     {
@@ -91,11 +145,6 @@ internal sealed partial class PptxRenderer
                     graphics.RestoreState();
                 }
             }
-        }
-
-        static bool IsLineHiddenSeries(int seriesIndex, IReadOnlyList<bool> seriesLineHidden)
-        {
-            return seriesIndex < seriesLineHidden.Count && seriesLineHidden[seriesIndex];
         }
 
         void FillBubbleInPlotClip(double pointX, double pointY, double radius)

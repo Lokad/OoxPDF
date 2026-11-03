@@ -703,11 +703,15 @@ internal sealed partial class PptxRenderer
                             ? new ChartAxisSource(null, chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault())
                             : default;
                 explicitValueAxisScale = HasSceneOrXmlExplicitValueAxisScale(valueAxis.SceneAxis, valueAxis.XmlAxis);
-                ChartValueExtents valueExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetScatterYValueExtents(series));
-                ChartAxisUnits axisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), valueExtents);
-                IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
+                var measured = MeasureScatterChartExtents(series, ReadSceneOrXmlChartScatterOptions(plot, plotElement),
+                    ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
+                var (valueExtents, pointOptions) = ReadChartPointValueAxisScale(theme, valueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
+                IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(valueExtents, pointOptions.Units.MajorUnit, includeEndpoints: true,
+                    PptxChartMetricRules.AxisNiceTickTargetCount, pointOptions.TickPolicy);
                 ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 string[] tickLabels = tickValues
+                    // Office reserves endpoint advance even when it is not a painted tick.
+                    .Append(valueExtents.Min).Append(valueExtents.Max)
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
                     .ToArray();
                 await textMeasurer.PrepareAsync(tickLabels, valueAxisTextStyle).ConfigureAwait(false);
@@ -891,8 +895,9 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetScatterXValueExtents(ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly)), PptxChartMetricRules.ScatterXAxisNiceTickTargetCount, preferUnitOneOverTwo: false);
-        ChartValueAxisRenderOptions xOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xValueAxis.SceneAxis, xValueAxis.XmlAxis, theme, xExtents, PptxChartMetricRules.ScatterXAxisNiceTickTargetCount);
+        var measured = MeasureScatterChartExtents(ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly),
+            ReadSceneOrXmlChartScatterOptions(plot, plotElement), ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
+        var (xExtents, xOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true);
         IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(xExtents, xOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: true, manualPlotLayoutApplied: false), xOptions.TickPolicy);
         if (tickValues.Count == 0)
         {
@@ -980,17 +985,22 @@ internal sealed partial class PptxRenderer
             (double X, double Y) p1 = points[i];
             (double X, double Y) p2 = points[i + 1];
             (double X, double Y) p3 = i + 2 < points.Count ? points[i + 2] : points[i + 1];
+            (double x1, double x2) = SmoothChartControls(p0.X, p1.X, p2.X, p3.X);
+            (double y1, double y2) = SmoothChartControls(p0.Y, p1.Y, p2.Y, p3.Y);
             graphics.CurveTo(
-                p1.X + (p2.X - p0.X) / 6d,
-                p1.Y + (p2.Y - p0.Y) / 6d,
-                p2.X - (p3.X - p1.X) / 6d,
-                p2.Y - (p3.Y - p1.Y) / 6d,
+                x1,
+                y1,
+                x2,
+                y2,
                 p2.X,
                 p2.Y);
         }
 
         graphics.StrokeCurrentPath();
     }
+
+    private static (double First, double Second) SmoothChartControls(double previous, double start, double end, double following) =>
+        (start + (end - previous) / 6d, end - (following - start) / 6d);
 
     private static ChartMarkerStyle ChartMarker(int seriesIndex, IReadOnlyList<ChartMarkerStyle> markerStyles)
     {

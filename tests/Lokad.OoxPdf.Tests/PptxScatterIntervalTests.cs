@@ -109,7 +109,8 @@ internal static partial class PptxScatterIntervalTests
             object series = read.Invoke(null, [scene.Plots.Single(), XDocument.Parse(source).Descendants(c+kind).Single(), bubble, null, true])!;
             foreach (var axis in new[] { ("X", 1d, 8d), ("Y", 2d, 79d) })
             {
-                var extents = (PptxRenderer.ChartValueExtents)typeof(PptxRenderer).GetMethod("GetScatter"+axis.Item1+"ValueExtents", flags)!.Invoke(null, [series])!;
+                object measured = typeof(PptxRenderer).GetMethod("MeasureScatterChartExtents", flags)!.Invoke(null, [series, null, null, CancellationToken.None])!;
+                var extents = (PptxRenderer.ChartValueExtents)measured.GetType().GetField(axis.Item1 == "X" ? "Item1" : "Item2")!.GetValue(measured)!;
                 TestAssert.True(Math.Abs(extents.Min-(shift+axis.Item2*scale))<1e-10d && Math.Abs(extents.Max-(shift+axis.Item3*scale))<1e-10d,
                     "Measured extrema follow source translation/scaling without inserting zero or a unit-sized range.");
             }

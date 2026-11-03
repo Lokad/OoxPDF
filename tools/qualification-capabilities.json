@@ -1,4 +1,10 @@
 {
+  "pptx-scatter-fixed-ranges": [
+    "PptxScatterFixedUnitRangesMatchIndependentOfficeBounds",
+    "PptxScatterFixedUnitLabelsMarksAndGridsUseOneScale",
+    "PptxScatterCurveOrderOwnsBoundsAndHiddenLinesKeepPointBounds",
+    "PptxScatterFixedUnitFallbacksKeepSceneAuthorityAndCancellation"
+  ],
   "pptx-scatter-smoothing": [
     "PptxScatterConnectionDefaultsKeepSceneOwnershipAndRawStyles",
     "PptxScatterConnectionsFollowSeriesSmoothingAndLineVisibility",
