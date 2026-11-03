@@ -2485,7 +2485,7 @@
       "DocxWordCompatiblePlainParagraphCountsMatchIndependentOffice",
       "DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently",
       "DocxWordCompatibleMixedBalloonParagraphBodyBoundaries",
-      "DocxWordCompatibleMixedBalloonKeepsFifthFontAliasesOnPriorFallback",
+      "DocxWordCompatibleBalloonFontAliasesUseResolvedParagraphFaces",
       "DocxWordCompatibleMixedBalloonKeepsLeadingFittingParagraphsAndWrapsFourth",
       "DocxWordCompatibleMixedBalloonKeepsTwoFittingParagraphsAndTheirMarks",
       "DocxWordCompatibleMixedBalloonRetainsParagraphMarkFace",
@@ -15061,6 +15061,18 @@
     "DocxParagraphShadingBeforeSpacingFollowsPlacedContainerBoundaries",
     "DocxParagraphShadingChangesPaintWithoutChangingTextGeometry",
     "DocxParagraphShadingUsesSourceIndentsAndFragmentLineBoxes",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
+  "docx-mixed-terminal-paragraphs": [
+    "DocxMixedTerminalParagraphsKeepBreaksAndPhysicalFacesAcrossCounts",
+    "DocxWordCompatibleBalloonFontAliasesUseResolvedParagraphFaces",
+    "DocxWordCompatibleMixedBalloonKeepsFittingFifthBodyFaces",
+    "DocxWordCompatibleMixedBalloonWrapsFifthBodyBeforeFittingClosingRun",
+    "DocxWordCompatibleMixedBalloonKeepsFittingFirstWordOfFifthClosingRun",
+    "DocxWordCompatibleMixedBalloonMovesPreservedFifthClosingRunToOwnRow",
+    "DocxWordCompatibleMixedBalloonWrapsParagraphsIndependently",
+    "DocxReviewCommentAuthorsKeepTextOwnershipCaseAndCancellation",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
   ]

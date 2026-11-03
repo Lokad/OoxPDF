@@ -4,13 +4,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxBalloonParagraphPolicy
 {
-    internal static bool HasMixedFiveParagraphTerminal(IReadOnlyList<DocxBodyElement> elements)
-    {
-        if (elements.Count != 5 || elements[^1] is not DocxParagraphElement terminal) { return false; }
-        DocxTextRun[] runs = terminal.Paragraph.Runs.Where(run => run.Text.Length != 0).ToArray();
-        return runs.Length == 2 && (runs[0].FontFamily != runs[1].FontFamily || runs[0].Fonts != runs[1].Fonts);
-    }
-
     internal static bool HasPlainBalloonParagraphShape(DocxParagraph paragraph) =>
         paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 &&
         paragraph.FieldReferences.Count == 0 && paragraph.Revisions.Count == 0 &&
@@ -26,8 +19,8 @@ internal static class DocxBalloonParagraphPolicy
         {
             if (element is not DocxParagraphElement item || !HasPlainBalloonParagraphShape(item.Paragraph) ||
                 item.Paragraph.ParagraphMarkRun is not { } mark || !IsPlainBalloonParagraphRun(mark)) { return false; }
-            // The separately qualified mixed-terminal family keeps its existing scope.
-            bool mixedTerminal = elements.Count == 5 && paragraphIndex == 4 && item.Paragraph.Runs.Count(run => run.Text.Length != 0) == 2;
+            // The final paragraph may contain the supported pair of physical faces.
+            bool mixedTerminal = paragraphIndex == elements.Count - 1 && item.Paragraph.Runs.Count(run => run.Text.Length != 0) == 2;
             DocxTextRun? first = null;
             foreach (DocxTextRun run in item.Paragraph.Runs)
             {

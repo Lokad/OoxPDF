@@ -543,7 +543,7 @@ internal sealed partial class DocxRenderer
                     WordCompatibleTerminalResource = candidate.WordCompatibleTerminalResource,
                         WordCompatibleBodyParts = candidate.WordCompatibleBodyParts,
                         WordCompatibleParagraphs = candidate.WordCompatibleParagraphs,
-                        WordCompatibleFittingMixedTerminal = candidate.WordCompatibleFittingMixedTerminal
+                        WordCompatibleMixedTerminal = candidate.WordCompatibleMixedTerminal
                 });
                 nextTop = y - MarkupBalloonMinimumSpacingPoints;
                 placedBandCandidates.Add(candidate);
@@ -737,7 +737,7 @@ internal sealed partial class DocxRenderer
                             WordCompatibleBodyParts = qualifiedParts,
                             WordCompatibleParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
                                 ? ResolveCommentBalloonParagraphs(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken) : null,
-                            WordCompatibleFittingMixedTerminal = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                            WordCompatibleMixedTerminal = UsesWordCompatibleAllMarkupTextProfile(markupContext)
                                 ? ResolveCommentMixedTerminalParagraph(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken) : null
                         });
                     }
@@ -1063,13 +1063,13 @@ internal sealed partial class DocxRenderer
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, markupContext.WordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
-                if (ResolveWordCompatibleFittingMixedTerminalRows(candidate.WordCompatibleFittingMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedFourthRows)
+                if (ResolveWordCompatibleFittingMixedTerminalRows(candidate.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedTerminalRows)
                 {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + mixedFourthRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + mixedTerminalRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
-                if (ResolveWordCompatibleWrappedMixedTerminalRows(candidate.WordCompatibleFittingMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedFourthRows)
+                if (ResolveWordCompatibleWrappedMixedTerminalRows(candidate.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedTerminalRows)
                 {
-                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + wrappedMixedFourthRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
+                    return WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints + wrappedMixedTerminalRows.ContinuationsHeight + WordCompatibleAllMarkupBalloonBottomInsetPoints;
                 }
                 if (ResolveWordCompatibleParagraphRows(candidate.WordCompatibleParagraphs, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } plainParagraphRows)
                 {
@@ -1157,7 +1157,7 @@ internal sealed partial class DocxRenderer
             WordCompatibleTerminalResource = null,
             WordCompatibleBodyParts = null,
             WordCompatibleParagraphs = null,
-            WordCompatibleFittingMixedTerminal = null,
+            WordCompatibleMixedTerminal = null,
             Kind = group.Select(candidate => candidate.Kind).Distinct().Count() == 1
                 ? group[0].Kind
                 : DocxMarkupBalloonKind.Markup,
@@ -1555,15 +1555,15 @@ internal sealed partial class DocxRenderer
         double titleWidth = labelResource.Embedded.MeasureTextPoints(title, fontSize);
         ComputeWordCompatibleBalloonWrapWidths(titleWidth, placement.Width, wordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
         double bodyFirstLineX = textX + titleWidth;
-        if (ResolveWordCompatibleFittingMixedTerminalRows(placement.WordCompatibleFittingMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedFourthRows)
+        if (ResolveWordCompatibleFittingMixedTerminalRows(placement.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedTerminalRows)
         {
-            RenderWordCompatibleFittingMixedTerminalRows(mixedFourthRows, placement, graphics, bodyFirstLineX, textX,
+            RenderWordCompatibleFittingMixedTerminalRows(mixedTerminalRows, placement, graphics, bodyFirstLineX, textX,
                 firstBaselineY, fontSize, cancellationToken);
             return;
         }
-        if (ResolveWordCompatibleWrappedMixedTerminalRows(placement.WordCompatibleFittingMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedFourthRows)
+        if (ResolveWordCompatibleWrappedMixedTerminalRows(placement.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } wrappedMixedTerminalRows)
         {
-            RenderWordCompatibleWrappedMixedTerminalRows(wrappedMixedFourthRows, placement, graphics, bodyFirstLineX, textX,
+            RenderWordCompatibleWrappedMixedTerminalRows(wrappedMixedTerminalRows, placement, graphics, bodyFirstLineX, textX,
                 firstBaselineY, fontSize, cancellationToken);
             return;
         }

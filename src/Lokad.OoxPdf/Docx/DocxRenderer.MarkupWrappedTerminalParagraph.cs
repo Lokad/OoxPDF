@@ -23,7 +23,7 @@ internal sealed partial class DocxRenderer
         DocxMarkupMixedTerminalParagraph? paragraphs, double size, double firstWidth,
         double continuationWidth, CancellationToken cancellationToken)
     {
-        if (paragraphs is null || paragraphs.Leading.Count is not (1 or 2 or 3 or 4) || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
+        if (paragraphs is null || paragraphs.Leading.Count < 1 || !double.IsFinite(firstWidth) || firstWidth <= 0d ||
             !double.IsFinite(continuationWidth) || continuationWidth <= 0d) { return null; }
         int leadingCount = paragraphs.Leading.Count;
         var rows = new DocxUniformBalloonRow[leadingCount][];

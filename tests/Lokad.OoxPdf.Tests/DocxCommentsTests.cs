@@ -3569,14 +3569,15 @@ internal static partial class DocxCommentsTests
         }
     }
 
-    public static void DocxWordCompatibleMixedBalloonKeepsFifthFontAliasesOnPriorFallback()
+    public static void DocxWordCompatibleBalloonFontAliasesUseResolvedParagraphFaces()
     {
+        foreach (int count in new[] { 5, 7 })
         foreach (int mask in Enumerable.Range(0, 16))
         foreach (bool unloadedMark in new[] { false, true })
         {
-            var paragraphs = Enumerable.Range(0, 5).Select(index =>
+            var paragraphs = Enumerable.Range(0, count).Select(index =>
             {
-                string text = index == 4 || (mask & (1 << index)) == 0 ? "end." : new string('m', 72) + " ending.";
+                string text = index == count - 1 || (mask & (1 << index)) == 0 ? "end." : new string('m', 72) + " ending.";
                 return DocxTests.CreateDocxLayoutParagraph(text, 12d, 14d) with
                 {
                     LineSpacingPoints = null,
@@ -3584,9 +3585,9 @@ internal static partial class DocxCommentsTests
                     ParagraphMarkRun = new DocxTextRun(" ", 18d, null, false, false, false, null, "UnusedMarkFace")
                 };
             }).ToArray();
-            paragraphs[4] = paragraphs[4] with
+            paragraphs[count - 1] = paragraphs[count - 1] with
             {
-                Runs = [paragraphs[4].Runs[0], paragraphs[4].Runs[0] with { Text = " tail.", FontFamily = "AliasCommentFace" }]
+                Runs = [paragraphs[count - 1].Runs[0], paragraphs[count - 1].Runs[0] with { Text = " tail.", FontFamily = "AliasCommentFace" }]
             };
             DocxParagraph anchor = DocxTests.CreateCommentMarkerParagraph("Body anchor", "1") with
             {
@@ -3608,14 +3609,16 @@ internal static partial class DocxCommentsTests
             };
             var renderer = new DocxRenderer(new BalloonAliasFontResolver(unloadedMark), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            byte[] Serialize(DocxDocument input)
+            var canonicalStory = unloadedMark ? formerStory : story with
             {
-                using var output = new MemoryStream();
-                PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(renderer.RenderPagesAsync(input, null, CancellationToken.None).ToBlockingEnumerable().ToArray()), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
-                return output.ToArray();
-            }
-            TestAssert.True(Serialize(document).SequenceEqual(Serialize(document with { RelatedStories = [formerStory] })),
-                "A fifth terminal alias resolving to the same body font retains former fallback PDF bytes.");
+                BodyElements = paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph with
+                {
+                    Runs = paragraph.Runs.Select(run => run with { FontFamily = "CommentFace" }).ToArray()
+                })).ToArray()
+            };
+            TestAssert.True(PaintedBalloonText(renderer, document).SequenceEqual(
+                PaintedBalloonText(renderer, document with { RelatedStories = [canonicalStory] })),
+                "Resolved aliases retain canonical paragraph text and geometry; unavailable marks retain semantic fallback.");
         }
     }
 
@@ -3781,14 +3784,9 @@ internal static partial class DocxCommentsTests
                                 Paragraph = element.Paragraph with { ParagraphMarkRun = null }
                             })).ToArray()
                     };
-                    byte[] Serialize(DocxDocument input)
-                    {
-                        using var output = new MemoryStream();
-                        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(renderer.RenderPagesAsync(input, null, CancellationToken.None).ToBlockingEnumerable().ToArray()), new OoxConversionLimits(), diagnosticSink: null, CancellationToken.None, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
-                        return output.ToArray();
-                    }
-                    TestAssert.True(Serialize(guarded with { RelatedStories = [retainedStory] }).SequenceEqual(Serialize(guarded with { RelatedStories = [formerStory] })),
-                        "Unused five-paragraph marks preserve former fallback PDF bytes, including font subsets and resource names.");
+                    TestAssert.True(PaintedBalloonText(renderer, guarded with { RelatedStories = [retainedStory] }).SequenceEqual(
+                        PaintedBalloonText(renderer, guarded with { RelatedStories = [formerStory] })),
+                        "Unused marks preserve complete painted fallback text, advances and placement.");
                 }
             }
             if (mask == 0 && !supplementary && !reverseFaces && gap == 0 && rightMargin == 72d && !canonicalSpacing)
