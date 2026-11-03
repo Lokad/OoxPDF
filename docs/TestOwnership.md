@@ -243,6 +243,12 @@ the emitted platform line delimiter. Coordinates, closed subpaths, fill/stroke
 exclusions and sampling counts retain their original assertions; no renderer or
 PDF encoding change is involved.
 
+`docx-glyphless-anchors` exercises fontless floating-image paint, source frames,
+blank-slot/page-break ownership, public publication/refunds and late cancellation.
+The existing empty-line layout record retains the consumed paragraph slot without
+acquiring a font. Neighbors cover other floating stories, bookmarks, image
+admission/cancellation and PDF structure; Office font/fidelity gates remain separate.
+
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
 controls combine reversal with explicit low/high labels; next-to crossings,

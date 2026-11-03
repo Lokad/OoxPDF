@@ -90,65 +90,7 @@ internal static class DocxRevisionsTests
 
     public static void DocxReaderPreservesFloatingDrawingWrapTokens()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="png" ContentType="image/png"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """),
-            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
-                </Relationships>
-                """),
-            ["word/document.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
-                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <w:body>
-                    <w:p>
-                      <w:r>
-                        <w:drawing>
-                          <wp:anchor distT="114300" distB="228600" distL="342900" distR="457200"
-                                     simplePos="0" relativeHeight="251658240" behindDoc="0"
-                                     locked="1" layoutInCell="1" allowOverlap="0">
-                            <wp:extent cx="1828800" cy="914400"/>
-                            <wp:positionH relativeFrom="column"><wp:align>center</wp:align></wp:positionH>
-                            <wp:positionV relativeFrom="paragraph"><wp:posOffset>63500</wp:posOffset></wp:positionV>
-                            <wp:wrapSquare wrapText="bothSides"/>
-                            <a:graphic>
-                              <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                                <pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic>
-                              </a:graphicData>
-                            </a:graphic>
-                          </wp:anchor>
-                        </w:drawing>
-                      </w:r>
-                    </w:p>
-                    <w:sectPr>
-                      <w:pgSz w:w="12240" w:h="15840"/>
-                      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
-                    </w:sectPr>
-                  </w:body>
-                </w:document>
-                """),
-            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(2, 1, [255, 0, 0, 0, 0, 255])
-        });
+        string input = DocxGlyphlessAnchorTests.CreateDocument();
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);

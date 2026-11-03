@@ -15248,6 +15248,25 @@
     "PptxSyntheticCustomGeometryArcPathRendersCurve",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "docx-glyphless-anchors": [
+    "DocxGlyphlessFloatingImagePaintsWithoutFontPrograms",
+    "DocxGlyphlessFloatingFramesMatchAnExplicitFontControl",
+    "DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks",
+    "DocxGlyphlessPictureFilePublishesAndRefundsWithoutFonts",
+    "DocxGlyphlessPictureLateCancellationPreservesPublication",
+    "DocxReaderPreservesFloatingDrawingWrapTokens",
+    "DocxFloatingTextBoxAnchorRendersTextAndDoesNotEmitUnsupportedDiagnostic",
+    "DocxWordCompatibleAllMarkupPlacesFloatingDrawingAnchors",
+    "DocxRendererTreatsStaticHeaderFloatingImagesAsRenderableContent",
+    "DocxRendererRendersPlacedFootnoteFloatingImages",
+    "DocxParagraphEndBookmarksIgnoreHiddenTrailingText",
+    "DocxParagraphEndBookmarksPreserveMissingTargetFallback",
+    "MemoryBudgetImageRefusalIsTerminalAcrossPublicConverters",
+    "MemoryBudgetImagePlanesFollowDecodedOwnerAndCompressionBorrow",
+    "MemoryBudgetImageRefusalAndCancellationReleaseConstruction",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 
 }

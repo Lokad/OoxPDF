@@ -2035,6 +2035,22 @@ internal sealed partial class DocxLayoutEngine
                 }
 
                 cursorY -= ResolveListLabelFirstLineExtraLeading(paragraph, paragraphFontSize, textMeasurer);
+                // A consumed paragraph slot owns geometry even when no glyphs
+                // can be measured. Floating drawings and other source anchors
+                // must still find its page and bounds without acquiring a font.
+                double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective));
+                DocxTextRun styleRun = paragraph.Runs.FirstOrDefault() ?? DocxImplicitParagraphElement.CreateParagraphMarkRun(paragraphFontSize);
+                currentItems.Add(new DocxTextLineLayout(
+                    string.Empty, styleRun, paragraphFontSize, x, cursorY - baselineOffset, 0d, [],
+                    SourceBlockIndex: elementIndex, SourceParagraphIndex: 0, SourceLineIndex: 0, Story: DocxStoryId.Body(),
+                    LineHeight: lineHeight, AppliedBeforeSpacing: spacingProfile.AppliedBeforeSpacing, IsFirstParagraphLine: true,
+                    EndsWithIntraTokenBreak: false, SingleLineHeight: null, ListLabelSingleLineHeight: null,
+                    BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null,
+                    LineSpacingFactorFloorApplied: null, PendingAfterSpacing: null,
+                    ParagraphBeforeSpacing: spacingProfile.ParagraphBeforeSpacing, ParagraphAfterSpacing: spacingProfile.ParagraphAfterSpacing,
+                    ContextualSpacingSuppressed: spacingProfile.ContextualSpacingSuppressed,
+                    SourceParagraph: paragraph, LineHeightSource: lineHeightProfile.Source,
+                    EmitsTerminalParagraphMark: false, FirstLineInsetPoints: baselineOffset));
                 cursorY -= lineHeight;
                 activeColumnHasContent = true;
             }
