@@ -17,6 +17,44 @@ internal sealed partial class PptxRenderer
 
         internal const int MaxChartRangeAreas = 256;
 
+        internal long EstimateRangeConstruction(PptxSceneChart chart, CancellationToken token)
+        {
+            long cells = 0;
+            foreach (var plot in chart.Plots)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!IsSupportedNativeChartPlot(plot.PlotKind) || !plot.Series.Any(HasRenderableCachedValues)) continue;
+                foreach (var series in plot.Series)
+                {
+                    var source = series.DataSources;
+                    Count(source.Name); Count(source.Values); Count(source.Categories);
+                    Count(source.XValues); Count(source.YValues); Count(source.BubbleSizes);
+                }
+            }
+            // Coarse capacity for range records, list/array replacement overlap,
+            // strings and number/text provenance projections. Repeated source
+            // roles may retain separate projections even when rangeMemo shares
+            // a result. This is a frame shape estimate, not cumulative work.
+            return checked(2048L * cells);
+
+            void Count(PptxSceneChartDataSource source)
+            {
+                token.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(source.Formula)) return;
+                string[] areas = SplitRangeAreas(ResolveRangeFormula(source.Formula).ResolvedFormula);
+                long count = 0;
+                foreach (string area in areas.Take(MaxChartRangeAreas))
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (!TryParseRange(area, out string sheet, out int x1, out int y1, out int x2, out int y2) || !sheets.ContainsKey(sheet)) continue;
+                    count = Math.Min(MaxChartRangeCells, count + (Math.Abs((long)x2 - x1) + 1L) * (Math.Abs((long)y2 - y1) + 1L));
+                }
+                // Existing readers still reject excessive cells/unions/areas.
+                // Admission bounds its estimate without duplicating validation.
+                cells = checked(cells + count);
+            }
+        }
+
 
         private void AddRangeAreaCells(
             List<ChartWorkbookRangeCell> values,

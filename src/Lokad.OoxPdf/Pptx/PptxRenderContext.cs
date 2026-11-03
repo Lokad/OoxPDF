@@ -36,6 +36,10 @@ internal sealed record PptxRenderContext(
     Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>? TextSpanMemo = null,
     Dictionary<PptxTableFrameMemoKey, PptxRenderer.TableFrameLayout?>? TableFrameMemo = null)
 {
+    // Borrow the page owner's existing grant. Context copies never own/refund it.
+    public IMemoryReservation? PageConstruction { get; init; }
+    public long PageConstructionBaseBytes { get; init; }
+
     public PptxTheme Theme => SceneSlide.Theme;
 
     public IReadOnlyList<XDocument> InheritedXml { get; } = InheritedSources.Select(source => source.Xml).ToArray();

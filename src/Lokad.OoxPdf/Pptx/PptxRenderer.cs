@@ -60,7 +60,11 @@ internal sealed partial class PptxRenderer
             var graphics = new PdfGraphicsBuilder();
             var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance);
             var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance);
-            PptxRenderContext context = CreateRenderContext(document, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo);
+            PptxRenderContext context = CreateRenderContext(document, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo) with
+            {
+                PageConstruction = construction,
+                PageConstructionBaseBytes = construction?.Bytes ?? 0L
+            };
 
             RenderBackground(context, graphics);
             cancellationToken.ThrowIfCancellationRequested();

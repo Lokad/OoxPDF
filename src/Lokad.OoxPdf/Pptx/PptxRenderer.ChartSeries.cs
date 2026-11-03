@@ -82,6 +82,14 @@ internal sealed partial class PptxRenderer
 
         try
         {
+            if (context.PageConstruction is { } construction && chartWorkbook is not null)
+            {
+                long capacity = checked(context.PageConstructionBaseBytes + chartWorkbook.EstimateRangeConstruction(sceneChart, context.CancellationToken));
+                // Range memos/projections coexist within a frame, then clear below.
+                // Sequential frames reuse the page's high-water construction window.
+                if (capacity > construction.Bytes) OoxMemory.Resize(construction, capacity);
+                context.CancellationToken.ThrowIfCancellationRequested();
+            }
             await RenderChartFrameWithWorkbookAsync(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
         }
         finally
@@ -145,27 +153,6 @@ internal sealed partial class PptxRenderer
 
         bool HasSupportedSceneChartWithoutRenderableCachedValues()
         {
-            bool IsSupportedNativeChartPlot(PptxSceneChartPlotKind kind)
-            {
-                return kind is PptxSceneChartPlotKind.Area or
-                    PptxSceneChartPlotKind.Bar or
-                    PptxSceneChartPlotKind.Bubble or
-                    PptxSceneChartPlotKind.Doughnut or
-                    PptxSceneChartPlotKind.Line or
-                    PptxSceneChartPlotKind.Pie or
-                    PptxSceneChartPlotKind.Radar or
-                    PptxSceneChartPlotKind.Scatter;
-            }
-
-            bool HasRenderableCachedValues(PptxSceneChartSeries series)
-            {
-                return series.Values.Count != 0 ||
-                    series.ValuePoints.Any(point => point.Value is not null) ||
-                    (series.XValues.Count != 0 && series.YValues.Count != 0) ||
-                    (series.XValuePoints.Any(point => point.Value is not null) &&
-                        series.YValuePoints.Any(point => point.Value is not null));
-            }
-
             return sceneChart.Plots.Any(plot =>
                 IsSupportedNativeChartPlot(plot.PlotKind) &&
                 plot.Series.Count != 0 &&
@@ -189,6 +176,16 @@ internal sealed partial class PptxRenderer
             .Where(plot => plot.PlotKind == kind && plot.KindIndex == index)
             .FirstOrDefault();
     }
+
+    private static bool IsSupportedNativeChartPlot(PptxSceneChartPlotKind kind) => kind is
+        PptxSceneChartPlotKind.Area or PptxSceneChartPlotKind.Bar or PptxSceneChartPlotKind.Bubble or
+        PptxSceneChartPlotKind.Doughnut or PptxSceneChartPlotKind.Line or PptxSceneChartPlotKind.Pie or
+        PptxSceneChartPlotKind.Radar or PptxSceneChartPlotKind.Scatter;
+
+    private static bool HasRenderableCachedValues(PptxSceneChartSeries series) =>
+        series.Values.Count != 0 || series.ValuePoints.Any(point => point.Value is not null) ||
+        series.XValues.Count != 0 && series.YValues.Count != 0 ||
+        series.XValuePoints.Any(point => point.Value is not null) && series.YValuePoints.Any(point => point.Value is not null);
 
     private static IReadOnlyList<XElement> ReadChartPlotElements(XDocument chartXml, string kind)
     {
