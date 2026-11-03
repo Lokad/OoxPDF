@@ -15037,5 +15037,15 @@
     "PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks",
     "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithoutManualBoxUseOfficeDenseTicks",
     "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithManualBoxUseOfficeSparseTicks"
+  ],
+  "pptx-centered-horizontal-labels": [
+    "PptxCenteredHorizontalLabelFramesFollowPaintedBars",
+    "PptxCenteredHorizontalLabelWidthFollowsContentInsteadOfPlotWidth",
+    "PptxCenteredHorizontalLabelKeysAndTextFitTheirMeasuredFrames",
+    "PptxCenteredHorizontalLabelManualAndCustomFallbacksKeepContent",
+    "PptxDefinedLabelsUseIndependentOfficeComponentDefaults",
+    "PptxSyntheticBarChartRendersLegendKeyOnlyDataLabels",
+    "PptxPointLabelKeysAlignWithMeasuredTextAcrossSizes",
+    "PptxLineLabelsReserveAuthoredMarkerExtentInEachPosition"
   ]
 }

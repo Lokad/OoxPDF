@@ -110,7 +110,12 @@ internal sealed partial class PptxRenderer
         bool percentStacked = IsPercentStackedChartGrouping(grouping);
         if (horizontalBars)
         {
+            var textMeasurer = new ChartTextMeasurer(fontResolver);
             double categoryHeight = plotBox.Height / categoryCount;
+            double paintedBarHeight = stacked ? GetStackedBarWidth(categoryHeight, gapWidthPercent)
+                : GetClusteredBarWidth(categoryHeight, denseValueSeries.Count, gapWidthPercent, barOptions.Overlap);
+            double paintedStep = stacked ? 0d : GetClusteredBarStep(paintedBarHeight, barOptions.Overlap);
+            double paintedClusterHeight = paintedBarHeight + Math.Max(0, denseValueSeries.Count - 1) * paintedStep;
             double barSlot = stacked
                 ? GetStackedBarWidth(categoryHeight, gapWidthPercent)
                 : categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseValueSeries.Count);
@@ -155,22 +160,57 @@ internal sealed partial class PptxRenderer
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
-                        ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
-                        RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
-                        double textX = labelBox.X;
-                        double textWidth = labelBox.Width;
-                        if (effectiveOptions.ShowLegendKey)
+                        ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
+                            ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, pointFills, values.Count,
+                                value - (stacked ? 0d : categoryPlacement?.CrossingValue ?? 0d), barOptions.InvertsNegativePoint(seriesIndex, category)) : null;
+                        ChartLayoutBox labelBox;
+                        ChartLayoutBox? keyBox = null;
+                        double textX, textWidth, baseline, textHeight, descent = 0d;
+                        bool measuredCenter = !string.IsNullOrEmpty(label) &&
+                            (labelPosition is PptxSceneChartDataLabelPosition.Center or PptxSceneChartDataLabelPosition.BestFit) &&
+                            !effectiveOptions.Layout.HasLayout && effectiveOptions.CustomTextRuns.Count == 0;
+                        if (measuredCenter)
                         {
-                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, pointFills, values.Count,
-                                value - (stacked ? 0d : categoryPlacement?.CrossingValue ?? 0d), barOptions.InvertsNegativePoint(seriesIndex, category));
-                            double legendKeyWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
-                            textX += legendKeyWidth;
-                            textWidth = Math.Max(1d, textWidth - legendKeyWidth);
+                            // The occupied key/text frame is centered on the same
+                            // rectangle painting uses, including grouped spacing.
+                            var line = await textMeasurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
+                            double advance = await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false);
+                            double horizontalPadding = PptxChartMetricRules.DataLabelHorizontalPadding;
+                            double verticalPadding = PptxChartMetricRules.DataLabelVerticalPadding;
+                            double swatch = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
+                            double keyReserve = keyFill is not null ? 2d * swatch + horizontalPadding : 0d;
+                            double width = advance + 2d * horizontalPadding + keyReserve;
+                            double height = line.Height + 2d * verticalPadding;
+                            double centerY = plotBox.Y + category * categoryHeight + (categoryHeight - paintedClusterHeight) / 2d +
+                                seriesIndex * paintedStep + paintedBarHeight / 2d;
+                            labelBox = new ChartLayoutBox((barBaseX + barEndX - width) / 2d, centerY - height / 2d, width, height);
+                            baseline = labelBox.Y + verticalPadding + line.Descent;
+                            descent = line.Descent;
+                            textHeight = line.Height;
+                            textX = labelBox.X + horizontalPadding + keyReserve;
+                            textWidth = Math.Max(1d, advance);
+                            if (keyFill is not null) keyBox = new ChartLayoutBox(ComputeBarLegendKeySwatchX(textX, fontSize),
+                                ComputeBarLegendKeySwatchY(baseline, fontSize), swatch, swatch);
+                        }
+                        else
+                        {
+                            // Authored boxes/rich runs and other positions keep
+                            // their independently qualified placement fallback.
+                            labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
+                            double keyReserve = keyFill is not null ? fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor +
+                                fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor : 0d;
+                            textX = labelBox.X + keyReserve;
+                            textWidth = Math.Max(1d, labelBox.Width - keyReserve);
+                            baseline = labelBox.Y;
+                            textHeight = labelBox.Height;
+                            if (keyFill is not null) keyBox = labelBox;
                         }
 
+                        RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
+                        if (keyFill is { } fill && keyBox is { } key) RenderFillDataLabelLegendKey(graphics, key, fontSize, fill);
                         if (!string.IsNullOrEmpty(label))
                         {
-                            await AddChartLabelRunsAsync(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, TextAlignment.Left, fontResolver, labelLinks).ConfigureAwait(false);
+                            await AddChartLabelRunsAsync(runs, label, effectiveOptions, textX, baseline, textWidth, textHeight, plotBox, style, TextAlignment.Left, fontResolver, labelLinks, descent).ConfigureAwait(false);
                         }
                     }
                 }

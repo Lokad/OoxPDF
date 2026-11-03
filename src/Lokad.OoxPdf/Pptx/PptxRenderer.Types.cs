@@ -531,8 +531,8 @@ internal sealed partial class PptxRenderer
         public const double CategoryPointLabelKeyTextGap = 1.5d;
         // Native label backgrounds enclose text and its insets; keys paint
         // alongside that frame. These are point distances, not font regimes.
-        public const double CategoryPointLabelHorizontalTextPadding = 3d;
-        public const double CategoryPointLabelVerticalTextPadding = 1.5d;
+        public const double DataLabelHorizontalPadding = 3d;
+        public const double DataLabelVerticalPadding = 1.5d;
         public const double LineDataLabelSideGap = 2d;
         public const double LineDataLabelBelowOffsetFactor = 1.25d;
         public const double LineDataLabelAboveOffsetFactor = 0.35d;

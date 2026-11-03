@@ -80,7 +80,7 @@ internal sealed partial class PptxRenderer
         // The occupied frame keeps a physical clearance from the authored
         // marker extent. Font metrics determine baseline and height, not this gap.
         double horizontalGap = markerRadius + PptxChartMetricRules.CategoryPointLabelMarkerClearance;
-        double verticalGap = horizontalGap + PptxChartMetricRules.CategoryPointLabelVerticalTextPadding;
+        double verticalGap = horizontalGap + PptxChartMetricRules.DataLabelVerticalPadding;
         return position switch
         {
             PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.OutsideEnd =>

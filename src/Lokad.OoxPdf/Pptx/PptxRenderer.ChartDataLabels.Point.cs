@@ -146,8 +146,8 @@ internal sealed partial class PptxRenderer
                             : strokeKeyInset + strokeKeyLength + PptxChartMetricRules.CategoryPointLabelKeyTextGap
                         : 0d;
                     double textWidth = await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false);
-                    double textPadding = edgeSize ? 0d : PptxChartMetricRules.CategoryPointLabelHorizontalTextPadding;
-                    double verticalPadding = edgeSize ? 0d : PptxChartMetricRules.CategoryPointLabelVerticalTextPadding;
+                    double textPadding = edgeSize ? 0d : PptxChartMetricRules.DataLabelHorizontalPadding;
+                    double verticalPadding = edgeSize ? 0d : PptxChartMetricRules.DataLabelVerticalPadding;
                     double occupiedHeight = authoredSize && !edgeSize
                         ? Math.Min(1d, layout.Height.GetValueOrDefault()) * chartFrame.Height : lineBox.Height + verticalPadding * 2d;
                     double verticalExpansion = (occupiedHeight - lineBox.Height - verticalPadding * 2d) / 2d;
