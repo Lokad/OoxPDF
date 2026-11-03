@@ -41,14 +41,14 @@ internal static class PptxRightLegendAdmissionTests
         PdfPage small = Render(false, "high", false, count: 1, fontSize: 12);
         PdfPage large = Render(false, "high", false, count: 1, fontSize: 18);
         PdfPage wide = Render(false, "high", false, count: 1, caption: "WideCaption");
-        foreach (var page in new[] { small, large, wide })
+        foreach (var (page, prefix) in new[] { (small, "W"), (large, "W"), (wide, "WideCaption") })
         {
             var (left, _) = Span(page);
-            string text = ReferenceEquals(page, wide) ? "WideCaption1" : "W1";
+            string text = prefix + "1";
             TestAssert.True(Math.Abs(TextOrigin(page, text).X - 83d) < .002d,
                 "The first tick-centered caption starts at the existing frame inset, using its actual font advance.");
             TestAssert.True(left > 83d, "Endpoint captions reserve their actual half advance.");
-            AssertText(page, 1, ReferenceEquals(page, wide) ? "WideCaption" : "W");
+            AssertText(page, 1, prefix);
         }
         TestAssert.True(Span(large).Left > Span(small).Left + 1d && Span(wide).Left > Span(large).Left + 1d,
             "Font size and literal caption width drive admission, rather than a fixed translation.");
