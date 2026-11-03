@@ -15190,6 +15190,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-highlight-oracle-portability": [
+    "PptxPortableHighlightContinuationKeepsSpacingAcrossWrappedLines",
+    "PptxPortableNumberedRunSplitKeepsContinuationSpacing",
     "PptxHighlightedHeadlineTextWrapsBeforeFinalWord",
     "PptxPortableHeadlineHighlightKeepsContentAndSpanGeometry",
     "PptxHighlightedTextRunDoesNotApplyImplicitTracking",

@@ -1888,7 +1888,13 @@ internal static class PptxTextLayoutTests
 
     public static void PptxHighlightedContinuationEmitsOfficeCharacterSpacingTextStateAcrossAutofitWrap()
     {
-        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution face = resolver.Resolve(new FontRequest("Cambria Math"));
+        if (face.IsFallback || !string.Equals(face.ResolvedFamily, "Cambria Math", StringComparison.OrdinalIgnoreCase))
+        {
+            TestAssert.Skip("The original exact wrapped-run count requires Cambria Math; portable continuation spacing is checked separately.");
+        }
+        var inspectionFonts = new PresentationFontResolver(resolver);
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -2015,7 +2021,13 @@ internal static class PptxTextLayoutTests
 
     public static void PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState()
     {
-        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution face = resolver.Resolve(new FontRequest("Aptos"));
+        if (face.IsFallback || !string.Equals(face.ResolvedFamily, "Aptos", StringComparison.OrdinalIgnoreCase))
+        {
+            TestAssert.Skip("The original exact numbered-run count requires Aptos; portable numbering continuation spacing is checked separately.");
+        }
+        var inspectionFonts = new PresentationFontResolver(resolver);
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -2040,6 +2052,46 @@ internal static class PptxTextLayoutTests
             glyphRuns.Any(run => run.ParagraphAutoNumberStartAt == 2) &&
             glyphRuns.Any(run => run.ParagraphBulletKind == "None"),
             "Expected the dense numbered-autofit branch to be driven by explicit numbering followed by body continuations.");
+    }
+
+    public static void PptxPortableHighlightContinuationKeepsSpacingAcrossWrappedLines()
+    {
+        foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new TestFaceFontResolver() })
+        {
+            var inspectionFonts = new PresentationFontResolver(resolver);
+            string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "pptx-ladder-04-typography-spautofit-tracking-narrow-probe.pptx"));
+            using var stream = File.OpenRead(input);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
+            int firstHighlight = Array.FindIndex(glyphs, g => g.HighlightColor is not null);
+            TestAssert.True(firstHighlight > 0, "Exercise an autofit highlight following ordinary paragraphs.");
+            var continuation = glyphs.Skip(firstHighlight).ToArray();
+            TestAssert.True(continuation.Any(g => g.HighlightColor is null), "Ordinary text continues after the highlighted run.");
+            TestAssert.True(continuation.Select(g => g.LineIndex).Distinct().Count() > 1, "Exercise continuation across an automatic wrap.");
+            TestAssert.True(glyphs.Take(firstHighlight).All(g => Math.Abs(g.PdfCharacterSpacing) < 0.001d), "Earlier paragraphs retain zero PDF spacing.");
+            TestAssert.True(continuation.All(g => Math.Abs(g.PdfCharacterSpacing + 0.036d) < 0.001d), "Every highlighted and ordinary continuation keeps the validated PDF spacing.");
+            TestAssert.True(glyphs.All(g => Math.Abs(g.LayoutCharacterSpacing) < 0.001d), "PDF spacing remains separate from authored layout tracking.");
+            TestAssert.Equal("AIboundarykeepsneighboringwordsstable.", string.Concat(continuation.Select(g => g.Text)).Replace(" ", ""));
+        }
+    }
+
+    public static void PptxPortableNumberedRunSplitKeepsContinuationSpacing()
+    {
+        foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new TestFaceFontResolver() })
+        {
+            var inspectionFonts = new PresentationFontResolver(resolver);
+            string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "pptx-ladder-04-typography-spautofit-numbered-run-split-tc-probe.pptx"));
+            using var stream = File.OpenRead(input);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
+            TestAssert.True(glyphs.Length > 0, "Inspect the numbered and ordinary continuation content.");
+            TestAssert.True(glyphs.Any(g => g.ParagraphAutoNumberStartAt == 2) && glyphs.Any(g => g.ParagraphBulletKind == "None"), "Exercise explicit numbering followed by ordinary body continuations.");
+            TestAssert.True(glyphs.All(g => Math.Abs(g.PdfCharacterSpacing + 0.024d) < 0.001d), "Every wrapped run keeps the validated dense-numbering PDF spacing.");
+            TestAssert.True(glyphs.All(g => Math.Abs(g.LayoutCharacterSpacing) < 0.001d), "Numbered PDF spacing does not change authored layout tracking.");
+            TestAssert.Equal(4, glyphs.Select(g => g.ParagraphIndex).Distinct().Count());
+        }
     }
 
     public static void PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance()

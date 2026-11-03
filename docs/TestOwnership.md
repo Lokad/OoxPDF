@@ -228,6 +228,9 @@ and numbered text-state checks, with neighboring authored-layout/glyph and PDF
 checks. Exact Cambria Math headline wrapping keeps its original assertions and
 font prerequisite; a separate two-face control checks content and highlight
 rectangles without assuming the same wrapping from different font metrics.
+Wrapped-highlight and numbered-run counts also retain their Cambria Math/Aptos
+prerequisites; two-face controls check every continuation's spacing and metadata
+across wrapping without assuming those fonts produce the same run counts.
 
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
