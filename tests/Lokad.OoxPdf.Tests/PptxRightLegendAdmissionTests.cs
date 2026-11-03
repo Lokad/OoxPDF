@@ -72,7 +72,7 @@ internal static class PptxRightLegendAdmissionTests
 
     private static void AssertText(PdfPage page, int count, string prefix)
     {
-        string[] text = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false).Select(s => s.Text).ToArray();
+        string[] text = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, includeTextTransforms: true).Select(s => s.Text).ToArray();
         TestAssert.Equal(1, text.Count(s => s == "Revenue"));
         for (int i = 1; i <= count; i++) TestAssert.Equal(1, text.Count(s => s == prefix + i));
     }
@@ -105,7 +105,7 @@ internal static class PptxRightLegendAdmissionTests
         string manual = fallback == "manual" ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:xMode val=\"factor\"/><c:yMode val=\"factor\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\"0.15\"/><c:y val=\"0.1\"/><c:w val=\"0.65\"/><c:h val=\"0.7\"/></c:manualLayout></c:layout>" : "";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{manual}}<c:{{plot}}Chart>
+              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{manual}}<c:{{plot}}Chart><c:varyColors val="0"/>
                 <c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>Revenue</c:v></c:tx>
                   <c:cat><c:strLit>{{categories}}</c:strLit></c:cat><c:val><c:numLit>{{values}}</c:numLit></c:val><c:smooth val="0"/>
                 </c:ser><c:axId val="1"/><c:axId val="2"/></c:{{plot}}Chart>
