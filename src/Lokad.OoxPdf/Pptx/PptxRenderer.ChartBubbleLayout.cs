@@ -64,13 +64,9 @@ internal sealed partial class PptxRenderer
         double legendWidth = 0d, legendLine = 0d;
         if (fallback.Legend.Visible && entries.Count != 0)
         {
-            if (await measure.TryMeasureNormalLineHeightAsync(legendStyle).ConfigureAwait(false) is not { } line) return null;
-            legendLine = line;
-            foreach (var entry in entries)
-                legendWidth = Math.Max(legendWidth, await measure.MeasureAsync(entry.Name, legendStyle).ConfigureAwait(false));
-            // A normal-font marker slot and the shared row padding admit the
-            // legend without a frame-width or font-specific preset.
-            legendWidth += .9d * legendLine + HorizontalLegendRowPadding;
+            if (await MeasureSideLegendFrameAsync(measure, legendStyle, entries).ConfigureAwait(false) is not { } legend) return null;
+            legendWidth = legend.Width;
+            legendLine = legend.LineHeight;
         }
         ChartFrameBox frame = fallback.Frame;
         double inset = PptxChartMetricRules.ChartContentFrameInset;

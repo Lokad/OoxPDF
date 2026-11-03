@@ -36,11 +36,11 @@ internal sealed partial class PptxRenderer
         double outerRight = layout.PlotBox.X + layout.PlotBox.Width;
         if (placement == ChartLegendPlacement.AreaRightLegend)
         {
-            // The inherited area reserve already contains half its last raw
-            // category. Remove that embedded band before admitting actual frames.
-            int last = (labels.Count - 1) / captions.TickLabelSkip * captions.TickLabelSkip;
-            if (labels[last] is { Text.Length: > 0 } label)
-                outerRight += await measure.MeasureAsync(label.Text, captions.Style).ConfigureAwait(false) / 2d;
+            // Share the measured allocation used by bubble side legends. The
+            // inherited fixed area block remains only on the fallback path.
+            if (await MeasureSideLegendFrameAsync(measure, legendStyle, entries).ConfigureAwait(false) is not { } frame) return (layout, null);
+            outerRight = layout.Frame.X + layout.Frame.Width - margin -
+                PptxChartMetricRules.ChartContentFrameInset - frame.Width;
         }
         double available = outerRight - outerLeft;
         double numericBand = IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis)

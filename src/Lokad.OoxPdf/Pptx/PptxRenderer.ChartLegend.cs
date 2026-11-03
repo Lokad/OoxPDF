@@ -449,6 +449,18 @@ internal sealed partial class PptxRenderer
         return plotRight + sideGap + legendLeadExtra + PptxChartMetricRules.LegendStrokeRightClipAllowance;
     }
 
+    // The side legend's allocation includes its font-relative key slot and row
+    // padding. Its painted swatch/text bounds are a separate, tighter frame.
+    private static async ValueTask<(double Width, double LineHeight)?> MeasureSideLegendFrameAsync(
+        ChartTextMeasurer measure, ChartTextStyle style, IReadOnlyList<ChartLegendEntry> entries)
+    {
+        if (await measure.TryMeasureNormalLineHeightAsync(style).ConfigureAwait(false) is not { } line) return null;
+        double width = 0d;
+        foreach (var entry in entries)
+            width = Math.Max(width, await measure.MeasureAsync(entry.Name, style).ConfigureAwait(false));
+        return (width + .9d * line + HorizontalLegendRowPadding, line);
+    }
+
     private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, ChartTextMeasurer textMeasurer, ChartLegendPlacement placement, double legendLeadExtra = 0d, bool doughnutRightLegend = false, bool doughnutLeftLegend = false, double doughnutRingCenterY = 0d, bool scatterLegend = false)
     {
         double fontSize = style.FontSize;
