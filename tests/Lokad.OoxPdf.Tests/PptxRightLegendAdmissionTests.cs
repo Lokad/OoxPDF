@@ -79,7 +79,10 @@ internal static class PptxRightLegendAdmissionTests
 
     private static (double X, double Y) TextOrigin(PdfPage page, string text)
     {
-        var show = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false).Single(s => s.Text == text);
+        var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, includeTextTransforms: true).ToArray();
+        var matches = shows.Where(s => s.Text == text).ToArray();
+        TestAssert.True(matches.Length == 1, $"Expected one {text}; got {matches.Length}. Shows: {string.Join("|", shows.Select(s => s.Text))}");
+        var show = matches[0];
         return (show.X, show.Y);
     }
 
