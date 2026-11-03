@@ -160,15 +160,19 @@ Approximate or restricted:
   default; explicit false keeps straight segments and series line noFill hides
   connections. Unknown/rejected styles retain their fallback. Curve fitting and
   automatic interval fitting remain approximate. Scatter axes with authored
-  positive major intervals measure curve overshoot and share resolved bounds
+  positive major intervals or inferred vertical intervals measure curve
+  overshoot and share resolved bounds
   across measurement, labels, marks/grids and placement. Independent controls
   cover partial bounds, fractional/negative ranges, constants and point order;
-  crossing coordinates agree within0.005pt. This does not establish exact curve
+  inferred vertical units also preserve source-relative intervals when an upper
+  bound is authored, across tested frame heights and label sizes. Existing fully
+  automatic clustered axes retain their interval density. Crossing coordinates
+  agree within0.005pt. This does not establish exact curve
   shaping or application-view parity. Bubble bounds, missing scaling and rejected
   or logarithmic declarations retain their existing fallback.
   Automatic scatter X intervals use the available authored inner factor width
   and axis font size; numeric captions, marks and legend measurement share the
-  resolved scale. Automatic/outer/edge plot widths and bubble/vertical automatic
+  resolved scale. Automatic/outer/edge X plot widths and bubble automatic
   intervals retain their approximation. Required integer-zero placeholders retain
   padding across the shared number formatter's existing sections, literal masks,
   grouping and scaling. Source-owned inner factor plots admit measured endpoint
