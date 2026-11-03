@@ -1648,14 +1648,12 @@ internal static class PptxChartAxesTests
               <c:chart><c:plotArea><c:scatterChart><c:scatterStyle val="lineMarker"/></c:scatterChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "scatterChart").Single();
-        System.Reflection.MethodInfo readScatterStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartScatterStyle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-style resolver.");
-        object scatterStyle = readScatterStyle.Invoke(null, [chart.Plots[0], mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved scatter style.");
-        System.Reflection.MethodInfo resolveLineConnection = typeof(PptxRenderer).GetMethod(
-            "ResolveChartScatterLineConnection",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter line-connection resolver.");
-        object connectLines = resolveLineConnection.Invoke(null, [scatterStyle]) ?? throw new InvalidOperationException("Expected resolved scatter line-connection state.");
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartScatterOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
+        object options = readOptions.Invoke(null, [chart.Plots[0], mismatchedXmlFallback])!;
+        object scatterStyle = options.GetType().GetProperty("ScatterStyle")!.GetValue(options)!;
+        object connectLines = options.GetType().GetProperty("ConnectLines")!.GetValue(options)!;
 
         TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, (PptxSceneChartScatterStyle)scatterStyle);
         TestAssert.True((bool)connectLines == false, "Expected unknown scatterStyle to keep the scene-owned no-line default instead of borrowing XML fallback lineMarker.");

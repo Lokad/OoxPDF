@@ -50,9 +50,10 @@ internal static class PptxChartPlotOptionsAgreementTests
         foreach (string style in styles)
         {
             (object? plot, XElement element) = LoadPlot("scatterChart", style);
-            object? xml = Invoke("ReadSceneOrXmlChartScatterStyle", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { null, element });
-            object? scene = Invoke("ReadSceneOrXmlChartScatterStyle", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { plot, element });
-            TestAssert.True(Equals(xml, scene), "Scatter style must agree for plot XML: " + style);
+            object xml = Invoke("ReadSceneOrXmlChartScatterOptions", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { null, element })!;
+            object scene = Invoke("ReadSceneOrXmlChartScatterOptions", new[] { typeof(PptxSceneChartPlot), typeof(XElement) }, new object?[] { plot, element })!;
+            TestAssert.True(Equals(xml.GetType().GetProperty("ScatterStyle")!.GetValue(xml),
+                scene.GetType().GetProperty("ScatterStyle")!.GetValue(scene)), "Scatter style must agree for plot XML: " + style);
         }
     }
 

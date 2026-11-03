@@ -155,11 +155,11 @@ Approximate or restricted:
   movements within0.05pt. Automatic ranges/steps, bubble plot padding, tick paint
   and remaining text geometry are approximate. Logarithmic axes retain their
   existing fallback.
-  Connected scatter series follow PowerPoint's smoothing default when the series
-  flag is absent; explicit false keeps straight segments and series line noFill
-  suppresses the connection. Curve fitting and automatic bounds around curves
-  remain approximate. Marker-only style reinterpretation is not yet aligned with
-  Office when the source omits an explicit series line setting.
+  Scatter connections follow series line visibility across omitted, marker-only,
+  line and smooth styles. Missing series smoothing follows PowerPoint's true
+  default; explicit false keeps straight segments and series line noFill hides
+  connections. Unknown/rejected styles retain their fallback. Curve fitting and
+  automatic bounds around curves remain approximate.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.

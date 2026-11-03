@@ -45,7 +45,7 @@ internal sealed partial class PptxRenderer
             {
                 ChartSeriesFill fill = ChartSeriesColor(theme, colorMap, chartPalette, seriesIndex, seriesFills, 1d);
                 // Unstyled scatter connects share the line-chart 2.25pt default width
-                // (Office smooth connects render 2.25, geometry-identical to ours); marker
+                // (Office smooth connects render 2.25); marker
                 // fills and outlines keep their own sizes through the marker path.
                 ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, colorMap, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
                 if (fill.Alpha < 1d || stroke.Alpha < 1d)

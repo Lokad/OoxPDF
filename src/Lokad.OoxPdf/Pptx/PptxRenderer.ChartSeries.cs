@@ -465,22 +465,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static PptxSceneChartScatterStyle ReadSceneOrXmlChartScatterStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
-    {
-        return scenePlot is not null
-            ? scenePlot.ScatterStyleKind
-            : PptxSceneBuilder.ParseChartScatterStyle(PptxSceneBuilder.ReadChartElementValue(plotElement, "scatterStyle"));
-    }
-
-    private static bool ResolveChartScatterLineConnection(PptxSceneChartScatterStyle scatterStyle)
-    {
-        return scatterStyle switch
-        {
-            PptxSceneChartScatterStyle.Line or PptxSceneChartScatterStyle.LineMarker or PptxSceneChartScatterStyle.Smooth or PptxSceneChartScatterStyle.SmoothMarker => true,
-            _ => false
-        };
-    }
-
     private static PptxSceneChartRadarStyle ReadSceneOrXmlChartRadarStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
     {
         return scenePlot is not null

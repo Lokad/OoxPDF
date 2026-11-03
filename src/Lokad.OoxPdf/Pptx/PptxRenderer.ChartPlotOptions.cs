@@ -119,10 +119,17 @@ internal sealed partial class PptxRenderer
 
     private static ChartScatterPlotOptions ReadSceneOrXmlChartScatterOptions(PptxSceneChartPlot? plot, XElement chartElement)
     {
-        PptxSceneChartScatterStyle scatterStyle = ReadSceneOrXmlChartScatterStyle(plot, chartElement);
+        string sourceStyle = plot is null
+            ? PptxSceneBuilder.ReadChartElementValue(chartElement, "scatterStyle")
+            : plot.ScatterStyle;
+        // Office loads omitted/marker-only styles as connected series. Series
+        // line noFill owns suppression; retain unknown/rejected-source fallbacks.
+        PptxSceneChartScatterStyle scatterStyle = string.IsNullOrEmpty(sourceStyle)
+            ? PptxSceneChartScatterStyle.LineMarker
+            : plot?.ScatterStyleKind ?? PptxSceneBuilder.ParseChartScatterStyle(sourceStyle);
         return new ChartScatterPlotOptions(
             scatterStyle,
-            ResolveChartScatterLineConnection(scatterStyle),
+            scatterStyle is not (PptxSceneChartScatterStyle.None or PptxSceneChartScatterStyle.Unknown),
             // PowerPoint smooths a connected scatter series when its smooth
             // element is absent. An explicit false retains straight segments.
             ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: false, defaultValue: true));

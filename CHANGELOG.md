@@ -2,8 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
-- PPTX: connected scatter series use PowerPoint's smoothing default while
-  preserving explicit straight lines and hidden connections.
+- PPTX: scatter connections follow series line visibility across omitted and
+  marker-only styles, preserving PowerPoint's smoothing default and explicit
+  straight lines.
 
 - PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
   explicit non-overlay legends retain their plot-space reservation. Bottom line

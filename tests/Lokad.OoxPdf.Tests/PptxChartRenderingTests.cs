@@ -4340,15 +4340,20 @@ internal static class PptxChartRenderingTests
 
     public static void PptxScatterLineConnectionCoversSmoothStyles()
     {
-        System.Reflection.MethodInfo resolve = typeof(PptxRenderer).GetMethod(
-            "ResolveChartScatterLineConnection",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter line-connection resolver.");
-        bool Invoke(PptxSceneChartScatterStyle style) => (bool)resolve.Invoke(null, [style])!;
+        System.Reflection.MethodInfo read = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartScatterOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter option reader.");
+        bool Invoke(PptxSceneChartScatterStyle style)
+        {
+            XElement source = XElement.Parse($"<c:scatterChart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:scatterStyle val=\"{style}\"/></c:scatterChart>");
+            object options = read.Invoke(null, [null, source])!;
+            return (bool)options.GetType().GetProperty("ConnectLines")!.GetValue(options)!;
+        }
         TestAssert.True(Invoke(PptxSceneChartScatterStyle.Line), "Line scatter style should connect points.");
         TestAssert.True(Invoke(PptxSceneChartScatterStyle.LineMarker), "LineMarker scatter style should connect points.");
         TestAssert.True(Invoke(PptxSceneChartScatterStyle.Smooth), "Smooth scatter style should connect points.");
         TestAssert.True(Invoke(PptxSceneChartScatterStyle.SmoothMarker), "SmoothMarker scatter style should connect points.");
-        TestAssert.True(!Invoke(PptxSceneChartScatterStyle.Marker), "Marker scatter style should not connect points.");
+        TestAssert.True(Invoke(PptxSceneChartScatterStyle.Marker), "Office's marker-only style keeps the series connection unless its line is hidden.");
         TestAssert.True(!Invoke(PptxSceneChartScatterStyle.None), "None scatter style should not connect points.");
         TestAssert.True(!Invoke(PptxSceneChartScatterStyle.Unknown), "Unknown scatter style should not connect points.");
     }

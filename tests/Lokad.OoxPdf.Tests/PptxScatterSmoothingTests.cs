@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
@@ -44,19 +45,62 @@ internal static class PptxScatterSmoothingTests
             "Explicit false keeps straight segments and series noFill suppresses the connection.");
 
         static int Curves(string content) => content.Split('\n').Count(line => line.TrimEnd().EndsWith(" c", StringComparison.Ordinal));
-        static string Render(string source)
+    }
+
+    public static void PptxScatterConnectionDefaultsKeepSceneOwnershipAndRawStyles()
+    {
+        var read = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlChartScatterOptions", BindingFlags.NonPublic | BindingFlags.Static)!;
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        foreach (string? style in new string?[] { null, "marker", "line", "smooth", "none", "bogus" })
         {
-            using var stream = PptxTests.CreateSingleChartPackageStream(source);
-            using var package = OoxPackage.Open(stream, default);
-            var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-                .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
-            return page.Content;
+            string source = Chart(style, null);
+            var scene = PptxTests.BuildSingleChartScene(source)!;
+            XElement xml = XDocument.Parse(source).Descendants(c + "scatterChart").Single();
+            XElement mismatch = XDocument.Parse(Chart(style is "none" or "bogus" ? "lineMarker" : "bogus", null))
+                .Descendants(c + "scatterChart").Single();
+            foreach (var pair in new[] { (Plot: (PptxSceneChartPlot?)null, Xml: xml), (Plot: scene.Plots[0], Xml: mismatch) })
+            {
+                object options = read.Invoke(null, [pair.Plot, pair.Xml])!;
+                TestAssert.Equal(style is not ("none" or "bogus"), (bool)options.GetType().GetProperty("ConnectLines")!.GetValue(options)!);
+            }
+            TestAssert.Equal(style ?? string.Empty, scene.Plots[0].ScatterStyle);
+            if (style is null)
+                TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, scene.Plots[0].ScatterStyleKind);
         }
     }
 
-    private static string Chart(string style, string? smooth, bool hidden = false) => $$"""
+    public static void PptxScatterConnectionsFollowSeriesSmoothingAndLineVisibility()
+    {
+        foreach (string? smooth in new string?[] { null, "0", "1" })
+        {
+            string expected = Render(Chart("lineMarker", smooth));
+            foreach (string? style in new string?[] { null, "marker", "line", "lineMarker", "smooth", "smoothMarker" })
+            {
+                string actual = Render(Chart(style, smooth));
+                TestAssert.Equal(expected, actual);
+                TestAssert.Equal(1, Connections(actual));
+                TestAssert.Equal(0, Connections(Render(Chart(style, smooth, hidden: true))));
+            }
+        }
+        foreach (string style in new[] { "none", "bogus" })
+            TestAssert.Equal(0, Connections(Render(Chart(style, null))));
+
+        static int Connections(string content) => Regex.Matches(content,
+            @"(?m)^[^\r\n]+ m\r?\n(?:[^\r\n]+ [lc]\r?\n){2,}S(?:\r?\n|$)").Count;
+    }
+
+    private static string Render(string source)
+    {
+        using var stream = PptxTests.CreateSingleChartPackageStream(source);
+        using var package = OoxPackage.Open(stream, default);
+        var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
+        return page.Content;
+    }
+
+    private static string Chart(string? style, string? smooth, bool hidden = false) => $$"""
         <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:autoTitleDeleted val="1"/><c:plotArea>
-          <c:scatterChart><c:scatterStyle val="{{style}}"/><c:ser><c:idx val="0"/><c:order val="0"/>
+          <c:scatterChart>{{(style is null ? "" : $"<c:scatterStyle val=\"{style}\"/>")}}<c:ser><c:idx val="0"/><c:order val="0"/>
             {{(hidden ? "<c:spPr><a:ln><a:noFill/></a:ln></c:spPr>" : "")}}
             <c:marker><c:symbol val="none"/></c:marker>
             <c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:xVal>
