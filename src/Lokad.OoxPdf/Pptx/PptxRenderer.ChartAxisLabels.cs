@@ -80,14 +80,13 @@ internal sealed partial class PptxRenderer
                     double gap = Math.Max(0d, baselineDistance - (labelsHighSide ? rotated.Descent : rotated.Ascent));
                     double radians = -rotated.RotationDegrees * Math.PI / 180d;
                     double sin = Math.Sin(radians), cos = Math.Cos(radians);
-                    double pivotX = center + (rotated.Ascent - rotated.Descent) * sin / 2d;
-                    double pivotY = labelsHighSide ? axisY + gap + rotated.Descent * cos : axisY - gap - rotated.Ascent * cos;
                     bool rightAnchor = (radians > 0d) != labelsHighSide;
+                    var horizontal = ChartCategoryCaptionHorizontalFrame(center, part.Width, rotated.Ascent, rotated.Descent, sin, cos, rightAnchor);
+                    double pivotX = horizontal.Pivot;
+                    double pivotY = labelsHighSide ? axisY + gap + rotated.Descent * cos : axisY - gap - rotated.Ascent * cos;
                     double localX = rightAnchor ? pivotX - part.Width : pivotX;
-                    double clipLeft = pivotX + (rightAnchor ? -part.Width * cos : 0d) +
-                        (sin >= 0d ? -rotated.Ascent * sin : rotated.Descent * sin);
-                    double clipRight = pivotX + (rightAnchor ? 0d : part.Width * cos) +
-                        (sin >= 0d ? rotated.Descent * sin : -rotated.Ascent * sin);
+                    double clipLeft = horizontal.Left;
+                    double clipRight = horizontal.Right;
                     double extent = part.Width * Math.Abs(sin) + rotated.LineHeight * cos;
                     double clipBottom = labelsHighSide ? axisY + gap : axisY - gap - extent;
                     TextRun rotatedRun = CreateChartTextRun(part.Text, localX, pivotY, part.Width, rotated.LineHeight,

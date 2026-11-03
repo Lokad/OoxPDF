@@ -73,31 +73,95 @@ internal sealed partial class PptxRenderer
             return (left, right);
         }
 
+        var admitted = AdmitChartCaptionBands(available, available - numericLeft - numericRightBand, RequiredBands);
+        if (admitted is null) return (layout, null);
+        double lower = admitted.Value.Width;
+        double slotWidth = lower / labels.Count * Math.Min(captions.TickLabelSkip, labels.Count) *
+            PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
+        if (captions.Labels.Values.Any(parts => parts[0].Width > slotWidth)) return (layout, null);
+        ChartPlotBox plot = layout.PlotBox with { X = outerLeft + admitted.Value.Left, Width = lower };
+        return (layout with { PlotBox = plot, PlotAreaBox = new(plot.X, plot.Y, plot.Width, plot.Height) }, legend);
+    }
+
+    private static (double Left, double Width, double Right)? AdmitChartCaptionBands(double available, double maximumWidth,
+        Func<double, (double Left, double Right)> requiredBands)
+    {
         // The intersection of these linear frame constraints is convex. Zero
         // width supplies a feasible lower bound; overfull fragments keep the
         // existing fallback. Bisection finds the widest admitted inner plot.
-        var minimum = RequiredBands(0d);
-        if (minimum.Left + minimum.Right > available) return (layout, null);
-        double lower = 0d, upper = available - numericLeft - numericRightBand;
-        var upperBands = RequiredBands(upper);
+        var minimum = requiredBands(0d);
+        if (minimum.Left + minimum.Right > available) return null;
+        double lower = 0d, upper = maximumWidth;
+        var upperBands = requiredBands(upper);
         if (upper + upperBands.Left + upperBands.Right > available)
         {
             for (int step = 0; step < 40; step++)
             {
                 double width = (lower + upper) / 2d;
-                var bands = RequiredBands(width);
+                var bands = requiredBands(width);
                 if (width + bands.Left + bands.Right <= available) lower = width;
                 else upper = width;
             }
         }
         else lower = upper;
-        if (lower < 1d) return (layout, null);
-        double slotWidth = lower / labels.Count * Math.Min(captions.TickLabelSkip, labels.Count) *
-            PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
-        if (captions.Labels.Values.Any(parts => parts[0].Width > slotWidth)) return (layout, null);
-        var admitted = RequiredBands(lower);
-        ChartPlotBox plot = layout.PlotBox with { X = outerLeft + admitted.Left, Width = lower };
-        return (layout with { PlotBox = plot, PlotAreaBox = new(plot.X, plot.Y, plot.Width, plot.Height) }, legend);
+        if (lower < 1d) return null;
+        var result = requiredBands(lower);
+        return (result.Left, lower, result.Right);
+    }
+
+    private static (double Pivot, double Left, double Right) ChartCategoryCaptionHorizontalFrame(double center,
+        double width, double ascent, double descent, double sin, double cos, bool rightAnchor)
+    {
+        double pivot = center + (ascent - descent) * sin / 2d;
+        double left = pivot + (rightAnchor ? -width * cos : 0d) + (sin >= 0d ? -ascent * sin : descent * sin);
+        double right = pivot + (rightAnchor ? 0d : width * cos) + (sin >= 0d ? descent * sin : -ascent * sin);
+        return (pivot, left, right);
+    }
+
+    private static ChartLayout AdmitObliqueCategoryCaptionFrames(ChartLayout layout, int count, bool onTickMarks,
+        bool reversed, bool highSide, CancellationToken cancellationToken)
+    {
+        // Horizontal captions keep their wrapping owner; vertical captions have
+        // no horizontal advance. Manual plots retain authored geometry.
+        if (layout.ManualPlotLayoutApplied || layout.CategoryLabels is not { } captions ||
+            captions.RotationDegrees == 0d || Math.Abs(captions.RotationDegrees) == 90d) return layout;
+        double radians = -captions.RotationDegrees * Math.PI / 180d;
+        double sin = Math.Sin(radians), cos = Math.Cos(radians);
+        bool rightAnchor = (radians > 0d) != highSide;
+        double outerLeft = layout.Frame.X + PptxChartMetricRules.ChartContentFrameInset;
+        double outerRight = layout.Frame.X + layout.Frame.Width - PptxChartMetricRules.ChartContentFrameInset;
+        double numericLeft = Math.Max(0d, layout.PlotBox.X - outerLeft);
+        double numericRight = Math.Max(0d, outerRight - layout.PlotBox.X - layout.PlotBox.Width);
+        (double Left, double Right) RequiredBands(double width)
+        {
+            double left = numericLeft, right = numericRight;
+            foreach (var (index, parts) in captions.Labels)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                double ratio = ChartCategoryToPlotCoordinate(index, count, 0d, 1d, onTickMarks, reversed);
+                foreach (var part in parts)
+                {
+                    if (part.Text.Length == 0) continue;
+                    var frame = ChartCategoryCaptionHorizontalFrame(0d, part.Width, captions.Ascent, captions.Descent, sin, cos, rightAnchor);
+                    left = Math.Max(left, -frame.Left - ratio * width);
+                    right = Math.Max(right, frame.Right - (1d - ratio) * width);
+                }
+            }
+            return (left, right);
+        }
+        double available = outerRight - outerLeft;
+        var original = RequiredBands(layout.PlotBox.Width);
+        if (layout.PlotBox.Width + original.Left + original.Right <= available) return layout;
+        var fitted = AdmitChartCaptionBands(available, layout.PlotBox.Width, RequiredBands);
+        if (fitted is null) return layout;
+        double x = outerLeft + fitted.Value.Left;
+        double shift = x - layout.PlotBox.X;
+        double shrink = layout.PlotBox.Width - fitted.Value.Width;
+        return layout with
+        {
+            PlotBox = layout.PlotBox with { X = x, Width = fitted.Value.Width },
+            PlotAreaBox = layout.PlotAreaBox with { X = layout.PlotAreaBox.X + shift, Width = Math.Max(1d, layout.PlotAreaBox.Width - shrink) }
+        };
     }
 
     private static ChartAxisPlacement? ReadHorizontalBarCategoryPlacement(PptxSceneChart chart,
@@ -323,7 +387,9 @@ internal sealed partial class PptxRenderer
                 measured[index] = fitted;
             }
         }
-        return layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, measured) };
+        layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, measured) };
+        return AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
+            ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), topSide, resolver.CancellationToken);
 
         async ValueTask<ChartTextRunLayout> FitAsync(string text, double cap)
         {

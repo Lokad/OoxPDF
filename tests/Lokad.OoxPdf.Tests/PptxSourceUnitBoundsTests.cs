@@ -8,7 +8,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxSourceUnitBoundsTests
+internal static partial class PptxSourceUnitBoundsTests
 {
     private sealed record Sample(double[] Values, double Unit, double? Minimum, double Min, double Max);
 
