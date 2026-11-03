@@ -23,6 +23,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxSectionNavigationTests)),
         .. FromType("rendering-portable", typeof(DocxPartOwnershipTests)),
         .. FromType("rendering-portable", typeof(DocxImageRecoveryTests)),
+        .. FromType("rendering-portable", typeof(DocxGlyphlessAnchorTests)),
         .. FromType("rendering-portable", typeof(DocxStoryOwnershipTests)),
         .. FromType("rendering-portable", typeof(PptxSlideMembershipTests)),
         .. FromType("rendering-portable", typeof(PptxTableDefaultTests)),
