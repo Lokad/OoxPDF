@@ -107,7 +107,8 @@ internal static class PptxCategorySlotTests
             PdfPage page = Render(count, area: false, "midCat", reversed: reversed, firstValue: overflow ? 20 : null);
             const string rectangle = @"(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re W\* n";
             var (plotLeft, plotRight) = PlotEdges(page);
-            double[] numericGridY = Regex.Matches(page.Content, @"(?<left>[-\d.]+) (?<y>[-\d.]+) m\s+(?<right>[-\d.]+) \k<y> l S")
+            // Grid subpaths can share one final stroke operator.
+            double[] numericGridY = Regex.Matches(page.Content, @"(?<left>[-\d.]+) (?<y>[-\d.]+) m\s+(?<right>[-\d.]+) \k<y> l")
                 .Where(line => Math.Abs(Number(line.Groups["left"].Value) - plotLeft) < .004d
                     && Math.Abs(Number(line.Groups["right"].Value) - plotRight) < .004d)
                 .Select(line => Number(line.Groups["y"].Value)).ToArray();
