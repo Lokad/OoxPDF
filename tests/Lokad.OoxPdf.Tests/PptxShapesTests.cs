@@ -531,8 +531,8 @@ internal static class PptxShapesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.4 g", pdf);
-        TestAssert.Contains("h\r\nf", pdf);
-        TestAssert.DoesNotContain("144 360 180 324 216 324 c\r\nS", pdf);
+        TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
+        TestAssert.DoesNotContain("144 360 180 324 216 324 c" + Environment.NewLine + "S", pdf);
     }
 
     public static void PptxSyntheticCurvedConnector2RendersCurve()
@@ -566,8 +566,8 @@ internal static class PptxShapesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.867 g", pdf);
-        TestAssert.Contains("h\r\nf", pdf);
-        TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
+        TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
+        TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c" + Environment.NewLine + "S", pdf);
     }
 
     public static void PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents()
@@ -608,8 +608,8 @@ internal static class PptxShapesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("-0 1 -1 -0", pdf);
-        TestAssert.Contains("h\r\nf", pdf);
-        TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
+        TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
+        TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c" + Environment.NewLine + "S", pdf);
     }
 
     public static void PptxSyntheticCurvedConnector2TriangleTailUsesOfficeSeparateMarkerSubpath()
@@ -643,11 +643,11 @@ internal static class PptxShapesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.867 g", pdf);
-        TestAssert.True(Regex.Matches(pdf, " m\r\n").Count >= 2, "Expected separate body and triangle marker subpaths.");
-        TestAssert.True(Regex.Matches(pdf, " l\r\n").Count >= 98, "Expected Office-like dense connector body sampling.");
-        TestAssert.True(Regex.Matches(pdf, "h\r\n").Count >= 2, "Expected both connector body and triangle marker to be closed before filling.");
-        TestAssert.Contains("h\r\nf", pdf);
-        TestAssert.DoesNotContain(" c\r\nS", pdf);
+        TestAssert.True(Regex.Matches(pdf, " m" + Environment.NewLine).Count >= 2, "Expected separate body and triangle marker subpaths.");
+        TestAssert.True(Regex.Matches(pdf, " l" + Environment.NewLine).Count >= 98, "Expected Office-like dense connector body sampling.");
+        TestAssert.True(Regex.Matches(pdf, "h" + Environment.NewLine).Count >= 2, "Expected both connector body and triangle marker to be closed before filling.");
+        TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
+        TestAssert.DoesNotContain(" c" + Environment.NewLine + "S", pdf);
     }
 
     public static void PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline()
@@ -681,10 +681,10 @@ internal static class PptxShapesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.376 g", pdf);
-        TestAssert.Contains(" c\r\n", pdf);
-        TestAssert.True(Regex.Matches(pdf, " c\r\n").Count >= 4, "Expected Office-like arrow-tail filled connector paths to retain four cubic segments.");
-        TestAssert.Contains("h\r\nf", pdf);
-        TestAssert.DoesNotContain(" c\r\nS", pdf);
+        TestAssert.Contains(" c" + Environment.NewLine, pdf);
+        TestAssert.True(Regex.Matches(pdf, " c" + Environment.NewLine).Count >= 4, "Expected Office-like arrow-tail filled connector paths to retain four cubic segments.");
+        TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
+        TestAssert.DoesNotContain(" c" + Environment.NewLine + "S", pdf);
     }
 
     public static void PptxSyntheticCustomGeometryCubicPathRendersCurve()
@@ -780,8 +780,8 @@ internal static class PptxShapesTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.502 0 rg", pdf);
         TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
-        TestAssert.True(Regex.Matches(pdf, " l\r\n").Count >= 120, "Expected Office-like dense stealth-tail connector body sampling.");
-        TestAssert.DoesNotContain(" c\r\nS", pdf);
+        TestAssert.True(Regex.Matches(pdf, " l" + Environment.NewLine).Count >= 120, "Expected Office-like dense stealth-tail connector body sampling.");
+        TestAssert.DoesNotContain(" c" + Environment.NewLine + "S", pdf);
     }
 
     public static void PptxSyntheticCustomGeometryArcPathRendersCurve()

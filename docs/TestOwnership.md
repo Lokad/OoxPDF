@@ -238,6 +238,11 @@ It includes inner/manual geometry, bubble caption placement, cancellation and PD
 structure neighbors. Office geometry/image gates remain separate: the measured
 outer-caption clearance is approximate, including a retained Calibri residual.
 
+`pptx-connector-operator-portability` checks connector/cubic path structure with
+the emitted platform line delimiter. Coordinates, closed subpaths, fill/stroke
+exclusions and sampling counts retain their original assertions; no renderer or
+PDF encoding change is involved.
+
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
 controls combine reversal with explicit low/high labels; next-to crossings,

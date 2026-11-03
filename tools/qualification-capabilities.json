@@ -15236,6 +15236,18 @@
     "PptxBubbleFallbackRadiusKeepsLegacyGeometry",
     "PptxBubbleLabelPlacement",
     "PptxBubbleChart"
+  ],
+  "pptx-connector-operator-portability": [
+    "PptxSyntheticCurvedConnectorRendersCurve",
+    "PptxSyntheticCurvedConnector2RendersCurve",
+    "PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents",
+    "PptxSyntheticCurvedConnector2TriangleTailUsesOfficeSeparateMarkerSubpath",
+    "PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline",
+    "PptxSyntheticCustomGeometryOpenCubicStealthTailUsesFilledOutline",
+    "PptxSyntheticCustomGeometryCubicPathRendersCurve",
+    "PptxSyntheticCustomGeometryArcPathRendersCurve",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 
 }
