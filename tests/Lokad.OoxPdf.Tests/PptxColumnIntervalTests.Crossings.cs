@@ -138,6 +138,8 @@ internal static partial class PptxColumnIntervalTests
                 xml.Descendants(CrossingC + "barChart").Single().Add(new XElement(CrossingC + "dLbls",
                     new XElement(CrossingC + "dLblPos", new XAttribute("val", "ctr")),
                     new XElement(CrossingC + "showVal", new XAttribute("val", "1")),
+                    new XElement(CrossingC + "showSerName", new XAttribute("val", "0")),
+                    new XElement(CrossingC + "showCatName", new XAttribute("val", "0")),
                     new XElement(CrossingC + "showLegendKey", new XAttribute("val", "1"))));
             });
             TestAssert.Equal(invert ? 0 : 4, PptxChartNegativeInversionTests.CountSeriesColorPaint(page.Content));
