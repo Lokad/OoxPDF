@@ -33,7 +33,7 @@ internal static partial class PptxScatterIntervalTests
         double[] ticks = lines.Where(line => Math.Abs(line.V[0] - line.V[2]) < 20d).Select(line => line.V[1]).ToArray();
         double[] grids = lines.Where(line => Math.Abs(line.V[0] - line.V[2]) > 100d).Select(line => line.V[1]).ToArray();
         TestAssert.Equal(6, ticks.Length);
-        TestAssert.Equal(4, grids.Length);
+        TestAssert.Equal(6, grids.Length);
         TestAssert.True(grids.All(y => ticks.Any(t => Math.Abs(t - y) < .002d)), "Grid lines and major marks share the source interval origin.");
     }
 
