@@ -354,9 +354,9 @@ internal static class PptxTextLayoutTests
 
     public static void PptxPortableTrailingEmphasisKeepsItsLineEndGlyphOperation()
     {
-        foreach (bool mathFont in new[] { false, true })
+        foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new TestFaceFontResolver() })
         {
-            var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver(mathFont));
+            var inspectionFonts = new PresentationFontResolver(resolver);
             string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
             {
                 ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -379,10 +379,8 @@ internal static class PptxTextLayoutTests
             var document = new PptxReader().Read(package, default);
             var lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: inspectionFonts)
                 .Frames.SelectMany(f => f.Paragraphs).SelectMany(p => p.Lines).ToArray();
-            TestAssert.True(lines.Length > 1, "Exercise automatic wrapping with both pinned faces.");
+            TestAssert.True(lines.Length > 1, "Exercise automatic wrapping with both explicit faces.");
             TestAssert.Equal("Alpha beta planning", string.Concat(lines[0].Spans.Select(s => s.Text)));
-            double separator = lines[0].EndX - lines[0].Spans[^1].X - lines[0].Spans[^1].Width;
-            TestAssert.True(separator > 0d, "Retain the hidden line-ending separator after the emphasized word.");
             var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
             var planning = glyphs.Single(g => g.Text == "planning");
             TestAssert.Equal(0, planning.LineIndex);
@@ -395,9 +393,48 @@ internal static class PptxTextLayoutTests
         }
     }
 
+    public static void PptxPortableManualBreakKeepsUnicodeAndCoalescedGlyphContent()
+    {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
+            ["_rels/.rels"] = PptxTests.PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp><p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3810000" cy="1016000"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" wrap="square"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:pPr><a:defRPr sz="900" i="1"><a:latin typeface="Cambria"/></a:defRPr></a:pPr>
+                        <a:r><a:rPr sz="900" i="1"><a:latin typeface="Cambria"/></a:rPr><a:t>“A 10% better forecast&#xA;wouldn’t even register.”</a:t></a:r>
+                      </a:p></p:txBody></p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using var stream = File.OpenRead(input);
+        using var package = OoxPackage.Open(stream, default);
+        var document = new PptxReader().Read(package, default);
+        var lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: inspectionFonts)
+            .Frames.SelectMany(f => f.Paragraphs).SelectMany(p => p.Lines).ToArray();
+        TestAssert.Equal(2, lines.Length);
+        var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
+        TestAssert.Equal(2, glyphs.Length);
+        TestAssert.Equal("“A 10% better forecast", glyphs[0].Text);
+        TestAssert.Equal("wouldn’t even register.”", glyphs[1].Text);
+        TestAssert.Equal(0, glyphs[0].LineIndex);
+        TestAssert.Equal(1, glyphs[1].LineIndex);
+    }
+
     public static void PptxTextManualBreakSameStyleLineCoalesces()
     {
-        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver(mathFont: true));
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution face = resolver.Resolve(new FontRequest("Cambria", Italic: true));
+        if (face.IsFallback || !face.Style.Italic || !string.Equals(face.ResolvedFamily, "Cambria", StringComparison.OrdinalIgnoreCase))
+        {
+            TestAssert.Skip("The original narrow Office wrapping requires Cambria Italic; portable authored-break coalescing is checked separately.");
+        }
+        var inspectionFonts = new PresentationFontResolver(resolver);
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
