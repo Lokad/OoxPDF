@@ -6,6 +6,99 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox? Box)> AdmitCartesianRightLegendAsync(
+        ChartLayout layout, PptxSceneChart chart, ChartAxisSource valueAxis,
+        IReadOnlyList<ChartIndexedTextPoint?> labels, bool onTickMarks, bool reversed,
+        IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle legendStyle,
+        PresentationFontResolver resolver, ChartLegendPlacement placement)
+    {
+        if (layout.ManualPlotLayoutApplied || !string.IsNullOrWhiteSpace(layout.Title) ||
+            !layout.Legend.Visible || layout.Legend.Overlay || layout.Legend.PositionKind != PptxSceneChartLegendPosition.Right ||
+            layout.Legend.Layout.HasGeometryValues || chart.Plots.Count != 1 ||
+            chart.Axes.Count(axis => axis.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
+            valueAxis.SceneAxis is not { HasLogarithmicScale: false } ||
+            ReadSceneOrXmlPairedCategoryAxis(chart, valueAxis.SceneAxis, valueAxis.XmlAxis).SceneAxis is null ||
+            layout.CategoryLabels is not { RotationDegrees: 0d } captions ||
+            captions.Labels.Values.Any(parts => parts.Length != 1) || labels.Count == 0 || entries.Count == 0)
+            return (layout, null);
+
+        // Office controls establish horizontal, unwrapped caption admission.
+        // Rotated/wrapped content retains its existing layout and legend path.
+        // Preserve the already measured legend position while the inner plot
+        // admits numeric and category fragments. Side stroke boxes otherwise
+        // follow the plot right edge during painting.
+        var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
+        await measure.PrepareAsync(entries.Select(entry => entry.Name), legendStyle).ConfigureAwait(false);
+        ChartLegendBox legend = ResolveChartLegendBox(layout.Frame, layout.PlotBox, entries,
+            layout.Legend, legendStyle, measure, placement);
+        double margin = PptxChartMetricRules.ColumnPlotRightReserve;
+        double outerLeft = layout.Frame.X + margin;
+        double outerRight = layout.PlotBox.X + layout.PlotBox.Width;
+        if (placement == ChartLegendPlacement.AreaRightLegend)
+        {
+            // The inherited area reserve already contains half its last raw
+            // category. Remove that embedded band before admitting actual frames.
+            int last = (labels.Count - 1) / captions.TickLabelSkip * captions.TickLabelSkip;
+            if (labels[last] is { Text.Length: > 0 } label)
+                outerRight += await measure.MeasureAsync(label.Text, captions.Style).ConfigureAwait(false) / 2d;
+        }
+        double available = outerRight - outerLeft;
+        double numericBand = IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis)
+            ? Math.Max(0d, layout.PlotBox.X - outerLeft) : 0d;
+        bool numericRight = ResolveSceneOrXmlValueAxisLabelsRightSide(chart, valueAxis.SceneAxis, valueAxis.XmlAxis,
+            ResolveSceneOrXmlValueAxisRightSide(chart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+        double numericLeft = numericRight ? 0d : numericBand;
+        double numericRightBand = numericRight ? numericBand : 0d;
+        if (available - numericLeft - numericRightBand < 1d) return (layout, null);
+
+        (double Left, double Right) RequiredBands(double width)
+        {
+            double left = numericLeft, right = numericRightBand;
+            foreach (var (index, parts) in captions.Labels)
+            {
+                resolver.CancellationToken.ThrowIfCancellationRequested();
+                double ratio = ChartCategoryToPlotCoordinate(index, labels.Count, 0d, 1d, onTickMarks, reversed);
+                double half = parts[0].Width / 2d;
+                left = Math.Max(left, half - ratio * width);
+                right = Math.Max(right, half - (1d - ratio) * width);
+                // Both ordinal range ends reserve their endpoint advance;
+                // for a sole category the first and last source are the same.
+                if (onTickMarks && index == labels.Count - 1)
+                {
+                    left = Math.Max(left, reversed ? half : 0d);
+                    right = Math.Max(right, reversed ? 0d : half);
+                }
+            }
+            return (left, right);
+        }
+
+        // The intersection of these linear frame constraints is convex. Zero
+        // width supplies a feasible lower bound; overfull fragments keep the
+        // existing fallback. Bisection finds the widest admitted inner plot.
+        var minimum = RequiredBands(0d);
+        if (minimum.Left + minimum.Right > available) return (layout, null);
+        double lower = 0d, upper = available - numericLeft - numericRightBand;
+        var upperBands = RequiredBands(upper);
+        if (upper + upperBands.Left + upperBands.Right > available)
+        {
+            for (int step = 0; step < 40; step++)
+            {
+                double width = (lower + upper) / 2d;
+                var bands = RequiredBands(width);
+                if (width + bands.Left + bands.Right <= available) lower = width;
+                else upper = width;
+            }
+        }
+        else lower = upper;
+        if (lower < 1d) return (layout, null);
+        double slotWidth = lower / labels.Count * Math.Min(captions.TickLabelSkip, labels.Count) *
+            PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
+        if (captions.Labels.Values.Any(parts => parts[0].Width > slotWidth)) return (layout, null);
+        var admitted = RequiredBands(lower);
+        ChartPlotBox plot = layout.PlotBox with { X = outerLeft + admitted.Left, Width = lower };
+        return (layout with { PlotBox = plot, PlotAreaBox = new(plot.X, plot.Y, plot.Width, plot.Height) }, legend);
+    }
+
     private static ChartAxisPlacement? ReadHorizontalBarCategoryPlacement(PptxSceneChart chart,
         ChartAxisSource category, ChartAxisSource value, ChartValueExtents extents, bool reversed)
     {

@@ -220,6 +220,10 @@ Approximate or restricted:
   direction, including reversal. Measurement, painting and secondary-axis slots
   share that rule. Unpaired,
   date/numeric and interior ordinal crossings retain their placement fallback.
+  Automatic no-title line/area plots with a right non-overlay legend admit
+  horizontal, unwrapped category captions and numeric labels together, keeping
+  the measured legend anchor. Rotated/wrapped captions retain their prior
+  layout, as do authored/composed frames and unsupported scales.
   Column category strokes and captions use the category crossing independently
   of the numeric axis crossing. Measured caption bands share line/area placement
   rules. Clustered columns use the category origin for lengths and inverted fill;

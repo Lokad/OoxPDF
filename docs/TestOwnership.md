@@ -206,6 +206,10 @@ font and cancellation coverage in Ubuntu CI. It is a four-method subset of the
 already-qualified mixed-terminal capability, with the same assertions and font
 owners; broad rendering and visual qualification are separate.
 
+`pptx-right-legend-admission` checks numeric/caption bands and stable legend
+anchors across source direction, slot modes, caption widths and font sizes,
+with authored/rotated/unpaired/logarithmic fallback and neighboring axis tests.
+
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
 controls combine reversal with explicit low/high labels; next-to crossings,

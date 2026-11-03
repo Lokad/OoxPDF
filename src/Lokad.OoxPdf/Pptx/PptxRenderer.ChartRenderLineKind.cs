@@ -81,6 +81,11 @@ internal sealed partial class PptxRenderer
                         chartLayout.AutomaticCategoryAxisPlacement?.LabelsHighSide ?? false,
                         chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
                         fontResolver, preparedLegendBox).ConfigureAwait(false);
+                var admitted = await AdmitCartesianRightLegendAsync(chartLayout, sceneChart, valueAxis,
+                    categoryLabels, categoryPointsOnTickMarks, categoryAxisReversed, legendEntries, legendTextStyle,
+                    fontResolver, ChartLegendPlacement.Default).ConfigureAwait(false);
+                chartLayout = admitted.Layout;
+                preparedLegendBox ??= admitted.Box;
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 RenderLineChart(graphics, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions, seriesAppearance, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, categoryPointsOnTickMarks,

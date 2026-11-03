@@ -2,6 +2,10 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: automatic line/area plots with horizontal, unwrapped categories admit
+  caption and numeric-label space beside right legends without moving the legend.
+  Authored, composed, rotated and wrapped layouts retain their existing paths.
+
 - PPTX: explicit numeric-axis low/high labels follow paired category direction,
   so reversed charts measure and paint their labels on the same source side.
 
