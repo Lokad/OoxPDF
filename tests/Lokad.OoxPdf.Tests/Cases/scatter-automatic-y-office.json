@@ -1,0 +1,141 @@
+{
+  "Scope": "Four independently authored PowerPoint16 automatic-Y bound declarations on a smooth series. Native PDF captions independently confirm queried ranges/units. Does not establish exact Office curve shaping or general bubble/automatic-X behavior.",
+  "Cases": [
+    {
+      "Id": "range-scatter-103-auto",
+      "Axis": "Y",
+      "X": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Y": [
+        1,
+        2,
+        79,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Minimum": null,
+      "Maximum": 103,
+      "MajorUnit": null,
+      "Smooth": null,
+      "LineHidden": false,
+      "ExpectedMinimum": -17,
+      "ExpectedMaximum": 103,
+      "ExpectedUnit": 20,
+      "InputSha256": "5AD0A94E1A7830DAE4FBA15B330C6D32F60AEDE120AEE3937DC7511A40936481",
+      "ReferencePdfSha256": "D89A980E25C8E0C744E6E430FBD4C43C4211F23604D404BBF7D67A39CF74301F"
+    },
+    {
+      "Id": "auto-y-upper-97",
+      "Axis": "Y",
+      "X": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Y": [
+        1,
+        2,
+        79,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Minimum": null,
+      "Maximum": 97,
+      "MajorUnit": null,
+      "Smooth": null,
+      "LineHidden": false,
+      "ExpectedMinimum": -23,
+      "ExpectedMaximum": 97,
+      "ExpectedUnit": 20,
+      "InputSha256": "901DC252B1D914436E7AE6D4A826053362BCDC408EA99D8DF8B6FD70202176E0",
+      "ReferencePdfSha256": "3612A506FFAE6B690193E013D2C41B223AF13B3B2B71215E975D4D90B77C28AA"
+    },
+    {
+      "Id": "auto-y-upper-107",
+      "Axis": "Y",
+      "X": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Y": [
+        1,
+        2,
+        79,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Minimum": null,
+      "Maximum": 107,
+      "MajorUnit": null,
+      "Smooth": null,
+      "LineHidden": false,
+      "ExpectedMinimum": -13,
+      "ExpectedMaximum": 107,
+      "ExpectedUnit": 20,
+      "InputSha256": "DF1A98D956A5C9DA73FE50BF7D04A61A927101CFE95DF4B2E0F03681609F1C28",
+      "ReferencePdfSha256": "E766DFF8F5AD1062F0CC4B952C06040F5CB3A686B87516E955B9A8F081D8DFC9"
+    },
+    {
+      "Id": "auto-y-both-ends",
+      "Axis": "Y",
+      "X": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Y": [
+        1,
+        2,
+        79,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "MajorUnit": null,
+      "Smooth": null,
+      "LineHidden": false,
+      "ExpectedMinimum": -10,
+      "ExpectedMaximum": 90,
+      "ExpectedUnit": 10,
+      "InputSha256": "4F4E950CA11E7AD05965DDA6C7FE32F8246A1FDFB3A417996248D59C773265BC",
+      "ReferencePdfSha256": "4ED1281E464AC2974D2083F235D898EB3CAF65C0B5C205E38D3B53A650A14DB2"
+    }
+  ]
+}

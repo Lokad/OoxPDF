@@ -1,4 +1,16 @@
 {
+  "pptx-scatter-automatic-y": [
+    "PptxScatterAutomaticY",
+    "PptxScatterFixedUnit",
+    "PptxScatterCurveOrder",
+    "PptxScatterAutomaticIntervals",
+    "PptxScatterCaptionAdmission",
+    "PptxChartValueAxis",
+    "PptxPointAxisFallback",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-scatter-caption-admission": [
     "PptxScatterCaptionAdmissionPreservesFrameAndNumericCenters",
     "PptxScatterCaptionAdmissionKeepsEndpointAndSeriesOwnership",

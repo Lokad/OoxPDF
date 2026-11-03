@@ -104,18 +104,20 @@ internal sealed partial class PptxRenderer
             xml is null ? (null, string.Empty) : PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xml, "max");
         ChartAxisUnits sourceUnits = ReadSceneOrXmlChartValueAxisUnits(axis, xml);
         string rawMajor = axis?.MajorUnitValue ?? (xml is null ? string.Empty : PptxSceneBuilder.ReadChartAxisUnitValueWithValue(xml, "majorUnit").RawValue);
-        bool automaticUnit = scatterX && automaticTickTargetCount is { } count && count >= 2d && double.IsFinite(count) &&
+        double? automaticTarget = !bubble && !horizontal
+            ? PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount : automaticTickTargetCount;
+        bool automaticUnit = !bubble && automaticTarget is { } count && count >= 2d && double.IsFinite(count) &&
             sourceUnits.MajorUnit is null && string.IsNullOrEmpty(rawMajor) && occupied.Max > occupied.Min;
-        // A source interval or measured source plot gives bounds and all emitted
-        // intervals one owner. Other automatic layouts and bubbles keep the
-        // existing fallback until their occupied geometry is resolved.
+        // Authored units, inferred vertical units and measured source X plots
+        // share bounds and emitted intervals. Other automatic X layouts and
+        // bubbles keep their existing fallback.
         ChartValueExtents owned = default;
         double unit = 0d;
         bool resolvedIntervals = !bubble && hasScaling && !logarithmic &&
             (minimum is not null || string.IsNullOrEmpty(rawMinimum)) &&
             (maximum is not null || string.IsNullOrEmpty(rawMaximum)) &&
             (automaticUnit || sourceUnits.MajorUnit is { } declared && declared > 0d && double.IsFinite(declared)) &&
-            TryResolvePointAxisRange(occupied, minimum, maximum, sourceUnits.MajorUnit, automaticTickTargetCount ?? target, out owned, out unit);
+            TryResolvePointAxisRange(occupied, minimum, maximum, sourceUnits.MajorUnit, automaticTarget ?? target, out owned, out unit);
         if (resolvedIntervals) extents = owned;
         ChartValueAxisRenderOptions options = ReadSceneOrXmlChartBubbleValueAxisOptions(axis, xml, theme, extents, target);
         if (resolvedIntervals) options = options with { Units = options.Units with { MajorUnit = unit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };

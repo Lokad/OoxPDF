@@ -73,7 +73,7 @@ internal static partial class PptxScatterIntervalTests
 
     private static readonly XNamespace CurveC = "http://schemas.openxmlformats.org/drawingml/2006/chart";
     private sealed record RangeCase(string Id, string Axis, double[] X, double[] Y, double? Minimum, double? Maximum,
-        double MajorUnit, string? Smooth, bool LineHidden, double ExpectedMinimum, double ExpectedMaximum);
+        double? MajorUnit, string? Smooth, bool LineHidden, double ExpectedMinimum, double ExpectedMaximum, double? ExpectedUnit = null);
 
     private static RangeCase[] RangeCases()
     {
@@ -83,7 +83,7 @@ internal static partial class PptxScatterIntervalTests
     }
 
     private static (PptxRenderer.ChartValueExtents Extents, object Options) ResolveRange(RangeCase sample, bool useScene,
-        XElement? mismatchedXml = null, bool logarithmic = false, CancellationToken cancellationToken = default)
+        XElement? mismatchedXml = null, bool logarithmic = false, CancellationToken cancellationToken = default, bool bubble = false)
     {
         string xml = RangeChart(sample, logarithmic);
         var chart = PptxTests.BuildSingleChartScene(xml)!;
@@ -100,7 +100,7 @@ internal static partial class PptxScatterIntervalTests
         XElement element = XDocument.Parse(xml).Descendants(CurveC + "valAx").Single(a => (string?)a.Element(CurveC + "axPos")?.Attribute("val") == side);
         Type sourceType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", BindingFlags.NonPublic)!;
         object source = Activator.CreateInstance(sourceType, [useScene ? axis : null, mismatchedXml ?? element])!;
-        object scale = CurveInvoke("ReadChartPointValueAxisScale", PptxTheme.Empty, source, data, occupied, false, coordinate == 1, null);
+        object scale = CurveInvoke("ReadChartPointValueAxisScale", PptxTheme.Empty, source, data, occupied, bubble, coordinate == 1, null);
         return ((PptxRenderer.ChartValueExtents)scale.GetType().GetField("Item1")!.GetValue(scale)!, scale.GetType().GetField("Item2")!.GetValue(scale)!);
     }
 
@@ -126,11 +126,13 @@ internal static partial class PptxScatterIntervalTests
         {
             bool selected = horizontal == (sample.Axis == "X");
             double? lower = selected ? sample.Minimum : 0d, upper = selected ? sample.Maximum : horizontal ? 9d : 103d;
+            double? major = selected ? sample.MajorUnit : horizontal ? 1d : 25d;
             XElement axis = XElement.Parse(Axis(horizontal ? "1" : "2", horizontal ? "b" : "l", horizontal ? "2" : "1",
-                lower is { } min ? Number(min) : "", upper is { } max ? Number(max) : "", Number(selected ? sample.MajorUnit : horizontal ? 1d : 25d), horizontal ? "00FF00" : "0000FF"));
+                lower is { } min ? Number(min) : "", upper is { } max ? Number(max) : "", Number(major ?? 1d), horizontal ? "00FF00" : "0000FF"));
             XElement scaling = axis.Element(CurveC + "scaling")!;
             if (lower is null) scaling.Element(CurveC + "min")!.Remove();
             if (upper is null) scaling.Element(CurveC + "max")!.Remove();
+            if (major is null) axis.Element(CurveC + "majorUnit")!.Remove();
             if (selected && logarithmic) scaling.Add(new XElement(CurveC + "logBase", new XAttribute("val", "10")));
             return axis.ToString(SaveOptions.DisableFormatting);
         }
