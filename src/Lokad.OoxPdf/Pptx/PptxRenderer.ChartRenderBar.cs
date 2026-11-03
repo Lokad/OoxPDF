@@ -740,7 +740,7 @@ internal sealed partial class PptxRenderer
             double requiredReserve = ComputeCartesianAxisLabelSideReserve(maxLabelWidth, tickStyle.FontSize);
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
-            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis,
+            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis,
                 ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
             if (labelsRight)
             {
@@ -913,7 +913,7 @@ internal sealed partial class PptxRenderer
             }
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
-            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis,
+            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis,
                 ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
             if (labelsRight)
             {
@@ -998,7 +998,7 @@ internal sealed partial class PptxRenderer
                     defaultNumberFormat: null,
                     fontResolver: fontResolver).ConfigureAwait(false));
                 double stripWidth = strip.StripWidth;
-                bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(
+                bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart,
                     valueAxis.SceneAxis,
                     valueAxis.XmlAxis,
                     ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));

@@ -116,7 +116,7 @@ internal sealed partial class PptxRenderer
                                 lineTickEdges[lineTickIndex] = ChartValueToPlotCoordinate(valueExtents, lineTickValues[lineTickIndex], plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
                             }
 
-                            bool lineValueLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, axesStyle.ValueAxisRightSide);
+                            bool lineValueLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, axesStyle.ValueAxisRightSide);
                             double lineValueAxisX = axesStyle.ValueAxisRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                             SetChartStroke(graphics, lineValueTickStroke);
                             StrokeMajorTickSegments(graphics, lineTickEdges, lineValueAxisX, verticalSegments: false, outwardIsLowSide: !lineValueLabelsRightSide, lineValueTickMark, lineValueTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);

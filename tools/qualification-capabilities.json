@@ -15107,5 +15107,24 @@
     "PptxSyntheticLineAndPieChartsRenderNativeCharts",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-numeric-label-direction": [
+    "PptxNumericCrossingOwnsPairedCategorySide",
+    "PptxNumericCrossingRetainsUnpairedAndInteriorFallbacks",
+    "PptxNumericCrossingMovesTheMeasuredStripWithItsLabels",
+    "PptxLineAndAreaCategoriesSharePhysicalSourceDirection",
+    "PptxLineCategoryDirectionKeepsSparseLabelsAndPointPaint",
+    "PptxChartSceneAxesUseSceneOwnedXmlEvidence",
+    "PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes",
+    "PptxChartSecondaryRightValueAxisSelectionUsesSceneSource",
+    "PptxChartSecondaryValueAxisStyleSelectionUsesSceneSource",
+    "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition",
+    "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips",
+    "PptxSyntheticChartComboLineUsesOwnValueAxisScale",
+    "PptxColumnCategoryGeometryIgnoresNumericCrossingEdits",
+    "PptxSingleCategoryMidpointOriginKeepsPointsCaptionsAndDirectionTogether",
+    "PptxLineCategoryBoundaryMarkersKeepHorizontalInkAndNumericClipping",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 }

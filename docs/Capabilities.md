@@ -216,7 +216,9 @@ Approximate or restricted:
   endpoint advance is reserved even without a painted endpoint tick. Automatic
   font sizing, unusual axis declarations and remaining geometry are approximate.
   Paired categorical axes use the numeric crossing and category orientation for
-  the numeric axis side; explicit low/high labels keep their own side. Unpaired,
+  the numeric axis side; explicit low/high labels follow the paired category
+  direction, including reversal. Measurement, painting and secondary-axis slots
+  share that rule. Unpaired,
   date/numeric and interior ordinal crossings retain their placement fallback.
   Column category strokes and captions use the category crossing independently
   of the numeric axis crossing. Measured caption bands share line/area placement

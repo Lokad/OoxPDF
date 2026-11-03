@@ -275,7 +275,7 @@ internal sealed partial class PptxRenderer
                     bool sameSideSecondaryValueAxis = !horizontalBars &&
                         secondaryValueAxis is not null &&
                         IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis) &&
-                        GetValueAxisSideSlot(
+                        GetValueAxisSideSlot(sceneChart,
                             valueSceneAxis,
                             valueAxis,
                             secondaryValueSceneAxis,
@@ -292,9 +292,9 @@ internal sealed partial class PptxRenderer
                         if (secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
                         {
                             bool secondaryValueAxisRightSide = axesStyle.SecondaryValueAxisRightSide;
-                            int sideSlot = GetValueAxisSideSlot(valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: axesStyle.ValueAxisRightSide, defaultSecondaryRightSide: secondaryValueAxisRightSide);
+                            int sideSlot = GetValueAxisSideSlot(sceneChart, valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: axesStyle.ValueAxisRightSide, defaultSecondaryRightSide: secondaryValueAxisRightSide);
                             double? secondaryInkAnchor = null;
-                            bool secondaryLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(secondaryValueSceneAxis, secondaryValueAxis, secondaryValueAxisRightSide);
+                            bool secondaryLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, secondaryValueSceneAxis, secondaryValueAxis, secondaryValueAxisRightSide);
                             if (!secondaryLabelsRightSide && sideSlot == 1 && valueAxisLabelsVisible)
                             {
                                 ChartValueAxisStripMeasure primaryStrip = (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, valueAxis, valueSceneAxis, valueExtents, valueAxisOptions.Units, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver).ConfigureAwait(false));
@@ -354,7 +354,7 @@ internal sealed partial class PptxRenderer
                                 tickEdges[tickIndex] = ChartValueToPlotCoordinate(valueExtents, tickValues[tickIndex], plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
                             }
 
-                            bool valueLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(valueSceneAxis, valueAxis, axesStyle.ValueAxisRightSide);
+                            bool valueLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueSceneAxis, valueAxis, axesStyle.ValueAxisRightSide);
                             double valueAxisX = axesStyle.ValueAxisRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                             SetChartStroke(graphics, valueTickStroke);
                             StrokeMajorTickSegments(graphics, tickEdges, valueAxisX, verticalSegments: false, outwardIsLowSide: !valueLabelsRightSide, valueTickMark, valueTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);

@@ -481,7 +481,7 @@ internal sealed partial class PptxRenderer
                     }
                     if (numericReserve is { } reserve)
                     {
-                        bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis,
+                        bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis,
                             ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
                         double left = labelsRight ? PptxChartMetricRules.ColumnPlotRightReserve : reserve;
                         double right = labelsRight ? reserve : PptxChartMetricRules.ColumnPlotRightReserve;
@@ -533,7 +533,7 @@ internal sealed partial class PptxRenderer
 
                 double sideReserve = numericLabelsVisible ? ComputeCartesianAxisLabelSideReserve(maxLabelWidth, tickStyle.FontSize) :
                     PptxChartMetricRules.ColumnPlotRightReserve;
-                bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis, valueAxes[0].XmlAxis,
+                bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis, valueAxes[0].XmlAxis,
                     ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis, valueAxes[0].XmlAxis, defaultRightSide: false));
                 double leftReserve = labelsRight ? PptxChartMetricRules.ColumnPlotRightReserve : sideReserve;
                 double rightReserve = labelsRight ? sideReserve : PptxChartMetricRules.ColumnPlotRightReserve;

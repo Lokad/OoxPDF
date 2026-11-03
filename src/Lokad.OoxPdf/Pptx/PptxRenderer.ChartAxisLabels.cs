@@ -223,7 +223,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                bool labelsRightSide = placement?.LabelsHighSide ?? ResolveSceneOrXmlValueAxisLabelsRightSide(sceneAxis, valueAxis, rightSide);
+                bool labelsRightSide = placement?.LabelsHighSide ?? ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, sceneAxis, valueAxis, rightSide);
                 double axisX = placement is { } resolved ? plotBox.X + plotBox.Width * resolved.LabelPlotRatio
                     : labelsRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                 width = useTextSizedWidth ? valueAxisLabelWidth : plotBox.Width * PptxChartMetricRules.VerticalValueAxisWidthRatio;

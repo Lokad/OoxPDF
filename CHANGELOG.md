@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: explicit numeric-axis low/high labels follow paired category direction,
+  so reversed charts measure and paint their labels on the same source side.
+
 - PPTX line/area charts place a single tick-centered category at its source
   endpoint, including reversal; captions and line markers share that origin. Horizontal marker admission preserves
   full edge markers while retaining numeric-axis clipping.

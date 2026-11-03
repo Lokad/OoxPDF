@@ -205,3 +205,10 @@ Installed-font Office comparisons remain independent.
 font and cancellation coverage in Ubuntu CI. It is a four-method subset of the
 already-qualified mixed-terminal capability, with the same assertions and font
 owners; broad rendering and visual qualification are separate.
+
+`pptx-numeric-label-direction` checks paired category direction across numeric
+label measurement, painting and secondary-axis slots. Independent line/area/column
+controls combine reversal with explicit low/high labels; next-to crossings,
+scene authority, unpaired/date/interior fallbacks and marker/source neighbors
+remain distinct checks. The fixed physical-side premise in the earlier synthetic
+matrix is corrected against those independent exports.

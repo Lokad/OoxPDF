@@ -132,7 +132,7 @@ internal sealed partial class PptxRenderer
                             areaValueEdges[areaValueTickIndex] = ChartValueToPlotCoordinate(valueExtents, areaTickValues[areaValueTickIndex], plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
                         }
 
-                        bool areaValueLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, axesStyle.ValueAxisRightSide);
+                        bool areaValueLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, axesStyle.ValueAxisRightSide);
                         double areaValueAxisX = axesStyle.ValueAxisRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                         SetChartStroke(graphics, areaValueTickStroke);
                         StrokeMajorTickSegments(graphics, areaValueEdges, areaValueAxisX, verticalSegments: false, outwardIsLowSide: !areaValueLabelsRightSide, areaValueTickMark, areaValueTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);

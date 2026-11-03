@@ -55,7 +55,7 @@ internal static class PptxAxisCrossingTests
     public static void PptxNumericCrossingOwnsPairedCategorySide()
     {
         // Independent Office matrix: numeric crosses owns the stroke/next-to
-        // side; category reversal mirrors it, while low/high labels stay fixed.
+        // side; explicit low/high labels follow the paired category direction.
         foreach (string kind in new[] { "line", "area", "column" })
         foreach (bool reversed in new[] { false, true })
         foreach (string? crossing in new string?[] { null, "autoZero", "min", "max" })
@@ -65,7 +65,7 @@ internal static class PptxAxisCrossingTests
             PdfPage right = Render(kind, "r", crossing, reversed, labels);
             TestAssert.True(left.Content == right.Content,
                 $"Paired {kind} crossing {crossing ?? "default"}, reversal {reversed}, labels {labels} must survive an axPos-only edit.");
-            Check(left, (crossing == "max") != reversed, labels, $"{kind}/{crossing ?? "default"}/{reversed}/{labels}");
+            Check(left, (crossing == "max") != reversed, labels, $"{kind}/{crossing ?? "default"}/{reversed}/{labels}", reversed);
         }
     }
 
@@ -104,7 +104,7 @@ internal static class PptxAxisCrossingTests
             .OrderByDescending(group => group.Count()).First().Key;
     }
 
-    private static void Check(PdfPage page, bool axisRight, string labels, string context)
+    private static void Check(PdfPage page, bool axisRight, string labels, string context, bool reversed = false)
     {
         var span = Span(page);
         double left = span.Left, right = span.Right;
@@ -120,7 +120,7 @@ internal static class PptxAxisCrossingTests
         var values = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal)).ToArray();
         TestAssert.True(values.Length >= 2, "Keep the numeric labels.");
-        bool labelsRight = labels == "high" || labels == "nextTo" && axisRight;
+        bool labelsRight = labels == "nextTo" ? axisRight : (labels == "high") != reversed;
         TestAssert.True(values.All(v => labelsRight ? v.X > right : v.X < left),
             "Measurement and painting share the numeric side; explicit low/high labels remain independent.");
     }
