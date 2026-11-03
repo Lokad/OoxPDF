@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, int? chartStyleId)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, int? chartStyleId, PptxRenderContext? context = null)
     {
         ChartPolarGeometry geometry = layout.Geometry;
         int pointCount = layout.PointCount;
@@ -55,7 +55,7 @@ internal sealed partial class PptxRenderer
 
         SetChartStroke(graphics, RadarGridlineDefaultStroke);
         bool hasGridPath = false;
-        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount))
+        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, context: context))
         {
             double tickRatio = GetChartValuePlotRatio(extents, tickValue, false);
             if (tickRatio <= PptxChartMetricRules.AxisValueEpsilon)
@@ -500,13 +500,13 @@ internal sealed partial class PptxRenderer
         ChartAxisUnits axisUnits,
         PresentationFontResolver? fontResolver,
         List<PdfFontResource> chartFonts,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null)
+        Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxRenderContext? context = null)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         ChartPlotBox plotBox = layout.PlotBox;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var runs = new List<TextRun>();
-        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount))
+        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, context: context))
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
             string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis, null);

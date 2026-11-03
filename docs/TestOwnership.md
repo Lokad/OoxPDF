@@ -268,4 +268,3 @@ their independent font and geometry requirements.
 semantics. The original four-row balloon control requires actual Times New Roman
 and retains its Office0.05pt gate; a two-font portable control checks all24 words
 and painted row extents without substituting another fixed row count.
-

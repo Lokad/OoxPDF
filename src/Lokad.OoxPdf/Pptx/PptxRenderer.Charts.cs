@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
         }
 
         if ((await TryRenderRadarChartKindAsync(
-            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context: context).ConfigureAwait(false)))
         {
             return true;
         }

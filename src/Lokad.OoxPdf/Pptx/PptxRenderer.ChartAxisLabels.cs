@@ -177,9 +177,9 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<(IReadOnlyList<double> Values, double MaximumWidth, double SlotWidth)> MeasureChartValueAxisCaptionsAsync(
         ChartTextMeasurer measurer, ChartTextStyle style, ChartAxisSource source, ChartValueExtents extents,
-        ChartAxisUnits units, double target, ChartAxisTickPolicy policy, string? defaultNumberFormat, bool reserveEndpoints)
+        ChartAxisUnits units, double target, ChartAxisTickPolicy policy, string? defaultNumberFormat, bool reserveEndpoints, PptxRenderContext? context = null)
     {
-        IReadOnlyList<double> values = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, target, policy);
+        IReadOnlyList<double> values = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, target, policy, context: context);
         IEnumerable<double> measured = reserveEndpoints ? values.Append(extents.Min).Append(extents.Max) : values;
         double maximum = 0d;
         foreach (string label in measured.Select(value => FormatSceneOrXmlChartAxisLabel(value, source.SceneAxis, source.XmlAxis, defaultNumberFormat)).DefaultIfEmpty("0"))
@@ -188,7 +188,7 @@ internal sealed partial class PptxRenderer
             maximum + style.FontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor));
     }
 
-    private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null)
+    private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null, PptxRenderContext? context = null)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
@@ -197,7 +197,7 @@ internal sealed partial class PptxRenderer
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         double autoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible: true, manualPlotLayoutApplied);
         var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, style, new(sceneAxis, valueAxis), extents,
-            axisUnits, autoTickTargetCount, tickPolicy, defaultNumberFormat, reserveEndpoints: false).ConfigureAwait(false);
+            axisUnits, autoTickTargetCount, tickPolicy, defaultNumberFormat, reserveEndpoints: false, context: context).ConfigureAwait(false);
         IReadOnlyList<double> tickValues = captions.Values;
         double valueAxisLabelWidth = captions.SlotWidth;
         var runs = new List<TextRun>(tickValues.Count);
@@ -308,7 +308,7 @@ internal sealed partial class PptxRenderer
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CVA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
-    private static async ValueTask RenderSecondaryChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxSceneChartAxis? primarySceneAxis = null, XElement? primaryXmlAxis = null)
+    private static async ValueTask RenderSecondaryChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxSceneChartAxis? primarySceneAxis = null, XElement? primaryXmlAxis = null, PptxRenderContext? context = null)
     {
         ChartAxisSource rightValueAxisSource = ReadSceneOrXmlSecondaryRightValueAxis(sceneChart, chartXml);
         if (primarySceneAxis is not null && rightValueAxisSource.SceneAxis is not null && string.Equals(primarySceneAxis.Id, rightValueAxisSource.SceneAxis.Id, StringComparison.Ordinal))
@@ -330,6 +330,6 @@ internal sealed partial class PptxRenderer
 
         ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(rightSceneAxis, rightValueAxis, fallback, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
         ChartValueAxisRenderOptions axisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(rightSceneAxis, rightValueAxis, theme, extents, percentStacked: false);
-        await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, rightSceneAxis, extents, axisOptions.Units, axisOptions.Reversed, horizontalBars: false, rightSide: true, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: chartFonts, diagnosticSink: diagnosticSink).ConfigureAwait(false);
+        await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, rightSceneAxis, extents, axisOptions.Units, axisOptions.Reversed, horizontalBars: false, rightSide: true, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: chartFonts, diagnosticSink: diagnosticSink, context: context).ConfigureAwait(false);
     }
 }

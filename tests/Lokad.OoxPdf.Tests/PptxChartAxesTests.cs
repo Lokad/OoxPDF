@@ -1053,8 +1053,8 @@ internal static class PptxChartAxesTests
         try
         {
             object[] arguments = sourceMinimumIntervals
-                ? [extents, unit!, includeEndpoints, 10d, Enum.Parse(typeof(PptxRenderer).GetNestedType("ChartAxisTickPolicy", System.Reflection.BindingFlags.NonPublic)!, "SourceMinimumIntervals")]
-                : [extents, unit!, includeEndpoints, 10d];
+                ? [extents, unit!, includeEndpoints, 10d, Enum.Parse(typeof(PptxRenderer).GetNestedType("ChartAxisTickPolicy", System.Reflection.BindingFlags.NonPublic)!, "SourceMinimumIntervals"), null!]
+                : [extents, unit!, includeEndpoints, 10d, null!];
             return (IReadOnlyList<double>)(method.Invoke(null, arguments) ?? throw new InvalidOperationException("Expected chart ticks."));
         }
         catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is { } inner)
@@ -1080,10 +1080,10 @@ internal static class PptxChartAxesTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart tick target resolver.");
         System.Reflection.MethodInfo readTickValues = typeof(PptxRenderer).GetMethods(
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "GetChartAxisTickValues" && method.GetParameters().Length == 4);
+            .Single(method => method.Name == "GetChartAxisTickValues" && method.GetParameters().Length == 5);
 
         double targetCount = (double)(readTargetCount.Invoke(null, [false, true, false]) ?? double.NaN);
-        object values = readTickValues.Invoke(null, [extents, null, true, targetCount]) ?? throw new InvalidOperationException("Expected chart tick values.");
+        object values = readTickValues.Invoke(null, [extents, null, true, targetCount, null]) ?? throw new InvalidOperationException("Expected chart tick values.");
         string tickList = string.Join(
             ",",
             ((System.Collections.IEnumerable)values).Cast<object>().Select(value => Convert.ToDouble(value, CultureInfo.InvariantCulture).ToString("0.########", CultureInfo.InvariantCulture)));

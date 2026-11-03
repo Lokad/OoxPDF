@@ -39,6 +39,7 @@ internal sealed record PptxRenderContext(
     // Borrow the page owner's existing grant. Context copies never own/refund it.
     public IMemoryReservation? PageConstruction { get; init; }
     public long PageConstructionBaseBytes { get; init; }
+    public long PageAxisConstructionSites { get; init; }
 
     public PptxTheme Theme => SceneSlide.Theme;
 

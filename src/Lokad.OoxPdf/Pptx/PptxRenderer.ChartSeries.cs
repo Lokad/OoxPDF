@@ -89,6 +89,8 @@ internal sealed partial class PptxRenderer
                 // Sequential frames reuse the page's high-water construction window.
                 if (capacity > construction.Bytes) OoxMemory.Resize(construction, capacity);
                 context.CancellationToken.ThrowIfCancellationRequested();
+                // Axis expansion coexists with this frame's range memos.
+                context = context with { PageConstructionBaseBytes = capacity };
             }
             await RenderChartFrameWithWorkbookAsync(context, graphics, fonts, bounds.Value, chartPartName, resolvedChartXml, sceneChart, chartWorkbook, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
         }

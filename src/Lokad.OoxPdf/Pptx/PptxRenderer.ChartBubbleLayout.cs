@@ -15,7 +15,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChart chart, XDocument xml, ChartLayout fallback, PptxSceneChartPlot? plot,
         IReadOnlyList<ScatterSeries> series, IReadOnlyList<ChartLegendEntry> entries,
         ChartAxisSource xAxis, ChartAxisSource yAxis, ChartValueExtents dataX, ChartValueExtents dataY,
-        PresentationFontResolver resolver)
+        PresentationFontResolver resolver, PptxRenderContext? context = null)
     {
         // Authored/composed frames, width-sized/negative bubbles and rejected
         // scales retain their existing approximation until independently qualified.
@@ -107,7 +107,7 @@ internal sealed partial class PptxRenderer
             if (yLabels)
             {
                 var captions = await MeasureChartValueAxisCaptionsAsync(measure, yStyle, yAxis, y, yOptions.Units,
-                    PptxChartMetricRules.AxisNiceTickTargetCount, yOptions.TickPolicy, null, reserveEndpoints: true).ConfigureAwait(false);
+                    PptxChartMetricRules.AxisNiceTickTargetCount, yOptions.TickPolicy, null, reserveEndpoints: true, context: context).ConfigureAwait(false);
                 sideSlot = Math.Max(0d, ComputeCartesianAxisLabelSideReserve(captions.MaximumWidth, yStyle.FontSize) - margin);
             }
             double captionReserve = xLabels ? ComputeCartesianLabelStripBottomReserve(xStyle.FontSize) : innerHeader.NumericClearance;

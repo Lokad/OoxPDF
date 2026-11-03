@@ -27,7 +27,7 @@ internal sealed partial class PptxRenderer
         ChartAxesStyle axesStyle,
         ChartShapeStyle plotAreaStyle,
         ChartValueExtents valueExtents,
-        bool categoryAxisReversed = false)
+        bool categoryAxisReversed = false, PptxRenderContext? context = null)
     {
         bool majorGridlines = valueAxisOptions.MajorGridlines;
         bool minorGridlines = valueAxisOptions.MinorGridlines;
@@ -47,10 +47,10 @@ internal sealed partial class PptxRenderer
             if (valueAxisOptions.TickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals)
                 DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents,
                     axisUnits, valueAxisCrossingValue, valueAxisReversed, major, stroke,
-                    valueAxisOptions.HasMajorGridlineElement, valueAxisOptions.TickPolicy);
+                    valueAxisOptions.HasMajorGridlineElement, valueAxisOptions.TickPolicy, context: context);
             else
                 DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents,
-                    major ? axisUnits.MajorUnit : axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major, stroke);
+                    major ? axisUnits.MajorUnit : axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major, stroke, context: context);
         }
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartValueSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
