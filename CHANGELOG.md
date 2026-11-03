@@ -56,6 +56,8 @@
   and markup layouts.
 - DOCX: paints direct and inherited paragraph backgrounds across wrapped flow,
   cells, static stories, equations and pictures, preserving authored foregrounds.
+  Qualified single-line minimum slots shade the natural line without painting
+  over the following paragraph.
 - DOCX: reports omitted external images, malformed floating drawings and unsupported
   VML in selected headers/footers using the owning story's relationships.
 - Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;

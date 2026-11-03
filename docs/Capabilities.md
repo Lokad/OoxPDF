@@ -382,6 +382,8 @@ Approximate or restricted:
   approximate; application-view calibration and remaining geometry gates are open.
   Simple single-line body minimum spacing uses measured font height across sizes,
   bold/mixed faces, kept paragraphs and neighboring tables/wrapped paragraphs.
+  Qualified minimum-line backgrounds follow natural line height while the
+  occupied minimum slot and joined source spacing remain unchanged.
   Multiline minimum paragraphs, columns, unresolved static frames, unsupported
   spacing/contextual styles and complex note-marker formatting retain restrictions.
 - Review balloons, ranges, revision bands, comment collision/layout and note-marker
