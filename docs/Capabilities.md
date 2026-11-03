@@ -169,9 +169,11 @@ Approximate or restricted:
   Automatic scatter X intervals use the available authored inner factor width
   and axis font size; numeric captions, marks and legend measurement share the
   resolved scale. Automatic/outer/edge plot widths and bubble/vertical automatic
-  intervals retain their approximation. Numeric zero-padding, source axis paint
-  and remaining caption-driven plot placement are not yet qualified as matching
-  Office; correct numeric intervals do not establish complete chart parity.
+  intervals retain their approximation. Required integer-zero placeholders retain
+  padding across the shared number formatter's existing sections, literal masks,
+  grouping and scaling. Source axis paint and remaining caption-driven plot
+  placement remain approximate; correct intervals and formatted values do not
+  establish complete chart parity.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.

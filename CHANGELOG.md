@@ -2,17 +2,13 @@
 
 ## 0.3.0 — Unreleased
 
-- PPTX: automatic scatter X intervals respond to authored inner plot width and
-  axis font size, sharing scale selection with legend measurement. Other plot
-  layouts and bubble/vertical automatic scales retain their existing fallback.
-
-- PPTX: scatter axes with authored major intervals measure connected curve
-  overshoot and share resolved bounds across layout, labels, ticks and grids.
-  Automatic interval fitting and bubble bounds retain their existing fallback.
-
-- PPTX: scatter connections follow series line visibility across omitted and
-  marker-only styles, preserving PowerPoint's smoothing default and explicit
-  straight lines.
+- PPTX: scatter connections follow series visibility and smoothing defaults.
+  Authored major intervals measure curve bounds; automatic X intervals use
+  authored inner plot width and axis font size. Layout, captions, ticks and legend
+  measurement share the scale. Other layouts and bubble/vertical automatic scales
+  retain their existing fallback.
+- PPTX: chart number formats preserve required leading integer zeros, including
+  sections, literal masking, grouping and scaling.
 
 - PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
   explicit non-overlay legends retain their plot-space reservation. Bottom line
