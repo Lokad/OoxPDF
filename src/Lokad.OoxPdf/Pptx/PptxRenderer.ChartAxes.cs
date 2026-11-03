@@ -188,7 +188,8 @@ internal sealed partial class PptxRenderer
         if (declaredUnit is null) unit = ChooseChartAxisMajorUnit(span, tickTargetCount);
         if (!(unit > 0d) || !double.IsFinite(unit)) return false;
         // Office fixed-unit controls retain zero for wide single-sign data;
-        // other automatic ends reserve five percent around occupied geometry.
+        // scatter ends reserve five percent; bubbles have already admitted
+        // physical radius padding and request no additional headroom.
         double paddedLower = minimum ?? (lower == 0d ? 0d : lower - headroomRatio * span);
         double paddedUpper = maximum ?? (upper == 0d ? 0d : upper + headroomRatio * span);
         if (minimum is { } origin) paddedUpper = origin + Math.Ceiling((paddedUpper - origin) / unit) * unit;
