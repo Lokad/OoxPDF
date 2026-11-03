@@ -7,7 +7,8 @@
 - PPTX: scatter connections follow series visibility and smoothing defaults.
   Authored major intervals and inferred Y intervals measure curve bounds.
   Automatic X intervals use authored inner plot width and axis font size.
-  Inner factor plots admit measured
+  Inner plots with factor positions resolve right-edge widths before placement
+  and interval selection, preserving equivalent layout declarations. They admit measured
   numeric captions inside the chart frame, shifting or shrinking the plot while
   keeping captions centered on ticks. Layout, captions, ticks and legend
   measurement share the scale. Other automatic X layouts retain their fallback.

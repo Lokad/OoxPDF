@@ -180,7 +180,11 @@ Approximate or restricted:
   bubbles retain the existing fallback.
   Automatic scatter X intervals use the available authored inner factor width
   and axis font size; numeric captions, marks and legend measurement share the
-  resolved scale. Automatic/outer/edge X plot widths and bubble automatic
+  resolved scale. Inner manual plots also resolve factor-position offsets together
+  with right-edge widths; equivalent declarations preserve their geometry and
+  captions. Three independent edge controls match complete axes within0.04pt,
+  correcting displacement up to80pt and extra axis captions. Automatic/outer X
+  plot widths, edge-height generalization and bubble automatic
   intervals retain their approximation. Required integer-zero placeholders retain
   padding across the shared number formatter's existing sections, literal masks,
   grouping and scaling. Source-owned inner factor plots admit measured endpoint
