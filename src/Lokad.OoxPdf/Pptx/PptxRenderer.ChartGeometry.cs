@@ -524,8 +524,14 @@ internal sealed partial class PptxRenderer
         double inset = PptxChartMetricRules.ChartContentFrameInset;
         double left = firstWidth > 0d ? inset + firstWidth / 2d : 0d;
         double right = lastWidth > 0d ? inset + lastWidth / 2d : 0d;
-        double ratio = Math.Clamp(sidePlacement.LabelPlotRatio, 0d, 1d);
         double side = sideSlotWidth > 0d ? sideSlotWidth + inset : 0d;
+        return AdmitChartPlotCaptionReserves(frame, source, left, right, side, sidePlacement);
+    }
+
+    private static ChartPlotBox AdmitChartPlotCaptionReserves(ChartFrameBox frame, ChartPlotBox source,
+        double left, double right, double side, ChartAxisPlacement sidePlacement)
+    {
+        double ratio = Math.Clamp(sidePlacement.LabelPlotRatio, 0d, 1d);
         double width = Math.Min(source.Width, frame.Width - left - right);
         // A side caption follows its value-axis anchor, including an interior
         // crossing. Solve its linear width constraint before clamping position.

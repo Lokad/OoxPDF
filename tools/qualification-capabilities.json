@@ -15018,5 +15018,21 @@
     "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition",
     "PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips",
     "PptxSyntheticChartComboLineUsesOwnValueAxisScale"
+  ],
+  "pptx-horizontal-crossing": [
+    "PptxHorizontalCategoryCrossingsFollowTheNumericScale",
+    "PptxHorizontalCategoryLabelSidesKeepTheirStrokeCrossing",
+    "PptxHorizontalCategoryTicksShareCrossingAndDirection",
+    "PptxHorizontalEndpointAdmissionFollowsPhysicalDirection",
+    "PptxHorizontalCategoryCrossingsKeepUnpairedAndComposedFallbacks",
+    "PptxSyntheticChartHorizontalBarCategoryAxisStrokeUsesAxisPosition",
+    "PptxSyntheticChartHorizontalBarValueAxisStrokeUsesAxisPosition",
+    "PptxSyntheticChartValueAxisReversedOrientationMovesHorizontalBarsAndLabels",
+    "PptxSyntheticChartValueAxisReversedOrientationStacksHorizontalBarSegmentsByValue",
+    "PptxHorizontalTitle",
+    "PptxHorizontalOverlayTitle",
+    "PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks",
+    "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithoutManualBoxUseOfficeDenseTicks",
+    "PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithManualBoxUseOfficeSparseTicks"
   ]
 }

@@ -23,7 +23,7 @@ internal sealed partial class PptxRenderer
             plotBox.Height + PptxChartMetricRules.BarPlotClipPad);
     }
 
-    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool horizontalBars, ChartBarPlotOptions plotOptions, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied, int? chartStyleId)
+    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool horizontalBars, ChartBarPlotOptions plotOptions, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, ChartValueAxisRenderOptions valueAxisOptions, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied, int? chartStyleId, ChartAxisPlacement? categoryPlacement = null)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -113,7 +113,9 @@ internal sealed partial class PptxRenderer
                 {
                     SetChartStroke(graphics, stroke);
                     double axisX = horizontalBars
-                        ? (axesStyle.CategoryAxisRightSide ? plotX + plotWidth : plotX)
+                        ? categoryPlacement is { } placement
+                            ? ChartValueToPlotCoordinate(valueExtents, placement.CrossingValue, plotX, plotWidth, valueAxisOptions.Reversed)
+                            : (axesStyle.CategoryAxisRightSide ? plotX + plotWidth : plotX)
                         : (axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX);
                     RenderInChartPlotAreaClip(graphics, plotClipBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
@@ -345,7 +347,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = await AdjustBarChartPlotBoxForCategoryLabelsAsync(defaultPlotBox).ConfigureAwait(false);
         defaultPlotBox = AdjustStackedColumnBottomLegendPlotBox(defaultPlotBox, frame, horizontalBars, barOptions.Grouping, hasTitle, legend);
         defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, horizontalBars, hasLegend);
-        defaultPlotBox = (await AdjustHorizontalBarPlotBoxForCategoryLabelsAsync(defaultPlotBox).ConfigureAwait(false));
+        defaultPlotBox = (await AdjustHorizontalBarPlotBoxForCaptionsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForValueLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
         if (cartesianHeader is null)
@@ -504,7 +506,7 @@ internal sealed partial class PptxRenderer
 
         async ValueTask<ChartPlotBox> AdjustHorizontalBarPlotBoxForValueLabelsAsync(ChartPlotBox plotBox)
         {
-            if (!horizontalBars)
+            if (!horizontalBars || usesMeasuredAxisInsets && categoryPlacement is not null)
             {
                 return plotBox;
             }
@@ -621,7 +623,7 @@ internal sealed partial class PptxRenderer
             return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, newTop - newY));
         }
 
-        async ValueTask<ChartPlotBox> AdjustHorizontalBarPlotBoxForCategoryLabelsAsync(ChartPlotBox plotBox)
+        async ValueTask<ChartPlotBox> AdjustHorizontalBarPlotBoxForCaptionsAsync(ChartPlotBox plotBox)
         {
             if (!horizontalBars)
             {
@@ -629,14 +631,10 @@ internal sealed partial class PptxRenderer
             }
 
             ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
-            if (!IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
-            {
-                return plotBox;
-            }
-
             ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxCategoryWidth = 0d;
+            if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
             foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
             {
                 string? labelText = label?.Text;
@@ -644,6 +642,27 @@ internal sealed partial class PptxRenderer
                 {
                     maxCategoryWidth = Math.Max(maxCategoryWidth, (await textMeasurer.MeasureAsync(labelText, tickStyle).ConfigureAwait(false)));
                 }
+            }
+
+            if (usesMeasuredAxisInsets && categoryPlacement is { } placement)
+            {
+                double left = PptxChartMetricRules.ColumnPlotRightReserve, right = left;
+                ChartAxisSource value = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+                if (IsSceneOrXmlChartAxisLabelVisible(value.SceneAxis, value.XmlAxis))
+                {
+                    bool percent = IsPercentStackedChartGrouping(barOptions.Grouping);
+                    ChartValueExtents extents = ReadCartesianChartValueAxisExtents(sceneChart, value.SceneAxis, value.XmlAxis,
+                        GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percent, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                    ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, value.SceneAxis, chartXml, value.XmlAxis,
+                        PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+                    double first = await textMeasurer.MeasureAsync(FormatSceneOrXmlChartAxisLabel(extents.Min, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
+                    double last = await textMeasurer.MeasureAsync(FormatSceneOrXmlChartAxisLabel(extents.Max, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
+                    if (ReadSceneOrXmlValueAxisReversed(value.SceneAxis, value.XmlAxis)) (first, last) = (last, first);
+                    left = Math.Max(left, first / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
+                    right = Math.Max(right, last / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
+                }
+                double side = maxCategoryWidth > 0d ? ComputeCartesianAxisLabelSideReserve(maxCategoryWidth, tickStyle.FontSize) : 0d;
+                return AdmitChartPlotCaptionReserves(frame, plotBox, left, right, side, placement);
             }
 
             if (maxCategoryWidth <= 0d)

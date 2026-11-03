@@ -1,0 +1,101 @@
+using System.Xml.Linq;
+using Lokad.OoxPdf.Pdf;
+
+namespace Lokad.OoxPdf.Tests;
+
+internal static partial class PptxColumnIntervalTests
+{
+    private static readonly XNamespace CrossingC = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+
+    public static void PptxHorizontalCategoryCrossingsFollowTheNumericScale()
+    {
+        // Four independent Office controls establish the clamped zero crossing
+        // in both directions. Fonts/plot admission may change the rectangle,
+        // but cannot change its source-relative crossing.
+        foreach (int minimum in new[] { 7, -7 })
+        foreach (bool reversed in new[] { false, true })
+        {
+            var actual = HorizontalGeometry(Render(minimum, 25, reversed: reversed, horizontal: true));
+            TestAssert.Equal(2, actual.Labels.Length);
+            double ratio = (Math.Clamp(0d, minimum, 103d) - minimum) / (103d - minimum);
+            if (reversed) ratio = 1d - ratio;
+            NearHorizontal(actual.Axis, actual.Left + ratio * (actual.Right - actual.Left));
+            TestAssert.True(reversed ? actual.Labels.All(x => x > actual.Axis) : actual.Labels.All(x => x < actual.Axis),
+                "Next-to category labels follow the crossing and numeric direction.");
+        }
+    }
+
+    public static void PptxHorizontalCategoryLabelSidesKeepTheirStrokeCrossing()
+    {
+        foreach (string position in new[] { "low", "high" })
+        {
+            var actual = HorizontalGeometry(Render(7, 25, reversed: true, horizontal: true, editChart: xml =>
+                xml.Descendants(CrossingC + "catAx").Single().Add(new XElement(CrossingC + "tickLblPos", new XAttribute("val", position)))));
+            NearHorizontal(actual.Axis, actual.Right);
+            TestAssert.Equal(2, actual.Labels.Length);
+            TestAssert.True(position == "low" ? actual.Labels.All(x => x > actual.Right) : actual.Labels.All(x => x < actual.Left),
+                "Independent native low/high controls move labels to right/left without moving the source crossing to that edge.");
+        }
+    }
+
+    public static void PptxHorizontalCategoryTicksShareCrossingAndDirection()
+    {
+        foreach (bool reversed in new[] { false, true })
+        {
+            var actual = HorizontalGeometry(Render(-7, 25, reversed: reversed, horizontal: true));
+            TestAssert.Equal(3, actual.Ticks.Length);
+            foreach (double[] tick in actual.Ticks)
+            {
+                NearHorizontal(reversed ? Math.Min(tick[0], tick[2]) : Math.Max(tick[0], tick[2]), actual.Axis);
+                TestAssert.True(reversed ? tick[0] > tick[2] : tick[0] < tick[2], "Outward category ticks follow numeric direction.");
+            }
+        }
+    }
+
+    public static void PptxHorizontalEndpointAdmissionFollowsPhysicalDirection()
+    {
+        PdfPage RenderHidden(bool reversed) => Render(7, 25, reversed: reversed, horizontal: true, editChart: xml =>
+            xml.Descendants(CrossingC + "catAx").Single().Add(new XElement(CrossingC + "tickLblPos", new XAttribute("val", "none"))));
+        var normal = HorizontalGeometry(RenderHidden(false));
+        var reverse = HorizontalGeometry(RenderHidden(true));
+        NearHorizontal(normal.Left - 72d, 792d - reverse.Right);
+        NearHorizontal(reverse.Left - 72d, 792d - normal.Right);
+        TestAssert.True(reverse.Left > normal.Left + 1d && reverse.Right > normal.Right + 1d,
+            "Each physical edge admits its endpoint caption; reversal moves the longer103 caption to the left.");
+    }
+
+    public static void PptxHorizontalCategoryCrossingsKeepUnpairedAndComposedFallbacks()
+    {
+        foreach (string fallback in new[] { "unpaired", "composed", "logarithmic" })
+        {
+            var actual = HorizontalGeometry(Render(7, 25, reversed: true, horizontal: true, editChart: xml =>
+            {
+                if (fallback == "unpaired")
+                {
+                    xml.Descendants(CrossingC + "crossAx").Remove();
+                    xml.Descendants(CrossingC + "catAx").Single().Element(CrossingC + "axPos")!.SetAttributeValue("val", "r");
+                }
+                if (fallback == "composed") xml.Descendants(CrossingC + "plotArea").Single().Add(new XElement(CrossingC + "lineChart"));
+                if (fallback == "logarithmic") xml.Descendants(CrossingC + "valAx").Single().Element(CrossingC + "scaling")!
+                    .Add(new XElement(CrossingC + "logBase", new XAttribute("val", "10")));
+            }));
+            NearHorizontal(actual.Axis, fallback == "unpaired" ? actual.Right : actual.Left);
+            TestAssert.Equal(2, actual.Labels.Length);
+            TestAssert.True(actual.Labels.All(x => x < actual.Left), "Unresolved placement keeps its existing caption fallback: " + fallback);
+        }
+    }
+
+    private static void NearHorizontal(double actual, double expected) => TestAssert.True(Math.Abs(actual - expected) < .002d,
+        $"Expected horizontal coordinate {expected:R}, got {actual:R}.");
+
+    private static (double Left, double Right, double Axis, double[] Labels, double[][] Ticks) HorizontalGeometry(PdfPage page)
+    {
+        var lines = Lines(page);
+        var numeric = lines.Single(p => p.Color == new RgbColor(255, 0, 0) && Math.Abs(p.V[1] - p.V[3]) < .001d && Math.Abs(p.V[0] - p.V[2]) > 100d).V;
+        var category = lines.Single(p => p.Color == new RgbColor(0, 170, 0) && Math.Abs(p.V[0] - p.V[2]) < .001d && Math.Abs(p.V[1] - p.V[3]) > 100d).V;
+        var ticks = lines.Where(p => p.Color == new RgbColor(0, 170, 0) && Math.Abs(p.V[1] - p.V[3]) < .001d && Math.Abs(p.V[0] - p.V[2]) is > 0d and < 20d).Select(p => p.V).ToArray();
+        var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+            fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).Select(p => p.X).ToArray();
+        return (Math.Min(numeric[0], numeric[2]), Math.Max(numeric[0], numeric[2]), category[0], labels, ticks);
+    }
+}

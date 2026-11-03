@@ -6,6 +6,19 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private static ChartAxisPlacement? ReadHorizontalBarCategoryPlacement(PptxSceneChart chart,
+        ChartAxisSource category, ChartAxisSource value, ChartValueExtents extents, bool reversed)
+    {
+        // A reciprocal ordinal/numeric pair owns the source crossing. Keep
+        // unpaired, composed and unsupported scales on their declared fallback.
+        if (chart.Plots.Count != 1 || chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
+            category.SceneAxis is not { AxisKind: PptxSceneChartAxisKind.Category } ordinal ||
+            value.SceneAxis is not { HasScaling: true, HasLogarithmicScale: false } numeric ||
+            string.IsNullOrEmpty(ordinal.Id) || string.IsNullOrEmpty(numeric.Id) ||
+            ordinal.CrossAxisId != numeric.Id || numeric.CrossAxisId != ordinal.Id) return null;
+        return ReadChartAxisPlacement(category, extents, reversed, horizontal: false);
+    }
+
     private static ChartAxisPlacement? ReadChartAxisPlacement(ChartAxisSource axis, ChartValueExtents extents, bool reversed, bool horizontal = true)
     {
         if (axis.SceneAxis is null && axis.XmlAxis is null) return null;

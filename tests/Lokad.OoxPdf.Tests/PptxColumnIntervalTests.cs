@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -102,7 +103,7 @@ internal static partial class PptxColumnIntervalTests
         return result.ToArray();
     }
 
-    private static PdfPage Render(int? minimum, int? major, int maximum = 103, bool reversed = false, string grouping = "clustered", bool manual = false, bool grids = false, bool horizontal = false)
+    private static PdfPage Render(int? minimum, int? major, int maximum = 103, bool reversed = false, string grouping = "clustered", bool manual = false, bool grids = false, bool horizontal = false, Action<XElement>? editChart = null)
     {
         string Grid(string name, string color) => grids ? $"<c:{name}><c:spPr><a:ln><a:solidFill><a:srgbClr val=\"{color}\"/></a:solidFill></a:ln></c:spPr></c:{name}>" : "";
         string chart = $$"""
@@ -112,7 +113,9 @@ internal static partial class PptxColumnIntervalTests
                 <c:cat><c:strLit><c:pt idx="0"><c:v>First</c:v></c:pt><c:pt idx="1"><c:v>Last</c:v></c:pt></c:strLit></c:cat>
                 <c:val><c:numLit><c:pt idx="0"><c:v>82</c:v></c:pt><c:pt idx="1"><c:v>96</c:v></c:pt></c:numLit></c:val>
               </c:ser><c:axId val="1"/><c:axId val="2"/></c:barChart>
-              <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/><c:crosses val="autoZero"/></c:catAx>
+              <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/>
+                <c:spPr><a:ln><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln></c:spPr>
+              </c:catAx>
               <c:valAx><c:axId val="2"/><c:scaling><c:orientation val="{{(reversed ? "maxMin" : "minMax")}}"/>
                 {{(minimum is { } min ? $"<c:min val=\"{min}\"/>" : "")}}<c:max val="{{maximum}}"/></c:scaling>
                 <c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/>
@@ -125,6 +128,12 @@ internal static partial class PptxColumnIntervalTests
         const string slide = """
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="457200"/><a:ext cx="9144000" cy="5486400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
             """;
+        if (editChart is not null)
+        {
+            XElement source = XElement.Parse(chart);
+            editChart(source);
+            chart = source.ToString(SaveOptions.DisableFormatting);
+        }
         using var stream = PptxTests.CreateSingleChartPackageStream(chart, new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
         using var package = OoxPackage.Open(stream, default);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();

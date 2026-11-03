@@ -19,7 +19,7 @@ internal sealed partial class PptxRenderer
         return lineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (offsetScale - 1d);
     }
 
-    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? verticalAxisY, bool categoryLabelsOnTickMarks, bool categoryLabelsTopSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null, bool categoryAxisReversed = false)
+    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? axisCoordinate, bool categoryLabelsOnTickMarks, bool labelsHighSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? automaticLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null, bool categoryAxisReversed = false)
     {
         if (labels.Count == 0)
         {
@@ -71,25 +71,25 @@ internal sealed partial class PptxRenderer
                 {
                     if (part.Text.Length == 0) continue;
                     double center = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
-                    double axisY = verticalAxisY ?? plotBox.Y;
+                    double axisY = axisCoordinate ?? plotBox.Y;
                     double legacyHeight = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
-                    double baselineDistance = categoryLabelsTopSide
+                    double baselineDistance = labelsHighSide
                         ? legacyHeight * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor
                         : legacyHeight * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor;
                     baselineDistance = automaticLabelOffsetAdjustment is { } extra ? baselineDistance + extra : baselineDistance * labelOffsetScale;
-                    double gap = Math.Max(0d, baselineDistance - (categoryLabelsTopSide ? rotated.Descent : rotated.Ascent));
+                    double gap = Math.Max(0d, baselineDistance - (labelsHighSide ? rotated.Descent : rotated.Ascent));
                     double radians = -rotated.RotationDegrees * Math.PI / 180d;
                     double sin = Math.Sin(radians), cos = Math.Cos(radians);
                     double pivotX = center + (rotated.Ascent - rotated.Descent) * sin / 2d;
-                    double pivotY = categoryLabelsTopSide ? axisY + gap + rotated.Descent * cos : axisY - gap - rotated.Ascent * cos;
-                    bool rightAnchor = (radians > 0d) != categoryLabelsTopSide;
+                    double pivotY = labelsHighSide ? axisY + gap + rotated.Descent * cos : axisY - gap - rotated.Ascent * cos;
+                    bool rightAnchor = (radians > 0d) != labelsHighSide;
                     double localX = rightAnchor ? pivotX - part.Width : pivotX;
                     double clipLeft = pivotX + (rightAnchor ? -part.Width * cos : 0d) +
                         (sin >= 0d ? -rotated.Ascent * sin : rotated.Descent * sin);
                     double clipRight = pivotX + (rightAnchor ? 0d : part.Width * cos) +
                         (sin >= 0d ? rotated.Descent * sin : -rotated.Ascent * sin);
                     double extent = part.Width * Math.Abs(sin) + rotated.LineHeight * cos;
-                    double clipBottom = categoryLabelsTopSide ? axisY + gap : axisY - gap - extent;
+                    double clipBottom = labelsHighSide ? axisY + gap : axisY - gap - extent;
                     TextRun rotatedRun = CreateChartTextRun(part.Text, localX, pivotY, part.Width, rotated.LineHeight,
                         clipLeft, clipBottom, Math.Max(1d, clipRight - clipLeft), extent,
                         style with { Alpha = 1d }, TextAlignment.Left, kerningEnabled: false);
@@ -106,11 +106,12 @@ internal sealed partial class PptxRenderer
             if (horizontalBars)
             {
                 double slotHeight = plotBox.Height / labels.Count;
-                double stripRight = plotBox.X - PptxChartMetricRules.HorizontalBarCategoryLabelPlotGapFactor * fontSize * labelOffsetScale;
+                double anchor = axisCoordinate ?? plotBox.X;
+                double gap = PptxChartMetricRules.HorizontalBarCategoryLabelPlotGapFactor * fontSize * labelOffsetScale;
                 y = plotBox.Y + slotHeight * (i + 0.5d) - height * PptxChartMetricRules.CategoryAxisHorizontalBaselineRatio;
                 width = Math.Max(1d, widestCategoryLabel);
-                x = Math.Max(0d, stripRight - width);
-                alignment = TextAlignment.Right;
+                x = Math.Max(0d, labelsHighSide ? anchor + gap : anchor - gap - width);
+                alignment = labelsHighSide ? TextAlignment.Left : TextAlignment.Right;
             }
             else
             {
@@ -120,8 +121,8 @@ internal sealed partial class PptxRenderer
                 width = slotWidth * Math.Min(tickLabelSkip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
                 double labelCenterX = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
                 x = labelCenterX - width / 2d;
-                double axisY = verticalAxisY ?? plotBox.Y;
-                y = categoryLabelsTopSide
+                double axisY = axisCoordinate ?? plotBox.Y;
+                y = labelsHighSide
                     ? automaticLabelOffsetAdjustment is { } topAdjustment
                         ? axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor + topAdjustment
                         : axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor * labelOffsetScale
@@ -164,7 +165,7 @@ internal sealed partial class PptxRenderer
             {
                 for (int lineIndex = 0; lineIndex < parts.Length; lineIndex++)
                 {
-                    double shift = lineIndex * prepared.LineHeight * (categoryLabelsTopSide ? 1d : -1d);
+                    double shift = lineIndex * prepared.LineHeight * (labelsHighSide ? 1d : -1d);
                     runs.Add(run with { Text = parts[lineIndex].Text, Y = run.Y + shift, ClipY = run.ClipY + shift });
                 }
             }
