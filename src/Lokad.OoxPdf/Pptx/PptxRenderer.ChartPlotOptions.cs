@@ -123,7 +123,9 @@ internal sealed partial class PptxRenderer
         return new ChartScatterPlotOptions(
             scatterStyle,
             ResolveChartScatterLineConnection(scatterStyle),
-            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: false));
+            // PowerPoint smooths a connected scatter series when its smooth
+            // element is absent. An explicit false retains straight segments.
+            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: false, defaultValue: true));
     }
 
     private readonly record struct ChartRadarPlotOptions(PptxSceneChartRadarStyle RadarStyle);

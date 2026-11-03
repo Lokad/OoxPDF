@@ -1,4 +1,13 @@
 {
+  "pptx-scatter-smoothing": [
+    "PptxScatterSmoothingKeepsSourceAuthorityAndExplicitFalse",
+    "PptxScatterSmoothingDefaultsPaintCurvesAndKeepStraightAndHiddenLines",
+    "ScatterStyleAgreesBetweenSceneAndXml",
+    "SeriesSmoothAgreesBetweenSceneAndXml",
+    "SeriesLineHiddenAgreesBetweenSceneAndXml",
+    "PptxScatterLineConnectionCoversSmoothStyles",
+    "PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault"
+  ],
   "pptx-scatter-measurement": [
     "PptxScatterMeasurementsRetainTranslatedAndSubunitDataExtrema",
     "PptxPointAxisFallbackOwnsLegacyZeroAndUnitBounds"
