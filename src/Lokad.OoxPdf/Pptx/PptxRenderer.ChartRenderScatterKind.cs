@@ -51,6 +51,9 @@ internal sealed partial class PptxRenderer
                 var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale(theme, yValueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
                 ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
                 ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
+                chartLayout = await AdmitScatterSourcePlotAsync(theme, sceneChart, chartXml, chartLayout,
+                    xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, yPlacement, fontResolver).ConfigureAwait(false);
+                plotBox = chartLayout.PlotBox;
                 // Each axis declares its crossing in the perpendicular scale.
                 xAxisOptions = xAxisOptions with { CrossingValue = Math.Clamp(yPlacement.CrossingValue, xExtents.Min, xExtents.Max) };
                 yAxisOptions = yAxisOptions with { CrossingValue = Math.Clamp(xPlacement.CrossingValue, yExtents.Min, yExtents.Max) };
@@ -76,12 +79,52 @@ internal sealed partial class PptxRenderer
                 await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, yAxisOptions.Reversed, horizontalBars: false, rightSide: false, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver, chartFonts: fonts, tickPolicy: yAxisOptions.TickPolicy, placement: yPlacement).ConfigureAwait(false);
                 await RenderDefaultChartAxisTitlesAsync(theme, graphics, chartLayout, sceneChart, fontResolver, fonts, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 RenderScatterBubbleMajorTicks(graphics, theme, chartXml, sceneChart, plotBox, xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, xPlacement, yPlacement);
-                double scatterLegendLeadExtra = 0.5d * (await MeasureScatterLastXLabelWidthAsync(theme, sceneChart, chartXml, scatterPlot, scatterChart, workbook, plotVisibleOnly, fontResolver, xTickTargetCount).ConfigureAwait(false));
+                double scatterLegendLeadExtra = 0.5d * (await MeasureScatterLegendEndLabelWidthAsync(theme, sceneChart, chartXml, scatterPlot, scatterChart, workbook, plotVisibleOnly, fontResolver, xTickTargetCount).ConfigureAwait(false));
                 await RenderChartLegendAsync(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, colorMap, chartPalette, scatterPlot, scatterChart, seriesStrokes, markerStyles, reverseOrder: false, workbook: workbook, seriesLineHidden: seriesLineHidden), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, legendLeadExtra: scatterLegendLeadExtra, scatterLegend: true).ConfigureAwait(false);
                 return true;
             }
         }
         return false;
+    }
+
+    private static async ValueTask<ChartLayout> AdmitScatterSourcePlotAsync(PptxTheme theme, PptxSceneChart chart, XDocument xml,
+        ChartLayout layout, ChartAxisSource xAxis, ChartAxisSource yAxis, ChartValueExtents xExtents, ChartValueExtents yExtents,
+        ChartValueAxisRenderOptions xOptions, ChartValueAxisRenderOptions yOptions, ChartAxisPlacement yPlacement,
+        PresentationFontResolver fontResolver)
+    {
+        PptxSceneChartManualLayout source = chart.PlotAreaLayout;
+        if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner || source.X is null || source.Width is null ||
+            source.XModeKind != PptxSceneChartManualLayoutMode.Factor || source.WidthModeKind != PptxSceneChartManualLayoutMode.Factor)
+            return layout;
+        var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
+        double firstWidth = 0d, lastWidth = 0d, sideWidth = 0d;
+        if (IsSceneOrXmlChartAxisLabelVisible(xAxis.SceneAxis, xAxis.XmlAxis))
+        {
+            ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, xAxis.SceneAxis, xml, xAxis.XmlAxis,
+                PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+            var captions = await MeasureChartValueAxisCaptionsAsync(measurer, style, xAxis, xExtents, xOptions.Units,
+                PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount, xOptions.TickPolicy, null, reserveEndpoints: false).ConfigureAwait(false);
+            if (captions.Values.Count > 0)
+            {
+                firstWidth = measurer.Measure(FormatSceneOrXmlChartAxisLabel(captions.Values[0], xAxis.SceneAxis, xAxis.XmlAxis, null), style);
+                lastWidth = measurer.Measure(FormatSceneOrXmlChartAxisLabel(captions.Values[^1], xAxis.SceneAxis, xAxis.XmlAxis, null), style);
+                if (xOptions.Reversed) (firstWidth, lastWidth) = (lastWidth, firstWidth);
+            }
+        }
+        if (IsSceneOrXmlChartAxisLabelVisible(yAxis.SceneAxis, yAxis.XmlAxis))
+        {
+            ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, yAxis.SceneAxis, xml, yAxis.XmlAxis,
+                PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+            var captions = await MeasureChartValueAxisCaptionsAsync(measurer, style, yAxis, yExtents, yOptions.Units,
+                PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, yOptions.TickPolicy, null, reserveEndpoints: true).ConfigureAwait(false);
+            sideWidth = captions.SlotWidth;
+        }
+        ChartPlotBox admitted = AdmitChartPlotCaptions(layout.Frame, layout.PlotBox, firstWidth, lastWidth, sideWidth, yPlacement);
+        return layout with
+        {
+            PlotBox = admitted,
+            PlotAreaBox = layout.PlotAreaBox with { X = admitted.X, Width = admitted.Width }
+        };
     }
 
     private static IReadOnlyList<bool> ReadSceneOrXmlSeriesLineHidden(PptxSceneChartPlot? plot, XElement chartElement)

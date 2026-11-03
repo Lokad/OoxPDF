@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
             // Automatic titles belong to the chart frame, independently of plot
             // placement, legend space or chart family. Measure the painted runs.
             var line = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
-            baselineY = frame.Y + frame.Height - PptxChartMetricRules.ChartTitleFrameInset -
+            baselineY = frame.Y + frame.Height - PptxChartMetricRules.ChartContentFrameInset -
                 PptxChartMetricRules.ChartTitleLinePadding - line.Ascent;
         }
         double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
@@ -595,7 +595,7 @@ internal sealed partial class PptxRenderer
         if (!string.IsNullOrWhiteSpace(chart.Title.Text) && chart.Title.Overlay != true)
         {
             var title = await MeasureChartTitleLineAsync(theme, chart, resolver).ConfigureAwait(false);
-            reserve += PptxChartMetricRules.ChartTitleFrameInset +
+            reserve += PptxChartMetricRules.ChartContentFrameInset +
                 2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height;
         }
         return (reserve, numericClearance);

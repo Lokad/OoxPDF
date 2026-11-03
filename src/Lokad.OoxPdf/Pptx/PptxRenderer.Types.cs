@@ -152,7 +152,7 @@ internal sealed partial class PptxRenderer
     private static class PptxChartMetricRules
     {
         public const double TitleFallbackFontSize = 12d;
-        public const double ChartTitleFrameInset = 6d;
+        public const double ChartContentFrameInset = 6d;
         public const double ChartTitleHorizontalPadding = 3d;
         public const double ChartTitleLinePadding = 1.5d;
         public const double LegendFallbackFontSize = 9d;
@@ -167,8 +167,8 @@ internal sealed partial class PptxRenderer
         public const double AxisNiceHorizontalValueTickTargetCount = 10d;
         public const double BubbleAxisBoundsTickTargetCount = 5d;
         public const double BubbleAxisNiceTickTargetCount = 10d;
-        // Scatter-X tick units halve one step earlier than Y (unit 1 through range 8,
-        // unit 2 from range 9; cached X-scaling probes over Xmax 8/9/9.5/12). Y keeps 10.
+        // Legacy horizontal target when an authored plot width is unavailable.
+        // Source-owned widths use measured caption slots instead.
         public const double ScatterXAxisNiceTickTargetCount = 8d;
         public const double AxisNiceTickStepSmall = 1d;
         public const double AxisNiceTickStepMedium = 2d;

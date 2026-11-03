@@ -364,7 +364,7 @@ internal sealed partial class PptxRenderer
             // Overlay titles use the same painted baseline and consume no plot space.
             if (sceneChart.Title.Overlay != true)
             {
-                double band = PptxChartMetricRules.ChartTitleFrameInset + 2d * PptxChartMetricRules.ChartTitleLinePadding +
+                double band = PptxChartMetricRules.ChartContentFrameInset + 2d * PptxChartMetricRules.ChartTitleLinePadding +
                     measuredLine.Height + PptxChartMetricRules.HorizontalBarPlotTopReserve;
                 double top = frame.Y + frame.Height - band;
                 defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };

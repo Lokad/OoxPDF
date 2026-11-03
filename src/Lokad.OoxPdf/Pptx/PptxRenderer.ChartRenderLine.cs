@@ -676,7 +676,7 @@ internal sealed partial class PptxRenderer
             ? (await MeasureLastCategoryLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false))
             : 0d;
         double lastXLabelWidth = plotKind == PptxSceneChartPlotKind.Scatter
-            ? (await MeasureScatterLastXLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver, scatterXTickTargetCount).ConfigureAwait(false))
+            ? (await MeasureScatterLegendEndLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver, scatterXTickTargetCount).ConfigureAwait(false))
             : 0d;
         double rightLegendWidth = (await ResolveRightLegendWidthAsync(
             seriesNames,
@@ -706,18 +706,11 @@ internal sealed partial class PptxRenderer
                 var measured = MeasureScatterChartExtents(series, ReadSceneOrXmlChartScatterOptions(plot, plotElement),
                     ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
                 var (valueExtents, pointOptions) = ReadChartPointValueAxisScale(theme, valueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
-                IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(valueExtents, pointOptions.Units.MajorUnit, includeEndpoints: true,
-                    PptxChartMetricRules.AxisNiceTickTargetCount, pointOptions.TickPolicy);
                 ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-                string[] tickLabels = tickValues
-                    // Office reserves endpoint advance even when it is not a painted tick.
-                    .Append(valueExtents.Min).Append(valueExtents.Max)
-                    .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
-                    .ToArray();
-                await textMeasurer.PrepareAsync(tickLabels, valueAxisTextStyle).ConfigureAwait(false);
-                maxValueLabelWidth = tickLabels.Length == 0
-                    ? 0d
-                    : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
+                var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, valueAxisTextStyle, valueAxis, valueExtents,
+                    pointOptions.Units, PptxChartMetricRules.AxisNiceTickTargetCount, pointOptions.TickPolicy,
+                    defaultNumberFormat: null, reserveEndpoints: true).ConfigureAwait(false);
+                maxValueLabelWidth = captions.MaximumWidth;
             }
         }
         else
@@ -875,13 +868,9 @@ internal sealed partial class PptxRenderer
         return (await new ChartTextMeasurer(fontResolver, kerningEnabled: false).MeasureAsync(label.Text, categoryStyle).ConfigureAwait(false));
     }
 
-    // Full width of the last visible X tick label for the scatter right-legend reserve
-    // and content: the swatch clears that edge label (centered on the plot edge) by half
-    // of it on top of the side gap. Mirrors the render-site X extents, units, style, and
-    // formatting exactly so both callers observe identical doubles. Returns zero when X
-    // labels are hidden or empty, and when any series hides its line (marker-only keys
-    // keep the legacy luck-matched layout).
-    private static async ValueTask<double> MeasureScatterLastXLabelWidthAsync(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, double? scatterXTickTargetCount)
+    // Legend-only clearance keeps its marker-key fallback when a series hides
+    // its line. Axis/plot admission measures captions independently of series paint.
+    private static async ValueTask<double> MeasureScatterLegendEndLabelWidthAsync(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, double? scatterXTickTargetCount)
     {
         IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
         ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
@@ -898,13 +887,16 @@ internal sealed partial class PptxRenderer
         var measured = MeasureScatterChartExtents(ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly),
             ReadSceneOrXmlChartScatterOptions(plot, plotElement), ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
         var (xExtents, xOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, scatterXTickTargetCount);
-        IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(xExtents, xOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: true, manualPlotLayoutApplied: false), xOptions.TickPolicy);
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, chartXml, xValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+        var captions = await MeasureChartValueAxisCaptionsAsync(new ChartTextMeasurer(fontResolver, kerningEnabled: false), style,
+            xValueAxis, xExtents, xOptions.Units, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: true, manualPlotLayoutApplied: false),
+            xOptions.TickPolicy, defaultNumberFormat: null, reserveEndpoints: false).ConfigureAwait(false);
+        IReadOnlyList<double> tickValues = captions.Values;
         if (tickValues.Count == 0)
         {
             return 0d;
         }
 
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, chartXml, xValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         string lastLabel = FormatSceneOrXmlChartAxisLabel(tickValues[tickValues.Count - 1], xValueAxis.SceneAxis, xValueAxis.XmlAxis, defaultNumberFormat: null);
         if (string.IsNullOrEmpty(lastLabel))
         {

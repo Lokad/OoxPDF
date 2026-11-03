@@ -466,10 +466,9 @@ internal sealed partial class PptxRenderer
         if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner)
             return layout;
 
-        // Office positions an authored inner rectangle around the frame center,
-        // then applies factor offsets and admits the rectangle inside the frame.
-        // Its origin therefore does not depend on an automatic label/title inset.
-        // Edge/mixed modes and absent sizes retain their existing placement.
+        // Resolve the source inner rectangle around the frame center. Containers
+        // that measure caption slots admit those separately. Edge/mixed modes
+        // and absent sizes retain their existing placement.
         ChartPlotBox plot = layout.PlotBox;
         double x = plot.X;
         double y = plot.Y;
@@ -485,6 +484,38 @@ internal sealed partial class PptxRenderer
             PlotBox = plot with { X = x, Y = y },
             PlotAreaBox = layout.PlotAreaBox with { X = x, Y = y }
         };
+    }
+
+    private static ChartPlotBox AdmitChartPlotCaptions(ChartFrameBox frame, ChartPlotBox source,
+        double firstWidth, double lastWidth, double sideSlotWidth, ChartAxisPlacement sidePlacement)
+    {
+        double inset = PptxChartMetricRules.ChartContentFrameInset;
+        double left = firstWidth > 0d ? inset + firstWidth / 2d : 0d;
+        double right = lastWidth > 0d ? inset + lastWidth / 2d : 0d;
+        double ratio = Math.Clamp(sidePlacement.LabelPlotRatio, 0d, 1d);
+        double side = sideSlotWidth > 0d ? sideSlotWidth + inset : 0d;
+        double width = Math.Min(source.Width, frame.Width - left - right);
+        // A side caption follows its value-axis anchor, including an interior
+        // crossing. Solve its linear width constraint before clamping position.
+        if (side > 0d)
+        {
+            if (sidePlacement.LabelsHighSide && ratio > 0d)
+                width = Math.Min(width, (frame.Width - left - side) / ratio);
+            else if (!sidePlacement.LabelsHighSide && ratio < 1d)
+                width = Math.Min(width, (frame.Width - right - side) / (1d - ratio));
+            else if (side > frame.Width - (sidePlacement.LabelsHighSide ? left : right)) return source;
+        }
+        if (!(width > 0d) || !double.IsFinite(width)) return source;
+        double minimum = frame.X + left;
+        double maximum = frame.X + frame.Width - right - width;
+        if (side > 0d)
+        {
+            if (sidePlacement.LabelsHighSide) maximum = Math.Min(maximum, frame.X + frame.Width - side - ratio * width);
+            else minimum = Math.Max(minimum, frame.X + side - ratio * width);
+        }
+        // Equivalent boundary expressions can differ by a rounding unit when
+        // the admitted width fills the available interval exactly.
+        return source with { X = Math.Clamp(source.X, minimum, Math.Max(minimum, maximum)), Width = width };
     }
 
     private static bool TryBuildManualPlotLayout(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)

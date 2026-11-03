@@ -174,6 +174,20 @@ internal sealed partial class PptxRenderer
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CCA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
+    private static async ValueTask<(IReadOnlyList<double> Values, double MaximumWidth, double SlotWidth)> MeasureChartValueAxisCaptionsAsync(
+        ChartTextMeasurer measurer, ChartTextStyle style, ChartAxisSource source, ChartValueExtents extents,
+        ChartAxisUnits units, double target, ChartAxisTickPolicy policy, string? defaultNumberFormat, bool reserveEndpoints)
+    {
+        IReadOnlyList<double> values = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, target, policy);
+        IEnumerable<double> measured = reserveEndpoints ? values.Append(extents.Min).Append(extents.Max) : values;
+        string[] labels = measured.Select(value => FormatSceneOrXmlChartAxisLabel(value, source.SceneAxis, source.XmlAxis, defaultNumberFormat))
+            .DefaultIfEmpty("0").ToArray();
+        await measurer.PrepareAsync(labels, style).ConfigureAwait(false);
+        double maximum = labels.Max(label => measurer.Measure(label, style));
+        return (values, maximum, Math.Max(style.FontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
+            maximum + style.FontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor));
+    }
+
     private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
@@ -182,17 +196,10 @@ internal sealed partial class PptxRenderer
         RgbColor color = style.Color;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         double autoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible: true, manualPlotLayoutApplied);
-        IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(extents, axisUnits.MajorUnit, includeEndpoints: true, autoTickTargetCount, tickPolicy);
-        await textMeasurer.PrepareAsync(tickValues
-            .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
-            .DefaultIfEmpty("0"), style).ConfigureAwait(false);
-        double maxLabelWidth = tickValues
-            .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
-            .DefaultIfEmpty("0")
-            .Max(label => textMeasurer.Measure(label, style));
-        double valueAxisLabelWidth = Math.Max(
-            fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
-            maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
+        var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, style, new(sceneAxis, valueAxis), extents,
+            axisUnits, autoTickTargetCount, tickPolicy, defaultNumberFormat, reserveEndpoints: false).ConfigureAwait(false);
+        IReadOnlyList<double> tickValues = captions.Values;
+        double valueAxisLabelWidth = captions.SlotWidth;
         var runs = new List<TextRun>(tickValues.Count);
         foreach (double value in tickValues)
         {
@@ -204,7 +211,9 @@ internal sealed partial class PptxRenderer
             TextAlignment alignment;
             if (horizontalBars)
             {
-                width = plotBox.Width / PptxChartMetricRules.HorizontalValueAxisSlotCount;
+                // A numeric caption is one measured fragment, even when wider
+                // than its nominal slot. Keep its center on the value coordinate.
+                width = Math.Max(plotBox.Width / PptxChartMetricRules.HorizontalValueAxisSlotCount, textMeasurer.Measure(label, style));
                 x = plotBox.X + plotBox.Width * offset - width / 2d;
                 double axisY = plotBox.Y + plotBox.Height * (placement?.LabelPlotRatio ?? 0d);
                 y = placement?.LabelsHighSide == true

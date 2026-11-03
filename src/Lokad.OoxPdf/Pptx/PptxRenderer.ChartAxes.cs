@@ -126,8 +126,8 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame, ChartAxisSource xAxis)
     {
         PptxSceneChartManualLayout source = chart?.PlotAreaLayout ?? PptxSceneBuilder.ReadChartPlotAreaManualLayout(xml);
-        // An inner factor width owns the actual plot width independently of
-        // caption/legend admission. Outer, edge and automatic widths do not.
+        // Resolve the authored inner factor width before caption admission.
+        // Outer, edge and automatic widths retain their existing scale fallback.
         if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner ||
             source.WidthModeKind != PptxSceneChartManualLayoutMode.Factor || source.Width is null ||
             !TryBuildManualPlotLayout(source, frame, GetDefaultChartPlotBox(frame), out ChartPlotLayout layout)) return null;

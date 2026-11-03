@@ -1,4 +1,18 @@
 {
+  "pptx-scatter-caption-admission": [
+    "PptxScatterCaptionAdmissionPreservesFrameAndNumericCenters",
+    "PptxScatterCaptionAdmissionKeepsEndpointAndSeriesOwnership",
+    "PptxScatterRequiredIntegerDigitsReachNumericCaptions",
+    "PptxChartNumberRequiredIntegerDigitsPreservePadding",
+    "PptxChartNumberIntegerPaddingExcludesLiteralZeros",
+    "PptxChartValueAxis",
+    "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics",
+    "PptxAutomaticColumnInsetsRespectHiddenAndOppositeAxisLabels",
+    "PptxHorizontalFrame",
+    "PptxHorizontalTitlesLeaveValueAxisOwnershipUnchanged",
+    "PptxChartRightLegendReserveUsesLegendTextStyle",
+    "PptxChartRightLegendValueAxisReserveUsesAxisTextStyle"
+  ],
   "pptx-chart-integer-padding": [
     "PptxChartNumber",
     "PptxChartAxisNumberFormatUsesSceneAuthoritativeAbsence",
