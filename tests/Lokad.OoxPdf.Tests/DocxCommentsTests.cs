@@ -3603,17 +3603,14 @@ internal static partial class DocxCommentsTests
             {
                 RelatedStories = [story], MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
             };
-            var formerStory = story with
-            {
-                BodyElements = paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph with { ParagraphMarkRun = null })).ToArray()
-            };
             var renderer = new DocxRenderer(new BalloonAliasFontResolver(unloadedMark), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var canonicalStory = unloadedMark ? formerStory : story with
+            var canonicalStory = story with
             {
                 BodyElements = paragraphs.Select(paragraph => (DocxBodyElement)new DocxParagraphElement(paragraph with
                 {
-                    Runs = paragraph.Runs.Select(run => run with { FontFamily = "CommentFace" }).ToArray()
+                    Runs = paragraph.Runs.Select(run => run with { FontFamily = "CommentFace" }).ToArray(),
+                    ParagraphMarkRun = unloadedMark ? paragraph.ParagraphMarkRun! with { FontFamily = "AnchorFace" } : paragraph.ParagraphMarkRun
                 })).ToArray()
             };
             var actualPaint = PaintedBalloonText(renderer, document);
@@ -3621,7 +3618,7 @@ internal static partial class DocxCommentsTests
             int difference = Enumerable.Range(0, Math.Min(actualPaint.Length, expectedPaint.Length))
                 .FirstOrDefault(index => actualPaint[index] != expectedPaint[index], -1);
             TestAssert.True(actualPaint.SequenceEqual(expectedPaint),
-                $"Resolved aliases retain canonical paragraph text and geometry; unavailable marks retain semantic fallback. Count={count}, mask={mask}, unloaded={unloadedMark}, lengths={actualPaint.Length}/{expectedPaint.Length}, difference={difference}: " +
+                $"Resolved aliases retain canonical paragraph text and geometry; unavailable marks use supplied embedded fallback metrics. Count={count}, mask={mask}, unloaded={unloadedMark}, lengths={actualPaint.Length}/{expectedPaint.Length}, difference={difference}: " +
                 (difference < 0 ? "none" : $"{actualPaint[difference]} versus {expectedPaint[difference]}"));
         }
     }
