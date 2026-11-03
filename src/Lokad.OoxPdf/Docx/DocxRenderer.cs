@@ -1146,9 +1146,9 @@ internal sealed partial class DocxRenderer
             textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
             textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);
             using IMemoryReservation? construction = ReservePageConstruction(layoutPage,
-                drawingPages.Floating.Get(pageIndex).All, drawingPages.Static.Get(pageIndex).All, cancellationToken);
+                drawingPages.Floating.Get(pageIndex).All, drawingPages.Static.Get(pageIndex).All, cancellationToken, out long svgSourceBytes);
             cancellationToken.ThrowIfCancellationRequested();
-            var graphics = new PdfGraphicsBuilder();
+            var graphics = new PdfGraphicsBuilder(construction, svgSourceBytes);
             var pageImages = new List<PdfImageResource>();
             int pageNumber = pageIndex + 1;
             RenderWordCompatibleMarkupLaneBackground(layoutPage, graphics, markupContext);

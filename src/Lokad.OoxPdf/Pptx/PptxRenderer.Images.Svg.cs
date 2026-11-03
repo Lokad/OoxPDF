@@ -160,6 +160,18 @@ internal sealed partial class PptxRenderer
         var admittedContainers = new HashSet<XElement>();
         var admittedGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
         var fallbackGradientAlpha = new HashSet<string>(StringComparer.Ordinal);
+        PdfGraphicsBuilder pageGraphics = graphics;
+        int precedingCharacters = graphics.ContentLength;
+        long sampledBytes = 0;
+        void AdmitSamples(int samples)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Retained generated paint plus builder/snapshot overlap. Keep this
+            // image's total across opacity groups; each new picture starts fresh.
+            sampledBytes = checked(sampledBytes + 1024L * samples);
+            pageGraphics.AdmitSvgConstruction(sampledBytes, bytes.Length, precedingCharacters);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
         void CloseGroup()
         {
             var entry = isolation[^1];
@@ -315,7 +327,7 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds radialBounds))
                 {
-                    if (!TryRenderSvgRadialGradientPath(graphics, data, radialGradient, transform, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted))
+                    if (!TryRenderSvgRadialGradientPath(graphics, data, radialGradient, transform, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
@@ -340,7 +352,7 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
-                    if (!TryRenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted))
+                    if (!TryRenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
@@ -770,7 +782,7 @@ internal sealed partial class PptxRenderer
         double scaleX,
         double scaleY,
         bool allowAlphaMask,
-        out bool varyingAlphaAdmitted)
+        out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
     {
         varyingAlphaAdmitted = false;
         // RV07: objectBoundingBox vectors normalize into path space while
@@ -857,10 +869,12 @@ internal sealed partial class PptxRenderer
         if (Math.Abs(effective.X2 - effective.X1) >= Math.Abs(effective.Y2 - effective.Y1))
         {
             int stripCount = Math.Clamp((int)Math.Ceiling(pathWidth / 2d), 16, 128);
+            admitSamples(stripCount);
             double stripSvgWidth = pathWidth / stripCount;
             double sampleY = pathBounds.CenterY;
             for (int strip = 0; strip < stripCount; strip++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double stripMinX = pathBounds.MinX + strip * stripSvgWidth;
                 double stripMaxX = strip == stripCount - 1 ? pathBounds.MaxX : stripMinX + stripSvgWidth;
                 double sampleX = (stripMinX + stripMaxX) / 2d;
@@ -876,12 +890,14 @@ internal sealed partial class PptxRenderer
         else
         {
             int stripCount = Math.Clamp((int)Math.Ceiling(pathHeight / 2d), 16, 128);
+            admitSamples(stripCount);
             double stripSvgHeight = pathHeight / stripCount;
             double sampleX = pathBounds.CenterX;
             double stripX = imageX + (pathBounds.MinX - minX) * scaleX;
             double stripWidth = Math.Max(0.001d, pathWidth * scaleX);
             for (int strip = 0; strip < stripCount; strip++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double stripMinY = pathBounds.MinY + strip * stripSvgHeight;
                 double stripMaxY = strip == stripCount - 1 ? pathBounds.MaxY : stripMinY + stripSvgHeight;
                 double sampleY = (stripMinY + stripMaxY) / 2d;
@@ -1757,7 +1773,7 @@ internal sealed partial class PptxRenderer
         }
         return gradients;
     }
-    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted)
+    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
     {
         varyingAlphaAdmitted = false;
         double pathWidth = Math.Max(0.001d, pathBounds.MaxX - pathBounds.MinX);
@@ -1875,8 +1891,10 @@ internal sealed partial class PptxRenderer
         else
         {
             int ringCount = Math.Clamp((int)Math.Ceiling(Math.Max(radiusX, radiusY) / 2d), 16, 128);
+            admitSamples(ringCount);
             for (int ring = 0; ring < ringCount; ring++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 double fraction = (double)(ringCount - ring) / ringCount;
                 RgbColor color = SampleSvgRadialStops(radial.Stops, (double)(ringCount - ring - 1) / (ringCount - 1), radial.Spread);
                 graphics.SetFillRgb(color.Red, color.Green, color.Blue);

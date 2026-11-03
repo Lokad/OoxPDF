@@ -55,9 +55,9 @@ internal sealed partial class PptxRenderer
             }
 
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts);
-            using IMemoryReservation? construction = ReservePageConstruction(sceneSlide, cancellationToken, out long axisConstructionSites);
+            using IMemoryReservation? construction = ReservePageConstruction(sceneSlide, cancellationToken, out long axisConstructionSites, out long svgSourceBytes);
             cancellationToken.ThrowIfCancellationRequested();
-            var graphics = new PdfGraphicsBuilder();
+            var graphics = new PdfGraphicsBuilder(construction, svgSourceBytes);
             var textSpanMemo = new Dictionary<PptxTextSpanMemoKey, IReadOnlyList<PptxPositionedTextSpan>>(PptxTextSpanMemoKeyComparer.Instance);
             var tableFrameMemo = new Dictionary<PptxTableFrameMemoKey, TableFrameLayout?>(PptxTableFrameMemoKeyComparer.Instance);
             PptxRenderContext context = CreateRenderContext(document, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink, cancellationToken, chartWorkbookCache, textSpanMemo, tableFrameMemo) with

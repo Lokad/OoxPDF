@@ -4,9 +4,10 @@ internal sealed partial class PptxRenderer
 {
     // Source-owned estimates keep painting/snapshots in one page-local grant;
     // retained descriptors transfer to their separate staging owner.
-    private static IMemoryReservation? ReservePageConstruction(PptxSceneSlide slide, CancellationToken token, out long axisConstructionSites)
+    private static IMemoryReservation? ReservePageConstruction(PptxSceneSlide slide, CancellationToken token, out long axisConstructionSites, out long svgSourceBytes)
     {
         axisConstructionSites = 0;
+        svgSourceBytes = 0;
         IMemoryScope? owner = OoxConversionBudget.Current?.Memory;
         if (owner is null) return null;
         // Background painting is one solid rectangle. Unused master/layout style
@@ -14,11 +15,13 @@ internal sealed partial class PptxRenderer
         long capacity = 64L * 1024;
         long chartExpansion = 0;
         long axisSites = 0;
+        long svgBytes = 0;
         if (slide.ShowMasterShapes) Nodes(slide.MasterNodes, renderPlaceholders: false);
         Nodes(slide.LayoutNodes, renderPlaceholders: false);
         Nodes(slide.SlideNodes, renderPlaceholders: true);
         token.ThrowIfCancellationRequested();
         axisConstructionSites = Math.Max(1L, axisSites);
+        svgSourceBytes = svgBytes;
         // Chart frames paint sequentially and clear their temporary memos on exit.
         // Share one expansion window instead of adding each frame's dense peak.
         return OoxMemory.Reserve(owner, checked(capacity + chartExpansion));
@@ -68,7 +71,10 @@ internal sealed partial class PptxRenderer
         void Image(PptxSceneImageResource? image)
         {
             if (image is not null && image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
+            {
                 capacity = checked(capacity + 64L * image.Bytes.Length);
+                svgBytes = checked(svgBytes + image.Bytes.Length);
+            }
         }
     }
 

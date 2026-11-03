@@ -6,11 +6,13 @@ internal sealed partial class DocxRenderer
     // This is coarse construction capacity, not per-operation work accounting.
     private static IMemoryReservation? ReservePageConstruction(DocxLayoutPage page,
         IReadOnlyList<DocxFloatingDrawingLayout> floating, IReadOnlyList<DocxFloatingDrawingLayout> staticDrawings,
-        CancellationToken token)
+        CancellationToken token, out long svgSourceBytes)
     {
+        svgSourceBytes = 0;
         IMemoryScope? owner = OoxConversionBudget.Current?.Memory;
         if (owner is null) return null;
         long capacity = 64L * 1024;
+        long svgBytes = 0;
         Items(page.Items);
         Items(page.StaticTextLines); Items(page.StaticInlineImages);
         Items(page.StaticInlineTextBoxes); Items(page.StaticTableRows);
@@ -21,6 +23,7 @@ internal sealed partial class DocxRenderer
             Items(story.TextLines); Items(story.InlineImages); Items(story.TableRows); Drawings(story.FloatingDrawings);
         }
         token.ThrowIfCancellationRequested();
+        svgSourceBytes = svgBytes;
         return OoxMemory.Reserve(owner, capacity);
 
         void Items(IEnumerable<DocxLayoutItem> items)
@@ -64,7 +67,10 @@ internal sealed partial class DocxRenderer
         void Image(DocxInlineImage image)
         {
             if (image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase) && image.Bytes is { } bytes)
+            {
                 capacity = checked(capacity + 64L * bytes.Length);
+                svgBytes = checked(svgBytes + bytes.Length);
+            }
         }
         void Drawings(IReadOnlyList<DocxFloatingDrawingLayout> drawings)
         {

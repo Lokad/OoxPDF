@@ -25,6 +25,34 @@ internal sealed class PdfGraphicsBuilder
     private int stateDepth;
     private bool actualTextOpen;
 
+    // Borrow the producer's existing page grant; the builder never owns/refunds it.
+    private readonly IMemoryReservation? construction;
+    private readonly long constructionBaseBytes;
+    private readonly long svgSourceBytes;
+
+    public PdfGraphicsBuilder() { }
+
+    public PdfGraphicsBuilder(IMemoryReservation? construction, long svgSourceBytes)
+    {
+        this.construction = construction;
+        constructionBaseBytes = construction?.Bytes ?? 0L;
+        this.svgSourceBytes = svgSourceBytes;
+    }
+
+    internal int ContentLength => builder.Length;
+
+    internal void AdmitSvgConstruction(long sampledBytes, int sourceBytes, int precedingCharacters)
+    {
+        if (construction is null) return;
+        // One observed expansion density covers all SVG placements on this page,
+        // including completed opacity groups. Prefix operators coexist with the
+        // expanded image. This is coarse construction/snapshot headroom, not a
+        // heap ceiling, per-path reservation or cumulative work allowance.
+        long density = checked((sampledBytes + sourceBytes - 1L) / sourceBytes);
+        long capacity = checked(constructionBaseBytes + 4L * precedingCharacters + density * Math.Max(svgSourceBytes, sourceBytes));
+        if (capacity > construction.Bytes) OoxMemory.Resize(construction, capacity);
+    }
+
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
 
     public IReadOnlyList<PdfShadingResource> Shadings => shadings;

@@ -46,7 +46,12 @@ construction gap without a per-cell ledger. Resolved axis tick expansion enlarge
 the same grant before numeric lists, captions and generated painting are built.
 Source axis/plot counts and radar vertices provide coarse coexistence headroom;
 repeated layout/painting shares a high-water window, including workbook-range
-storage. Hidden paint does not construct or admit unused ticks. Other workbook
+storage. The shared SVG painter also grows that page grant before sampled
+gradient output, using the observed image expansion and page SVG source weight.
+Completed opacity groups and preceding operators remain covered; repeated
+pictures reuse the page's high-water capacity. The builder only borrows the
+reservation. Native shading keeps its existing source-sized funding. Hidden
+paint does not construct or admit unused ticks. Other workbook
 and effect expansion remains unproven. These estimates cover ordinary
 construction overlap; unusually expanding effects/vector inputs remain unproven.
 MemoryBudget also admits
