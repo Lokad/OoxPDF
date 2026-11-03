@@ -19,7 +19,9 @@
 - PPTX: chart number formats preserve required leading integer zeros, including
   sections, literal masking, grouping and scaling.
 - PPTX: horizontal value-axis labels, ticks and grids start intervals at the
-  authored minimum and omit unaligned upper endpoints.
+  authored minimum and omit unaligned upper endpoints. Paired category axes
+  share crossings across caption admission, ticks and painting; clustered bars
+  and their labels use that origin, including origin-relative inverted paint.
 
 - PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
   explicit non-overlay legends retain their plot-space reservation. Bottom line

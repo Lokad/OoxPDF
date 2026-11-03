@@ -147,6 +147,12 @@ Approximate or restricted:
   axis also anchor an automatic lower bound to an authored maximum and major
   unit. Automatic step fitting and remaining horizontal frame geometry stay
   approximate. Composed/secondary interval ownership retains its fallback.
+  A single reciprocal category/value pair shares horizontal crossing geometry
+  across plot admission, strokes, ticks and labels; low/high label bands remain
+  separate from the stroke. Clustered bars and label swatches classify inversion
+  relative to that origin. Unpaired/composed/logarithmic placement keeps its
+  fallback. Nonzero stacked origins and remaining label/stroke geometry stay
+  approximate.
   Scatter/bubble axes with a retained authored minimum share that interval origin
   across numeric labels, major ticks and grids; only aligned upper endpoints are
   ticks. Numeric pairs share direction across connecting paths, markers/bubbles,
