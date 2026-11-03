@@ -1639,8 +1639,8 @@ internal static class PptxChartLegendsTests
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendChart, null, null, true, null, smallLegendStyle])!) ?? throw new InvalidOperationException("Expected small legend plot box.");
-        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendChart, null, null, true, null, largeLegendStyle])!) ?? throw new InvalidOperationException("Expected large legend plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendChart, null, null, true, null, smallLegendStyle, null])!) ?? throw new InvalidOperationException("Expected small legend plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendChart, null, null, true, null, largeLegendStyle, null])!) ?? throw new InvalidOperationException("Expected large legend plot box.");
         double smallWidth = (double)(smallPlotBox.GetType().GetProperty("Width")?.GetValue(smallPlotBox) ?? 0d);
         double largeWidth = (double)(largePlotBox.GetType().GetProperty("Width")?.GetValue(largePlotBox) ?? 0d);
 
@@ -1683,7 +1683,7 @@ internal static class PptxChartLegendsTests
         System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
-        object plotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, null, null, true, null, legendStyle])!) ?? throw new InvalidOperationException("Expected plot box.");
+        object plotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, null, null, true, null, legendStyle, null])!) ?? throw new InvalidOperationException("Expected plot box.");
         double y = (double)(plotBox.GetType().GetProperty("Y")?.GetValue(plotBox) ?? 0d);
         double height = (double)(plotBox.GetType().GetProperty("Height")?.GetValue(plotBox) ?? 0d);
         TestAssert.True(Math.Abs(y - 75.90d) < 0.05d, "Plot bottom should sit 39.9pt below the frame top, on the Office category-axis line. Got " + y);
@@ -1731,8 +1731,8 @@ internal static class PptxChartLegendsTests
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisChart, null, null, true, null, legendStyle])!) ?? throw new InvalidOperationException("Expected small axis plot box.");
-        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisChart, null, null, true, null, legendStyle])!) ?? throw new InvalidOperationException("Expected large axis plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisChart, null, null, true, null, legendStyle, null])!) ?? throw new InvalidOperationException("Expected small axis plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisChart, null, null, true, null, legendStyle, null])!) ?? throw new InvalidOperationException("Expected large axis plot box.");
         double smallX = (double)(smallPlotBox.GetType().GetProperty("X")?.GetValue(smallPlotBox) ?? 0d);
         double largeX = (double)(largePlotBox.GetType().GetProperty("X")?.GetValue(largePlotBox) ?? 0d);
 

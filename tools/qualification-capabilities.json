@@ -1,4 +1,12 @@
 {
+  "pptx-scatter-automatic-intervals": [
+    "PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry",
+    "PptxScatterAutomaticIntervalsPreserveSourceUnitsAndRejectedDeclarations",
+    "PptxScatterAutomaticIntervalGeometryRemainsSceneOwned",
+    "PptxChartRightLegendReserveUsesLegendTextStyle",
+    "PptxSyntheticNoTitleRightLegendPlotBoxSitsOnOfficeAxisLine",
+    "PptxChartRightLegendValueAxisReserveUsesAxisTextStyle"
+  ],
   "pptx-scatter-fixed-ranges": [
     "PptxScatterFixedUnitRangesMatchIndependentOfficeBounds",
     "PptxScatterFixedUnitLabelsMarksAndGridsUseOneScale",

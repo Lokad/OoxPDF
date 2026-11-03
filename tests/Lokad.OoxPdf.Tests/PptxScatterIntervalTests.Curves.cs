@@ -100,7 +100,7 @@ internal static partial class PptxScatterIntervalTests
         XElement element = XDocument.Parse(xml).Descendants(CurveC + "valAx").Single(a => (string?)a.Element(CurveC + "axPos")?.Attribute("val") == side);
         Type sourceType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", BindingFlags.NonPublic)!;
         object source = Activator.CreateInstance(sourceType, [useScene ? axis : null, mismatchedXml ?? element])!;
-        object scale = CurveInvoke("ReadChartPointValueAxisScale", PptxTheme.Empty, source, data, occupied, false, coordinate == 1);
+        object scale = CurveInvoke("ReadChartPointValueAxisScale", PptxTheme.Empty, source, data, occupied, false, coordinate == 1, null);
         return ((PptxRenderer.ChartValueExtents)scale.GetType().GetField("Item1")!.GetValue(scale)!, scale.GetType().GetField("Item2")!.GetValue(scale)!);
     }
 
