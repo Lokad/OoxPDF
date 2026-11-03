@@ -404,7 +404,9 @@ internal sealed partial class PptxRenderer
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment };
         }
 
-        manualPlotLayout = ResolveCartesianInnerPlot(sceneChart.PlotAreaLayout, frame, manualPlotLayout);
+        // Bars retain their dedicated outer-area placement and caption owner.
+        if (sceneChart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner)
+            manualPlotLayout = ResolveCartesianPlotPosition(sceneChart.PlotAreaLayout, frame, manualPlotLayout);
         return (await ResolveBarManualPlotLayoutTargetAsync(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars, frame, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
 
         ChartPlotBox GetHorizontalBarManualLayoutTargetDefaultPlotBox(ChartPlotBox defaultPlotBox)

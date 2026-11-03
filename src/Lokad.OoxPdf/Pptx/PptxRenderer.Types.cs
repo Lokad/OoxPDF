@@ -153,6 +153,9 @@ internal sealed partial class PptxRenderer
     {
         public const double TitleFallbackFontSize = 12d;
         public const double ChartContentFrameInset = 6d;
+        // Measured outer numeric-caption bands; font-metric residuals remain.
+        public const double OuterPlotCaptionLineClearanceFactor = .77d;
+        public const double OuterPlotCaptionPadding = 1.5d;
         public const double ChartTitleHorizontalPadding = 3d;
         public const double ChartTitleLinePadding = 1.5d;
         public const double LegendFallbackFontSize = 9d;

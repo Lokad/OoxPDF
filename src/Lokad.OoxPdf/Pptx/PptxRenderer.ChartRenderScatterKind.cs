@@ -52,7 +52,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
                 ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
                 chartLayout = await AdmitScatterSourcePlotAsync(theme, sceneChart, chartXml, chartLayout,
-                    xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, yPlacement, fontResolver).ConfigureAwait(false);
+                    xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, xPlacement, yPlacement, fontResolver).ConfigureAwait(false);
                 plotBox = chartLayout.PlotBox;
                 // Each axis declares its crossing in the perpendicular scale.
                 xAxisOptions = xAxisOptions with { CrossingValue = Math.Clamp(yPlacement.CrossingValue, xExtents.Min, xExtents.Max) };
@@ -89,19 +89,26 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<ChartLayout> AdmitScatterSourcePlotAsync(PptxTheme theme, PptxSceneChart chart, XDocument xml,
         ChartLayout layout, ChartAxisSource xAxis, ChartAxisSource yAxis, ChartValueExtents xExtents, ChartValueExtents yExtents,
-        ChartValueAxisRenderOptions xOptions, ChartValueAxisRenderOptions yOptions, ChartAxisPlacement yPlacement,
+        ChartValueAxisRenderOptions xOptions, ChartValueAxisRenderOptions yOptions, ChartAxisPlacement xPlacement, ChartAxisPlacement yPlacement,
         PresentationFontResolver fontResolver)
     {
         PptxSceneChartManualLayout source = chart.PlotAreaLayout;
-        if (source.X is null || source.XModeKind != PptxSceneChartManualLayoutMode.Factor ||
-            !TryResolveCartesianInnerPlotWidth(source, layout.Frame, layout.PlotBox, out _))
+        bool outer = source.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer;
+        if (source.X is null || (!outer && source.XModeKind != PptxSceneChartManualLayoutMode.Factor) ||
+            (outer && (chart.Plots.Count != 1 || source.Y is null || source.HeightModeKind != PptxSceneChartManualLayoutMode.Factor || source.Height is null)) ||
+            !TryResolveCartesianPlotWidth(source, layout.Frame, layout.PlotBox, out _))
             return layout;
         var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-        double firstWidth = 0d, lastWidth = 0d, sideWidth = 0d;
+        double firstWidth = 0d, lastWidth = 0d, sideWidth = 0d, xLine = 0d, yLine = 0d;
         if (IsSceneOrXmlChartAxisLabelVisible(xAxis.SceneAxis, xAxis.XmlAxis))
         {
             ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, xAxis.SceneAxis, xml, xAxis.XmlAxis,
                 PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+            if (outer)
+            {
+                if (await measurer.TryMeasureNormalLineHeightAsync(style).ConfigureAwait(false) is not { } line) return layout;
+                xLine = line;
+            }
             var captions = await MeasureChartValueAxisCaptionsAsync(measurer, style, xAxis, xExtents, xOptions.Units,
                 PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount, xOptions.TickPolicy, null, reserveEndpoints: false).ConfigureAwait(false);
             if (captions.Values.Count > 0)
@@ -118,6 +125,25 @@ internal sealed partial class PptxRenderer
             var captions = await MeasureChartValueAxisCaptionsAsync(measurer, style, yAxis, yExtents, yOptions.Units,
                 PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, yOptions.TickPolicy, null, reserveEndpoints: true).ConfigureAwait(false);
             sideWidth = captions.SlotWidth;
+            if (outer)
+            {
+                if (await measurer.TryMeasureNormalLineHeightAsync(style).ConfigureAwait(false) is not { } line) return layout;
+                yLine = line;
+                sideWidth = captions.MaximumWidth + PptxChartMetricRules.OuterPlotCaptionLineClearanceFactor * line +
+                    PptxChartMetricRules.OuterPlotCaptionPadding;
+            }
+        }
+        if (outer)
+        {
+            // The authored outer area contains caption fragments. Use the same
+            // interval constraints for both dimensions, including high labels.
+            ChartPlotBox area = layout.PlotBox;
+            double inset = PptxChartMetricRules.ChartContentFrameInset;
+            var horizontal = AdmitChartCaptionInterval(area.X, area.Width, area.X, area.Width,
+                firstWidth > 0d ? firstWidth / 2d + inset : 0d, lastWidth > 0d ? lastWidth / 2d + inset : 0d, sideWidth, yPlacement);
+            var vertical = AdmitChartCaptionInterval(area.Y, area.Height, area.Y, area.Height, yLine / 2d, yLine / 2d,
+                xLine > 0d ? 2d * PptxChartMetricRules.OuterPlotCaptionLineClearanceFactor * xLine + PptxChartMetricRules.OuterPlotCaptionPadding : 0d, xPlacement);
+            return layout with { PlotBox = new(horizontal.Start, vertical.Start, horizontal.Length, vertical.Length) };
         }
         ChartPlotBox admitted = AdmitChartPlotCaptions(layout.Frame, layout.PlotBox, firstWidth, lastWidth, sideWidth, yPlacement);
         return layout with

@@ -151,8 +151,9 @@ internal sealed partial class PptxRenderer
         PptxSceneChartManualLayout source = chart?.PlotAreaLayout ?? PptxSceneBuilder.ReadChartPlotAreaManualLayout(xml);
         // Resolve the same authored inner width used for placement before caption
         // admission. Outer, automatic and unresolved modes retain their fallback.
-        if (!TryBuildManualPlotLayout(source, frame, GetDefaultChartPlotBox(frame), out ChartPlotLayout layout) ||
-            !TryResolveCartesianInnerPlotWidth(source, frame, layout.PlotBox, out var plot)) return null;
+        if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner ||
+            !TryBuildManualPlotLayout(source, frame, GetDefaultChartPlotBox(frame), out ChartPlotLayout layout) ||
+            !TryResolveCartesianPlotWidth(source, frame, layout.PlotBox, out var plot)) return null;
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, xAxis.SceneAxis, xml, xAxis.XmlAxis,
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
         if (!(style.FontSize > 0d) || !double.IsFinite(style.FontSize)) return null;

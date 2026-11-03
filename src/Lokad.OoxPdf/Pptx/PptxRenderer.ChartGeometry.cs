@@ -461,16 +461,20 @@ internal sealed partial class PptxRenderer
         return TryBuildManualPlotLayout(PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml), frame, defaultPlotBox, out plotLayout);
     }
 
-    private static ChartPlotLayout ResolveCartesianInnerPlot(PptxSceneChartManualLayout source, ChartFrameBox frame, ChartPlotLayout layout)
+    private static ChartPlotLayout ResolveCartesianPlotPosition(PptxSceneChartManualLayout source, ChartFrameBox frame, ChartPlotLayout layout)
     {
-        if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner)
+        if (source.LayoutTargetKind is not (PptxSceneChartManualLayoutTarget.Inner or PptxSceneChartManualLayoutTarget.Outer))
             return layout;
 
-        // Resolve the source inner rectangle around the frame center. Containers
+        // Resolve the authored rectangle around the frame center. Containers
         // that measure caption slots admit those separately. Position and width
         // can be coupled when one is a center offset and the other a right edge.
         ChartPlotBox plot = layout.PlotBox;
-        if (TryResolveCartesianInnerPlotWidth(source, frame, plot, out var horizontal)) plot = horizontal;
+        bool hasWidth = TryResolveCartesianPlotWidth(source, frame, plot, out var horizontal);
+        if (source.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer &&
+            (source.HeightModeKind != PptxSceneChartManualLayoutMode.Factor || source.Height is null || !hasWidth))
+            return layout;
+        if (hasWidth) plot = horizontal;
         double y = plot.Y;
         if (source.YModeKind == PptxSceneChartManualLayoutMode.Factor && source.Y is { } yFactor &&
             source.HeightModeKind == PptxSceneChartManualLayoutMode.Factor && source.Height is not null)
@@ -483,11 +487,13 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static bool TryResolveCartesianInnerPlotWidth(PptxSceneChartManualLayout source, ChartFrameBox frame,
+    private static bool TryResolveCartesianPlotWidth(PptxSceneChartManualLayout source, ChartFrameBox frame,
         ChartPlotBox fallback, out ChartPlotBox plot)
     {
         plot = fallback;
-        if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner || source.Width is not { } size)
+        if (source.LayoutTargetKind is not (PptxSceneChartManualLayoutTarget.Inner or PptxSceneChartManualLayoutTarget.Outer) || source.Width is not { } size)
+            return false;
+        if (source.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer && source.WidthModeKind != PptxSceneChartManualLayoutMode.Factor)
             return false;
         if (source.WidthModeKind is not (PptxSceneChartManualLayoutMode.Factor or PptxSceneChartManualLayoutMode.Edge))
             return false;
@@ -531,29 +537,36 @@ internal sealed partial class PptxRenderer
     private static ChartPlotBox AdmitChartPlotCaptionReserves(ChartFrameBox frame, ChartPlotBox source,
         double left, double right, double side, ChartAxisPlacement sidePlacement)
     {
+        var interval = AdmitChartCaptionInterval(frame.X, frame.Width, source.X, source.Width, left, right, side, sidePlacement);
+        return source with { X = interval.Start, Width = interval.Length };
+    }
+
+    private static (double Start, double Length) AdmitChartCaptionInterval(double start, double length,
+        double sourceStart, double sourceLength, double left, double right, double side, ChartAxisPlacement sidePlacement)
+    {
         double ratio = Math.Clamp(sidePlacement.LabelPlotRatio, 0d, 1d);
-        double width = Math.Min(source.Width, frame.Width - left - right);
+        double width = Math.Min(sourceLength, length - left - right);
         // A side caption follows its value-axis anchor, including an interior
         // crossing. Solve its linear width constraint before clamping position.
         if (side > 0d)
         {
             if (sidePlacement.LabelsHighSide && ratio > 0d)
-                width = Math.Min(width, (frame.Width - left - side) / ratio);
+                width = Math.Min(width, (length - left - side) / ratio);
             else if (!sidePlacement.LabelsHighSide && ratio < 1d)
-                width = Math.Min(width, (frame.Width - right - side) / (1d - ratio));
-            else if (side > frame.Width - (sidePlacement.LabelsHighSide ? left : right)) return source;
+                width = Math.Min(width, (length - right - side) / (1d - ratio));
+            else if (side > length - (sidePlacement.LabelsHighSide ? left : right)) return (sourceStart, sourceLength);
         }
-        if (!(width > 0d) || !double.IsFinite(width)) return source;
-        double minimum = frame.X + left;
-        double maximum = frame.X + frame.Width - right - width;
+        if (!(width > 0d) || !double.IsFinite(width)) return (sourceStart, sourceLength);
+        double minimum = start + left;
+        double maximum = start + length - right - width;
         if (side > 0d)
         {
-            if (sidePlacement.LabelsHighSide) maximum = Math.Min(maximum, frame.X + frame.Width - side - ratio * width);
-            else minimum = Math.Max(minimum, frame.X + side - ratio * width);
+            if (sidePlacement.LabelsHighSide) maximum = Math.Min(maximum, start + length - side - ratio * width);
+            else minimum = Math.Max(minimum, start + side - ratio * width);
         }
         // Equivalent boundary expressions can differ by a rounding unit when
         // the admitted width fills the available interval exactly.
-        return source with { X = Math.Clamp(source.X, minimum, Math.Max(minimum, maximum)), Width = width };
+        return (Math.Clamp(sourceStart, minimum, Math.Max(minimum, maximum)), width);
     }
 
     private static bool TryBuildManualPlotLayout(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)

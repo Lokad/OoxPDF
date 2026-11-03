@@ -15207,6 +15207,35 @@
     "PortablePptxInspectionUsesTheRenderingFontSource",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-scatter-outer-target": [
+    "PptxScatterOuterHiddenCaptionsUseNativeCenteredBounds",
+    "PptxScatterOuterCaptionsConsumeTheAuthoredArea",
+    "PptxScatterOuterHighCaptionsMirrorPlacementAndPointLabels",
+    "PptxScatterOuterEquivalentPositionsPreserveEveryOperation",
+    "PptxScatterOuterUnmeasuredSizeModesKeepTheirFallback",
+    "PptxScatterEdgeWidthSharesNativeAxesAndIntervals",
+    "PptxScatterEquivalentWidthDeclarationsPreserveContent",
+    "PptxScatterEdgeWidthReversalPreservesPointLabels",
+    "PptxScatterEdgeWidthKeepsSceneAuthorityAndFallbacks",
+    "PptxInnerFactorPlotOriginsMatchIndependentOfficeControls",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxScenePreservesChartManualLayoutNumericOptionTokens",
+    "PptxScatterCaptionAdmissionPreservesFrameAndNumericCenters",
+    "PptxScatterCaptionAdmissionKeepsEndpointAndSeriesOwnership",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders",
+    "PptxBubbleMeasured",
+    "PptxBubbleSubunit",
+    "PptxBubbleCompound",
+    "PptxBubbleSceneScale",
+    "PptxBubbleFixedBounds",
+    "PptxBubbleFallbackRadiusKeepsLegacyGeometry",
+    "PptxBubbleLabelPlacement",
+    "PptxBubbleChart"
   ]
 
 }

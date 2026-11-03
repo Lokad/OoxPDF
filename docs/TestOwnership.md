@@ -232,6 +232,12 @@ Wrapped-highlight and numbered-run counts also retain their Cambria Math/Aptos
 prerequisites; two-face controls check every continuation's spacing and metadata
 across wrapping without assuming those fonts produce the same run counts.
 
+`pptx-scatter-outer-target` checks centered authored areas, caption containment,
+opposite label sides, equivalent declarations and explicit size-mode fallbacks.
+It includes inner/manual geometry, bubble caption placement, cancellation and PDF
+structure neighbors. Office geometry/image gates remain separate: the measured
+outer-caption clearance is approximate, including a retained Calibri residual.
+
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
 controls combine reversal with explicit low/high labels; next-to crossings,

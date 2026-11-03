@@ -490,9 +490,12 @@ internal sealed partial class PptxRenderer
                     }
                 }
             }
-            return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
-                ? ResolveCartesianInnerPlot(sceneChart.PlotAreaLayout, frame, manualPlotLayout)
-                : ChartPlotLayout.FromPlotBox(defaultPlotBox);
+            if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout))
+                return ChartPlotLayout.FromPlotBox(defaultPlotBox);
+            // Other outer targets retain their existing container-specific owner.
+            return sceneChart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner ||
+                sceneChart.Plots is [{ PlotKind: PptxSceneChartPlotKind.Scatter }]
+                ? ResolveCartesianPlotPosition(sceneChart.PlotAreaLayout, frame, manualPlotLayout) : manualPlotLayout;
 
             async ValueTask<ChartPlotBox?> TryGetMeasuredCategoryPlotBoxAsync((double Reserve, double NumericClearance)? headerClearance = null)
             {
