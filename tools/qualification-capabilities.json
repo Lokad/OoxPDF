@@ -15009,6 +15009,7 @@
       "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-horizontal-intervals": [
+    "PptxLineAuthoredMaximum",
     "PptxHorizontalIntervalsShareOfficeSourceMinimums",
     "PptxHorizontalIntervalsSurvivePlacementAndStacking",
     "PptxHorizontalTicksAndBothGridKindsUseTheLabelIntervals",
