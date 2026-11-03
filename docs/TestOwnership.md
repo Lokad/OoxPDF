@@ -260,3 +260,8 @@ matrix is corrected against those independent exports.
 print-scale, marker-label omission and synthetic-title coverage assertions. All
 original fixtures and assertions remain; Office-specific row counts/heights keep
 their independent font and geometry requirements.
+
+`rendering-font-prerequisites` pins the single-row balloon and PPTX boundary-coalescing
+semantics. The original four-row balloon control requires actual Times New Roman
+and retains its Office0.05pt gate; a two-font portable control checks all24 words
+and painted row extents without substituting another fixed row count.

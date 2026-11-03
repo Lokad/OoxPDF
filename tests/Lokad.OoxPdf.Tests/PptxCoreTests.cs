@@ -222,7 +222,8 @@ internal static class PptxCoreTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0,
+            inspectionFonts: new PresentationFontResolver(new PortableRenderingTests.PinnedResolver()));
         string[] glyphRunTexts = glyphRuns.Select(run => run.Text).ToArray();
 
         TestAssert.Equal(4, glyphRunTexts.Length);

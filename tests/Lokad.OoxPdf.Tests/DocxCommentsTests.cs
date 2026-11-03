@@ -9058,7 +9058,7 @@ internal static partial class DocxCommentsTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+        DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .InspectMarkupBalloons(document)
             .Single(item => item.Kind == "Comment");
 
@@ -9069,6 +9069,47 @@ internal static partial class DocxCommentsTests
     {
         // bodies: the 24-word body wraps to four rows at this lane width, and heights
         // must grow with the wrapped body rows.
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution face = resolver.Resolve(new FontRequest("Times New Roman"));
+        if (face.IsFallback || !face.ResolvedFamily.Equals("Times New Roman", StringComparison.OrdinalIgnoreCase))
+            TestAssert.Skip("The original four-row Office control requires actual Times New Roman; portable fonts have different wrapping.");
+
+        DocxDocument document = CreateWrappedBalloonHeightDocument();
+        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        DocxMarkupBalloonPlacementSnapshot placement = renderer
+            .InspectMarkupBalloons(document)
+            .Single(item => item.Kind == "Comment");
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        var rows = ReadEmbeddedGlyphTextShows(page)
+            .Where(show => show.Text.StartsWith("Balloon", StringComparison.Ordinal)).ToArray();
+        TestAssert.Equal(4, rows.Length);
+        double expected = 9.21d + rows[0].Y - rows[^1].Y + 3.4d;
+
+        TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit four text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static void DocxPortableBalloonHeightFollowsPaintedRowsAcrossFonts()
+    {
+        foreach (bool mathFont in new[] { false, true })
+        {
+            DocxDocument document = CreateWrappedBalloonHeightDocument();
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var placement = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
+            PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            var rows = ReadEmbeddedGlyphTextShows(page)
+                .Where(show => show.Text.StartsWith("Balloon", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(rows.Length > 1, "The portable control exercises a wrapped balloon.");
+            TestAssert.Equal(24, Regex.Matches(string.Join(" ", rows.Select(row => row.Text)), @"\bBalloon\b").Count);
+            TestAssert.True(rows.Zip(rows.Skip(1)).All(pair => pair.First.Y > pair.Second.Y), "Painted body rows advance down the balloon.");
+            double expected = 9.21d + rows[0].Y - rows[^1].Y + 3.4d;
+            TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d,
+                "The same Office inset gate follows the painted row extent without assuming a font-specific row count.");
+        }
+    }
+
+    private static DocxDocument CreateWrappedBalloonHeightDocument()
+    {
         DocxParagraph paragraph = DocxTests.CreateCommentMarkerParagraph("Wrapped balloon anchor text here", "1");
         DocxRelatedStory commentStory = new(
             DocxRelatedStoryKind.Comment,
@@ -9095,17 +9136,7 @@ internal static partial class DocxCommentsTests
             RelatedStories = [commentStory],
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
-        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        DocxMarkupBalloonPlacementSnapshot placement = renderer
-            .InspectMarkupBalloons(document)
-            .Single(item => item.Kind == "Comment");
-        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
-        var rows = ReadEmbeddedGlyphTextShows(page)
-            .Where(show => show.Text.StartsWith("Balloon", StringComparison.Ordinal)).ToArray();
-        TestAssert.Equal(4, rows.Length);
-        double expected = 9.21d + rows[0].Y - rows[^1].Y + 3.4d;
-
-        TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit four text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+        return document;
     }
 
     public static void DocxWordCompatibleBalloonHeightIgnoresUnprintedReplies()

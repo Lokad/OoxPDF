@@ -15276,6 +15276,14 @@
     "DocxBalloonBodyEmissionCoversItsOwnFontSubset",
     "DocxWordCompatibleAllMarkupScalesBodySpacing",
     "DocxGlyphlessFloatingImagePaintsWithoutFontPrograms"
+  ],
+  "rendering-font-prerequisites": [
+    "DocxWordCompatibleBalloonHeightFitsSingleLineContent",
+    "DocxWordCompatibleBalloonHeightFitsWrappedBodyContent",
+    "PptxBoundaryInvarianceProbeCoalescesLeftAlignedHighlightBoundaries",
+    "DocxPortableBalloonHeightFollowsPaintedRowsAcrossFonts",
+    "DocxBalloonBodyEmissionCoversItsOwnFontSubset",
+    "PortablePptxInspectionUsesTheRenderingFontSource"
   ]
 
 }
