@@ -15175,6 +15175,17 @@
     "PptxCategorySlotsKeepSparseSourceIndexesAndStackedNeighbors",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-typography-oracle-portability": [
+    "PptxTextOfficeTrailingEmphasisRunOwnsLineEndGlyphOperation",
+    "PptxTextManualBreakSameStyleLineCoalesces",
+    "PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance",
+    "PortablePptxInspectionUsesTheRenderingFontSource",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
+    "PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 
 }

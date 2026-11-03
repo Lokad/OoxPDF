@@ -307,6 +307,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxTextOfficeTrailingEmphasisRunOwnsLineEndGlyphOperation()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver(mathFont: true));
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -318,7 +319,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: inspectionFonts)
             .Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
@@ -333,7 +334,7 @@ internal static class PptxTextLayoutTests
             trailingSeparatorAdvance > 0d && trailingSeparatorAdvance < 4d,
             "Expected the emphasized trailing visible run to be followed only by the hidden line-ending separator advance.");
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
         TestAssert.Equal(3, glyphRuns.Length);
         TestAssert.Equal("Quality decisions depend on careful operational ", glyphRuns[0].Text);
         TestAssert.Equal("planning", glyphRuns[1].Text);
@@ -347,6 +348,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxTextManualBreakSameStyleLineCoalesces()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -371,7 +373,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: inspectionFonts)
             .Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
@@ -381,7 +383,7 @@ internal static class PptxTextLayoutTests
         TestAssert.Equal("“A 10% better forecast", string.Concat(lines[0].Spans.Select(span => span.Text)));
         TestAssert.Equal("wouldn’t even register.”", string.Concat(lines[1].Spans.Select(span => span.Text)));
 
-        PptxTextGlyphRunSnapshot[] secondLineRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+        PptxTextGlyphRunSnapshot[] secondLineRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts)
             .Where(run => run.LineIndex == 1)
             .ToArray();
 
@@ -1950,6 +1952,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
@@ -1986,7 +1989,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextFlowRunSnapshot[] flowRuns = PptxRenderer.InspectTextFlow(document, package, 0)
+        PptxTextFlowRunSnapshot[] flowRuns = PptxRenderer.InspectTextFlow(document, package, 0, inspectionFonts: inspectionFonts)
             .Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Runs)
@@ -2000,7 +2003,7 @@ internal static class PptxTextLayoutTests
         TestAssert.True(styleBoundaryLeadingSpace.Segments.Any(segment => segment.Kind == "HiddenAdvance" && segment.AdvanceText == " "), "Expected style-boundary leading space to become measured hidden advance.");
         TestAssert.True(styleBoundaryLeadingSpace.Segments.Any(segment => segment.Kind == "Text" && segment.Text == "beta"), "Expected style-boundary visible text to start after the hidden leading space.");
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
         TestAssert.True(
             glyphRuns.Any(run => run.ParagraphIndex == 0 && run.Text == "Alpha beta"),
             "Expected same-style authored runs to merge into one Office-compatible PDF text operation.");

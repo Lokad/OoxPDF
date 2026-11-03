@@ -217,6 +217,11 @@ bubble, numeric-side and PDF-structure neighbors.
 `pptx-area-legend-paint` adds measured key/row geometry and mixed-ink row
 baselines to those neighboring checks; all run as one exact method set.
 
+`pptx-typography-oracle-portability` binds the same pinned font resolver to
+layout/flow and glyph inspection for trailing emphasis, manual breaks and hidden
+spaces. Original wrapping, glyph-operation and advance assertions remain;
+these semantic checks do not establish Cambria/Arial Office visual parity.
+
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
 controls combine reversal with explicit low/high labels; next-to crossings,
