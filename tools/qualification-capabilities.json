@@ -15188,6 +15188,23 @@
     "PptxSyntheticTextBoxNoBreakSpaceKeepsWrappedClusterTogether",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-highlight-oracle-portability": [
+    "PptxHighlightedHeadlineTextWrapsBeforeFinalWord",
+    "PptxPortableHeadlineHighlightKeepsContentAndSpanGeometry",
+    "PptxHighlightedTextRunDoesNotApplyImplicitTracking",
+    "PptxSingleParagraphHighlightDoesNotStartContinuationTextState",
+    "PptxNoAutofitHeadlineHighlightDoesNotStartContinuationTextState",
+    "PptxHighlightedContinuationEmitsOfficeCharacterSpacingTextStateAcrossAutofitWrap",
+    "PptxHighlightedTextStateContinuesAcrossFollowingParagraph",
+    "PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState",
+    "PptxTextGlyphRunInspectionReportsInterGlyphAdjustmentAggregates",
+    "PptxNumberedAutofitFramesEmitOfficeCharacterSpacingTextState",
+    "PptxNumberedNoAutofitFramesEmitOfficeCharacterSpacingTextState",
+    "PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance",
+    "PortablePptxInspectionUsesTheRenderingFontSource",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 
 }

@@ -1770,6 +1770,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxHighlightedTextRunDoesNotApplyImplicitTracking()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -1781,7 +1782,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, 0);
+        PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, 0, inspectionFonts: inspectionFonts);
         PptxTextFlowRunSnapshot[] runs = flow.Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Runs)
@@ -1796,7 +1797,7 @@ internal static class PptxTextLayoutTests
 
         TestAssert.True(following.FontSize > 0d, "Expected the following run to remain present in text flow.");
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
         PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
             .Where(run => Math.Abs(run.PdfCharacterSpacing + 0.036d) < 0.001d)
             .ToArray();
@@ -1815,6 +1816,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxSingleParagraphHighlightDoesNotStartContinuationTextState()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -1826,7 +1828,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
 
         TestAssert.True(
             glyphRuns.Any(run => run.HighlightColor is not null),
@@ -1838,6 +1840,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxNoAutofitHeadlineHighlightDoesNotStartContinuationTextState()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -1849,7 +1852,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
 
         TestAssert.True(
             glyphRuns.Any(run => run.FrameAutofitMode == "noAutofit" && run.HighlightColor is not null),
@@ -1885,6 +1888,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxHighlightedContinuationEmitsOfficeCharacterSpacingTextStateAcrossAutofitWrap()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -1896,7 +1900,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
         PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
             .Where(run => Math.Abs(run.PdfCharacterSpacing + 0.036d) < 0.001d)
             .ToArray();
@@ -1915,6 +1919,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxHighlightedTextStateContinuesAcrossFollowingParagraph()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -1926,7 +1931,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
         PptxTextGlyphRunSnapshot[] trackedRuns = glyphRuns
             .Where(run => Math.Abs(run.PdfCharacterSpacing + 0.036d) < 0.001d)
             .ToArray();
@@ -2010,6 +2015,7 @@ internal static class PptxTextLayoutTests
 
     public static void PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState()
     {
+        var inspectionFonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..",
@@ -2021,7 +2027,7 @@ internal static class PptxTextLayoutTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
         Dictionary<double, int> buckets = glyphRuns
             .GroupBy(run => Math.Round(run.PdfCharacterSpacing, 3))
             .ToDictionary(group => group.Key, group => group.Count());

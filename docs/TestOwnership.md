@@ -223,6 +223,12 @@ with a two-face portable trailing-emphasis control. The original narrow Office
 wrap tests keep every assertion and require Cambria Math or Cambria Italic.
 Portable semantic checks do not establish Cambria/Arial Office visual parity.
 
+`pptx-highlight-oracle-portability` binds pinned fonts for highlight continuation
+and numbered text-state checks, with neighboring authored-layout/glyph and PDF
+checks. Exact Cambria Math headline wrapping keeps its original assertions and
+font prerequisite; a separate two-face control checks content and highlight
+rectangles without assuming the same wrapping from different font metrics.
+
 `pptx-numeric-label-direction` checks paired category direction across numeric
 label measurement, painting and secondary-axis slots. Independent line/area/column
 controls combine reversal with explicit low/high labels; next-to crossings,

@@ -1158,6 +1158,13 @@ internal static class PptxTextSpacingTests
 
     public static void PptxHighlightedHeadlineTextWrapsBeforeFinalWord()
     {
+        var resolver = new WindowsFontResolver();
+        FontFaceResolution face = resolver.Resolve(new FontRequest("Cambria Math"));
+        if (face.IsFallback || !string.Equals(face.ResolvedFamily, "Cambria Math", StringComparison.OrdinalIgnoreCase))
+        {
+            TestAssert.Skip("The original exact Office headline wrap requires Cambria Math; portable highlight content and geometry are checked separately.");
+        }
+        var inspectionFonts = new PresentationFontResolver(resolver);
         string input = Path.Combine(
             Directory.GetCurrentDirectory(),
             "tests",
@@ -1168,7 +1175,7 @@ internal static class PptxTextSpacingTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 
-        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: inspectionFonts)
             .Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
@@ -1181,7 +1188,7 @@ internal static class PptxTextSpacingTests
         TestAssert.Equal("Public headline uses highlighted terms and normal ", texts[0]);
         TestAssert.Equal("text", texts[1]);
 
-        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts);
         string[] glyphRunTexts = glyphRuns.Select(run => run.Text).ToArray();
         TestAssert.Equal(7, glyphRunTexts.Length);
         TestAssert.Equal("Public headline uses ", glyphRunTexts[0]);
@@ -1222,6 +1229,31 @@ internal static class PptxTextSpacingTests
         double actualHighlightHeight = highlighted.HighlightHeight.GetValueOrDefault();
         TestAssert.True(Math.Abs(actualHighlightWidth - highlighted.Width) < 0.01d, "Expected highlight geometry to be owned by the positioned glyph span width.");
         TestAssert.True(actualHighlightHeight > highlighted.LayoutFontSize * 0.5d, "Expected highlight geometry to use a line-height-sized rectangle.");
+    }
+
+    public static void PptxPortableHeadlineHighlightKeepsContentAndSpanGeometry()
+    {
+        foreach (IFontResolver resolver in new IFontResolver[] { new PortableRenderingTests.PinnedResolver(), new TestFaceFontResolver() })
+        {
+            var inspectionFonts = new PresentationFontResolver(resolver);
+            string input = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "pptx-ladder-04-highlighted-headline-runs.pptx"));
+            using var stream = File.OpenRead(input);
+            using var package = OoxPackage.Open(stream, default);
+            var document = new PptxReader().Read(package, default);
+            var lines = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: inspectionFonts)
+                .Frames.SelectMany(f => f.Paragraphs).SelectMany(p => p.Lines).ToArray();
+            var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: inspectionFonts).ToArray();
+            TestAssert.True(lines.Length > 0 && glyphs.Length > 0, "Inspect visible content with each explicit font source.");
+            TestAssert.Equal("Publicheadlineuseshighlightedtermsandnormaltext", string.Concat(glyphs.Select(g => g.Text)).Replace(" ", ""));
+            TestAssert.True(glyphs.All(g => g.LineIndex >= 0 && g.LineIndex < lines.Length &&
+                g.SpanIndex >= 0 && g.SpanIndex < lines[g.LineIndex].Spans.Count && g.LineSpanCount == lines[g.LineIndex].Spans.Count), "Glyph inspection retains layout line/span ownership.");
+            var highlighted = glyphs.Single(g => g.Text == "highlighted");
+            TestAssert.True(highlighted.HighlightColor is { } color && color.Equals(new RgbColor(255, 255, 0)), "Retain the authored yellow highlight.");
+            TestAssert.True(highlighted.HighlightX is { } x && double.IsFinite(x) && highlighted.HighlightY is { } y && double.IsFinite(y), "Highlight rectangle origins remain finite.");
+            TestAssert.True(highlighted.HighlightWidth is { } width && Math.Abs(width - highlighted.Width) < 0.01d, "The positioned span owns highlight width.");
+            TestAssert.True(highlighted.HighlightHeight is { } height && height > highlighted.LayoutFontSize * 0.5d, "Highlight height follows the selected line metrics.");
+            TestAssert.True(glyphs.All(g => Math.Abs(g.PdfCharacterSpacing) < 0.001d), "Authored noAutofit highlights keep zero PDF character spacing.");
+        }
     }
 
     public static void PptxSyntheticCenteredLogoBoxWrapsDefaultTypefaceText()
