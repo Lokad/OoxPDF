@@ -153,6 +153,10 @@ Approximate or restricted:
   relative to that origin. Unpaired/composed/logarithmic placement keeps its
   fallback. Nonzero stacked origins and remaining label/stroke geometry stay
   approximate.
+  Automatic centered horizontal labels measure their text, key reservation and
+  font line before centering the occupied frame on the painted bar. Manual/custom
+  labels, key-only content and other positions retain their existing fallback;
+  key-only painting can differ from Office's omitted label.
   Scatter/bubble axes with a retained authored minimum share that interval origin
   across numeric labels, major ticks and grids; only aligned upper endpoints are
   ticks. Numeric pairs share direction across connecting paths, markers/bubbles,

@@ -22,6 +22,8 @@
   authored minimum and omit unaligned upper endpoints. Paired category axes
   share crossings across caption admission, ticks and painting; clustered bars
   and their labels use that origin, including origin-relative inverted paint.
+- PPTX: automatic centered horizontal labels size their text/key frames from
+  content and font metrics, then follow the actual grouped or stacked bar.
 
 - PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
   explicit non-overlay legends retain their plot-space reservation. Bottom line
