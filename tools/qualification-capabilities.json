@@ -15020,6 +15020,7 @@
     "PptxSyntheticChartComboLineUsesOwnValueAxisScale"
   ],
   "pptx-horizontal-crossing": [
+    "PptxHorizontalClusteredDataAndLabelsShareTheCategoryOrigin",
     "PptxHorizontalCategoryCrossingsFollowTheNumericScale",
     "PptxHorizontalCategoryLabelSidesKeepTheirStrokeCrossing",
     "PptxHorizontalCategoryTicksShareCrossingAndDirection",

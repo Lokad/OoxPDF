@@ -1,4 +1,6 @@
 using System.Xml.Linq;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Pptx;
 using Lokad.OoxPdf.Pdf;
 
@@ -83,6 +85,38 @@ internal static partial class PptxColumnIntervalTests
             NearHorizontal(actual.Axis, fallback == "unpaired" ? actual.Right : actual.Left);
             TestAssert.Equal(2, actual.Labels.Length);
             TestAssert.True(actual.Labels.All(x => x < actual.Left), "Unresolved placement keeps its existing caption fallback: " + fallback);
+        }
+    }
+
+    public static void PptxHorizontalClusteredDataAndLabelsShareTheCategoryOrigin()
+    {
+        foreach (bool reversed in new[] { false, true })
+        {
+            PdfPage page = Render(7, 25, reversed: reversed, horizontal: true, editChart: xml =>
+            {
+                var crossing = xml.Descendants(CrossingC + "catAx").Single().Element(CrossingC + "crosses")!;
+                crossing.Name = CrossingC + "crossesAt";
+                crossing.SetAttributeValue("val", "40");
+                xml.Descendants(CrossingC + "barChart").Single().Add(new XElement(CrossingC + "dLbls",
+                    new XElement(CrossingC + "dLblPos", new XAttribute("val", "ctr")),
+                    new XElement(CrossingC + "showVal", new XAttribute("val", "1"))));
+            });
+            var geometry = HorizontalGeometry(page);
+            double origin = geometry.Left + (reversed ? 63d / 96d : 33d / 96d) * (geometry.Right - geometry.Left);
+            var bars = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) re f")
+                .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
+                .Where(r => r[2] is > 20d and < 700d && r[3] is > 20d and < 200d).ToArray();
+            var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(2, bars.Length);
+            TestAssert.Equal(2, labels.Length);
+            for (int i = 0; i < bars.Length; i++)
+            {
+                NearHorizontal(reversed ? bars[i][0] + bars[i][2] : bars[i][0], origin);
+                double center = labels[i].X + labels[i].Font.MeasureTextPoints(labels[i].Text, labels[i].Size, kerningEnabled: false) / 2d;
+                TestAssert.True(center >= bars[i][0] && center <= bars[i][0] + bars[i][2],
+                    "Data-label placement consumes the same source origin as its clustered bar.");
+            }
         }
     }
 

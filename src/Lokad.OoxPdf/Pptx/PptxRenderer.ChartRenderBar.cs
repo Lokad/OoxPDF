@@ -38,7 +38,7 @@ internal sealed partial class PptxRenderer
             int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
             bool stacked = IsStackedChartGrouping(plotOptions.Grouping);
             bool percentStacked = IsPercentStackedChartGrouping(plotOptions.Grouping);
-            double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisOptions.Reversed);
+            double barOriginX = ChartValueToPlotCoordinate(valueExtents, categoryPlacement?.CrossingValue ?? 0d, plotX, plotWidth, valueAxisOptions.Reversed);
             double columnOrigin = valueAxisOptions.CrossingValue ?? 0d;
             double columnOriginY = ChartValueToPlotCoordinate(valueExtents, columnOrigin, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
             double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotY, plotHeight, horizontalBars ? false : valueAxisOptions.Reversed);
@@ -139,7 +139,7 @@ internal sealed partial class PptxRenderer
                 }
                 else
                 {
-                    RenderClusteredHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, zeroX, seriesFills, pointFills, pointStrokes, plotOptions, chartStyleId);
+                    RenderClusteredHorizontalBars(graphics, plotClipBox, theme, colorMap, chartPalette, plotX, plotY, plotWidth, plotHeight, denseSeries, categoryCount, valueExtents, valueAxisOptions.Reversed, barOriginX, seriesFills, pointFills, pointStrokes, plotOptions, chartStyleId);
                 }
 
                 return;

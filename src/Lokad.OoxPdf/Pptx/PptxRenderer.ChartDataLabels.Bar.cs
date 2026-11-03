@@ -70,7 +70,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null)
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        ChartAxisPlacement? categoryPlacement = null)
     {
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
         bool valueAxisReversed = valueAxisOptions.Reversed;
@@ -101,7 +102,7 @@ internal sealed partial class PptxRenderer
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
 
         int categoryCount = Math.Max(1, denseValueSeries.Max(values => values.Count));
-        double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
+        double originX = ChartValueToPlotCoordinate(extents, categoryPlacement?.CrossingValue ?? 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
@@ -136,7 +137,7 @@ internal sealed partial class PptxRenderer
                         : (0d, value);
                     double barBaseX = stacked
                         ? ChartValueToPlotCoordinate(extents, barBase, plotBox.X, plotBox.Width, valueAxisReversed)
-                        : zeroX;
+                        : originX;
                     double barEndX = ChartValueToPlotCoordinate(extents, barEnd, plotBox.X, plotBox.Width, valueAxisReversed);
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     if (!effectiveOptions.HasVisibleContent)
