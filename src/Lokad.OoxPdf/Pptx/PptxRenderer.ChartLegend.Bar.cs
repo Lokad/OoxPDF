@@ -84,7 +84,10 @@ internal sealed partial class PptxRenderer
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
         bool automaticLegend = !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
-        bool measuredFillGrid = measuredBand && bottom && automaticLegend && entries.All(entry => entry.Fill is not null);
+        // Category keys use the measured grid. Per-series legends have an
+        // independently validated spacing contract and retain that owner.
+        bool measuredFillGrid = measuredBand && bottom && automaticLegend &&
+            entries.All(entry => entry.Fill is not null && entry.SeriesName is null);
         double naturalWidth = 0d, widestCell = 0d;
         for (int i = 0; i < entries.Count; i++)
         {
