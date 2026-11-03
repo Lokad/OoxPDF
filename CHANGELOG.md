@@ -2,6 +2,8 @@
 
 ## 0.3.0 — Unreleased
 
+- Host memory admission covers workbook-derived chart range construction, reusing
+  the existing page reservation across sequential chart frames.
 - PPTX: scatter connections follow series visibility and smoothing defaults.
   Authored major intervals and inferred Y intervals measure curve bounds.
   Automatic X intervals use authored inner plot width and axis font size.

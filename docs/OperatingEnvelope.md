@@ -38,8 +38,12 @@ text and SVG bytes; unused master/layout definitions do not inflate it. Prepared
 balloon text grows the same page reservation. Cached chart point/category spans
 also contribute construction headroom: sparse indices can require more storage
 than the XML size suggests. Sequential chart frames share the largest additional
-window in that page reservation. Other workbook-derived and axis/effect expansion
-remains unproven. These estimates cover ordinary
+window in that page reservation. Resolved workbook formula ranges also enlarge
+that grant before range records and provenance projections are constructed,
+including list/array replacement overlap. Sequential frames reuse its high-water
+capacity; page advancement or disposal refunds it. This covers the measured range
+construction gap without a per-cell ledger. Other workbook-derived and axis/effect
+expansion remains unproven. These estimates cover ordinary
 construction overlap; unusually expanding effects/vector inputs remain unproven.
 MemoryBudget also admits
 PDF content staging, private SFNT/
