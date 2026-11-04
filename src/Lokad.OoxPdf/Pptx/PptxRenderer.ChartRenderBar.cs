@@ -217,7 +217,10 @@ internal sealed partial class PptxRenderer
         ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement, context: context, resolvedValueExtents: resolvedValueExtents).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
             plotLayout.AutomaticCategoryLabelOffsetAdjustment,
-            plotLayout.ManualLayoutTargetKind is null && sceneChart.Plots.Count == 1 ? categoryPlacement : null)
+            // The caller supplies a resolved range only for an admitted shared
+            // reciprocal pair; retain that frame's category placement as well.
+            plotLayout.ManualLayoutTargetKind is null && (sceneChart.Plots.Count == 1 || resolvedValueExtents is not null)
+                ? categoryPlacement : null)
         { AutomaticCaptionFittingClearance = plotLayout.AutomaticCaptionFittingClearance };
     }
 

@@ -15329,6 +15329,7 @@
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
   "pptx-shared-axis-scale": [
+    "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
       "PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels",
       "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale"
   ]

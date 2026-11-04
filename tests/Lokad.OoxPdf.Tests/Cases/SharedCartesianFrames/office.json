@@ -1,0 +1,101 @@
+{
+  "Evidence": "Twelve independent PowerPoint16 PDF exports; six prospective single/shared frame predictions matched exactly. Pair equality is separate from absolute typography/image fidelity; all controls are now observed.",
+  "Rows": [
+    {
+      "Id": "reversed-min-single",
+      "Pair": "reversed-min",
+      "Composed": false,
+      "Input": "reversed-min-single.pptx",
+      "InputSha256": "C10734AE5F90C557A2C2F4BF93672BA95A5412DC8B8C353A33EB1684F20ED3D0",
+      "OfficePdfSha256": "14666461354B02A6CC3CAA87E2EC8A1821FAD76CEEBCB4B33AAB303291DEF00D"
+    },
+    {
+      "Id": "reversed-min-shared",
+      "Pair": "reversed-min",
+      "Composed": true,
+      "Input": "reversed-min-shared.pptx",
+      "InputSha256": "865F2606E47D475B68BA8B4DF3F7871C59529C09176C851483667A9BC2AC0B70",
+      "OfficePdfSha256": "D61C44F295CA87CEF063B9E2EF6CFF720EEA86863A8BD78F580F1BE30D1FE6AB"
+    },
+    {
+      "Id": "reversed-max-taller-line-first-single",
+      "Pair": "reversed-max-taller-line-first",
+      "Composed": false,
+      "Input": "reversed-max-taller-line-first-single.pptx",
+      "InputSha256": "0F368F7785ECC2D88B63FE477F4C0E6DE9221F634DBE3CA1D2B4E0694EB08A7F",
+      "OfficePdfSha256": "88D3EE1012BED5701152B34E21593C17F81419FC40E6EF1B658F8816404E2441"
+    },
+    {
+      "Id": "reversed-max-taller-line-first-shared",
+      "Pair": "reversed-max-taller-line-first",
+      "Composed": true,
+      "Input": "reversed-max-taller-line-first-shared.pptx",
+      "InputSha256": "EAB6D14E230C910BFBBBFD74D3FD15CB5ED69B805F5D88F5492FD299457A3168",
+      "OfficePdfSha256": "BDEC2064F6E0C84F81C53AF4D9AF715C405B648DEB8C7F2655599C01B6A3A5EA"
+    },
+    {
+      "Id": "reversed-numeric-interior-single",
+      "Pair": "reversed-numeric-interior",
+      "Composed": false,
+      "Input": "reversed-numeric-interior-single.pptx",
+      "InputSha256": "6421FCCA24F1B13E076FE43D9325D6D1DA01BCA5A5733E7622B97492B5344A19",
+      "OfficePdfSha256": "51CDB466510C44DEEE3D8A1B8ACE3FCA04C78497D5EDA14C22DC78BFF3CEA1F6"
+    },
+    {
+      "Id": "reversed-numeric-interior-shared",
+      "Pair": "reversed-numeric-interior",
+      "Composed": true,
+      "Input": "reversed-numeric-interior-shared.pptx",
+      "InputSha256": "9DAE7509E4E769C5F36655EF693270A1D695E2FA61B2EFE864579CBC9D264EC5",
+      "OfficePdfSha256": "B8872CD855511D07B8EC7FBF0F2FEFDCFAF79607C3D161B534FF773E18CC7037"
+    },
+    {
+      "Id": "normal-max-times14-single",
+      "Pair": "normal-max-times14",
+      "Composed": false,
+      "Input": "normal-max-times14-single.pptx",
+      "InputSha256": "C080C8764598250E4D566A60FAC29D80E29058FCC1F390FDC1C30E7653BB8981",
+      "OfficePdfSha256": "23B01C0AE120DD39A8B0A3BC1BF7014800251A0AFE089A9BF745AE1F7D02370C"
+    },
+    {
+      "Id": "normal-max-times14-shared",
+      "Pair": "normal-max-times14",
+      "Composed": true,
+      "Input": "normal-max-times14-shared.pptx",
+      "InputSha256": "3C45D2958E72781F0A499FAE64B7FDEA13B0F1FDF66A4B82258512027D737C8E",
+      "OfficePdfSha256": "55BD8109BA87D4F38D7526E921CD9B0E57760790C47D2C98C9BB91A25F30CDAE"
+    },
+    {
+      "Id": "reversed-high-arial12-single",
+      "Pair": "reversed-high-arial12",
+      "Composed": false,
+      "Input": "reversed-high-arial12-single.pptx",
+      "InputSha256": "05E98649E82E8A227E0080839EF18ADFCDEDE3117ACCF4D821128C46536D0841",
+      "OfficePdfSha256": "54B6C6E8011F9166B8107A17364F398AC306A78AF215CE35AA97EFF29FC666CD"
+    },
+    {
+      "Id": "reversed-high-arial12-shared",
+      "Pair": "reversed-high-arial12",
+      "Composed": true,
+      "Input": "reversed-high-arial12-shared.pptx",
+      "InputSha256": "DCE02BC7600794AE60E8BEC41A06DE592B4A24C5C462528AB8EFA1F78F9F403E",
+      "OfficePdfSha256": "8D9F78E452D43E1802E25F5DD7BE499EEBAC32E8C07B1BD4C29C1F8E1EB59694"
+    },
+    {
+      "Id": "reversed-low-shorter-single",
+      "Pair": "reversed-low-shorter",
+      "Composed": false,
+      "Input": "reversed-low-shorter-single.pptx",
+      "InputSha256": "EF3390379BFFB3A1F0A30956032EC659CDBF68658174EB90AF646AC444768F5F",
+      "OfficePdfSha256": "DA8C5DE1F3443FFA6C53F5AEB36759E66018480E1CDB9C9590B980984EB3703D"
+    },
+    {
+      "Id": "reversed-low-shorter-shared",
+      "Pair": "reversed-low-shorter",
+      "Composed": true,
+      "Input": "reversed-low-shorter-shared.pptx",
+      "InputSha256": "14DC7A63D62BFB0595B38645BEE5FCA344BD6BFA011473FC03A3ED5B3A9C7007",
+      "OfficePdfSha256": "5153FCBC313495FEF89BD7EAD3DA06858B52314255A1618E873B284D79FDE088"
+    }
+  ]
+}

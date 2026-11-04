@@ -555,7 +555,7 @@ internal sealed partial class PptxRenderer
         // Authored frames and furniture above/beside the plot keep their existing
         // placement owner. This path measures the ordinary numeric-axis header.
         ChartAxisTitleReserveSides titles = ReadDefaultAxisTitleReserveSides(chart);
-        if (chart.Plots.Count != 1 || chart.PlotAreaLayout.HasGeometryValues ||
+        if (chart.PlotAreaLayout.HasGeometryValues ||
             chart.Title.Layout.HasGeometryValues || legend.Layout.HasGeometryValues ||
             titles.HasHorizontalTitle || titles.HasVerticalTitle ||
             legend.Visible && !legend.Overlay && legend.PositionKind != PptxSceneChartLegendPosition.Bottom)
@@ -564,6 +564,9 @@ internal sealed partial class PptxRenderer
         if (axes.Count != 1 || axes[0].SceneAxis is not { } axis ||
             axis.PositionKind is not (PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right))
             return null;
+        // One reciprocal shared scale also owns one measured header and
+        // category band. Unsupported composed axes retain their fallback.
+        if (chart.Plots.Count != 1 && !HasSharedCartesianChartValueAxis(chart, axis)) return null;
         ChartAxisSource category = ReadSceneOrXmlChartCategoryAxisForPlot(chart, plot, chartXml, plotElement);
         if (categoryPlacement is null && IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis) &&
             (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } categoryAxis ||

@@ -9,6 +9,31 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxSharedAxisScaleTests
 {
+    internal static void CheckFrames()
+    {
+        string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "SharedCartesianFrames"));
+        using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "office.json")));
+        foreach (var pair in oracle.RootElement.GetProperty("Rows").EnumerateArray()
+            .GroupBy(row => row.GetProperty("Pair").GetString()))
+        {
+            var frames = new List<double[]>();
+            foreach (var row in pair)
+            {
+                string path = Path.Combine(cases, row.GetProperty("Input").GetString()!);
+                TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
+                using var package = OoxPackage.Open(path, default);
+                var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(
+                    new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
+                frames.Add(PptxColumnIntervalTests.Lines(page).Single(line => line.Color == new RgbColor(255, 0, 0) &&
+                    Math.Abs(line.V[0] - line.V[2]) < .001d && Math.Abs(line.V[1] - line.V[3]) > 100d).V);
+            }
+            TestAssert.Equal(2, frames.Count);
+            for (int axis = 0; axis < 4; axis++)
+                TestAssert.True(Math.Abs(frames[0][axis] - frames[1][axis]) < .002d,
+                    "A shared reciprocal scale retains the single plot frame: " + pair.Key + "/" + axis);
+        }
+    }
+
     internal static void Check(bool geometry)
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "SharedCartesianAxes"));
