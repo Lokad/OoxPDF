@@ -37,7 +37,7 @@ internal static class PptxComposedAxisTests
             using var package = OoxPackage.Open(stream, default);
             var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(
                 new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
-            string[] actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, fontResourceFilter:
+            string[] actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false, fontResourceFilter:
                 name => name.StartsWith("CVA", StringComparison.Ordinal)).Select(show => show.Text).Order(StringComparer.Ordinal).ToArray();
             string[] expected = row.GetProperty(hidePrimary ? "SecondaryLabels" : "OfficeNumericLabels")
                 .EnumerateArray().Select(label => label.GetString()!).Order(StringComparer.Ordinal).ToArray();
