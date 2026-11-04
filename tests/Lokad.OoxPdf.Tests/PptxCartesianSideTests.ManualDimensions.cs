@@ -28,7 +28,26 @@ internal static partial class PptxCartesianSideTests
     {
         using var controls = ReadManualControls();
         var row = controls.RootElement.EnumerateArray().Single(row => row.GetProperty("Id").GetString() == "scatter-valid-edge-height");
-        CheckManualRectangle(RenderManual(row), row);
+        var actual = ManualPlotBounds(RenderManual(row));
+        var native = row.GetProperty("NativePlot");
+        double bottom = native.GetProperty("Bottom").GetDouble(), height = native.GetProperty("Height").GetDouble();
+        TestAssert.True(Math.Abs(actual.Bottom - bottom) <= .1d && Math.Abs(actual.Top - bottom - height) <= .1d,
+            "Scatter edge heights retain the independent Office vertical rectangle.");
+        // Scatter already measures its horizontal numeric captions. Keep that
+        // font-dependent owner, and compare equivalent source representations
+        // with the same pinned face instead of asserting a Calibri X origin.
+        using var stream = new MemoryStream(); stream.Write(ReadManualBytes(row)); stream.Position = 0;
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
+            XDocument xml; using (var input = entry.Open()) xml = XDocument.Load(input);
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            var manual = xml.Descendants(c + "plotArea").Single().Element(c + "layout")!.Element(c + "manualLayout")!;
+            manual.Element(c + "hMode")!.SetAttributeValue("val", "factor");
+            manual.Element(c + "h")!.SetAttributeValue("val", (height / row.GetProperty("Frame").GetProperty("Height").GetDouble()).ToString("R", CultureInfo.InvariantCulture));
+            entry.Delete(); using var output = archive.CreateEntry("ppt/charts/chart1.xml").Open(); xml.Save(output);
+        }
+        TestAssert.Equal(actual, ManualPlotBounds(RenderManualBytes(stream.ToArray())));
     }
 
     public static void PptxManualEdgeHeightsPreserveTheirRectangleAcrossValueDirection()
