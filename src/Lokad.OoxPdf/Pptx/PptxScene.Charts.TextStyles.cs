@@ -34,7 +34,13 @@ internal sealed partial class PptxSceneBuilder
 
     internal static PptxSceneChartTextStyleOverride ResolveChartAxisTextStyleOverride(PptxSceneChart chart, PptxSceneChartAxis? axis, string? chartStyleRole)
     {
-        return ResolveChartElementTextStyleOverride(chart, axis?.TextStyle ?? default, chartStyleRole);
+        PptxSceneChartTextStyleOverride style = ResolveChartElementTextStyleOverride(chart, axis?.TextStyle ?? default, chartStyleRole);
+        // Built-in category/value axes inherit their size from the chart, then
+        // local axis formatting. External role sizes remain scene-visible but
+        // do not supply the missing size; other role attributes keep their owner.
+        return HasBuiltInChartStyle(chart) && chartStyleRole is "categoryAxis" or "valueAxis"
+            ? style with { FontSize = axis?.TextStyle.FontSize ?? chart.TextStyle.FontSize }
+            : style;
     }
 
     internal static PptxSceneChartTextStyleOverride ResolveChartElementTextStyleOverride(PptxSceneChart chart, PptxSceneChartTextStyleOverride elementTextStyle, string? chartStyleRole)

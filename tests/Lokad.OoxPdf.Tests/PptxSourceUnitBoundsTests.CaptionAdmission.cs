@@ -154,6 +154,34 @@ internal static partial class PptxSourceUnitBoundsTests
         }
     }
 
+    public static void PptxBuiltInAxesInheritChartFontSizeBeforeRoleDefaults()
+    {
+        foreach (int gallery in new[] { 2, 9, 48 })
+        foreach (int? globalSize in new int?[] { null, 1800 })
+        foreach (int angle in new[] { -45, 45 })
+        {
+            int size = globalSize ?? 1000;
+            PdfPage Render(bool inherit) => RenderCaptionFrames(angle, 2, height: 240,
+                categoryFontSize: size, valueFontSize: size, overflow: "ellipsis", categoryText: new string('W', 80),
+                builtInStyle: gallery, categoryRoleFontSize: 1600, valueRoleFontSize: 800,
+                chartFontSize: globalSize, inheritAxisFontSizes: inherit);
+            PdfPage explicitFonts = Render(false), inheritedFonts = Render(true);
+            foreach (string prefix in new[] { "CCA", "CVA" })
+            {
+                var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(explicitFonts, usePageCoordinates: true,
+                    fontResourceFilter: name => name.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+                var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(inheritedFonts, usePageCoordinates: true,
+                    fontResourceFilter: name => name.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+                TestAssert.True(expected.Length > 0 && expected.Length == actual.Length && expected.Zip(actual).All(pair =>
+                    pair.First.Text == pair.Second.Text && pair.First.Size == pair.Second.Size &&
+                    Math.Abs(pair.First.X - pair.Second.X) < .003 && Math.Abs(pair.First.Y - pair.Second.Y) < .003),
+                    "Equivalent local/global axis sizes preserve typography and geometry; unused role sizes do not become effective.");
+            }
+            TestAssert.True(Math.Abs(CaptionPlotHeight(explicitFonts) - CaptionPlotHeight(inheritedFonts)) < .003,
+                "Equivalent font declarations retain the occupied caption frame.");
+        }
+    }
+
     private static double CaptionPlotHeight(PdfPage page)
     {
         double[] axis = PptxColumnIntervalTests.Lines(page).Single(line =>

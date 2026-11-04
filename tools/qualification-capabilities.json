@@ -1507,6 +1507,7 @@
   ],
   "pptx-category-layout": [
     "PptxBuiltInCategoryFittingIgnoresOverriddenRoleFonts",
+    "PptxBuiltInAxesInheritChartFontSizeBeforeRoleDefaults",
     "PptxSyntheticChartAutoTitleUsesOfficeScaledSize",
     "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",
     "PptxCategoryOverflowTracksValueFontWithoutChangingCategoryTypeface",

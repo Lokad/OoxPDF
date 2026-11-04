@@ -3,7 +3,9 @@
 ## 0.3.0 — Unreleased
 
 - PPTX: overridden chart-style fonts no longer change rotated category-caption
-  fitting in built-in charts. Numeric-scale and inherited-font limitations remain.
+  fitting in built-in charts. Their axis sizes inherit from chart/local text,
+  preserving Office's fallback when external role sizes are present. Automatic
+  numeric-scale limitations remain.
 
 - PPTX: automatic line/area plots with horizontal, unwrapped categories admit
   caption and numeric-label space beside right legends without moving the legend.

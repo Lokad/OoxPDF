@@ -157,6 +157,9 @@ Approximate or restricted:
   short-frame caption geometry remain approximate.
   Built-in chart fitting retains its default reference when overridden role or
   global fonts change; effective fonts still determine glyph geometry.
+  Category/value axis sizes in those charts inherit from chart text and local
+  axis formatting. External role sizes do not fill a missing size; other role
+  formatting and custom-style fallbacks retain their existing owners.
   Automatic linear-axis limits and major intervals can differ from Office,
   changing the visible numeric scale in short charts or when numeric fonts
   change. Authored bounds and units remain authoritative within the supported
