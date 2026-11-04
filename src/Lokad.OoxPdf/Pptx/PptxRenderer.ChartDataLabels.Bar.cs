@@ -89,10 +89,11 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        // Fixed-series keys keep series paint and negative inversion; authored
-        // point fills belong to the point. Category keys retain point styling.
+        // A lone point-styled series uses category keys even without variation.
+        // Series keys keep series paint and negative inversion; category keys
+        // retain their authored point styling.
         IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> legendPointFills =
-            varyColors && denseValueSeries.Count == 1 ? pointFills : [];
+            chartPalette.SeriesCount == 1 || varyColors && denseValueSeries.Count == 1 ? pointFills : [];
 
         // index workbook points once per series instead of filtering plus
         // linear-scanning per rendered label below.

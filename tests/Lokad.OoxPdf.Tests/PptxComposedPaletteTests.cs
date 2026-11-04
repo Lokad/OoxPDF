@@ -48,26 +48,73 @@ internal static class PptxComposedPaletteTests
         byte[] original = File.ReadAllBytes(Path.Combine(Cases, "index-shift.pptx"));
         foreach (string? index in new[] { (string?)null, "-1", "unknown", int.MaxValue.ToString(CultureInfo.InvariantCulture) })
         {
-            using var stream = new MemoryStream();
-            stream.Write(original); stream.Position = 0;
-            using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+            byte[] bytes = EditChart(original, xml =>
             {
-                var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
-                XDocument xml;
-                using (var input = entry.Open()) xml = XDocument.Load(input);
                 XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
                 var source = xml.Descendants(c + "barChart").Last().Element(c + "ser")!.Element(c + "idx")!;
                 if (index is null) source.Remove(); else source.SetAttributeValue("val", index);
-                entry.Delete();
-                using var output = archive.CreateEntry("ppt/charts/chart1.xml").Open();
-                xml.Save(output);
-            }
-            var bars = Rectangles(Render(stream.ToArray())).Where(r => r.Width is > 1d and < 80d && r.Height > 50d).ToArray();
+            });
+            var bars = Rectangles(Render(bytes)).Where(r => r.Width is > 1d and < 80d && r.Height > 50d).ToArray();
             TestAssert.True(bars.Length == 16, "Sparse source indices do not allocate dense series slots or omit bars.");
             if (index != int.MaxValue.ToString(CultureInfo.InvariantCulture))
                 TestAssert.True(bars.All(r => r.Color == new RgbColor(79, 129, 189)),
                     "Missing or invalid source identity retains the existing automatic-theme fallback.");
         }
+    }
+
+    internal static void CheckSingleSeriesKeys()
+    {
+        // Separate native controls retain point-styled category keys in a lone
+        // series, including explicit false variation. Values are native bytes.
+        byte[] original = File.ReadAllBytes(Path.Combine(Cases, "keys-point-override-valid.pptx"));
+        foreach (bool varying in new[] { false, true })
+        {
+            byte[] bytes = EditChart(original, xml =>
+            {
+                XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+                var plots = xml.Descendants(c + "barChart").ToArray();
+                plots[1].Remove();
+                plots[0].Element(c + "varyColors")!.SetAttributeValue("val", varying ? "1" : "0");
+            });
+            var keys = Rectangles(Render(bytes)).Where(r => r.Width is > 1d and < 25d && r.Height is > 1d and < 25d)
+                .GroupBy(r => r.Color).ToDictionary(group => group.Key, group => group.Count());
+            RgbColor purple = new(85, 0, 170);
+            TestAssert.True(keys.TryGetValue(purple, out int points) && points == 2,
+                "Native label and category-legend keys preserve the explicit point fill: " + varying);
+            TestAssert.Equal(16, keys.Values.Sum());
+            if (!varying)
+            {
+                TestAssert.Equal(2, keys.Count);
+                TestAssert.Equal(14, keys[new RgbColor(79, 129, 189)]);
+            }
+            else
+            {
+                RgbColor[] colors = [purple, new(170, 70, 67), new(137, 165, 78), new(113, 88, 143),
+                    new(65, 152, 175), new(219, 132, 61), new(147, 169, 207), new(209, 147, 146)];
+                TestAssert.Equal(8, keys.Count);
+                foreach (var color in colors)
+                    TestAssert.True(keys.Any(pair => pair.Value == 2 && Math.Abs(pair.Key.Red - color.Red) <= 1 &&
+                        Math.Abs(pair.Key.Green - color.Green) <= 1 && Math.Abs(pair.Key.Blue - color.Blue) <= 1),
+                        "Native varying category key: " + color);
+            }
+        }
+    }
+
+    private static byte[] EditChart(byte[] source, Action<XDocument> edit)
+    {
+        using var stream = new MemoryStream();
+        stream.Write(source); stream.Position = 0;
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
+            XDocument xml;
+            using (var input = entry.Open()) xml = XDocument.Load(input);
+            edit(xml);
+            entry.Delete();
+            using var output = archive.CreateEntry("ppt/charts/chart1.xml").Open();
+            xml.Save(output);
+        }
+        return stream.ToArray();
     }
 
     private static PdfPage Render(byte[] bytes)
