@@ -1506,6 +1506,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-category-layout": [
+    "PptxFittedCategoryCaptionsReturnUnusedVerticalCapacity",
     "PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames",
     "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
     "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",

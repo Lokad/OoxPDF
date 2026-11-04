@@ -358,15 +358,6 @@ internal sealed partial class PptxRenderer
             ? Math.Max(0d, (topSide ? freeEdge - axisY : axisY - freeEdge) - ComputeCartesianLabelStripBottomReserve(style.FontSize)) : 0d;
         double admitted = layout.ManualPlotLayoutApplied || !atEdge ? 0d :
             Math.Min(requested, Math.Max(0d, (layout.PlotBox.Height - line.Height) / 2d));
-        if (admitted > 0d)
-        {
-            double shift = topSide ? 0d : admitted;
-            layout = layout with
-            {
-                PlotBox = layout.PlotBox with { Y = layout.PlotBox.Y + shift, Height = layout.PlotBox.Height - admitted },
-                PlotAreaBox = layout.PlotAreaBox with { Y = layout.PlotAreaBox.Y + shift, Height = Math.Max(1d, layout.PlotAreaBox.Height - admitted) }
-            };
-        }
         double availableExtra = admitted + existingExtra;
         if (angle != 0d && availableExtra < requested)
         {
@@ -386,6 +377,28 @@ internal sealed partial class PptxRenderer
                 fitted[^1] = await FitAsync(string.Join(" ", parts.Skip(admittedLines - 1).Select(part => part.Text)), flatWidth).ConfigureAwait(false);
                 measured[index] = fitted;
             }
+        }
+        if (admitted > 0d)
+        {
+            // Fitting uses a capacity; placement reserves the content that
+            // actually fits. Discrete truncation or wrapping can leave part of
+            // that capacity unused. Return it to the plot rather than making
+            // unchanged captions consume half of every increase in frame height.
+            double occupied = 0d;
+            foreach (var parts in measured.Values)
+            {
+                resolver.CancellationToken.ThrowIfCancellationRequested();
+                occupied = Math.Max(occupied, angle == 0d
+                    ? (parts.Length - 1) * line.Height
+                    : parts[0].Width * sin + line.Height * cos - line.Height);
+            }
+            admitted = Math.Min(admitted, Math.Max(0d, occupied));
+            double shift = topSide ? 0d : admitted;
+            layout = layout with
+            {
+                PlotBox = layout.PlotBox with { Y = layout.PlotBox.Y + shift, Height = layout.PlotBox.Height - admitted },
+                PlotAreaBox = layout.PlotAreaBox with { Y = layout.PlotAreaBox.Y + shift, Height = Math.Max(1d, layout.PlotAreaBox.Height - admitted) }
+            };
         }
         layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, measured) };
         return AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
