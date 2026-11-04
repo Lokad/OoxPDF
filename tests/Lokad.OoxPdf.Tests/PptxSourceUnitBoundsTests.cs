@@ -79,14 +79,27 @@ internal static partial class PptxSourceUnitBoundsTests
         TestAssert.Equal(new PptxRenderer.ChartValueExtents(0, 6),
             (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", scene, axis, mismatch, data, false, true, .96d));
 
-        foreach (string fallback in new[] { "log", "secondary", "composed", "horizontal", "percent" })
+        XElement shared = XElement.Parse(xml);
+        shared.Descendants(c + "plotArea").Single().Add(new XElement(shared.Descendants(c + "barChart").Single()));
+        var sharedModel = PptxTests.BuildSingleChartScene(shared.ToString())!;
+        TestAssert.Equal(new PptxRenderer.ChartValueExtents(0, 6),
+            (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", sharedModel,
+                sharedModel.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value), mismatch, data, false, true, .96d));
+
+        foreach (string fallback in new[] { "log", "secondary", "stacked-composition", "unpaired-composition", "horizontal", "percent" })
         {
             XElement source = XElement.Parse(xml);
             XElement plot = source.Descendants(c + "plotArea").Single();
             XElement valueAxis = plot.Element(c + "valAx")!;
             if (fallback == "log") valueAxis.Element(c + "scaling")!.Add(new XElement(c + "logBase", new XAttribute("val", 10)));
             if (fallback == "secondary") plot.Add(new XElement(valueAxis));
-            if (fallback == "composed") plot.Add(new XElement(plot.Element(c + "barChart")!));
+            if (fallback is "stacked-composition" or "unpaired-composition")
+            {
+                var extra = new XElement(plot.Element(c + "barChart")!);
+                if (fallback == "stacked-composition") extra.Element(c + "grouping")!.SetAttributeValue("val", "stacked");
+                else extra.Elements(c + "axId").Last().SetAttributeValue("val", "999");
+                plot.Add(extra);
+            }
             if (fallback == "horizontal") plot.Element(c + "barChart")!.Element(c + "barDir")!.SetAttributeValue("val", "bar");
             var model = PptxTests.BuildSingleChartScene(source.ToString())!;
             var modelAxis = model.Axes.First(a => a.AxisKind == PptxSceneChartAxisKind.Value);
