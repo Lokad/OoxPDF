@@ -250,6 +250,16 @@ Approximate or restricted:
   Independent controls match Office X-axis coordinates within0.04pt. Vertical
   admission, other plot layouts, source axis paint and remaining typography retain
   their approximation; this does not establish complete chart parity.
+  Inner column/line/area plots with one linear numeric axis and horizontal,
+  single-line ordinal captions admit numeric side bands and axis endcaps using
+  their measured fonts. Category and numeric constraints activate independently;
+  geometry shared by plots, labels and links follows the resulting rectangle.
+  Independent Office PDFs correct displacements of28.4pt vertically and38.38pt
+  horizontally; two Arial baseline residuals remain1.18–1.52pt. Outer layouts,
+  authored title/legend geometry, explicit numeric crossings, secondary/log axes
+  and rotated/wrapped categories retain their existing paths. Native-font
+  geometry checks remain separate from portable content checks at font-dependent
+  admission boundaries. References remain uncalibrated against the application view.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Stacked horizontal bars,
   general column and secondary-axis category direction retain their existing

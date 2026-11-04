@@ -16,6 +16,10 @@
 - PPTX: factor positions and edge-sized heights resolve together for authored
   inner Cartesian plots, keeping columns, curves, axes and labels on the same
   rectangle. Width and height share the existing source-coordinate calculation.
+  Ordinary inner column, line and area plots also admit numeric side captions
+  and visible-axis endcaps within the chart frame, including independent axis
+  fonts and sides. Rotated/wrapped categories, secondary axes and outer layouts
+  retain their existing approximation.
 
 - PPTX: plain automatic outside-end column labels wrap measured text and admit
   the whole label/key frame within the chart, retaining value suffixes at its
