@@ -86,7 +86,14 @@ internal static partial class PptxSourceUnitBoundsTests
             (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", sharedModel,
                 sharedModel.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value), mismatch, data, false, true, .96d));
 
-        foreach (string fallback in new[] { "log", "secondary", "stacked-composition", "unpaired-composition", "horizontal", "percent" })
+        XElement horizontal = XElement.Parse(xml);
+        MakeHorizontal(horizontal.Descendants(c + "plotArea").Single());
+        var horizontalModel = PptxTests.BuildSingleChartScene(horizontal.ToString())!;
+        TestAssert.Equal(new PptxRenderer.ChartValueExtents(0, 6),
+            (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", horizontalModel,
+                horizontalModel.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value), mismatch, data, false, true, .96d));
+
+        foreach (string fallback in new[] { "log", "secondary", "stacked-composition", "unpaired-composition", "horizontal-stacked", "percent" })
         {
             XElement source = XElement.Parse(xml);
             XElement plot = source.Descendants(c + "plotArea").Single();
@@ -100,7 +107,11 @@ internal static partial class PptxSourceUnitBoundsTests
                 else extra.Elements(c + "axId").Last().SetAttributeValue("val", "999");
                 plot.Add(extra);
             }
-            if (fallback == "horizontal") plot.Element(c + "barChart")!.Element(c + "barDir")!.SetAttributeValue("val", "bar");
+            if (fallback == "horizontal-stacked")
+            {
+                MakeHorizontal(plot);
+                plot.Element(c + "barChart")!.Element(c + "grouping")!.SetAttributeValue("val", "stacked");
+            }
             var model = PptxTests.BuildSingleChartScene(source.ToString())!;
             var modelAxis = model.Axes.First(a => a.AxisKind == PptxSceneChartAxisKind.Value);
             var expected = (PptxRenderer.ChartValueExtents)Invoke("ReadPercentStackedAwareValueAxisExtents", modelAxis, valueAxis, data, fallback == "percent", true, .96d);
@@ -111,6 +122,13 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (bool manual in new[] { false, true })
             TestAssert.True(Labels(Render(new([4, 4], 1.25, .3, .3, 5.3), "bar", reversed, manual))
                 .SequenceEqual(new[] { .3, 1.55, 2.8, 4.05, 5.3 }), "Source intervals survive reversal and authored placement.");
+
+        void MakeHorizontal(XElement plot)
+        {
+            plot.Element(c + "barChart")!.Element(c + "barDir")!.SetAttributeValue("val", "bar");
+            plot.Element(c + "catAx")!.Element(c + "axPos")!.SetAttributeValue("val", "l");
+            plot.Element(c + "valAx")!.Element(c + "axPos")!.SetAttributeValue("val", "b");
+        }
     }
 
     private static double[] Labels(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
