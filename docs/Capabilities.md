@@ -296,6 +296,13 @@ Approximate or restricted:
   gallery roles, minor-stroke defaults, automatic tick fitting and arbitrary
   color-style methods remain incomplete. Category bar legends share point paint
   and wrap within the chart frame; crowded frames diagnose clipped entries.
+  Automatic bar theme colors follow declared series indices and the shared
+  declared index span, including sparse indices and empty siblings. Bar paint,
+  legend entries and label keys share this recipe. Lone point-styled category
+  keys retain point fills; series keys preserve negative inversion without
+  adopting authored point fills. Source-index handling for custom and single-
+  accent recipes has not been generalized. Long data labels near frame edges
+  can still lose value suffixes through clipping; wrapping remains approximate.
   Existing independent Office thresholds still apply.
 - A single-series line plot with point variation shares source-indexed paint
   across incoming straight/curved segments, markers, category-name legend entries

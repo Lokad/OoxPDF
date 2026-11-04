@@ -87,6 +87,9 @@
   frames consistently, and keeps overlay legends from consuming plot space.
 - PPTX: resolves built-in single-accent palettes from the theme, sharing
   shade/tint colors across series, varying points and legend keys.
+- PPTX: automatic bar theme colors follow declared series indices across plots,
+  including sparse indices and empty siblings. Legend and data-label keys share
+  those colors while preserving category-point styling and negative inversion.
 - PPTX: restores category legends for individually formatted single-series points
   when varying colors is off, and preserves explicit point no-fill.
 - PPTX: measures automatic column-chart horizontal reserves from axis labels,
