@@ -15328,6 +15328,24 @@
       "PptxChartSecondaryValueAxisStyleSelectionUsesSceneSource",
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
+  "pptx-column-label-wrapping": [
+    "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
+    "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+    "PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks",
+    "PptxColumnLabelSourceRetainsExplicitWrappingConstraints",
+    "PptxSyntheticBarLegendKey",
+    "PptxSyntheticChartStackedColumnDataLabelsUseStackSegmentGeometry",
+    "PptxSyntheticBarChartRendersLegendKeyOnlyDataLabels",
+    "PptxChartDataLabelOptionsPreserveRawBooleanState",
+    "PptxChartUnknownDataLabelPositionResolvesThroughExplicitDefault",
+    "PptxAutomaticLabelTextOwnsItsClippingRegion",
+    "PortableRenderingBarPointKeysKeepSingleSeriesCategoryIdentity",
+    "PortableRenderingBarKeysRetainIndependentOfficePaint",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-bar-source-palette": [
     "PortableRenderingBarPointKeysKeepSingleSeriesCategoryIdentity",
     "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",

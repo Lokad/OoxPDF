@@ -702,7 +702,8 @@ internal readonly record struct PptxSceneChartTextBodyProperties(
     double? RotationDegrees,
     string RotationValue,
     string OrientationValue,
-    string VerticalOverflowValue);
+    string VerticalOverflowValue,
+    string WrapValue = "");
 
 internal readonly record struct PptxSceneChartNumberFormat(
     bool IsDefined,

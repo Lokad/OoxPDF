@@ -2,6 +2,11 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: plain automatic outside-end column labels wrap measured text and admit
+  the whole label/key frame within the chart, retaining value suffixes at its
+  edges. Manual, rich-text, no-wrap, stacked and other label placements retain
+  their existing behavior.
+
 - PPTX: overridden chart-style fonts no longer change rotated category-caption
   fitting in built-in charts. Their axis sizes inherit from chart/local text,
   preserving Office's fallback when external role sizes are present. Automatic

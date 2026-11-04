@@ -52,6 +52,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxColorMap colorMap,
         PdfGraphicsBuilder graphics,
+        ChartFrameBox chartFrame,
         ChartPlotBox plotBox,
         IReadOnlyList<ChartIndexedNumberVector> series,
         ChartColorPalette chartPalette,
@@ -111,12 +112,12 @@ internal sealed partial class PptxRenderer
         double originX = ChartValueToPlotCoordinate(extents, categoryPlacement?.CrossingValue ?? 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
+        var textMeasurer = new ChartTextMeasurer(fontResolver);
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         bool stacked = IsStackedChartGrouping(grouping);
         bool percentStacked = IsPercentStackedChartGrouping(grouping);
         if (horizontalBars)
         {
-            var textMeasurer = new ChartTextMeasurer(fontResolver);
             double categoryHeight = plotBox.Height / categoryCount;
             double paintedBarHeight = stacked ? GetStackedBarWidth(categoryHeight, gapWidthPercent)
                 : GetClusteredBarWidth(categoryHeight, denseValueSeries.Count, gapWidthPercent, barOptions.Overlap);
@@ -276,6 +277,20 @@ internal sealed partial class PptxRenderer
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
+                        if (!stacked && barEndY >= barBaseY &&
+                            ResolveChartDataLabelPosition(labelPosition) == PptxSceneChartDataLabelPosition.OutsideEnd &&
+                            CanWrapAutomaticColumnLabel(effectiveOptions) && !string.IsNullOrEmpty(label))
+                        {
+                            double barWidth = GetClusteredBarWidth(categoryWidth, denseValueSeries.Count, barOptions.GapWidth, barOptions.Overlap);
+                            double step = GetClusteredBarStep(barWidth, barOptions.Overlap);
+                            double clusterWidth = barWidth + Math.Max(0, denseValueSeries.Count - 1) * step;
+                            double centerX = plotBox.X + category * categoryWidth + (categoryWidth - clusterWidth) / 2d + seriesIndex * step + barWidth / 2d;
+                            ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
+                                ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category)) : null;
+                            await AddAutomaticColumnLabelAsync(runs, graphics, label, effectiveOptions, style,
+                                textMeasurer, chartFrame, centerX, barEndY, keyFill, context.CancellationToken).ConfigureAwait(false);
+                            continue;
+                        }
                         double legendKeyWidth = effectiveOptions.ShowLegendKey
                             ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
                             : 0d;

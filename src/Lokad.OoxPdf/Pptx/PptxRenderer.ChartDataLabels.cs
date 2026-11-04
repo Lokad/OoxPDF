@@ -241,7 +241,8 @@ internal sealed partial class PptxRenderer
         return properties.RotationDegrees is null &&
             string.IsNullOrEmpty(properties.RotationValue) &&
             string.IsNullOrEmpty(properties.OrientationValue) &&
-            string.IsNullOrEmpty(properties.VerticalOverflowValue);
+            string.IsNullOrEmpty(properties.VerticalOverflowValue) &&
+            string.IsNullOrEmpty(properties.WrapValue);
     }
 
     // Radar axis labels route here alone (data labels use AddChartLabelRuns below);

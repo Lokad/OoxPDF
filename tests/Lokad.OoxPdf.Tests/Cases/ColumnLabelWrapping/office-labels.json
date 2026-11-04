@@ -1,0 +1,267 @@
+[
+  {
+    "Id": "single-short",
+    "InputSha256": "C7E3DB24E9D708DB9139C7B9DF22D2C01778688A198C3B9BEA60247312CD03E8",
+    "ReferencePdfSha256": "F51A8E80F8CD93D8C343AA1DF9E104365D29C5489276F7BE59DCE51245F49406",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "R, W1, 82", "Left": 38.196141732283465, "Top": 78.04015748031496, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "R, W2, 85", "Left": 120.49921259842519, "Top": 66.75685039370079, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "R, W3, 79", "Left": 202.80220472440945, "Top": 89.32346456692913, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "R, W4, 91", "Left": 285.10519685039367, "Top": 44.19015748031496, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "R, W5, 88", "Left": 367.4081889763779, "Top": 55.47354330708661, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "R, W6, 94", "Left": 449.71125984251967, "Top": 32.906850393700786, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "R, W7, 87", "Left": 532.0142519685039, "Top": 59.23464566929133, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "R, W8, 96", "Left": 614.3172440944882, "Top": 25.384645669291338, "Width": 99.06244094488189, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "single-long-word",
+    "InputSha256": "3B0B515902027F89DEC31234E5E03D8A1206200FD0C116D5C2B1019F8B902AF1",
+    "ReferencePdfSha256": "9C0592EC148168FCF562A011F6F457EDBB832FF1DB01D008FBDCE9509B67C86E",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "AnnualRevenueForecast, W1, 82", "Left": 7.266141732283463, "Top": 56.0651968503937, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "AnnualRevenueForecast, W2, 85", "Left": 89.5692125984252, "Top": 44.781889763779525, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "AnnualRevenueForecast, W3, 79", "Left": 171.87220472440944, "Top": 67.34850393700788, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "AnnualRevenueForecast, W4, 91", "Left": 254.17519685039366, "Top": 22.2151968503937, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "AnnualRevenueForecast, W5, 88", "Left": 336.47818897637796, "Top": 33.49858267716535, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "AnnualRevenueForecast, W6, 94", "Left": 418.78125984251966, "Top": 10.931889763779527, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "AnnualRevenueForecast, W7, 87", "Left": 501.0842519685039, "Top": 37.259685039370076, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "AnnualRevenueForecast, W8, 96", "Left": 555.0775590551181, "Top": 3.4096850393700784, "Width": 160.92244094488188, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "single-spaced",
+    "InputSha256": "8F5DDFE207D456C593B883C8BC90C37B7FA2FC8B95349EC1D165D0E6490E05F1",
+    "ReferencePdfSha256": "B72DCAD1CF15C0EC7FF7B89C5EF4F410C56A0D4AE6610BED1AD3A71E1D58D2A6",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Regional sales performance, W1, 82", "Left": 6.951102362204724, "Top": 34.09015748031496, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "Regional sales performance, W2, 85", "Left": 89.25417322834645, "Top": 22.806850393700785, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "Regional sales performance, W3, 79", "Left": 171.5571653543307, "Top": 45.37346456692913, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "Regional sales performance, W4, 91", "Left": 253.86015748031497, "Top": 0.2401574803149602, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "Regional sales performance, W5, 88", "Left": 336.1631496062992, "Top": 11.523543307086614, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "Regional sales performance, W6, 94", "Left": 418.4662204724409, "Top": -4.0, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "Regional sales performance, W7, 87", "Left": 500.76921259842516, "Top": 15.284645669291336, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "Regional sales performance, W8, 96", "Left": 554.4474803149606, "Top": -4.0, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "narrow-composed12",
+    "InputSha256": "1E55C80C9C4EFA07728BB52AD20D59F7F123121C69956CA0CF648C51533F1C9A",
+    "ReferencePdfSha256": "A015F21F895023F43990EC46DE0B6B4D4BDE177DAF1EAC035A6AC8F24C3963B8",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 480.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 418.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Regional sales performance, W1, 82", "Left": 17.369842519685037, "Top": 150.09291338582676, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "Regional sales performance, W2, 85", "Left": 69.67291338582677, "Top": 142.5707086614173, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "Regional sales performance, W3, 79", "Left": 121.97590551181102, "Top": 157.6151181102362, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "Regional sales performance, W4, 91", "Left": 174.27889763779527, "Top": 127.52629921259842, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "Regional sales performance, W5, 88", "Left": 226.58188976377951, "Top": 135.04850393700787, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "Regional sales performance, W6, 94", "Left": 278.88496062992124, "Top": 120.00401574803149, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "Regional sales performance, W7, 87", "Left": 331.1879527559055, "Top": 137.555905511811, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "Regional sales performance, W8, 96", "Left": 365.2849606299212, "Top": 114.9892125984252, "Width": 110.71503937007874, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 1, "Text": "Companion sales forecast, W1, 131", "Left": 18.90732283464567, "Top": 41.879999999999995, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 2, "Text": "Companion sales forecast, W2, 134", "Left": 71.21039370078739, "Top": 34.35779527559055, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 3, "Text": "Companion sales forecast, W3, 128", "Left": 123.51338582677165, "Top": 49.40228346456693, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 4, "Text": "Companion sales forecast, W4, 140", "Left": 175.8163779527559, "Top": 19.313385826771654, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 5, "Text": "Companion sales forecast, W5, 137", "Left": 228.11937007874013, "Top": 26.835590551181102, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 6, "Text": "Companion sales forecast, W6, 143", "Left": 280.4224409448819, "Top": 11.791181102362204, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 7, "Text": "Companion sales forecast, W7, 136", "Left": 332.72543307086613, "Top": 29.342992125984253, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1},
+      {"Series": 2, "Point": 8, "Text": "Companion sales forecast, W8, 145", "Left": 368.3599212598425, "Top": 6.7763779527559045, "Width": 107.64007874015748, "Height": 32.3, "FontName": "Calibri", "FontSize": 12.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "wide-composed24",
+    "InputSha256": "4E66DBD28FD485B98D148C17624C3E3DF6E5652EB303E60A81A7FC682DB1B320",
+    "ReferencePdfSha256": "8338EF2730672E45AB9E7B1DF5AEED1E59A2CEA8632ED4CEF691028BFA6A2B39",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 800.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 738.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Quarterly revenue, W1, 82", "Left": 9.794645669291338, "Top": 106.15787401574802, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "Quarterly revenue, W2, 85", "Left": 102.09763779527559, "Top": 98.63566929133857, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "Quarterly revenue, W3, 79", "Left": 194.40062992125982, "Top": 113.68007874015747, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "Quarterly revenue, W4, 91", "Left": 286.70370078740154, "Top": 83.59125984251968, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "Quarterly revenue, W5, 88", "Left": 379.0066929133858, "Top": 91.11346456692912, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "Quarterly revenue, W6, 94", "Left": 471.30968503937004, "Top": 76.06897637795275, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "Quarterly revenue, W7, 87", "Left": 563.6126771653543, "Top": 93.62086614173228, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "Quarterly revenue, W8, 96", "Left": 630.1344881889763, "Top": 71.05417322834646, "Width": 165.86551181102362, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 1, "Text": "Companion sales forecast, W1, 131", "Left": 6.447086614173228, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 2, "Text": "Companion sales forecast, W2, 134", "Left": 98.75015748031495, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 3, "Text": "Companion sales forecast, W3, 128", "Left": 191.0531496062992, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 4, "Text": "Companion sales forecast, W4, 140", "Left": 283.35614173228345, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 5, "Text": "Companion sales forecast, W5, 137", "Left": 375.6591338582677, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 6, "Text": "Companion sales forecast, W6, 143", "Left": 467.96220472440945, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 7, "Text": "Companion sales forecast, W7, 136", "Left": 560.2651968503936, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1},
+      {"Series": 2, "Point": 8, "Text": "Companion sales forecast, W8, 145", "Left": 623.4394488188976, "Top": -4.0, "Width": 172.56055118110234, "Height": 90.88503937007873, "FontName": "Calibri", "FontSize": 24.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "plain-spaced",
+    "InputSha256": "58C2112FAC5A419447D3312ECEDD4640F911989B3EB294C5C1A2EFB443A7F4FA",
+    "ReferencePdfSha256": "2B4D3574F7C73B8881F3CC8390EBF08FE6B1089413F30803460BFFD324D30009",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Regional sales performance, W1, 82", "Left": 18.33984251968504, "Top": 34.09015748031496, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "Regional sales performance, W2, 85", "Left": 100.64291338582677, "Top": 22.806850393700785, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "Regional sales performance, W3, 79", "Left": 182.94590551181102, "Top": 45.37346456692913, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "Regional sales performance, W4, 91", "Left": 265.24889763779527, "Top": 0.2401574803149602, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "Regional sales performance, W5, 88", "Left": 347.5518897637795, "Top": 11.523543307086614, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "Regional sales performance, W6, 94", "Left": 429.85496062992127, "Top": -4.0, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "Regional sales performance, W7, 87", "Left": 512.1579527559055, "Top": 15.284645669291336, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "Regional sales performance, W8, 96", "Left": 577.2249606299213, "Top": -4.0, "Width": 138.77503937007873, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "explicit-no-wrap",
+    "InputSha256": "03C0081DE1E188B332CEF76C63C810B4136DFE32CB4443BACE14E659325A11AF",
+    "ReferencePdfSha256": "A4F18EA605415A0B2517C114CD1EE2F10ADE1021379198DDC8D48B09C69C3F13",
+    "Automatic": false,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Quarterly revenue and margin, W1, 82", "Left": 4.338661417322834, "Top": 78.04015748031496, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 2, "Text": "Quarterly revenue and margin, W2, 85", "Left": 86.64165354330709, "Top": 66.75685039370079, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 3, "Text": "Quarterly revenue and margin, W3, 79", "Left": 168.94464566929133, "Top": 89.32346456692913, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 4, "Text": "Quarterly revenue and margin, W4, 91", "Left": 251.24771653543306, "Top": 44.19015748031496, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 5, "Text": "Quarterly revenue and margin, W5, 88", "Left": 333.55070866141733, "Top": 55.47354330708661, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 6, "Text": "Quarterly revenue and margin, W6, 94", "Left": 415.8537007874016, "Top": 32.906850393700786, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 7, "Text": "Quarterly revenue and margin, W7, 87", "Left": 498.1566929133858, "Top": 59.23464566929133, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 8, "Text": "Quarterly revenue and margin, W8, 96", "Left": 549.2225196850393, "Top": 25.384645669291338, "Width": 166.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0}
+    ]
+  },
+  {
+    "Id": "manual-last",
+    "InputSha256": "36FF88DABEEBB308A37992DB1D35968C3C409B590465A96654B1C7E0E373EA4C",
+    "ReferencePdfSha256": "0FB68A0A59298E76BC7601A5DAE5FC74457450C68B8CC3A2C0D3EFD6FD56EE20",
+    "Automatic": false,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Regional sales performance, W1, 82", "Left": 6.951102362204724, "Top": 34.09015748031496, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "Regional sales performance, W2, 85", "Left": 89.25417322834645, "Top": 22.806850393700785, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "Regional sales performance, W3, 79", "Left": 171.5571653543307, "Top": 45.37346456692913, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "Regional sales performance, W4, 91", "Left": 253.86015748031497, "Top": 0.2401574803149602, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "Regional sales performance, W5, 88", "Left": 336.1631496062992, "Top": 11.523543307086614, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "Regional sales performance, W6, 94", "Left": 418.4662204724409, "Top": -4.0, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "Regional sales performance, W7, 87", "Left": 500.76921259842516, "Top": 15.284645669291336, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "Regional sales performance, W8, 96", "Left": 600.8, "Top": 58.99968503937008, "Width": 115.19999999999999, "Height": 43.199999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "two-categories",
+    "InputSha256": "52F97B5BF2995DA4BB7B23C7154A7D6EA19B21875213E5C3B66C9399E75B7BC6",
+    "ReferencePdfSha256": "46D0AF69E27D70DBFEC91065202528D9CF7ADC3AFAD074F8B23D882B97220E93",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "ColumnSource, W1, 82", "Left": 141.39818897637795, "Top": 56.0651968503937, "Width": 139.56748031496062, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "ColumnSource, W2, 85", "Left": 470.6102362204724, "Top": 44.781889763779525, "Width": 139.56748031496062, "Height": 46.949999999999996, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "nowrap-narrow",
+    "InputSha256": "D59255D01E269EB5ABD1E957B70A396CC86D71E7C9EA918DEA8BDA88D34199BD",
+    "ReferencePdfSha256": "F55F64940AFDF08CBD9377C5AC9DD7B2F07165155A5A07D3DEF5848F150E7CA3",
+    "Automatic": false,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 480.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 418.424094488189, "PlotInsideHeight": 376.1108661417323, "ChartAreaLeft": 4.0, "ChartAreaTop": 4.0, "ChartAreaWidth": 480.0, "ChartAreaHeight": 432.0},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Quarterly revenue and margin, W1, 82", "Left": 13.338661417322832, "Top": 78.04015748031496, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 2, "Text": "Quarterly revenue and margin, W2, 85", "Left": 65.64165354330709, "Top": 66.75685039370079, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 3, "Text": "Quarterly revenue and margin, W3, 79", "Left": 117.94464566929133, "Top": 89.32346456692913, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 4, "Text": "Quarterly revenue and margin, W4, 91", "Left": 170.24771653543306, "Top": 44.19015748031496, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 5, "Text": "Quarterly revenue and margin, W5, 88", "Left": 222.5507086614173, "Top": 55.47354330708661, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 6, "Text": "Quarterly revenue and margin, W6, 94", "Left": 274.8537007874016, "Top": 32.906850393700786, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 7, "Text": "Quarterly revenue and margin, W7, 87", "Left": 327.1566929133858, "Top": 59.23464566929133, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 8, "Text": "Quarterly revenue and margin, W8, 96", "Left": 357.22251968503934, "Top": 25.384645669291338, "Width": 118.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0}
+    ]
+  },
+  {
+    "Id": "nowrap-wide",
+    "InputSha256": "F2185719B199EDF0DAACAB5A9D7A92632FE13248FCB0DF38C5E8D2719BED42AA",
+    "ReferencePdfSha256": "8C9C4A8573800707A3F14F13E28F6BF6B8FAF4BBE1DCF25262FD1D29C546048C",
+    "Automatic": false,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 800.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 738.424094488189, "PlotInsideHeight": 376.1108661417323, "ChartAreaLeft": 4.0, "ChartAreaTop": 4.0, "ChartAreaWidth": 800.0, "ChartAreaHeight": 432.0},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Quarterly revenue and margin, W1, 82", "Left": 1.3386614173228342, "Top": 78.04015748031496, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 2, "Text": "Quarterly revenue and margin, W2, 85", "Left": 93.64165354330709, "Top": 66.75685039370079, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 3, "Text": "Quarterly revenue and margin, W3, 79", "Left": 185.94464566929133, "Top": 89.32346456692913, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 4, "Text": "Quarterly revenue and margin, W4, 91", "Left": 278.2477165354331, "Top": 44.19015748031496, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 5, "Text": "Quarterly revenue and margin, W5, 88", "Left": 370.55070866141733, "Top": 55.47354330708661, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 6, "Text": "Quarterly revenue and margin, W6, 94", "Left": 462.8537007874016, "Top": 32.906850393700786, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 7, "Text": "Quarterly revenue and margin, W7, 87", "Left": 555.1566929133858, "Top": 59.23464566929133, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0},
+      {"Series": 1, "Point": 8, "Text": "Quarterly revenue and margin, W8, 96", "Left": 613.2225196850393, "Top": 25.384645669291338, "Width": 182.77748031496063, "Height": 24.97503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": 0}
+    ]
+  },
+  {
+    "Id": "arial14-frame640",
+    "InputSha256": "252971B977568CC4EF2D73FF8A967072A039D378B348255BDBCC411A31185F37",
+    "ReferencePdfSha256": "5757D4BAF077D02787FDE1B5777D71D097374A06356F8E119910EF219698EFD7",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 640.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 578.424094488189, "PlotInsideHeight": 376.1108661417323, "ChartAreaLeft": 4.0, "ChartAreaTop": 4.0, "ChartAreaWidth": 640.0, "ChartAreaHeight": 432.0},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "AnnualRevenueForecastSales, W1, 82", "Left": 10.879370078740157, "Top": 67.8151968503937, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "AnnualRevenueForecastSales, W2, 85", "Left": 83.1823622047244, "Top": 56.531889763779525, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "AnnualRevenueForecastSales, W3, 79", "Left": 155.48535433070865, "Top": 79.09850393700788, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "AnnualRevenueForecastSales, W4, 91", "Left": 227.78842519685037, "Top": 33.965196850393696, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "AnnualRevenueForecastSales, W5, 88", "Left": 300.0914173228346, "Top": 45.24858267716535, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "AnnualRevenueForecastSales, W6, 94", "Left": 372.39440944881886, "Top": 22.681889763779527, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "AnnualRevenueForecastSales, W7, 87", "Left": 444.6974015748031, "Top": 49.009685039370076, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "AnnualRevenueForecastSales, W8, 96", "Left": 492.30393700787397, "Top": 15.159685039370078, "Width": 143.69606299212597, "Height": 35.199999999999996, "FontName": "Arial", "FontSize": 14.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "times20-frame640",
+    "InputSha256": "069B353711906B50566CD45DBADA99EE7E4B3850000F215DFBA22154F4970610",
+    "ReferencePdfSha256": "D1DF68BE02D78C474BB9A26D0D4C55E33D141A5C84E745ED1B96B5167824BCB8",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 640.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 578.424094488189, "PlotInsideHeight": 376.1108661417323, "ChartAreaLeft": 4.0, "ChartAreaTop": 4.0, "ChartAreaWidth": 640.0, "ChartAreaHeight": 432.0},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Regional sales performance, W1, 82", "Left": 10.224645669291338, "Top": 31.030157480314962, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "Regional sales performance, W2, 85", "Left": 82.52763779527558, "Top": 19.746850393700786, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "Regional sales performance, W3, 79", "Left": 154.83062992125983, "Top": 42.313464566929134, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "Regional sales performance, W4, 91", "Left": 227.13370078740155, "Top": -2.8198425196850394, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "Regional sales performance, W5, 88", "Left": 299.4366929133858, "Top": 8.463543307086614, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "Regional sales performance, W6, 94", "Left": 371.73968503937004, "Top": -4.0, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "Regional sales performance, W7, 87", "Left": 444.0426771653543, "Top": 12.224645669291338, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "Regional sales performance, W8, 96", "Left": 490.99448818897633, "Top": -4.0, "Width": 145.0055118110236, "Height": 71.98503937007874, "FontName": "Times New Roman", "FontSize": 20.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "manual-plot-frame720",
+    "InputSha256": "E120225D417395A02B5F8CAB0CAAEEB90C1FF296786FD0E1D5CF75DCDC75F083",
+    "ReferencePdfSha256": "D0035D405A958DECD40153A4CBB4DB56BADBE0F3F05AB2E5DF2F08DA2CDDBC1E",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 348.8, "PlotInsideTop": 112.29834645669291, "PlotInsideWidth": 360.0, "PlotInsideHeight": 280.8, "ChartAreaLeft": 4.0, "ChartAreaTop": 4.0, "ChartAreaWidth": 720.0, "ChartAreaHeight": 432.0},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "Regional sales performance, W1, 82", "Left": 290.52370078740154, "Top": 110.57330708661416, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "Regional sales performance, W2, 85", "Left": 335.52370078740154, "Top": 102.14929133858267, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "Regional sales performance, W3, 79", "Left": 380.52370078740154, "Top": 118.99732283464566, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "Regional sales performance, W4, 91", "Left": 425.52370078740154, "Top": 85.30133858267716, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "Regional sales performance, W5, 88", "Left": 470.52370078740154, "Top": 93.72527559055118, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "Regional sales performance, W6, 94", "Left": 515.5237007874016, "Top": 76.87732283464567, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "Regional sales performance, W7, 87", "Left": 554.4474803149606, "Top": 96.53330708661417, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "Regional sales performance, W8, 96", "Left": 554.4474803149606, "Top": 71.26133858267715, "Width": 161.55251968503936, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  },
+  {
+    "Id": "longword-boundary720",
+    "InputSha256": "DD4BBE1EB83ED26FAA93AF12B2DA03848579704A26FFA54E295C1FA746721136",
+    "ReferencePdfSha256": "DAE4FA50F0F26B859DB5D188AA780FB10711EED33266CD6E4400155FC6FDEA32",
+    "Automatic": true,
+    "Shape": {"OfficeVersion": "16.0", "DocumentOwned": true, "ShapeLeft": 72.0, "ShapeTop": 36.0, "ShapeWidth": 720.0, "ShapeHeight": 432.0, "PlotInsideLeft": 46.57590551181102, "PlotInsideTop": 11.98748031496063, "PlotInsideWidth": 658.424094488189, "PlotInsideHeight": 376.1108661417323, "ChartAreaLeft": 4.0, "ChartAreaTop": 4.0, "ChartAreaWidth": 720.0, "ChartAreaHeight": 432.0},
+    "Labels": [
+      {"Series": 1, "Point": 1, "Text": "AnnualRevenueForecastSales, W1, 82", "Left": 7.266141732283463, "Top": 34.09015748031496, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 2, "Text": "AnnualRevenueForecastSales, W2, 85", "Left": 89.5692125984252, "Top": 22.806850393700785, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 3, "Text": "AnnualRevenueForecastSales, W3, 79", "Left": 171.87220472440944, "Top": 45.37346456692913, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 4, "Text": "AnnualRevenueForecastSales, W4, 91", "Left": 254.17519685039366, "Top": 0.2401574803149602, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 5, "Text": "AnnualRevenueForecastSales, W5, 88", "Left": 336.47818897637796, "Top": 11.523543307086614, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 6, "Text": "AnnualRevenueForecastSales, W6, 94", "Left": 418.78125984251966, "Top": -4.0, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 7, "Text": "AnnualRevenueForecastSales, W7, 87", "Left": 501.0842519685039, "Top": 15.284645669291336, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1},
+      {"Series": 1, "Point": 8, "Text": "AnnualRevenueForecastSales, W8, 96", "Left": 555.0775590551181, "Top": -4.0, "Width": 160.92244094488188, "Height": 68.92503937007874, "FontName": "Calibri", "FontSize": 18.0, "WordWrap": -1}
+    ]
+  }
+]

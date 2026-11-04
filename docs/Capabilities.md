@@ -301,8 +301,12 @@ Approximate or restricted:
   legend entries and label keys share this recipe. Lone point-styled category
   keys retain point fills; series keys preserve negative inversion without
   adopting authored point fills. Source-index handling for custom and single-
-  accent recipes has not been generalized. Long data labels near frame edges
-  can still lose value suffixes through clipping; wrapping remains approximate.
+  accent recipes has not been generalized. Plain automatic outside-end labels
+  above clustered columns wrap at measured word/text-element boundaries and
+  admit their occupied text/key frame inside the chart. Manual, rich-text,
+  explicit no-wrap, negative-end, stacked and other placements retain their
+  existing paths and can still clip long text; no general collision avoidance
+  is claimed.
   Existing independent Office thresholds still apply.
 - A single-series line plot with point variation shares source-indexed paint
   across incoming straight/curved segments, markers, category-name legend entries

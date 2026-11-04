@@ -132,7 +132,8 @@ internal sealed partial class PptxSceneBuilder
             ParseOptionalOoxmlAngle(rotation),
             rotation,
             (string?)bodyProperties?.Attribute("vert") ?? string.Empty,
-            (string?)bodyProperties?.Attribute("vertOverflow") ?? string.Empty);
+            (string?)bodyProperties?.Attribute("vertOverflow") ?? string.Empty,
+            (string?)bodyProperties?.Attribute("wrap") ?? string.Empty);
     }
 
     private static double? ParseOptionalOoxmlAngle(string value)
