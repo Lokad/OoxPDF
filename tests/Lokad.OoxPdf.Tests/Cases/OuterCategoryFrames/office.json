@@ -1,0 +1,219 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "Uncalibrated against application view",
+  "Rows": [
+    {
+      "Id": "outer-arial24-width60",
+      "Input": "outer-arial24-width60.pptx",
+      "InputSha256": "FDDD095065EEC51829C890B6522012886A8998DC518F0320AA6786B188547F28",
+      "OfficePdfSha256": "A59099463D4A10DA552D26B6C3AD536C7B99E2A61FF85B00B211A803A18EB320",
+      "ExpectedRendererAngle": 0,
+      "NativeTextAngles": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-arial18-width44",
+      "Input": "outer-arial18-width44.pptx",
+      "InputSha256": "32B2FE6F8090B6D48859E7B67BC875278575D3FA96CFCD615818420DFBE103CF",
+      "OfficePdfSha256": "D6341DAF37A9A57F93A64407E82F3ED5A04C8279532BD0FBEEB430C92ECD5B75",
+      "ExpectedRendererAngle": 0,
+      "NativeTextAngles": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-arial24-no-numeric",
+      "Input": "outer-arial24-no-numeric.pptx",
+      "InputSha256": "E7D643B7696D7C59C29E4D2265E8806992C883BE7064091019AE55E0CB32C608",
+      "OfficePdfSha256": "42FEDA623C7BE05BC9052312862FF167A51F01E069EA1FDD121ECB6E2D1188EB",
+      "ExpectedRendererAngle": 0,
+      "NativeTextAngles": [
+        0.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-arial24-explicit-horizontal",
+      "Input": "outer-arial24-explicit-horizontal.pptx",
+      "InputSha256": "9185E610E5318EBF10DE2E4BFBC99A10AEE1B67C5C4D3E35F28D75641FD0ADC4",
+      "OfficePdfSha256": "ADCF4D83D81633EC7112B4F638BDED6F657C250D447FAF765F8F0EB6947CD53D",
+      "ExpectedRendererAngle": 0,
+      "NativeTextAngles": [],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": true
+    },
+    {
+      "Id": "outer-arial24-width50",
+      "Input": "outer-arial24-width50.pptx",
+      "InputSha256": "650E2CCE5F34AE45FDD35AC0A65FC23D0B346DEA931E417BF5C4ABD64ACF931D",
+      "OfficePdfSha256": "6FE71D22F27DF7FE75BE82532AD0202B2115BA7EE8EA27F48DFCF8B29654115F",
+      "ExpectedRendererAngle": 0,
+      "NativeTextAngles": [
+        0.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-quarter45",
+      "Input": "outer-quarter45.pptx",
+      "InputSha256": "C12AFF67707446E011D9F20EDEC25F8C77BA246FAC72584D3AF087A42D74F5E9",
+      "OfficePdfSha256": "771CC3C7350A0B52F60EBABD473CEE9000317D7082332CE3E12D5078F31AFFD6",
+      "ExpectedRendererAngle": -45,
+      "NativeTextAngles": [],
+      "NativeVectorCaptionGroups": 8,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-high90",
+      "Input": "outer-high90.pptx",
+      "InputSha256": "C48536D9B1FB522CFD5C0089439EB6409BBC0ED5312B1ECECA0851394ABC311A",
+      "OfficePdfSha256": "08162301B6CAAB1EE588DE5C2122000B7CC052944181C56FEFD8399611D99938",
+      "ExpectedRendererAngle": -90,
+      "NativeTextAngles": [
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-line90",
+      "Input": "outer-line90.pptx",
+      "InputSha256": "D9A873A6128737E85852A387A2D46317576E31B10C9D94C928C67EC33B613089",
+      "OfficePdfSha256": "13015177905493DD261CE2EEC6662BC88D0B8B6D67599AEBDDF8D0CCE01877C9",
+      "ExpectedRendererAngle": 0,
+      "NativeTextAngles": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-area45",
+      "Input": "outer-area45.pptx",
+      "InputSha256": "BA14090B558D2FAD40BCEAC006A6CA31C08BB644BCDCD90631F3114400C19BC5",
+      "OfficePdfSha256": "44CAEB0DBC7258B8D2F9B4E33FE70BF2D14C824E92A3F43B4DC0F442B83D3E17",
+      "ExpectedRendererAngle": -45,
+      "NativeTextAngles": [],
+      "NativeVectorCaptionGroups": 8,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-painted90",
+      "Input": "outer-painted90.pptx",
+      "InputSha256": "79B637629F875D9DBF152D1617C1F112EFBC9A0CB54329512C09B14B32175BCD",
+      "OfficePdfSha256": "5B5D8B9692AAB78516AD23CFBDD57F2DDB28F344B5D7BAB91B3BFC050E01F8A9",
+      "ExpectedRendererAngle": -90,
+      "NativeTextAngles": [
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-line-axis24-90",
+      "Input": "outer-line-axis24-90.pptx",
+      "InputSha256": "7464077178FDAD412D83B2BFD34CC0108F83CAD08401F6DE9433EACA8E7C556B",
+      "OfficePdfSha256": "C35670BD52517954C128558C0BE07CEC5E1F959451EDF8CF91C0D87BB454282C",
+      "ExpectedRendererAngle": -90,
+      "NativeTextAngles": [
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-area-axis24-90",
+      "Input": "outer-area-axis24-90.pptx",
+      "InputSha256": "0E6ECBE96EA902C8958456352458AD91558D593DF5475843D8E66DBFE7D2F04D",
+      "OfficePdfSha256": "D90C8D9847D13F392AF9364ACCE67590112074AC8F10E4291E20A09EDC672BE6",
+      "ExpectedRendererAngle": -90,
+      "NativeTextAngles": [
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0,
+        90.0
+      ],
+      "NativeVectorCaptionGroups": 0,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-authored45-low",
+      "Input": "outer-authored45-low.pptx",
+      "InputSha256": "3585871D043A0FECA8F17FC8B4D841324EDADFB776A6342BD0B962B90F5A7EA0",
+      "OfficePdfSha256": "0AF3298F97B077C6E59C83EC828460B9CCBE674396968809F6E05D55FAC63C70",
+      "ExpectedRendererAngle": -45,
+      "NativeTextAngles": [],
+      "NativeVectorCaptionGroups": 8,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-authored45-high",
+      "Input": "outer-authored45-high.pptx",
+      "InputSha256": "ACA96C120AC380D378F15848E57794BE59FE63AB7B9DAEBE1A779D2B28BFFDD2",
+      "OfficePdfSha256": "298C32319ECBC27878C0FDD5CF52D48462BCE727CE68ABA7224C4B5EACC0697D",
+      "ExpectedRendererAngle": 45,
+      "NativeTextAngles": [],
+      "NativeVectorCaptionGroups": 8,
+      "UnresolvedNativeCaptionOmission": false
+    },
+    {
+      "Id": "outer-arial24-heldout",
+      "Input": "../OuterPlotFrames/outer-arial24-heldout.pptx",
+      "InputSha256": "07345A80F70E12E012BD9CA6E5C5FD314D7C3881257F0C3C198ED8DB3B57FBC6",
+      "ExpectedRendererAngle": -90
+    }
+  ]
+}

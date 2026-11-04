@@ -48,15 +48,17 @@ internal static partial class PptxSourceUnitBoundsTests
             "Vertical captions add no horizontal advance reserve, matching the native control.");
     }
 
-    private static void CheckCaptionInk(PdfPage page, int angle)
+    internal static void CheckCaptionInk(PdfPage page, int angle, int expectedCount = 19,
+        double frameLeft = 72d, double frameRight = 648d, double? frameBottom = null, double? frameTop = null)
     {
         var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
             fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
-        TestAssert.Equal(19, captions.Length);
+        TestAssert.Equal(expectedCount, captions.Length);
         double radians = -angle * Math.PI / 180, cos = Math.Cos(radians), sin = Math.Sin(radians);
         foreach (var show in captions)
         {
             double cursor = 0, left = double.PositiveInfinity, right = double.NegativeInfinity;
+            double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
             var font = show.Font.Font;
             foreach (Rune rune in show.Text.EnumerateRunes())
             {
@@ -69,10 +71,14 @@ internal static partial class PptxSourceUnitBoundsTests
                     double actual = show.X + (cursor + x) * cos - y * sin;
                     left = Math.Min(left, actual);
                     right = Math.Max(right, actual);
+                    double vertical = show.Y + (cursor + x) * sin + y * cos;
+                    bottom = Math.Min(bottom, vertical);
+                    top = Math.Max(top, vertical);
                 }
                 cursor += font.GetAdvanceWidth(glyph) * scale;
             }
-            TestAssert.True(left >= 72 && right <= 648,
+            TestAssert.True(left >= frameLeft && right <= frameRight &&
+                (frameBottom is null || bottom >= frameBottom) && (frameTop is null || top <= frameTop),
                 $"Full category ink survives the chart clip: {show.Text} {left:F3}..{right:F3}.");
         }
     }

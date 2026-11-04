@@ -17,55 +17,72 @@ internal sealed partial class PptxRenderer
         return adjustment is { } offset ? baseline + offset : baseline * offsetScale;
     }
 
-    private static async ValueTask<ChartLayout> AdmitManualCartesianAxisFramesAsync(ChartLayout layout,
+    private static async ValueTask<ChartLayout> PrepareCartesianCategoryFramesAsync(ChartLayout layout,
         PptxTheme theme, PptxSceneChart chart, XDocument xml, ChartAxisSource valueAxis,
         ChartValueExtents extents, ChartValueAxisRenderOptions options, double tickTarget,
-        bool defaultRightSide, ChartAxisSource categoryAxis, int categoryCount, double categoryRatio, bool categoryHighSide,
-        PresentationFontResolver resolver, PptxRenderContext context, string? defaultNumberFormat = null)
+        bool defaultRightSide, ChartAxisSource categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, double categoryRatio, bool categoryHighSide,
+        PresentationFontResolver resolver, PptxRenderContext context, ChartLegendBox? legendBox = null, string? defaultNumberFormat = null)
     {
-        bool outer = chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer;
-        if (!layout.ManualPlotLayoutApplied ||
-            chart.PlotAreaLayout.LayoutTargetKind is not (PptxSceneChartManualLayoutTarget.Inner or PptxSceneChartManualLayoutTarget.Outer) ||
-            chart.Axes.Count(axis => axis.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
-            valueAxis.SceneAxis is not { HasLogarithmicScale: false, CrossesAt: null } ||
-            categoryAxis.SceneAxis?.AxisKind != PptxSceneChartAxisKind.Category ||
-            chart.Title.Layout.HasGeometryValues || layout.Legend.Layout.HasGeometryValues ||
-            layout.CategoryLabels is { RotationDegrees: not 0d } ||
-            layout.CategoryLabels?.Labels.Values.Any(parts => parts.Length != 1) == true)
-            return layout;
-
-        // An outer source rectangle contains its caption bands. Keep incomplete
-        // or composed declarations on their existing container-specific path.
-        if (outer && (chart.Plots.Count != 1 || chart.PlotAreaLayout is not
+        bool canAdmit = layout.ManualPlotLayoutApplied &&
+            chart.Axes.Count(axis => axis.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
+            valueAxis.SceneAxis is { HasLogarithmicScale: false, CrossesAt: null } &&
+            categoryAxis.SceneAxis?.AxisKind == PptxSceneChartAxisKind.Category &&
+            !chart.Title.Layout.HasGeometryValues && !layout.Legend.Layout.HasGeometryValues;
+        bool inner = canAdmit && chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner;
+        bool outer = canAdmit && chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer &&
+            chart.Plots.Count == 1 && chart.PlotAreaLayout is
             { X: not null, Y: not null, Width: not null, Height: not null,
-              WidthModeKind: PptxSceneChartManualLayoutMode.Factor, HeightModeKind: PptxSceneChartManualLayoutMode.Factor }))
-            return layout;
-
-        var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
+              WidthModeKind: PptxSceneChartManualLayoutMode.Factor, HeightModeKind: PptxSceneChartManualLayoutMode.Factor };
+        ChartLayout original = layout;
+        ChartPlotBox source = layout.PlotBox;
         double numericClearance = 0d, numericBand = 0d;
         bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(chart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide);
-        if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
-        {
-            ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, valueAxis.SceneAxis, xml, valueAxis.XmlAxis,
-                PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
-            numericClearance = (await measure.MeasureLineBoxAsync(style).ConfigureAwait(false)).Height / 2d;
-            var captions = await MeasureChartValueAxisCaptionsAsync(measure, style, valueAxis, extents,
-                options.Units, tickTarget, options.TickPolicy, defaultNumberFormat, reserveEndpoints: true, context).ConfigureAwait(false);
-            numericBand = captions.MaximumWidth + Math.Max(3d, style.FontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor) +
-                PptxChartMetricRules.OuterPlotCaptionPadding;
-        }
-        ChartPlotBox source = layout.PlotBox;
+        bool onTickMarks = ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis);
+        // Outer captions fit the area remaining after numeric admission. Inner
+        // and automatic layouts retain their established preparation order.
         if (outer)
+        {
+            (numericClearance, numericBand) = await MeasureNumericFrameAsync().ConfigureAwait(false);
             source = ResolveCartesianPlotPosition(chart.PlotAreaLayout, layout.Frame,
                 new(layout.PlotAreaBox, source, PptxSceneChartManualLayoutTarget.Outer)).PlotBox;
+            if (source.Width - numericBand < 1d) outer = false;
+            else layout = layout with { PlotBox = source with { X = source.X + (labelsRight ? 0d : numericBand),
+                Width = source.Width - numericBand } };
+        }
+        bool categoryVisible = categoryAxis.SceneAxis is { } axis ? axis.IsDeleted != true : !IsChartAxisDeleted(categoryAxis.XmlAxis);
+        if (categoryVisible)
+            layout = await PrepareCategoryLabelLayoutAsync(layout, theme, chart, xml, categoryAxis, labels,
+                onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox,
+                outer ? Math.Max(0d, source.Height - 2d * numericClearance) : null).ConfigureAwait(false);
+        if (!inner && !outer) return layout;
+        if (layout.CategoryLabels?.Labels.Values.Any(parts => parts.Length != 1) == true)
+            return outer ? await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
+                onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false) : layout;
+        if (inner)
+        {
+            if (layout.CategoryLabels is { RotationDegrees: not 0d }) return layout;
+            (numericClearance, numericBand) = await MeasureNumericFrameAsync().ConfigureAwait(false);
+            source = layout.PlotBox;
+        }
         double categoryClearance = 0d, categoryBand = 0d;
+        double captionRadians = -(layout.CategoryLabels?.RotationDegrees ?? 0d) * Math.PI / 180d;
+        double captionSin = Math.Sin(captionRadians), captionCos = Math.Cos(captionRadians);
+        bool rightCaptionAnchor = (captionRadians > 0d) != categoryHighSide;
         if (layout.CategoryLabels is { } category && category.Labels.Values.Any(parts => parts.Any(part => part.Text.Length > 0)))
         {
             categoryClearance = category.LineHeight / 2d;
-            categoryBand = ChartCategoryLabelBaselineDistance(category.Style.FontSize, categoryHighSide,
+            double baseline = ChartCategoryLabelBaselineDistance(category.Style.FontSize, categoryHighSide,
                 ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
-                layout.AutomaticCategoryLabelOffsetAdjustment) +
-                (categoryHighSide ? category.Ascent : category.Descent) + PptxChartMetricRules.OuterPlotCaptionPadding;
+                layout.AutomaticCategoryLabelOffsetAdjustment);
+            if (category.RotationDegrees == 0d)
+                categoryBand = baseline + (categoryHighSide ? category.Ascent : category.Descent) + PptxChartMetricRules.OuterPlotCaptionPadding;
+            else
+            {
+                double gap = Math.Max(0d, baseline - (categoryHighSide ? category.Descent : category.Ascent));
+                categoryBand = gap + category.Labels.Values.Max(parts =>
+                    (parts[0].Width - (rightCaptionAnchor ? parts[0].OverflowAdvance : 0d)) * Math.Abs(captionSin) + category.LineHeight * captionCos) +
+                    PptxChartMetricRules.OuterPlotCaptionPadding;
+            }
         }
         if (outer)
         {
@@ -79,24 +96,26 @@ internal sealed partial class PptxRenderer
                     categoryAxis.SceneAxis, xml, categoryAxis.XmlAxis, PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
                 categoryBand = Math.Max(categoryBand, style.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
             }
-            bool onTickMarks = ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis);
             bool reversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
             (double Left, double Right) RequiredBands(double width)
             {
                 double left = labelsRight ? 0d : numericBand, right = labelsRight ? numericBand : 0d;
-                if (categoryCount > 0 && layout.CategoryLabels is { } captions)
+                if (labels.Count > 0 && layout.CategoryLabels is { } captions)
                     foreach (var (index, parts) in captions.Labels)
                     {
                         resolver.CancellationToken.ThrowIfCancellationRequested();
-                        double ratio = ChartCategoryToPlotCoordinate(index, categoryCount, 0d, 1d, onTickMarks, reversed);
-                        double half = parts[0].Width / 2d + PptxChartMetricRules.DataLabelHorizontalPadding;
-                        left = Math.Max(left, half - ratio * width);
-                        right = Math.Max(right, half - (1d - ratio) * width);
+                        double ratio = ChartCategoryToPlotCoordinate(index, labels.Count, 0d, 1d, onTickMarks, reversed);
+                        var frame = ChartCategoryCaptionHorizontalFrame(0d, parts[0].Width, captions.Ascent, captions.Descent,
+                            captionSin, captionCos, rightCaptionAnchor);
+                        left = Math.Max(left, -frame.Left + PptxChartMetricRules.DataLabelHorizontalPadding - ratio * width);
+                        right = Math.Max(right, frame.Right + PptxChartMetricRules.DataLabelHorizontalPadding - (1d - ratio) * width);
                     }
                 return (left, right);
             }
             var bands = AdmitChartCaptionBands(source.Width, source.Width, RequiredBands);
-            if (bands is null) return layout;
+            if (bands is null)
+                return await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
+                    onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false);
             var verticalBand = AdmitChartCaptionInterval(source.Y, source.Height, source.Y, source.Height,
                 numericClearance, numericClearance, categoryBand, new(0d, categoryRatio, categoryHighSide, categoryHighSide));
             ChartPlotBox inner = new(source.X + bands.Value.Left, verticalBand.Start, bands.Value.Width, verticalBand.Length);
@@ -135,6 +154,19 @@ internal sealed partial class PptxRenderer
                 Y = layout.PlotAreaBox.Y + plot.Y - source.Y, Width = Math.Max(1d, layout.PlotAreaBox.Width + plot.Width - source.Width),
                 Height = Math.Max(1d, layout.PlotAreaBox.Height + plot.Height - source.Height) }
         };
+
+        async ValueTask<(double Clearance, double Band)> MeasureNumericFrameAsync()
+        {
+            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis)) return (0d, 0d);
+            var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
+            ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, valueAxis.SceneAxis, xml, valueAxis.XmlAxis,
+                PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+            double clearance = (await measure.MeasureLineBoxAsync(style).ConfigureAwait(false)).Height / 2d;
+            var captions = await MeasureChartValueAxisCaptionsAsync(measure, style, valueAxis, extents,
+                options.Units, tickTarget, options.TickPolicy, defaultNumberFormat, reserveEndpoints: true, context).ConfigureAwait(false);
+            return (clearance, captions.MaximumWidth + Math.Max(3d, style.FontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor) +
+                PptxChartMetricRules.OuterPlotCaptionPadding);
+        }
     }
 
     private static async ValueTask<(ChartLayout Layout, ChartLegendBox? Box)> AdmitCartesianRightLegendAsync(
@@ -243,6 +275,7 @@ internal sealed partial class PptxRenderer
     private static (double Pivot, double Left, double Right) ChartCategoryCaptionHorizontalFrame(double center,
         double width, double ascent, double descent, double sin, double cos, bool rightAnchor)
     {
+        if (sin == 0d && cos == 1d) return (center, center - width / 2d, center + width / 2d);
         double pivot = center + (ascent - descent) * sin / 2d;
         double left = pivot + (rightAnchor ? -width * cos : 0d) + (sin >= 0d ? -ascent * sin : descent * sin);
         double right = pivot + (rightAnchor ? 0d : width * cos) + (sin >= 0d ? descent * sin : -ascent * sin);
@@ -385,7 +418,7 @@ internal sealed partial class PptxRenderer
         ChartLayout layout, PptxTheme theme, PptxSceneChart chart, XDocument xml,
         ChartAxisSource axis, IReadOnlyList<ChartIndexedTextPoint?> labels,
         bool onTickMarks, bool topSide, double axisRatio,
-        PresentationFontResolver resolver, ChartLegendBox? legendBox = null)
+        PresentationFontResolver resolver, ChartLegendBox? legendBox = null, double? availableCaptionHeight = null)
     {
         if (labels.Count == 0 || !IsSceneOrXmlChartAxisLabelVisible(axis.SceneAxis, axis.XmlAxis))
             return layout;
@@ -490,6 +523,8 @@ internal sealed partial class PptxRenderer
         double admitted = layout.ManualPlotLayoutApplied || !atEdge ? 0d :
             Math.Min(requested, Math.Max(0d, (layout.PlotBox.Height - line.Height) / 2d));
         double availableExtra = admitted + existingExtra;
+        if (availableCaptionHeight is { } captionHeight)
+            availableExtra = Math.Max(0d, captionHeight - line.Height);
         // Reuse the header owner's clearance rather than measuring its fonts
         // or rebuilding its eligibility here. The outer fitting budget restores
         // the default flat strip and removes the two minimum end margins.

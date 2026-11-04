@@ -75,16 +75,10 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, linePlot, chartXml, lineChart);
                 bool categoryAxisReversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
                 var categoryLabels = ReadSharedCategoryLabels(linePlot, lineChart, workbook, plotVisibleOnly);
-                if (axesStyle.CategoryAxisVisible)
-                    chartLayout = await PrepareCategoryLabelLayoutAsync(chartLayout, theme, sceneChart, chartXml, categoryAxis, categoryLabels,
-                        categoryPointsOnTickMarks,
-                        chartLayout.AutomaticCategoryAxisPlacement?.LabelsHighSide ?? false,
-                        chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
-                        fontResolver, preparedLegendBox).ConfigureAwait(false);
-                chartLayout = await AdmitManualCartesianAxisFramesAsync(chartLayout, theme, sceneChart, chartXml,
+                chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
                     valueAxis, valueExtents, valueAxisOptions, GetValueAxisAutoTickTargetCount(false, true, false), axesStyle.ValueAxisRightSide,
-                    categoryAxis, categoryLabels.Count, chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
-                    chartLayout.AutomaticCategoryAxisPlacement?.LabelsHighSide ?? false, fontResolver, context,
+                    categoryAxis, categoryLabels, chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
+                    chartLayout.AutomaticCategoryAxisPlacement?.LabelsHighSide ?? false, fontResolver, context, preparedLegendBox,
                     lineOptions.PercentStacked ? "0%" : null).ConfigureAwait(false);
                 var admitted = await AdmitCartesianRightLegendAsync(chartLayout, sceneChart, valueAxis,
                     categoryLabels, categoryPointsOnTickMarks, categoryAxisReversed, legendEntries, legendTextStyle,

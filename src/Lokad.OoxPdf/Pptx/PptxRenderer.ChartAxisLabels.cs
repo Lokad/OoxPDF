@@ -72,11 +72,8 @@ internal sealed partial class PptxRenderer
                     if (part.Text.Length == 0) continue;
                     double center = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
                     double axisY = axisCoordinate ?? plotBox.Y;
-                    double legacyHeight = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
-                    double baselineDistance = labelsHighSide
-                        ? legacyHeight * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor
-                        : legacyHeight * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor;
-                    baselineDistance = automaticLabelOffsetAdjustment is { } extra ? baselineDistance + extra : baselineDistance * labelOffsetScale;
+                    double baselineDistance = ChartCategoryLabelBaselineDistance(fontSize, labelsHighSide,
+                        labelOffsetScale, automaticLabelOffsetAdjustment);
                     double gap = Math.Max(0d, baselineDistance - (labelsHighSide ? rotated.Descent : rotated.Ascent));
                     double radians = -rotated.RotationDegrees * Math.PI / 180d;
                     double sin = Math.Sin(radians), cos = Math.Cos(radians);

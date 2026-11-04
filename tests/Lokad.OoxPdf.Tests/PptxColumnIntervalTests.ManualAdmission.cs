@@ -129,7 +129,7 @@ internal static partial class PptxColumnIntervalTests
     private static double[] AdmissionNumbers(JsonElement row, string name) => row.GetProperty(name).EnumerateArray().Select(value => value.GetDouble()).ToArray();
     private static JsonDocument AdmissionOracle() => JsonDocument.Parse(File.ReadAllText(Path.Combine(AdmissionCases, "office.json")));
 
-    private static PdfPage RenderAdmission(JsonElement row, bool link = false, string? caseDirectory = null)
+    private static PdfPage RenderAdmission(JsonElement row, bool link = false, string? caseDirectory = null, bool horizontalCategories = false)
     {
         string path = Path.Combine(caseDirectory ?? AdmissionCases, row.GetProperty("Input").GetString()!);
         TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
@@ -138,18 +138,35 @@ internal static partial class PptxColumnIntervalTests
         {
             using var source = entry.Open(); using var target = new MemoryStream(); source.CopyTo(target); return target.ToArray();
         });
-        if (link)
+        if (link || horizontalCategories)
         {
             using var source = new MemoryStream(parts["ppt/charts/chart1.xml"]);
             var xml = XDocument.Load(source);
-            var series = xml.Descendants(CrossingC + "barChart").Single().Elements(CrossingC + "ser").First();
-            series.Element(CrossingC + "cat")!.AddBeforeSelf(XElement.Parse("""
-                <c:dLbls xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:dLbl><c:idx val="0"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="admissionLink"/></a:rPr><a:t>L</a:t></a:r></a:p></c:rich></c:tx><c:dLblPos val="ctr"/><c:showVal val="0"/></c:dLbl></c:dLbls>
-                """));
+            if (horizontalCategories)
+            {
+                // The native endpoint witness is horizontal. Pin that source
+                // intent here so font substitution tests caption admission
+                // independently of the automatic-orientation boundary.
+                XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+                var axis = xml.Descendants(CrossingC + "catAx").Single();
+                var body = axis.Element(CrossingC + "txPr");
+                if (body is null) { body = new XElement(CrossingC + "txPr", new XElement(a + "bodyPr"), new XElement(a + "p")); axis.Add(body); }
+                body.Element(a + "bodyPr")!.SetAttributeValue("rot", "0");
+                var skip = axis.Element(CrossingC + "tickLblSkip");
+                if (skip is null) { skip = new XElement(CrossingC + "tickLblSkip"); axis.Add(skip); }
+                skip.SetAttributeValue("val", "1");
+            }
+            if (link)
+            {
+                var series = xml.Descendants(CrossingC + "barChart").Single().Elements(CrossingC + "ser").First();
+                series.Element(CrossingC + "cat")!.AddBeforeSelf(XElement.Parse("""
+                    <c:dLbls xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:dLbl><c:idx val="0"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:hlinkClick r:id="admissionLink"/></a:rPr><a:t>L</a:t></a:r></a:p></c:rich></c:tx><c:dLblPos val="ctr"/><c:showVal val="0"/></c:dLbl></c:dLbls>
+                    """));
+                parts["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="admissionLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/manual-caption" TargetMode="External"/></Relationships>
+                    """);
+            }
             parts["ppt/charts/chart1.xml"] = TestFixtures.Utf8(xml.ToString(SaveOptions.DisableFormatting));
-            parts["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="admissionLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/manual-caption" TargetMode="External"/></Relationships>
-                """);
         }
         using var stream = TestFixtures.CreateZipPackage(parts);
         using var package = OoxPackage.Open(stream, default);

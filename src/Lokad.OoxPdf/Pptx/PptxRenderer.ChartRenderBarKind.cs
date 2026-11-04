@@ -140,17 +140,12 @@ internal sealed partial class PptxRenderer
                 var categoryPlacement = resolvedCategory is { } placed ? (placed.LabelPlotRatio, placed.LabelsHighSide) :
                     ResolveChartAxisLabelPlacement(categoryAxis.SceneAxis, categoryAxis.XmlAxis,
                         GetChartValuePlotRatio(valueExtents, valueAxisOptions.CrossingValue ?? 0d, valueAxisOptions.Reversed), valueAxisOptions.Reversed);
-                if (!horizontalBars && axesStyle.CategoryAxisVisible)
-                    chartLayout = await PrepareCategoryLabelLayoutAsync(chartLayout, theme, sceneChart, chartXml, categoryAxis, categoryLabels,
-                        ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis),
-                        categoryPlacement.LabelsHighSide, categoryPlacement.LabelPlotRatio,
-                        fontResolver, preparedLegendBox).ConfigureAwait(false);
                 if (!horizontalBars)
-                    chartLayout = await AdmitManualCartesianAxisFramesAsync(chartLayout, theme, sceneChart, chartXml,
+                    chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
                         valueAxisSource, valueExtents, valueAxisOptions,
                         GetValueAxisAutoTickTargetCount(false, true, chartLayout.ManualPlotLayoutApplied), axesStyle.ValueAxisRightSide,
-                        categoryAxis, categoryLabels.Count, categoryPlacement.LabelPlotRatio, categoryPlacement.LabelsHighSide,
-                        fontResolver, context, percentStacked ? "0%" : null).ConfigureAwait(false);
+                        categoryAxis, categoryLabels, categoryPlacement.LabelPlotRatio, categoryPlacement.LabelsHighSide,
+                        fontResolver, context, preparedLegendBox, percentStacked ? "0%" : null).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts

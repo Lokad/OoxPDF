@@ -1,5 +1,11 @@
 {
   "pptx-manual-axis-admission": [
+    "PptxOuterCategoryOrientationUsesWidthAfterNumericAdmission",
+    "PptxOuterCategoryOrientationRespectsAxisFontAndContainerOwners",
+    "PptxOuterProjectedCategoryInkStaysInsideItsChart",
+    "PptxOuterCategoryAdmissionKeepsFillLegendAndLinkedLabelsTogether",
+    "PptxOuterExplicitCategoryOrientationPreservesSourceContent",
+    "PptxCategoryLabelRotationPreservesContentAcrossPlotKinds",
     "PptxManualOuterFramesUseIndependentCaptionSides",
     "PptxManualOuterHiddenAxesRetainTheirIndependentMinimumBand",
     "PptxManualOuterEndpointsOwnTheirMeasuredCaptionFrames",

@@ -50,8 +50,8 @@ internal static partial class PptxColumnIntervalTests
     public static void PptxManualOuterEndpointsOwnTheirMeasuredCaptionFrames()
     {
         using var oracle = OuterOracle();
-        PdfPage wide = RenderAdmission(OuterRow(oracle, "outer-width35-left12-y03"), caseDirectory: OuterCases);
-        PdfPage shortened = RenderAdmission(OuterRow(oracle, "outer-width35-last-short-fixed"), caseDirectory: OuterCases);
+        PdfPage wide = RenderAdmission(OuterRow(oracle, "outer-width35-left12-y03"), caseDirectory: OuterCases, horizontalCategories: true);
+        PdfPage shortened = RenderAdmission(OuterRow(oracle, "outer-width35-last-short-fixed"), caseDirectory: OuterCases, horizontalCategories: true);
         var before = AdmissionBounds(wide);
         var after = AdmissionBounds(shortened);
         TestAssert.True(after.Right > before.Right + 1d && Math.Abs(after.Left - before.Left) < .002d &&
