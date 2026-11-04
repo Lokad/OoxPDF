@@ -72,7 +72,7 @@ internal sealed partial class PptxRenderer
                         chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d, fontResolver, preparedLegendBox).ConfigureAwait(false);
                 chartLayout = await AdmitManualCartesianAxisFramesAsync(chartLayout, theme, sceneChart, chartXml,
                     valueAxis, valueExtents, valueAxisOptions, GetValueAxisAutoTickTargetCount(false, true, false), axesStyle.ValueAxisRightSide,
-                    categoryAxis, chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
+                    categoryAxis, categoryLabels.Count, chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
                     chartLayout.AutomaticCategoryAxisPlacement?.LabelsHighSide ?? false, fontResolver, context,
                     areaOptions.PercentStacked ? "0%" : null).ConfigureAwait(false);
                 var admitted = await AdmitCartesianRightLegendAsync(chartLayout, sceneChart, valueAxis,

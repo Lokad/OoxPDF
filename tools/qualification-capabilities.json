@@ -1,5 +1,10 @@
 {
   "pptx-manual-axis-admission": [
+    "PptxManualOuterFramesUseIndependentCaptionSides",
+    "PptxManualOuterHiddenAxesRetainTheirIndependentMinimumBand",
+    "PptxManualOuterEndpointsOwnTheirMeasuredCaptionFrames",
+    "PptxManualOuterPlotFillUsesTheNativeDataRectangle",
+    "PptxManualOuterLinkedLabelsFollowTheirAdmittedPlot",
     "PptxManualInnerFaceBoundaryKeepsSourceCaptions",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",

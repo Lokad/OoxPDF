@@ -129,9 +129,9 @@ internal static partial class PptxColumnIntervalTests
     private static double[] AdmissionNumbers(JsonElement row, string name) => row.GetProperty(name).EnumerateArray().Select(value => value.GetDouble()).ToArray();
     private static JsonDocument AdmissionOracle() => JsonDocument.Parse(File.ReadAllText(Path.Combine(AdmissionCases, "office.json")));
 
-    private static PdfPage RenderAdmission(JsonElement row, bool link = false)
+    private static PdfPage RenderAdmission(JsonElement row, bool link = false, string? caseDirectory = null)
     {
-        string path = Path.Combine(AdmissionCases, row.GetProperty("Input").GetString()!);
+        string path = Path.Combine(caseDirectory ?? AdmissionCases, row.GetProperty("Input").GetString()!);
         TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
         using var archive = ZipFile.OpenRead(path);
         var parts = archive.Entries.ToDictionary(entry => entry.FullName, entry =>

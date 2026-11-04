@@ -145,7 +145,7 @@ internal sealed partial class PptxRenderer
                     chartLayout = await AdmitManualCartesianAxisFramesAsync(chartLayout, theme, sceneChart, chartXml,
                         valueAxisSource, valueExtents, valueAxisOptions,
                         GetValueAxisAutoTickTargetCount(false, true, chartLayout.ManualPlotLayoutApplied), axesStyle.ValueAxisRightSide,
-                        categoryAxis, categoryPlacement.LabelPlotRatio, categoryPlacement.LabelsHighSide,
+                        categoryAxis, categoryLabels.Count, categoryPlacement.LabelPlotRatio, categoryPlacement.LabelsHighSide,
                         fontResolver, context, percentStacked ? "0%" : null).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
