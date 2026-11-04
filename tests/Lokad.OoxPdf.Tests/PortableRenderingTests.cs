@@ -16,6 +16,9 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingPageBreaksKeepMathPicturesAndNavigation() =>
+        DocxInlineCompositionTests.CheckComposedRunPageBreaks();
+
     public static void PortableRenderingPptxJustificationPreservesWordAndGlyphGeometry() =>
         PptxModelTests.CheckJustifiedTextLayout(new PinnedResolver(), compareOffice: false);
 

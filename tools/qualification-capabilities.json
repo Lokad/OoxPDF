@@ -1,4 +1,11 @@
 {
+  "docx-composed-breaks": [
+    "PortableRenderingPageBreaksKeepMathPicturesAndNavigation",
+    "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
+    "DocxInlineMetadataWrappersKeepHardBreakBoundaries",
+    "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
+    "DocxReaderSplitsNestedVisibleInlineContainerPageBreaks"
+  ],
   "pptx-scatter-edge-width": [
     "PptxScatterEdgeWidth",
     "PptxScatterEquivalentWidthDeclarationsPreserveContent",
