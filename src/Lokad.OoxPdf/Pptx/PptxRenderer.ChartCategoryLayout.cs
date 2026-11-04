@@ -69,9 +69,12 @@ internal sealed partial class PptxRenderer
             // Mirroring an outer caption changes its anchor, not its occupied
             // clearance. Native side/direction/offset controls reserve equal
             // heights. Keep the existing inner/automatic baseline owners.
+            // An authored offset is an increment in normal-line units, as on
+            // the automatic path; it does not scale the full baseline distance.
+            double offset = rotated.LineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio *
+                (ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis) - 1d);
             double gap = Math.Max(0d, ChartCategoryLabelBaselineDistance(rotated.Style.FontSize, highSide: false,
-                ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
-                layout.AutomaticCategoryLabelOffsetAdjustment) - rotated.Ascent);
+                offsetScale: 1d, adjustment: offset) - rotated.Ascent);
             layout = layout with { CategoryLabels = rotated with { AxisGap = gap } };
         }
         double categoryClearance = 0d, categoryBand = 0d;

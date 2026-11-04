@@ -25,6 +25,22 @@ internal static partial class PptxColumnIntervalTests
         }
     }
 
+    public static void PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight()
+    {
+        using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(CaptionClearanceCases, "office.json")));
+        var rows = oracle.RootElement.GetProperty("Rows").EnumerateArray().ToDictionary(row => row.GetProperty("Id").GetString()!);
+        foreach (string side in new[] { "high", "low" })
+        {
+            var ordinary = rows["outer-authored45-" + side];
+            var offset = rows["outer-" + side + "45-offset200"];
+            var before = AdmissionBounds(RenderAdmission(ordinary, caseDirectory: CaptionClearanceCases));
+            var after = AdmissionBounds(RenderAdmission(offset, caseDirectory: CaptionClearanceCases));
+            double native = ordinary.GetProperty("NativeInsideHeight").GetDouble() - offset.GetProperty("NativeInsideHeight").GetDouble();
+            TestAssert.True(Math.Abs(before.Bottom - before.Top - after.Bottom + after.Top - native) <= 1d,
+                "The native offset increment survives pinned font substitution without multiplying the full baseline reserve.");
+        }
+    }
+
     public static void PptxOuterRotatedCaptionClearanceKeepsCompleteInkAndAngles()
     {
         using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(CaptionClearanceCases, "office.json")));
