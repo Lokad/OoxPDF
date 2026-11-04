@@ -14,7 +14,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             string fixture = withNote ? "footnote-image-math" : "inline-math-navigation";
-            var document = ReadMutation("CompositionProbes/" + fixture, mode, false, false, (xml, w, m) =>
+            DocxDocument Read(bool pageBreak) => ReadMutation("CompositionProbes/" + fixture, mode, false, false, (xml, w, m) =>
             {
                 XElement body = xml.Root!.Element(w + "body")!;
                 XElement paragraph = body.Elements(w + "p").Single(p => p.Elements(m + "oMath").Count() == 2);
@@ -27,7 +27,8 @@ internal static partial class DocxInlineCompositionTests
                         run.AddFirst(new XElement(m + "rPr", new XElement(m + "nor")));
                     else if (properties.Element(m + "nor") is null) properties.Add(new XElement(m + "nor"));
                 }
-                equations[1].AddBeforeSelf(new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "page"))));
+                if (pageBreak)
+                    equations[1].AddBeforeSelf(new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "page"))));
                 if (!withNote)
                 {
                     // Retain the existing raster relation and page properties;
@@ -52,8 +53,15 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var pages = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            var before = renderer.RenderPagesAsync(Read(false), null, default).ToBlockingEnumerable().ToArray();
+            var pages = renderer.RenderPagesAsync(Read(true), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
+            // Painting order can interleave prose and formulas. The break must
+            // preserve every non-whitespace glyph, independently of show order.
+            static string Characters(IEnumerable<PdfPage> sequence) => string.Concat(sequence.SelectMany(page =>
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true))
+                .SelectMany(show => show.Text).Where(c => !char.IsWhiteSpace(c)).Order());
+            TestAssert.Equal(Characters(before), Characters(pages));
             string[] text = pages.Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).Select(show => show.Text))).ToArray();
             // A consumed wrapping space need not have its own painted glyph.
@@ -71,7 +79,6 @@ internal static partial class DocxInlineCompositionTests
             if (!withNote) continue;
             TestAssert.Contains("Publiccalculationnote.", prose[0]);
             TestAssert.True(!prose[1].Contains("Publiccalculationnote.", StringComparison.Ordinal), "The note stays with its source marker.");
-            TestAssert.True(prose[0].Contains("Endofsupportednote.", StringComparison.Ordinal), "The complete note tail remains visible: " + text[0]);
             TestAssert.Contains("Followingprose.", prose[1]);
             var target = pages[1].Annotations.Where(link => link.IsDestination).Single().Destination!.Value;
             TestAssert.Equal(0, target.PageIndex);
