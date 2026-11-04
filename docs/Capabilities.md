@@ -155,8 +155,11 @@ Approximate or restricted:
   full width. Authored ellipses remain ordinary text. Manual geometry, clipping
   and horizontal wrapping retain their existing policies. Text fitting and
   short-frame caption geometry remain approximate.
-  Automatic step fitting and remaining horizontal frame geometry stay
-  approximate. Composed/secondary interval ownership retains its fallback.
+  Automatic linear-axis limits and major intervals can differ from Office,
+  changing the visible numeric scale in short charts or when numeric fonts
+  change. Authored bounds and units remain authoritative within the supported
+  single-axis scope above. Remaining horizontal frame geometry is approximate;
+  composed/secondary interval ownership retains its fallback.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain
   separate from the stroke. Clustered bars and label swatches classify inversion
