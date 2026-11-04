@@ -1,0 +1,899 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "Uncalibrated against application view",
+  "Rows": [
+    {
+      "Id": "column-normal-three-explicit",
+      "Input": "column-normal-three-explicit.pptx",
+      "InputSha256": "3859A1C6539553FEBA257CD8615C64E12C76625D3859C09D15E85F648919C724",
+      "OfficePdfSha256": "089A92819787B4FEBE72E4C673F013C611FF3795FB7D644EB2CBA074D24E4D39",
+      "Source": {
+        "Id": "column-normal-three",
+        "Reversed": false
+      },
+      "NativeFrame": [
+        259.20001220703125,
+        176.39999389648438,
+        777.5999755859375,
+        457.20001220703125
+      ],
+      "Bars": [
+        {
+          "Series": 0,
+          "Index": 1,
+          "Color": [
+            204,
+            0,
+            204
+          ],
+          "Value": 45,
+          "CenterFraction": 0.3194444199157823
+        },
+        {
+          "Series": 0,
+          "Index": 0,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 25,
+          "CenterFraction": 0.0694444199157823
+        },
+        {
+          "Series": 0,
+          "Index": 2,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 65,
+          "CenterFraction": 0.5694444493501769
+        },
+        {
+          "Series": 0,
+          "Index": 3,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 85,
+          "CenterFraction": 0.8194444787845714
+        },
+        {
+          "Series": 1,
+          "Index": 0,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 20,
+          "CenterFraction": 0.12499998528280272
+        },
+        {
+          "Series": 1,
+          "Index": 1,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 40,
+          "CenterFraction": 0.3750000147171973
+        },
+        {
+          "Series": 1,
+          "Index": 2,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 60,
+          "CenterFraction": 0.6249999852828028
+        },
+        {
+          "Series": 1,
+          "Index": 3,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 80,
+          "CenterFraction": 0.8750000735859864
+        },
+        {
+          "Series": 2,
+          "Index": 0,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 15,
+          "CenterFraction": 0.18055555064982312
+        },
+        {
+          "Series": 2,
+          "Index": 1,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 35,
+          "CenterFraction": 0.43055555064982315
+        },
+        {
+          "Series": 2,
+          "Index": 2,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 55,
+          "CenterFraction": 0.6805555800842177
+        },
+        {
+          "Series": 2,
+          "Index": 3,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 75,
+          "CenterFraction": 0.9305556095186123
+        }
+      ]
+    },
+    {
+      "Id": "column-reversed-three-explicit",
+      "Input": "column-reversed-three-explicit.pptx",
+      "InputSha256": "D52D0397E02C3946B7D3D86F7279C716B37199F3E8DBC7FACD0876B204F4E3D7",
+      "OfficePdfSha256": "43CF8CD307CAA75534059AC8C83AC878203E2047C95CB74D2F59ABB4DD9CC6D6",
+      "Source": {
+        "Id": "column-reversed-three",
+        "Reversed": true
+      },
+      "NativeFrame": [
+        241.75,
+        176.39999389648438,
+        760.1500244140625,
+        445.84698486328125
+      ],
+      "Bars": [
+        {
+          "Series": 0,
+          "Index": 1,
+          "Color": [
+            204,
+            0,
+            204
+          ],
+          "Value": 45,
+          "CenterFraction": 0.6805555588260435
+        },
+        {
+          "Series": 0,
+          "Index": 0,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 25,
+          "CenterFraction": 0.93065192702249
+        },
+        {
+          "Series": 0,
+          "Index": 2,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 65,
+          "CenterFraction": 0.4306519858912722
+        },
+        {
+          "Series": 0,
+          "Index": 3,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 85,
+          "CenterFraction": 0.18065198589127218
+        },
+        {
+          "Series": 1,
+          "Index": 0,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 20,
+          "CenterFraction": 0.8750963976308377
+        },
+        {
+          "Series": 1,
+          "Index": 1,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 40,
+          "CenterFraction": 0.6250964564996199
+        },
+        {
+          "Series": 1,
+          "Index": 2,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 60,
+          "CenterFraction": 0.3750964270652287
+        },
+        {
+          "Series": 1,
+          "Index": 3,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 80,
+          "CenterFraction": 0.1250964564996198
+        },
+        {
+          "Series": 2,
+          "Index": 0,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 15,
+          "CenterFraction": 0.8195408682391853
+        },
+        {
+          "Series": 2,
+          "Index": 1,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 35,
+          "CenterFraction": 0.5695408682391853
+        },
+        {
+          "Series": 2,
+          "Index": 2,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 55,
+          "CenterFraction": 0.31954086823918526
+        },
+        {
+          "Series": 2,
+          "Index": 3,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 75,
+          "CenterFraction": 0.06954089767357637
+        }
+      ]
+    },
+    {
+      "Id": "column-reversed-overlap-explicit",
+      "Input": "column-reversed-overlap-explicit.pptx",
+      "InputSha256": "3BD0B7AC790DE2EB793A0D652C356647EE716675D82D203F7F6D7FEA26D8E40F",
+      "OfficePdfSha256": "886F82BB9BC73BBA10502295C450CB5F35E0DEE4D647BDF598E43225E6DACE73",
+      "Source": {
+        "Id": "column-reversed-overlap",
+        "Reversed": true,
+        "Overlap": 50,
+        "Gap": 80
+      },
+      "NativeFrame": [
+        241.75,
+        176.39999389648438,
+        760.1500244140625,
+        445.84698486328125
+      ],
+      "Bars": [
+        {
+          "Series": 0,
+          "Index": 1,
+          "Color": [
+            204,
+            0,
+            204
+          ],
+          "Value": 45,
+          "CenterFraction": 0.6696431115400945
+        },
+        {
+          "Series": 0,
+          "Index": 0,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 25,
+          "CenterFraction": 0.9196565924912162
+        },
+        {
+          "Series": 0,
+          "Index": 2,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 65,
+          "CenterFraction": 0.41965662192560726
+        },
+        {
+          "Series": 0,
+          "Index": 3,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 85,
+          "CenterFraction": 0.1696566219256073
+        },
+        {
+          "Series": 1,
+          "Index": 0,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 20,
+          "CenterFraction": 0.8749806616050503
+        },
+        {
+          "Series": 1,
+          "Index": 1,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 40,
+          "CenterFraction": 0.6249807204738325
+        },
+        {
+          "Series": 1,
+          "Index": 2,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 60,
+          "CenterFraction": 0.37498069103944137
+        },
+        {
+          "Series": 1,
+          "Index": 3,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 80,
+          "CenterFraction": 0.12498072047383248
+        },
+        {
+          "Series": 2,
+          "Index": 0,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 15,
+          "CenterFraction": 0.8304205256134539
+        },
+        {
+          "Series": 2,
+          "Index": 1,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 35,
+          "CenterFraction": 0.5804204667446717
+        },
+        {
+          "Series": 2,
+          "Index": 2,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 55,
+          "CenterFraction": 0.3304205256134539
+        },
+        {
+          "Series": 2,
+          "Index": 3,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 75,
+          "CenterFraction": 0.08042052561345392
+        }
+      ]
+    },
+    {
+      "Id": "column-reversed-sparse-explicit",
+      "Input": "column-reversed-sparse-explicit.pptx",
+      "InputSha256": "9348E6DD2681869E9EFFC01972B56E221E45E605BEE65CDAB5FA9C41AED8EB33",
+      "OfficePdfSha256": "F64F7BA8B74DA1E24C071400712AC4A05726315A54F1EC9144F27303CE0695D1",
+      "Source": {
+        "Id": "column-reversed-sparse",
+        "Reversed": true,
+        "Sparse": true
+      },
+      "NativeFrame": [
+        241.75,
+        176.39999389648438,
+        760.1500244140625,
+        445.84698486328125
+      ],
+      "Bars": [
+        {
+          "Series": 0,
+          "Index": 1,
+          "Color": [
+            204,
+            0,
+            204
+          ],
+          "Value": 45,
+          "CenterFraction": 0.6805555588260435
+        },
+        {
+          "Series": 0,
+          "Index": 0,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 25,
+          "CenterFraction": 0.93065192702249
+        },
+        {
+          "Series": 0,
+          "Index": 2,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 65,
+          "CenterFraction": 0.4306519858912722
+        },
+        {
+          "Series": 0,
+          "Index": 3,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 85,
+          "CenterFraction": 0.18065198589127218
+        },
+        {
+          "Series": 1,
+          "Index": 0,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 20,
+          "CenterFraction": 0.8750963976308377
+        },
+        {
+          "Series": 1,
+          "Index": 1,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 40,
+          "CenterFraction": 0.6250964564996199
+        },
+        {
+          "Series": 1,
+          "Index": 3,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 80,
+          "CenterFraction": 0.1250964564996198
+        },
+        {
+          "Series": 2,
+          "Index": 0,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 15,
+          "CenterFraction": 0.8195408682391853
+        },
+        {
+          "Series": 2,
+          "Index": 1,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 35,
+          "CenterFraction": 0.5695408682391853
+        },
+        {
+          "Series": 2,
+          "Index": 2,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 55,
+          "CenterFraction": 0.31954086823918526
+        },
+        {
+          "Series": 2,
+          "Index": 3,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 75,
+          "CenterFraction": 0.06954089767357637
+        }
+      ]
+    },
+    {
+      "Id": "column-reversed-keys-explicit",
+      "Input": "column-reversed-keys-explicit.pptx",
+      "InputSha256": "28AFEA71FC18E9BACB04D22984480C00BB6FACCB14BC0048183AC78769EF1FA0",
+      "OfficePdfSha256": "6CA9976CA488410D834D3904924F7002DDCD8DE2933DCCA0E2A7C8B243617332",
+      "Source": {
+        "Id": "column-reversed-keys",
+        "Reversed": true,
+        "Keys": true
+      },
+      "NativeFrame": [
+        241.75,
+        176.39999389648438,
+        760.1500244140625,
+        445.84698486328125
+      ],
+      "Bars": [
+        {
+          "Series": 0,
+          "Index": 1,
+          "Color": [
+            204,
+            0,
+            204
+          ],
+          "Value": 45,
+          "CenterFraction": 0.6805555588260435
+        },
+        {
+          "Series": 0,
+          "Index": 0,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 25,
+          "CenterFraction": 0.93065192702249
+        },
+        {
+          "Series": 0,
+          "Index": 2,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 65,
+          "CenterFraction": 0.4306519858912722
+        },
+        {
+          "Series": 0,
+          "Index": 3,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 85,
+          "CenterFraction": 0.18065198589127218
+        },
+        {
+          "Series": 1,
+          "Index": 0,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 20,
+          "CenterFraction": 0.8750963976308377
+        },
+        {
+          "Series": 1,
+          "Index": 1,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 40,
+          "CenterFraction": 0.6250964564996199
+        },
+        {
+          "Series": 1,
+          "Index": 2,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 60,
+          "CenterFraction": 0.3750964270652287
+        },
+        {
+          "Series": 1,
+          "Index": 3,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 80,
+          "CenterFraction": 0.1250964564996198
+        },
+        {
+          "Series": 2,
+          "Index": 0,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 15,
+          "CenterFraction": 0.8195408682391853
+        },
+        {
+          "Series": 2,
+          "Index": 1,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 35,
+          "CenterFraction": 0.5695408682391853
+        },
+        {
+          "Series": 2,
+          "Index": 2,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 55,
+          "CenterFraction": 0.31954086823918526
+        },
+        {
+          "Series": 2,
+          "Index": 3,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 75,
+          "CenterFraction": 0.06954089767357637
+        }
+      ]
+    },
+    {
+      "Id": "column-reversed-automatic",
+      "Input": "column-reversed-automatic.pptx",
+      "InputSha256": "B602FA1FD87F231F799CEB04299E63DD906EE7DCCFE0F23659B65C0BEDFF6221",
+      "OfficePdfSha256": "338789A4BE1C70E0949DECF77A2332A852ED5B4BF70686FC8C7FBE52E4741528",
+      "Source": {
+        "Reversed": true,
+        "Automatic": true
+      },
+      "NativeFrame": [
+        83.0,
+        47.709991455078125,
+        755.1500244140625,
+        440.84698486328125
+      ],
+      "Bars": [
+        {
+          "Series": 0,
+          "Index": 1,
+          "Color": [
+            204,
+            0,
+            204
+          ],
+          "Value": 45,
+          "CenterFraction": 0.6805489595192956
+        },
+        {
+          "Series": 0,
+          "Index": 0,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 25,
+          "CenterFraction": 0.930566076422569
+        },
+        {
+          "Series": 0,
+          "Index": 2,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 65,
+          "CenterFraction": 0.4305883919609215
+        },
+        {
+          "Series": 0,
+          "Index": 3,
+          "Color": [
+            18,
+            87,
+            176
+          ],
+          "Value": 85,
+          "CenterFraction": 0.1805549300041244
+        },
+        {
+          "Series": 1,
+          "Index": 0,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 20,
+          "CenterFraction": 0.8749534847018472
+        },
+        {
+          "Series": 1,
+          "Index": 1,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 40,
+          "CenterFraction": 0.62500928489846
+        },
+        {
+          "Series": 1,
+          "Index": 2,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 60,
+          "CenterFraction": 0.3750650850950728
+        },
+        {
+          "Series": 1,
+          "Index": 3,
+          "Color": [
+            213,
+            94,
+            0
+          ],
+          "Value": 80,
+          "CenterFraction": 0.12494234963413414
+        },
+        {
+          "Series": 2,
+          "Index": 0,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 15,
+          "CenterFraction": 0.8194301551345352
+        },
+        {
+          "Series": 2,
+          "Index": 1,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 35,
+          "CenterFraction": 0.5694859553311481
+        },
+        {
+          "Series": 2,
+          "Index": 2,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 55,
+          "CenterFraction": 0.31945249337435094
+        },
+        {
+          "Series": 2,
+          "Index": 3,
+          "Color": [
+            0,
+            158,
+            115
+          ],
+          "Value": 75,
+          "CenterFraction": 0.06941903141755383
+        }
+      ]
+    }
+  ]
+}

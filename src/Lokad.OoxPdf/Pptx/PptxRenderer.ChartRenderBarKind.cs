@@ -55,7 +55,8 @@ internal sealed partial class PptxRenderer
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme, valueExtents, percentStacked);
                 valueAxisOptions = valueAxisOptions with { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueSceneAxis, valueExtents, percentStacked) };
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
-                barOptions = barOptions with { CategoryAxisReversed = horizontalBars &&
+                barOptions = barOptions with { CategoryAxisReversed = (horizontalBars ||
+                    CanOwnColumnCategoryDirection(sceneChart, categoryAxis, valueAxisSource)) &&
                     barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
                     ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis) };
                 ChartAxisPlacement? resolvedCategory = horizontalBars

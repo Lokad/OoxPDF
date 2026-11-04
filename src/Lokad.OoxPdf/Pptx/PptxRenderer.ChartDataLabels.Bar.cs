@@ -238,14 +238,17 @@ internal sealed partial class PptxRenderer
             double barSlot = stacked
                 ? GetStackedBarWidth(categoryWidth, gapWidthPercent)
                 : categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseValueSeries.Count);
+            double columnWidth = GetClusteredBarWidth(categoryWidth, denseValueSeries.Count, barOptions.GapWidth, barOptions.Overlap);
+            double columnStep = GetClusteredBarStep(columnWidth, barOptions.Overlap);
+            double clusterWidth = columnWidth + Math.Max(0, denseValueSeries.Count - 1) * columnStep;
+            double ColumnCenter(int category, int seriesIndex) => ChartCategoryToPlotCoordinate(category, categoryCount,
+                plotBox.X, plotBox.Width, onTickMarks: false, barOptions.CategoryAxisReversed,
+                slotOffset: -clusterWidth / 2d + seriesIndex * columnStep + columnWidth / 2d);
             double[] positiveValues = new double[categoryCount];
             double[] negativeValues = new double[categoryCount];
             double[] positiveTotals = stacked ? GetCategoryPositiveTotals(denseValueSeries, categoryCount, percentStacked) : [];
             for (int category = 0; category < categoryCount; category++)
             {
-                double categoryX = stacked
-                    ? plotBox.X + category * categoryWidth + (categoryWidth - barSlot) / 2d
-                    : plotBox.X + category * categoryWidth + categoryWidth * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
                 for (int seriesIndex = 0; seriesIndex < denseValueSeries.Count; seriesIndex++)
                 {
                     IReadOnlyList<double?> values = denseValueSeries[seriesIndex];
@@ -258,7 +261,6 @@ internal sealed partial class PptxRenderer
                     (double barBase, double barEnd) = stacked
                         ? ResolveStackedBarSegmentValues(positiveValues, negativeValues, category, normalizedValue)
                         : (0d, value);
-                    double x = categoryX + (stacked ? 0d : seriesIndex * barSlot);
                     double barBaseY = stacked
                         ? ChartValueToPlotCoordinate(extents, barBase, plotBox.Y, plotBox.Height, valueAxisReversed)
                         : zeroY;
@@ -290,10 +292,7 @@ internal sealed partial class PptxRenderer
                             ResolveChartDataLabelPosition(labelPosition) == PptxSceneChartDataLabelPosition.OutsideEnd &&
                             CanWrapAutomaticColumnLabel(effectiveOptions) && !string.IsNullOrEmpty(label))
                         {
-                            double barWidth = GetClusteredBarWidth(categoryWidth, denseValueSeries.Count, barOptions.GapWidth, barOptions.Overlap);
-                            double step = GetClusteredBarStep(barWidth, barOptions.Overlap);
-                            double clusterWidth = barWidth + Math.Max(0, denseValueSeries.Count - 1) * step;
-                            double centerX = plotBox.X + category * categoryWidth + (categoryWidth - clusterWidth) / 2d + seriesIndex * step + barWidth / 2d;
+                            double centerX = ColumnCenter(category, seriesIndex);
                             ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
                                 ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category)) : null;
                             await AddAutomaticColumnLabelAsync(runs, graphics, label, effectiveOptions, style,
@@ -304,6 +303,8 @@ internal sealed partial class PptxRenderer
                             ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
                             : 0d;
                         double labelWidth = Math.Max(legendKeyWidth + 1d, barSlot * PptxChartMetricRules.VerticalBarDataLabelWidthRatio);
+                        double x = stacked ? plotBox.X + category * categoryWidth + (categoryWidth - barSlot) / 2d
+                            : ColumnCenter(category, seriesIndex) - labelWidth / 2d;
                         ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
                         RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
                         double textX = labelBox.X;
@@ -316,11 +317,7 @@ internal sealed partial class PptxRenderer
                             // Office centers the swatch+text unit on the bar middle (other
                             // groupings and plain labels keep the legacy slot math, unobserved).
                             double barLegendKeyTextWidth = string.IsNullOrEmpty(label) ? 0d : Math.Max(0d, (await new ChartTextMeasurer(fontResolver).MeasureAsync(label, style).ConfigureAwait(false)));
-                            double barLegendKeyCategoryWidth = plotBox.Width / categoryCount;
-                            double barLegendKeyBarWidth = GetClusteredBarWidth(barLegendKeyCategoryWidth, denseValueSeries.Count, barOptions.GapWidth, barOptions.Overlap);
-                            double barLegendKeyStep = GetClusteredBarStep(barLegendKeyBarWidth, barOptions.Overlap);
-                            double barLegendKeyClusterWidth = barLegendKeyBarWidth + Math.Max(0, denseValueSeries.Count - 1) * barLegendKeyStep;
-                            double barLegendKeyBarCenterX = plotBox.X + category * barLegendKeyCategoryWidth + (barLegendKeyCategoryWidth - barLegendKeyClusterWidth) / 2d + seriesIndex * barLegendKeyStep + barLegendKeyBarWidth / 2d;
+                            double barLegendKeyBarCenterX = ColumnCenter(category, seriesIndex);
                             double barLegendKeyUnitLeft = ComputeBarLegendKeyUnitLeft(barLegendKeyBarCenterX, barLegendKeySwatch, barLegendKeyTextWidth);
                             labelBox = new ChartLayoutBox(barLegendKeyUnitLeft, labelBox.Y, labelBox.Width, labelBox.Height);
                             textX = barLegendKeyUnitLeft + barLegendKeySwatch + barLegendKeySwatch;

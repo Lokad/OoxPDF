@@ -340,6 +340,13 @@ internal sealed partial class PptxRenderer
         };
     }
 
+    private static bool CanOwnColumnCategoryDirection(PptxSceneChart chart, ChartAxisSource category, ChartAxisSource value) =>
+        chart.Plots.Count == 1 && chart.Axes.Count(axis => axis.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
+        category.SceneAxis is { AxisKind: PptxSceneChartAxisKind.Category } ordinal &&
+        value.SceneAxis is { AxisKind: PptxSceneChartAxisKind.Value, HasLogarithmicScale: false } numeric &&
+        !string.IsNullOrEmpty(ordinal.Id) && !string.IsNullOrEmpty(numeric.Id) &&
+        ordinal.CrossAxisId == numeric.Id && numeric.CrossAxisId == ordinal.Id;
+
     private static ChartAxisPlacement? ReadHorizontalBarCategoryPlacement(PptxSceneChart chart,
         ChartAxisSource category, ChartAxisSource value, ChartValueExtents extents, bool reversed)
     {

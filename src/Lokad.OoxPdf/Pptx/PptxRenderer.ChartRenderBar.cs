@@ -158,7 +158,6 @@ internal sealed partial class PptxRenderer
             double clusterWidth = barWidth + Math.Max(0, denseSeries.Count - 1) * step;
             for (int category = 0; category < categoryCount; category++)
             {
-                double categoryX = plotX + category * categoryWidth + (categoryWidth - clusterWidth) / 2d;
                 for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
                 {
                     IReadOnlyList<double?> values = denseSeries[seriesIndex];
@@ -168,7 +167,10 @@ internal sealed partial class PptxRenderer
                     }
 
                     ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseSeries.Count, plotOptions.VaryColors.Value, seriesFills, pointFills, values.Count, value - columnOrigin, plotOptions.InvertsNegativePoint(seriesIndex, category));
-                    double barX = categoryX + seriesIndex * step;
+                    double centerX = ChartCategoryToPlotCoordinate(category, categoryCount, plotX, plotWidth,
+                        onTickMarks: false, plotOptions.CategoryAxisReversed,
+                        slotOffset: -clusterWidth / 2d + seriesIndex * step + barWidth / 2d);
+                    double barX = centerX - barWidth / 2d;
                     double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisOptions.Reversed);
                     double barY = Math.Min(columnOriginY, valueY);
                     double barHeight = Math.Abs(valueY - columnOriginY);

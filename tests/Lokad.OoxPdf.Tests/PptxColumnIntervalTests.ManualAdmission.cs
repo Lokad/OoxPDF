@@ -129,7 +129,8 @@ internal static partial class PptxColumnIntervalTests
     private static double[] AdmissionNumbers(JsonElement row, string name) => row.GetProperty(name).EnumerateArray().Select(value => value.GetDouble()).ToArray();
     private static JsonDocument AdmissionOracle() => JsonDocument.Parse(File.ReadAllText(Path.Combine(AdmissionCases, "office.json")));
 
-    private static PdfPage RenderAdmission(JsonElement row, bool link = false, string? caseDirectory = null, bool horizontalCategories = false)
+    private static PdfPage RenderAdmission(JsonElement row, bool link = false, string? caseDirectory = null, bool horizontalCategories = false,
+        Action<XDocument>? editChart = null)
     {
         string path = Path.Combine(caseDirectory ?? AdmissionCases, row.GetProperty("Input").GetString()!);
         TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
@@ -138,7 +139,7 @@ internal static partial class PptxColumnIntervalTests
         {
             using var source = entry.Open(); using var target = new MemoryStream(); source.CopyTo(target); return target.ToArray();
         });
-        if (link || horizontalCategories)
+        if (link || horizontalCategories || editChart is not null)
         {
             using var source = new MemoryStream(parts["ppt/charts/chart1.xml"]);
             var xml = XDocument.Load(source);
@@ -166,6 +167,7 @@ internal static partial class PptxColumnIntervalTests
                     <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="admissionLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/manual-caption" TargetMode="External"/></Relationships>
                     """);
             }
+            editChart?.Invoke(xml);
             parts["ppt/charts/chart1.xml"] = TestFixtures.Utf8(xml.ToString(SaveOptions.DisableFormatting));
         }
         using var stream = TestFixtures.CreateZipPackage(parts);
