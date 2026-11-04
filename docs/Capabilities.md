@@ -260,6 +260,13 @@ Approximate or restricted:
   and rotated/wrapped categories retain their existing paths. Native-font
   geometry checks remain separate from portable content checks at font-dependent
   admission boundaries. References remain uncalibrated against the application view.
+  Complete factor-sized outer column/line/area declarations also center their
+  source area before allocating numeric and category-caption bands inside it.
+  Shortened endpoint captions release their measured space; a present category
+  axis retains a nominal minimum band when labels/ticks are hidden. Data axes,
+  plot fill and linked label geometry share the admitted inner rectangle.
+  Automatic rotation after width admission and empty-caption spacing remain
+  approximate, as do incomplete declarations and the exclusions above.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Stacked horizontal bars,
   general column and secondary-axis category direction retain their existing

@@ -18,8 +18,11 @@
   rectangle. Width and height share the existing source-coordinate calculation.
   Ordinary inner column, line and area plots also admit numeric side captions
   and visible-axis endcaps within the chart frame, including independent axis
-  fonts and sides. Rotated/wrapped categories, secondary axes and outer layouts
+  fonts and sides. Rotated/wrapped categories and secondary axes
   retain their existing approximation.
+  Ordinary outer column, line and area plots center the authored caption area
+  before allocating measured axis bands. Data, plot fill and linked labels share
+  the inner rectangle. Automatic rotation and empty-caption spacing remain approximate.
 
 - PPTX: plain automatic outside-end column labels wrap measured text and admit
   the whole label/key frame within the chart, retaining value suffixes at its
