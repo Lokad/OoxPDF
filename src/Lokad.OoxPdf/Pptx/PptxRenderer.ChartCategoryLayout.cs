@@ -58,9 +58,6 @@ internal sealed partial class PptxRenderer
         if (outer)
             source = ResolveCartesianPlotPosition(chart.PlotAreaLayout, layout.Frame,
                 new(layout.PlotAreaBox, source, PptxSceneChartManualLayoutTarget.Outer)).PlotBox;
-        var horizontal = AdmitChartCaptionInterval(layout.Frame.X, layout.Frame.Width, source.X, source.Width,
-            0d, 0d, numericBand, new(0d, labelsRight ? 1d : 0d, labelsRight, labelsRight));
-
         double categoryClearance = 0d, categoryBand = 0d;
         if (layout.CategoryLabels is { } category && category.Labels.Values.Any(parts => parts.Any(part => part.Text.Length > 0)))
         {
@@ -107,6 +104,8 @@ internal sealed partial class PptxRenderer
             // data rectangle; the authored outer area only owns admission.
             return layout with { PlotBox = inner, PlotAreaBox = new(inner.X, inner.Y, inner.Width, inner.Height) };
         }
+        var horizontal = AdmitChartCaptionInterval(layout.Frame.X, layout.Frame.Width, source.X, source.Width,
+            0d, 0d, numericBand, new(0d, labelsRight ? 1d : 0d, labelsRight, labelsRight));
         // Each role activates its own constraint. An overflowing category endcap
         // admits the occupied frame as a unit. If only numeric endcaps overflow,
         // retain their admitted interval and allocate the category band inside
