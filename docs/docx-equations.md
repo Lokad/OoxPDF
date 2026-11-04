@@ -13,10 +13,10 @@ inline pictures share measurement and placement in body paragraphs, simple table
 cells and direct headers/footers. Numbering owns the first authored row; formulas
 beside prose use inline sizing while a later math-only row owns display sizing.
 Links and annotations follow the resulting physical geometry.
-The first display group's justification owns display rows in the same text
-paragraph, including across hard breaks; later groups retain their source
-properties without overriding that placement. Separate paragraphs remain
-independent. Unknown justification values keep their explicit fallback.
+Supported display rows separated by hard breaks share the first display row's
+justification in the same text paragraph. Authored group properties remain
+available; separate paragraphs stay independent. Conflicting adjacent groups on
+one row and unknown justification values retain their diagnosed fallback.
 
 Authored body page breaks can separate supported formulas without discarding
 prose, pictures or notes. Spanning links follow content on each page; a spanning

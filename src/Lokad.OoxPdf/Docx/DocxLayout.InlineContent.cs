@@ -41,6 +41,7 @@ internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     public int? BoundPageNumber { get; init; }
     public int? BoundPageCount { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
+    public DocxTextAlignment? DisplayAlignment { get; init; }
 }
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
@@ -417,7 +418,9 @@ internal sealed partial class DocxLayoutEngine
             measured.Select((fragment, index) => (fragment, index))
                 .Where(item => item.fragment.CounterDependencies != DocxCounterDependencies.None)
                 .Select(item => item.index).ToArray())
-            { BoundPageNumber = pageNumber, BoundPageCount = pageCount, MathEquations = equations };
+            { BoundPageNumber = pageNumber, BoundPageCount = pageCount, MathEquations = equations,
+                DisplayAlignment = paragraph.Equations.Count == 0 ? null :
+                    DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(paragraph, token) };
         return true;
 
         void AddMeasuredMath(DocxInlineItem source, DocxPreparedMathParagraph prepared)
@@ -892,7 +895,7 @@ internal sealed partial class DocxLayoutEngine
                 textInset = baselineInset;
             }
             output.Add(new(current.ToArray(), advance, above, above + below)
-                { DisplayAlignment = displayGroup ? DocxMathParagraphPolicy.ResolveDisplayAlignment(paragraph.Equations, token) : null,
+                { DisplayAlignment = displayGroup ? atoms.DisplayAlignment : null,
                     ListLabelSegments = labelSegments, TextBaselineInset = textInset,
                     EndCursor = endCursor with { LineIndex = cursor.LineIndex + output.Count + 1 } });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);

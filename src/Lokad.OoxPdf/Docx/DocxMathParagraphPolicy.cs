@@ -315,10 +315,7 @@ internal static class DocxMathParagraphPolicy
 
     public static DocxTextAlignment? ResolveDisplayAlignment(IEnumerable<DocxEquation> equations, CancellationToken token)
     {
-        // Word uses the first actual display group in the containing text
-        // paragraph. Later groups retain their source properties, but do not
-        // replace that owner, including across authored hard breaks.
-        DocxTextAlignment? first = null, display = null;
+        DocxTextAlignment? alignment = null;
         foreach (var equation in equations)
         {
             token.ThrowIfCancellationRequested();
@@ -329,11 +326,38 @@ internal static class DocxMathParagraphPolicy
                 "right" => DocxTextAlignment.Right,
                 _ => null
             };
-            if (current is null) return null;
-            first ??= current;
-            if (equation.Display) display ??= current;
+            if (current is null || alignment is not null && alignment != current) return null;
+            alignment = current;
         }
-        return display ?? first;
+        return alignment;
+    }
+
+    public static DocxTextAlignment? ResolveParagraphDisplayAlignment(DocxParagraph paragraph, CancellationToken token)
+    {
+        if (paragraph.InlineContent is not { } items) return ResolveDisplayAlignment(paragraph.Equations, token);
+        // Authored rows keep their source validation. Word places the supported
+        // rows using the first display row's paragraph justification. Adjacent
+        // conflicting groups still need their own source-normalization contract.
+        DocxTextAlignment? owner = null;
+        var row = new List<DocxEquation>();
+        foreach (var item in items)
+        {
+            token.ThrowIfCancellationRequested();
+            if (item is DocxInlineBreak lineBreak && !lineBreak.Run.EffectiveProperties.Hidden)
+            { if (!CompleteRow()) return null; }
+            else if (item is DocxInlineEquation math && math.Equation.Display) row.Add(math.Equation);
+        }
+        return CompleteRow() ? owner ?? ResolveDisplayAlignment(paragraph.Equations, token) : null;
+
+        bool CompleteRow()
+        {
+            if (row.Count == 0) return true;
+            var alignment = ResolveDisplayAlignment(row, token);
+            row.Clear();
+            if (alignment is null) return false;
+            owner ??= alignment;
+            return true;
+        }
     }
 
     private static bool DisplayRowsOwnParagraphAlignment(DocxParagraph paragraph,
@@ -366,7 +390,7 @@ internal static class DocxMathParagraphPolicy
         var displayRows = paragraph.Equations.Any(equation => equation.Display)
             ? GetMathOnlySourceEquations(paragraph, token) : null;
         var mixedRows = displayRows is not null ? GetMixedSourceEquations(paragraph, token) : null;
-        if (displayRows is not null && ResolveDisplayAlignment(paragraph.Equations, token) is null) return [];
+        if (displayRows is not null && ResolveParagraphDisplayAlignment(paragraph, token) is null) return [];
         if (!HasSupportedOrderedAlignment(paragraph) &&
             (displayRows is null || !DisplayRowsOwnParagraphAlignment(paragraph, displayRows, token))) return [];
         foreach (var equation in paragraph.Equations)

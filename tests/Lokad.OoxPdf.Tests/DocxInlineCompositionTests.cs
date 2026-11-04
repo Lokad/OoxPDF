@@ -2505,10 +2505,15 @@ internal static partial class DocxInlineCompositionTests
             "The measured line retains one display alignment instead of a centering flag.");
         var differing = paragraph.Equations.Select((equation, index) => equation with
             { AlignmentValue = index == 0 ? "right" : "left" }).ToArray();
-        TestAssert.Equal(DocxTextAlignment.Right, DocxMathParagraphPolicy.ResolveDisplayAlignment(differing, default));
+        var hardBreak = new DocxTextRun("\n", 12d, null, false, false, false, null, null);
+        var separateRows = paragraph with { Equations = differing, Runs = [hardBreak], InlineContent =
+            [new DocxInlineEquation(differing[0]), new DocxInlineBreak(hardBreak, 0), new DocxInlineEquation(differing[1])] };
+        TestAssert.Equal(DocxTextAlignment.Right, DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows, default));
         var inlinePrefix = differing[0] with { Display = false, AlignmentValue = null };
         TestAssert.Equal(DocxTextAlignment.Right,
-            DocxMathParagraphPolicy.ResolveDisplayAlignment([inlinePrefix, .. differing], default));
+            DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows with
+            { Equations = [inlinePrefix, .. differing], InlineContent = [new DocxInlineEquation(inlinePrefix),
+                new DocxInlineBreak(hardBreak, 0), .. separateRows.InlineContent!] }, default));
         TestAssert.True(DocxMathParagraphPolicy.ResolveDisplayAlignment(
             [differing[0], differing[1] with { AlignmentValue = "unknown" }], default) is null,
             "Unknown source justification keeps its existing explicit fallback.");
@@ -2527,6 +2532,7 @@ internal static partial class DocxInlineCompositionTests
             "An unknown alignment retains an explicit fallback.");
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.ResolveDisplayAlignment(paragraph.Equations, cancellation.Token));
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows, cancellation.Token));
     }
 
     public static void DocxInlineCompositionAuthoredDisplayAlignmentMatchesIndependentWord()

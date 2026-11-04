@@ -107,7 +107,8 @@
   shared measured rows for balloon height and painting, including supported
   terminal font pairs and resolved font aliases.
 - DOCX: retains formulas when display groups in one paragraph declare different
-  justifications, using the first group's placement across body, cells and footers.
+  justifications across hard breaks, using the first row's placement in body,
+  cells and footers. Conflicting adjacent groups retain their fallback.
 - DOCX: minimum-line placement uses measured local slots across fonts, styles
   and neighboring tables/wrapped text; links and background paint retain geometry.
 - DOCX: continuation pages use their own body print origins, keeping text,
