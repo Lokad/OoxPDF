@@ -177,6 +177,12 @@ Approximate or restricted:
   crossing and label sides. Manual furniture, composed stacking, unpaired and
   logarithmic scales retain their existing fallbacks. Fully automatic capacity,
   font geometry, clustering and some image comparisons remain approximate.
+  Consistently oriented clustered horizontal plots also share the source scale
+  and category crossing, including signed values, authored bounds and reversal.
+  Standalone clustered horizontal bars use the same source-interval owner;
+  stacked horizontal bounds keep their existing fallback. Numeric-axis maximum
+  crossing still displaces the horizontal plot vertically in a retained native
+  control; scale correctness does not imply fully matching plot placement.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain
   separate from the stroke. Clustered bars and label swatches classify inversion

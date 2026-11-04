@@ -2,6 +2,10 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: clustered horizontal plots sharing an axis now use one source range,
+  interval lattice and category crossing for bars, grids and labels. Authored
+  zero maxima retain lower headroom across supported Cartesian plots.
+
 - PPTX: factor positions and edge-sized heights resolve together for authored
   inner Cartesian plots, keeping columns, curves, axes and labels on the same
   rectangle. Width and height share the existing source-coordinate calculation.
