@@ -607,6 +607,84 @@
         "0"
       ],
       "BarValues": []
+    },
+    {
+      "Id": "category-cross50",
+      "Input": "category-cross50.pptx",
+      "InputSha256": "8531864FA05B85BB849214E682A37D1D7BE693B75119E35BF679DD4C708102E8",
+      "OfficePdfSha256": "72F4459429D79C45B42BDF2CE49523381840C1441E55A3B27ACBF3F21DCA8818",
+      "Minimum": 7.0,
+      "Maximum": 157.0,
+      "MajorUnit": 25.0,
+      "Reversed": false,
+      "Horizontal": true,
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "BarValues": [
+        82.0,
+        85.0,
+        79.0,
+        91.0,
+        88.0,
+        94.0,
+        87.0,
+        96.0,
+        131.0,
+        134.0,
+        128.0,
+        140.0,
+        137.0,
+        143.0,
+        136.0,
+        145.0
+      ],
+      "CategoryCrossing": 50
+    },
+    {
+      "Id": "category-cross-max",
+      "Input": "category-cross-max.pptx",
+      "InputSha256": "333977C09D28ACC0D0A2A3E4BDD207A716C8CE5A859EACF83BA0793A4492B0B0",
+      "OfficePdfSha256": "30045F371CACD2FDE4E00663C1A20F847EC1A0332B98BCC32D80F5E64E705D6C",
+      "Minimum": 7.0,
+      "Maximum": 157.0,
+      "MajorUnit": 25.0,
+      "Reversed": false,
+      "Horizontal": true,
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "BarValues": [
+        82.0,
+        85.0,
+        79.0,
+        91.0,
+        88.0,
+        94.0,
+        87.0,
+        96.0,
+        131.0,
+        134.0,
+        128.0,
+        140.0,
+        137.0,
+        143.0,
+        136.0,
+        145.0
+      ],
+      "CategoryCrossing": 157.0
     }
   ]
 }

@@ -38,7 +38,7 @@ internal static class PptxHorizontalScaleTests
             bool horizontal = row.GetProperty("Horizontal").GetBoolean();
             var axis = Axis(page, horizontal);
             double minimum = row.GetProperty("Minimum").GetDouble(), maximum = row.GetProperty("Maximum").GetDouble();
-            double baseline = Math.Clamp(0d, minimum, maximum);
+            double baseline = row.TryGetProperty("CategoryCrossing", out var crossing) ? crossing.GetDouble() : Math.Clamp(0d, minimum, maximum);
             double Position(double value)
             {
                 double ratio = (value - minimum) / (maximum - minimum);
@@ -46,7 +46,7 @@ internal static class PptxHorizontalScaleTests
             }
             var rectangles = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re f\s")
                 .Select(match => match.Groups.Cast<Group>().Skip(1).Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray())
-                .Where(rect => horizontal ? Math.Abs(rect[2]) > 40d && Math.Abs(rect[3]) is > 1d and < 80d
+                .Where(rect => horizontal ? Math.Abs(rect[2]) > 0d && Math.Abs(rect[3]) is > 1d and < 80d
                     : Math.Abs(rect[2]) is > 1d and < 80d && Math.Abs(rect[3]) > 40d).ToArray();
             TestAssert.Equal(values.Length, rectangles.Length);
             for (int index = 0; index < values.Length; index++)
@@ -85,7 +85,7 @@ internal static class PptxHorizontalScaleTests
             double[] grids = lines.Where(line => line.Color != new RgbColor(255, 0, 0) && line.Color != new RgbColor(0, 170, 0) &&
                 Math.Abs(line.V[0] - line.V[2]) < .001d && Math.Abs(line.V[1] - line.V[3]) > 100d)
                 .Select(line => Value(line.V[0])).Distinct().Order().ToArray();
-            double crossing = Math.Clamp(0d, minimum, maximum);
+            double crossing = row.TryGetProperty("CategoryCrossing", out var authored) ? authored.GetDouble() : Math.Clamp(0d, minimum, maximum);
             Check(grids, expected.Where(value => Math.Abs(value - crossing) > .001d).ToArray(), "grids");
 
             void Check(double[] actual, double[] desired, string role) => TestAssert.True(actual.Length == desired.Length &&

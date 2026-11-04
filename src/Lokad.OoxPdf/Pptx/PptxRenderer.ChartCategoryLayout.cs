@@ -170,8 +170,9 @@ internal sealed partial class PptxRenderer
         ChartAxisSource category, ChartAxisSource value, ChartValueExtents extents, bool reversed)
     {
         // A reciprocal ordinal/numeric pair owns the source crossing. Keep
-        // unpaired, composed and unsupported scales on their declared fallback.
-        if (chart.Plots.Count != 1 || chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
+        // unpaired and unsupported composed scales on their declared fallback.
+        if (chart.Plots.Count != 1 && !HasSharedCartesianChartValueAxis(chart, value.SceneAxis) ||
+            chart.Axes.Count(a => a.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
             category.SceneAxis is not { AxisKind: PptxSceneChartAxisKind.Category } ordinal ||
             value.SceneAxis is not { HasScaling: true, HasLogarithmicScale: false } numeric ||
             string.IsNullOrEmpty(ordinal.Id) || string.IsNullOrEmpty(numeric.Id) ||

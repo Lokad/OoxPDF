@@ -179,7 +179,7 @@ internal sealed partial class PptxRenderer
                         extraValueExtents,
                         valueAxisLabelsVisible: false,
                         manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied,
-                        barStyleId, context: context);
+                        barStyleId, categoryPlacement: sharedValueAxis && extraHorizontalBars ? resolvedCategory : null, context: context);
                     await RenderBarDataLabelsAsync(
                         theme,
                         colorMap,
@@ -196,7 +196,8 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook, plotVisibleOnly),
-                        ReadSharedChartSeriesNames(extraBarPlot, extraBarChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
+                        ReadSharedChartSeriesNames(extraBarPlot, extraBarChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
+                        categoryPlacement: sharedValueAxis && extraHorizontalBars ? resolvedCategory : null).ConfigureAwait(false);
                     seriesOffset += extraSeriesCount;
                     barChartIndex++;
                 }
