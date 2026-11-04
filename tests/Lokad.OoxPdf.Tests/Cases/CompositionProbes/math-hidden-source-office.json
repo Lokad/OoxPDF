@@ -1,0 +1,61 @@
+{
+  "SourceFixture": "docx-omml-isolated-inline-body-fraction-left",
+  "SourceSha256": "96A12C11555C1CF0C9360F0939551E77BE12180A69411CC534D56297E7B25B4F",
+  "ObservedUtc": "2026-11-04T09:00:51.773246+00:00",
+  "Evidence": "Supervised Word16 PDF export; Final adds a read-only native math-model observation. Uninstrumented Review has identical text/font/origins. Source mutations only add the hidden ordinary run used in the regression.",
+  "Mutation": "Insert w:r/w:rPr/w:vanish plus w:t Invisible prose immediately before the existing m:oMath.",
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "HiddenProse": false,
+      "NativeMathType": 0,
+      "NativeJustification": 1,
+      "Anchor": {
+        "Text": "x",
+        "X": 285.04998779296875,
+        "Y": 740.260009765625,
+        "FontSize": 11.039999961853027
+      },
+      "ReferencePdfSha256": "F02D614B12CD3E7549ABABA6A05EA201E77B27E6839A133EF6CACADBA88EA165"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "HiddenProse": false,
+      "NativeMathType": 0,
+      "NativeJustification": 1,
+      "Anchor": {
+        "Text": "x",
+        "X": 285.04998779296875,
+        "Y": 740.260009765625,
+        "FontSize": 11.039999961853027
+      },
+      "ReferencePdfSha256": "050E9A7D3DA24F06150583F6130325026C20D43EA93D91FCB5A6C1EC6021A5D6"
+    },
+    {
+      "Mode": "final-preserve",
+      "HiddenProse": true,
+      "NativeMathType": 1,
+      "NativeJustification": 7,
+      "Anchor": {
+        "Text": "x",
+        "X": 72.02400207519531,
+        "Y": 742.6599731445312,
+        "FontSize": 8.039999961853027
+      },
+      "ReferencePdfSha256": "B68A94365F26EE6EAEEE3DBADDE6FE441E48BED096FE1413F50E28EF8C948839"
+    },
+    {
+      "Mode": "all-word-compatible",
+      "HiddenProse": true,
+      "NativeMathType": 1,
+      "NativeJustification": 7,
+      "Anchor": {
+        "Text": "x",
+        "X": 72.02400207519531,
+        "Y": 742.6599731445312,
+        "FontSize": 8.039999961853027
+      },
+      "ReferencePdfSha256": "22A4FB3BA62C5E82E0986942F4FE074F05F251D781E676EF77D54681D5C78BE8"
+    }
+  ]
+}

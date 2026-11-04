@@ -163,15 +163,15 @@ internal static class DocxMathParagraphPolicy
         }
     }
 
-    // Office promotes a sole visible equation to centered display layout, even
-    // when its source is inline. Preserve the source record and select that
-    // style only for measurement; mixed prose retains its inline ownership.
+    // Office promotes a math-only source row even when its equation is inline.
+    // Ordinary source characters, including unpainted ones, retain inline mode.
+    // Preserve the original source record when selecting the measured style.
     public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
         if (!HasSupportedOwner(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ||
             paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
             paragraph.CommentRanges.Count != 0 ||
-            HasVisibleProse(paragraph) || (paragraph.InlineContent is { } items &&
+            HasOrdinarySourceText(paragraph) || (paragraph.InlineContent is { } items &&
             items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden)) ||
             !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }
@@ -205,20 +205,15 @@ internal static class DocxMathParagraphPolicy
     private static bool HasVisibleProse(DocxParagraph paragraph) => paragraph.InlineContent is { } items
         ? DocxInlineContent.HasVisibleText(items) : paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text));
 
-    // Authored breaks delimit source rows. Only rows without another visible
-    // inline owner promote their formulas; soft wrapping never changes style.
-    public static IReadOnlySet<DocxEquation> GetDisplaySourceEquations(DocxParagraph paragraph,
-        CancellationToken token)
-    {
-        var display = GetMathOnlySourceEquations(paragraph, token);
-        // A link on another authored row does not own these equations.
-        // Equations inside the actual link keep their qualified inline style.
-        if (DocxInlineContent.GetHyperlinkedEquations(paragraph, token) is { } linked)
-            display.ExceptWith(linked);
-        return display;
-    }
+    // Ordinary source characters determine math mode before visibility filtering.
+    // Hidden text still makes the equation inline, while remaining unpainted.
+    private static bool HasOrdinarySourceText(DocxParagraph paragraph) => paragraph.InlineContent is { } items
+        ? items.Any(item => item is DocxInlineText { Length: > 0 })
+        : paragraph.Runs.Any(run => run.Text.Any(c => c is not ('\t' or '\n')));
 
-    private static HashSet<DocxEquation> GetMathOnlySourceEquations(DocxParagraph paragraph,
+    // Authored breaks delimit source formatting rows. Soft wrapping and painting
+    // hidden content do not replace those source owners.
+    public static IReadOnlySet<DocxEquation> GetDisplaySourceEquations(DocxParagraph paragraph,
         CancellationToken token) => GetSourceRowEquations(paragraph, token, withInlineOwner: false);
 
     public static IReadOnlySet<DocxEquation> GetMixedSourceEquations(DocxParagraph paragraph,
@@ -232,6 +227,7 @@ internal static class DocxMathParagraphPolicy
             paragraph.InlineContent is not { } items || !TryGetDisplayLineSpacingFactor(paragraph, out _))
             return display;
         var row = new List<DocxEquation>();
+        var linked = DocxInlineContent.GetHyperlinkedEquations(paragraph, token);
         // A list label is visible content on the first authored row. A hard
         // break ends that ownership just like prose; later math-only rows may
         // own their display frame independently.
@@ -242,13 +238,12 @@ internal static class DocxMathParagraphPolicy
             token.ThrowIfCancellationRequested();
             switch (item)
             {
-                case DocxInlineText text when text.Run.EffectiveProperties.Hidden ||
-                    text.Run.Text.AsSpan(text.Start, text.Length).IsWhiteSpace():
+                case DocxInlineText { Length: 0 }:
                 case DocxInlineTab tab when tab.Run.EffectiveProperties.Hidden:
-                case DocxInlineBreak lineBreak when lineBreak.Run.EffectiveProperties.Hidden:
                     break;
                 case DocxInlineEquation math:
                     row.Add(math.Equation);
+                    if (linked?.Contains(math.Equation) == true) hasInlineOwner = hasOtherContent = true;
                     break;
                 case DocxInlineText:
                 case DocxInlinePicture:
@@ -316,6 +311,7 @@ internal static class DocxMathParagraphPolicy
     public static DocxTextAlignment? ResolveDisplayAlignment(IEnumerable<DocxEquation> equations, CancellationToken token)
     {
         DocxTextAlignment? alignment = null;
+        bool hasDisplayContainer = false;
         foreach (var equation in equations)
         {
             token.ThrowIfCancellationRequested();
@@ -326,8 +322,12 @@ internal static class DocxMathParagraphPolicy
                 "right" => DocxTextAlignment.Right,
                 _ => null
             };
-            if (current is null || alignment is not null && alignment != current) return null;
-            alignment = current;
+            if (current is null) return null;
+            // Adjacent display containers merge in source order. A later
+            // container supplies its default too; bare formulas add content
+            // without replacing that containing paragraph's properties.
+            if (equation.Display || !hasDisplayContainer) alignment = current;
+            hasDisplayContainer |= equation.Display;
         }
         return alignment;
     }
@@ -335,18 +335,17 @@ internal static class DocxMathParagraphPolicy
     public static DocxTextAlignment? ResolveParagraphDisplayAlignment(DocxParagraph paragraph, CancellationToken token)
     {
         if (paragraph.InlineContent is not { } items) return ResolveDisplayAlignment(paragraph.Equations, token);
-        // Authored rows keep their source validation. Word places the supported
-        // rows using the first display row's paragraph justification. Adjacent
-        // conflicting groups still need their own source-normalization contract.
+        // The first effective display row owns paragraph justification. Inline
+        // rows retain their source properties without governing later display.
         DocxTextAlignment? owner = null;
         var promoted = GetDisplaySourceEquations(paragraph, token);
         var row = new List<DocxEquation>();
         foreach (var item in items)
         {
             token.ThrowIfCancellationRequested();
-            if (item is DocxInlineBreak lineBreak && !lineBreak.Run.EffectiveProperties.Hidden)
+            if (item is DocxInlineBreak)
             { if (!CompleteRow()) return null; }
-            else if (item is DocxInlineEquation math && (math.Equation.Display || promoted.Contains(math.Equation))) row.Add(math.Equation);
+            else if (item is DocxInlineEquation math && promoted.Contains(math.Equation)) row.Add(math.Equation);
         }
         return CompleteRow() ? owner ?? ResolveDisplayAlignment(paragraph.Equations, token) : null;
 
@@ -389,7 +388,7 @@ internal static class DocxMathParagraphPolicy
         // Source rows own resolved style: Word measures explicit formulas inline
         // beside visible text/pictures; math-only rows retain display measurement/alignment.
         var displayRows = paragraph.Equations.Any(equation => equation.Display)
-            ? GetMathOnlySourceEquations(paragraph, token) : null;
+            ? GetDisplaySourceEquations(paragraph, token) : null;
         var mixedRows = displayRows is not null ? GetMixedSourceEquations(paragraph, token) : null;
         if (displayRows is not null && ResolveParagraphDisplayAlignment(paragraph, token) is null) return [];
         if (!HasSupportedOrderedAlignment(paragraph) &&

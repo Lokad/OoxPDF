@@ -13,12 +13,18 @@ inline pictures share measurement and placement in body paragraphs, simple table
 cells and direct headers/footers. Numbering owns the first authored row; formulas
 beside prose use inline sizing while a later math-only row owns display sizing.
 Links and annotations follow the resulting physical geometry.
-Supported display rows separated by hard breaks share the first display row's
-justification in the same text paragraph. Authored group properties remain
-available; separate paragraphs stay independent. Conflicting adjacent groups on
-one row and unknown justification values retain their diagnosed fallback.
+Adjacent display containers combine in source order; the later container supplies
+its justification, including the default when omitted. Bare formulas add content
+without replacing the container's properties. The first effective display row
+owns subsequent display-row placement in the text paragraph. Authored properties
+remain available; separate paragraphs stay independent. Unknown justification
+values retain their diagnosed fallback.
 A math-only row can promote an inline source formula to that display owner;
 an inline formula beside prose does not.
+Ordinary source characters, including spaces and hidden text, keep math inline.
+Links and pictures also determine the shared row mode. Hidden text stays unpainted;
+its presence still affects equation layout. Hidden manual-break combinations and
+centerGroup geometry remain approximate.
 
 Authored body page breaks can separate supported formulas without discarding
 prose, pictures or notes. Spanning links follow content on each page; a spanning

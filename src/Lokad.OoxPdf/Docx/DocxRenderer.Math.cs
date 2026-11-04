@@ -149,13 +149,12 @@ internal sealed partial class DocxRenderer
             }
             bool standalone = DocxMathParagraphPolicy.GetStandaloneRow(paragraph) is not null;
             var displayRows = DocxMathParagraphPolicy.GetDisplaySourceEquations(paragraph, token);
-            var hyperlinked = DocxInlineContent.GetHyperlinkedEquations(paragraph, token);
             var mixedRows = sourceEquations.Any(equation => equation.Display)
                 ? DocxMathParagraphPolicy.GetMixedSourceEquations(paragraph, token) : null;
             foreach (DocxEquation sourceEquation in sourceEquations)
             {
-                bool displayStyle = hyperlinked?.Contains(sourceEquation) != true &&
-                    (sourceEquation.Display && mixedRows?.Contains(sourceEquation) != true || standalone || displayRows.Contains(sourceEquation));
+                bool displayStyle = sourceEquation.Display && mixedRows?.Contains(sourceEquation) != true ||
+                    standalone || displayRows.Contains(sourceEquation);
                 // Document defaults belong to the preparation context, including
                 // stories parsed without paragraph-level document settings.
                 // Keep the original source identity as the prepared-map key.

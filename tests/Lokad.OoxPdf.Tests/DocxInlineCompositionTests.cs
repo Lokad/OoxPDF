@@ -2325,30 +2325,6 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxInlineCompositionHiddenRunPreservesMathGeometry()
-    {
-        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
-            TestAssert.Skip("Installed Cambria Math is required for the visible geometry control.");
-        const string fixture = "docx-omml-isolated-inline-body-fraction-left";
-        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
-        {
-            var source = ReadMutation(fixture, mode, false, false);
-            var hidden = ReadMutation(fixture, mode, false, false, (document, w, m) =>
-                document.Descendants(m + "oMath").Single().AddBeforeSelf(new XElement(w + "r",
-                    new XElement(w + "rPr", new XElement(w + "vanish")), new XElement(w + "t", "Invisible prose"))));
-            var renderer = new DocxRenderer(null, mode, mode == OoxPdfDocxMarkupMode.Final
-                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var before = renderer.InspectLayout(source).Pages.Single().Items.Single(item => item.Kind == "Equation");
-            var after = renderer.InspectLayout(hidden).Pages.Single().Items.Single(item => item.Kind == "Equation");
-            TestAssert.True(before.X == after.X && before.Y == after.Y && before.Width == after.Width && before.Height == after.Height,
-                "Invisible source prose must not alter mathematical style, alignment or occupied geometry.");
-            var pages = renderer.RenderPagesAsync(hidden, null, default).ToBlockingEnumerable().ToArray();
-            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
-            TestAssert.True(!text.Contains("Invisible", StringComparison.Ordinal), "Hidden prose cannot paint.");
-            TestAssert.Equal(1, text.Normalize(NormalizationForm.FormKC).Split("x+2y", StringSplitOptions.None).Length - 1);
-        }
-    }
-
     public static void DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks()
     {
         var paragraph = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-explicit-display-same-group")
@@ -2369,9 +2345,20 @@ internal static partial class DocxInlineCompositionTests
             var aligned = paragraph with { Equations = equations, InlineContent = equations.Select(equation => (DocxInlineItem)new DocxInlineEquation(equation)).ToArray() };
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(aligned).Count);
         }
-        var conflicting = paragraph.Equations.Select((equation, index) => equation with { AlignmentValue = index == 0 ? "left" : "right" }).ToArray();
-        TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with { Equations = conflicting,
-            InlineContent = conflicting.Select(equation => (DocxInlineItem)new DocxInlineEquation(equation)).ToArray() }).Count);
+        // Use the live reader: differing properties belong to separate source
+        // containers, rather than fabricating contradictory children of one group.
+        var normalizedSource = ReadMutation("CompositionProbes/math-explicit-display-same-group", OoxPdfDocxMarkupMode.Final,
+            false, false, (xml, w, m) =>
+            {
+                var group = xml.Descendants(m + "oMathPara").Single();
+                var second = group.Elements(m + "oMath").Last(); second.Remove();
+                group.Element(m + "oMathParaPr")?.Remove();
+                group.AddFirst(new XElement(m + "oMathParaPr", new XElement(m + "jc", new XAttribute(m + "val", "left"))));
+                group.AddAfterSelf(new XElement(m + "oMathPara", new XElement(m + "oMathParaPr",
+                    new XElement(m + "jc", new XAttribute(m + "val", "right"))), second));
+            }).Paragraphs.Single(value => value.Equations.Count == 2);
+        TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(normalizedSource).Count);
+        TestAssert.Equal(DocxTextAlignment.Right, DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(normalizedSource, default));
         TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
             12d, 8d, 8d, 9d, 16d, 1d, default, out _), "An individual box wider than every line retains fallback.");
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();

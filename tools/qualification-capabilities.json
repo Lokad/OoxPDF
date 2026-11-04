@@ -2669,7 +2669,7 @@
       "DocxFooterInlineImageReservesItsVisibleHeight",
       "PortableRenderingInlinePictureLinksFollowVisibleFrames",
       "PortableRenderingStaticPictureLinksRetainComposedFrames",
-      "DocxInlineCompositionHiddenRunPreservesMathGeometry",
+      "PortableRenderingSourceCharactersSetMathModeWithoutPaintingHiddenText",
       "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
       "DocxLockedFields",
       "DocxReaderPreservesFieldReferencesStructurally"
@@ -4920,6 +4920,9 @@
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath"
   ],
   "docx-authored-display-alignment": [
+    "PortableRenderingAdjacentMathGroupsNormalizeSourceFormatting",
+    "PortableRenderingSourceCharactersSetMathModeWithoutPaintingHiddenText",
+    "DocxInlineCompositionHiddenSourceMathMatchesIndependentWord",
     "PortableRenderingFirstDisplayGroupOwnsParagraphJustification",
     "DocxInlineCompositionAuthoredDisplayAlignment",
     "DocxInlineCompositionExplicitDisplays",
@@ -12797,7 +12800,7 @@
     "DocxInlineCompositionHyperlinkPreservesSingleMathFrame",
     "DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs",
     "DocxInlineCompositionGroupedHyperlinksFollowPrintedReviewRows",
-    "DocxInlineCompositionHiddenRunPreservesMathGeometry"
+    "PortableRenderingSourceCharactersSetMathModeWithoutPaintingHiddenText"
   ],
   "docx-inline-box-total-counter-containers": [
     "DocxInlineBoxTotalCountersKeepContentAcrossContainers",

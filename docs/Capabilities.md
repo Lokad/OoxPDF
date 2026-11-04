@@ -391,9 +391,11 @@ Approximate or restricted:
 - Supported native equations share ordered inline measurement with text/pictures.
   Fitting multiple formulas, bookmarks and unchanged-format run splitting preserve
   content in qualified body paragraphs, simple cells and direct headers/footers.
-  Supported display rows separated by hard breaks share the first row's
-  justification; differing later rows do not discard formulas. Conflicting
-  adjacent groups on one row retain their fallback.
+  Adjacent display containers combine using the later container's justification;
+  subsequent display rows share the first effective display row's owner.
+  Ordinary source text, including spaces and hidden text, links and pictures
+  retain inline math without discarding neighboring formulas. Hidden text is
+  unpainted; hidden manual-break and centerGroup geometry remain approximate.
   Authored body page breaks retain supported formulas, prose, pictures and note
   references in source order. Links can span the resulting pages; bookmarks target
   the first placed source content. This content-preservation coverage does not
