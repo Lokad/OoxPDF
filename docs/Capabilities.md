@@ -211,7 +211,9 @@ Approximate or restricted:
   bubbles retain the existing fallback.
   Automatic scatter X intervals use the available authored inner factor width
   and axis font size; numeric captions, marks and legend measurement share the
-  resolved scale. Inner manual plots also resolve factor-position offsets together
+  resolved scale. Unit selection measures occupied-data headroom before implicit
+  zero inclusion; authored bounds and intervals remain authoritative. Inner manual
+  plots also resolve factor-position offsets together
   with right-edge widths; equivalent declarations preserve their geometry and
   captions. Three independent edge controls match complete axes within0.04pt,
   correcting displacement up to80pt and extra axis captions. Automatic/outer X

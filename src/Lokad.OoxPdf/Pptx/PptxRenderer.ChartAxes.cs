@@ -106,9 +106,27 @@ internal sealed partial class PptxRenderer
         // bubbles keep their existing fallback.
         ChartValueExtents owned = default;
         double unit = 0d;
-        bool resolvedIntervals = !bubble && declaration is { } declared &&
-            (automaticUnit || declared.MajorUnit is not null) &&
-            TryResolvePointAxisRange(occupied, declared.Minimum, declared.Maximum, declared.MajorUnit, automaticTarget ?? target, out owned, out unit);
+        bool resolvedIntervals = false;
+        if (!bubble && declaration is { } declared && (automaticUnit || declared.MajorUnit is not null))
+        {
+            double? interval = declared.MajorUnit;
+            if (automaticUnit && horizontal)
+            {
+                // Source-owned X capacity measures occupied/source-bounded
+                // headroom before the bounds admit zero. Numeric Y targets
+                // retain their independently validated span measurement.
+                double first = declared.Minimum ?? occupied.Min, last = declared.Maximum ?? occupied.Max;
+                double span = last - first;
+                if (span > 0d && double.IsFinite(span))
+                {
+                    double padding = (declared.Minimum is null && first != 0d ? PointAxisHeadroomRatio : 0d) +
+                        (declared.Maximum is null && last != 0d ? PointAxisHeadroomRatio : 0d);
+                    interval = ChooseChartAxisMajorUnit(span * (1d + padding), automaticTarget!.Value);
+                }
+            }
+            resolvedIntervals = TryResolvePointAxisRange(occupied, declared.Minimum, declared.Maximum, interval,
+                automaticTarget ?? target, out owned, out unit);
+        }
         if (resolvedIntervals) extents = owned;
         ChartValueAxisRenderOptions options = ReadSceneOrXmlChartBubbleValueAxisOptions(axis, xml, theme, extents, target);
         if (resolvedIntervals) options = options with { Units = options.Units with { MajorUnit = unit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
@@ -163,8 +181,10 @@ internal sealed partial class PptxRenderer
         return double.IsFinite(slots) ? Math.Clamp(slots - 1d, 2d, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount) : null;
     }
 
+    private const double PointAxisHeadroomRatio = .05d;
+
     private static bool TryResolvePointAxisRange(ChartValueExtents occupied, double? minimum, double? maximum,
-        double? declaredUnit, double tickTargetCount, out ChartValueExtents result, out double unit, double headroomRatio = .05d)
+        double? declaredUnit, double tickTargetCount, out ChartValueExtents result, out double unit, double headroomRatio = PointAxisHeadroomRatio)
     {
         result = default;
         unit = declaredUnit ?? 0d;

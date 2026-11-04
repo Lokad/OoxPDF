@@ -1,5 +1,5 @@
 {
-  "Scope": "25 independent Office16 controls for source-owned inner plot widths, X fonts/formats, explicit bounds and automatic numeric intervals. Not a complete layout or application-view claim.",
+  "Scope": "33 independent Office16 controls for source-owned inner plot widths, X fonts/formats, source bounds and automatic intervals. Eight independent controls establish headroom-based unit choice before implicit zero inclusion. Not complete layout or application-view parity.",
   "Cases": [
     {
       "Id": "auto-x-width-240",
@@ -600,6 +600,198 @@
       "ExpectedUnit": 1.0,
       "InputSha256": "28F2CB1ED5ABC9CF39A2DC7B833D8FCAA913BDCE696592FE131C5C391A138C99",
       "ReferencePdfSha256": "C0F3FD5D9C36E1442906886AEB862D42F6EF959DBAA5FBA38722AC2C50FA94A5"
+    },
+    {
+      "Id": "scatter-headroom-4p7",
+      "FrameWidth": 540,
+      "WidthFactor": 0.45185185185185184,
+      "FontSize": 10,
+      "X": [
+        0.0,
+        0.671428571429,
+        1.342857142857,
+        2.014285714286,
+        2.685714285714,
+        3.357142857143,
+        4.028571428571,
+        4.7
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": 0,
+      "ExpectedMaximum": 5,
+      "ExpectedUnit": 1,
+      "InputSha256": "8ADB58E54322C5349D389FA231B3835C345C843E04870ABE94811F3A22FB313A",
+      "ReferencePdfSha256": "D6B12FCCD95EB0C39D82345D3B6AA6EE9D9C6726CBA61C90797BB12E4C7799BE"
+    },
+    {
+      "Id": "scatter-headroom-4p8",
+      "FrameWidth": 540,
+      "WidthFactor": 0.45185185185185184,
+      "FontSize": 10,
+      "X": [
+        0.0,
+        0.685714285714,
+        1.371428571429,
+        2.057142857143,
+        2.742857142857,
+        3.428571428571,
+        4.114285714286,
+        4.8
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": 0,
+      "ExpectedMaximum": 6,
+      "ExpectedUnit": 2,
+      "InputSha256": "0142650B2BDB45DB6B1508FACB2E2C182A9B2D1D091477B2650A83700BA52A49",
+      "ReferencePdfSha256": "D027CB0402BC1B145D9D9755D9B76B1C5D74FFDDACB230D2A3723A573B452D33"
+    },
+    {
+      "Id": "headroom-scaled48",
+      "FrameWidth": 540,
+      "WidthFactor": 0.45185185185185184,
+      "FontSize": 10,
+      "X": [
+        0.0,
+        6.857142857143,
+        13.714285714286,
+        20.571428571429,
+        27.428571428571,
+        34.285714285714,
+        41.142857142857,
+        48
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": 0,
+      "ExpectedMaximum": 60,
+      "ExpectedUnit": 20,
+      "InputSha256": "ACA73D58DAF41F25760A33792EF2A2E7FF34F784509BBDF9C551E1B7C6DD172B",
+      "ReferencePdfSha256": "A0417881D2455687E57E19B39F26D830487E87E3B23187F858BEF9D924742C66"
+    },
+    {
+      "Id": "headroom-negative",
+      "FrameWidth": 540,
+      "WidthFactor": 0.45185185185185184,
+      "FontSize": 10,
+      "X": [
+        -4.8,
+        -4.114285714286,
+        -3.428571428571,
+        -2.742857142857,
+        -2.057142857143,
+        -1.371428571429,
+        -0.685714285714,
+        0
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": -6,
+      "ExpectedMaximum": 0,
+      "ExpectedUnit": 2,
+      "InputSha256": "20A80CDCE6547B947531F5A811798B061EAACA7D986081C0D489FBDA8B4A902B",
+      "ReferencePdfSha256": "73DCD01289F2C70BD396100449A88B73176C33AE127473ECA45B8A827030333C"
+    },
+    {
+      "Id": "headroom-translated100",
+      "FrameWidth": 540,
+      "WidthFactor": 0.45185185185185184,
+      "FontSize": 10,
+      "X": [
+        100.0,
+        100.685714285714,
+        101.371428571429,
+        102.057142857143,
+        102.742857142857,
+        103.428571428571,
+        104.114285714286,
+        104.8
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": 98,
+      "ExpectedMaximum": 106,
+      "ExpectedUnit": 2,
+      "InputSha256": "2B9A484D2A84D22681C5DA18AA1A9BA03C474B38BCD01F85AA1BE061DE3807D3",
+      "ReferencePdfSha256": "8F9D1FC0F4BC06B84912B0B38A9A741928F0037CD276FEB6DACB607999E939EF"
+    },
+    {
+      "Id": "headroom-mixed",
+      "FrameWidth": 540,
+      "WidthFactor": 0.45185185185185184,
+      "FontSize": 10,
+      "X": [
+        -2.4,
+        -1.714285714286,
+        -1.028571428571,
+        -0.342857142857,
+        0.342857142857,
+        1.028571428571,
+        1.714285714286,
+        2.4
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": -4,
+      "ExpectedMaximum": 4,
+      "ExpectedUnit": 2,
+      "InputSha256": "689E124315766D66496C9CA7E4238FBC9B1B82A0DB0AD15E35EDFEAD5AC78602",
+      "ReferencePdfSha256": "683BC63BC341DB8BB51A3BDAD7743244460AD293DD6DEC24FD9BF47498FFB1F0"
+    },
+    {
+      "Id": "headroom-source-min0",
+      "FrameWidth": 540,
+      "WidthFactor": 0.45185185185185184,
+      "FontSize": 10,
+      "X": [
+        1.0,
+        1.542857142857,
+        2.085714285714,
+        2.628571428571,
+        3.171428571429,
+        3.714285714286,
+        4.257142857143,
+        4.8
+      ],
+      "Minimum": 0,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": 0,
+      "ExpectedMaximum": 6,
+      "ExpectedUnit": 2,
+      "InputSha256": "F2AAB5955FAE923D8FD500E1232788574ABEEF39EDFC47EFCF37934155A94A08",
+      "ReferencePdfSha256": "7BEC17E77B3A990CC3ACFE97F0D899284F0CCC21EC11035F2DABBB48C4669594"
+    },
+    {
+      "Id": "headroom-wide284",
+      "FrameWidth": 540,
+      "WidthFactor": 0.5259259259259259,
+      "FontSize": 10,
+      "X": [
+        0.0,
+        0.685714285714,
+        1.371428571429,
+        2.057142857143,
+        2.742857142857,
+        3.428571428571,
+        4.114285714286,
+        4.8
+      ],
+      "Minimum": null,
+      "Maximum": null,
+      "NumberFormat": "General",
+      "ExpectedMinimum": 0,
+      "ExpectedMaximum": 6,
+      "ExpectedUnit": 1,
+      "InputSha256": "81BD3685FCD15DEAC5BB0DEF4F69E177D54DA8049CDC5A3796FAB0FD58687F79",
+      "ReferencePdfSha256": "249AD36AA6FD81013BC49274734F4FC6C1BC2801185C1120A536A52B9BBC23AE"
     }
   ]
 }
