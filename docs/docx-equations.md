@@ -14,6 +14,13 @@ cells and direct headers/footers. Numbering owns the first authored row; formula
 beside prose use inline sizing while a later math-only row owns display sizing.
 Links and annotations follow the resulting physical geometry.
 
+Authored body page breaks can separate supported formulas without discarding
+prose, pictures or notes. Spanning links follow content on each page; a spanning
+bookmark resolves to its first placed source content. Portable regression checks
+cover this in Final/preserved and AllMarkup/Word-compatible modes with pinned
+fonts. These checks establish content and navigation preservation, not agreement
+with Office page geometry or unrestricted multi-column flow.
+
 Literal text, fractions, scripts, roots, delimiters, n-ary operators, functions,
 matrices and cases have qualified bounded forms. Their presence does not imply
 unrestricted nesting or line breaking. A sole inline equation uses standalone

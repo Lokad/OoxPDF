@@ -72,6 +72,14 @@ retained while their host adapters now implement `IMemoryBudget`; the estimated
 whole-conversion lease is removed. These checks do not establish admission of
 all renderer allocations. Package-consumer coverage uses the same public contract.
 
+`docx-composed-breaks` selects the portable mixed-content page-break witness and
+its neighboring reader, metadata-wrapper, hard-break and cancellation checks.
+The witness compares complete visible-character multisets before/after a break,
+then checks formula pages, picture draws, note ownership and navigation destinations
+separately. PDF paint order and wrapping spaces are not content-loss oracles.
+Select the capability union for affected production changes; a harness-only
+repair runs the changed exact method and reuses unchanged qualified runtime assets.
+
 Independent Office comparisons remain necessary for fidelity changes. Parser or
 layout assertions alone cannot establish visual correctness; image comparisons
 alone cannot establish searchable text, annotations or links. Historical failures

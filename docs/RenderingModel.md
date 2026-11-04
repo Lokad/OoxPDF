@@ -34,6 +34,14 @@ Word-compatible body origins belong to each printed page. Painting, inspection,
 bookmark/link geometry and following-note boundaries use that page's origin;
 mapped static stories and bottom-anchored notes retain their own frames.
 
+Supported mixed DOCX content uses ordered source items for text, tabs, breaks,
+pictures and equations. Measurement produces inline fragments without page
+coordinates; body, cell and related-story containers own wrapping, admission and
+placement. Painting and annotation bounds consume those placed frames. An authored
+body page break preserves source ownership on both sides, including linked
+formulas and the note associated with a reference. Unsupported combinations keep
+their explicit fallbacks; this is not unrestricted Word reflow.
+
 Current text layout intentionally avoids complex shaping. Bold/italic use a hybrid: prefer a real font face on exact non-fallback matches, otherwise synthesize (stroked bold pass, oblique shear). Font programs flow through FontRequest, FontFaceResolution, IFontProgramSource, OpenTypeFont, and the subsetted embedded PDF font (see [fonts and portability](Fonts.md)).
 
 ## Shape, media, and table pipeline (PPTX)
