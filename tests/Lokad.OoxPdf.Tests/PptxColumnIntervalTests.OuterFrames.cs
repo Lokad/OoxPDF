@@ -61,6 +61,10 @@ internal static partial class PptxColumnIntervalTests
             fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).Select(show => show.Text).ToArray();
         TestAssert.True(captions.SequenceEqual(Enumerable.Range(1, 7).Select(i => "W" + i).Append("x")),
             "Frame admission retains every source category, including the changed endpoint.");
+        foreach (PdfPage page in new[] { wide, shortened })
+            TestAssert.Equal("Regional sales performance", string.Concat(
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                    fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).Select(show => show.Text)));
     }
 
     public static void PptxManualOuterPlotFillUsesTheNativeDataRectangle()
