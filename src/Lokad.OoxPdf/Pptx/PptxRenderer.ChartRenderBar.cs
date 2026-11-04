@@ -302,6 +302,7 @@ internal sealed partial class PptxRenderer
         bool hasLegend = legend.Visible && !legend.Overlay;
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
         double? categoryLabelOffsetAdjustment = null;
+        double? categoryNumericEndClearance = null;
         double? categoryTopReserve = null;
         bool usesMeasuredAxisInsets = !sceneChart.PlotAreaLayout.HasLayout &&
             (!hasLegend || legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
@@ -395,7 +396,7 @@ internal sealed partial class PptxRenderer
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
-            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = cartesianHeader?.NumericClearance };
+            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = categoryNumericEndClearance };
         }
 
         ChartPlotBox manualDefaultPlotBox = horizontalBars && HasRecognizedManualPlotLayoutTarget()
@@ -404,7 +405,7 @@ internal sealed partial class PptxRenderer
         if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, manualDefaultPlotBox, out ChartPlotLayout manualPlotLayout))
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
-            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = cartesianHeader?.NumericClearance };
+            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = categoryNumericEndClearance };
         }
 
         // Bars retain their dedicated outer-area placement and caption owner.
@@ -830,6 +831,7 @@ internal sealed partial class PptxRenderer
                 if (height < 1d) return plotBox;
                 categoryTopReserve = reserves.Top;
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
+                categoryNumericEndClearance = headerMetrics.NumericClearance;
                 return new(plotBox.X, frame.Y + reserves.Bottom, plotBox.Width, height);
             }
             double presetBottomReserve = plotBox.Y - frame.Y;
@@ -843,6 +845,7 @@ internal sealed partial class PptxRenderer
             double admittedTop = cartesianHeader is { } header ? frame.Y + frame.Height - header.Reserve : plotTop;
             if (measuredOffsetAdjustment is not null && admittedTop - newY < 1d) return plotBox;
             categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
+            categoryNumericEndClearance = measuredFrame ? cartesianHeader?.NumericClearance : null;
             return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, plotTop - newY));
         }
 

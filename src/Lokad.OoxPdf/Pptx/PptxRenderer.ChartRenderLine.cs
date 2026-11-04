@@ -464,7 +464,6 @@ internal sealed partial class PptxRenderer
                     categoryPlot, lineElement, chartXml, fontResolver,
                     categoryPlacement: categoryAxisPlacement).ConfigureAwait(false) is { } header)
             {
-                categoryNumericEndClearance = header.NumericClearance;
                 if (await TryGetMeasuredCategoryPlotBoxAsync((header.Reserve, header.NumericClearance)).ConfigureAwait(false) is { } composedPlotBox)
                 {
                     defaultPlotBox = composedPlotBox;
