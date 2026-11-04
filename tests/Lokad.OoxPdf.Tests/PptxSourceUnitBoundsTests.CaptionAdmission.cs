@@ -61,13 +61,15 @@ internal static partial class PptxSourceUnitBoundsTests
                 categoryFontSize: size, overflow: "ellipsis", categoryText: fitted);
             var second = DocxCommentsTests.ReadEmbeddedGlyphTextShows(authored, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
-            TestAssert.True(second.Length == first.Length && first.Zip(second).All(pair =>
-                pair.First.Text == pair.Second.Text && Math.Abs(pair.First.X - pair.Second.X) < .003 &&
-                Math.Abs(pair.First.Y - pair.Second.Y) < .003),
-                "Returning a generated marker's advance to the plot preserves the painted text origins.");
             var font = first[0].Font.Font;
             double marker = font.GetAdvanceWidth(font.MapCodePoint('\u2026')) * (size / 100d) / font.UnitsPerEm;
             double expected = marker * Math.Sin(Math.Abs(angle) * Math.PI / 180d);
+            bool trailingEndAtAxis = (angle < 0) != high;
+            double expectedOriginShift = trailingEndAtAxis ? 0d : high ? expected : -expected;
+            TestAssert.True(second.Length == first.Length && first.Zip(second).All(pair =>
+                pair.First.Text == pair.Second.Text && Math.Abs(pair.First.X - pair.Second.X) < .003 &&
+                Math.Abs(pair.First.Y - pair.Second.Y - expectedOriginShift) < .003),
+                "A generated marker follows the caption's axis-facing anchor; the opposite end moves with its band.");
             TestAssert.True(Math.Abs(CaptionPlotHeight(generated) - CaptionPlotHeight(authored) - expected) < .003,
                 "Generated markers hang outside occupied height; an authored ellipsis keeps its normal advance.");
         }

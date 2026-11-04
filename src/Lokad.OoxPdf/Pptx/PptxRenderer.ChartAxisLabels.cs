@@ -80,10 +80,12 @@ internal sealed partial class PptxRenderer
                     double gap = Math.Max(0d, baselineDistance - (labelsHighSide ? rotated.Descent : rotated.Ascent));
                     double radians = -rotated.RotationDegrees * Math.PI / 180d;
                     double sin = Math.Sin(radians), cos = Math.Cos(radians);
-                    // Only a generated overflow marker hangs toward the plot.
-                    // Literal source ellipses retain their ordinary advance.
-                    double labelAxisY = axisY + (labelsHighSide ? -1d : 1d) * part.OverflowAdvance * Math.Abs(sin);
                     bool rightAnchor = (radians > 0d) != labelsHighSide;
+                    // A trailing marker hangs toward the axis only when the
+                    // trailing end anchors there. At the opposite end it moves
+                    // with the caption band. Literal ellipses have no overhang.
+                    double overhang = rightAnchor ? part.OverflowAdvance * Math.Abs(sin) : 0d;
+                    double labelAxisY = axisY + (labelsHighSide ? -overhang : overhang);
                     var horizontal = ChartCategoryCaptionHorizontalFrame(center, part.Width, rotated.Ascent, rotated.Descent, sin, cos, rightAnchor);
                     double pivotX = horizontal.Pivot;
                     double pivotY = labelsHighSide ? labelAxisY + gap + rotated.Descent * cos : labelAxisY - gap - rotated.Ascent * cos;
