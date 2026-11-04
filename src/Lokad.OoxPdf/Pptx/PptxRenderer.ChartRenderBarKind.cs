@@ -74,7 +74,8 @@ internal sealed partial class PptxRenderer
                     ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
                     : BuildFillLegendEntries(theme, colorMap, barPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
                 ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver, resolvedCategory, context: context,
-                    resolvedValueExtents: sharedValueAxis ? valueExtents : null).ConfigureAwait(false));
+                    resolvedValueExtents: sharedValueAxis || horizontalBars && CanOwnCartesianChartSourceRange(sceneChart, valueSceneAxis)
+                        ? valueExtents : null).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
                 ChartLegendBox? preparedLegendBox = null;
                 bool measuredHorizontalLegend = UsesMeasuredBarLegend(barOptions, sceneChart, chartLayout.Legend);

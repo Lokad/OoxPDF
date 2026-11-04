@@ -337,10 +337,11 @@ internal sealed partial class PptxRenderer
         double lower = axis.Minimum ?? origin + Math.Floor((data.Min - origin) / unit) * unit;
         double upper = axis.Maximum ?? origin + Math.Ceiling((data.Max - origin) / unit) * unit;
         double span = upper - lower;
-        // A fixed maximum owns the downward lattice without extra headroom.
+        // A nonzero fixed maximum owns the downward lattice without extra
+        // headroom. Zero remains the baseline and retains lower headroom.
         // Source intervals use one shared padding decision across plot kinds;
         // automatic-unit scales retain their existing rounding policy above.
-        bool extendLower = axis.Minimum is null && axis.Maximum is null && lower != 0d &&
+        bool extendLower = axis.Minimum is null && (axis.Maximum is null or 0d) && lower != 0d &&
             (lower >= data.Min || span > 0d && (upper - data.Min) / span >= PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
         bool extendUpper = axis.Maximum is null && (upper != 0d || lower == 0d) &&
             (upper <= data.Max || span > 0d && (data.Max - lower) / span >= PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
@@ -356,7 +357,9 @@ internal sealed partial class PptxRenderer
 
     private static bool CanOwnCartesianChartSourceRange(PptxSceneChart? chart, PptxSceneChartAxis? axis) =>
         CanUseCartesianChartSourceIntervals(chart, axis) &&
-        chart!.Plots[0] is not { PlotKind: PptxSceneChartPlotKind.Bar, BarDirectionKind: PptxSceneChartBarDirection.Bar };
+        // Stacked horizontal intervals retain their existing bounds fallback.
+        chart!.Plots[0] is not { PlotKind: PptxSceneChartPlotKind.Bar, BarDirectionKind: PptxSceneChartBarDirection.Bar,
+            GroupingKind: not PptxSceneChartGrouping.Clustered };
 
     // A shared reciprocal source pair owns one linear scale across the supported
     // independent plots. Other compositions retain their existing fallback.
@@ -365,16 +368,24 @@ internal sealed partial class PptxRenderer
         if (chart is null || chart.Plots.Count < 2 || axis is not { HasScaling: true, HasLogarithmicScale: false } ||
             chart.Axes.Count(candidate => candidate.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
             ReadSceneOrXmlPairedCategoryAxis(chart, axis, null).SceneAxis is not { } category) return false;
-        bool hasColumns = false;
+        PptxSceneChartBarDirection? direction = null;
+        bool hasLines = false;
         foreach (var plot in chart.Plots)
         {
             if (plot.AxisIds.Count != 2 || !plot.AxisIds.Contains(axis.Id, StringComparer.Ordinal) ||
                 !plot.AxisIds.Contains(category.Id, StringComparer.Ordinal)) return false;
-            if (plot is { PlotKind: PptxSceneChartPlotKind.Bar, BarDirectionKind: PptxSceneChartBarDirection.Column,
-                GroupingKind: PptxSceneChartGrouping.Clustered }) hasColumns = true;
-            else if (plot is not { PlotKind: PptxSceneChartPlotKind.Line, GroupingKind: PptxSceneChartGrouping.Standard }) return false;
+            if (plot is { PlotKind: PptxSceneChartPlotKind.Bar,
+                BarDirectionKind: PptxSceneChartBarDirection.Column or PptxSceneChartBarDirection.Bar,
+                GroupingKind: PptxSceneChartGrouping.Clustered })
+            {
+                if (direction is not null && direction != plot.BarDirectionKind) return false;
+                direction = plot.BarDirectionKind;
+            }
+            else if (plot is { PlotKind: PptxSceneChartPlotKind.Line, GroupingKind: PptxSceneChartGrouping.Standard }) hasLines = true;
+            else return false;
         }
-        return hasColumns;
+        return direction == PptxSceneChartBarDirection.Column ||
+            direction == PptxSceneChartBarDirection.Bar && !hasLines;
     }
 
     private static bool CanUseCartesianChartSourceIntervals(PptxSceneChart? chart, PptxSceneChartAxis? axis) =>

@@ -29,7 +29,10 @@ internal static partial class PptxColumnIntervalTests
         foreach (string grouping in new[] { "clustered", "stacked" })
         foreach (bool manual in new[] { false, true })
             TestAssert.Equal("7,32,57,82", string.Join(",", Labels(Render(7, 25, grouping: grouping, manual: manual, horizontal: true))));
-        TestAssert.Equal("0,25,50,75,100,103", string.Join(",", Labels(Render(null, 25, horizontal: true))));
+        // Fresh Office upper-only controls anchor whole intervals at103 and
+        // include zero in bar data extents: the old zero-aligned fallback was
+        // an implementation assertion, not a matching native range.
+        TestAssert.Equal("-22,3,28,53,78,103", string.Join(",", Labels(Render(null, 25, horizontal: true))));
     }
 
     public static void PptxHorizontalTicksAndBothGridKindsUseTheLabelIntervals()
