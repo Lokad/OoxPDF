@@ -25,7 +25,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "normal-high",
@@ -50,7 +51,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "max-high",
@@ -75,7 +77,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "category-reversed-max",
@@ -100,7 +103,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "category-reversed-normal",
@@ -125,7 +129,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "max-font12",
@@ -150,7 +155,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "max-font24",
@@ -175,7 +181,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "max-small-frame",
@@ -200,7 +207,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "category-reversed-low",
@@ -225,7 +233,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "category-reversed-high",
@@ -250,7 +259,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "single-max-next",
@@ -273,7 +283,8 @@
       ],
       "Furniture": false,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "title-normal",
@@ -298,7 +309,8 @@
       ],
       "Furniture": true,
       "RelativeTo": null,
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "title-max",
@@ -323,7 +335,8 @@
       ],
       "Furniture": true,
       "RelativeTo": "title-normal",
-      "NativeLegendNames": []
+      "NativeLegendNames": [],
+      "NativeLegendRows": 0
     },
     {
       "Id": "legend-normal",
@@ -351,7 +364,8 @@
       "NativeLegendNames": [
         "ColumnSource",
         "OtherColumnSource"
-      ]
+      ],
+      "NativeLegendRows": 1
     },
     {
       "Id": "legend-max",
@@ -379,7 +393,8 @@
       "NativeLegendNames": [
         "ColumnSource",
         "OtherColumnSource"
-      ]
+      ],
+      "NativeLegendRows": 1
     },
     {
       "Id": "legend-narrow",
@@ -407,7 +422,8 @@
       "NativeLegendNames": [
         "ColumnSource",
         "OtherColumnSource"
-      ]
+      ],
+      "NativeLegendRows": 2
     },
     {
       "Id": "legend-narrow-max",
@@ -432,6 +448,94 @@
       ],
       "Furniture": true,
       "RelativeTo": "legend-narrow",
+      "NativeLegendNames": [
+        "ColumnSource",
+        "OtherColumnSource"
+      ],
+      "NativeLegendRows": 2
+    },
+    {
+      "Id": "legend-width330",
+      "Input": "legend-width330.pptx",
+      "InputSha256": "FB40EFB9D89DCEF25E2ABA9D47D12DC74B420703D438B2BC2A217B88BA67D9EB",
+      "OfficePdfSha256": "71905727F18796ED9C1211E217EC653340C2AD4E498795B725EAF338F3F2B18C",
+      "NativeFrameY": [
+        47.0,
+        394.3399963378906
+      ],
+      "NativeAxisY": 394.3399963378906,
+      "NativeAxisTop": false,
+      "NativeCaptionSide": "below",
+      "NativeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Furniture": true,
+      "RelativeTo": null,
+      "NativeLegendRows": 1,
+      "NativeLegendNames": [
+        "ColumnSource",
+        "OtherColumnSource"
+      ]
+    },
+    {
+      "Id": "legend-width344",
+      "Input": "legend-width344.pptx",
+      "InputSha256": "1ED55E84C34B5CD092C3DBFA8EFE422C455BF565E4BCA35EF138F65006892D21",
+      "OfficePdfSha256": "5BAB51BE7855DE61A0452E9710849E41B387737BBF3BD144017AE5B6A709F8E3",
+      "NativeFrameY": [
+        47.0,
+        394.3399963378906
+      ],
+      "NativeAxisY": 394.3399963378906,
+      "NativeAxisTop": false,
+      "NativeCaptionSide": "below",
+      "NativeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Furniture": true,
+      "RelativeTo": null,
+      "NativeLegendRows": 1,
+      "NativeLegendNames": [
+        "ColumnSource",
+        "OtherColumnSource"
+      ]
+    },
+    {
+      "Id": "legend-width380",
+      "Input": "legend-width380.pptx",
+      "InputSha256": "40172623E0C5C4B82B1CFBDE802E1810B1C5DF034D8551EC399CEB95C6CC1D1B",
+      "OfficePdfSha256": "1BF2405930B9392E27BCD5FD77D5B74B0D91D4C99CB58AD1A7BF5139F3076BC3",
+      "NativeFrameY": [
+        47.0,
+        394.3399963378906
+      ],
+      "NativeAxisY": 394.3399963378906,
+      "NativeAxisTop": false,
+      "NativeCaptionSide": "below",
+      "NativeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Furniture": true,
+      "RelativeTo": null,
+      "NativeLegendRows": 1,
       "NativeLegendNames": [
         "ColumnSource",
         "OtherColumnSource"

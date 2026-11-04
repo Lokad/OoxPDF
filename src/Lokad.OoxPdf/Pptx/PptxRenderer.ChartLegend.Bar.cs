@@ -84,19 +84,24 @@ internal sealed partial class PptxRenderer
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
         bool automaticLegend = !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
-        // Category keys use the measured grid. Per-series legends have an
-        // independently validated spacing contract and retain that owner.
+        // Filled keys share natural-row admission and wrapped columns. Series
+        // cells retain their measured key/text gap; category cells also own
+        // the independently observed marker-sized tail.
         bool measuredFillGrid = measuredBand && bottom && automaticLegend &&
-            entries.All(entry => entry.Fill is not null && entry.SeriesName is null);
-        double naturalWidth = 0d, widestCell = 0d;
+            entries.All(entry => entry.Fill is not null);
+        bool categoryFillGrid = measuredFillGrid && entries.All(entry => entry.SeriesName is null);
+        double naturalWidth = 0d, widestCell = 0d, widestNaturalCell = 0d;
         for (int i = 0; i < entries.Count; i++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
             widths[i] = GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, measure, box.MarkerWidth, gap, padding);
             if (measuredFillGrid)
             {
-                double cell = measure.Measure(entries[i].Name, style) + box.MarkerWidth + box.MarkerSize;
-                naturalWidth += cell;
+                double advance = measure.Measure(entries[i].Name, style) + box.MarkerWidth;
+                double naturalCell = advance + box.MarkerSize;
+                double cell = categoryFillGrid ? naturalCell : widths[i];
+                naturalWidth += naturalCell;
+                widestNaturalCell = Math.Max(widestNaturalCell, naturalCell);
                 widestCell = Math.Max(widestCell, cell);
             }
         }
@@ -128,15 +133,15 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                int capacity = (int)Math.Min(entries.Count, Math.Max(1d, Math.Floor(availableWidth / widestCell)));
+                int capacity = (int)Math.Min(entries.Count, Math.Max(1d, Math.Floor(availableWidth / widestNaturalCell)));
                 int rowCount = (entries.Count - 1) / capacity + 1;
                 int columns = (entries.Count - 1) / rowCount + 1;
                 Array.Fill(widths, widestCell);
-                padding = 0d;
+                if (categoryFillGrid) padding = 0d;
                 for (int start = 0; start < entries.Count; start += columns)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    rows.Add((start, Math.Min(entries.Count, start + columns), columns * widestCell));
+                    rows.Add((start, Math.Min(entries.Count, start + columns), columns * widestCell - padding));
                 }
             }
         }

@@ -97,6 +97,23 @@ internal static partial class PptxHorizontalFrameTests
         }
     }
 
+    public static void PptxWrappedFilledSeriesLegendsKeepIndependentOfficeColumns()
+    {
+        using var oracle = NumericSideOracle();
+        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            int nativeRows = row.GetProperty("NativeLegendRows").GetInt32();
+            if (nativeRows < 2 || nativeRows != row.GetProperty("NativeLegendNames").GetArrayLength()) continue;
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(RenderNumericSide(row), usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
+            // These native rows form one column. The pinned face is wider,
+            // retaining wrapping without fitting a font-specific break width.
+            TestAssert.True(captions.Select(show => show.Y).Distinct().Count() > 1 &&
+                captions.All(show => Math.Abs(show.X - captions[0].X) < .002d),
+                row.GetProperty("Id").GetString() + ": filled series rows preserve their native shared column.");
+        }
+    }
+
     private static (double Top, double Bottom, double Axis) NumericSideGeometry(PdfPage page)
     {
         var lines = PptxColumnIntervalTests.Lines(page);
