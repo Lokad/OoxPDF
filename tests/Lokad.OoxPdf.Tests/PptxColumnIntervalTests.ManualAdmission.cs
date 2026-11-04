@@ -12,6 +12,7 @@ internal static partial class PptxColumnIntervalTests
 {
     private static string AdmissionCases => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", "ManualAxisAdmission"));
+    private const string AdmissionFaceBoundary = "category12-y15";
 
     public static void PptxManualInnerNumericStripsFitTheirIndependentOfficeSide()
     {
@@ -39,12 +40,32 @@ internal static partial class PptxColumnIntervalTests
     public static void PptxManualInnerVerticalAdmissionMatchesIndependentOfficeFrames()
     {
         using var oracle = AdmissionOracle();
-        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row => row.GetProperty("CheckY").GetBoolean()))
+        // Calibri crosses the endcap boundary in this fixture; the pinned
+        // DejaVu face fits it. Frozen Office qualification retains its absolute
+        // rectangle gate, while the portable check below retains source content.
+        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row => row.GetProperty("CheckY").GetBoolean() &&
+            row.GetProperty("Id").GetString() != AdmissionFaceBoundary))
         {
             var box = AdmissionBounds(RenderAdmission(row));
             double[] expected = AdmissionNumbers(row, "NativeFrame");
             TestAssert.True(Math.Abs(box.Top - expected[1]) <= 1d && Math.Abs(box.Bottom - expected[3]) <= 1d,
                 row.GetProperty("Id").GetString() + ": native visible-axis admission and hidden-axis ownership.");
+        }
+    }
+
+    public static void PptxManualInnerFaceBoundaryKeepsSourceCaptions()
+    {
+        using var oracle = AdmissionOracle();
+        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray().Where(row =>
+            row.GetProperty("Id").GetString() is AdmissionFaceBoundary or "axes12-global6-y15" or "axes12-global24-y15"))
+        {
+            PdfPage page = RenderAdmission(row);
+            var categories = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).Select(show => show.Text).ToArray();
+            TestAssert.True(categories.SequenceEqual(Enumerable.Range(1, 8).Select(index => "W" + index)),
+                "Face substitution and chart defaults preserve every emitted source category.");
+            TestAssert.True(AdmissionNumericShows(page).Select(show => show.Text).SequenceEqual(new[] { "7", "32", "57", "82", "107" }),
+                "The face-dependent admission boundary preserves all source intervals.");
         }
     }
 

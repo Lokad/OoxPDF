@@ -1,5 +1,6 @@
 {
   "pptx-manual-axis-admission": [
+    "PptxManualInnerFaceBoundaryKeepsSourceCaptions",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
