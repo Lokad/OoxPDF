@@ -152,6 +152,9 @@ Approximate or restricted:
   Automatic plots admit oblique category-caption frames horizontally using the
   same measured geometry as painting. Manual plot geometry stays authored;
   horizontal wrapping and vertical-caption placement retain their own policies.
+  Ellipsized category captions reserve their fitted height; unused fitting space
+  returns to the plot. Clipping retains its existing capacity policy. Short-frame
+  caption geometry remains approximate.
   Automatic step fitting and remaining horizontal frame geometry stay
   approximate. Composed/secondary interval ownership retains its fallback.
   A single reciprocal category/value pair shares horizontal crossing geometry
