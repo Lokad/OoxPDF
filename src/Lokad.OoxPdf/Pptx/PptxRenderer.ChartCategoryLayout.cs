@@ -364,9 +364,9 @@ internal sealed partial class PptxRenderer
         // or rebuilding its eligibility here. The outer fitting budget restores
         // the default flat strip and removes the two minimum end margins.
         double fittingBudget = layout.PlotBox.Height + ComputeCartesianLabelStripBottomReserve(style.FontSize) -
-            2d * PptxChartMetricRules.HorizontalBarPlotTopReserve + (layout.AutomaticNumericEndClearance ?? 0d);
+            2d * PptxChartMetricRules.HorizontalBarPlotTopReserve + (layout.AutomaticCaptionFittingClearance ?? 0d);
         bool overflowFrame = angle != 0d && body.VerticalOverflowValue == "ellipsis" &&
-            !layout.ManualPlotLayoutApplied && atEdge && layout.AutomaticNumericEndClearance is not null && fittingBudget > 0d;
+            !layout.ManualPlotLayoutApplied && atEdge && layout.AutomaticCaptionFittingClearance is not null && fittingBudget > 0d;
         const double fittingPixel = 72d / 96d;
         ChartTextStyle fittingStyle = style with
         { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize), CharacterSpacing = 0d };

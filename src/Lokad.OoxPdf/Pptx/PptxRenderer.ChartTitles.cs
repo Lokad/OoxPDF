@@ -589,8 +589,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<(double Reserve, double NumericClearance)> MeasureCartesianHeaderReserveAsync(
         PptxTheme theme, PptxSceneChart chart, PresentationFontResolver? resolver, double numericLineHeight)
     {
-        double numericClearance = Math.Max(PptxChartMetricRules.HorizontalBarPlotTopReserve,
-            PptxChartMetricRules.AutomaticCartesianTopPadding + numericLineHeight / 2d);
+        double numericClearance = CartesianAxisEndClearance(numericLineHeight);
         double reserve = numericClearance;
         if (!string.IsNullOrWhiteSpace(chart.Title.Text) && chart.Title.Overlay != true)
         {
@@ -599,6 +598,24 @@ internal sealed partial class PptxRenderer
                 2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height;
         }
         return (reserve, numericClearance);
+    }
+
+    private static double CartesianAxisEndClearance(double lineHeight) =>
+        Math.Max(PptxChartMetricRules.HorizontalBarPlotTopReserve,
+            PptxChartMetricRules.AutomaticCartesianTopPadding + lineHeight / 2d);
+
+    private static async ValueTask<double?> MeasureCategoryFittingClearanceAsync(PptxTheme theme,
+        PptxSceneChart chart, XDocument xml, PresentationFontResolver? resolver, double numericClearance)
+    {
+        // Axis-local numeric typography consumes space at both ends of the
+        // fitting container. Its reference comes from the chart's category
+        // style, before axis-local text overrides; painting keeps those overrides.
+        ChartTextStyle reference = ReadSceneOrXmlChartTextStyle(theme, chart, null, xml, null,
+            PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
+        var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
+        if (await measure.TryMeasureNormalLineHeightAsync(reference).ConfigureAwait(false) is not { } lineHeight)
+            return null;
+        return 2d * CartesianAxisEndClearance(lineHeight) - numericClearance;
     }
 
     private static async ValueTask<(double Ascent, double Height)> MeasureChartTitleLineAsync(

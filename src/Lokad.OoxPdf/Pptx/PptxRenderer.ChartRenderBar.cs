@@ -217,7 +217,7 @@ internal sealed partial class PptxRenderer
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
             plotLayout.AutomaticCategoryLabelOffsetAdjustment,
             plotLayout.ManualLayoutTargetKind is null && sceneChart.Plots.Count == 1 ? categoryPlacement : null)
-        { AutomaticNumericEndClearance = plotLayout.AutomaticNumericEndClearance };
+        { AutomaticCaptionFittingClearance = plotLayout.AutomaticCaptionFittingClearance };
     }
 
     private static double ReadCategoryTitleFontSizeAtPosition(PptxSceneChart sceneChart, PptxSceneChartAxisPosition titlePosition)
@@ -302,7 +302,7 @@ internal sealed partial class PptxRenderer
         bool hasLegend = legend.Visible && !legend.Overlay;
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
         double? categoryLabelOffsetAdjustment = null;
-        double? categoryNumericEndClearance = null;
+        double? categoryFittingClearance = null;
         double? categoryTopReserve = null;
         bool usesMeasuredAxisInsets = !sceneChart.PlotAreaLayout.HasLayout &&
             (!hasLegend || legend.PositionKind is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom);
@@ -396,7 +396,7 @@ internal sealed partial class PptxRenderer
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
-            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = categoryNumericEndClearance };
+            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
         }
 
         ChartPlotBox manualDefaultPlotBox = horizontalBars && HasRecognizedManualPlotLayoutTarget()
@@ -405,7 +405,7 @@ internal sealed partial class PptxRenderer
         if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, manualDefaultPlotBox, out ChartPlotLayout manualPlotLayout))
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
-            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = categoryNumericEndClearance };
+            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
         }
 
         // Bars retain their dedicated outer-area placement and caption owner.
@@ -831,7 +831,7 @@ internal sealed partial class PptxRenderer
                 if (height < 1d) return plotBox;
                 categoryTopReserve = reserves.Top;
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
-                categoryNumericEndClearance = headerMetrics.NumericClearance;
+                categoryFittingClearance = await MeasureCategoryFittingClearanceAsync(theme, sceneChart, chartXml, fontResolver, headerMetrics.NumericClearance).ConfigureAwait(false);
                 return new(plotBox.X, frame.Y + reserves.Bottom, plotBox.Width, height);
             }
             double presetBottomReserve = plotBox.Y - frame.Y;
@@ -845,7 +845,7 @@ internal sealed partial class PptxRenderer
             double admittedTop = cartesianHeader is { } header ? frame.Y + frame.Height - header.Reserve : plotTop;
             if (measuredOffsetAdjustment is not null && admittedTop - newY < 1d) return plotBox;
             categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
-            categoryNumericEndClearance = measuredFrame ? cartesianHeader?.NumericClearance : null;
+            categoryFittingClearance = measuredFrame ? await MeasureCategoryFittingClearanceAsync(theme, sceneChart, chartXml, fontResolver, cartesianHeader!.Value.NumericClearance).ConfigureAwait(false) : null;
             return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, plotTop - newY));
         }
 

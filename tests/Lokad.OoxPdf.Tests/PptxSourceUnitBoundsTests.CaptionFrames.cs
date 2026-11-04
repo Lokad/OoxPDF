@@ -79,7 +79,7 @@ internal static partial class PptxSourceUnitBoundsTests
 
     private static PdfPage RenderCaptionFrames(int angle, int unit, string kind = "bar", bool reversed = false,
         bool highSide = false, bool manual = false, bool hidden = false, int height = 360,
-        int categoryFontSize = 1200, string? overflow = null, string? categoryText = null)
+        int categoryFontSize = 1200, string? overflow = null, string? categoryText = null, int valueFontSize = 1000)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -96,6 +96,7 @@ internal static partial class PptxSourceUnitBoundsTests
             overflow is null ? null : new XAttribute("vertOverflow", overflow)),
             new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr", new XAttribute("sz", categoryFontSize))))));
         XElement numeric = plot.Element(c + "valAx")!;
+        numeric.Descendants(a + "defRPr").Single().SetAttributeValue("sz", valueFontSize);
         numeric.Element(c + "numFmt")!.SetAttributeValue("formatCode", "0");
         if (kind == "line") numeric.Add(new XElement(c + "crossBetween", new XAttribute("val", "midCat")));
         if (manual) plot.AddFirst(XElement.Parse("""

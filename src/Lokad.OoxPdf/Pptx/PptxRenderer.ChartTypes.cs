@@ -447,7 +447,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, PptxSceneChartTextBodyProperties TitleTextBodyProperties, ChartLegendLayout Legend, double? AutomaticCategoryLabelOffsetAdjustment = null, ChartAxisPlacement? AutomaticCategoryAxisPlacement = null)
     {
         public ChartCategoryLabelLayout? CategoryLabels { get; init; }
-        public double? AutomaticNumericEndClearance { get; init; }
+        public double? AutomaticCaptionFittingClearance { get; init; }
     }
 
     private sealed record ChartCategoryLabelLayout(ChartTextStyle Style, double RotationDegrees, int TickLabelSkip,
@@ -484,7 +484,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, PptxSceneChartManualLayoutTarget? ManualLayoutTargetKind)
     {
         public double? AutomaticCategoryLabelOffsetAdjustment { get; init; }
-        public double? AutomaticNumericEndClearance { get; init; }
+        public double? AutomaticCaptionFittingClearance { get; init; }
 
         public static ChartPlotLayout FromPlotBox(ChartPlotBox plotBox)
         {

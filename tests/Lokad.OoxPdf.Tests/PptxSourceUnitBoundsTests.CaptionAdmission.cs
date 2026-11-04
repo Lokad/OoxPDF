@@ -97,6 +97,31 @@ internal static partial class PptxSourceUnitBoundsTests
         }
     }
 
+    public static void PptxCategoryOverflowTracksValueFontWithoutChangingCategoryTypeface()
+    {
+        foreach (int angle in new[] { -45, 45 })
+        foreach (bool high in new[] { false, true })
+        {
+            var prefixes = new List<string>();
+            foreach (int valueSize in new[] { 800, 1200, 1800 })
+            {
+                PdfPage page = RenderCaptionFrames(angle, 2, highSide: high, height: 154,
+                    overflow: "ellipsis", categoryText: new string('W', 80), valueFontSize: valueSize);
+                var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                    fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+                TestAssert.Equal(19, captions.Length);
+                TestAssert.True(captions.All(show => show.Size == 12 && show.Text == captions[0].Text),
+                    "Changing numeric typography keeps the category typeface size and source positions.");
+                TestAssert.True(Labels(page).SequenceEqual(new double[] { 0, 2, 4, 6 }),
+                    "Numeric typography preserves the authored source scale.");
+                prefixes.Add(captions[0].Text);
+            }
+            TestAssert.True(prefixes[0].Length > prefixes[^1].Length && prefixes.Zip(prefixes.Skip(1)).All(
+                pair => pair.First.Length >= pair.Second.Length),
+                "Larger numeric type consumes fitting space at both ends; category typography remains fixed.");
+        }
+    }
+
     private static double CaptionPlotHeight(PdfPage page)
     {
         double[] axis = PptxColumnIntervalTests.Lines(page).Single(line =>

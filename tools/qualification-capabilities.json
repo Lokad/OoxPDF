@@ -1506,6 +1506,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-category-layout": [
+    "PptxCategoryOverflowTracksValueFontWithoutChangingCategoryTypeface",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
     "PptxCategoryOverflowMarkerSeparatesOccupiedHeightFromPainting",
     "PptxCategoryOverflowPreservesManualTextOrigins",
     "PptxFittedCategoryCaptionsReturnUnusedVerticalCapacity",
