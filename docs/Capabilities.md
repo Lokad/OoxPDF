@@ -185,8 +185,11 @@ Approximate or restricted:
   independently of the numeric stroke. Low/high/next-to placement follows the
   paired category direction, including reversal, with measured titles and
   top/bottom legends. Authored furniture, axis titles, side legends and interior
-  ordinal crossings retain their existing placement fallback. Reversed-category
-  paint and remaining typography retain explicit image-comparison failures.
+  ordinal crossings retain their existing placement fallback. Clustered
+  horizontal categories mirror bar rows and internal series offsets together,
+  preserving source values and paint across single/composed plots. Captions,
+  data-label/key frames and linked runs follow that direction. Remaining
+  typography and unqualified layout combinations stay approximate.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain
   separate from the stroke. Clustered bars and label swatches classify inversion
@@ -248,8 +251,9 @@ Approximate or restricted:
   admission, other plot layouts, source axis paint and remaining typography retain
   their approximation; this does not establish complete chart parity.
   Line/area captions, data points and line data labels share category direction
-  while retaining source indices and point formatting. Bar/column and composed
-  category-direction behavior remains approximate.
+  while retaining source indices and point formatting. Stacked horizontal bars,
+  general column and secondary-axis category direction retain their existing
+  approximation.
 - Automatic bottom legends with filled keys admit naturally fitting names on one row and
   align wrapped rows in uniform columns, including the incomplete final row.
   Composed bar charts collect all series entries before measuring the legend.
