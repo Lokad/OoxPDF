@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
