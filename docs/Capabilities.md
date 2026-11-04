@@ -180,9 +180,13 @@ Approximate or restricted:
   Consistently oriented clustered horizontal plots also share the source scale
   and category crossing, including signed values, authored bounds and reversal.
   Standalone clustered horizontal bars use the same source-interval owner;
-  stacked horizontal bounds keep their existing fallback. Numeric-axis maximum
-  crossing still displaces the horizontal plot vertically in a retained native
-  control; scale correctness does not imply fully matching plot placement.
+  stacked horizontal bounds keep their existing fallback. Automatic clustered
+  horizontal frames reserve the numeric-caption band on its source side,
+  independently of the numeric stroke. Low/high/next-to placement follows the
+  paired category direction, including reversal, with measured titles and
+  top/bottom legends. Authored furniture, axis titles, side legends and interior
+  ordinal crossings retain their existing placement fallback. Reversed-category
+  paint and remaining typography retain explicit image-comparison failures.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain
   separate from the stroke. Clustered bars and label swatches classify inversion
@@ -246,8 +250,9 @@ Approximate or restricted:
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Bar/column and composed
   category-direction behavior remains approximate.
-- Automatic bottom category legends with filled keys admit naturally fitting names on one row and
+- Automatic bottom legends with filled keys admit naturally fitting names on one row and
   align wrapped rows in uniform columns, including the incomplete final row.
+  Composed bar charts collect all series entries before measuring the legend.
   Whole-row height admission retains a source-ordered prefix and diagnoses
   clipped overflow. Manual frames retain their authored bounds. Spacing and
   absolute placement remain approximate.

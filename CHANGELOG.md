@@ -5,6 +5,11 @@
 - PPTX: clustered horizontal plots sharing an axis now use one source range,
   interval lattice and category crossing for bars, grids and labels. Authored
   zero maxima retain lower headroom across supported Cartesian plots.
+  Automatic horizontal numeric captions reserve space on their source-selected
+  side, independently of the axis stroke, including category reversal.
+- PPTX: composed bar charts measure every series legend entry before layout,
+  preserving names from later plots. Automatic bottom filled-key legends share
+  natural row admission and aligned wrapped columns.
 
 - PPTX: factor positions and edge-sized heights resolve together for authored
   inner Cartesian plots, keeping columns, curves, axes and labels on the same
