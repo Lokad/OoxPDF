@@ -1,0 +1,632 @@
+{
+  "Evidence": "Independent PowerPoint16 exports; source-index/span predictions precede captures. Native PDF channel quantization is checked within1byte; whole-image thresholds remain separate and unchanged. The fixed-key no-inversion prediction was refuted and retained.",
+  "Rows": [
+    {
+      "Id": "dense-six",
+      "Input": "dense-six.pptx",
+      "InputSha256": "722B7674D050506737DFDF79B835B93056ACF58FAEBB59D27B635CDCDD697834",
+      "OfficePdfSha256": "20194A3FC6E71B98E48DFA528641176CBDE33321FC9AB667FF46B6F576621753",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            65,
+            152,
+            175
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            113,
+            88,
+            143
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            137,
+            165,
+            78
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            170,
+            70,
+            67
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            219,
+            132,
+            61
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "horizontal-sparse7",
+      "Input": "horizontal-sparse7.pptx",
+      "InputSha256": "47DB974933FC1BEA410FDFDBE9633440D2E43B9582C017C4EEB8351B80BB3919",
+      "OfficePdfSha256": "EB7DF73E4D1AD9362087D433E4893C68BE6B9F17AAF9AA890C2A9EC244AE3D11",
+      "Horizontal": true,
+      "BarColors": [
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "keys-point-override-valid",
+      "Input": "keys-point-override-valid.pptx",
+      "InputSha256": "C9D6B8888E54E12D5BE21D0EE273F4732043F9CAA2666D7AC14A5566037AC031",
+      "OfficePdfSha256": "4A7E124CAD40E5FAFA1C6D7E0D6364B84619C4A90C7BC9F2235B8A9A4BA9F481",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 7
+        },
+        {
+          "Rgb": [
+            85,
+            0,
+            170
+          ],
+          "Count": 1
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": [
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 9
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 9
+        }
+      ]
+    },
+    {
+      "Id": "fixed-series-negative-keys",
+      "Input": "fixed-series-negative-keys.pptx",
+      "InputSha256": "D5CECE35F3E4CBEA7554B4A931B187D629296C2EE1644EE03AABFD5ADA8AE30F",
+      "OfficePdfSha256": "0F5731A2A45329FFF056F8A5A9F2D575770BFE5B79452014230D88D270A240C0",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 7
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            255,
+            255,
+            255
+          ],
+          "Count": 1
+        }
+      ],
+      "KeyColors": [
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 9
+        },
+        {
+          "Rgb": [
+            255,
+            255,
+            255
+          ],
+          "Count": 1
+        }
+      ]
+    },
+    {
+      "Id": "authored-series-point-keys",
+      "Input": "authored-series-point-keys.pptx",
+      "InputSha256": "6D0B328BE267594A8F215FC06EF234DC56C52965EBDD5839FCE926EED32D48DC",
+      "OfficePdfSha256": "C5C581EA45A29D95F6993AF3AECFE0DEB58FED482930DE40A384FD6A8EE9318D",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            0,
+            136,
+            0
+          ],
+          "Count": 7
+        },
+        {
+          "Rgb": [
+            85,
+            0,
+            170
+          ],
+          "Count": 1
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": [
+        {
+          "Rgb": [
+            0,
+            136,
+            0
+          ],
+          "Count": 9
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 9
+        }
+      ]
+    },
+    {
+      "Id": "index-shift",
+      "Input": "index-shift.pptx",
+      "InputSha256": "004863D589302AF7AD0ACB12A8AA251A9ECA9B00FA6593460475CE27DD20F91D",
+      "OfficePdfSha256": "97922CE0CA03D8B1AFCCB9543F52C9C0A33954E0ED11A3631B61B56130C89F3F",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            219,
+            132,
+            61
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "order-shift",
+      "Input": "order-shift.pptx",
+      "InputSha256": "6CC35C5534D1621F9F95B2E0144D893A67C3AA1D62B0F452A218524637FF5158",
+      "OfficePdfSha256": "A1C82240DF43B2323FC48F8B5CE7D73E53A83B6A73BFABB373B2F1653ED20AD1",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            79,
+            129,
+            189
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            192,
+            80,
+            77
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "plots-reordered",
+      "Input": "plots-reordered.pptx",
+      "InputSha256": "134CFC9979FD1B980833ABF89CE617BF8EAFD874BA7F02A3DD54BB98D2597DDF",
+      "OfficePdfSha256": "CA97DF2A84C76D5CA2536F2ED6E30DDAFC3A6C9332F11E2322A27EB9485315C7",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            79,
+            129,
+            189
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            192,
+            80,
+            77
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "indices-swapped",
+      "Input": "indices-swapped.pptx",
+      "InputSha256": "E702C32C0A71885350219899BEF7F09D316080AA1E262DE9265CAB7A5B38F98A",
+      "OfficePdfSha256": "DED5EAD6027B8AFEF1EDAC0193BF7692993F46036EE0A4E15ACAD4B8FEA3DB3F",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            79,
+            129,
+            189
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            192,
+            80,
+            77
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "orders-swapped",
+      "Input": "orders-swapped.pptx",
+      "InputSha256": "67C69E858FCED72E0DD3FCC5DC15C4540D25FE1F79C1E41911B1FF2BBEF56015",
+      "OfficePdfSha256": "1C497D07E05C0782436F569022C6444753B7AC435080E07F2DD5F9309837E1F0",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            79,
+            129,
+            189
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            192,
+            80,
+            77
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "explicit-green",
+      "Input": "explicit-green.pptx",
+      "InputSha256": "A24E83843634FA80DA9799F5510774D9123D8F2621E09E19506DF56EB2F3894F",
+      "OfficePdfSha256": "EFE78498BD9F0B4C9AFF20B6D1A8755A408EB6CBF507709FDBF8937BD4766622",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            0,
+            136,
+            0
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            79,
+            129,
+            189
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "three-plots",
+      "Input": "three-plots.pptx",
+      "InputSha256": "31432F994AE49070849D9F9C621C74AB41AE85CFCF2894B2C3BB0B20DB9ADB91",
+      "OfficePdfSha256": "F12A1D9EFE177913899B800C260BE9B9351C0C15BDFD2DD7685C23AC72A4BC50",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            79,
+            129,
+            189
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            155,
+            187,
+            89
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            192,
+            80,
+            77
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "span5",
+      "Input": "span5.pptx",
+      "InputSha256": "C3DF9246B0D0171D58B50D05ECDDB4C17DCFFDF3751CD52C3DEC53F903300D10",
+      "OfficePdfSha256": "0FFD110D5C1FC5D2D5EC4AA20DED788C87D6F661101E6A6E7FF066874BCEBA02",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            75,
+            172,
+            198
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            79,
+            129,
+            189
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "span7",
+      "Input": "span7.pptx",
+      "InputSha256": "3F4C006782ACC48C44286E4357B6F6B5F6FC15A68A04FC2DD7FBE2319D536DE8",
+      "OfficePdfSha256": "F138903F631DA498C0E7EBC7014779779B40AF3CCDA49A2F678D18AF59EABFFC",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            69,
+            114,
+            167
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            147,
+            169,
+            207
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "span12",
+      "Input": "span12.pptx",
+      "InputSha256": "09B39BBCE2AC6935062A38DDCCEFA6EB7019133988ACF3F39710311DC2CE1AF7",
+      "OfficePdfSha256": "DA9F32B08628C133A1765E130D8BDC82C158235817759847D28298CF1F17A9B4",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            64,
+            105,
+            156
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            247,
+            150,
+            70
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "span13",
+      "Input": "span13.pptx",
+      "InputSha256": "AC1C06D98F6D3A89F1855DCA1D1799B16A0F12AB603CC7B434FF9BDAB64353D3",
+      "OfficePdfSha256": "3B853F963B8E24F3028D1796A7985472D553A3E2CAF66D7F991BB1A4F1DF4CB6",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            64,
+            105,
+            156
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            170,
+            186,
+            215
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "unpainted-span12",
+      "Input": "unpainted-span12.pptx",
+      "InputSha256": "5E54AD45213142AA0B42927F0F60DD956D71AF419123C633AB412F4141F2DE2A",
+      "OfficePdfSha256": "983DC440AB9A2F7ECA59D65F8689CB9CCA0556C4A27CA8E8D8404B2CB91200EA",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            64,
+            105,
+            156
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "single-plot-span13",
+      "Input": "single-plot-span13.pptx",
+      "InputSha256": "549C978D117692D9C9EC471D8BEDD9A1E3E76B554F56A28C61B4E4E98D1E87F4",
+      "OfficePdfSha256": "FB3846D3F10F5BFE46E4A3D3A259CD19AE3572F24629B23E1A24348983E84E1C",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            64,
+            105,
+            156
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            170,
+            186,
+            215
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "explicit-sibling-span12",
+      "Input": "explicit-sibling-span12.pptx",
+      "InputSha256": "F631BA8BC83406CF9521B079BCAD08C710B9AD5EA0A70B8A19E5E7D45C05601A",
+      "OfficePdfSha256": "FE344ED0B8E2A2C2DD29A9508EBDD590AD445E332A9DEE3E7F8CA09D797899A5",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            0,
+            136,
+            0
+          ],
+          "Count": 8
+        },
+        {
+          "Rgb": [
+            64,
+            105,
+            156
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    },
+    {
+      "Id": "mixed-line-span12",
+      "Input": "mixed-line-span12.pptx",
+      "InputSha256": "C8173724A30F056694B7D5681E6AB6CC173091B547CEA9270F62B53D0F6D2912",
+      "OfficePdfSha256": "9E239E7F0B0DEEA08492DBBB6DCAC8162E2D3FB4E82F84924A9475823BDC8D16",
+      "Horizontal": false,
+      "BarColors": [
+        {
+          "Rgb": [
+            64,
+            105,
+            156
+          ],
+          "Count": 8
+        }
+      ],
+      "KeyColors": []
+    }
+  ]
+}

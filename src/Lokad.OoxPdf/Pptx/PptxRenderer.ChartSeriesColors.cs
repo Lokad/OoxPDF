@@ -7,12 +7,24 @@ internal sealed partial class PptxRenderer
 {
     // A palette is an inherited color recipe, separate from authored series/point fills.
     private readonly record struct ChartColorPalette(
-        IReadOnlyList<RgbColor>? Colors, RgbColor? SingleAccent, int SeriesCount);
+        IReadOnlyList<RgbColor>? Colors, RgbColor? SingleAccent, int SeriesCount,
+        long SourceIndexSpan = 0, IReadOnlyList<PptxSceneChartSeries>? SourceSeries = null);
 
     private static ChartColorPalette ResolveChartColorPalette(
-        PptxSceneChart chart, PptxTheme theme, PptxColorMap colorMap)
+        PptxSceneChart chart, PptxTheme theme, PptxColorMap colorMap, CancellationToken cancellationToken)
     {
-        int seriesCount = chart.Plots.Sum(plot => plot.Series.Count);
+        int seriesCount = 0;
+        long indexSpan = 0;
+        bool declaredIndices = true;
+        foreach (var plot in chart.Plots)
+        foreach (var series in plot.Series)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            seriesCount = checked(seriesCount + 1);
+            if (series.Index is int index && index >= 0)
+                indexSpan = Math.Max(indexSpan, (long)index + 1L);
+            else declaredIndices = false;
+        }
         if (chart.ColorStyle.Colors is { Count: > 0 } colors) { return new(colors, null, seriesCount); }
 
         int? preferred = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chart.ChartXml?.Root);
@@ -26,8 +38,14 @@ internal sealed partial class PptxRenderer
             return new(null, accent, seriesCount);
         }
 
-        return new(null, null, seriesCount);
+        return new(null, null, seriesCount, declaredIndices ? indexSpan : 0);
     }
+
+    // Bind existing source metadata without allocating a dense array across gaps.
+    // Only the automatic theme recipe has a source span; custom and single-accent
+    // recipes, missing/invalid indices and XML-only callers retain their fallback.
+    private static ChartColorPalette WithSourceSeries(ChartColorPalette palette, PptxSceneChartPlot? plot) =>
+        palette.SourceIndexSpan > 0 && plot is not null ? palette with { SourceSeries = plot.Series } : palette;
 
     // Office's single-accent palette samples one continuous shade/tint span.
     // Integer percentages are shared by series and varying-point colors.
@@ -41,9 +59,15 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesFill ChartSeriesColor(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, double defaultAlpha)
     {
-        return seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is { } fill
-            ? fill
-            : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, seriesIndex), defaultAlpha, null, null);
+        if (seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is { } fill) return fill;
+        if (chartPalette.SourceSeries is { } sources && seriesIndex < sources.Count &&
+            sources[seriesIndex].Index is int sourceIndex && sourceIndex >= 0)
+        {
+            RgbColor automatic = ResolveAutomaticCategoryColor(
+                ChartPalette(chartPalette, theme, colorMap, sourceIndex), sourceIndex, chartPalette.SourceIndexSpan);
+            return new ChartSeriesFill(automatic, defaultAlpha, null, null);
+        }
+        return new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, seriesIndex), defaultAlpha, null, null);
     }
 
     private static RgbColor ApplyUnstyledLineStrokeTint(RgbColor color)
@@ -128,7 +152,7 @@ internal sealed partial class PptxRenderer
     // cycle receives a shade/tint spaced over (-70%, +70%); Office truncates
     // the resulting percentage before applying it in linear light. Counts at
     // exact cycle boundaries include the next cycle in the spacing denominator.
-    private static RgbColor ResolveAutomaticCategoryColor(RgbColor color, int categoryIndex, int valuePointCount)
+    private static RgbColor ResolveAutomaticCategoryColor(RgbColor color, int categoryIndex, long valuePointCount)
     {
         const int accentCount = 6;
         int percentage = (int)(140L * (categoryIndex / accentCount + 1) / (valuePointCount / accentCount + 2));

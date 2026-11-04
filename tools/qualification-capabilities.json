@@ -15328,6 +15328,18 @@
       "PptxChartSecondaryValueAxisStyleSelectionUsesSceneSource",
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
+  "pptx-bar-source-palette": [
+    "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
+    "PortableRenderingBarKeysRetainIndependentOfficePaint",
+    "PortableRenderingBarPaletteIndicesKeepBoundsAndFallbacks",
+    "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
+    "PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels",
+    "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-shared-axis-scale": [
     "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
       "PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels",

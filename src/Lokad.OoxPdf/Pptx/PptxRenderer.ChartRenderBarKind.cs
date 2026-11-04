@@ -38,6 +38,7 @@ internal sealed partial class PptxRenderer
             if (barSeriesCount != 0)
             {
                 ChartBarPlotOptions barOptions = ReadSceneOrXmlChartBarOptions(barPlot, barChart, PptxSceneChartGrouping.Clustered);
+                ChartColorPalette barPalette = WithSourceSeries(chartPalette, barPlot);
                 bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme, colorMap);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, barPlot, chartXml, theme, barChart);
@@ -70,8 +71,8 @@ internal sealed partial class PptxRenderer
                 bool categoryLegend = barSeriesVectors.Count == 1 && sceneChart.Plots.Sum(plot => plot.Series.Count) == 1 &&
                     (barOptions.VaryColors.Value || barPlot?.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
-                    ? BuildBarCategoryLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
-                    : BuildFillLegendEntries(theme, colorMap, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
+                    ? BuildBarCategoryLegendEntries(theme, colorMap, barPalette, barPlot, barChart, barSeriesVectors[0], barOptions, seriesFills, seriesStrokes, pointFills, pointStrokes, workbook, plotVisibleOnly)
+                    : BuildFillLegendEntries(theme, colorMap, barPalette, barPlot, barChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook));
                 ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver, resolvedCategory, context: context,
                     resolvedValueExtents: sharedValueAxis ? valueExtents : null).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
@@ -114,7 +115,7 @@ internal sealed partial class PptxRenderer
                 }
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
                 int? barStyleId = ReadChartStyleId(chartXml);
-                RenderBarChart(graphics, theme, colorMap, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barStyleId, resolvedCategory, context: context);
+                RenderBarChart(graphics, theme, colorMap, barPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barStyleId, resolvedCategory, context: context);
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -134,6 +135,7 @@ internal sealed partial class PptxRenderer
                     }
 
                     ChartBarPlotOptions extraBarOptions = ReadSceneOrXmlChartBarOptions(extraBarPlot, extraBarChart, PptxSceneChartGrouping.Clustered);
+                    ChartColorPalette extraPalette = WithSourceSeries(chartPalette, extraBarPlot);
                     bool extraHorizontalBars = extraBarOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                     ChartAxisSource extraValueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, extraBarPlot, chartXml, extraBarChart).FirstOrDefault();
                     XElement? extraValueAxis = extraValueAxisSource.XmlAxis;
@@ -156,12 +158,12 @@ internal sealed partial class PptxRenderer
                         secondaryAxisReversed = extraValueAxisOptions.Reversed;
                     }
 
-                    legendEntries.AddRange(BuildFillLegendEntries(theme, colorMap, chartPalette, extraBarPlot, extraBarChart, extraSeriesFills, extraSeriesStrokes, seriesOffset, workbook));
+                    legendEntries.AddRange(BuildFillLegendEntries(theme, colorMap, extraPalette, extraBarPlot, extraBarChart, extraSeriesFills, extraSeriesStrokes, seriesOffset, workbook));
                     RenderBarChart(
                         graphics,
                         theme,
                         colorMap,
-                        chartPalette,
+                        extraPalette,
                         chartLayout.PlotAreaBox,
                         plotBox,
                         extraSeriesVectors,
@@ -183,7 +185,7 @@ internal sealed partial class PptxRenderer
                         graphics,
                         plotBox,
                         extraSeriesVectors,
-                        chartPalette,
+                        extraPalette,
                         extraValueExtents,
                         extraBarOptions,
                         extraValueAxisOptions,
@@ -426,7 +428,7 @@ internal sealed partial class PptxRenderer
                     graphics,
                     plotBox,
                     barSeriesVectors,
-                    chartPalette,
+                    barPalette,
                     valueExtents,
                     barOptions,
                     valueAxisOptions,

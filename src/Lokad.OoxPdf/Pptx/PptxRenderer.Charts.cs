@@ -30,7 +30,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        ChartColorPalette palette = ResolveChartColorPalette(sceneChart, theme, colorMap);
+        ChartColorPalette palette = ResolveChartColorPalette(sceneChart, theme, colorMap, context.CancellationToken);
         bool plotVisibleOnly = ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, chartXml);
         if ((await TryRenderBarChartKindAsync(
             graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))

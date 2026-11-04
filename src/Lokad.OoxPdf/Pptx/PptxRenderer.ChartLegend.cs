@@ -17,9 +17,11 @@ internal sealed partial class PptxRenderer
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
-            ChartSeriesFill fill = i < seriesFills.Count && seriesFills[i] is { } explicitFill
-                ? explicitFill
-                : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, i + paletteOffset), 1d, null, null);
+            ChartSeriesFill fill = chartPalette.SourceSeries is not null
+                ? ChartSeriesColor(theme, colorMap, chartPalette, i, seriesFills, 1d)
+                : i < seriesFills.Count && seriesFills[i] is { } explicitFill
+                    ? explicitFill
+                    : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, i + paletteOffset), 1d, null, null);
             ChartSeriesStroke? stroke = seriesStrokes is not null && i < seriesStrokes.Count
                 ? seriesStrokes[i]
                 : null;

@@ -16,6 +16,15 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices() =>
+        PptxComposedPaletteTests.CheckColors(keys: false);
+
+    public static void PortableRenderingBarKeysRetainIndependentOfficePaint() =>
+        PptxComposedPaletteTests.CheckColors(keys: true);
+
+    public static void PortableRenderingBarPaletteIndicesKeepBoundsAndFallbacks() =>
+        PptxComposedPaletteTests.CheckIndexBoundsAndFallbacks();
+
     public static void PortableRenderingSharedAxisFramesMatchIndependentOfficePairs() =>
         PptxSharedAxisScaleTests.CheckFrames();
 

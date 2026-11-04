@@ -89,6 +89,11 @@ internal sealed partial class PptxRenderer
             return;
         }
 
+        // Fixed-series keys keep series paint and negative inversion; authored
+        // point fills belong to the point. Category keys retain point styling.
+        IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> legendPointFills =
+            varyColors && denseValueSeries.Count == 1 ? pointFills : [];
+
         // index workbook points once per series instead of filtering plus
         // linear-scanning per rendered label below.
         Dictionary<int, ChartIndexedNumberPoint>[] workbookIndexes = series.Select(BuildWorkbookPointIndex).ToArray();
@@ -161,7 +166,7 @@ internal sealed partial class PptxRenderer
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
                         ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
-                            ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, pointFills, values.Count,
+                            ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count,
                                 value - (stacked ? 0d : categoryPlacement?.CrossingValue ?? 0d), barOptions.InvertsNegativePoint(seriesIndex, category)) : null;
                         ChartLayoutBox labelBox;
                         ChartLayoutBox? keyBox = null;
@@ -297,7 +302,7 @@ internal sealed partial class PptxRenderer
                         }
                         if (effectiveOptions.ShowLegendKey)
                         {
-                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, pointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category));
+                            ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category));
                             if (barLegendKeyUnitCenter)
                             {
                                 textX = labelBox.X + barLegendKeySwatch + barLegendKeySwatch;
