@@ -15378,6 +15378,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-horizontal-numeric-side": [
+    "PptxHorizontalComposedLegendsRetainEveryNativeSeriesName",
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "PortableRenderingBarKeysRetainIndependentOfficePaint",

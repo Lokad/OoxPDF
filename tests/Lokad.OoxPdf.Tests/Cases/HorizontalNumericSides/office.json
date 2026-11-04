@@ -24,7 +24,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "normal-high",
@@ -48,7 +49,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "max-high",
@@ -72,7 +74,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "category-reversed-max",
@@ -96,7 +99,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "category-reversed-normal",
@@ -120,7 +124,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "max-font12",
@@ -144,7 +149,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "max-font24",
@@ -168,7 +174,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "max-small-frame",
@@ -192,7 +199,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "category-reversed-low",
@@ -216,7 +224,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "category-reversed-high",
@@ -240,7 +249,8 @@
         "157"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "single-max-next",
@@ -262,7 +272,8 @@
         "107"
       ],
       "Furniture": false,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "title-normal",
@@ -286,7 +297,8 @@
         "157"
       ],
       "Furniture": true,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": []
     },
     {
       "Id": "title-max",
@@ -310,7 +322,8 @@
         "157"
       ],
       "Furniture": true,
-      "RelativeTo": "title-normal"
+      "RelativeTo": "title-normal",
+      "NativeLegendNames": []
     },
     {
       "Id": "legend-normal",
@@ -334,7 +347,11 @@
         "157"
       ],
       "Furniture": true,
-      "RelativeTo": null
+      "RelativeTo": null,
+      "NativeLegendNames": [
+        "ColumnSource",
+        "OtherColumnSource"
+      ]
     },
     {
       "Id": "legend-max",
@@ -358,7 +375,67 @@
         "157"
       ],
       "Furniture": true,
-      "RelativeTo": "legend-normal"
+      "RelativeTo": "legend-normal",
+      "NativeLegendNames": [
+        "ColumnSource",
+        "OtherColumnSource"
+      ]
+    },
+    {
+      "Id": "legend-narrow",
+      "Input": "legend-narrow.pptx",
+      "InputSha256": "6DBF0EC67D971ED0BC06F6E150399E543C6F39FBB953534C753F691E00ED1529",
+      "OfficePdfSha256": "9270597BD8A8BE5271F821908157F51A8B20A79168618E9AF2363F99618595B3",
+      "NativeFrameY": [
+        47.0,
+        368.0899963378906
+      ],
+      "NativeAxisY": 368.0899963378906,
+      "NativeAxisTop": false,
+      "NativeCaptionSide": "below",
+      "NativeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Furniture": true,
+      "RelativeTo": null,
+      "NativeLegendNames": [
+        "ColumnSource",
+        "OtherColumnSource"
+      ]
+    },
+    {
+      "Id": "legend-narrow-max",
+      "Input": "legend-narrow-max.pptx",
+      "InputSha256": "55273C2BE796C5C31D0C26ADA267F13DE6AD8EE7B4066427EB5DBCD60846C415",
+      "OfficePdfSha256": "C9804877763530074D1C7327917A780554100A3C0FE8328DCAC798D7450E3F3F",
+      "NativeFrameY": [
+        75.89999389648438,
+        396.989990234375
+      ],
+      "NativeAxisY": 75.89999389648438,
+      "NativeAxisTop": true,
+      "NativeCaptionSide": "above",
+      "NativeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Furniture": true,
+      "RelativeTo": "legend-narrow",
+      "NativeLegendNames": [
+        "ColumnSource",
+        "OtherColumnSource"
+      ]
     }
   ]
 }

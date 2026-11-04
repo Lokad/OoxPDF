@@ -83,6 +83,20 @@ internal static partial class PptxHorizontalFrameTests
         }
     }
 
+    public static void PptxHorizontalComposedLegendsRetainEveryNativeSeriesName()
+    {
+        using var oracle = NumericSideOracle();
+        foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string[] expected = row.GetProperty("NativeLegendNames").EnumerateArray().Select(value => value.GetString()!).ToArray();
+            if (expected.Length == 0) continue;
+            var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(RenderNumericSide(row), usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).Select(show => show.Text).ToArray();
+            TestAssert.True(actual.Order(StringComparer.Ordinal).SequenceEqual(expected.Order(StringComparer.Ordinal)),
+                row.GetProperty("Id").GetString() + ": every native legend series survives measurement and wrapping; actual " + string.Join(",", actual));
+        }
+    }
+
     private static (double Top, double Bottom, double Axis) NumericSideGeometry(PdfPage page)
     {
         var lines = PptxColumnIntervalTests.Lines(page);
