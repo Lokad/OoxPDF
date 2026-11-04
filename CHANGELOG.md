@@ -22,7 +22,9 @@
   retain their existing approximation.
   Ordinary outer column, line and area plots center the authored caption area
   before allocating measured axis bands. Data, plot fill and linked labels share
-  the inner rectangle. Automatic rotation and empty-caption spacing remain approximate.
+  the inner rectangle. Numeric admission also precedes category angle/skip fitting;
+  rotated caption bounds use the same geometry as painting. High-side placement,
+  typography and empty-caption spacing remain approximate.
 
 - PPTX: plain automatic outside-end column labels wrap measured text and admit
   the whole label/key frame within the chart, retaining value suffixes at its

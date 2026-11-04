@@ -265,8 +265,13 @@ Approximate or restricted:
   Shortened endpoint captions release their measured space; a present category
   axis retains a nominal minimum band when labels/ticks are hidden. Data axes,
   plot fill and linked label geometry share the admitted inner rectangle.
-  Automatic rotation after width admission and empty-caption spacing remain
-  approximate, as do incomplete declarations and the exclusions above.
+  Numeric-caption admission precedes automatic category angle/skip fitting.
+  Rotated single-line category fragments allocate their projected bounds within
+  the same source area; measurement, clipping and painting share the baseline
+  and horizontal frame rules. High-side alignment, baseline typography and
+  empty-caption spacing remain approximate, as do incomplete declarations and
+  the exclusions above. Some Office references paint category text as vector
+  outlines; their validation uses graphics/raster output as well as extraction.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Stacked horizontal bars,
   general column and secondary-axis category direction retain their existing
