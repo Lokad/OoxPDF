@@ -150,11 +150,11 @@ Approximate or restricted:
   same interval count. Labels, tick marks and grids share those source intervals;
   automatic minor grids subdivide a major interval into five unless overridden.
   Automatic plots admit oblique category-caption frames horizontally using the
-  same measured geometry as painting. Manual plot geometry stays authored;
-  horizontal wrapping and vertical-caption placement retain their own policies.
-  Ellipsized category captions reserve their fitted height; unused fitting space
-  returns to the plot. Clipping retains its existing capacity policy. Short-frame
-  caption geometry remains approximate.
+  same measured geometry as painting. Generated ellipsis markers remain visible
+  outside the occupied vertical content band; horizontal bounds include their
+  full width. Authored ellipses remain ordinary text. Manual geometry, clipping
+  and horizontal wrapping retain their existing policies. Text fitting and
+  short-frame caption geometry remain approximate.
   Automatic step fitting and remaining horizontal frame geometry stay
   approximate. Composed/secondary interval ownership retains its fallback.
   A single reciprocal category/value pair shares horizontal crossing geometry
