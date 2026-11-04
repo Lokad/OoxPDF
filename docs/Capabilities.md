@@ -275,9 +275,11 @@ Approximate or restricted:
   the exclusions above. Some Office references paint category text as vector
   outlines; their validation uses graphics/raster output as well as extraction.
   Line/area captions, data points and line data labels share category direction
-  while retaining source indices and point formatting. Stacked horizontal bars,
-  general column and secondary-axis category direction retain their existing
-  approximation.
+  while retaining source indices and point formatting. Ordinary clustered
+  columns with one paired ordinal/linear numeric axis share that direction,
+  including intra-cluster series offsets, sparse slots, labels and links.
+  Plain column labels use their painted bar centers. Stacked, composed and
+  secondary-axis column reversal retain their existing fallbacks.
 - Automatic bottom legends with filled keys admit naturally fitting names on one row and
   align wrapped rows in uniform columns, including the incomplete final row.
   Composed bar charts collect all series entries before measuring the legend.

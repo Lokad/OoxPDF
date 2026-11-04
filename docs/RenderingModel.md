@@ -33,6 +33,11 @@ For rotated outer captions, mirroring preserves that clearance and authored
 offsets add normal-line spacing. Inner and automatic layouts retain their
 separate baseline rules; signed-angle horizontal admission remains approximate.
 
+For ordinary clustered columns, one ordinal coordinate transform places data,
+captions and data-label/link slots. Reversal mirrors the within-cluster series
+offsets while preserving source indices, sparse values and point formatting.
+Plain labels, automatic labels and legend-key units use actual bar centers.
+
 DOCX layout is flow-based. The renderer converts twips to points, computes the content rectangle from page size and margins, performs simple greedy Latin line breaking, handles keep rules, split table rows with repeated headers, floating-drawing exclusion geometry, and markup balloon contexts, advances a page cursor, and creates new pages when content crosses the bottom margin. Headers and footers are drawn on each produced page.
 
 Word-compatible body origins belong to each printed page. Painting, inspection,
