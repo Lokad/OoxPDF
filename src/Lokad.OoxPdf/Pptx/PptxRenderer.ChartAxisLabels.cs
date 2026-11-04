@@ -109,10 +109,10 @@ internal sealed partial class PptxRenderer
             TextAlignment alignment;
             if (horizontalBars)
             {
-                double slotHeight = plotBox.Height / labels.Count;
                 double anchor = axisCoordinate ?? plotBox.X;
                 double gap = PptxChartMetricRules.HorizontalBarCategoryLabelPlotGapFactor * fontSize * labelOffsetScale;
-                y = plotBox.Y + slotHeight * (i + 0.5d) - height * PptxChartMetricRules.CategoryAxisHorizontalBaselineRatio;
+                y = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.Y, plotBox.Height,
+                    onTickMarks: false, categoryAxisReversed) - height * PptxChartMetricRules.CategoryAxisHorizontalBaselineRatio;
                 width = Math.Max(1d, widestCategoryLabel);
                 x = Math.Max(0d, labelsHighSide ? anchor + gap : anchor - gap - width);
                 alignment = labelsHighSide ? TextAlignment.Left : TextAlignment.Right;

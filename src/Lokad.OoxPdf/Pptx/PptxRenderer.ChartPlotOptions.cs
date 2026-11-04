@@ -19,6 +19,8 @@ internal sealed partial class PptxRenderer
         double Overlap,
         IReadOnlyList<PptxSceneChartNegativeInversion> NegativeInversions)
     {
+        public bool CategoryAxisReversed { get; init; }
+
         public bool InvertsNegativePoint(int seriesIndex, int pointIndex) =>
             NegativeInversions is null || seriesIndex >= NegativeInversions.Count ||
             NegativeInversions[seriesIndex].ForPoint(pointIndex);

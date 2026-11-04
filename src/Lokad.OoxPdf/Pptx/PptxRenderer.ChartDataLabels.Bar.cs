@@ -163,6 +163,11 @@ internal sealed partial class PptxRenderer
                     PptxSceneChartDataLabelPosition labelPosition = ResolveStackedBarDataLabelPosition(effectiveOptions.PositionKind, stacked);
                     double x = ResolveHorizontalBarDataLabelX(labelPosition, barBaseX, barEndX, labelWidth);
                     double y = categoryY + (stacked ? (barSlot - labelHeight) / 2d : seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d);
+                    if (barOptions.CategoryAxisReversed)
+                        y = ChartCategoryToPlotCoordinate(category, categoryCount, plotBox.Y, plotBox.Height,
+                            onTickMarks: false, reversed: true,
+                            slotOffset: categoryHeight * (PptxChartMetricRules.BarDataLabelCategoryInsetRatio - 0.5d) +
+                                seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio) - labelHeight / 2d;
                     ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(category, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
@@ -190,6 +195,10 @@ internal sealed partial class PptxRenderer
                             double height = line.Height + 2d * verticalPadding;
                             double centerY = plotBox.Y + category * categoryHeight + (categoryHeight - paintedClusterHeight) / 2d +
                                 seriesIndex * paintedStep + paintedBarHeight / 2d;
+                            if (barOptions.CategoryAxisReversed)
+                                centerY = ChartCategoryToPlotCoordinate(category, categoryCount, plotBox.Y, plotBox.Height,
+                                    onTickMarks: false, reversed: true,
+                                    slotOffset: seriesIndex * paintedStep + (paintedBarHeight - paintedClusterHeight) / 2d);
                             labelBox = new ChartLayoutBox((barBaseX + barEndX - width) / 2d, centerY - height / 2d, width, height);
                             baseline = labelBox.Y + verticalPadding + line.Descent;
                             descent = line.Descent;

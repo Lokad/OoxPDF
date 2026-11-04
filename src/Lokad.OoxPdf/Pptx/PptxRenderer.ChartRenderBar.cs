@@ -1945,6 +1945,10 @@ internal sealed partial class PptxRenderer
                 double barX = Math.Min(originX, valueX);
                 double barWidth = Math.Abs(valueX - originX);
                 double barY = categoryY + seriesIndex * step;
+                if (barOptions.CategoryAxisReversed)
+                    barY = ChartCategoryToPlotCoordinate(category, categoryCount, plotY, plotHeight,
+                        onTickMarks: false, reversed: true,
+                        slotOffset: seriesIndex * step + (barHeight - clusterHeight) / 2d) - barHeight / 2d;
                 bool isStyleDriven = (seriesIndex >= seriesFills.Count || seriesFills[seriesIndex] is null) && !HasExplicitChartPointFill(pointFills, seriesIndex, category);
                 if (isStyleDriven && TryGetStyleBarGradientStops(chartStyleId, fill, out IReadOnlyList<PdfShadingStop> stops))
                 {

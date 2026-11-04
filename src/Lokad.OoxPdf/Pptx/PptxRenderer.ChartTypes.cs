@@ -371,13 +371,16 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1, null);
 
-    private static double ChartCategoryToPlotCoordinate(int index, int count, double origin, double length, bool onTickMarks, bool reversed = false)
+    private static double ChartCategoryToPlotCoordinate(int index, int count, double origin, double length, bool onTickMarks, bool reversed = false, double slotOffset = 0d)
     {
         // Tick-centered categories start at the source origin, including a sole
         // category. Between-slot categories occupy the center of each slot.
         double offset = onTickMarks
             ? length * index / Math.Max(1, count - 1)
             : length * (index + 0.5d) / count;
+        // An occupied cluster mirrors its internal series offsets with the
+        // category center, retaining source indices and paint ownership.
+        offset += slotOffset;
         return origin + (reversed ? length - offset : offset);
     }
 

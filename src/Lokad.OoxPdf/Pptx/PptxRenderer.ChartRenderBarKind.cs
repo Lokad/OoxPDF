@@ -55,6 +55,9 @@ internal sealed partial class PptxRenderer
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme, valueExtents, percentStacked);
                 valueAxisOptions = valueAxisOptions with { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueSceneAxis, valueExtents, percentStacked) };
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                barOptions = barOptions with { CategoryAxisReversed = horizontalBars &&
+                    barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
+                    ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis) };
                 ChartAxisPlacement? resolvedCategory = horizontalBars
                     ? ReadHorizontalBarCategoryPlacement(sceneChart, categoryAxis, valueAxisSource, valueExtents, valueAxisOptions.Reversed) :
                     ReadChartAxisPlacement(categoryAxis, valueExtents, valueAxisOptions.Reversed);
@@ -75,7 +78,7 @@ internal sealed partial class PptxRenderer
                     // Numeric X bounds do not describe this crossing: it lies on
                     // the paired ordinal Y axis. Reuse its direction and edges.
                     ? ReadChartAxisPlacement(valueAxisSource, new(0d, Math.Max(1, MaxDensePointCount(barSeriesVectors))),
-                        ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+                        barOptions.CategoryAxisReversed)
                     : null;
                 if (numericPlacement is { } numeric)
                     axesStyle = axesStyle with { ValueAxisBottomSide = !numeric.AxisHighSide };
@@ -178,6 +181,10 @@ internal sealed partial class PptxRenderer
                     ChartBarPlotOptions extraBarOptions = ReadSceneOrXmlChartBarOptions(extraBarPlot, extraBarChart, PptxSceneChartGrouping.Clustered);
                     ChartColorPalette extraPalette = WithSourceSeries(chartPalette, extraBarPlot);
                     bool extraHorizontalBars = extraBarOptions.BarDirection == PptxSceneChartBarDirection.Bar;
+                    ChartAxisSource extraCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, extraBarPlot, chartXml, extraBarChart);
+                    extraBarOptions = extraBarOptions with { CategoryAxisReversed = extraHorizontalBars &&
+                        extraBarOptions.Grouping == PptxSceneChartGrouping.Clustered &&
+                        ReadSceneOrXmlValueAxisReversed(extraCategoryAxis.SceneAxis, extraCategoryAxis.XmlAxis) };
                     ChartAxisSource extraValueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, extraBarPlot, chartXml, extraBarChart).FirstOrDefault();
                     XElement? extraValueAxis = extraValueAxisSource.XmlAxis;
                     PptxSceneChartAxis? extraValueSceneAxis = extraValueAxisSource.SceneAxis;
@@ -316,7 +323,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelCoordinate = horizontalBars
                         ? resolvedCategory is { } horizontalPlacement ? plotBox.X + plotBox.Width * horizontalPlacement.LabelPlotRatio : null
                         : plotBox.Y + plotBox.Height * categoryPlacement.LabelPlotRatio;
-                    await RenderChartCategoryLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, automaticLabelOffsetAdjustment: chartLayout.AutomaticCategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels).ConfigureAwait(false);
+                    await RenderChartCategoryLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, automaticLabelOffsetAdjustment: chartLayout.AutomaticCategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: barOptions.CategoryAxisReversed).ConfigureAwait(false);
                 }
 
                 if (axesStyle.ValueAxisVisible)
