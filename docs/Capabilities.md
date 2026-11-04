@@ -155,6 +155,8 @@ Approximate or restricted:
   full width. Authored ellipses remain ordinary text. Manual geometry, clipping
   and horizontal wrapping retain their existing policies. Text fitting and
   short-frame caption geometry remain approximate.
+  Built-in chart fitting retains its default reference when overridden role or
+  global fonts change; effective fonts still determine glyph geometry.
   Automatic linear-axis limits and major intervals can differ from Office,
   changing the visible numeric scale in short charts or when numeric fonts
   change. Authored bounds and units remain authoritative within the supported

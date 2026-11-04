@@ -607,11 +607,14 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<double?> MeasureCategoryFittingClearanceAsync(PptxTheme theme,
         PptxSceneChart chart, XDocument xml, PresentationFontResolver? resolver, double numericClearance)
     {
-        // Axis-local numeric typography consumes space at both ends of the
-        // fitting container. Its reference comes from the chart's category
-        // style, before axis-local text overrides; painting keeps those overrides.
-        ChartTextStyle reference = ReadSceneOrXmlChartTextStyle(theme, chart, null, xml, null,
-            PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
+        // Built-in charts retain a default fitting reference when overridden
+        // role/global fonts change. Those unused sizes must not alter the frame.
+        // Actual numeric typography still consumes space at both ends; painting
+        // retains its effective fonts. External/custom styles keep their fallback.
+        ChartTextStyle reference = PptxSceneBuilder.HasBuiltInChartStyle(chart)
+            ? CreateDefaultChartTextStyle(theme, chart.ColorMap, PptxChartMetricRules.BuiltInAxisFittingReferenceFontSize)
+            : ReadSceneOrXmlChartTextStyle(theme, chart, null, xml, null,
+                PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
         if (await measure.TryMeasureNormalLineHeightAsync(reference).ConfigureAwait(false) is not { } lineHeight)
             return null;

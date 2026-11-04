@@ -15,15 +15,17 @@ internal sealed partial class PptxSceneBuilder
         // Inferred titles have a built-in text default, not a scaled external
         // gallery role size. Only an authored chart text size takes the title's
         // 120% scale; a title-local size already describes the final size.
-        bool hasBuiltInStyle = OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chart.ChartXml?.Root) is not null ||
-            int.TryParse(chart.StyleId, NumberStyles.Integer, CultureInfo.InvariantCulture, out int legacyStyle) &&
-            legacyStyle is >= 1 and <= 48;
         return style with
         {
             FontSize = chart.Title.TextStyle.FontSize ??
-                (chart.TextStyle.FontSize is double size ? size * 1.2d : hasBuiltInStyle ? 18d : 10d)
+                (chart.TextStyle.FontSize is double size ? size * 1.2d : HasBuiltInChartStyle(chart) ? 18d : 10d)
         };
     }
+
+    internal static bool HasBuiltInChartStyle(PptxSceneChart chart) =>
+        OoxMarkupCompatibility.ReadPreferredChartGalleryStyle(chart.ChartXml?.Root) is not null ||
+        int.TryParse(chart.StyleId, NumberStyles.Integer, CultureInfo.InvariantCulture, out int legacyStyle) &&
+        legacyStyle is >= 1 and <= 48;
 
     internal static PptxSceneChartTextStyleOverride ResolveChartLegendTextStyleOverride(PptxSceneChart chart)
     {

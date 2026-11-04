@@ -79,7 +79,8 @@ internal static partial class PptxSourceUnitBoundsTests
 
     private static PdfPage RenderCaptionFrames(int angle, int unit, string kind = "bar", bool reversed = false,
         bool highSide = false, bool manual = false, bool hidden = false, int height = 360,
-        int categoryFontSize = 1200, string? overflow = null, string? categoryText = null, int valueFontSize = 1000)
+        int categoryFontSize = 1200, string? overflow = null, string? categoryText = null, int valueFontSize = 1000,
+        int? builtInStyle = null, int? categoryRoleFontSize = null, int? chartFontSize = null)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -106,8 +107,23 @@ internal static partial class PptxSourceUnitBoundsTests
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="7315200" cy="4572000"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
             """;
         slide = slide.Replace("cy=\"4572000\"", $"cy=\"{height * 12700}\"", StringComparison.Ordinal);
-        using var stream = PptxTests.CreateSingleChartPackageStream(xml.ToString(SaveOptions.DisableFormatting),
-            new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
+        if (builtInStyle is { } styleId)
+            xml.AddFirst(new XElement(c + "style", new XAttribute("val", styleId)));
+        if (chartFontSize is { } globalSize)
+            xml.Add(new XElement(c + "txPr", new XElement(a + "bodyPr"), new XElement(a + "lstStyle"),
+                new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr", new XAttribute("sz", globalSize))))));
+        var parts = new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) };
+        if (categoryRoleFontSize is { } roleSize)
+        {
+            parts["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rStyle" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/></Relationships>
+                """);
+            XNamespace cs = "http://schemas.microsoft.com/office/drawing/2012/chartStyle";
+            parts["ppt/charts/style1.xml"] = TestFixtures.Utf8(new XElement(cs + "chartStyle",
+                new XAttribute("id", "201"), new XElement(cs + "categoryAxis",
+                    new XElement(cs + "defRPr", new XAttribute("sz", roleSize)))).ToString(SaveOptions.DisableFormatting));
+        }
+        using var stream = PptxTests.CreateSingleChartPackageStream(xml.ToString(SaveOptions.DisableFormatting), parts);
         using var package = OoxPackage.Open(stream, default);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
             .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();

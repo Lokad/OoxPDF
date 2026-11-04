@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: overridden chart-style fonts no longer change rotated category-caption
+  fitting in built-in charts. Numeric-scale and inherited-font limitations remain.
+
 - PPTX: automatic line/area plots with horizontal, unwrapped categories admit
   caption and numeric-label space beside right legends without moving the legend.
   Area plots share the font-line-box side-legend allocation used by bubble plots.

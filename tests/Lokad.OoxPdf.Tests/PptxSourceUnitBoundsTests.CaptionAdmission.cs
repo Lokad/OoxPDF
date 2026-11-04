@@ -122,6 +122,38 @@ internal static partial class PptxSourceUnitBoundsTests
         }
     }
 
+    public static void PptxBuiltInCategoryFittingIgnoresOverriddenRoleFonts()
+    {
+        foreach (int gallery in new[] { 2, 9, 48 })
+        foreach (int size in new[] { 1200, 1600 })
+        foreach (int angle in new[] { -45, 45 })
+        foreach (bool high in new[] { false, true })
+        {
+            PdfPage Render(int roleSize, int? globalSize = null) => RenderCaptionFrames(angle, 2,
+                highSide: high, height: 154, categoryFontSize: size, overflow: "ellipsis",
+                categoryText: new string('W', 80), builtInStyle: gallery,
+                categoryRoleFontSize: roleSize, chartFontSize: globalSize);
+            PdfPage baseline = Render(1200);
+            var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(baseline, usePageCoordinates: true,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(19, expected.Length);
+            TestAssert.True(expected.All(show => show.Text.EndsWith('\u2026')),
+                "The fixture must exercise fitted captions, not unchanged full strings.");
+            foreach (PdfPage variant in new[] { Render(800), Render(1800), Render(1200, 800), Render(1200, 1800) })
+            {
+                var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(variant, usePageCoordinates: true,
+                    fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(Math.Abs(CaptionPlotHeight(baseline) - CaptionPlotHeight(variant)) < .003 &&
+                    actual.Length == expected.Length && expected.Zip(actual).All(pair =>
+                        pair.First.Text == pair.Second.Text && pair.First.Size == pair.Second.Size &&
+                        Math.Abs(pair.First.X - pair.Second.X) < .003 && Math.Abs(pair.First.Y - pair.Second.Y) < .003),
+                    "Overridden role/global fonts preserve built-in fitting, effective caption fonts and occupied geometry.");
+                TestAssert.True(Labels(variant).SequenceEqual(Labels(baseline)),
+                    "Unused font defaults preserve the authored numeric scale.");
+            }
+        }
+    }
+
     private static double CaptionPlotHeight(PdfPage page)
     {
         double[] axis = PptxColumnIntervalTests.Lines(page).Single(line =>
