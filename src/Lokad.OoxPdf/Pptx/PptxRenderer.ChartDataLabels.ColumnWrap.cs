@@ -23,11 +23,14 @@ internal sealed partial class PptxRenderer
         double cap = Math.Max(1d, frame.Width / 5d - 2d * horizontalPadding);
         var lines = await WrapColumnLabelAsync(text, cap, style, measurer, cancellationToken).ConfigureAwait(false);
         var metrics = await measurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
+        // Native Arial/Times controls distinguish line advance (hhea plus gap)
+        // from the Windows baseline descent. Calibri's two heights coincide.
+        double lineAdvance = (await measurer.MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false)).Height;
         double textWidth = lines.Max(line => line.Width);
         double swatch = style.FontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
         double keyReserve = keyFill is not null ? 2d * (swatch + PptxChartMetricRules.BarLegendKeyUnitCenterOffset) : 0d;
         double width = textWidth + 2d * horizontalPadding + keyReserve;
-        double height = lines.Count * metrics.Height + 2d * verticalPadding;
+        double height = lines.Count * lineAdvance + 2d * verticalPadding;
         // Admit the complete occupied frame before painting its shape and text.
         // Positive outside-end labels sit above the bar, with the existing box gap.
         double x = Math.Clamp(centerX - width / 2d, frame.X, Math.Max(frame.X, frame.X + frame.Width - width));
@@ -35,7 +38,7 @@ internal sealed partial class PptxRenderer
             frame.Y, Math.Max(frame.Y, frame.Y + frame.Height - height));
         RenderChartShapeStyle(graphics, x, y, width, height, options.ShapeStyle);
         double textX = x + horizontalPadding + keyReserve;
-        double baseline = y + verticalPadding + metrics.Descent + (lines.Count - 1) * metrics.Height;
+        double baseline = y + verticalPadding + metrics.Descent + (lines.Count - 1) * lineAdvance;
         if (keyFill is { } fill)
             RenderFillDataLabelLegendKey(graphics, new ChartLayoutBox(
                 ComputeBarLegendKeySwatchX(textX, style.FontSize), ComputeBarLegendKeySwatchY(baseline, style.FontSize), swatch, swatch), style.FontSize, fill);
@@ -45,7 +48,7 @@ internal sealed partial class PptxRenderer
             double lineX = textX + (textWidth - line.Width) / 2d;
             runs.Add(CreateChartTextRun(line.Text, lineX, baseline, Math.Max(1d, line.Width), metrics.Height,
                 frame.X, frame.Y, frame.Width, frame.Height, style, TextAlignment.Left));
-            baseline -= metrics.Height;
+            baseline -= lineAdvance;
         }
     }
 
