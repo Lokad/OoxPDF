@@ -56,7 +56,8 @@ internal static partial class PptxColumnIntervalTests
             }
         }
         var linked = oracle.RootElement.GetProperty("Rows").EnumerateArray().Single(row => row.GetProperty("Id").GetString() == "column-reversed-three-explicit");
-        var linkedPage = RenderAdmission(linked, link: true, caseDirectory: ColumnDirectionCases);
+        var linkedPage = RenderAdmission(linked, link: true, caseDirectory: ColumnDirectionCases, editChart: xml =>
+            xml.Descendants(CrossingC + "dLbl").Single().Add(new XElement(CrossingC + "showLegendKey", new XAttribute("val", "0"))));
         double[] target = ColumnDirectionBar(linkedPage, linked.GetProperty("Bars").EnumerateArray().Single(bar =>
             bar.GetProperty("Series").GetInt32() == 0 && bar.GetProperty("Index").GetInt32() == 0));
         var annotation = linkedPage.Annotations.Single();
@@ -79,12 +80,19 @@ internal static partial class PptxColumnIntervalTests
             double[] bar = ColumnDirectionBar(page, expected);
             string value = expected.GetProperty("Value").GetInt32().ToString(CultureInfo.InvariantCulture);
             var label = labels.Single(show => show.Text == value);
-            double[] key = ColumnDirectionRectangles(page, expected.GetProperty("Color")).Where(rect =>
+            // Native multi-series keys use the series color even for the
+            // overridden pink point. Point painting retains its own color.
+            var seriesColor = row.GetProperty("Bars").EnumerateArray().Single(bar =>
+                bar.GetProperty("Series").GetInt32() == expected.GetProperty("Series").GetInt32() &&
+                bar.GetProperty("Index").GetInt32() == 0).GetProperty("Color");
+            double[] key = ColumnDirectionRectangles(page, seriesColor).Where(rect =>
                 rect[2] < 20d && rect[3] < 20d && rect[0] < label.X && label.X - rect[0] < 30d &&
                 Math.Abs(rect[1] + rect[3] / 2d - label.Y) < label.Size).Single();
             double end = label.X + label.Font.MeasureTextPoints(label.Text, label.Size);
-            TestAssert.True(Math.Abs((key[0] + end) / 2d - bar[0] - bar[2] / 2d) <= 1d,
-                "Each source-colored key and text unit follows its own reflected column.");
+            // These independent 12pt Office controls place the occupied unit
+            // 1.88pt right of the bar center; retain that measured spacing.
+            TestAssert.True(Math.Abs((key[0] + end) / 2d - bar[0] - bar[2] / 2d - 1.88d) <= 1d,
+                "Each series-colored key and text unit follows its own reflected column with the native offset.");
         }
     }
 
