@@ -438,6 +438,144 @@
       "NativeNumericAdvance": 18.246002197265625,
       "CheckY": true,
       "Unchanged": true
+    },
+    {
+      "Id": "numeric24-y145",
+      "Input": "numeric24-y145.pptx",
+      "InputSha256": "3CA3E31C0CA47A42881103DA9D872344FC3AB3470733904CF79D1B8C211E768D",
+      "OfficePdfSha256": "8DD8CEA4425906563ED16A1A6080CDFAB9F1D1D35EDC1A0506D327A58AF82579",
+      "NativeFrame": [
+        424.79998779296875,
+        172.54998779296875,
+        784.7999877929688,
+        433.1000061035156
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "category12-y15",
+      "Input": "category12-y15.pptx",
+      "InputSha256": "1B8975A038CB283BD7859313C41CBC2716532AAAE5301310E3AD24706E06B8CB",
+      "OfficePdfSha256": "B0F65CC715297E167C84A2663017C94E88D65C86734E1EB2655A10C278047A15",
+      "NativeFrame": [
+        424.79998779296875,
+        176.20999145507812,
+        784.7999877929688,
+        444.2330017089844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "activation-numeric24-category12-y15",
+      "Input": "activation-numeric24-category12-y15.pptx",
+      "InputSha256": "1AE88C29FFA072BB7D30DD7BA7312928E15BFD119B01C23FCD7E95C29833AC19",
+      "OfficePdfSha256": "4EF0E71EA5F33D3BF8AFC05A4717477F59F3635572F2D77CCF65FFEEEE1411A2",
+      "NativeFrame": [
+        424.79998779296875,
+        172.54998779296875,
+        784.7999877929688,
+        444.2330017089844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "activation-numeric24-category12-high-up15",
+      "Input": "activation-numeric24-category12-high-up15.pptx",
+      "InputSha256": "9E8DBD91D383645E968F1282886127F7BBEB89694A7D09181FE153F85B7A8847",
+      "OfficePdfSha256": "25CFF4CDC19AB04A40DB5364C7FD5ABE5FF8A6A327B30788939057449ED1B65A",
+      "NativeFrame": [
+        424.79998779296875,
+        59.769989013671875,
+        784.7999877929688,
+        331.45001220703125
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "activation-numeric24-category18-y14",
+      "Input": "activation-numeric24-category18-y14.pptx",
+      "InputSha256": "229555EFA699B3663ABFD5BB6E06DB153B2AB3448F4D63C9387992B05EE82741",
+      "OfficePdfSha256": "F77736573FFAA5D8518837B68B9843644AE78C8CD580503198FB3FD9FD057439",
+      "NativeFrame": [
+        424.79998779296875,
+        172.07998657226562,
+        784.7999877929688,
+        452.8800048828125
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": true
+    },
+    {
+      "Id": "activation-numeric24-category12-tall",
+      "Input": "activation-numeric24-category12-tall.pptx",
+      "InputSha256": "B6FD947E4549C1B8BAC5915C64477B566FDB4D4F9FD36AC56CCC420DBF04577C",
+      "OfficePdfSha256": "F05BD5704DE7795060B98357A739CDD5DA1750CFD1C5A4A03A1E6AB01393E114",
+      "NativeFrame": [
+        424.79998779296875,
+        50.649993896484375,
+        784.7999877929688,
+        444.2330017089844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
     }
   ]
 }

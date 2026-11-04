@@ -49,24 +49,36 @@ internal sealed partial class PptxRenderer
         var horizontal = AdmitChartCaptionInterval(layout.Frame.X, layout.Frame.Width, source.X, source.Width,
             0d, 0d, numericBand, new(0d, labelsRight ? 1d : 0d, labelsRight, labelsRight));
 
-        double preflight = numericClearance, categoryBand = 0d;
+        double categoryClearance = 0d, categoryBand = 0d;
         if (layout.CategoryLabels is { } category && category.Labels.Values.Any(parts => parts.Any(part => part.Text.Length > 0)))
         {
-            preflight = Math.Max(preflight, category.LineHeight / 2d);
+            categoryClearance = category.LineHeight / 2d;
             categoryBand = ChartCategoryLabelBaselineDistance(category.Style.FontSize, categoryHighSide,
                 ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
                 layout.AutomaticCategoryLabelOffsetAdjustment) +
                 (categoryHighSide ? category.Ascent : category.Descent) + PptxChartMetricRules.OuterPlotCaptionPadding;
         }
-        // X admits its complete numeric strip. Y preserves an authored position
-        // while its axis endcaps fit; only an overflowing endcap admits the full
-        // visible caption band. The coordinates have independent owners.
+        // Each role activates its own constraint. An overflowing category endcap
+        // admits the occupied frame as a unit. If only numeric endcaps overflow,
+        // retain their admitted interval and allocate the category band inside
+        // it. This also preserves the opposite edge for an interior crossing.
         (double Start, double Length) vertical = (source.Y, source.Height);
-        if (source.Y - preflight < layout.Frame.Y ||
-            source.Y + source.Height + preflight > layout.Frame.Y + layout.Frame.Height)
+        var categoryPlacement = new ChartAxisPlacement(0d, categoryRatio, categoryHighSide, categoryHighSide);
+        bool EndcapsOverflow(double clearance) => source.Y - clearance < layout.Frame.Y ||
+            source.Y + source.Height + clearance > layout.Frame.Y + layout.Frame.Height;
+        if (EndcapsOverflow(categoryClearance))
             vertical = AdmitChartCaptionInterval(layout.Frame.Y, layout.Frame.Height, source.Y, source.Height,
-                numericClearance, numericClearance, categoryBand,
-                new(0d, categoryRatio, categoryHighSide, categoryHighSide));
+                numericClearance, numericClearance, categoryBand, categoryPlacement);
+        else if (EndcapsOverflow(numericClearance))
+        {
+            var numeric = AdmitChartCaptionInterval(layout.Frame.Y, layout.Frame.Height, source.Y, source.Height,
+                numericClearance, numericClearance, 0d, categoryPlacement);
+            double insideBand = Math.Max(0d, categoryHighSide
+                ? numeric.Start + numeric.Length + categoryBand - layout.Frame.Y - layout.Frame.Height
+                : layout.Frame.Y + categoryBand - numeric.Start);
+            vertical = AdmitChartCaptionInterval(numeric.Start, numeric.Length, numeric.Start, numeric.Length,
+                0d, 0d, insideBand, categoryPlacement);
+        }
         ChartPlotBox plot = source with { X = horizontal.Start, Width = horizontal.Length, Y = vertical.Start, Height = vertical.Length };
         return layout with
         {
