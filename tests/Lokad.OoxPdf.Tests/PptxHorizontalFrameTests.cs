@@ -3,7 +3,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxHorizontalFrameTests
+internal static partial class PptxHorizontalFrameTests
 {
     public static void PptxHorizontalFrameKeepsUntitledTopAcrossHeightAndLegendChanges()
     {

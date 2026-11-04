@@ -197,13 +197,13 @@ internal sealed partial class PptxRenderer
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
         PresentationFontResolver? fontResolver,
-        ChartAxisPlacement? categoryPlacement, PptxRenderContext? context = null,
+        ChartAxisPlacement? categoryPlacement, ChartLegendLayout legend, ChartAxisPlacement? numericPlacement,
+        PptxRenderContext? context = null,
         ChartValueExtents? resolvedValueExtents = null)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
         PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
-        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
         // Horizontal legend rows are admitted by the legend owner. The baseline
         // plot retains title/axis space; its legend band is applied exactly once.
         ChartLegendLayout plotLegend = UsesMeasuredBarLegend(barOptions, sceneChart, legend)
@@ -214,11 +214,11 @@ internal sealed partial class PptxRenderer
             barOptions.BarDirection == PptxSceneChartBarDirection.Bar && UsesAutomaticBarFrame(barOptions, sceneChart, legend) &&
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
-        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement, context: context, resolvedValueExtents: resolvedValueExtents).ConfigureAwait(false));
+        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement, context: context, resolvedValueExtents: resolvedValueExtents, numericPlacement: numericPlacement).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
             plotLayout.AutomaticCategoryLabelOffsetAdjustment,
-            // The caller supplies a resolved range only for an admitted shared
-            // reciprocal pair; retain that frame's category placement as well.
+            // Resolved ranges serve admitted single/shared horizontal plots and
+            // shared columns. Retain their automatic category placement too.
             plotLayout.ManualLayoutTargetKind is null && (sceneChart.Plots.Count == 1 || resolvedValueExtents is not null)
                 ? categoryPlacement : null)
         { AutomaticCaptionFittingClearance = plotLayout.AutomaticCaptionFittingClearance };
@@ -301,7 +301,7 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver? fontResolver,
         (double Ascent, double Height)? measuredTitle = null,
         ChartAxisPlacement? categoryPlacement = null, PptxRenderContext? context = null,
-        ChartValueExtents? resolvedValueExtents = null)
+        ChartValueExtents? resolvedValueExtents = null, ChartAxisPlacement? numericPlacement = null)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -397,6 +397,20 @@ internal sealed partial class PptxRenderer
                 : PptxChartMetricRules.TitleAbovePlotBaselineOffsetFactor);
             double top = Math.Min(defaultPlotBox.Y + defaultPlotBox.Height, frame.Y + frame.Height - lineHeight - titleOffset);
             defaultPlotBox = defaultPlotBox with { Height = Math.Max(1d, top - defaultPlotBox.Y) };
+        }
+        if (numericPlacement is { LabelsHighSide: true })
+        {
+            ChartAxisSource numericAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            if (IsSceneOrXmlChartAxisLabelVisible(numericAxis.SceneAxis, numericAxis.XmlAxis))
+            {
+                // Transfer only the numeric band. Title and legend owners keep
+                // their measured space; plot height and category geometry stay.
+                ChartTextStyle numericStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, numericAxis.SceneAxis,
+                    chartXml, numericAxis.XmlAxis, PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+                double transfer = ComputeCartesianLabelStripBottomReserve(numericStyle.FontSize) -
+                    PptxChartMetricRules.HorizontalBarPlotTopReserve;
+                defaultPlotBox = defaultPlotBox with { Y = defaultPlotBox.Y - transfer };
+            }
         }
         if (ignoreManualPlotLayout)
         {
