@@ -1508,6 +1508,10 @@
   "pptx-category-layout": [
     "PptxBuiltInCategoryFittingIgnoresOverriddenRoleFonts",
     "PptxBuiltInAxesInheritChartFontSizeBeforeRoleDefaults",
+    "PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering",
+    "PptxSyntheticChartStyleAxisDefaultsDriveManualAxisTitleRendering",
+    "PptxChartAxisTextStyleUsesSceneAuthoritativeMissingAxis",
+    "PptxChartTextStyleCarriesTypefaceSourceThroughRendererStyle",
     "PptxSyntheticChartAutoTitleUsesOfficeScaledSize",
     "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",
     "PptxCategoryOverflowTracksValueFontWithoutChangingCategoryTypeface",

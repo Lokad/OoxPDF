@@ -131,7 +131,7 @@ internal static partial class PptxSourceUnitBoundsTests
         {
             PdfPage Render(int roleSize, int? globalSize = null) => RenderCaptionFrames(angle, 2,
                 highSide: high, height: 154, categoryFontSize: size, overflow: "ellipsis",
-                categoryText: new string('W', 80), builtInStyle: gallery,
+                categoryText: new string('i', 80), builtInStyle: gallery,
                 categoryRoleFontSize: roleSize, chartFontSize: globalSize);
             PdfPage baseline = Render(1200);
             var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(baseline, usePageCoordinates: true,
