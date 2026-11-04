@@ -113,6 +113,9 @@
   column plots share the primary value axis.
 - PPTX: shares source ranges and declared intervals across ordinary column/line
   combinations, keeping their data on the same numeric scale.
+- PPTX: combined plots sharing one supported axis pair reuse the measured column
+  frame across reversal and crossing, correcting displaced plots. Font and
+  clustering differences and strict image failures remain documented.
 - DOCX: minimum-line placement uses measured local slots across fonts, styles
   and neighboring tables/wrapped text; links and background paint retain geometry.
 - DOCX: continuation pages use their own body print origins, keeping text,

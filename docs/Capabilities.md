@@ -172,9 +172,11 @@ Approximate or restricted:
   Clustered-column and standard-line plots sharing one reciprocal category/value
   pair use a common source-data range and declared linear intervals. The resolved
   scale feeds numeric measurement, bar/line placement, labels and grids, including
-  partial bounds and empty sibling plots. Composed stacking, unpaired or
-  logarithmic scales retain their existing fallbacks; fully automatic capacity
-  and absolute composed-frame geometry remain approximate.
+  partial bounds and empty sibling plots. Their automatic column frames share
+  the measured numeric header and category band across value-axis reversal,
+  crossing and label sides. Manual furniture, composed stacking, unpaired and
+  logarithmic scales retain their existing fallbacks. Fully automatic capacity,
+  font geometry, clustering and some image comparisons remain approximate.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain
   separate from the stroke. Clustered bars and label swatches classify inversion
