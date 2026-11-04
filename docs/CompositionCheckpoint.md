@@ -55,6 +55,17 @@ Eighteen raw image failures, a 1.046pt Times horizontal residual and an inherite
 are uncalibrated against the visible application view. Local evidence:
 `artifacts/tbar-label-wrap-1104/qualification.json`.
 
+The 0.3.0 factor/edge-height correction resolves three displaced or distorted
+Cartesian plot rectangles, reducing 25.9–87.7pt errors to at most 0.003pt against
+Office PDF strokes. Forty source controls retain their API/PDF audit; thirty-seven
+candidate PDFs and twelve retained neighbors, including both portfolio decks,
+remain byte-identical. Forty-six focused Windows/Linux checks pass across both
+frameworks. Five selected image gates pass unchanged thresholds, improving from
+two; the three corrected outputs also match Office's extracted word multisets.
+A broader caption-admission prototype was withdrawn after a fresh accepted
+control contradicted it. The 28.4pt vertical and 38.4pt horizontal admission
+residuals remain open. Local evidence: `artifacts/tmanual-plot-frame-1104/qualification.json`.
+
 The complete 9,570-line development and qualification journal remains in
 [checkpoint history at the reviewed revision](https://github.com/Lokad/OoxPDF/blob/6584386f9f36bd0c32dc59c7f3043f5b39f8d062/docs/CompositionCheckpoint.md).
 Detailed local evidence remains under ignored artifacts; private inputs stay
