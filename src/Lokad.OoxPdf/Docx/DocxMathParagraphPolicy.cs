@@ -334,7 +334,9 @@ internal static class DocxMathParagraphPolicy
 
     public static DocxTextAlignment? ResolveParagraphDisplayAlignment(DocxParagraph paragraph, CancellationToken token)
     {
-        if (paragraph.InlineContent is not { } items) return ResolveDisplayAlignment(paragraph.Equations, token);
+        // Known source values remain required even when a row is measured inline.
+        var fallback = ResolveDisplayAlignment(paragraph.Equations, token);
+        if (fallback is null || paragraph.InlineContent is not { } items) return fallback;
         // The first effective display row owns paragraph justification. Inline
         // rows retain their source properties without governing later display.
         DocxTextAlignment? owner = null;
@@ -347,7 +349,7 @@ internal static class DocxMathParagraphPolicy
             { if (!CompleteRow()) return null; }
             else if (item is DocxInlineEquation math && promoted.Contains(math.Equation)) row.Add(math.Equation);
         }
-        return CompleteRow() ? owner ?? ResolveDisplayAlignment(paragraph.Equations, token) : null;
+        return CompleteRow() ? owner ?? fallback : null;
 
         bool CompleteRow()
         {

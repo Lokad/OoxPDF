@@ -2510,6 +2510,12 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(DocxMathParagraphPolicy.ResolveDisplayAlignment(
             [differing[0], differing[1] with { AlignmentValue = "unknown" }], default) is null,
             "Unknown source justification keeps its existing explicit fallback.");
+        var unknownInline = differing[0] with { AlignmentValue = "unknown" };
+        TestAssert.True(DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows with
+            { Equations = [unknownInline, differing[1]], Runs = [prefixText, hardBreak], InlineContent =
+                [new DocxInlineText(prefixText, 0, prefixText.Text.Length), new DocxInlineEquation(unknownInline),
+                    new DocxInlineBreak(hardBreak, 0), new DocxInlineEquation(differing[1])] }, default) is null,
+            "A valid display owner cannot hide unknown justification on an earlier inline row.");
         var prose = new DocxTextRun("Visible prose", 12d, null, false, false, false, null, null);
         var lineBreak = prose with { Text = "\n" };
         var mixed = paragraph with { Runs = [lineBreak, prose], InlineContent = [.. paragraph.InlineContent!,
