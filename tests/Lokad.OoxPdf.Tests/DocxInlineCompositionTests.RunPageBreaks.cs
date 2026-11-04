@@ -56,6 +56,9 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, pages.Length);
             string[] text = pages.Select(page => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: true).Select(show => show.Text))).ToArray();
+            // A consumed wrapping space need not have its own painted glyph.
+            // Check prose characters independently of line/show boundaries.
+            string[] prose = text.Select(value => string.Concat(value.Where(c => !char.IsWhiteSpace(c)))).ToArray();
             TestAssert.Contains("flowAlpha", text[0]);
             TestAssert.True(!text[1].Contains("flowAlpha", StringComparison.Ordinal), "The first formula stays before the break.");
             TestAssert.Contains("flowBeta", text[1]);
@@ -66,10 +69,10 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(1, Draws(pages[0]));
             TestAssert.Equal(0, Draws(pages[1]));
             if (!withNote) continue;
-            TestAssert.Contains("Public calculation note.", text[0]);
-            TestAssert.True(!text[1].Contains("Public calculation note.", StringComparison.Ordinal), "The note stays with its source marker.");
-            TestAssert.Contains("End of supported note.", text[0]);
-            TestAssert.Contains("Following prose.", text[1]);
+            TestAssert.Contains("Publiccalculationnote.", prose[0]);
+            TestAssert.True(!prose[1].Contains("Publiccalculationnote.", StringComparison.Ordinal), "The note stays with its source marker.");
+            TestAssert.True(prose[0].Contains("Endofsupportednote.", StringComparison.Ordinal), "The complete note tail remains visible: " + text[0]);
+            TestAssert.Contains("Followingprose.", prose[1]);
             var target = pages[1].Annotations.Where(link => link.IsDestination).Single().Destination!.Value;
             TestAssert.Equal(0, target.PageIndex);
             TestAssert.True(pages[0].Annotations.Count(link => link.Destination == target) >= 2,
