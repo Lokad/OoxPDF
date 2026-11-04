@@ -28,7 +28,7 @@ internal sealed partial class PptxRenderer
             valueAxis.SceneAxis is { HasLogarithmicScale: false, CrossesAt: null } &&
             categoryAxis.SceneAxis?.AxisKind == PptxSceneChartAxisKind.Category &&
             !chart.Title.Layout.HasGeometryValues && !layout.Legend.Layout.HasGeometryValues;
-        bool inner = canAdmit && chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner;
+        bool innerTarget = canAdmit && chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner;
         bool outer = canAdmit && chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer &&
             chart.Plots.Count == 1 && chart.PlotAreaLayout is
             { X: not null, Y: not null, Width: not null, Height: not null,
@@ -54,11 +54,11 @@ internal sealed partial class PptxRenderer
             layout = await PrepareCategoryLabelLayoutAsync(layout, theme, chart, xml, categoryAxis, labels,
                 onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox,
                 outer ? Math.Max(0d, source.Height - 2d * numericClearance) : null).ConfigureAwait(false);
-        if (!inner && !outer) return layout;
+        if (!innerTarget && !outer) return layout;
         if (layout.CategoryLabels?.Labels.Values.Any(parts => parts.Length != 1) == true)
             return outer ? await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
                 onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false) : layout;
-        if (inner)
+        if (innerTarget)
         {
             if (layout.CategoryLabels is { RotationDegrees: not 0d }) return layout;
             (numericClearance, numericBand) = await MeasureNumericFrameAsync().ConfigureAwait(false);
