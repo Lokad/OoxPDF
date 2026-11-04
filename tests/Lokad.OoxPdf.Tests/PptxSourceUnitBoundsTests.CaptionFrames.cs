@@ -117,6 +117,22 @@ internal static partial class PptxSourceUnitBoundsTests
             foreach (XElement axis in plot.Elements().Where(element => element.Name == c + "catAx" || element.Name == c + "valAx"))
                 foreach (XElement properties in axis.Descendants(a + "defRPr")) properties.Attribute("sz")?.Remove();
         var parts = new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) };
+        if (builtInStyle is not null)
+        {
+            // The measured frame needs a named theme face. The resolver pins its
+            // program on either host; missing theme metadata exercises a fallback.
+            XNamespace relationships = "http://schemas.openxmlformats.org/package/2006/relationships";
+            XElement presentationRelationships = XElement.Parse(PptxTests.PresentationRelationship());
+            presentationRelationships.Add(new XElement(relationships + "Relationship",
+                new XAttribute("Id", "rTheme"),
+                new XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme"),
+                new XAttribute("Target", "theme/theme1.xml")));
+            parts["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(presentationRelationships.ToString(SaveOptions.DisableFormatting));
+            parts["ppt/theme/theme1.xml"] = TestFixtures.Utf8(new XElement(a + "theme",
+                new XElement(a + "themeElements", new XElement(a + "fontScheme",
+                    new XElement(a + "majorFont", new XElement(a + "latin", new XAttribute("typeface", "DejaVu Sans"))),
+                    new XElement(a + "minorFont", new XElement(a + "latin", new XAttribute("typeface", "DejaVu Sans")))))).ToString(SaveOptions.DisableFormatting));
+        }
         if (categoryRoleFontSize is not null || valueRoleFontSize is not null)
         {
             parts["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
