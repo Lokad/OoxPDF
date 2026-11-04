@@ -1,0 +1,116 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "Uncalibrated against application view",
+  "Rows": [
+    {
+      "Id": "outer-high-minus45",
+      "Input": "outer-high-minus45.pptx",
+      "InputSha256": "4EABDD665CFC4D1C4B295D2A4CE326BEC964504C782D046125F8DFED30527B9E",
+      "OfficePdfSha256": "6437F80B951377E2952E6CA45EA0D01D1837820139E60453D21B32038C3876EB",
+      "ExpectedRendererAngle": -45,
+      "NativeInsideHeight": 206.99826771653542
+    },
+    {
+      "Id": "outer-low-plus45",
+      "Input": "outer-low-plus45.pptx",
+      "InputSha256": "60BC11569EE40563EF8CAC6E5B89C5A679C8FB3DB5D2A8E4A3E8ACECF35870F1",
+      "OfficePdfSha256": "880F2249C6882520C8CA50F31C28B7FC70A4EABDF9B1ACF205CBD595CE74C6FF",
+      "ExpectedRendererAngle": 45,
+      "NativeInsideHeight": 206.99826771653542
+    },
+    {
+      "Id": "outer-high-plus30",
+      "Input": "outer-high-plus30.pptx",
+      "InputSha256": "F63B6A0AC56A6AE6FC29924E677097B533B97CBE635BEC110D9050BD0B1F5570",
+      "OfficePdfSha256": "6BED47574AB6FEEBFB3FDCB0D7A3314CDA5602B97459AA4B4A9342D6F54E9D00",
+      "ExpectedRendererAngle": 30,
+      "NativeInsideHeight": 210.19346456692912
+    },
+    {
+      "Id": "outer-low-minus30",
+      "Input": "outer-low-minus30.pptx",
+      "InputSha256": "8A451E2A1C7C4C6EE7654F7C601D1B12BC3E5D99BE3A91F036DB2633AC7B4779",
+      "OfficePdfSha256": "40037071BC9C1D9011763D7C67EEF8E96B14D7A08C2CA0BFCC017DAC45864387",
+      "ExpectedRendererAngle": -30,
+      "NativeInsideHeight": 210.19346456692912
+    },
+    {
+      "Id": "outer-high45-reversed",
+      "Input": "outer-high45-reversed.pptx",
+      "InputSha256": "41A9935E6593DA5E105874D9ABE27D999580A81C97FF1AEE12F3D0F95A7515BD",
+      "OfficePdfSha256": "EFB15CD8F3DE68C102BCD34E9F6BFC9854088CB6F8AAF1AD12CDA6EA531B72D9",
+      "ExpectedRendererAngle": 45,
+      "NativeInsideHeight": 206.99826771653542
+    },
+    {
+      "Id": "outer-high45-arial18",
+      "Input": "outer-high45-arial18.pptx",
+      "InputSha256": "E57BACF3C4AC6538696DB228717675DBB34B2AED0236B000C4C76876F0EE98F2",
+      "OfficePdfSha256": "1524FDCE65CEAA7EBD5834EDFAFA5973FA1CF8D07E1BC4DC4E7EEF3AD85FD5F0",
+      "ExpectedRendererAngle": 45,
+      "NativeInsideHeight": 225.06984251968504
+    },
+    {
+      "Id": "outer-low45-arial18",
+      "Input": "outer-low45-arial18.pptx",
+      "InputSha256": "4153605D8608B4E30949454C40D4F396B7B297C594A244F04AFC18FAE0797869",
+      "OfficePdfSha256": "FEFCCE564A51B1ACE747355A8798FA9EE9E60E336FDF38E970322DED30D94931",
+      "ExpectedRendererAngle": -45,
+      "NativeInsideHeight": 225.06984251968504
+    },
+    {
+      "Id": "outer-high45-offset200",
+      "Input": "outer-high45-offset200.pptx",
+      "InputSha256": "89739956ED7455A8C307E9C61BE4759EC2FE403FE5B002295312DC8B29D9F4BB",
+      "OfficePdfSha256": "F5E6CC5AC4E54E4E8266B2C81EDD4B8FC2D3FED987395F5AAD779972CD6108DA",
+      "ExpectedRendererAngle": 45,
+      "NativeInsideHeight": 200.29574803149606
+    },
+    {
+      "Id": "outer-low45-offset200",
+      "Input": "outer-low45-offset200.pptx",
+      "InputSha256": "66BE8E421139BC5221AE060065CEDF4C177699D5D66ABC32383081A8ADFEAE11",
+      "OfficePdfSha256": "9A55A987AE9526A6631A928CDD0767ECC951BEEC4A803DF9378EF201B64B5762",
+      "ExpectedRendererAngle": -45,
+      "NativeInsideHeight": 200.29574803149606
+    },
+    {
+      "Id": "outer-authored45-high",
+      "Input": "../OuterCategoryFrames/outer-authored45-high.pptx",
+      "InputSha256": "ACA96C120AC380D378F15848E57794BE59FE63AB7B9DAEBE1A779D2B28BFFDD2",
+      "OfficePdfSha256": "298C32319ECBC27878C0FDD5CF52D48462BCE727CE68ABA7224C4B5EACC0697D",
+      "ExpectedRendererAngle": 45,
+      "NativeInsideHeight": 206.99826771653542
+    },
+    {
+      "Id": "outer-authored45-low",
+      "Input": "../OuterCategoryFrames/outer-authored45-low.pptx",
+      "InputSha256": "3585871D043A0FECA8F17FC8B4D841324EDADFB776A6342BD0B962B90F5A7EA0",
+      "OfficePdfSha256": "0AF3298F97B077C6E59C83EC828460B9CCBE674396968809F6E05D55FAC63C70",
+      "ExpectedRendererAngle": -45,
+      "NativeInsideHeight": 206.99826771653542
+    }
+  ],
+  "HeightPairs": [
+    [
+      "outer-authored45-high",
+      "outer-authored45-low"
+    ],
+    [
+      "outer-high-minus45",
+      "outer-low-plus45"
+    ],
+    [
+      "outer-high-plus30",
+      "outer-low-minus30"
+    ],
+    [
+      "outer-high45-arial18",
+      "outer-low45-arial18"
+    ],
+    [
+      "outer-high45-offset200",
+      "outer-low45-offset200"
+    ]
+  ]
+}

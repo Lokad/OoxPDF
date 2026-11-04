@@ -64,6 +64,16 @@ internal sealed partial class PptxRenderer
             (numericClearance, numericBand) = await MeasureNumericFrameAsync().ConfigureAwait(false);
             source = layout.PlotBox;
         }
+        if (outer && layout.CategoryLabels is { RotationDegrees: not 0d } rotated)
+        {
+            // Mirroring an outer caption changes its anchor, not its occupied
+            // clearance. Native side/direction/offset controls reserve equal
+            // heights. Keep the existing inner/automatic baseline owners.
+            double gap = Math.Max(0d, ChartCategoryLabelBaselineDistance(rotated.Style.FontSize, highSide: false,
+                ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
+                layout.AutomaticCategoryLabelOffsetAdjustment) - rotated.Ascent);
+            layout = layout with { CategoryLabels = rotated with { AxisGap = gap } };
+        }
         double categoryClearance = 0d, categoryBand = 0d;
         double captionRadians = -(layout.CategoryLabels?.RotationDegrees ?? 0d) * Math.PI / 180d;
         double captionSin = Math.Sin(captionRadians), captionCos = Math.Cos(captionRadians);
@@ -78,8 +88,7 @@ internal sealed partial class PptxRenderer
                 categoryBand = baseline + (categoryHighSide ? category.Ascent : category.Descent) + PptxChartMetricRules.OuterPlotCaptionPadding;
             else
             {
-                double gap = Math.Max(0d, baseline - (categoryHighSide ? category.Descent : category.Ascent));
-                categoryBand = gap + category.Labels.Values.Max(parts =>
+                categoryBand = category.AxisGap + category.Labels.Values.Max(parts =>
                     (parts[0].Width - (rightCaptionAnchor ? parts[0].OverflowAdvance : 0d)) * Math.Abs(captionSin) + category.LineHeight * captionCos) +
                     PptxChartMetricRules.OuterPlotCaptionPadding;
             }
@@ -588,7 +597,10 @@ internal sealed partial class PptxRenderer
                 PlotAreaBox = layout.PlotAreaBox with { Y = layout.PlotAreaBox.Y + shift, Height = Math.Max(1d, layout.PlotAreaBox.Height - admitted) }
             };
         }
-        layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, measured) };
+        double axisGap = Math.Max(0d, ChartCategoryLabelBaselineDistance(style.FontSize, topSide,
+            ResolveSceneOrXmlCategoryAxisLabelOffsetScale(axis.SceneAxis, axis.XmlAxis),
+            layout.AutomaticCategoryLabelOffsetAdjustment) - (topSide ? line.Descent : line.Ascent));
+        layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, axisGap, measured) };
         return AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
             ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), topSide, resolver.CancellationToken);
 

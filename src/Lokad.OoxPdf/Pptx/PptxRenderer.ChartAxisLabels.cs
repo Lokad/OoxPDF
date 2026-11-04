@@ -72,9 +72,7 @@ internal sealed partial class PptxRenderer
                     if (part.Text.Length == 0) continue;
                     double center = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
                     double axisY = axisCoordinate ?? plotBox.Y;
-                    double baselineDistance = ChartCategoryLabelBaselineDistance(fontSize, labelsHighSide,
-                        labelOffsetScale, automaticLabelOffsetAdjustment);
-                    double gap = Math.Max(0d, baselineDistance - (labelsHighSide ? rotated.Descent : rotated.Ascent));
+                    double gap = rotated.AxisGap;
                     double radians = -rotated.RotationDegrees * Math.PI / 180d;
                     double sin = Math.Sin(radians), cos = Math.Cos(radians);
                     bool rightAnchor = (radians > 0d) != labelsHighSide;

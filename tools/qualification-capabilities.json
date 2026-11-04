@@ -1,5 +1,7 @@
 {
   "pptx-manual-axis-admission": [
+    "PptxOuterRotatedCaptionClearanceIsSideIndependent",
+    "PptxOuterRotatedCaptionClearanceKeepsCompleteInkAndAngles",
     "PptxOuterCategoryOrientationUsesWidthAfterNumericAdmission",
     "PptxOuterCategoryOrientationRespectsAxisFontAndContainerOwners",
     "PptxOuterProjectedCategoryInkStaysInsideItsChart",
