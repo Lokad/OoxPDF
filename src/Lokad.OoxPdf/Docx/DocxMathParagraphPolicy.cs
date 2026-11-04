@@ -315,7 +315,10 @@ internal static class DocxMathParagraphPolicy
 
     public static DocxTextAlignment? ResolveDisplayAlignment(IEnumerable<DocxEquation> equations, CancellationToken token)
     {
-        DocxTextAlignment? alignment = null;
+        // Word uses the first actual display group in the containing text
+        // paragraph. Later groups retain their source properties, but do not
+        // replace that owner, including across authored hard breaks.
+        DocxTextAlignment? first = null, display = null;
         foreach (var equation in equations)
         {
             token.ThrowIfCancellationRequested();
@@ -326,10 +329,11 @@ internal static class DocxMathParagraphPolicy
                 "right" => DocxTextAlignment.Right,
                 _ => null
             };
-            if (current is null || alignment is not null && alignment != current) return null;
-            alignment = current;
+            if (current is null) return null;
+            first ??= current;
+            if (equation.Display) display ??= current;
         }
-        return alignment;
+        return display ?? first;
     }
 
     private static bool DisplayRowsOwnParagraphAlignment(DocxParagraph paragraph,

@@ -4920,6 +4920,7 @@
     "PortableRenderingNormalNotesPreserveInlineImagesAndMath"
   ],
   "docx-authored-display-alignment": [
+    "PortableRenderingFirstDisplayGroupOwnsParagraphJustification",
     "DocxInlineCompositionAuthoredDisplayAlignment",
     "DocxInlineCompositionExplicitDisplays",
     "DocxInlineCompositionExplicitDisplayLinks",

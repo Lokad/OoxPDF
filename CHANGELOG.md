@@ -106,6 +106,8 @@
 - DOCX: preserves plain comment paragraph breaks beyond five paragraphs, using
   shared measured rows for balloon height and painting, including supported
   terminal font pairs and resolved font aliases.
+- DOCX: retains formulas when display groups in one paragraph declare different
+  justifications, using the first group's placement across body, cells and footers.
 - DOCX: minimum-line placement uses measured local slots across fonts, styles
   and neighboring tables/wrapped text; links and background paint retain geometry.
 - DOCX: continuation pages use their own body print origins, keeping text,

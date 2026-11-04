@@ -391,6 +391,8 @@ Approximate or restricted:
 - Supported native equations share ordered inline measurement with text/pictures.
   Fitting multiple formulas, bookmarks and unchanged-format run splitting preserve
   content in qualified body paragraphs, simple cells and direct headers/footers.
+  Display groups in one text paragraph share the first display group's
+  justification; differing later values do not discard supported formulas.
   Authored body page breaks retain supported formulas, prose, pictures and note
   references in source order. Links can span the resulting pages; bookmarks target
   the first placed source content. This content-preservation coverage does not

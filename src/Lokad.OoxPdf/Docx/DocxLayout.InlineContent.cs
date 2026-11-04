@@ -892,8 +892,7 @@ internal sealed partial class DocxLayoutEngine
                 textInset = baselineInset;
             }
             output.Add(new(current.ToArray(), advance, above, above + below)
-                { DisplayAlignment = displayGroup ? DocxMathParagraphPolicy.ResolveDisplayAlignment(
-                    current.Where(fragment => fragment.Math is not null).Select(fragment => fragment.Math!.Equation), token) : null,
+                { DisplayAlignment = displayGroup ? DocxMathParagraphPolicy.ResolveDisplayAlignment(paragraph.Equations, token) : null,
                     ListLabelSegments = labelSegments, TextBaselineInset = textInset,
                     EndCursor = endCursor with { LineIndex = cursor.LineIndex + output.Count + 1 } });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);

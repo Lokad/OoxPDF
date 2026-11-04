@@ -2503,6 +2503,15 @@ internal static partial class DocxInlineCompositionTests
             12d, 100d, 100d, 9d, 16d, 1d, default, out var lines), "A math-owned paragraph alignment must measure.");
         TestAssert.True(TestAssert.NotNull(lines).Single().DisplayAlignment == DocxTextAlignment.Right,
             "The measured line retains one display alignment instead of a centering flag.");
+        var differing = paragraph.Equations.Select((equation, index) => equation with
+            { AlignmentValue = index == 0 ? "right" : "left" }).ToArray();
+        TestAssert.Equal(DocxTextAlignment.Right, DocxMathParagraphPolicy.ResolveDisplayAlignment(differing, default));
+        var inlinePrefix = differing[0] with { Display = false, AlignmentValue = null };
+        TestAssert.Equal(DocxTextAlignment.Right,
+            DocxMathParagraphPolicy.ResolveDisplayAlignment([inlinePrefix, .. differing], default));
+        TestAssert.True(DocxMathParagraphPolicy.ResolveDisplayAlignment(
+            [differing[0], differing[1] with { AlignmentValue = "unknown" }], default) is null,
+            "Unknown source justification keeps its existing explicit fallback.");
         var prose = new DocxTextRun("Visible prose", 12d, null, false, false, false, null, null);
         var lineBreak = prose with { Text = "\n" };
         var mixed = paragraph with { Runs = [lineBreak, prose], InlineContent = [.. paragraph.InlineContent!,
