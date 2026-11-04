@@ -169,6 +169,12 @@ Approximate or restricted:
   emit that axis's numeric labels once. Distinct secondary source axes retain
   their independent labels and visibility; composed scale/frame geometry remains
   approximate.
+  Clustered-column and standard-line plots sharing one reciprocal category/value
+  pair use a common source-data range and declared linear intervals. The resolved
+  scale feeds numeric measurement, bar/line placement, labels and grids, including
+  partial bounds and empty sibling plots. Composed stacking, unpaired or
+  logarithmic scales retain their existing fallbacks; fully automatic capacity
+  and absolute composed-frame geometry remain approximate.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain
   separate from the stroke. Clustered bars and label swatches classify inversion

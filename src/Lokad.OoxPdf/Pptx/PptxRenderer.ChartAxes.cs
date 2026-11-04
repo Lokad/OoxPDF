@@ -358,10 +358,27 @@ internal sealed partial class PptxRenderer
         CanUseCartesianChartSourceIntervals(chart, axis) &&
         chart!.Plots[0] is not { PlotKind: PptxSceneChartPlotKind.Bar, BarDirectionKind: PptxSceneChartBarDirection.Bar };
 
-    // A standalone plot shares one resolved linear scale. Composed/secondary
-    // scale ownership retains its existing fallback, independently of direction.
+    // A shared reciprocal source pair owns one linear scale across the supported
+    // independent plots. Other compositions retain their existing fallback.
+    private static bool HasSharedCartesianChartValueAxis(PptxSceneChart? chart, PptxSceneChartAxis? axis)
+    {
+        if (chart is null || chart.Plots.Count < 2 || axis is not { HasScaling: true, HasLogarithmicScale: false } ||
+            chart.Axes.Count(candidate => candidate.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
+            ReadSceneOrXmlPairedCategoryAxis(chart, axis, null).SceneAxis is not { } category) return false;
+        bool hasColumns = false;
+        foreach (var plot in chart.Plots)
+        {
+            if (plot.AxisIds.Count != 2 || !plot.AxisIds.Contains(axis.Id, StringComparer.Ordinal) ||
+                !plot.AxisIds.Contains(category.Id, StringComparer.Ordinal)) return false;
+            if (plot is { PlotKind: PptxSceneChartPlotKind.Bar, BarDirectionKind: PptxSceneChartBarDirection.Column,
+                GroupingKind: PptxSceneChartGrouping.Clustered }) hasColumns = true;
+            else if (plot is not { PlotKind: PptxSceneChartPlotKind.Line, GroupingKind: PptxSceneChartGrouping.Standard }) return false;
+        }
+        return hasColumns;
+    }
+
     private static bool CanUseCartesianChartSourceIntervals(PptxSceneChart? chart, PptxSceneChartAxis? axis) =>
-        chart is not null && chart.Plots.Count == 1 &&
+        HasSharedCartesianChartValueAxis(chart, axis) || chart is not null && chart.Plots.Count == 1 &&
         (chart.Plots[0].PlotKind is PptxSceneChartPlotKind.Line or PptxSceneChartPlotKind.Area ||
             chart.Plots[0] is { PlotKind: PptxSceneChartPlotKind.Bar,
                 BarDirectionKind: PptxSceneChartBarDirection.Column or PptxSceneChartBarDirection.Bar }) &&

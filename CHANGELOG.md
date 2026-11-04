@@ -111,6 +111,8 @@
   pictures keep inline math; hidden text remains unpainted.
 - PPTX: avoids a false secondary numeric-label strip when combined bar/line or
   column plots share the primary value axis.
+- PPTX: shares source ranges and declared intervals across ordinary column/line
+  combinations, keeping their data on the same numeric scale.
 - DOCX: minimum-line placement uses measured local slots across fonts, styles
   and neighboring tables/wrapped text; links and background paint retain geometry.
 - DOCX: continuation pages use their own body print origins, keeping text,

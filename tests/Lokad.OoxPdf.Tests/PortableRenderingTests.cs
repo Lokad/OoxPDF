@@ -16,6 +16,12 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static class PortableRenderingTests
 {
+    public static void PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels() =>
+        PptxSharedAxisScaleTests.Check(geometry: false);
+
+    public static void PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale() =>
+        PptxSharedAxisScaleTests.Check(geometry: true);
+
     public static void PortableRenderingComposedPlotsShareOnePrimaryAxisLabelStrip() =>
         PptxComposedAxisTests.CheckLabels(hidePrimary: false);
 

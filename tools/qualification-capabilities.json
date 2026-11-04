@@ -15327,5 +15327,9 @@
       "PptxChartSecondaryRightValueAxisSelectionUsesSceneSource",
       "PptxChartSecondaryValueAxisStyleSelectionUsesSceneSource",
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
+  ],
+  "pptx-shared-axis-scale": [
+      "PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels",
+      "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale"
   ]
 }

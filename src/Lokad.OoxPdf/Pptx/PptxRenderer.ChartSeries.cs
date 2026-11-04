@@ -759,6 +759,28 @@ internal sealed partial class PptxRenderer
             () => GetLineChartValueExtents(ReadSharedChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), stacked, percentStacked));
     }
 
+    // Called after shared-axis ownership is established. Preserve the existing
+    // series/workbook memos; only the small range value crosses stages.
+    private static ChartValueExtents GetSharedCartesianChartValueExtents(PptxSceneChart chart,
+        PptxSceneChartPlot primaryPlot, ChartValueExtents primaryData, ChartWorkbookData? workbook,
+        bool plotVisibleOnly, CancellationToken cancellationToken)
+    {
+        double minimum = primaryData.Min, maximum = primaryData.Max;
+        foreach (var plot in chart.Plots)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (ReferenceEquals(plot, primaryPlot)) continue;
+            var vectors = ReadSharedChartSeriesVectors(plot, plot.Source, workbook, plotVisibleOnly);
+            if (CountRenderableSeries(vectors) == 0) continue;
+            var data = plot.PlotKind == PptxSceneChartPlotKind.Bar
+                ? GetBarChartValueExtents(vectors, plot.GroupingKind)
+                : GetLineChartValueExtents(vectors, stacked: false, percentStacked: false);
+            minimum = Math.Min(minimum, data.Min);
+            maximum = Math.Max(maximum, data.Max);
+        }
+        return new(minimum, maximum);
+    }
+
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
         // RV20: compact value arrays pair positions; dense-slot provenance

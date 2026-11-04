@@ -1,0 +1,454 @@
+{
+  "Evidence": "Independent PowerPoint16 PDF exports. Twelve prospective predictions matched; all controls are now observed. Numeric source bounds or aligned endpoint labels pin the resolved range. Relative placement is separate from absolute frame/image fidelity.",
+  "Rows": [
+    {
+      "Id": "closed-origin",
+      "Input": "closed-origin.pptx",
+      "InputSha256": "0FB0DD914BEA28CC311588AD1505F4685E07C27E1A98E8BC394A634C248A8A2A",
+      "OfficePdfSha256": "CA705277CD9A4E4CDC4E2ADDDB1E68A507A88CC6B904C4662AA3C11D750B2163",
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82"
+      ],
+      "Minimum": 7,
+      "Maximum": 103,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "lower-only-line-larger",
+      "Input": "lower-only-line-larger.pptx",
+      "InputSha256": "138CE637F519CB15E8CEE66B3B57D139A271E8C9F00B4D59062A5649BE4B9205",
+      "OfficePdfSha256": "AD037806C2B5DE51BC88E0087A8BC6E898F32D42A8F6A754E605BB4C3322DE93",
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Minimum": 7,
+      "Maximum": 157.0,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        131,
+        134,
+        128,
+        140,
+        137,
+        143,
+        136,
+        145
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "upper-only-line-negative",
+      "Input": "upper-only-line-negative.pptx",
+      "InputSha256": "23448831FC3D1908C6B6791C24388AD20502CAF799F1CE6A0C06AB4905068206",
+      "OfficePdfSha256": "A5886C94D105E62AB5F8F63F6E574F9F895E706296038CAA4D2AE8F7F6B4EC20",
+      "OfficeNumericLabels": [
+        "-47",
+        "-22",
+        "3",
+        "28",
+        "53",
+        "78",
+        "103"
+      ],
+      "Minimum": -47.0,
+      "Maximum": 103,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        -23,
+        -20,
+        -26,
+        -14,
+        -17,
+        -11,
+        -18,
+        -9
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "automatic-bounds-authored-unit",
+      "Input": "automatic-bounds-authored-unit.pptx",
+      "InputSha256": "FD3E2944E55171B63A2784DE702539E12A79E31B45876F82F73242F1CE16BFE3",
+      "OfficePdfSha256": "5EA451B12377CF531A461C40670DAE544A392F7F99C73F0B3956B155E2DF17BF",
+      "OfficeNumericLabels": [
+        "0",
+        "25",
+        "50",
+        "75",
+        "100",
+        "125",
+        "150",
+        "175"
+      ],
+      "Minimum": 0.0,
+      "Maximum": 175.0,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        131,
+        134,
+        128,
+        140,
+        137,
+        143,
+        136,
+        145
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "closed-range-line-smaller",
+      "Input": "closed-range-line-smaller.pptx",
+      "InputSha256": "5B14F945B6B2A63C50D5B8EC0D9B51668F4EDAD2E2FFB3581FC0F68392A6678D",
+      "OfficePdfSha256": "87C6FC833BC31F7453C085ECFC880421E5C53112E7BB38A8ADFD78F2DC20428D",
+      "OfficeNumericLabels": [
+        "0",
+        "50",
+        "100",
+        "150",
+        "200"
+      ],
+      "Minimum": 0,
+      "Maximum": 200,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        24,
+        27,
+        21,
+        33,
+        30,
+        36,
+        29,
+        38
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "lower-only-column-larger",
+      "Input": "lower-only-column-larger.pptx",
+      "InputSha256": "A79E413AB00F670CAA6D5C18E9E2D5A7BE8D00829B311B19219FFC7B63BC9676",
+      "OfficePdfSha256": "1C048007B80C2A18735013D1D048A1CF1337EFC6001019871A40CF91FD3D518D",
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Minimum": 7,
+      "Maximum": 157.0,
+      "Reversed": false,
+      "PrimaryValues": [
+        131,
+        134,
+        128,
+        140,
+        137,
+        143,
+        136,
+        145
+      ],
+      "OtherValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "lower-only-extra-column",
+      "Input": "lower-only-extra-column.pptx",
+      "InputSha256": "3561E045EA13AFE19F486E2A8007D592A5E11054E6B0461E56CE3B4FFCC7A58F",
+      "OfficePdfSha256": "9F9B4ED47855DBE26A3CAE9F646AA062FC179E0470A8A6ED9F8C1B1B820F6117",
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82",
+        "107",
+        "132",
+        "157"
+      ],
+      "Minimum": 7,
+      "Maximum": 157.0,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        131,
+        134,
+        128,
+        140,
+        137,
+        143,
+        136,
+        145
+      ],
+      "OtherIsColumn": true
+    },
+    {
+      "Id": "closed-reversed",
+      "Input": "closed-reversed.pptx",
+      "InputSha256": "89AB8CE8E9B03686999BE2417AA8DA1138D172176861C59C3046F589DE994D55",
+      "OfficePdfSha256": "705005C7CFC794A857CB51CAC0CCC63EC49616D1B14C8ACDA649181AB9ED1F59",
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82"
+      ],
+      "Minimum": 7,
+      "Maximum": 103,
+      "Reversed": true,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "closed-line-first",
+      "Input": "closed-line-first.pptx",
+      "InputSha256": "539BA5E9AA7A42909FD780D7E1245866D2E8C32E798A8F879D5F32D4F3BFF3AA",
+      "OfficePdfSha256": "735355A2040535AD99F9A0CF4BAE937A9FEC96C565693A3317E423657AC526DF",
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82"
+      ],
+      "Minimum": 7,
+      "Maximum": 103,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        33,
+        36,
+        30,
+        42,
+        39,
+        45,
+        38,
+        47
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "closed-automatic-unit",
+      "Input": "closed-automatic-unit.pptx",
+      "InputSha256": "5EA89601A2D047C783A9E8BE47B5F0BDF740179C9B6B2BEC8546A66ABC41B818",
+      "OfficePdfSha256": "A18CBF1B02CB437A18A3916C2B62F47866310E85DEF49244601E14F7C3A56985",
+      "OfficeNumericLabels": [
+        "7",
+        "17",
+        "27",
+        "37",
+        "47",
+        "57",
+        "67",
+        "77",
+        "87",
+        "97"
+      ],
+      "Minimum": 7,
+      "Maximum": 103,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "empty-sibling",
+      "Input": "empty-sibling.pptx",
+      "InputSha256": "E6A3173A46FAF905CB010E2AABF56D3B4DDC2DD82AA0D36C1528D6C3F8905665",
+      "OfficePdfSha256": "C955F4004E6D675081894039666123158FF2E69BB6DF9C24379E6D3F74726740",
+      "OfficeNumericLabels": [
+        "7",
+        "32",
+        "57",
+        "82"
+      ],
+      "Minimum": 7,
+      "Maximum": 103,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [],
+      "OtherIsColumn": false
+    },
+    {
+      "Id": "manual-upper-negative",
+      "Input": "manual-upper-negative.pptx",
+      "InputSha256": "7CD9CE2EF37EB6CE31B8986B952B73C323E404C7BA4DA3839105D71F79ADE5A1",
+      "OfficePdfSha256": "47ABF4A1C40B725FA9370AF1C4B020113963028531EE637009961C4FBCD332CD",
+      "OfficeNumericLabels": [
+        "-47",
+        "-22",
+        "3",
+        "28",
+        "53",
+        "78",
+        "103"
+      ],
+      "Minimum": -47.0,
+      "Maximum": 103,
+      "Reversed": false,
+      "PrimaryValues": [
+        82,
+        85,
+        79,
+        91,
+        88,
+        94,
+        87,
+        96
+      ],
+      "OtherValues": [
+        -23,
+        -20,
+        -26,
+        -14,
+        -17,
+        -11,
+        -18,
+        -9
+      ],
+      "OtherIsColumn": false
+    }
+  ]
+}
