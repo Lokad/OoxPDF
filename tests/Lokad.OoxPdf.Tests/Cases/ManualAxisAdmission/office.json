@@ -1,0 +1,443 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "Uncalibrated against application view",
+  "Rows": [
+    {
+      "Id": "x-left24-y-fit",
+      "Input": "x-left24-y-fit.pptx",
+      "InputSha256": "561B9E203E64779C732BE6C174E073A20A4D35F7635541C0373FCA453896496D",
+      "OfficePdfSha256": "8DED0D20DC13E36DFCD5119C44E1CC0D5CD14CC8F8ED782137979AF755D98CD2",
+      "NativeFrame": [
+        117.58000183105469,
+        111.60000610351562,
+        477.5799865722656,
+        392.3999938964844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": true,
+      "NumericRight": false,
+      "NativeNumericAdvance": 27.366004943847656,
+      "CheckY": false,
+      "Unchanged": false
+    },
+    {
+      "Id": "x-left22-y-fit",
+      "Input": "x-left22-y-fit.pptx",
+      "InputSha256": "8EE09D7DB8DE51DF8E37BF7A205F1F8C6730E688EAF52A708E3F487325AC14CC",
+      "OfficePdfSha256": "6CE5DC086CBD4C796BBAEBBEDB69AEDCF51BB52680878B3CB0E92C9185F464BF",
+      "NativeFrame": [
+        117.58000183105469,
+        111.60000610351562,
+        477.5799865722656,
+        392.3999938964844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": true,
+      "NumericRight": false,
+      "NativeNumericAdvance": 27.366004943847656,
+      "CheckY": false,
+      "Unchanged": false
+    },
+    {
+      "Id": "x-left24-numeric12",
+      "Input": "x-left24-numeric12.pptx",
+      "InputSha256": "28B1A84BE76F385334D140CCD6FD0A9DF253A74A374293DD004D52E38DAD2D54",
+      "OfficePdfSha256": "7FE412B318EE3186670743921D0BC52F6677AEFF1062BF843042EA8048B03C0A",
+      "NativeFrame": [
+        102.87000274658203,
+        111.60000610351562,
+        462.8699951171875,
+        392.3999938964844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": true,
+      "NumericRight": false,
+      "NativeNumericAdvance": 18.204002380371094,
+      "CheckY": false,
+      "Unchanged": false
+    },
+    {
+      "Id": "numeric-right18",
+      "Input": "numeric-right18.pptx",
+      "InputSha256": "63E4EDB176F4E72989D8461074B505A331F4FB0AAF2DF1EBE7F12BF73B46B099",
+      "OfficePdfSha256": "57EBD146CEE59A5B30E1D8EB8AC96130D1DB0F9449A63CCC059199A28EF8EFD9",
+      "NativeFrame": [
+        386.4200134277344,
+        111.60000610351562,
+        746.4199829101562,
+        392.3999938964844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": true,
+      "NumericRight": true,
+      "NativeNumericAdvance": 27.365966796875,
+      "CheckY": false,
+      "Unchanged": false
+    },
+    {
+      "Id": "numeric-right12",
+      "Input": "numeric-right12.pptx",
+      "InputSha256": "E1B6AA38D5B1E0C22BBBF1BABF55C57EB75E0CDD9CD17B1667D95B5B6BF1E961",
+      "OfficePdfSha256": "1089922615BDD57B92006D760961951DFC927DCB297787B5AF1EF913E480A182",
+      "NativeFrame": [
+        401.1300048828125,
+        111.60000610351562,
+        761.1300048828125,
+        392.3999938964844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": true,
+      "NumericRight": true,
+      "NativeNumericAdvance": 18.2039794921875,
+      "CheckY": false,
+      "Unchanged": false
+    },
+    {
+      "Id": "line-left24",
+      "Input": "line-left24.pptx",
+      "InputSha256": "9A46457D785BA83A86FBFFC969ED927A12A7E072A6CE8FD1212C2F450E131B09",
+      "OfficePdfSha256": "C28A23F4E085AEDB841A962E7CAB5260B77FB10A20AC0E7FA877A7E51E24FA71",
+      "NativeFrame": [
+        117.58000183105469,
+        111.60000610351562,
+        477.5799865722656,
+        392.3999938964844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": true,
+      "NumericRight": false,
+      "NativeNumericAdvance": 27.366004943847656,
+      "CheckY": false,
+      "Unchanged": false
+    },
+    {
+      "Id": "area-left24",
+      "Input": "area-left24.pptx",
+      "InputSha256": "47CFFCDBFD2C2EC57435F2C7F1959AF4E18F13FEF3A78E95D93CDFF05D71A205",
+      "OfficePdfSha256": "7A9942932972CC4ACBE362F4C40D00D1A2D7441E136AC6AF681407A832E5E42D",
+      "NativeFrame": [
+        117.58000183105469,
+        111.60000610351562,
+        477.5799865722656,
+        392.3999938964844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": true,
+      "NumericRight": false,
+      "NativeNumericAdvance": 27.366004943847656,
+      "CheckY": false,
+      "Unchanged": false
+    },
+    {
+      "Id": "x-overflow-y-fit",
+      "Input": "x-overflow-y-fit.pptx",
+      "InputSha256": "7BDC1CC3B73C4C32811FB78550CF067FC03E43E7B74F0770FCA99C1DD1889E70",
+      "OfficePdfSha256": "F1BE1BF5580D13D85AAF78CAE666C00000FC3E2BF355FCE2F18C324762778FC6",
+      "NativeFrame": [
+        432.0,
+        139.67999267578125,
+        792.0,
+        450.7200012207031
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 18.246002197265625,
+      "CheckY": true,
+      "Unchanged": true
+    },
+    {
+      "Id": "axes12-global6-y15",
+      "Input": "axes12-global6-y15.pptx",
+      "InputSha256": "7A3FBA972FD9BC537B7A26102281C6F77CF3837C8E8A6CD37C5313D43B79574C",
+      "OfficePdfSha256": "FEAC11608A35FD75044E53DD8A181B6E1CDA134F5157243B3F63BFD1B38FB6F8",
+      "NativeFrame": [
+        424.79998779296875,
+        176.39999389648438,
+        784.7999877929688,
+        457.20001220703125
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 18.20404052734375,
+      "CheckY": true,
+      "Unchanged": true
+    },
+    {
+      "Id": "axes12-global24-y15",
+      "Input": "axes12-global24-y15.pptx",
+      "InputSha256": "0633750532A4A08E45C9AF64826827B148CE2E39B6AB8A66EAE9413715B306AF",
+      "OfficePdfSha256": "01DC6F1DB7017C5C1FCB2C4ED7D32DA996E5655E05F8A9CC83CA8A3A8DF2D360",
+      "NativeFrame": [
+        424.79998779296875,
+        176.39999389648438,
+        784.7999877929688,
+        457.20001220703125
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 18.20404052734375,
+      "CheckY": true,
+      "Unchanged": true
+    },
+    {
+      "Id": "category-only-up22",
+      "Input": "category-only-up22.pptx",
+      "InputSha256": "EA5F13283F6F8FA06DE43EB01631DBFF97332408719B0AB3266A3058C7E50C02",
+      "OfficePdfSha256": "96105AAAECE486262F8FD3F24FF022C78ECFF8067BB5BC7E013D61CF702D2E56",
+      "NativeFrame": [
+        424.79998779296875,
+        36.0,
+        784.7999877929688,
+        316.79998779296875
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "axes-hidden-up22",
+      "Input": "axes-hidden-up22.pptx",
+      "InputSha256": "46150F31082ADFE95A3A100B2563A701BF10B0678694FEF158026BC9E2E0F2AB",
+      "OfficePdfSha256": "204F5C0C486F98B07F879AA964743778F3FBE471ABD9795E1880BD87B841A8D3",
+      "NativeFrame": [
+        424.79998779296875,
+        36.0,
+        784.7999877929688,
+        316.79998779296875
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "inner-factor-y16",
+      "Input": "inner-factor-y16.pptx",
+      "InputSha256": "E55635E4C188F2ED0A755A83D3C52C716088F7365440E7717A233D020A4A812F",
+      "OfficePdfSha256": "F811BA5900E303534E3865B1B3D67F210866467E0B32AAD1BBAA96DC3F15EEC5",
+      "NativeFrame": [
+        424.79998779296875,
+        152.29998779296875,
+        784.7999877929688,
+        433.1000061035156
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 27.365997314453125,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "inner-axis12-y16",
+      "Input": "inner-axis12-y16.pptx",
+      "InputSha256": "8A75A694CB7CA569E6EE31D0FDED831F8A2F0C9130975C4D0109403F7F228F8A",
+      "OfficePdfSha256": "63A0EB8B976FFDE029DC498324B7E88185E8AC24A1F3944AE3882E3B9BDF530C",
+      "NativeFrame": [
+        424.79998779296875,
+        163.42999267578125,
+        784.7999877929688,
+        444.2330017089844
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 18.20404052734375,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "inner-axis24-y16",
+      "Input": "inner-axis24-y16.pptx",
+      "InputSha256": "5CBEB0440A80834FAC8EF610E74DC4D6AABB144477E8CA662BAC25C0C48AABA8",
+      "OfficePdfSha256": "7B822E86AD87471D6990C608FA31587CCFB0D39C117D339D621BC3EED3A3C198",
+      "NativeFrame": [
+        424.79998779296875,
+        141.17001342773438,
+        785.0599975585938,
+        421.9700012207031
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 36.503997802734375,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "inner-hide-category-y16",
+      "Input": "inner-hide-category-y16.pptx",
+      "InputSha256": "9D891ECF50EEF59E9227F1B413C89063EBAFB377F8C29B5A82425177576A68FA",
+      "OfficePdfSha256": "3399E4D5AC3BF2300D1183086883FD1F8420CDDDB8E36656CA4A2B61A05FA3CF",
+      "NativeFrame": [
+        424.79998779296875,
+        176.20999145507812,
+        784.7999877929688,
+        457.01300048828125
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 27.378082275390625,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "inner-hide-all-axis-y16",
+      "Input": "inner-hide-all-axis-y16.pptx",
+      "InputSha256": "AA2EF5693E534BA56C4B8B4668018749C9A8A131006ED8912A7230A57A55B4CC",
+      "OfficePdfSha256": "57536FC0314E24B97B8B56B9E26B09FDED88F9DF8A700BD63AECC21CB77C0F8D",
+      "NativeFrame": [
+        424.79998779296875,
+        180.72000122070312,
+        784.7999877929688,
+        461.5199890136719
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 0,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "inner-category-max-up22",
+      "Input": "inner-category-max-up22.pptx",
+      "InputSha256": "EA7B7F65C89B0A7C315D700FE5D6248A928171523D6FE8AC5735C70B914639A2",
+      "OfficePdfSha256": "63AFA0F1A377805D873D1AE7F3A56E2192A3C4EA24C6EE1877B49F2BAD304175",
+      "NativeFrame": [
+        424.79998779296875,
+        70.89999389648438,
+        784.7999877929688,
+        351.70001220703125
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 27.365997314453125,
+      "CheckY": true,
+      "Unchanged": false
+    },
+    {
+      "Id": "retained-column-interval",
+      "Input": "../ManualInnerPlots/column-interval-manual.pptx",
+      "InputSha256": "304111847B90254E609FBB36F57DAD9543B8FE0DCC0A64A7E2466B9E42896352",
+      "OfficePdfSha256": "1205362CCDE2B3E5C9D10EDD5B1BECF106E2070C1F6B296DB437F7A413F23CB2",
+      "NativeFrame": [
+        230.39999389648438,
+        139.67999267578125,
+        792.0,
+        450.7200012207031
+      ],
+      "ChartFrame": [
+        72,
+        36,
+        792,
+        468
+      ],
+      "XAdmitted": false,
+      "NumericRight": false,
+      "NativeNumericAdvance": 18.246002197265625,
+      "CheckY": true,
+      "Unchanged": true
+    }
+  ]
+}

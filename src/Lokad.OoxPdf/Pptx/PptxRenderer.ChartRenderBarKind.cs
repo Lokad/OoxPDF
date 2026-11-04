@@ -141,6 +141,12 @@ internal sealed partial class PptxRenderer
                         ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis),
                         categoryPlacement.LabelsHighSide, categoryPlacement.LabelPlotRatio,
                         fontResolver, preparedLegendBox).ConfigureAwait(false);
+                if (!horizontalBars)
+                    chartLayout = await AdmitManualCartesianAxisFramesAsync(chartLayout, theme, sceneChart, chartXml,
+                        valueAxisSource, valueExtents, valueAxisOptions,
+                        GetValueAxisAutoTickTargetCount(false, true, chartLayout.ManualPlotLayoutApplied), axesStyle.ValueAxisRightSide,
+                        categoryAxis, categoryPlacement.LabelPlotRatio, categoryPlacement.LabelsHighSide,
+                        fontResolver, context, percentStacked ? "0%" : null).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts

@@ -126,13 +126,8 @@ internal sealed partial class PptxRenderer
                 double labelCenterX = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
                 x = labelCenterX - width / 2d;
                 double axisY = axisCoordinate ?? plotBox.Y;
-                y = labelsHighSide
-                    ? automaticLabelOffsetAdjustment is { } topAdjustment
-                        ? axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor + topAdjustment
-                        : axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor * labelOffsetScale
-                    : automaticLabelOffsetAdjustment is { } adjustment
-                        ? axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor - adjustment
-                        : axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
+                double baseline = ChartCategoryLabelBaselineDistance(fontSize, labelsHighSide, labelOffsetScale, automaticLabelOffsetAdjustment);
+                y = labelsHighSide ? axisY + baseline : axisY - baseline;
                 alignment = TextAlignment.Center;
             }
 
