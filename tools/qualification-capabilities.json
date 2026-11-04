@@ -15328,6 +15328,24 @@
       "PptxChartSecondaryValueAxisStyleSelectionUsesSceneSource",
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
+  "pptx-manual-plot-dimensions": [
+    "PptxManualFactorAndEdgeSizesShareIndependentOfficeRectangles",
+    "PptxManualScatterEdgeHeightKeepsIndependentOfficeRectangle",
+    "PptxManualEdgeHeightsPreserveTheirRectangleAcrossValueDirection",
+    "PptxInnerFactorPlotOriginsMatchIndependentOfficeControls",
+    "PptxManualLinePlotRetainsItsAuthoredGeometryAcrossFonts",
+    "PptxLineCategoryFooterKeepsItsInsetAcrossFrameHeights",
+    "PptxLineNumericSideStripsFollowLabelsAcrossFrameWidths",
+    "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+    "PptxScenePreservesChartManualLayoutNumericOptionTokens",
+    "PptxPointLabelManualLinksTranslateWithPaint",
+    "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
+    "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-column-label-wrapping": [
     "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
     "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",

@@ -2,6 +2,10 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: factor positions and edge-sized heights resolve together for authored
+  inner Cartesian plots, keeping columns, curves, axes and labels on the same
+  rectangle. Width and height share the existing source-coordinate calculation.
+
 - PPTX: plain automatic outside-end column labels wrap measured text and admit
   the whole label/key frame within the chart, retaining value suffixes at its
   edges. Manual, rich-text, no-wrap, stacked and other label placements retain

@@ -8,7 +8,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxCartesianSideTests
+internal static partial class PptxCartesianSideTests
 {
     public static void PptxInnerFactorPlotOriginsMatchIndependentOfficeControls()
     {

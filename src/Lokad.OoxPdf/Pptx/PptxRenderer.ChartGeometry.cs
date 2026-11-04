@@ -475,15 +475,16 @@ internal sealed partial class PptxRenderer
             (source.HeightModeKind != PptxSceneChartManualLayoutMode.Factor || source.Height is null || !hasWidth))
             return layout;
         if (hasWidth) plot = horizontal;
-        double y = plot.Y;
-        if (source.YModeKind == PptxSceneChartManualLayoutMode.Factor && source.Y is { } yFactor &&
-            source.HeightModeKind == PptxSceneChartManualLayoutMode.Factor && source.Height is not null)
-            y = frame.Y + Math.Clamp((frame.Height - plot.Height) / 2d - yFactor * frame.Height, 0d, Math.Max(0d, frame.Height - plot.Height));
+        double top = frame.Y + frame.Height - plot.Y - plot.Height;
+        if (TryResolveCartesianPlotInterval((0d, frame.Height), (top, plot.Height),
+            (source.Y, source.YModeKind, source.Height, source.HeightModeKind), out var vertical))
+            plot = plot with { Y = frame.Y + frame.Height - vertical.Start - vertical.Length, Height = vertical.Length };
 
         return layout with
         {
-            PlotBox = plot with { Y = y },
-            PlotAreaBox = layout.PlotAreaBox with { X = plot.X, Y = y, Width = plot.Width }
+            PlotBox = plot,
+            PlotAreaBox = layout.PlotAreaBox with { X = plot.X, Y = plot.Y, Width = plot.Width,
+                Height = Math.Max(1d, layout.PlotAreaBox.Height + plot.Height - layout.PlotBox.Height) }
         };
     }
 
@@ -495,32 +496,43 @@ internal sealed partial class PptxRenderer
             return false;
         if (source.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer && source.WidthModeKind != PptxSceneChartManualLayoutMode.Factor)
             return false;
-        if (source.WidthModeKind is not (PptxSceneChartManualLayoutMode.Factor or PptxSceneChartManualLayoutMode.Edge))
-            return false;
+        if (!TryResolveCartesianPlotInterval((frame.X, frame.Width), (fallback.X, fallback.Width),
+            (source.X, source.XModeKind, size, source.WidthModeKind), out var interval)) return false;
+        plot = fallback with { X = interval.Start, Width = interval.Length };
+        return true;
+    }
 
-        double width = fallback.Width;
-        bool factorPosition = source.XModeKind == PptxSceneChartManualLayoutMode.Factor && source.X is { };
-        if (source.WidthModeKind == PptxSceneChartManualLayoutMode.Edge)
+    private static bool TryResolveCartesianPlotInterval((double Start, double Length) frame,
+        (double Start, double Length) fallback,
+        (double? Position, PptxSceneChartManualLayoutMode PositionMode, double? Size, PptxSceneChartManualLayoutMode SizeMode) source,
+        out (double Start, double Length) interval)
+    {
+        interval = fallback;
+        if (source.Size is not { } size ||
+            source.SizeMode is not (PptxSceneChartManualLayoutMode.Factor or PptxSceneChartManualLayoutMode.Edge)) return false;
+        double length = fallback.Length;
+        bool factorPosition = source.PositionMode == PptxSceneChartManualLayoutMode.Factor && source.Position is not null;
+        if (source.SizeMode == PptxSceneChartManualLayoutMode.Edge)
         {
-            if (!double.IsFinite(size) || source.X is not { } position || !double.IsFinite(position)) return false;
-            double right = Math.Clamp(size, 0d, 1d) * frame.Width;
+            if (!double.IsFinite(size) || source.Position is not { } position || !double.IsFinite(position)) return false;
+            double edge = Math.Clamp(size, 0d, 1d) * frame.Length;
             if (factorPosition)
             {
-                // The factor position offsets the centered default rectangle;
-                // its right edge is center + width/2, not left + a fixed width.
-                double center = frame.Width / 2d + position * frame.Width;
-                width = 2d * (right - center);
+                // Factor positions offset a centered rectangle; an edge-sized
+                // interval must solve its length and position together.
+                double center = frame.Length / 2d + position * frame.Length;
+                length = 2d * (edge - center);
             }
-            else if (source.XModeKind == PptxSceneChartManualLayoutMode.Edge)
-                width = right - Math.Clamp(position, 0d, 1d) * frame.Width;
+            else if (source.PositionMode == PptxSceneChartManualLayoutMode.Edge)
+                length = edge - Math.Clamp(position, 0d, 1d) * frame.Length;
             else return false;
         }
-        if (!(width > 0d) || !double.IsFinite(width)) return false;
-        width = Math.Min(width, frame.Width);
-        double x = factorPosition ? frame.X + Math.Clamp((frame.Width - width) / 2d + source.X!.Value * frame.Width,
-            0d, Math.Max(0d, frame.Width - width)) : fallback.X;
-        if (!double.IsFinite(x)) return false;
-        plot = fallback with { X = x, Width = width };
+        if (!(length > 0d) || !double.IsFinite(length)) return false;
+        length = Math.Min(length, frame.Length);
+        double start = factorPosition ? frame.Start + Math.Clamp((frame.Length - length) / 2d + source.Position!.Value * frame.Length,
+            0d, Math.Max(0d, frame.Length - length)) : fallback.Start;
+        if (!double.IsFinite(start)) return false;
+        interval = (start, length);
         return true;
     }
 

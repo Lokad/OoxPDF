@@ -307,6 +307,10 @@ Approximate or restricted:
   explicit no-wrap, negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
   is claimed.
+  Authored inner Cartesian plots resolve factor positions and edge-sized
+  dimensions together on both axes. Caption admission near chart edges remains
+  approximate, with unresolved differences from Office. Distinct outer layouts
+  retain their existing paths.
   Existing independent Office thresholds still apply.
 - A single-series line plot with point variation shares source-indexed paint
   across incoming straight/curved segments, markers, category-name legend entries
