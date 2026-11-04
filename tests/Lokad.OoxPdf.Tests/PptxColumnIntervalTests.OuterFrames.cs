@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pptx;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
