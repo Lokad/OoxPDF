@@ -402,9 +402,11 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlot? categoryPlot = ReadSceneChartPlot(sceneChart, categoryPlotKind, 0);
         bool canMeasureCategoryPlot = categoryPlotElement is not null && resolvedValueExtents is not null;
         double? categoryLabelOffsetAdjustment = null;
+        double? categoryNumericEndClearance = null;
         ChartAxisPlacement? categoryAxisPlacement = await ReadAutomaticCategoryPlacementAsync().ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetPlotLayoutAsync().ConfigureAwait(false));
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement)
+        { AutomaticNumericEndClearance = categoryNumericEndClearance };
 
         async ValueTask<ChartAxisPlacement?> ReadAutomaticCategoryPlacementAsync()
         {
@@ -462,6 +464,7 @@ internal sealed partial class PptxRenderer
                     categoryPlot, lineElement, chartXml, fontResolver,
                     categoryPlacement: categoryAxisPlacement).ConfigureAwait(false) is { } header)
             {
+                categoryNumericEndClearance = header.NumericClearance;
                 if (await TryGetMeasuredCategoryPlotBoxAsync((header.Reserve, header.NumericClearance)).ConfigureAwait(false) is { } composedPlotBox)
                 {
                     defaultPlotBox = composedPlotBox;
@@ -579,6 +582,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
+                categoryNumericEndClearance = clearance.NumericClearance;
                 return new ChartPlotBox(frame.X + leftReserve, frame.Y + bottomReserve, width, height);
             }
 

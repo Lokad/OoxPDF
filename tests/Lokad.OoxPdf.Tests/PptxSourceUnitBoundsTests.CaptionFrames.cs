@@ -79,13 +79,15 @@ internal static partial class PptxSourceUnitBoundsTests
 
     private static PdfPage RenderCaptionFrames(int angle, int unit, string kind = "bar", bool reversed = false,
         bool highSide = false, bool manual = false, bool hidden = false, int height = 360,
-        int categoryFontSize = 1200, string? overflow = null)
+        int categoryFontSize = 1200, string? overflow = null, string? categoryText = null)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
         var sample = new Sample(Enumerable.Repeat(4d, 19).ToArray(), unit, null, 0, unit == 2 ? 6 : 5);
         XElement xml = XElement.Parse(Chart(sample, kind, false, false));
         XElement plot = xml.Descendants(c + "plotArea").Single();
+        if (categoryText is not null)
+            foreach (XElement text in plot.Descendants(c + "cat").Descendants(c + "v")) text.Value = categoryText;
         XElement ordinal = plot.Element(c + "catAx")!;
         ordinal.Element(c + "axId")!.AddAfterSelf(new XElement(c + "scaling",
             new XElement(c + "orientation", new XAttribute("val", reversed ? "maxMin" : "minMax"))));

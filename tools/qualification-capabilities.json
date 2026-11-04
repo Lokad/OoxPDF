@@ -1506,6 +1506,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-category-layout": [
+    "PptxCategoryOverflowMarkerSeparatesOccupiedHeightFromPainting",
+    "PptxCategoryOverflowPreservesManualTextOrigins",
     "PptxFittedCategoryCaptionsReturnUnusedVerticalCapacity",
     "PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames",
     "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",

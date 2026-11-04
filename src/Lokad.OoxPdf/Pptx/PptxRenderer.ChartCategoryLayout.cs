@@ -1,5 +1,7 @@
 using System.Xml.Linq;
+using System.Text;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Pdf;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -311,7 +313,7 @@ internal sealed partial class PptxRenderer
 
         double innerPitch = layout.PlotBox.Width / labels.Count;
         double flatWidth = Math.Max(1d, innerPitch * Math.Min(skip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor);
-        var measured = new Dictionary<int, ChartTextRunLayout[]>();
+        var measured = new Dictionary<int, ChartCategoryTextLine[]>();
         double widest = 0d;
         int maxLines = 1;
         for (int i = 0; i < labels.Count; i++)
@@ -320,7 +322,7 @@ internal sealed partial class PptxRenderer
             if (i % skip != 0 || string.IsNullOrWhiteSpace(labels[i]?.Text)) continue;
             string text = labels[i]!.Text;
             double width = await measure.MeasureAsync(text, style).ConfigureAwait(false);
-            var lines = new List<ChartTextRunLayout>();
+            var lines = new List<ChartCategoryTextLine>();
             if (angle == 0d && automaticSkip && width > flatWidth)
             {
                 string current = string.Empty;
@@ -330,14 +332,14 @@ internal sealed partial class PptxRenderer
                     double joinedWidth = await measure.MeasureAsync(joined, style).ConfigureAwait(false);
                     if (current.Length > 0 && joinedWidth > flatWidth)
                     {
-                        lines.Add(new(current, style, await measure.MeasureAsync(current, style).ConfigureAwait(false)));
+                        lines.Add(new(current, await measure.MeasureAsync(current, style).ConfigureAwait(false)));
                         current = word;
                     }
                     else current = joined;
                 }
-                if (current.Length > 0) lines.Add(new(current, style, await measure.MeasureAsync(current, style).ConfigureAwait(false)));
+                if (current.Length > 0) lines.Add(new(current, await measure.MeasureAsync(current, style).ConfigureAwait(false)));
             }
-            else lines.Add(new(text, style, width));
+            else lines.Add(new(text, width));
             measured.Add(i, lines.ToArray());
             maxLines = Math.Max(maxLines, lines.Count);
             widest = Math.Max(widest, width);
@@ -345,9 +347,8 @@ internal sealed partial class PptxRenderer
         double sin = Math.Sin(Math.Abs(angle) * Math.PI / 180d);
         double cos = Math.Cos(angle * Math.PI / 180d);
         double requested = angle == 0d ? (maxLines - 1) * line.Height : Math.Max(0d, widest * sin + line.Height * cos - line.Height);
-        // A caption band must not become taller than the plot it describes.
-        // For extra height e, line.Height + e <= plot.Height - e. Office
-        // controls support this admission constraint, not an exact allocation.
+        // The legacy fallback limits caption height against the inner plot.
+        // Measured overflow frames below have their own fitting container.
         bool atEdge = topSide ? axisRatio == 1d : axisRatio == 0d;
         double freeEdge = topSide ? layout.Frame.Y + layout.Frame.Height : layout.Frame.Y;
         if (legendBox is { } legend && layout.Legend.Visible && !layout.Legend.Overlay &&
@@ -359,9 +360,24 @@ internal sealed partial class PptxRenderer
         double admitted = layout.ManualPlotLayoutApplied || !atEdge ? 0d :
             Math.Min(requested, Math.Max(0d, (layout.PlotBox.Height - line.Height) / 2d));
         double availableExtra = admitted + existingExtra;
-        if (angle != 0d && availableExtra < requested)
+        // Reuse the header owner's clearance rather than measuring its fonts
+        // or rebuilding its eligibility here. The outer fitting budget restores
+        // the default flat strip and removes the two minimum end margins.
+        double fittingBudget = layout.PlotBox.Height + ComputeCartesianLabelStripBottomReserve(style.FontSize) -
+            2d * PptxChartMetricRules.HorizontalBarPlotTopReserve + (layout.AutomaticNumericEndClearance ?? 0d);
+        bool overflowFrame = angle != 0d && body.VerticalOverflowValue == "ellipsis" &&
+            !layout.ManualPlotLayoutApplied && atEdge && layout.AutomaticNumericEndClearance is not null && fittingBudget > 0d;
+        const double fittingPixel = 72d / 96d;
+        ChartTextStyle fittingStyle = style with
+        { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize), CharacterSpacing = 0d };
+        if (angle != 0d && (overflowFrame || availableExtra < requested))
         {
-            double cap = Math.Max(0d, (line.Height + availableExtra - line.Height * cos) / sin);
+            // Bootstrap controls distinguish the fitting grid from the source
+            // advances used for geometry and painting. This remains an
+            // approximation of Office's text fitting, not a font hinting engine.
+            double fittingHeight = Math.Ceiling(style.FontSize * PptxChartMetricRules.AxisLabelHeightFactor / fittingPixel) * fittingPixel;
+            double cap = Math.Max(0d, overflowFrame ? (fittingBudget / 2d - fittingHeight * cos) / sin
+                : (line.Height + availableExtra - line.Height * cos) / sin);
             for (int index = 0; index < labels.Count; index++)
             {
                 if (measured.TryGetValue(index, out var parts)) measured[index] = [await FitAsync(parts[0].Text, cap).ConfigureAwait(false)];
@@ -378,7 +394,7 @@ internal sealed partial class PptxRenderer
                 measured[index] = fitted;
             }
         }
-        if (admitted > 0d)
+        if (admitted > 0d || overflowFrame)
         {
             // Fitting uses a capacity; placement reserves the content that
             // actually fits. Discrete truncation or wrapping can leave part of
@@ -396,10 +412,10 @@ internal sealed partial class PptxRenderer
                     resolver.CancellationToken.ThrowIfCancellationRequested();
                     occupied = Math.Max(occupied, angle == 0d
                         ? (parts.Length - 1) * line.Height
-                        : parts[0].Width * sin + line.Height * cos - line.Height);
+                        : (parts[0].Width - parts[0].OverflowAdvance) * sin + line.Height * cos - line.Height);
                 }
             }
-            admitted = Math.Min(admitted, Math.Max(0d, occupied));
+            admitted = Math.Min(overflowFrame ? Math.Max(0d, layout.PlotBox.Height - 1d) : admitted, Math.Max(0d, occupied));
             double shift = topSide ? 0d : admitted;
             layout = layout with
             {
@@ -411,19 +427,20 @@ internal sealed partial class PptxRenderer
         return AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
             ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), topSide, resolver.CancellationToken);
 
-        async ValueTask<ChartTextRunLayout> FitAsync(string text, double cap)
+        async ValueTask<ChartCategoryTextLine> FitAsync(string text, double cap)
         {
             double fullWidth = await measure.MeasureAsync(text, style).ConfigureAwait(false);
-            if (fullWidth <= cap) return new(text, style, fullWidth);
+            double fittingWidth = overflowFrame ? await FitWidthAsync(text).ConfigureAwait(false) : fullWidth;
+            if (fittingWidth <= cap) return new(text, fullWidth);
             string suffix = body.VerticalOverflowValue == "ellipsis" ? "\u2026" : string.Empty;
-            if (await measure.MeasureAsync(suffix, style).ConfigureAwait(false) > cap) return new(string.Empty, style, 0d);
+            if (await FitWidthAsync(suffix).ConfigureAwait(false) > cap) return new(string.Empty, 0d);
             int low = 0, high = text.Length, best = 0;
             while (low <= high)
             {
                 resolver.CancellationToken.ThrowIfCancellationRequested();
                 int middle = low + (high - low) / 2;
                 int cut = middle > 0 && char.IsHighSurrogate(text[middle - 1]) ? middle - 1 : middle;
-                if (await measure.MeasureAsync(text[..cut] + suffix, style).ConfigureAwait(false) <= cap)
+                if (await FitWidthAsync(text[..cut] + suffix).ConfigureAwait(false) <= cap)
                 {
                     best = cut;
                     low = middle + 1;
@@ -431,7 +448,24 @@ internal sealed partial class PptxRenderer
                 else high = middle - 1;
             }
             string fitted = text[..best] + suffix;
-            return new(fitted, style, await measure.MeasureAsync(fitted, style).ConfigureAwait(false));
+            double width = await measure.MeasureAsync(fitted, style).ConfigureAwait(false);
+            double overflow = overflowFrame ? width - await measure.MeasureAsync(text[..best], style).ConfigureAwait(false) : 0d;
+            return new(fitted, width, Math.Max(0d, overflow));
+        }
+
+        async ValueTask<double> FitWidthAsync(string text)
+        {
+            if (!overflowFrame) return await measure.MeasureAsync(text, style).ConfigureAwait(false);
+            double width = 0d;
+            int count = 0;
+            foreach (Rune rune in text.EnumerateRunes())
+            {
+                resolver.CancellationToken.ThrowIfCancellationRequested();
+                double advance = await measure.MeasureAsync(rune.ToString(), fittingStyle).ConfigureAwait(false);
+                width += Math.Round(advance / fittingPixel, MidpointRounding.AwayFromZero) * fittingPixel;
+                if (count++ > 0) width += style.CharacterSpacing;
+            }
+            return width;
         }
     }
 }

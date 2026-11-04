@@ -216,7 +216,8 @@ internal sealed partial class PptxRenderer
         ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement, context: context).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
             plotLayout.AutomaticCategoryLabelOffsetAdjustment,
-            plotLayout.ManualLayoutTargetKind is null && sceneChart.Plots.Count == 1 ? categoryPlacement : null);
+            plotLayout.ManualLayoutTargetKind is null && sceneChart.Plots.Count == 1 ? categoryPlacement : null)
+        { AutomaticNumericEndClearance = plotLayout.AutomaticNumericEndClearance };
     }
 
     private static double ReadCategoryTitleFontSizeAtPosition(PptxSceneChart sceneChart, PptxSceneChartAxisPosition titlePosition)
@@ -393,7 +394,8 @@ internal sealed partial class PptxRenderer
         }
         if (ignoreManualPlotLayout)
         {
-            return ChartPlotLayout.FromPlotBox(defaultPlotBox) with { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment };
+            return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
+            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = cartesianHeader?.NumericClearance };
         }
 
         ChartPlotBox manualDefaultPlotBox = horizontalBars && HasRecognizedManualPlotLayoutTarget()
@@ -401,7 +403,8 @@ internal sealed partial class PptxRenderer
             : defaultPlotBox;
         if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, manualDefaultPlotBox, out ChartPlotLayout manualPlotLayout))
         {
-            return ChartPlotLayout.FromPlotBox(defaultPlotBox) with { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment };
+            return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
+            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticNumericEndClearance = cartesianHeader?.NumericClearance };
         }
 
         // Bars retain their dedicated outer-area placement and caption owner.
