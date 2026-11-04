@@ -35,10 +35,14 @@ internal static partial class DocxInlineCompositionTests
             DocxDocument Read(bool canonical) => ReadMutation("CompositionProbes/" + fixture, mode, false, false,
                 (xml, w, m) =>
                 {
-                    var paragraph = xml.Descendants(w + "p").Single(p => p.Descendants(m + "oMath").Count() == 2);
+                    var paragraph = xml.Descendants(w + "p").Single(p => p.Descendants(m + "oMath").Count() == 2 &&
+                        (kind != "picture" || p.Descendants(w + "drawing").Any()));
                     XElement firstGroup, next;
                     if (kind == "picture")
                     {
+                        // This fixture also has an unrelated two-formula paragraph.
+                        // Keep the actual picture owner as an independent control.
+                        paragraph.Parent!.Elements().Where(element => element != paragraph && element.Name != w + "sectPr").Remove();
                         paragraph.Elements(w + "r").Where(run => !run.Descendants(w + "drawing").Any()).Remove();
                         var equations = paragraph.Elements(m + "oMath").ToArray();
                         foreach (var equation in equations)
