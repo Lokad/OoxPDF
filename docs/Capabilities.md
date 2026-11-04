@@ -165,6 +165,10 @@ Approximate or restricted:
   change. Authored bounds and units remain authoritative within the supported
   single-axis scope above. Remaining horizontal frame geometry is approximate;
   composed/secondary interval ownership retains its fallback.
+  Bar/line and additional-column plots sharing the primary value-axis identity
+  emit that axis's numeric labels once. Distinct secondary source axes retain
+  their independent labels and visibility; composed scale/frame geometry remains
+  approximate.
   A single reciprocal category/value pair shares horizontal crossing geometry
   across plot admission, strokes, ticks and labels; low/high label bands remain
   separate from the stroke. Clustered bars and label swatches classify inversion

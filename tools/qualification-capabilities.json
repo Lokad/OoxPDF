@@ -15318,6 +15318,14 @@
     "DocxPortableBalloonHeightFollowsPaintedRowsAcrossFonts",
     "DocxBalloonBodyEmissionCoversItsOwnFontSubset",
     "PortablePptxInspectionUsesTheRenderingFontSource"
+  ],
+  "pptx-composed-axis-identity": [
+      "PortableRenderingComposedPlotsShareOnePrimaryAxisLabelStrip",
+      "PortableRenderingComposedAxisLabelsRetainSourceVisibility",
+      "PptxPrimaryValueAxisLabelsPaintOnceOnTheirSelectedSide",
+      "PptxSecondaryValueAxisOwnsItsVisibilityIndependently",
+      "PptxChartSecondaryRightValueAxisSelectionUsesSceneSource",
+      "PptxChartSecondaryValueAxisStyleSelectionUsesSceneSource",
+      "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ]
-
 }

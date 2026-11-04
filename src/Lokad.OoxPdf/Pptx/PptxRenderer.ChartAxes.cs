@@ -526,6 +526,13 @@ internal sealed partial class PptxRenderer
         return primaryRight == secondaryRight ? 1 : 0;
     }
 
+    private static bool IsSameChartAxis(ChartAxisSource first, ChartAxisSource second)
+    {
+        string? firstId = first.SceneAxis?.Id ?? ReadChartAxisId(first.XmlAxis);
+        string? secondId = second.SceneAxis?.Id ?? ReadChartAxisId(second.XmlAxis);
+        return !string.IsNullOrWhiteSpace(firstId) && string.Equals(firstId, secondId, StringComparison.Ordinal);
+    }
+
     private static XElement? ReadSecondaryRightValueAxis(XDocument chartXml)
     {
         return chartXml

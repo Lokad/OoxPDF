@@ -1,0 +1,107 @@
+{
+  "Evidence": "Independent PowerPoint16 PDF exports; source copies retain public fixture data, fonts, geometry and colored axes. This pins numeric label multiplicities, not geometry or image fidelity.",
+  "PublicSource": "Public synthetic column source retained at artifacts/tcolumn-ticks-1101/column-min7-major25.pptx; raw probe ancestry remains in artifacts/tcomposed-axis-1104/complete-manifest.json.",
+  "Rows": [
+    {
+      "Id": "solo-column",
+      "Input": "solo-column.pptx",
+      "InputSha256": "80F4F775538D8FDC18BFCCAF61E29359BA35A94F376C15662B3D2E7575DEE17D",
+      "SecondaryLabels": [],
+      "PrimaryAxisId": "2140495176",
+      "OfficePdfSha256": "3AA8E6F402B60633694476A5D20F4BDE8186242815006C9A60AE3FEFB6A0ECF4",
+      "OfficeNumericLabels": [
+        "0",
+        "25",
+        "50",
+        "75",
+        "100"
+      ]
+    },
+    {
+      "Id": "shared-column-line",
+      "Input": "shared-column-line.pptx",
+      "InputSha256": "DDC724B063EB9FDA678B4CB06C709AF9855D473067DBE36536A49CE86CED483D",
+      "SecondaryLabels": [],
+      "PrimaryAxisId": "2140495176",
+      "OfficePdfSha256": "DD350BBA122157A967A7E0C8216AF9DE60C4B62623946DE3EE825A6930E88861",
+      "OfficeNumericLabels": [
+        "0",
+        "25",
+        "50",
+        "75",
+        "100"
+      ]
+    },
+    {
+      "Id": "shared-line-column",
+      "Input": "shared-line-column.pptx",
+      "InputSha256": "769CB4418071B73E8CC64ED510FBAA6F4D9C75310DD174FD60679FB493B641B3",
+      "SecondaryLabels": [],
+      "PrimaryAxisId": "2140495176",
+      "OfficePdfSha256": "6C41B08E09EDCFC7DFA119C1D86042D893D703C86F14553509DFD45DA25EA977",
+      "OfficeNumericLabels": [
+        "0",
+        "25",
+        "50",
+        "75",
+        "100"
+      ]
+    },
+    {
+      "Id": "shared-reversed",
+      "Input": "shared-reversed.pptx",
+      "InputSha256": "090A894907ECCCE1744A131E77F0896B3575C60A2255EB0EDA676AF765A0EB44",
+      "SecondaryLabels": [],
+      "PrimaryAxisId": "2140495176",
+      "OfficePdfSha256": "84F723E8B3717DB5D284E7F812B71FA1E4F6A525055A7533815CD095576DEE31",
+      "OfficeNumericLabels": [
+        "0",
+        "25",
+        "50",
+        "75",
+        "100"
+      ]
+    },
+    {
+      "Id": "distinct-secondary",
+      "Input": "distinct-secondary.pptx",
+      "InputSha256": "22DED79F722C5D131EC7BA6DC6CDDF34F4F9FC1717772ED19ED8F878AB06A994",
+      "SecondaryLabels": [
+        "0",
+        "50",
+        "100",
+        "150",
+        "200"
+      ],
+      "PrimaryAxisId": "2140495176",
+      "OfficePdfSha256": "AB5EDF5A20BD458FB87B0EBA61CC542640D8E089F4760F098FCBACB801B1C9CD",
+      "OfficeNumericLabels": [
+        "0",
+        "50",
+        "100",
+        "150",
+        "200",
+        "0",
+        "25",
+        "50",
+        "75",
+        "100"
+      ]
+    },
+    {
+      "Id": "shared-column-column",
+      "Input": "shared-column-column.pptx",
+      "InputSha256": "7024A73C2A1B872CCA1B83F0C1284C907FA1DA5BFCC72EB7A659F9481B2133F4",
+      "SecondaryLabels": [],
+      "PrimaryAxisId": "2140495176",
+      "OfficePdfSha256": "7AF25AABC64C94D42C4A105690ABBDFCA59811D759620EBA2368625F31404582",
+      "OfficeNumericLabels": [
+        "0",
+        "25",
+        "50",
+        "75",
+        "100"
+      ]
+    }
+  ]
+}

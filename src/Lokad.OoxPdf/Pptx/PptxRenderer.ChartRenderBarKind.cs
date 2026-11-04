@@ -140,7 +140,9 @@ internal sealed partial class PptxRenderer
                     IReadOnlyList<ChartSeriesStroke?> extraSeriesStrokes = ReadSceneOrXmlSeriesStrokes(extraBarPlot, extraBarChart, theme, colorMap, ChartFilledSeriesInheritedStrokeWidth);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneOrXmlSeriesPointFills(extraBarPlot, extraBarChart, theme, colorMap);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneOrXmlSeriesPointStrokes(extraBarPlot, extraBarChart, theme, colorMap);
-                    if (!extraHorizontalBars && secondaryValueAxis is null && IsSceneOrXmlVisibleValueAxis(extraValueSceneAxis, extraValueAxis))
+                    if (!extraHorizontalBars && secondaryValueAxis is null &&
+                        !IsSameChartAxis(valueAxisSource, extraValueAxisSource) &&
+                        IsSceneOrXmlVisibleValueAxis(extraValueSceneAxis, extraValueAxis))
                     {
                         secondaryValueAxis = extraValueAxis;
                         secondaryValueSceneAxis = extraValueSceneAxis;
@@ -210,7 +212,8 @@ internal sealed partial class PptxRenderer
                     ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(lineValueSceneAxis, lineValueAxisForScale, theme, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme, colorMap, ResolveLineKindInheritedStrokeWidth(ReadChartStyleId(chartXml)));
                     IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneOrXmlMarkerStyles(linePlot, comboLineChart, theme, colorMap);
-                    if (secondaryValueAxis is null && IsSceneOrXmlVisibleValueAxis(lineValueSceneAxis, lineValueAxis))
+                    if (secondaryValueAxis is null && !IsSameChartAxis(valueAxisSource, lineValueAxisSource) &&
+                        IsSceneOrXmlVisibleValueAxis(lineValueSceneAxis, lineValueAxis))
                     {
                         secondaryValueAxis = lineValueAxis;
                         secondaryValueSceneAxis = lineValueSceneAxis;
