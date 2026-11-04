@@ -384,13 +384,20 @@ internal sealed partial class PptxRenderer
             // actually fits. Discrete truncation or wrapping can leave part of
             // that capacity unused. Return it to the plot rather than making
             // unchanged captions consume half of every increase in frame height.
-            double occupied = 0d;
-            foreach (var parts in measured.Values)
+            // Explicit clipping still owns its original capacity: the native
+            // clip control changes visible glyphs as the frame grows. Its clip
+            // geometry must be established before reclaiming that space.
+            double occupied = admitted;
+            if (body.VerticalOverflowValue == "ellipsis")
             {
-                resolver.CancellationToken.ThrowIfCancellationRequested();
-                occupied = Math.Max(occupied, angle == 0d
-                    ? (parts.Length - 1) * line.Height
-                    : parts[0].Width * sin + line.Height * cos - line.Height);
+                occupied = 0d;
+                foreach (var parts in measured.Values)
+                {
+                    resolver.CancellationToken.ThrowIfCancellationRequested();
+                    occupied = Math.Max(occupied, angle == 0d
+                        ? (parts.Length - 1) * line.Height
+                        : parts[0].Width * sin + line.Height * cos - line.Height);
+                }
             }
             admitted = Math.Min(admitted, Math.Max(0d, occupied));
             double shift = topSide ? 0d : admitted;

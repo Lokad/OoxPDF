@@ -13,13 +13,12 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (int size in new[] { 1200, 1600 })
         foreach (int angle in new[] { -45, 45, -90, 90 })
         foreach (bool high in new[] { false, true })
-        foreach (string overflow in new[] { "ellipsis", "clip" })
         {
             int stablePairs = 0;
             (string Text, double Height) Read(int height)
             {
                 PdfPage page = RenderCaptionFrames(angle, 2, highSide: high,
-                    height: height, categoryFontSize: size, overflow: overflow);
+                    height: height, categoryFontSize: size, overflow: "ellipsis");
                 string text = string.Join("|", DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                     usePageCoordinates: false, fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal))
                     .Select(show => show.Text));
@@ -36,7 +35,7 @@ internal static partial class PptxSourceUnitBoundsTests
                 {
                     stablePairs++;
                     TestAssert.True(Math.Abs(next.Height - previous.Height - 1) < .003,
-                        $"Unchanged {size}/{angle}/{high}/{overflow} captions retain their occupied height: {previous.Height} -> {next.Height}.");
+                        $"Unchanged {size}/{angle}/{high} ellipsized captions retain their occupied height: {previous.Height} -> {next.Height}.");
                 }
                 previous = next;
             }
