@@ -339,13 +339,14 @@ internal static class DocxMathParagraphPolicy
         // rows using the first display row's paragraph justification. Adjacent
         // conflicting groups still need their own source-normalization contract.
         DocxTextAlignment? owner = null;
+        var promoted = GetDisplaySourceEquations(paragraph, token);
         var row = new List<DocxEquation>();
         foreach (var item in items)
         {
             token.ThrowIfCancellationRequested();
             if (item is DocxInlineBreak lineBreak && !lineBreak.Run.EffectiveProperties.Hidden)
             { if (!CompleteRow()) return null; }
-            else if (item is DocxInlineEquation math && math.Equation.Display) row.Add(math.Equation);
+            else if (item is DocxInlineEquation math && (math.Equation.Display || promoted.Contains(math.Equation))) row.Add(math.Equation);
         }
         return CompleteRow() ? owner ?? ResolveDisplayAlignment(paragraph.Equations, token) : null;
 

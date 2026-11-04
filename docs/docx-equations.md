@@ -17,6 +17,8 @@ Supported display rows separated by hard breaks share the first display row's
 justification in the same text paragraph. Authored group properties remain
 available; separate paragraphs stay independent. Conflicting adjacent groups on
 one row and unknown justification values retain their diagnosed fallback.
+A math-only row can promote an inline source formula to that display owner;
+an inline formula beside prose does not.
 
 Authored body page breaks can separate supported formulas without discarding
 prose, pictures or notes. Spanning links follow content on each page; a spanning

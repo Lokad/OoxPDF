@@ -2510,10 +2510,16 @@ internal static partial class DocxInlineCompositionTests
             [new DocxInlineEquation(differing[0]), new DocxInlineBreak(hardBreak, 0), new DocxInlineEquation(differing[1])] };
         TestAssert.Equal(DocxTextAlignment.Right, DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows, default));
         var inlinePrefix = differing[0] with { Display = false, AlignmentValue = null };
-        TestAssert.Equal(DocxTextAlignment.Right,
+        TestAssert.Equal(DocxTextAlignment.Center,
             DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows with
             { Equations = [inlinePrefix, .. differing], InlineContent = [new DocxInlineEquation(inlinePrefix),
                 new DocxInlineBreak(hardBreak, 0), .. separateRows.InlineContent!] }, default));
+        var prefixText = new DocxTextRun("Inline prefix ", 12d, null, false, false, false, null, null);
+        TestAssert.Equal(DocxTextAlignment.Right,
+            DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows with
+            { Equations = [inlinePrefix, .. differing], Runs = [prefixText, hardBreak], InlineContent =
+                [new DocxInlineText(prefixText, 0, prefixText.Text.Length), new DocxInlineEquation(inlinePrefix),
+                    new DocxInlineBreak(hardBreak, 0), .. separateRows.InlineContent!] }, default));
         TestAssert.True(DocxMathParagraphPolicy.ResolveDisplayAlignment(
             [differing[0], differing[1] with { AlignmentValue = "unknown" }], default) is null,
             "Unknown source justification keeps its existing explicit fallback.");
