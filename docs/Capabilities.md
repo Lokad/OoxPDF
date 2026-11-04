@@ -268,7 +268,9 @@ Approximate or restricted:
   Numeric-caption admission precedes automatic category angle/skip fitting.
   Rotated single-line category fragments allocate their projected bounds within
   the same source area; measurement, clipping and painting share the baseline
-  and horizontal frame rules. High-side alignment, baseline typography and
+  and horizontal frame rules. Mirrored outer captions share their measured gap;
+  authored label offsets add normal-line spacing rather than scaling the full
+  baseline reserve. Signed-angle horizontal reserves, baseline typography and
   empty-caption spacing remain approximate, as do incomplete declarations and
   the exclusions above. Some Office references paint category text as vector
   outlines; their validation uses graphics/raster output as well as extraction.
