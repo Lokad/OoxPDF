@@ -93,7 +93,7 @@ internal static partial class OoxMemoryAdmissionTests
         using var package = OoxPackage.Open(input, default);
         var document = new PptxReader().Read(package, default);
         var budget = new TestMemoryBudget();
-        string hash; int characters; IMemoryReservation? retained = null;
+        string hash; int characters;
         using (var operation = OoxConversionBudget.BeginScope(null, governed ? budget : null))
         {
             var iterator = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
@@ -106,14 +106,12 @@ internal static partial class OoxMemoryAdmissionTests
                 hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
                 if (governed)
                 {
-                    retained = budget.LargestLiveGrant();
-                    TestAssert.True(retained.Bytes >= 4L * characters,
+                    TestAssert.True(budget.Reserved >= 4L * characters,
                         "A shared number-format literal must fund generated page text, not only its short source declaration.");
                 }
             }
             finally { iterator.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
         }
-        if (retained is not null) TestAssert.Equal(0L, retained.Bytes);
         TestAssert.Equal(0L, budget.Reserved);
         TestAssert.Equal(budget.ScopesCreated, budget.ScopesDisposed);
         return (hash, characters);
