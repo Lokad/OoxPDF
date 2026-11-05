@@ -67,8 +67,12 @@ internal sealed partial class PptxRenderer
 
             if (prepared is { RotationDegrees: not 0d } rotated && rotated.Labels.TryGetValue(i, out var rotatedParts))
             {
-                foreach (var part in rotatedParts)
+                double stackAdvance = rotated.LineAdvance ?? rotated.LineHeight;
+                double widestLine = rotatedParts.Length > 1 ? rotatedParts.Max(part => part.Width) : 0d;
+                for (int lineIndex = 0; lineIndex < rotatedParts.Length; lineIndex++)
                 {
+                    fontResolver?.CancellationToken.ThrowIfCancellationRequested();
+                    var part = rotatedParts[lineIndex];
                     if (part.Text.Length == 0) continue;
                     double center = ChartCategoryToPlotCoordinate(i, labels.Count, plotBox.X, plotBox.Width, categoryLabelsOnTickMarks, categoryAxisReversed);
                     double axisY = axisCoordinate ?? plotBox.Y;
@@ -83,6 +87,20 @@ internal sealed partial class PptxRenderer
                     var horizontal = ChartCategoryCaptionHorizontalFrame(center, part.Width, rotated.Ascent, rotated.Descent, sin, cos, rightAnchor);
                     double pivotX = horizontal.Pivot;
                     double pivotY = labelsHighSide ? axisY + gap + rotated.Descent * cos : axisY - gap - rotated.Ascent * cos;
+                    if (rotatedParts.Length > 1)
+                    {
+                        // Center the complete normal-line stack across its tick.
+                        // The nearest baseline stays on the selected axis side;
+                        // the chart clip owns lines beyond the physical frame.
+                        double normal = ((labelsHighSide ? rotatedParts.Length - 1 : 0) - lineIndex) * stackAdvance;
+                        double centerShift = (labelsHighSide ? 1d : -1d) *
+                            (rotatedParts.Length - 1) * stackAdvance * sin / 2d;
+                        double alignment = (rightAnchor ? -1d : 1d) * (widestLine - part.Width) / 2d;
+                        double shiftX = centerShift - normal * sin + alignment * cos;
+                        pivotX += shiftX;
+                        pivotY += normal * cos + alignment * sin;
+                        horizontal = (pivotX, horizontal.Left + shiftX, horizontal.Right + shiftX);
+                    }
                     double localX = pivotX - anchorAdvance;
                     double clipShift = rightAnchor ? part.OverflowAdvance * cos : 0d;
                     double clipLeft = horizontal.Left + clipShift;

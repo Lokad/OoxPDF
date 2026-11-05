@@ -1,4 +1,9 @@
 {
+  "pptx-overflow-category-wrapping": [
+    "PptxOverflowCategoryCaptionsShareMeasuredWrappedLines",
+    "PptxOverflowCategoryNoWrapRetainsItsCompleteSourceLine",
+    "PptxOverflowCategoryWrappingKeepsCompleteTextElements"
+  ],
   "pptx-logical-source-fit": [
     "PptxReadmittedSourceReferencesPrecedeValueDirection"
   ],

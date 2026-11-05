@@ -21,7 +21,7 @@ internal sealed partial class PptxRenderer
         // Independent Office controls retain this frame-owned cap when category
         // count, plot width, font and key presence change. Key space is additional.
         double cap = Math.Max(1d, frame.Width / 5d - 2d * horizontalPadding);
-        var lines = await WrapColumnLabelAsync(text, cap, style, measurer, cancellationToken).ConfigureAwait(false);
+        var lines = await WrapChartTextAsync(text, cap, style, measurer, cancellationToken).ConfigureAwait(false);
         var metrics = await measurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
         // Native Arial/Times controls distinguish line advance (hhea plus gap)
         // from the Windows baseline descent. Calibri's two heights coincide.
@@ -52,7 +52,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static async ValueTask<List<(string Text, double Width)>> WrapColumnLabelAsync(
+    private static async ValueTask<List<(string Text, double Width)>> WrapChartTextAsync(
         string text, double cap, ChartTextStyle style, ChartTextMeasurer measurer, CancellationToken cancellationToken)
     {
         await measurer.PrepareAsync(text, style).ConfigureAwait(false);

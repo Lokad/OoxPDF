@@ -588,6 +588,7 @@ internal sealed partial class PptxRenderer
         double innerPitch = layout.PlotBox.Width / labels.Count;
         double flatWidth = Math.Max(1d, innerPitch * Math.Min(skip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor);
         var measured = new Dictionary<int, ChartCategoryTextLine[]>();
+        double? wrappedLineAdvance = null;
         double widest = 0d;
         int maxLines = 1;
         for (int i = 0; i < labels.Count; i++)
@@ -666,7 +667,23 @@ internal sealed partial class PptxRenderer
             // An overfull original line retains full source references when
             // numeric endcaps readmit the frame. Otherwise its source prefix,
             // excluding a generated marker, establishes the outer rectangle.
-            if (!admitInnerCaptions || cap >= 0d)
+            if (!admitInnerCaptions && overflowMode == "overflow")
+            {
+                // Explicit overflow keeps the source body. Authored no-wrap
+                // retains its full line; other bodies share chart word wrapping.
+                // Numeric readmission keeps its existing source/fitting owner.
+                if (body.WrapValue != "none")
+                    for (int index = 0; index < labels.Count; index++)
+                        if (measured.TryGetValue(index, out var parts))
+                        {
+                            var lines = await WrapChartTextAsync(parts[0].Text, Math.Max(0d, cap), style,
+                                measure, resolver.CancellationToken).ConfigureAwait(false);
+                            measured[index] = lines.Select(part => new ChartCategoryTextLine(part.Text, part.Width)).ToArray();
+                            if (lines.Count > 1)
+                                wrappedLineAdvance ??= (await measure.MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false)).Height;
+                        }
+            }
+            else if (!admitInnerCaptions || cap >= 0d)
                 for (int index = 0; index < labels.Count; index++)
                     if (measured.TryGetValue(index, out var parts))
                         measured[index] = [await FitAsync(parts[0].Text, Math.Max(0d, cap), admitInnerCaptions).ConfigureAwait(false)];
@@ -729,7 +746,7 @@ internal sealed partial class PptxRenderer
         // occupied content; a generated marker hangs outside that prefix.
         double? occupiedHeight = angle != 0d && overflowMode == "overflow" && availableCaptionHeight is { } outerHeight
             ? Math.Min(widest * sin + line.Height * cos, outerHeight / 2d) : null;
-        layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, axisGap, measured, occupiedHeight) };
+        layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, axisGap, measured, occupiedHeight, wrappedLineAdvance) };
         (double Left, double Right,
             (double NumericStart, double NumericLength, double OuterStart, double OuterLength)? Vertical)? sourceReferences = null;
         if (innerRotated && admitInnerCaptions)

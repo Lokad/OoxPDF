@@ -89,7 +89,7 @@ internal static partial class PptxSourceUnitBoundsTests
         int? builtInStyle = null, int? categoryRoleFontSize = null, int? chartFontSize = null,
         int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d, int? labelSkip = null,
         bool? onTickMarks = null, int? interiorCaptionIndex = null, double manualY = .1d,
-        bool valueReversed = false, int width = 576, string? firstCaptionText = null)
+        bool valueReversed = false, int width = 576, string? firstCaptionText = null, string? wrap = null)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -113,7 +113,7 @@ internal static partial class PptxSourceUnitBoundsTests
         ordinal.Add(new XElement(c + "tickLblPos", new XAttribute("val", hidden ? "none" : valueReversed
             ? highSide ? "low" : "high" : highSide ? "high" : "nextTo")));
         ordinal.Add(new XElement(c + "txPr", new XElement(a + "bodyPr", new XAttribute("rot", angle * 60000),
-            overflow is null ? null : new XAttribute("vertOverflow", overflow)),
+            overflow is null ? null : new XAttribute("vertOverflow", overflow), wrap is null ? null : new XAttribute("wrap", wrap)),
             new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr", new XAttribute("sz", categoryFontSize))))));
         XElement numeric = plot.Element(c + "valAx")!;
         if (valueReversed)
