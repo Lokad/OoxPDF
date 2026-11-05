@@ -14,7 +14,8 @@ internal static partial class PptxColumnIntervalTests
         foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
         {
             var page = RenderAdmission(row, caseDirectory: NumericSideCases);
-            var shows = AdmissionNumericShows(page);
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                includeTextTransforms: true, fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal)).ToArray();
             TestAssert.True(shows.Select(show => show.Text).SequenceEqual(new[] { "7", "32", "57", "82", "107" }),
                 row.GetProperty("Id").GetString() + ": changing the numeric face preserves the complete authored numeric interval: " +
                 string.Join(",", shows.Select(show => show.Text)));
