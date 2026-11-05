@@ -21,10 +21,7 @@ internal static partial class PptxSourceUnitBoundsTests
                 categoryText: word, interiorCaptionIndex: angle > 0 ? 18 : 0,
                 manualHeight: .83d, manualY: high ? .15d : .02d,
                 labelSkip: 1, onTickMarks: onTick, valueReversed: true);
-            double[] axis = PptxColumnIntervalTests.Lines(page).Single(line =>
-                line.Color == new RgbColor(0, 170, 0) && Math.Abs(line.V[1] - line.V[3]) < .001 &&
-                Math.Abs(line.V[0] - line.V[2]) > 100).V;
-            double left = Math.Min(axis[0], axis[2]), width = Math.Abs(axis[0] - axis[2]);
+            var (left, width) = CaptionHorizontalInterval(page);
             TestAssert.True(Math.Abs(left - (72d + 576d * .1d)) < .003 &&
                 Math.Abs(width - 576d * .8d) < .003,
                 $"Complete logical references preserve the source interval: {kind}/{angle}/{high}/{onTick}, {left}/{width}.");
