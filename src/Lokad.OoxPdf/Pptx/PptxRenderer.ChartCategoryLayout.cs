@@ -371,65 +371,11 @@ internal sealed partial class PptxRenderer
         }
         // Spacing selects paint, not the source interval's ends. Reuse the edge
         // fragments without measuring or painting an omitted source caption.
-        // Interior fragments retain their separate physical-ink admission;
-        // they do not become logical endpoint references.
+        // Manual painted-fragment admission stays separate from these logical
+        // source endpoints.
         Include(0, captions.Labels.MinBy(entry => entry.Key).Value[0]);
         Include(count - 1, captions.Labels.MaxBy(entry => entry.Key).Value[0]);
         return (left, right);
-    }
-
-    private static ChartLayout AdmitObliqueCategoryCaptionFrames(ChartLayout layout, int count, bool onTickMarks,
-        bool reversed, bool highSide, CancellationToken cancellationToken)
-    {
-        // Horizontal captions keep their wrapping owner; vertical captions have
-        // no horizontal advance. Manual plots retain authored geometry.
-        if (layout.ManualPlotLayoutApplied || layout.CategoryLabels is not { } captions ||
-            captions.RotationDegrees == 0d || Math.Abs(captions.RotationDegrees) == 90d) return layout;
-        double radians = -captions.RotationDegrees * Math.PI / 180d;
-        double sin = Math.Sin(radians), cos = Math.Cos(radians);
-        bool rightAnchor = (radians > 0d) != highSide;
-        double outerLeft = layout.Frame.X + PptxChartMetricRules.ChartContentFrameInset;
-        double outerRight = layout.Frame.X + layout.Frame.Width - PptxChartMetricRules.ChartContentFrameInset;
-        double numericLeft = Math.Max(0d, layout.PlotBox.X - outerLeft);
-        double numericRight = Math.Max(0d, outerRight - layout.PlotBox.X - layout.PlotBox.Width);
-        // Automatic references use the source frame before caption admission,
-        // inset by the same minimum frame padding as the header. Numeric strips
-        // keep their existing margins. Complete painted fragments must fit the
-        // physical chart frame, separately from these source-reference insets.
-        var referenceBands = ChartRotatedCategoryReferenceBands(captions, count, onTickMarks, reversed,
-            Math.Max(0d, layout.Frame.Width - 2d * PptxChartMetricRules.AutomaticCartesianFramePadding),
-            PptxChartMetricRules.ColumnPlotRightReserve - PptxChartMetricRules.ChartContentFrameInset, cancellationToken);
-        double available = outerRight - outerLeft;
-        (double Left, double Right) RequiredBands(double width)
-        {
-            double left = Math.Max(numericLeft, referenceBands.Left), right = Math.Max(numericRight, referenceBands.Right);
-            foreach (var (index, parts) in captions.Labels)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                double ratio = ChartCategoryToPlotCoordinate(index, count, 0d, 1d, onTickMarks, reversed);
-                foreach (var part in parts)
-                {
-                    if (part.Text.Length == 0) continue;
-                    var frame = ChartCategoryCaptionHorizontalFrame(0d, part.Width, captions.Ascent, captions.Descent, sin, cos, rightAnchor);
-                    double shift = rightAnchor ? part.OverflowAdvance * cos : 0d;
-                    left = Math.Max(left, -frame.Left - shift - ratio * width - PptxChartMetricRules.ChartContentFrameInset);
-                    right = Math.Max(right, frame.Right + shift - (1d - ratio) * width - PptxChartMetricRules.ChartContentFrameInset);
-                }
-            }
-            return (left, right);
-        }
-        var original = RequiredBands(layout.PlotBox.Width);
-        if (layout.PlotBox.Width + original.Left + original.Right <= available) return layout;
-        var fitted = AdmitChartCaptionBands(available, layout.PlotBox.Width, RequiredBands);
-        if (fitted is null) return layout;
-        double x = outerLeft + fitted.Value.Left;
-        double shift = x - layout.PlotBox.X;
-        double shrink = layout.PlotBox.Width - fitted.Value.Width;
-        return layout with
-        {
-            PlotBox = layout.PlotBox with { X = x, Width = fitted.Value.Width },
-            PlotAreaBox = layout.PlotAreaBox with { X = layout.PlotAreaBox.X + shift, Width = Math.Max(1d, layout.PlotAreaBox.Width - shrink) }
-        };
     }
 
     private static bool CanOwnColumnCategoryPlacement(PptxSceneChart chart, ChartAxisSource category, ChartAxisSource value) =>
@@ -801,8 +747,7 @@ internal sealed partial class PptxRenderer
                     : new(text, await measure.MeasureAsync(text, style).ConfigureAwait(false))];
             }
         }
-        return (AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
-            ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), topSide, resolver.CancellationToken), sourceReferences);
+        return (layout, sourceReferences);
 
         async ValueTask<ChartCategoryTextLine> FitAsync(string text, double cap, bool hangingMarker = false)
         {

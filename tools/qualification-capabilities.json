@@ -55,8 +55,9 @@
     "PptxInnerFactorPlotOriginsMatchIndependentOfficeControls"
   ],
   "pptx-automatic-caption-ends": [
+    "PptxAutomaticCaptionOverflowKeepsTheBaselineDataFrame",
     "PptxAutomaticCategoryReferencesKeepSourceEndpoints",
-    "PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames",
+    "PptxObliqueCategoryCaptionsKeepSourceScaleWithinTheirChartClip",
     "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
     "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",
     "PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames",
@@ -2055,7 +2056,7 @@
     "PptxCategoryOverflowMarkerSeparatesOccupiedHeightFromPainting",
     "PptxCategoryOverflowPreservesManualTextOrigins",
     "PptxFittedCategoryCaptionsReturnUnusedVerticalCapacity",
-    "PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames",
+    "PptxObliqueCategoryCaptionsKeepSourceScaleWithinTheirChartClip",
     "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
     "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",
     "PptxCrowdedCategoryCaptionsPreservePlotSpaceAcrossFrameSizes",

@@ -284,6 +284,8 @@ Approximate or restricted:
   spacing remain approximate, as do incomplete declarations and
   the exclusions above. Some Office references paint category text as vector
   outlines; their validation uses graphics/raster output as well as extraction.
+  Automatic oblique captions retain the plot's baseline geometry and clip at
+  the physical chart frame; a long caption does not force the data plot inward.
   Line/area captions, data points and line data labels share category direction
   while retaining source indices and point formatting. Ordinary clustered
   columns with one paired ordinal/linear numeric axis share that direction,

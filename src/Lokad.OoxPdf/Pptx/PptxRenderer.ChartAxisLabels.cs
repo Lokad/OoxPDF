@@ -19,7 +19,7 @@ internal sealed partial class PptxRenderer
         return lineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (offsetScale - 1d);
     }
 
-    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? axisCoordinate, bool categoryLabelsOnTickMarks, bool labelsHighSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? categoryLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null, bool categoryAxisReversed = false)
+    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? axisCoordinate, bool categoryLabelsOnTickMarks, bool labelsHighSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? categoryLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null, bool categoryAxisReversed = false)
     {
         if (labels.Count == 0)
         {
@@ -166,7 +166,15 @@ internal sealed partial class PptxRenderer
             else runs.Add(run);
         }
 
-        await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CCA", fontResolver, diagnosticSink).ConfigureAwait(false);
+        // Captions can extend beyond their automatic source positions. Office
+        // clips that paint at the chart frame rather than shrinking the data plot.
+        graphics.SaveState();
+        try
+        {
+            graphics.ClipRectangle(frame.X, frame.Y, frame.Width, frame.Height);
+            await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CCA", fontResolver, diagnosticSink).ConfigureAwait(false);
+        }
+        finally { graphics.RestoreState(); }
     }
 
     private static async ValueTask<(IReadOnlyList<double> Values, double MaximumWidth, double SlotWidth, double SideGap)> MeasureChartValueAxisCaptionsAsync(

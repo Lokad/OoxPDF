@@ -338,7 +338,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelCoordinate = horizontalBars
                         ? resolvedCategory is { } horizontalPlacement ? plotBox.X + plotBox.Width * horizontalPlacement.LabelPlotRatio : null
                         : plotBox.Y + plotBox.Height * categoryPlacement.LabelPlotRatio;
-                    await RenderChartCategoryLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: barOptions.CategoryAxisReversed).ConfigureAwait(false);
+                    await RenderChartCategoryLabelsAsync(theme, graphics, chartLayout.Frame, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: barOptions.CategoryAxisReversed).ConfigureAwait(false);
                 }
 
                 if (axesStyle.ValueAxisVisible)

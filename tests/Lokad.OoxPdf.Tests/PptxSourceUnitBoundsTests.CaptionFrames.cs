@@ -9,13 +9,13 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxSourceUnitBoundsTests
 {
-    public static void PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames()
+    public static void PptxObliqueCategoryCaptionsKeepSourceScaleWithinTheirChartClip()
     {
         foreach (int angle in new[] { -45, 45 })
         foreach (int unit in new[] { 1, 2, 5 })
         {
             PdfPage page = RenderCaptionFrames(angle, unit);
-            CheckCaptionInk(page, angle);
+            CheckChartCaptionClip(page);
             double maximum = unit == 2 ? 6 : 5;
             double[] labels = Labels(page);
             TestAssert.True(labels[0] == 0 && labels[^1] == maximum,
@@ -29,7 +29,7 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (bool reversed in new[] { false, true })
         foreach (bool highSide in new[] { false, true })
         foreach (string kind in new[] { "bar", "line" })
-            CheckCaptionInk(RenderCaptionFrames(angle, 2, kind, reversed, highSide), angle);
+            CheckChartCaptionClip(RenderCaptionFrames(angle, 2, kind, reversed, highSide));
     }
 
     public static void PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners()
@@ -89,7 +89,7 @@ internal static partial class PptxSourceUnitBoundsTests
         int? builtInStyle = null, int? categoryRoleFontSize = null, int? chartFontSize = null,
         int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d, int? labelSkip = null,
         bool? onTickMarks = null, int? interiorCaptionIndex = null, double manualY = .1d,
-        bool valueReversed = false)
+        bool valueReversed = false, int width = 576, string? firstCaptionText = null)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -100,6 +100,8 @@ internal static partial class PptxSourceUnitBoundsTests
             foreach (XElement point in plot.Descendants(c + "cat").Descendants(c + "pt"))
                 point.Element(c + "v")!.Value = interiorCaptionIndex is null || (int)point.Attribute("idx")! == interiorCaptionIndex
                     ? categoryText : "I";
+        if (firstCaptionText is not null)
+            plot.Descendants(c + "cat").Descendants(c + "pt").First().Element(c + "v")!.Value = firstCaptionText;
         XElement ordinal = plot.Element(c + "catAx")!;
         if (labelSkip is { } explicitSkip)
         {
@@ -136,6 +138,7 @@ internal static partial class PptxSourceUnitBoundsTests
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="7315200" cy="4572000"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
             """;
         slide = slide.Replace("cy=\"4572000\"", $"cy=\"{height * 12700}\"", StringComparison.Ordinal);
+        slide = slide.Replace("cx=\"7315200\"", $"cx=\"{width * 12700}\"", StringComparison.Ordinal);
         if (builtInStyle is { } styleId)
             xml.AddFirst(new XElement(c + "style", new XAttribute("val", styleId)));
         if (chartFontSize is { } globalSize)
