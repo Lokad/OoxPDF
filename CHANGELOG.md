@@ -9,6 +9,8 @@
   side, independently of the axis stroke, including category reversal.
   Clustered horizontal category reversal mirrors bar rows, series offsets,
   captions and data-label/key/link geometry while preserving source identities.
+  Vertical numeric-axis labels keep their measured width so formatted values
+  survive in narrow plots.
 - PPTX: composed bar charts measure every series legend entry before layout,
   preserving names from later plots. Automatic bottom filled-key legends share
   natural row admission and aligned wrapped columns.

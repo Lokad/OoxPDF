@@ -75,6 +75,19 @@
     "XrefTablePointsAtObjectHeaders",
     "PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight"
   ],
+  "pptx-numeric-caption-ink": [
+    "PptxVerticalNumericCaptionsKeepFormattedGlyphsInsideTheirClips",
+    "PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics",
+    "PptxManualInnerNumericStripsFitTheirIndependentOfficeSide",
+    "PptxRightLegendAdmissionMovesNumericBandsWithoutMovingLegend",
+    "PptxNumericCrossingMovesTheMeasuredStripWithItsLabels",
+    "PptxScatterCaptionAdmissionPreservesFrameAndNumericCenters",
+    "PptxLineCategoryBoundaryMarkersKeepHorizontalInkAndNumericClipping",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-manual-axis-admission": [
     "PptxOuterRotatedCaptionClearanceIsSideIndependent",
     "PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight",

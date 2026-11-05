@@ -266,6 +266,8 @@ Approximate or restricted:
   axis retains a nominal minimum band when labels/ticks are hidden. Data axes,
   plot fill and linked label geometry share the admitted inner rectangle.
   Numeric-caption admission precedes automatic category angle/skip fitting.
+  Vertical numeric captions keep at least their measured text width during
+  painting and clipping, including formatted values and either label side.
   Rotated single-line category fragments allocate logical text advance and
   normal-line spans against the authored width before numeric carving. Source
   pitch and ordinal reversal own reference movements; measured painting and
