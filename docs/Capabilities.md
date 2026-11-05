@@ -93,6 +93,9 @@ Supported within the following constraints:
   Defined point labels own component defaults; a defined series owns its point
   declarations. Fully disabled Cartesian plots suppress plot-point requests,
   while series and pie/doughnut points retain independent label scope.
+  Label-set deletion hides default labels while preserving explicit child
+  requests. Defined series and points own their deletion default; absent plot
+  containers keep series settings local to their source series.
   Defined point and series text styles combine chart defaults with local
   formatting; unoverridden labels retain their container style. Font provenance
   and raw source presence remain inspectable.

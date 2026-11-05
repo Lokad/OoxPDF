@@ -11,6 +11,9 @@
   captions and data-label/key/link geometry while preserving source identities.
   Vertical numeric-axis labels keep their measured width so formatted values
   survive in narrow plots.
+- PPTX: deleted plot/series label sets hide their default labels while preserving
+  defined child requests. Series label settings no longer leak into an absent
+  plot container or unrelated series.
 - PPTX: composed bar charts measure every series legend entry before layout,
   preserving names from later plots. Automatic bottom filled-key legends share
   natural row admission and aligned wrapped columns.
