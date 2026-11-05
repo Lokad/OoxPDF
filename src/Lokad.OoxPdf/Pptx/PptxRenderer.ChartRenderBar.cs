@@ -218,7 +218,7 @@ internal sealed partial class PptxRenderer
             titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement, context: context, resolvedValueExtents: resolvedValueExtents, numericPlacement: numericPlacement).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
-            plotLayout.AutomaticCategoryLabelOffsetAdjustment,
+            plotLayout.CategoryLabelOffsetAdjustment,
             // Resolved ranges serve admitted single/shared horizontal plots and
             // shared columns. Retain their automatic category placement too.
             plotLayout.ManualLayoutTargetKind is null && (sceneChart.Plots.Count == 1 || resolvedValueExtents is not null)
@@ -444,7 +444,7 @@ internal sealed partial class PptxRenderer
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
-            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
+            { CategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
         }
 
         ChartPlotBox manualDefaultPlotBox = horizontalBars && HasRecognizedManualPlotLayoutTarget()
@@ -453,7 +453,7 @@ internal sealed partial class PptxRenderer
         if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, manualDefaultPlotBox, out ChartPlotLayout manualPlotLayout))
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
-            { AutomaticCategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
+            { CategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
         }
 
         // Bars retain their dedicated outer-area placement and caption owner.

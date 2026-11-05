@@ -86,11 +86,13 @@ internal static partial class PptxColumnIntervalTests
     }
 
     private static PdfPage RenderCaption(JsonElement row, double size, bool high, double numericSize,
-        int offset, string mode, double rotation = 0d) => RenderAdmission(row, caseDirectory: OuterCases,
+        int offset, string mode, double rotation = 0d, string target = "outer") => RenderAdmission(row, caseDirectory: OuterCases,
         horizontalCategories: true, editChart: xml =>
         {
             XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
             XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            if (target == "automatic") xml.Descendants(c + "plotArea").Single().Element(c + "layout")!.Remove();
+            else xml.Descendants(c + "manualLayout").Single().Element(c + "layoutTarget")!.SetAttributeValue("val", target);
             foreach (var value in xml.Descendants(c + "cat").Descendants(c + "v"))
                 value.Value = mode == "empty" ? string.Empty : mode == "spaces" ? " " : "I";
             var axis = xml.Descendants(c + "catAx").Single();

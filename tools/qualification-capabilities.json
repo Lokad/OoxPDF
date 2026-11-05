@@ -1,4 +1,26 @@
 {
+  "pptx-category-label-offsets": [
+    "PptxCategoryOffsetsShareMeasuredUnitsAcrossPreparedContainers",
+    "PptxLegendlessLinePlotCategoryOffsetKeepsBaselineAndMeasuresReserve",
+    "PptxLineCategoryOffsetsShareVerticalGeometryAcrossAxisSides",
+    "PptxLegendlessLinePlotCategoryOffsetUsesSelectedCategoryMetric",
+    "PptxLegendlessLinePlotCategoryOffsetRetainsSourceLayoutFallbacks",
+    "PptxLegendlessLineTopCategoryOffsetKeepsBaseline",
+    "PptxSyntheticChartCategoryAxisLabelOffsetRender",
+    "PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight",
+    "PptxManualOuterEmptyCaptionsRemoveOnlyTheirTextLine",
+    "PptxManualOuterRotatedEmptyCaptionsKeepTheirMinimumBand",
+    "PptxManualOuterWhitespaceCaptionsReserveMeasuredLines",
+    "PptxCategoryOverflowPreservesManualTextOrigins",
+    "PptxManualInnerAdmissionPreservesQualifiedAuthoredFrames",
+    "PptxManualInnerVerticalAdmissionMatchesIndependentOfficeFrames",
+    "PptxManualOuterFramesUseIndependentCaptionSides",
+    "PptxManualOuterHiddenAxesRetainTheirIndependentMinimumBand",
+    "PptxOuterCategoryAdmissionKeepsFillLegendAndLinkedLabelsTogether",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-empty-caption-frames": [
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",

@@ -86,7 +86,7 @@ internal sealed partial class PptxRenderer
             categoryClearance = category.LineHeight / 2d;
             double baseline = ChartCategoryLabelBaselineDistance(category.Style.FontSize, categoryHighSide,
                 ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
-                layout.AutomaticCategoryLabelOffsetAdjustment);
+                layout.CategoryLabelOffsetAdjustment);
             if (category.RotationDegrees == 0d)
                 categoryBand = baseline + (categoryHighSide ? category.Ascent : category.Descent) + PptxChartMetricRules.OuterPlotCaptionPadding;
             else
@@ -490,6 +490,12 @@ internal sealed partial class PptxRenderer
         // Keep emission at its existing size; this is the spacing measurement.
         ChartTextStyle policyStyle = style with { FontSize = Math.Round(style.FontSize * 20d, MidpointRounding.AwayFromZero) / 20d };
         var line = await measure.MeasureLineBoxAsync(style).ConfigureAwait(false);
+        // Authored offsets increment the selected normal-line spacing. Carry
+        // the same adjustment through admission and painting for every prepared
+        // container; missing metrics retain the existing baseline fallback.
+        if (layout.CategoryLabelOffsetAdjustment is null)
+            layout = layout with { CategoryLabelOffsetAdjustment = await TryMeasureCategoryLabelOffsetAdjustmentAsync(measure,
+                style, ResolveSceneOrXmlCategoryAxisLabelOffsetScale(axis.SceneAxis, axis.XmlAxis)).ConfigureAwait(false) };
         // Tick spacing includes the horizontal-header line gap. Selecting the
         // OS/2 ink box instead admits too many Arial/Times labels (Office controls).
         double policyHeight = (await measure.MeasureLineBoxAsync(policyStyle, horizontalHeader: true).ConfigureAwait(false)).Height;
@@ -644,7 +650,7 @@ internal sealed partial class PptxRenderer
         }
         double axisGap = Math.Max(0d, ChartCategoryLabelBaselineDistance(style.FontSize, topSide,
             ResolveSceneOrXmlCategoryAxisLabelOffsetScale(axis.SceneAxis, axis.XmlAxis),
-            layout.AutomaticCategoryLabelOffsetAdjustment) - (topSide ? line.Descent : line.Ascent));
+            layout.CategoryLabelOffsetAdjustment) - (topSide ? line.Descent : line.Ascent));
         layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, axisGap, measured) };
         return AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
             ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), topSide, resolver.CancellationToken);
