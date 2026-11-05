@@ -16,7 +16,8 @@ internal static partial class PptxColumnIntervalTests
             var page = RenderAdmission(row, caseDirectory: NumericSideCases);
             var shows = AdmissionNumericShows(page);
             TestAssert.True(shows.Select(show => show.Text).SequenceEqual(new[] { "7", "32", "57", "82", "107" }),
-                "Changing the numeric face preserves the complete authored numeric interval.");
+                row.GetProperty("Id").GetString() + ": changing the numeric face preserves the complete authored numeric interval: " +
+                string.Join(",", shows.Select(show => show.Text)));
             var font = shows[0].Font.Font;
             var os2 = font.Os2;
             double units = (os2.SelectionFlags & 0x80) != 0
