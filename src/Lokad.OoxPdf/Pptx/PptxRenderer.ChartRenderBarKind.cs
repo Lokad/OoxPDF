@@ -55,10 +55,16 @@ internal sealed partial class PptxRenderer
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme, valueExtents, percentStacked);
                 valueAxisOptions = valueAxisOptions with { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueSceneAxis, valueExtents, percentStacked) };
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
-                barOptions = barOptions with { CategoryAxisReversed = (horizontalBars ||
-                    CanOwnColumnCategoryDirection(sceneChart, categoryAxis, valueAxisSource)) &&
-                    barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
-                    ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis) };
+                bool ownsColumnCategories = barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
+                    CanOwnColumnCategoryPlacement(sceneChart, categoryAxis, valueAxisSource);
+                barOptions = barOptions with
+                {
+                    CategoryAxisReversed = (horizontalBars || ownsColumnCategories) &&
+                        barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
+                        ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
+                    CategoryPointsOnTickMarks = !horizontalBars && ownsColumnCategories &&
+                        ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis)
+                };
                 ChartAxisPlacement? resolvedCategory = horizontalBars
                     ? ReadHorizontalBarCategoryPlacement(sceneChart, categoryAxis, valueAxisSource, valueExtents, valueAxisOptions.Reversed) :
                     ReadChartAxisPlacement(categoryAxis, valueExtents, valueAxisOptions.Reversed);
@@ -388,16 +394,11 @@ internal sealed partial class PptxRenderer
                         {
                             ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, chartXml, tickCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                             int tickCategoryCount = Math.Max(1, MaxDensePointCount(barSeriesVectors));
-                            double tickSlotWidth = plotBox.Width / tickCategoryCount;
-                            double[] tickEdges = new double[tickCategoryCount + 1];
-                            for (int tickIndex = 0; tickIndex <= tickCategoryCount; tickIndex++)
-                            {
-                                tickEdges[tickIndex] = plotBox.X + tickSlotWidth * tickIndex;
-                            }
-
                             double categoryAxisY = ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
                             SetChartStroke(graphics, categoryTickStroke);
-                            StrokeMajorTickSegments(graphics, tickEdges, categoryAxisY, verticalSegments: true, outwardIsLowSide: !axesStyle.CategoryAxisTopSide, categoryTickMark, categoryTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
+                            DrawCartesianChartCategoryAxisMajorTicks(graphics, plotBox.X, plotBox.Width,
+                                tickCategoryCount, categoryAxisY, categoryTickMark, categoryTickStyle.FontSize,
+                                barOptions.CategoryPointsOnTickMarks, axesStyle.CategoryAxisTopSide);
                         }
                     }
 

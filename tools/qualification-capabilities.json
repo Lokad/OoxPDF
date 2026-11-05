@@ -360,6 +360,15 @@
       "StreamLengthsMatchPayloads",
       "XrefTablePointsAtObjectHeaders"
   ],
+  "pptx-on-tick-columns": [
+    "PptxOnTickColumnsKeepSourceClustersAndGaps",
+    "PptxOnTickColumnLabelsAndLinksFollowPaintedClusters",
+    "PptxColumnIntervalsShareOfficeSourceMinimums",
+    "PptxColumnIntervalsSurviveStackingAndAuthoredPlotPlacement",
+    "PptxColumnTicksAndBothGridKindsUseTheLabelIntervals",
+    "PptxClusteredColumnDataUsesTheCategoryOrigin",
+    "PptxClusteredSpacingMatchesIndependentOfficeAcrossSeriesAndOverlap"
+  ],
   "pptx-column-source-direction": [
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",

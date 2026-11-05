@@ -234,7 +234,7 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            double categoryWidth = plotBox.Width / categoryCount;
+            double categoryWidth = barOptions.CategoryPitch(plotBox.Width, categoryCount);
             double barSlot = stacked
                 ? GetStackedBarWidth(categoryWidth, gapWidthPercent)
                 : categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseValueSeries.Count);
@@ -242,7 +242,7 @@ internal sealed partial class PptxRenderer
             double columnStep = GetClusteredBarStep(columnWidth, barOptions.Overlap);
             double clusterWidth = columnWidth + Math.Max(0, denseValueSeries.Count - 1) * columnStep;
             double ColumnCenter(int category, int seriesIndex) => ChartCategoryToPlotCoordinate(category, categoryCount,
-                plotBox.X, plotBox.Width, onTickMarks: false, barOptions.CategoryAxisReversed,
+                plotBox.X, plotBox.Width, barOptions.CategoryPointsOnTickMarks, barOptions.CategoryAxisReversed,
                 slotOffset: -clusterWidth / 2d + seriesIndex * columnStep + columnWidth / 2d);
             double[] positiveValues = new double[categoryCount];
             double[] negativeValues = new double[categoryCount];

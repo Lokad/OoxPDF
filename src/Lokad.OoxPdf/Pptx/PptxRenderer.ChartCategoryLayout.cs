@@ -432,7 +432,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static bool CanOwnColumnCategoryDirection(PptxSceneChart chart, ChartAxisSource category, ChartAxisSource value) =>
+    private static bool CanOwnColumnCategoryPlacement(PptxSceneChart chart, ChartAxisSource category, ChartAxisSource value) =>
         chart.Plots.Count == 1 && chart.Axes.Count(axis => axis.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
         category.SceneAxis is { AxisKind: PptxSceneChartAxisKind.Category } ordinal &&
         value.SceneAxis is { AxisKind: PptxSceneChartAxisKind.Value, HasLogarithmicScale: false } numeric &&

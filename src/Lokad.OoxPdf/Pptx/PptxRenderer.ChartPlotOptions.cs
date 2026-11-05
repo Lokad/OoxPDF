@@ -20,6 +20,10 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneChartNegativeInversion> NegativeInversions)
     {
         public bool CategoryAxisReversed { get; init; }
+        public bool CategoryPointsOnTickMarks { get; init; }
+
+        public double CategoryPitch(double length, int count) =>
+            length / Math.Max(1, count - (CategoryPointsOnTickMarks ? 1 : 0));
 
         public bool InvertsNegativePoint(int seriesIndex, int pointIndex) =>
             NegativeInversions is null || seriesIndex >= NegativeInversions.Count ||
