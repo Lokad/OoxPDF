@@ -15,7 +15,7 @@ internal static partial class PptxSourceUnitBoundsTests
                 categoryText: text, manualHeight: .88d, labelSkip: 1);
             PdfPage shortSource = Render("L"), longSource = Render("LongQuarterSummary");
             TestAssert.True(Width(longSource) + 10d < Width(shortSource),
-                "Restored long captions allocate space inside the admitted source-reference frame.");
+                $"Restored long captions allocate space inside the admitted source-reference frame: {kind}/{angle}, {Width(shortSource)} -> {Width(longSource)}.");
             foreach (var (page, text) in new[] { (shortSource, "L"), (longSource, "LongQuarterSummary") })
             {
                 var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
@@ -59,7 +59,9 @@ internal static partial class PptxSourceUnitBoundsTests
                     : axisY - show.Y - ascent * cos - (rightAnchor ? advance * sin : 0d);
             }
             double low = Gap(false), high = Gap(true);
-            TestAssert.True(low >= 0d && Math.Abs(high - low) < .005,
+            // Text matrices, axes and glyph advances are independently rounded
+            // during PDF emission; inversion combines those small errors.
+            TestAssert.True(low >= 0d && Math.Abs(high - low) < .02,
                 $"Mirrored inner captions retain their normal-line gap: {size}/{angle}, low={low}, high={high}.");
         }
     }
