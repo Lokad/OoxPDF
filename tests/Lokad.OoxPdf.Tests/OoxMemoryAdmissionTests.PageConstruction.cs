@@ -218,7 +218,7 @@ internal static partial class OoxMemoryAdmissionTests
                     try
                     {
                         TestAssert.True(reader.MoveNextAsync().AsTask().GetAwaiter().GetResult(), "Prepare a real page grant for selective refusal.");
-                        var page = control.LargestLiveGrant(); request = page.Bytes;
+                        var page = control.LargestLiveGrant(); request = control.InitialRequest(page);
                         reader.DisposeAsync().AsTask().GetAwaiter().GetResult();
                         TestAssert.Equal(0L, page.Bytes);
                     }
@@ -288,12 +288,13 @@ internal static partial class OoxMemoryAdmissionTests
     private sealed class PageMemoryBudget : IMemoryBudget
     {
         public readonly TestMemoryBudget Pool = new();
-        private readonly List<IMemoryReservation> direct = [];
+        private readonly List<(IMemoryReservation Reservation, long InitialBytes)> direct = [];
         public long MatchBytes;
         public CancellationTokenSource? Cancel;
         public bool Reached;
         public int MatchCount;
-        public IMemoryReservation LargestLiveGrant() => direct.Where(item => item.Bytes > 0).MaxBy(item => item.Bytes)
+        public long InitialRequest(IMemoryReservation reservation) => direct.Single(item => ReferenceEquals(item.Reservation, reservation)).InitialBytes;
+        public IMemoryReservation LargestLiveGrant() => direct.Select(item => item.Reservation).Where(item => item.Bytes > 0).MaxBy(item => item.Bytes)
             ?? throw new InvalidOperationException("The producer must hold a page construction reservation.");
         public bool TryReserve(long bytes, out IMemoryReservation? reservation) => Pool.TryReserve(bytes, out reservation);
         public IMemoryScope CreateScope() => new Root(this, Pool.CreateScope());
@@ -310,7 +311,7 @@ internal static partial class OoxMemoryAdmissionTests
                     if (owner.Cancel is null) { reservation = null; return false; }
                 }
                 bool accepted = inner.TryReserve(bytes, out reservation);
-                if (accepted && bytes > 0 && reservation is not null) owner.direct.Add(reservation);
+                if (accepted && bytes > 0 && reservation is not null) owner.direct.Add((reservation, bytes));
                 if (selected) owner.Cancel!.Cancel();
                 return accepted;
             }
