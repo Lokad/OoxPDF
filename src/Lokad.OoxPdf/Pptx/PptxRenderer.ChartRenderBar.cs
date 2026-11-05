@@ -1412,20 +1412,12 @@ internal sealed partial class PptxRenderer
         double fontSize = style.FontSize;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         bool percentStacked = sceneChart is { Plots.Count: 1 } && IsPercentStackedChartGrouping(sceneChart.Plots[0].GroupingKind);
-        IEnumerable<double> tickValues = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, sceneAxis, extents, percentStacked), context: context)
-            .Concat(new[] { extents.Min, extents.Max });
-        await textMeasurer.PrepareAsync(tickValues
-            .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
-            .DefaultIfEmpty("0"), style).ConfigureAwait(false);
-        double maxLabelWidth = tickValues
-            .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
-            .DefaultIfEmpty("0")
-            .Max(label => textMeasurer.Measure(label, style));
-        double labelWidth = Math.Max(
-            fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
-            maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
-        double sideGap = ChartValueAxisLabelSideGap(textMeasurer, style);
-        return new ChartValueAxisStripMeasure(maxLabelWidth, fontSize, labelWidth + sideGap, sideGap);
+        var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, style, new(sceneAxis, valueAxis),
+            extents, units, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount,
+            ReadCartesianChartAxisTickPolicy(sceneChart, sceneAxis, extents, percentStacked),
+            defaultNumberFormat, reserveEndpoints: true, context).ConfigureAwait(false);
+        return new ChartValueAxisStripMeasure(captions.MaximumWidth, fontSize,
+            captions.SlotWidth + captions.SideGap, captions.SideGap);
     }
 
     // Near-maximum headroom (the shared 0.96 rule) applies to vertical-bar value axes:

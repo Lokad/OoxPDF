@@ -2247,7 +2247,8 @@ internal static class PptxTypographyTests
         TestAssert.True(DocxTests.CountPdfTextShows(cffPdf) >= 1, "Substituted chart text must be painted.");
         TestAssert.DoesNotContain("CffFamily", cffPdf);
         TestAssert.True(cffDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "Chart CFF rendering must report the substitution.");
-        TestAssert.Equal(File.ReadAllText(ttOutput, Encoding.ASCII), cffPdf);
+        TestAssert.True(File.ReadAllText(ttOutput, Encoding.ASCII) == cffPdf,
+            "Chart CFF substitution must produce the same PDF as requesting the TrueType fallback directly.");
         TestAssert.True(!ttDiagnostics.Any(diagnostic => diagnostic.Id == "FONT_UNSUPPORTED_OUTLINES"), "TrueType rendering must not report a substitution.");
     }
 

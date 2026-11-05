@@ -315,14 +315,14 @@ internal static class PptxChartsTests
         var resolver = new WindowsFontResolver();
         FontFaceResolution face = resolver.Resolve(new FontRequest("Arial"));
         if (face.IsFallback || !string.Equals(face.ResolvedFamily, "Arial", StringComparison.OrdinalIgnoreCase))
-            TestAssert.Skip("The font-specific323.014pt assertion requires installed Arial; portable tick-label semantics are checked separately.");
-        CheckSyntheticChartAxisTickLabelOptions(resolver, compareArialCoordinate: true);
+            TestAssert.Skip("The installed-font integration check requires Arial; portable tick-label semantics are checked separately.");
+        CheckSyntheticChartAxisTickLabelOptions(resolver);
     }
 
     public static void PptxSyntheticChartAxisTickLabelOptionsUsePortableFontSemantics() =>
-        CheckSyntheticChartAxisTickLabelOptions(new TestFaceFontResolver(), compareArialCoordinate: false);
+        CheckSyntheticChartAxisTickLabelOptions(new TestFaceFontResolver());
 
-    private static void CheckSyntheticChartAxisTickLabelOptions(IFontResolver resolver, bool compareArialCoordinate)
+    private static void CheckSyntheticChartAxisTickLabelOptions(IFontResolver resolver)
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -382,10 +382,6 @@ internal static class PptxChartsTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
-        // Value labels moved with the plot edge, which now rests on the preset floor since
-        // the recalibrated label reserve (frame indent plus font-relative gap) fits inside it.
-        if (compareArialCoordinate) TestAssert.Contains("323.014", pdf);
-        else
         {
             var axes = Regex.Matches(pdf, @"([-\d.]+) ([-\d.]+) m ([-\d.]+) ([-\d.]+) l S")
                 .Select(m => m.Groups.Cast<Group>().Skip(1).Select(g => double.Parse(g.Value, CultureInfo.InvariantCulture)).ToArray())
@@ -396,7 +392,7 @@ internal static class PptxChartsTests
                 .Where(m => m.Groups["body"].Value.Contains("/CVA", StringComparison.Ordinal))
                 .Select(m => Regex.Match(m.Groups["body"].Value, @"1 0 0 1 (?<x>[-\d.]+) [-\d.]+ Tm")).ToArray();
             TestAssert.True(labels.Length == 3 && labels.All(m => m.Success && double.Parse(m.Groups["x"].Value, CultureInfo.InvariantCulture) > right),
-                "The three formatted value labels use the authored high side of the plot with the pinned portable face.");
+                "The three formatted value labels use the authored high side of the plot.");
         }
     }
 

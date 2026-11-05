@@ -457,7 +457,8 @@ internal sealed partial class PptxRenderer
             return (height * 0.8d, height * 0.2d, height);
         }
 
-        public async ValueTask<(double Ascent, double Height)> MeasureTextLineBoxAsync(string text, ChartTextStyle style)
+        public async ValueTask<(double Ascent, double Height, bool HasMetrics)> MeasureTextLineBoxAsync(
+            string text, ChartTextStyle style, bool horizontalHeader = true)
         {
             // Use the same embeddable per-glyph faces as advance measurement and
             // painting, including substitution of unsupported outline formats.
@@ -467,15 +468,15 @@ internal sealed partial class PptxRenderer
                 ResolvedGlyphFont? resolved = await estimator.ResolveGlyphFontAsync(
                     style.FontFamily, style.Bold, style.Italic, rune.Value).ConfigureAwait(false);
                 if (resolved is not null && TryMeasureLineBox(resolved.Font, style,
-                    out double glyphAscent, out _, out double glyphHeight, horizontalHeader: true))
+                    out double glyphAscent, out _, out double glyphHeight, horizontalHeader))
                 {
                     ascent = Math.Max(ascent, glyphAscent);
                     height = Math.Max(height, glyphHeight);
                 }
             }
-            if (height > 0d) return (ascent, height);
-            var line = await MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false);
-            return (line.Ascent, line.Height);
+            if (height > 0d) return (ascent, height, true);
+            var line = await MeasureLineBoxAsync(style, horizontalHeader).ConfigureAwait(false);
+            return (line.Ascent, line.Height, false);
         }
 
         private bool TryMeasureLineBox(ChartTextStyle style, out double ascent, out double descent, out double height, bool horizontalHeader = false)

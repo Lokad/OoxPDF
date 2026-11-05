@@ -1,5 +1,6 @@
 {
   "pptx-numeric-side-spacing": [
+      "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
       "ConvertPptxObservesCancellationAfterWorkBegins",
       "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
       "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",

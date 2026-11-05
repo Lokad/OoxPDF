@@ -200,7 +200,7 @@ internal sealed partial class PptxRenderer
             double clearance = (await measure.MeasureLineBoxAsync(style).ConfigureAwait(false)).Height / 2d;
             var captions = await MeasureChartValueAxisCaptionsAsync(measure, style, valueAxis, extents,
                 options.Units, tickTarget, options.TickPolicy, defaultNumberFormat, reserveEndpoints: true, context).ConfigureAwait(false);
-            return (clearance, captions.MaximumWidth + ChartValueAxisLabelSideGap(measure, style) +
+            return (clearance, captions.MaximumWidth + captions.SideGap +
                 PptxChartMetricRules.OuterPlotCaptionPadding);
         }
     }

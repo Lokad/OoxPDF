@@ -169,23 +169,25 @@ internal sealed partial class PptxRenderer
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CCA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
-    private static async ValueTask<(IReadOnlyList<double> Values, double MaximumWidth, double SlotWidth)> MeasureChartValueAxisCaptionsAsync(
+    private static async ValueTask<(IReadOnlyList<double> Values, double MaximumWidth, double SlotWidth, double SideGap)> MeasureChartValueAxisCaptionsAsync(
         ChartTextMeasurer measurer, ChartTextStyle style, ChartAxisSource source, ChartValueExtents extents,
         ChartAxisUnits units, double target, ChartAxisTickPolicy policy, string? defaultNumberFormat, bool reserveEndpoints, PptxRenderContext? context = null)
     {
         IReadOnlyList<double> values = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, target, policy, context: context);
         IEnumerable<double> measured = reserveEndpoints ? values.Append(extents.Min).Append(extents.Max) : values;
-        double maximum = 0d;
+        double maximum = 0d, normalHeight = 0d;
         foreach (string label in measured.Select(value => FormatSceneOrXmlChartAxisLabel(value, source.SceneAxis, source.XmlAxis, defaultNumberFormat)).DefaultIfEmpty("0"))
+        {
             maximum = Math.Max(maximum, await measurer.MeasureAsync(label, style).ConfigureAwait(false));
-        return (values, maximum, Math.Max(style.FontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
-            maximum + style.FontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor));
-    }
-
-    private static double ChartValueAxisLabelSideGap(ChartTextMeasurer measurer, ChartTextStyle style)
-        => Math.Max(3d, measurer.TryMeasureNormalLineHeight(style, out double height)
-            ? height * PptxChartMetricRules.ValueAxisLabelSideGapLineHeightRatio
+            var line = await measurer.MeasureTextLineBoxAsync(label, style, horizontalHeader: false).ConfigureAwait(false);
+            if (line.HasMetrics) normalHeight = Math.Max(normalHeight, line.Height);
+        }
+        double sideGap = Math.Max(3d, normalHeight > 0d
+            ? normalHeight * PptxChartMetricRules.ValueAxisLabelSideGapLineHeightRatio
             : style.FontSize * PptxChartMetricRules.ValueAxisLabelSideGapFallbackFontSizeRatio);
+        return (values, maximum, Math.Max(style.FontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
+            maximum + style.FontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor), sideGap);
+    }
 
     private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null, PptxRenderContext? context = null)
     {
@@ -199,7 +201,7 @@ internal sealed partial class PptxRenderer
             axisUnits, autoTickTargetCount, tickPolicy, defaultNumberFormat, reserveEndpoints: false, context: context).ConfigureAwait(false);
         IReadOnlyList<double> tickValues = captions.Values;
         double valueAxisLabelWidth = captions.SlotWidth;
-        double sideGap = ChartValueAxisLabelSideGap(textMeasurer, style);
+        double sideGap = captions.SideGap;
         var runs = new List<TextRun>(tickValues.Count);
         foreach (double value in tickValues)
         {
