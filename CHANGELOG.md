@@ -10,7 +10,8 @@
   Clustered horizontal category reversal mirrors bar rows, series offsets,
   captions and data-label/key/link geometry while preserving source identities.
   Vertical numeric-axis labels keep their measured width so formatted values
-  survive in narrow plots.
+  survive in narrow plots. Their side gap follows the selected font's normal
+  line box and is shared by allocation, painting and composed strip spacing.
 - PPTX: deleted plot/series label sets hide their default labels while preserving
   defined child requests. Series label settings no longer leak into an absent
   plot container or unrelated series.

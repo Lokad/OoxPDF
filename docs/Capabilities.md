@@ -271,6 +271,10 @@ Approximate or restricted:
   Numeric-caption admission precedes automatic category angle/skip fitting.
   Vertical numeric captions keep at least their measured text width during
   painting and clipping, including formatted values and either label side.
+  Side gaps follow measured normal-line geometry; admission, painting and
+  chained strips share that gap. Unavailable metrics retain the nominal fallback.
+  This remains a measured approximation: Calibri spacing and composed absolute
+  placement retain independent residuals.
   Rotated single-line category fragments allocate logical text advance and
   normal-line spans against the authored width before numeric carving. Source
   pitch and ordinal reversal own reference movements; measured painting and
