@@ -220,7 +220,8 @@ internal sealed partial class PptxRenderer
                 bool labelsRightSide = placement?.LabelsHighSide ?? ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, sceneAxis, valueAxis, rightSide);
                 double axisX = placement is { } resolved ? plotBox.X + plotBox.Width * resolved.LabelPlotRatio
                     : labelsRightSide ? plotBox.X + plotBox.Width : plotBox.X;
-                width = useTextSizedWidth ? valueAxisLabelWidth : plotBox.Width * PptxChartMetricRules.VerticalValueAxisWidthRatio;
+                width = useTextSizedWidth ? valueAxisLabelWidth : Math.Max(valueAxisLabelWidth,
+                    plotBox.Width * PptxChartMetricRules.VerticalValueAxisWidthRatio);
                 double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
                 // Outer same-side strips anchor to the inner strip ink edge: Office keeps a
                 // fixed sideGap-plus-inter-axis gap between the ink blocks instead of chaining
