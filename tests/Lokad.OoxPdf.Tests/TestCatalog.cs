@@ -15,6 +15,7 @@ internal static class TestCatalog
         new("rendering-portable", PptxColumnIntervalTests.PptxShortRotatedCaptionsKeepFiniteSpacingAndAuthoredSkips),
         new("rendering-portable", PptxColumnIntervalTests.PptxSkippedCategoryPaintKeepsLogicalReferenceEnds),
         new("rendering-portable", PptxColumnIntervalTests.PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames),
+        new("rendering-portable", PptxColumnIntervalTests.PptxAutomaticCategoryReferencesKeepSourceEndpoints),
         .. FromType("rendering-portable", typeof(DocxAutomaticColorTests)),
         .. FromType("rendering-portable", typeof(DocxParagraphShadingTests)),
         .. FromType("docx-page", typeof(DocxRevisionBarTests)),

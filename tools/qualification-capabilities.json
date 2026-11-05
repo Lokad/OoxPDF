@@ -1,4 +1,15 @@
 {
+  "pptx-automatic-caption-ends": [
+    "PptxAutomaticCategoryReferencesKeepSourceEndpoints",
+    "PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames",
+    "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
+    "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",
+    "PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames",
+    "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-caption-fitting": [
     "PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames",
     "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",

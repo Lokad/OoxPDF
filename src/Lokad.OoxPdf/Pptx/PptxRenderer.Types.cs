@@ -312,9 +312,10 @@ internal sealed partial class PptxRenderer
         // which pad the axis rect by the known 0.7; compact/overlay/bottom-legend Office
         // axes all sit at 11.0 while our clip-bound rights overshot by 0.66-0.70).
         public const double ColumnPlotRightReserve = 11.0d;
-        // Untitled automatic cartesian plots reserve half the value-label line box
-        // above the top tick plus 5pt (independent Aptos/Calibri/Arial/Tahoma/Times probes).
-        public const double AutomaticCartesianTopPadding = 5d;
+        // Automatic source frames keep 5pt padding. Headers add half the value
+        // label line above the top tick; horizontal caption references use the
+        // interval before numeric and caption admission (independent Office controls).
+        public const double AutomaticCartesianFramePadding = 5d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         // Tail reserve past the legend marker block for untitled right-legend line/scatter
         // charts. Calibrated from cached Office references: reserve minus our measured marker

@@ -605,7 +605,7 @@ internal sealed partial class PptxRenderer
 
     private static double CartesianAxisEndClearance(double lineHeight) =>
         Math.Max(PptxChartMetricRules.HorizontalBarPlotTopReserve,
-            PptxChartMetricRules.AutomaticCartesianTopPadding + lineHeight / 2d);
+            PptxChartMetricRules.AutomaticCartesianFramePadding + lineHeight / 2d);
 
     private static async ValueTask<double?> MeasureCategoryFittingClearanceAsync(PptxTheme theme,
         PptxSceneChart chart, XDocument xml, PresentationFontResolver? resolver, double numericClearance)

@@ -119,46 +119,24 @@ internal sealed partial class PptxRenderer
             }
             bool reversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
             bool rotatedCaptions = layout.CategoryLabels is { RotationDegrees: not 0d };
-            double referenceExpansion = reversed
-                ? source.Width / Math.Max(1, onTickMarks ? labels.Count - 1 : labels.Count) : 0d;
+            var referenceBands = rotatedCaptions ? ChartRotatedCategoryReferenceBands(layout.CategoryLabels!,
+                labels.Count, onTickMarks, reversed, source.Width, PptxChartMetricRules.ChartContentFrameInset,
+                resolver.CancellationToken) : (Left: 0d, Right: 0d);
             (double Left, double Right) RequiredBands(double width)
             {
                 double left = labelsRight ? 0d : numericBand, right = labelsRight ? numericBand : 0d;
+                if (rotatedCaptions)
+                    return (Math.Max(left, referenceBands.Left), Math.Max(right, referenceBands.Right));
                 if (labels.Count > 0 && layout.CategoryLabels is { } captions)
                 {
-                    void IncludeRotatedReference(int index, ChartCategoryTextLine part)
-                    {
-                        // The authored area owns reference ends; word advance
-                        // and normal-line span exchange roles with rotation.
-                        double wordWidth = part.Width - part.OverflowAdvance;
-                        double ratio = ChartCategoryToPlotCoordinate(index, labels.Count, 0d, 1d, onTickMarks, reversed);
-                        double leftSpan = (captionRadians < 0d ? captions.LineHeight : wordWidth) * captionCos;
-                        double rightSpan = (captionRadians < 0d ? wordWidth : captions.LineHeight) * captionCos;
-                        double inset = PptxChartMetricRules.ChartContentFrameInset + referenceExpansion;
-                        left = Math.Max(left, leftSpan + inset - ratio * source.Width);
-                        right = Math.Max(right, rightSpan + inset - (1d - ratio) * source.Width);
-                    }
                     foreach (var (index, parts) in captions.Labels)
                     {
                         resolver.CancellationToken.ThrowIfCancellationRequested();
                         double ratio = ChartCategoryToPlotCoordinate(index, labels.Count, 0d, 1d, onTickMarks, reversed);
-                        if (rotatedCaptions)
-                        {
-                            IncludeRotatedReference(index, parts[0]);
-                            continue;
-                        }
                         var frame = ChartCategoryCaptionHorizontalFrame(0d, parts[0].Width, captions.Ascent, captions.Descent,
                             captionSin, captionCos, rightCaptionAnchor);
                         left = Math.Max(left, -frame.Left + PptxChartMetricRules.DataLabelHorizontalPadding - ratio * width);
                         right = Math.Max(right, frame.Right + PptxChartMetricRules.DataLabelHorizontalPadding - (1d - ratio) * width);
-                    }
-                    if (rotatedCaptions && captions.Labels.Count > 0)
-                    {
-                        // Spacing selects paint, not the source interval's ends.
-                        // Extend the edge captions' measured references without
-                        // painting or measuring an omitted source caption.
-                        IncludeRotatedReference(0, captions.Labels.MinBy(entry => entry.Key).Value[0]);
-                        IncludeRotatedReference(labels.Count - 1, captions.Labels.MaxBy(entry => entry.Key).Value[0]);
                     }
                 }
                 return (left, right);
@@ -340,6 +318,34 @@ internal sealed partial class PptxRenderer
         return (pivot, left, right);
     }
 
+    private static (double Left, double Right) ChartRotatedCategoryReferenceBands(
+        ChartCategoryLabelLayout captions, int count, bool onTickMarks, bool reversed,
+        double referenceWidth, double inset, CancellationToken cancellationToken)
+    {
+        double left = 0d, right = 0d;
+        if (count == 0 || captions.Labels.Count == 0) return (left, right);
+        double radians = -captions.RotationDegrees * Math.PI / 180d, cos = Math.Cos(radians);
+        double expansion = reversed ? referenceWidth / Math.Max(1, onTickMarks ? count - 1 : count) : 0d;
+        void Include(int index, ChartCategoryTextLine part)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Source references exchange word advance and normal-line span
+            // with rotation. A painted suffix is outside the occupied prefix.
+            double advance = part.Width - part.OverflowAdvance;
+            double ratio = ChartCategoryToPlotCoordinate(index, count, 0d, 1d, onTickMarks, reversed);
+            double leftSpan = (radians < 0d ? captions.LineHeight : advance) * cos;
+            double rightSpan = (radians < 0d ? advance : captions.LineHeight) * cos;
+            left = Math.Max(left, leftSpan + inset + expansion - ratio * referenceWidth);
+            right = Math.Max(right, rightSpan + inset + expansion - (1d - ratio) * referenceWidth);
+        }
+        foreach (var (index, parts) in captions.Labels) Include(index, parts[0]);
+        // Spacing selects paint, not the source interval's ends. Reuse the edge
+        // fragments without measuring or painting an omitted source caption.
+        Include(0, captions.Labels.MinBy(entry => entry.Key).Value[0]);
+        Include(count - 1, captions.Labels.MaxBy(entry => entry.Key).Value[0]);
+        return (left, right);
+    }
+
     private static ChartLayout AdmitObliqueCategoryCaptionFrames(ChartLayout layout, int count, bool onTickMarks,
         bool reversed, bool highSide, CancellationToken cancellationToken)
     {
@@ -354,9 +360,15 @@ internal sealed partial class PptxRenderer
         double outerRight = layout.Frame.X + layout.Frame.Width - PptxChartMetricRules.ChartContentFrameInset;
         double numericLeft = Math.Max(0d, layout.PlotBox.X - outerLeft);
         double numericRight = Math.Max(0d, outerRight - layout.PlotBox.X - layout.PlotBox.Width);
+        // Automatic references use the source frame before caption admission,
+        // inset by the same minimum frame padding as the header. Numeric strips
+        // and the complete painted ink retain their own constraints below.
+        var referenceBands = ChartRotatedCategoryReferenceBands(captions, count, onTickMarks, reversed,
+            Math.Max(0d, layout.Frame.Width - 2d * PptxChartMetricRules.AutomaticCartesianFramePadding),
+            PptxChartMetricRules.ColumnPlotRightReserve - PptxChartMetricRules.ChartContentFrameInset, cancellationToken);
         (double Left, double Right) RequiredBands(double width)
         {
-            double left = numericLeft, right = numericRight;
+            double left = Math.Max(numericLeft, referenceBands.Left), right = Math.Max(numericRight, referenceBands.Right);
             foreach (var (index, parts) in captions.Labels)
             {
                 cancellationToken.ThrowIfCancellationRequested();
