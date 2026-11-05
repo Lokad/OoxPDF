@@ -96,6 +96,13 @@ internal sealed partial class PptxRenderer
                     PptxChartMetricRules.OuterPlotCaptionPadding;
             }
         }
+        else if (outer && layout.CategoryLabels is { } emptyCategory)
+        {
+            // Visible empty captions remove one normal text line, but retain
+            // the prepared gap and outer padding. Hidden captions have no
+            // prepared fragment; the present-axis minimum below still applies.
+            categoryBand = emptyCategory.AxisGap + PptxChartMetricRules.OuterPlotCaptionPadding;
+        }
         if (outer)
         {
             // A present category axis retains a minimum external band even
