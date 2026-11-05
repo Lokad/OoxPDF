@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -11,9 +12,9 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (string kind in new[] { "bar", "line", "area" })
         {
             var full = RenderCaptionFrames(angle, 2, kind, highSide: true,
-                categoryText: "Regional sales performance", width: width, onTickMarks: true);
+                categoryText: "Regional sales performance", width: width, onTickMarks: true, labelSkip: 1);
             var shortFirst = RenderCaptionFrames(angle, 2, kind, highSide: true,
-                categoryText: "Regional sales performance", width: width, onTickMarks: true, firstCaptionText: "Q");
+                categoryText: "Regional sales performance", width: width, onTickMarks: true, labelSkip: 1, firstCaptionText: "Q");
             double[] Axis(PdfPage page) => PptxColumnIntervalTests.Lines(page)
                 .Single(line => line.Color == new RgbColor(255, 0, 0) &&
                     Math.Abs(line.V[0] - line.V[2]) < .001 && Math.Abs(line.V[1] - line.V[3]) > 100).V;
