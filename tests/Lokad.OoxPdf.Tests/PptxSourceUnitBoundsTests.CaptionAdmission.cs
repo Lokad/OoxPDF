@@ -17,7 +17,7 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (string? overflow in new string?[] { null, "ellipsis" })
         {
             PdfPage page = RenderCaptionFrames(angle, 2, kind, highSide: high, manual: true,
-                categoryFontSize: 1800, overflow: overflow, categoryText: first + "QuarterSummary", manualHeight: .9d);
+                categoryFontSize: 1800, overflow: overflow, categoryText: first + "QuarterSummary", manualHeight: .9d, labelSkip: 1);
             var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(19, captions.Length);
@@ -33,7 +33,7 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (string text in new[] { "W", "\U0001F600" })
         {
             PdfPage page = RenderCaptionFrames(angle, 2, highSide: high, manual: true,
-                categoryFontSize: 1800, overflow: "ellipsis", categoryText: text, manualHeight: .9d);
+                categoryFontSize: 1800, overflow: "ellipsis", categoryText: text, manualHeight: .9d, labelSkip: 1);
             var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(19, captions.Length);

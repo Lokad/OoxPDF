@@ -87,7 +87,7 @@ internal static partial class PptxSourceUnitBoundsTests
         bool highSide = false, bool manual = false, bool hidden = false, int height = 360,
         int categoryFontSize = 1200, string? overflow = null, string? categoryText = null, int valueFontSize = 1000,
         int? builtInStyle = null, int? categoryRoleFontSize = null, int? chartFontSize = null,
-        int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d)
+        int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d, int? labelSkip = null)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -97,6 +97,11 @@ internal static partial class PptxSourceUnitBoundsTests
         if (categoryText is not null)
             foreach (XElement text in plot.Descendants(c + "cat").Descendants(c + "v")) text.Value = categoryText;
         XElement ordinal = plot.Element(c + "catAx")!;
+        if (labelSkip is { } explicitSkip)
+        {
+            ordinal.Elements(c + "tickLblSkip").Remove();
+            ordinal.Add(new XElement(c + "tickLblSkip", new XAttribute("val", explicitSkip)));
+        }
         ordinal.Element(c + "axId")!.AddAfterSelf(new XElement(c + "scaling",
             new XElement(c + "orientation", new XAttribute("val", reversed ? "maxMin" : "minMax"))));
         ordinal.Add(new XElement(c + "tickLblPos", new XAttribute("val", hidden ? "none" : highSide ? "high" : "nextTo")));
