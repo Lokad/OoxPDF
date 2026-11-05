@@ -66,12 +66,31 @@ internal static partial class PptxSourceUnitBoundsTests
             double expected = marker * Math.Sin(Math.Abs(angle) * Math.PI / 180d);
             bool trailingEndAtAxis = (angle < 0) != high;
             double expectedOriginShift = trailingEndAtAxis ? 0d : high ? expected : -expected;
-            TestAssert.True(second.Length == first.Length && first.Zip(second).All(pair =>
-                pair.First.Text == pair.Second.Text && Math.Abs(pair.First.X - pair.Second.X) < .003 &&
-                Math.Abs(pair.First.Y - pair.Second.Y - expectedOriginShift) < .003),
-                "A generated marker follows the caption's axis-facing anchor; the opposite end moves with its band.");
+            TestAssert.Equal(first.Length, second.Length);
+            var generatedPlot = Interval(generated); var authoredPlot = Interval(authored);
+            for (int index = 0; index < first.Length; index++)
+            {
+                double ratio = (index + .5d) / first.Length;
+                double sourceShift = generatedPlot.Left - authoredPlot.Left +
+                    ratio * (generatedPlot.Width - authoredPlot.Width);
+                double markerShift = trailingEndAtAxis ? marker * Math.Cos(Math.Abs(angle) * Math.PI / 180d) : 0d;
+                TestAssert.True(first[index].Text == second[index].Text &&
+                    Math.Abs(first[index].X - second[index].X - sourceShift - markerShift) < .003 &&
+                    Math.Abs(first[index].Y - second[index].Y - expectedOriginShift) < .003,
+                    $"Generated marker origins follow the admitted source interval and rotated prefix anchor: {size}/{angle}/{high}/{index}.");
+            }
             TestAssert.True(Math.Abs(CaptionPlotHeight(generated) - CaptionPlotHeight(authored) - expected) < .003,
                 "Generated markers hang outside occupied height; an authored ellipsis keeps its normal advance.");
+        }
+
+        static (double Left, double Width) Interval(PdfPage page)
+        {
+            var lines = PptxColumnIntervalTests.Lines(page);
+            double left = lines.Single(line => line.Color == new RgbColor(255, 0, 0) &&
+                Math.Abs(line.V[0] - line.V[2]) < .001 && Math.Abs(line.V[1] - line.V[3]) > 1).V[0];
+            double width = lines.Where(line => line.Color == new RgbColor(0, 0, 255) &&
+                Math.Abs(line.V[1] - line.V[3]) < .001).Max(line => Math.Abs(line.V[2] - line.V[0]));
+            return (left, width);
         }
     }
 

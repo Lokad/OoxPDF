@@ -76,19 +76,19 @@ internal sealed partial class PptxRenderer
                     double radians = -rotated.RotationDegrees * Math.PI / 180d;
                     double sin = Math.Sin(radians), cos = Math.Cos(radians);
                     bool rightAnchor = (radians > 0d) != labelsHighSide;
-                    // A trailing marker hangs toward the axis only when the
-                    // trailing end anchors there. At the opposite end it moves
-                    // with the caption band. Literal ellipses have no overhang.
-                    double overhang = rightAnchor ? part.OverflowAdvance * Math.Abs(sin) : 0d;
-                    double labelAxisY = axisY + (labelsHighSide ? -overhang : overhang);
+                    // Anchor the occupied prefix, then paint the complete suffix
+                    // along the rotated line. This owns both coordinates; a
+                    // separate vertical marker displacement loses the X shift.
+                    double anchorAdvance = rightAnchor ? part.Width - part.OverflowAdvance : 0d;
                     var horizontal = ChartCategoryCaptionHorizontalFrame(center, part.Width, rotated.Ascent, rotated.Descent, sin, cos, rightAnchor);
                     double pivotX = horizontal.Pivot;
-                    double pivotY = labelsHighSide ? labelAxisY + gap + rotated.Descent * cos : labelAxisY - gap - rotated.Ascent * cos;
-                    double localX = rightAnchor ? pivotX - part.Width : pivotX;
-                    double clipLeft = horizontal.Left;
-                    double clipRight = horizontal.Right;
+                    double pivotY = labelsHighSide ? axisY + gap + rotated.Descent * cos : axisY - gap - rotated.Ascent * cos;
+                    double localX = pivotX - anchorAdvance;
+                    double clipShift = rightAnchor ? part.OverflowAdvance * cos : 0d;
+                    double clipLeft = horizontal.Left + clipShift;
+                    double clipRight = horizontal.Right + clipShift;
                     double extent = part.Width * Math.Abs(sin) + rotated.LineHeight * cos;
-                    double clipBottom = labelsHighSide ? labelAxisY + gap : labelAxisY - gap - extent;
+                    double clipBottom = pivotY + Math.Min(-anchorAdvance * sin, (part.Width - anchorAdvance) * sin) - rotated.Descent * cos;
                     TextRun rotatedRun = CreateChartTextRun(part.Text, localX, pivotY, part.Width, rotated.LineHeight,
                         clipLeft, clipBottom, Math.Max(1d, clipRight - clipLeft), extent,
                         style with { Alpha = 1d }, TextAlignment.Left, kerningEnabled: false);
