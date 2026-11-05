@@ -11,8 +11,8 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (int angle in new[] { 30, 45, 60 })
         {
             PdfPage Render(string text) => RenderCaptionFrames(angle, 2, kind,
-                highSide: true, manual: true, categoryFontSize: 1800, valueFontSize: 2400,
-                categoryText: text, manualHeight: .88d, labelSkip: 1);
+                manual: true, categoryFontSize: 1800, valueFontSize: 7200,
+                categoryText: text, manualHeight: .7d, labelSkip: 1);
             PdfPage shortSource = Render("L"), longSource = Render("LongQuarterSummary");
             TestAssert.True(Width(longSource) + 10d < Width(shortSource),
                 $"Restored long captions allocate space inside the admitted source-reference frame: {kind}/{angle}, {Width(shortSource)} -> {Width(longSource)}.");
@@ -41,27 +41,24 @@ internal static partial class PptxSourceUnitBoundsTests
             {
                 PdfPage page = RenderCaptionFrames(angle, 2, highSide: high, manual: true,
                     categoryFontSize: size, categoryText: "I", labelSkip: 1);
-                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                // The raw text origin is the rotation pivot's baseline; reading
+                // it avoids multiplying independently rounded PDF matrices.
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
                     fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
                 TestAssert.True(shows.Length == 19 && shows.All(show => show.Text == "I"),
                     "Changing the caption side preserves every source fragment.");
                 var show = shows[0]; var font = show.Font.Font;
                 double scale = show.Size / font.UnitsPerEm;
                 double ascent = font.Os2.WindowsAscender * scale, descent = font.Os2.WindowsDescender * scale;
-                double advance = font.GetAdvanceWidth(font.MapCodePoint('I')) * scale;
-                double radians = -angle * Math.PI / 180d, cos = Math.Cos(radians), sin = Math.Sin(radians);
-                bool rightAnchor = (angle < 0) != high;
+                double cos = Math.Cos(angle * Math.PI / 180d);
                 double[] axis = PptxColumnIntervalTests.Lines(page).Single(line =>
                     line.Color == new RgbColor(255, 0, 0) && Math.Abs(line.V[0] - line.V[2]) < .001 &&
                     Math.Abs(line.V[1] - line.V[3]) > 1).V;
                 double axisY = high ? Math.Max(axis[1], axis[3]) : Math.Min(axis[1], axis[3]);
-                return high ? show.Y - axisY - descent * cos + (rightAnchor ? advance * sin : 0d)
-                    : axisY - show.Y - ascent * cos - (rightAnchor ? advance * sin : 0d);
+                return high ? show.Y - axisY - descent * cos : axisY - show.Y - ascent * cos;
             }
             double low = Gap(false), high = Gap(true);
-            // Text matrices, axes and glyph advances are independently rounded
-            // during PDF emission; inversion combines those small errors.
-            TestAssert.True(low >= 0d && Math.Abs(high - low) < .02,
+            TestAssert.True(low >= 0d && Math.Abs(high - low) < .003,
                 $"Mirrored inner captions retain their normal-line gap: {size}/{angle}, low={low}, high={high}.");
         }
     }
