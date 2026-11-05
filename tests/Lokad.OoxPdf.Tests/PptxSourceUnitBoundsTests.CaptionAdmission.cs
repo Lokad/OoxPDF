@@ -24,11 +24,13 @@ internal static partial class PptxSourceUnitBoundsTests
             TestAssert.True(shows.Length == 19 && shows.All(show => show.Text == word),
                 "The admitted container preserves all complete source captions when they fit its capacity.");
             var font = shows[0].Font.Font;
+            // Admission measures the authored14pt style; PDF emission may
+            // quantize that size independently of the layout geometry.
             double Width(string text) => text.Sum(ch => (double)font.GetAdvanceWidth(font.MapCodePoint(ch))) *
-                shows[0].Size / font.UnitsPerEm;
+                14d / font.UnitsPerEm;
             double extra = (Width(word) - Width(prefix)) * Math.Sin(Math.Abs(angle) * Math.PI / 180d);
             TestAssert.True(Math.Abs(CaptionPlotHeight(reference) - CaptionPlotHeight(complete) - extra) < .004,
-                "Restored source advance consumes only its added projected span inside the same admitted outer interval.");
+                $"Restored source advance consumes only its added projected span: {kind}/{angle}/{high}, actual={CaptionPlotHeight(reference) - CaptionPlotHeight(complete)}, expected={extra}.");
         }
 
         static (PdfEmbeddedFont Font, string Text, double Size, double X, double Y)[] Captions(PdfPage page) =>
