@@ -1,4 +1,26 @@
 {
+  "pptx-caption-fitting": [
+    "PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames",
+    "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",
+    "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",
+    "PptxCategoryLabelRotationPreservesContentAcrossPlotKinds",
+    "PptxCategoryOverflowPreservesManualTextOrigins",
+    "PptxCategoryOverflowMarkerSeparatesOccupiedHeightFromPainting",
+    "PptxCategoryOverflowTracksValueFontWithoutChangingCategoryTypeface",
+    "PptxBuiltInCategoryFittingIgnoresOverriddenRoleFonts",
+    "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",
+    "PptxOuterRotatedCaptionClearanceIsSideIndependent",
+    "PptxOuterRotatedCaptionClearanceKeepsCompleteInkAndAngles",
+    "PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight",
+    "PptxManualOuterRotatedEmptyCaptionsKeepTheirMinimumBand",
+    "PptxManualOuterWhitespaceCaptionsReserveMeasuredLines",
+    "PptxOuterCategoryAdmissionKeepsFillLegendAndLinkedLabelsTogether",
+    "PptxManualOuterLinkedLabelsFollowTheirAdmittedPlot",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-logical-caption-ends": [
     "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",
     "PptxShortRotatedCaptionsKeepFiniteSpacingAndAuthoredSkips",
