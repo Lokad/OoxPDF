@@ -15,6 +15,7 @@
     "PptxManualOuterLinkedLabelsFollowTheirAdmittedPlot",
     "PptxManualOuterPlotFillUsesTheNativeDataRectangle",
     "PptxManualOuterRotatedEmptyCaptionsKeepTheirMinimumBand",
+    "PptxManualOuterWhitespaceCaptionsReserveMeasuredLines",
     "PptxNumericSideBandsFollowIndependentFontLineGeometry",
     "PptxNumericSideGapsShareBothLabelSidesAndPreserveCaptions",
     "PptxObliqueCategoryFramesShareDirectionAndEndpointPlacement",

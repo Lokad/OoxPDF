@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text.Json;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
@@ -17,28 +18,7 @@ internal static partial class PptxColumnIntervalTests
             (12d, false, 18d, 100), (18d, false, 18d, 100), (24d, false, 18d, 100),
             (18d, true, 18d, 100), (18d, false, 36d, 100), (18d, false, 18d, 0) })
         {
-            PdfPage Render(string mode) => RenderAdmission(row, caseDirectory: OuterCases,
-                horizontalCategories: true, editChart: xml =>
-                {
-                    XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-                    XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
-                    foreach (var value in xml.Descendants(c + "cat").Descendants(c + "v"))
-                        value.Value = mode == "empty" ? string.Empty : "I";
-                    var axis = xml.Descendants(c + "catAx").Single();
-                    axis.Element(c + "tickLblPos")!.SetAttributeValue("val", mode == "hidden" ? "none" : high ? "high" : "nextTo");
-                    axis.Element(c + "lblOffset")!.SetAttributeValue("val", offset);
-                    SetSize(axis, size);
-                    SetSize(xml.Descendants(c + "valAx").Single(), numericSize);
-
-                    void SetSize(XElement axis, double points)
-                    {
-                        var tx = axis.Element(c + "txPr");
-                        if (tx is null) { tx = new XElement(c + "txPr", new XElement(a + "bodyPr", new XAttribute("rot", 0))); axis.Add(tx); }
-                        tx.Elements(a + "p").Remove();
-                        tx.Add(new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr",
-                            new XAttribute("sz", (int)(points * 100d)), new XElement(a + "latin", new XAttribute("typeface", "Calibri"))))));
-                    }
-                });
+            PdfPage Render(string mode) => RenderCaption(row, size, high, numericSize, offset, mode);
             var ordinary = Render("ordinary"); var empty = Render("empty"); var hidden = Render("hidden");
             var o = AdmissionBounds(ordinary); var e = AdmissionBounds(empty); var h = AdmissionBounds(hidden);
             var font = AdmissionNumericShows(ordinary)[0].Font.Font;
@@ -73,20 +53,60 @@ internal static partial class PptxColumnIntervalTests
         var row = OuterRow(oracle, "outer-width35-left12-y03");
         foreach (bool high in new[] { false, true })
         {
-            PdfPage Render(bool hidden) => RenderAdmission(row, caseDirectory: OuterCases,
-                horizontalCategories: true, editChart: xml =>
-                {
-                    XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-                    XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
-                    foreach (var value in xml.Descendants(c + "cat").Descendants(c + "v")) value.Value = string.Empty;
-                    var axis = xml.Descendants(c + "catAx").Single();
-                    axis.Element(c + "txPr")!.Element(a + "bodyPr")!.SetAttributeValue("rot", -45 * 60000);
-                    axis.Element(c + "tickLblPos")!.SetAttributeValue("val", hidden ? "none" : high ? "high" : "nextTo");
-                });
+            PdfPage Render(bool hidden) => RenderCaption(row, 18d, high, 18d, 100, hidden ? "hidden" : "empty", rotation: -45d);
             var empty = AdmissionBounds(Render(hidden: false)); var hidden = AdmissionBounds(Render(hidden: true));
             TestAssert.True(new[] { empty.Left - hidden.Left, empty.Top - hidden.Top,
                 empty.Right - hidden.Right, empty.Bottom - hidden.Bottom }.All(delta => Math.Abs(delta) < .002d),
                 "Independent Office controls reserve the same minimum for rotated empty captions and hidden labels.");
         }
     }
+
+    public static void PptxManualOuterWhitespaceCaptionsReserveMeasuredLines()
+    {
+        using var oracle = OuterOracle();
+        var row = OuterRow(oracle, "outer-width35-left12-y03");
+        foreach (var (size, high, rotation) in new[] { (18d, false, 0d), (24d, false, 0d), (18d, true, 0d), (18d, false, -45d) })
+        {
+            PdfPage Render(string mode) => RenderCaption(row, size, high, 18d, 100, mode, rotation);
+            var spaces = Render("spaces"); var ordinary = Render("ordinary"); var empty = Render("empty");
+            var s = AdmissionBounds(spaces); var o = AdmissionBounds(ordinary); var e = AdmissionBounds(empty);
+            if (rotation == 0d)
+                TestAssert.True(new[] { s.Left - o.Left, s.Top - o.Top, s.Right - o.Right, s.Bottom - o.Bottom }
+                    .All(delta => Math.Abs(delta) < .002d),
+                    "Native flat space-only labels retain the same normal-line frame as short visible labels.");
+            else
+                TestAssert.True(e.Bottom - s.Bottom > 10d,
+                    "Native rotated space-only labels project a measured text line; rotated empty sources do not.");
+            TestAssert.True(AdmissionNumericShows(spaces).Select(show => show.Text)
+                .SequenceEqual(AdmissionNumericShows(ordinary).Select(show => show.Text)),
+                "Space-only category measurement preserves the complete numeric interval.");
+            TestAssert.Equal(0, DocxCommentsTests.ReadEmbeddedGlyphTextShows(spaces, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).Count());
+        }
+    }
+
+    private static PdfPage RenderCaption(JsonElement row, double size, bool high, double numericSize,
+        int offset, string mode, double rotation = 0d) => RenderAdmission(row, caseDirectory: OuterCases,
+        horizontalCategories: true, editChart: xml =>
+        {
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            foreach (var value in xml.Descendants(c + "cat").Descendants(c + "v"))
+                value.Value = mode == "empty" ? string.Empty : mode == "spaces" ? " " : "I";
+            var axis = xml.Descendants(c + "catAx").Single();
+            axis.Element(c + "tickLblPos")!.SetAttributeValue("val", mode == "hidden" ? "none" : high ? "high" : "nextTo");
+            axis.Element(c + "lblOffset")!.SetAttributeValue("val", offset);
+            SetSize(axis, size);
+            axis.Element(c + "txPr")!.Element(a + "bodyPr")!.SetAttributeValue("rot", (int)(rotation * 60000d));
+            SetSize(xml.Descendants(c + "valAx").Single(), numericSize);
+
+            void SetSize(XElement owner, double points)
+            {
+                var tx = owner.Element(c + "txPr");
+                if (tx is null) { tx = new XElement(c + "txPr", new XElement(a + "bodyPr")); owner.Add(tx); }
+                tx.Elements(a + "p").Remove();
+                tx.Add(new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr",
+                    new XAttribute("sz", (int)(points * 100d)), new XElement(a + "latin", new XAttribute("typeface", "Calibri"))))));
+            }
+        });
 }

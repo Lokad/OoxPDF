@@ -534,7 +534,9 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < labels.Count; i++)
         {
             resolver.CancellationToken.ThrowIfCancellationRequested();
-            if (i % skip != 0 || string.IsNullOrWhiteSpace(labels[i]?.Text)) continue;
+            // Spaces have advance and a normal line box even when painting
+            // omits their ink. Only a genuinely empty source has no text line.
+            if (i % skip != 0 || string.IsNullOrEmpty(labels[i]?.Text)) continue;
             string text = labels[i]!.Text;
             double width = await measure.MeasureAsync(text, style).ConfigureAwait(false);
             var lines = new List<ChartCategoryTextLine>();

@@ -20,6 +20,7 @@ internal static class PortableRenderingTests
     {
         PptxColumnIntervalTests.PptxManualOuterEmptyCaptionsRemoveOnlyTheirTextLine();
         PptxColumnIntervalTests.PptxManualOuterRotatedEmptyCaptionsKeepTheirMinimumBand();
+        PptxColumnIntervalTests.PptxManualOuterWhitespaceCaptionsReserveMeasuredLines();
     }
 
     public static void PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames() =>
