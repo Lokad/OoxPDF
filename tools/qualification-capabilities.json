@@ -11,6 +11,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-caption-fitting": [
+    "PptxInnerCategoryEllipsisRetainsACompleteSourceCharacter",
+    "PptxInnerSingleCharacterCaptionNeedsNoGeneratedEllipsis",
     "PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames",
     "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",
     "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",

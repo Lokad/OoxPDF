@@ -87,7 +87,7 @@ internal static partial class PptxSourceUnitBoundsTests
         bool highSide = false, bool manual = false, bool hidden = false, int height = 360,
         int categoryFontSize = 1200, string? overflow = null, string? categoryText = null, int valueFontSize = 1000,
         int? builtInStyle = null, int? categoryRoleFontSize = null, int? chartFontSize = null,
-        int? valueRoleFontSize = null, bool inheritAxisFontSizes = false)
+        int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -110,6 +110,8 @@ internal static partial class PptxSourceUnitBoundsTests
         if (manual) plot.AddFirst(XElement.Parse("""
             <c:layout xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val=".1"/><c:y val=".1"/><c:w val=".8"/><c:h val=".5"/></c:manualLayout></c:layout>
             """));
+        if (manual) plot.Descendants(c + "manualLayout").Single().Element(c + "h")!
+            .SetAttributeValue("val", manualHeight.ToString(System.Globalization.CultureInfo.InvariantCulture));
         string slide = """
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="7315200" cy="4572000"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
             """;

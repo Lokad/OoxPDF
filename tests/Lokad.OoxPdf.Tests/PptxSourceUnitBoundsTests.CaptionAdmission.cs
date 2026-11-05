@@ -5,6 +5,43 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxSourceUnitBoundsTests
 {
+    public static void PptxInnerCategoryEllipsisRetainsACompleteSourceCharacter()
+    {
+        // Independent Office controls retain a source character when a tight
+        // authored inner frame cannot fit even the ellipsis. Exercise that
+        // content contract with portable fonts and a supplementary scalar.
+        foreach (string kind in new[] { "bar", "line", "area" })
+        foreach (int angle in new[] { -45, 45, -90, 90 })
+        foreach (bool high in new[] { false, true })
+        foreach (string first in new[] { "L", "W", "\U0001F600" })
+        foreach (string? overflow in new string?[] { null, "ellipsis" })
+        {
+            PdfPage page = RenderCaptionFrames(angle, 2, kind, highSide: high, manual: true,
+                categoryFontSize: 1800, overflow: overflow, categoryText: first + "QuarterSummary", manualHeight: .9d);
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(19, captions.Length);
+            TestAssert.True(captions.All(show => show.Text == first + "\u2026"),
+                $"Tight {kind}/{angle}/{high}/{overflow} inner captions retain a whole source character: {string.Join('|', captions.Select(show => show.Text))}.");
+        }
+    }
+
+    public static void PptxInnerSingleCharacterCaptionNeedsNoGeneratedEllipsis()
+    {
+        foreach (int angle in new[] { -45, 45 })
+        foreach (bool high in new[] { false, true })
+        foreach (string text in new[] { "W", "\U0001F600" })
+        {
+            PdfPage page = RenderCaptionFrames(angle, 2, highSide: high, manual: true,
+                categoryFontSize: 1800, overflow: "ellipsis", categoryText: text, manualHeight: .9d);
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(19, captions.Length);
+            TestAssert.True(captions.All(show => show.Text == text),
+                "A complete single-scalar caption has no omitted tail to mark.");
+        }
+    }
+
     public static void PptxFittedCategoryCaptionsReturnUnusedVerticalCapacity()
     {
         // Independent Office resize controls retain the same fitted captions

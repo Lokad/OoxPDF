@@ -708,7 +708,13 @@ internal sealed partial class PptxRenderer
             double fittingWidth = overflowFrame ? await FitWidthAsync(text).ConfigureAwait(false) : fullWidth;
             if (fittingWidth <= cap) return new(text, fullWidth);
             string suffix = overflowMode == "ellipsis" ? "\u2026" : string.Empty;
-            if (await FitWidthAsync(suffix).ConfigureAwait(false) > cap) return new(string.Empty, 0d);
+            // An authored inner frame keeps at least one source scalar under
+            // ellipsis, even when its minimum prefix exceeds the fitting band.
+            // Clipping and other containers retain their own admission policy.
+            int minimumPrefix = suffix.Length > 0 && text.Length > 0 && layout.ManualPlotLayoutApplied &&
+                chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner
+                ? (char.IsSurrogatePair(text, 0) ? 2 : 1) : 0;
+            if (minimumPrefix == 0 && await FitWidthAsync(suffix).ConfigureAwait(false) > cap) return new(string.Empty, 0d);
             int low = 0, high = text.Length, best = 0;
             while (low <= high)
             {
@@ -722,6 +728,8 @@ internal sealed partial class PptxRenderer
                 }
                 else high = middle - 1;
             }
+            best = Math.Max(best, minimumPrefix);
+            if (best == text.Length) return new(text, fullWidth);
             string fitted = text[..best] + suffix;
             double width = await measure.MeasureAsync(fitted, style).ConfigureAwait(false);
             // An authored inner frame retains its text origins. The outer and
