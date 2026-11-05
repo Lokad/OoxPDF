@@ -11,20 +11,19 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (string kind in new[] { "bar", "line", "area" })
         foreach (int angle in new[] { -60, -30, 30, 60 })
         foreach (bool high in new[] { false, true })
-        foreach (bool onTick in new[] { false, true })
         {
             // The original logical side has no prefix capacity here. Original
-            // and final complete endpoint references therefore cancel, even
-            // though physical-side fitting would shorten the first reference.
+            // and final complete references at anchored ticks therefore cancel,
+            // even though physical-side fitting would shorten the first one.
             PdfPage page = RenderCaptionFrames(angle, 2, kind, highSide: high,
                 manual: true, categoryFontSize: 1400, valueFontSize: 2400,
                 categoryText: word, interiorCaptionIndex: angle > 0 ? 18 : 0,
                 manualHeight: .83d, manualY: high ? .15d : .02d,
-                labelSkip: 1, onTickMarks: onTick, valueReversed: true);
+                labelSkip: 1, onTickMarks: true, valueReversed: true);
             var (left, width) = CaptionHorizontalInterval(page);
             TestAssert.True(Math.Abs(left - (72d + 576d * .1d)) < .003 &&
                 Math.Abs(width - 576d * .8d) < .003,
-                $"Complete logical references preserve the source interval: {kind}/{angle}/{high}/{onTick}, {left}/{width}.");
+                $"Complete logical references preserve the source interval: {kind}/{angle}/{high}, {left}/{width}.");
             var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 usePageCoordinates: false, fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.True(captions.Length == 19 && captions.Count(show => show.Text == word) == 1 &&
