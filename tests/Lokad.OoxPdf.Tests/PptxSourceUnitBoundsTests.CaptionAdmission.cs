@@ -5,6 +5,61 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxSourceUnitBoundsTests
 {
+    public static void PptxInnerReadmissionChargesOnlyTheRestoredCaptionSpan()
+    {
+        const string word = "LongQuarterSummary";
+        foreach (string kind in new[] { "bar", "line", "area" })
+        foreach (int angle in new[] { -90, -45, 45, 90 })
+        foreach (bool high in new[] { false, true })
+        {
+            PdfPage Render(string text, int numericSize) => RenderCaptionFrames(angle, 2, kind,
+                highSide: high, manual: true, categoryFontSize: 1400, valueFontSize: numericSize,
+                categoryText: text, manualHeight: .83d, manualY: high ? .15d : .02d, labelSkip: 1);
+            var fitted = Captions(Render(word, 800));
+            TestAssert.True(fitted.Length == 19 && fitted.All(show => show.Text == fitted[0].Text) &&
+                fitted[0].Text.EndsWith('\u2026'), "The non-admitted control must exercise source caption fitting.");
+            string prefix = fitted[0].Text[..^1];
+            PdfPage complete = Render(word, 2400), reference = Render(prefix, 2400);
+            var shows = Captions(complete);
+            TestAssert.True(shows.Length == 19 && shows.All(show => show.Text == word),
+                "The admitted container preserves all complete source captions when they fit its capacity.");
+            var font = shows[0].Font.Font;
+            double Width(string text) => text.Sum(ch => (double)font.GetAdvanceWidth(font.MapCodePoint(ch))) *
+                shows[0].Size / font.UnitsPerEm;
+            double extra = (Width(word) - Width(prefix)) * Math.Sin(Math.Abs(angle) * Math.PI / 180d);
+            TestAssert.True(Math.Abs(CaptionPlotHeight(reference) - CaptionPlotHeight(complete) - extra) < .004,
+                "Restored source advance consumes only its added projected span inside the same admitted outer interval.");
+        }
+
+        static (PdfEmbeddedFont Font, string Text, double Size, double X, double Y)[] Captions(PdfPage page) =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+    }
+
+    public static void PptxReadmittedCaptionFittingTracksItsAdmittedContainer()
+    {
+        const string word = "LongQuarterSummary";
+        foreach (string kind in new[] { "bar", "line", "area" })
+        foreach (int angle in new[] { -90, 90 })
+        foreach (bool high in new[] { false, true })
+        {
+            PdfPage Render(int height) => RenderCaptionFrames(angle, 2, kind, highSide: high,
+                manual: true, height: height, categoryFontSize: 1800, valueFontSize: 2400,
+                categoryText: word, interiorCaptionIndex: 17, manualHeight: .96d, labelSkip: 1);
+            string[] Captions(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                usePageCoordinates: false, fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal))
+                .Select(show => show.Text).ToArray();
+            PdfPage small = Render(300), large = Render(432);
+            string[] a = Captions(small), b = Captions(large);
+            TestAssert.True(a.Length == 19 && b.Length == 19 && a.Count(text => text == "I") == 18 &&
+                b.Count(text => text == "I") == 18, "Fitting retains every selected caption and its neighboring text.");
+            string fitted = a.Single(text => text != "I");
+            TestAssert.True(fitted.EndsWith('\u2026') && fitted.Length > 1 && fitted.Length < word.Length &&
+                b.Single(text => text != "I") == word, "Shared container capacity controls fitting, not unconditional full-text restoration.");
+            CheckCaptionInk(large, angle, frameBottom: 0d, frameTop: 432d);
+        }
+    }
+
     public static void PptxReversedOnTickReferencesPreserveTheAuthoredSourceInterval()
     {
         foreach (string kind in new[] { "line", "area" })
@@ -120,7 +175,7 @@ internal static partial class PptxSourceUnitBoundsTests
         {
             PdfPage page = RenderCaptionFrames(angle, 2, kind, highSide: high, manual: true,
                 categoryFontSize: size, valueFontSize: 2400, overflow: overflow,
-                categoryText: text, manualHeight: .96d, labelSkip: 1);
+                categoryText: text, height: 432, manualHeight: .96d, labelSkip: 1);
             var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(19, captions.Length);
