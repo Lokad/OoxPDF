@@ -96,11 +96,13 @@ internal sealed partial class PptxRenderer
                     PptxChartMetricRules.OuterPlotCaptionPadding;
             }
         }
-        else if (outer && layout.CategoryLabels is { } emptyCategory)
+        else if (outer && layout.CategoryLabels is { RotationDegrees: 0d } emptyCategory &&
+            labels.All(label => string.IsNullOrEmpty(label?.Text)))
         {
-            // Visible empty captions remove one normal text line, but retain
-            // the prepared gap and outer padding. Hidden captions have no
-            // prepared fragment; the present-axis minimum below still applies.
+            // Flat empty captions retain their gap after removing one normal
+            // text line. Rotated empties keep only the axis minimum; whitespace
+            // is authored text, not an empty fragment. Hidden captions have no
+            // prepared fragment. Native controls distinguish these roles.
             categoryBand = emptyCategory.AxisGap + PptxChartMetricRules.OuterPlotCaptionPadding;
         }
         if (outer)
