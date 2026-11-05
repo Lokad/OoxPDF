@@ -1,4 +1,32 @@
 {
+  "pptx-manual-category-placement": [
+    "PptxManualCategoryPlacementPreservesSourceSidesAndRectangle",
+    "PptxManualLineAndAreaAxesUseTheSourceCrossing",
+    "PptxAreaFrameMeasuresTitlesAndBottomLegendsTogether",
+    "PptxAreaFrameAndCaptionsShareTheSourceCrossing",
+    "PptxAreaPrimaryValueLabelsUseTheirMeasuredSide",
+    "PptxCategoryMaximumCrossingUsesSourceModeAndLabelOverrides",
+    "PptxCategoryTickSidesDistinguishNumericAndImplicitCrossings",
+    "PptxReversedNumericUpperCaptionsReuseLowSideGeometry",
+    "PptxAreaFillSharesCrossingAndStackLayerOwnership",
+    "PptxLegendlessLineCategoryAxisUsesItsSourceCrossing",
+    "PptxLegendlessLineCategoryLabelsFollowCrossingAndSourceSide",
+    "PptxLegendlessLineTopCategoryOffsetKeepsBaseline",
+    "PptxLegendlessLineCategoryPlacementRetainsSourceLayoutFallbacks",
+    "PptxLegendlessLineNumericCrossingKeepsSourceTickSide",
+    "PptxManualFactorAndEdgeSizesShareIndependentOfficeRectangles",
+    "PptxManualScatterEdgeHeightKeepsIndependentOfficeRectangle",
+    "PptxManualEdgeHeightsPreserveTheirRectangleAcrossValueDirection",
+    "PptxInnerRotatedAdmissionKeepsCompleteSourceCaptions",
+    "PptxInnerRotatedAdmissionFollowsNumericEndcaps",
+    "PptxInnerSourceReferencesPrecedeRestoredCaptions",
+    "PptxRotatedInnerCaptionGapIsSideIndependent",
+    "PptxManualAxisAdmissionMovesLinkedLabelsWithTheirSourcePlot",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-inner-source-references": [
     "PptxInnerSourceReferencesPrecedeRestoredCaptions",
     "PptxRotatedInnerCaptionGapIsSideIndependent"

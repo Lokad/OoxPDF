@@ -1631,7 +1631,7 @@ internal static class PptxChartsTests
 
     public static void PptxLegendlessLineCategoryPlacementRetainsSourceLayoutFallbacks()
     {
-        foreach (string guard in new[] { "manual", "composed", "category-top", "extra-axis" })
+        foreach (string guard in new[] { "composed", "category-top", "extra-axis" })
         {
             string pdf = RenderLegendlessLineLayoutProbe(18, 288, 100, guard: guard,
                 categoryCrossesAt: 50d, categoryLabelPosition: "high");

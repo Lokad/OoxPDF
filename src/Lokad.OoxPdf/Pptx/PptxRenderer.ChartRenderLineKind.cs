@@ -68,7 +68,7 @@ internal sealed partial class PptxRenderer
                     chartLayout = prepared.Layout;
                     preparedLegendBox = prepared.Box;
                 }
-                if (chartLayout.AutomaticCategoryAxisPlacement is { } categoryPlacement)
+                if (chartLayout.CategoryAxisPlacement is { } categoryPlacement)
                 {
                     valueAxisOptions = valueAxisOptions with { CrossingValue = categoryPlacement.CrossingValue };
                 }
@@ -77,8 +77,8 @@ internal sealed partial class PptxRenderer
                 var categoryLabels = ReadSharedCategoryLabels(linePlot, lineChart, workbook, plotVisibleOnly);
                 chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
                     valueAxis, valueExtents, valueAxisOptions, GetValueAxisAutoTickTargetCount(false, true, false), axesStyle.ValueAxisRightSide,
-                    categoryAxis, categoryLabels, chartLayout.AutomaticCategoryAxisPlacement?.LabelPlotRatio ?? 0d,
-                    chartLayout.AutomaticCategoryAxisPlacement?.LabelsHighSide ?? false, fontResolver, context, preparedLegendBox,
+                    categoryAxis, categoryLabels, chartLayout.CategoryAxisPlacement?.LabelPlotRatio ?? 0d,
+                    chartLayout.CategoryAxisPlacement?.LabelsHighSide ?? false, fontResolver, context, preparedLegendBox,
                     lineOptions.PercentStacked ? "0%" : null).ConfigureAwait(false);
                 var admitted = await AdmitCartesianRightLegendAsync(chartLayout, sceneChart, valueAxis,
                     categoryLabels, categoryPointsOnTickMarks, categoryAxisReversed, legendEntries, legendTextStyle,
@@ -88,10 +88,10 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 RenderLineChart(graphics, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions, seriesAppearance, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, categoryPointsOnTickMarks,
-                    ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, ReadChartStyleId(chartXml), categoryTicksTopSide: chartLayout.AutomaticCategoryAxisPlacement?.AxisHighSide ?? false, pointAppearance: pointAppearance, categoryAxisReversed: categoryAxisReversed, varyPointColors: varyPointColors, context: context);
+                    ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, ReadChartStyleId(chartXml), categoryTicksTopSide: chartLayout.CategoryAxisPlacement?.AxisHighSide ?? false, pointAppearance: pointAppearance, categoryAxisReversed: categoryAxisReversed, varyPointColors: varyPointColors, context: context);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    ChartAxisPlacement? labelPlacement = chartLayout.AutomaticCategoryAxisPlacement;
+                    ChartAxisPlacement? labelPlacement = chartLayout.CategoryAxisPlacement;
                     double? labelAxisY = labelPlacement is { } placement
                         ? plotBox.Y + plotBox.Height * placement.LabelPlotRatio
                         : null;

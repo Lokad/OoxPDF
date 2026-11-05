@@ -403,18 +403,18 @@ internal sealed partial class PptxRenderer
         bool canMeasureCategoryPlot = categoryPlotElement is not null && resolvedValueExtents is not null;
         double? categoryLabelOffsetAdjustment = null;
         double? categoryFittingClearance = null;
-        ChartAxisPlacement? categoryAxisPlacement = await ReadAutomaticCategoryPlacementAsync().ConfigureAwait(false);
+        ChartAxisPlacement? categoryAxisPlacement = await ReadCategoryPlacementAsync().ConfigureAwait(false);
         ChartPlotLayout plotLayout = (await GetPlotLayoutAsync().ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend, categoryLabelOffsetAdjustment, categoryAxisPlacement)
         { AutomaticCaptionFittingClearance = categoryFittingClearance };
 
-        async ValueTask<ChartAxisPlacement?> ReadAutomaticCategoryPlacementAsync()
+        async ValueTask<ChartAxisPlacement?> ReadCategoryPlacementAsync()
         {
             // Caption side/crossing belongs to the scale, independently of
             // whether the title/header can use measured plot placement.
-            // Keep authored/composed frames, unsupported scales and unresolved
+            // Keep composed frames, unsupported scales and unresolved
             // font boxes on their existing fallback.
-            if (resolvedValueExtents is not { } extents || sceneChart.PlotAreaLayout.HasGeometryValues || sceneChart.Plots.Count != 1)
+            if (resolvedValueExtents is not { } extents || sceneChart.Plots.Count != 1)
                 return null;
             PptxSceneChartPlot? plot = categoryPlot;
             XElement? plotElement = categoryPlotElement;

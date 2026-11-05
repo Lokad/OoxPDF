@@ -9,6 +9,48 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class PptxAreaFrameTests
 {
+    public static void PptxManualCategoryPlacementPreservesSourceSidesAndRectangle()
+    {
+        foreach (bool line in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string mode in new[] { "autoZero", "max", "middle", "numeric" })
+        foreach (string position in new[] { "nextTo", "low", "high" })
+        {
+            PdfPage page = Render(12, line: line, reversed: reversed, caption: position,
+                categoryCrossing: mode, manual: true);
+            var plot = Plot(page);
+            var control = Plot(Render(12, line: line, reversed: reversed, manual: true));
+            TestAssert.True(Math.Abs(plot.X - control.X) < .002 && Math.Abs(plot.Y - control.Y) < .002 &&
+                Math.Abs(plot.Width - control.Width) < .002 && Math.Abs(plot.Height - control.Height) < .002,
+                "Changing scale placement preserves a spacious authored inner rectangle.");
+            double sourceRatio = mode == "middle" ? .5d : mode is "max" or "numeric" ? 1d : 0d;
+            bool above = position == "nextTo" ? (mode == "max") != reversed : (position == "high") != reversed;
+            double ratio = position == "nextTo" ? sourceRatio : position == "high" ? 1d : 0d;
+            // Numeric next-to upper captions on a reversed scale use the
+            // independently qualified low-side endpoint fallback.
+            if (position == "nextTo" && mode == "numeric" && reversed) ratio = 0d;
+            double anchor = plot.Y + plot.Height * (reversed ? 1d - ratio : ratio);
+            AssertCaptionSide(page, anchor, above);
+        }
+    }
+
+    public static void PptxManualLineAndAreaAxesUseTheSourceCrossing()
+    {
+        foreach (bool line in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (string mode in new[] { "autoZero", "max", "middle", "numeric" })
+        {
+            PdfPage page = Render(12, line: line, reversed: reversed, categoryCrossing: mode, manual: true);
+            var plot = Plot(page);
+            double ratio = mode == "middle" ? .5d : mode is "max" or "numeric" ? 1d : 0d;
+            double expected = plot.Y + plot.Height * (reversed ? 1d - ratio : ratio);
+            var axes = PptxColumnIntervalTests.Lines(page).Where(x => x.Color == new RgbColor(0, 255, 0) &&
+                Math.Abs(x.V[1] - x.V[3]) < .001 && Math.Abs(x.V[0] - x.V[2]) > plot.Width / 2d).ToArray();
+            TestAssert.True(axes.Length == 1 && Math.Abs(axes[0].V[1] - expected) < .003,
+                $"The authored {line}/{reversed}/{mode} category stroke follows its numeric crossing.");
+        }
+    }
+
     public static void PptxAreaFrameMeasuresTitlesAndBottomLegendsTogether()
     {
         foreach (int size in new[] { 12, 24 })
@@ -217,13 +259,14 @@ internal static class PptxAreaFrameTests
     private static PdfPage Render(int size, bool legend = false, bool title = false, bool overlay = false,
         int minimum = 0, bool reversed = false, string caption = "nextTo", bool rightAxis = false,
         bool line = false, string categoryCrossing = "autoZero", bool stacked = false, bool emptyFirst = false, int maximum = 10,
-        double? numericCrossing = null)
+        double? numericCrossing = null, bool manual = false)
     {
         string kind = line ? "lineChart" : "areaChart";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart>{{(title ? "<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr sz=\"" + size * 100 + "\"/><a:t>Area</a:t></a:r></a:p></c:rich></c:tx><c:overlay val=\"0\"/></c:title>" : "<c:autoTitleDeleted val=\"1\"/>")}}
-                <c:plotArea><c:{{kind}}><c:grouping val="{{(stacked ? "stacked" : "standard")}}"/><c:varyColors val="0"/><c:ser><c:tx><c:v>Series</c:v></c:tx>
+                <c:plotArea>{{(manual ? "<c:layout><c:manualLayout><c:layoutTarget val=\"inner\"/><c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\".2\"/><c:y val=\".2\"/><c:w val=\".6\"/><c:h val=\".5\"/></c:manualLayout></c:layout>" : "")}}
+                <c:{{kind}}><c:grouping val="{{(stacked ? "stacked" : "standard")}}"/><c:varyColors val="0"/><c:ser><c:tx><c:v>Series</c:v></c:tx>
                   <c:spPr><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></c:spPr>
                   <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
                   <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>6</c:v></c:pt></c:numLit></c:val>
