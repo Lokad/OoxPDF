@@ -1,4 +1,7 @@
 {
+  "pptx-logical-source-fit": [
+    "PptxReadmittedSourceReferencesPrecedeValueDirection"
+  ],
   "pptx-inner-vertical-reference-admission": [
     "PptxInnerReadmissionChargesOnlyTheRestoredCaptionSpan",
     "PptxReadmittedCaptionFittingTracksItsAdmittedContainer"

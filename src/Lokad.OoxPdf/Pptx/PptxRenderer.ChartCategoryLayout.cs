@@ -18,9 +18,9 @@ internal sealed partial class PptxRenderer
     }
 
     private static double ChartRotatedCategoryBand(ChartCategoryLabelLayout category,
-        double sin, double cos, double? referenceAdvance = null) =>
+        double sin, double cos) =>
         category.AxisGap + (category.OccupiedHeight ??
-            (referenceAdvance ?? category.Labels.Values.Max(parts => parts[0].Width - parts[0].OverflowAdvance)) *
+            category.Labels.Values.Max(parts => parts[0].Width - parts[0].OverflowAdvance) *
             Math.Abs(sin) + category.LineHeight * cos) + PptxChartMetricRules.OuterPlotCaptionPadding;
 
     private static async ValueTask<ChartLayout> PrepareCartesianCategoryFramesAsync(ChartLayout layout,
@@ -685,6 +685,14 @@ internal sealed partial class PptxRenderer
         if (innerRotated)
         {
             double remaining = topSide ? freeEdge - axisY : axisY - freeEdge;
+            // Readmitted source references precede value-direction mapping on
+            // both axes. Fit once, before horizontal and vertical admission;
+            // final painting keeps its resolved physical side and capacity.
+            if (admitInnerCaptions && valueAxisReversed)
+            {
+                double logicalAxis = layout.PlotBox.Y + layout.PlotBox.Height * (1d - axisRatio);
+                remaining = topSide ? logicalAxis - layout.Frame.Y : layout.Frame.Y + layout.Frame.Height - logicalAxis;
+            }
             double cap = (remaining - axisGap - line.Height * cos - PptxChartMetricRules.OuterPlotCaptionPadding) / sin;
             // An overfull original line retains full source references when
             // numeric endcaps readmit the frame. Otherwise its source prefix,
@@ -765,29 +773,7 @@ internal sealed partial class PptxRenderer
             if (measured.Count > 0 && (layout.PlotBox.Y - line.Height / 2d < layout.Frame.Y ||
                 layout.PlotBox.Y + layout.PlotBox.Height + line.Height / 2d > layout.Frame.Y + layout.Frame.Height))
             {
-                double? referenceAdvance = null;
-                if (valueAxisReversed)
-                {
-                    // Original vertical references precede value-direction
-                    // mapping; painting uses the resolved physical side.
-                    double logicalAxis = layout.PlotBox.Y + layout.PlotBox.Height * (1d - axisRatio);
-                    double remaining = topSide ? logicalAxis - layout.Frame.Y : layout.Frame.Y + layout.Frame.Height - logicalAxis;
-                    double cap = (remaining - axisGap - line.Height * cos - PptxChartMetricRules.OuterPlotCaptionPadding) / sin;
-                    referenceAdvance = widest;
-                    if (cap >= 0d)
-                    {
-                        double maximum = 0d;
-                        for (int index = 0; index < labels.Count; index++)
-                        {
-                            resolver.CancellationToken.ThrowIfCancellationRequested();
-                            if (!measured.ContainsKey(index)) continue;
-                            var part = await FitAsync(labels[index]!.Text, cap, hangingMarker: true).ConfigureAwait(false);
-                            maximum = Math.Max(maximum, part.Width - part.OverflowAdvance);
-                        }
-                        referenceAdvance = maximum;
-                    }
-                }
-                double beforeBand = ChartRotatedCategoryBand(layout.CategoryLabels, sin, cos, referenceAdvance);
+                double beforeBand = ChartRotatedCategoryBand(layout.CategoryLabels, sin, cos);
                 var placement = new ChartAxisPlacement(0d, axisRatio, topSide, topSide);
                 var numeric = AdmitChartCaptionInterval(layout.Frame.Y, layout.Frame.Height,
                     layout.PlotBox.Y, layout.PlotBox.Height, numericClearance, numericClearance, 0d, placement);

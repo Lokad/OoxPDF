@@ -5,6 +5,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxSourceUnitBoundsTests
 {
+    public static void PptxReadmittedSourceReferencesPrecedeValueDirection()
+    {
+        const string word = "LongQuarterSummary";
+        foreach (string kind in new[] { "bar", "line", "area" })
+        foreach (int angle in new[] { -60, -30, 30, 60 })
+        foreach (bool high in new[] { false, true })
+        foreach (bool onTick in new[] { false, true })
+        {
+            // The original logical side has no prefix capacity here. Original
+            // and final complete endpoint references therefore cancel, even
+            // though physical-side fitting would shorten the first reference.
+            PdfPage page = RenderCaptionFrames(angle, 2, kind, highSide: high,
+                manual: true, categoryFontSize: 1400, valueFontSize: 2400,
+                categoryText: word, interiorCaptionIndex: angle > 0 ? 18 : 0,
+                manualHeight: .83d, manualY: high ? .15d : .02d,
+                labelSkip: 1, onTickMarks: onTick, valueReversed: true);
+            double[] axis = PptxColumnIntervalTests.Lines(page).Single(line =>
+                line.Color == new RgbColor(0, 170, 0) && Math.Abs(line.V[1] - line.V[3]) < .001 &&
+                Math.Abs(line.V[0] - line.V[2]) > 100).V;
+            double left = Math.Min(axis[0], axis[2]), width = Math.Abs(axis[0] - axis[2]);
+            TestAssert.True(Math.Abs(left - (72d + 576d * .1d)) < .003 &&
+                Math.Abs(width - 576d * .8d) < .003,
+                $"Complete logical references preserve the source interval: {kind}/{angle}/{high}/{onTick}, {left}/{width}.");
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                usePageCoordinates: false, fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(captions.Length == 19 && captions.Count(show => show.Text == word) == 1 &&
+                captions.Count(show => show.Text == "I") == 18, "Direction mapping retains every selected caption.");
+        }
+    }
+
     public static void PptxInnerReadmissionChargesOnlyTheRestoredCaptionSpan()
     {
         const string word = "LongQuarterSummary";

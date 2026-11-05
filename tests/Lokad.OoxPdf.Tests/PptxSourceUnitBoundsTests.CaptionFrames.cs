@@ -88,7 +88,8 @@ internal static partial class PptxSourceUnitBoundsTests
         int categoryFontSize = 1200, string? overflow = null, string? categoryText = null, int valueFontSize = 1000,
         int? builtInStyle = null, int? categoryRoleFontSize = null, int? chartFontSize = null,
         int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d, int? labelSkip = null,
-        bool? onTickMarks = null, int? interiorCaptionIndex = null, double manualY = .1d)
+        bool? onTickMarks = null, int? interiorCaptionIndex = null, double manualY = .1d,
+        bool valueReversed = false)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -107,11 +108,17 @@ internal static partial class PptxSourceUnitBoundsTests
         }
         ordinal.Element(c + "axId")!.AddAfterSelf(new XElement(c + "scaling",
             new XElement(c + "orientation", new XAttribute("val", reversed ? "maxMin" : "minMax"))));
-        ordinal.Add(new XElement(c + "tickLblPos", new XAttribute("val", hidden ? "none" : highSide ? "high" : "nextTo")));
+        ordinal.Add(new XElement(c + "tickLblPos", new XAttribute("val", hidden ? "none" : valueReversed
+            ? highSide ? "low" : "high" : highSide ? "high" : "nextTo")));
         ordinal.Add(new XElement(c + "txPr", new XElement(a + "bodyPr", new XAttribute("rot", angle * 60000),
             overflow is null ? null : new XAttribute("vertOverflow", overflow)),
             new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr", new XAttribute("sz", categoryFontSize))))));
         XElement numeric = plot.Element(c + "valAx")!;
+        if (valueReversed)
+        {
+            numeric.Element(c + "scaling")!.Elements(c + "orientation").Remove();
+            numeric.Element(c + "scaling")!.AddFirst(new XElement(c + "orientation", new XAttribute("val", "maxMin")));
+        }
         numeric.Descendants(a + "defRPr").Single().SetAttributeValue("sz", valueFontSize);
         numeric.Element(c + "numFmt")!.SetAttributeValue("formatCode", "0");
         if (kind == "line" || onTickMarks is not null)
