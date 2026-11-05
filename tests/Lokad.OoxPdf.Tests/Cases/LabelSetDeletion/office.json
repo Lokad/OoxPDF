@@ -1,0 +1,165 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "Uncalibrated against application view",
+  "Rows": [
+    {
+      "Id": "plot-visible",
+      "Input": "plot-visible.pptx",
+      "InputSha256": "AA84BA9551AEFAC321736942D283C830CC655A0E42EB09FF442DD3D5604C76CB",
+      "OfficePdfSha256": "58FB2E00D4236DE40D055288BDE7A541DEAD69A8072B6DFE7A8E1E4A748FC1F3",
+      "ExpectedDataLabels": [
+        "25",
+        "45",
+        "65",
+        "85",
+        "20",
+        "40",
+        "60",
+        "80",
+        "15",
+        "35",
+        "55",
+        "75"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": true
+    },
+    {
+      "Id": "plot-deleted",
+      "Input": "plot-deleted.pptx",
+      "InputSha256": "7FE8D293A20216FDFE227492433B7A241EC537859FB1C3B8B89102DBAEAE3289",
+      "OfficePdfSha256": "FEBDD36FF122E072AE39B569B2DA305FADC980BE47C139948EAA731464B26291",
+      "ExpectedDataLabels": [],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": true
+    },
+    {
+      "Id": "first-series-deleted",
+      "Input": "first-series-deleted.pptx",
+      "InputSha256": "FFC1869781D2D555A70C098B963510247323476A1E7D8D9A966C2810D08B01F0",
+      "OfficePdfSha256": "3C51CF89E5BD66354B2D11F02640E49AB60C8B4D9AAF7D0C05892FE3672F5B83",
+      "ExpectedDataLabels": [
+        "20",
+        "40",
+        "60",
+        "80",
+        "15",
+        "35",
+        "55",
+        "75"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": true
+    },
+    {
+      "Id": "first-series-explicit-false",
+      "Input": "first-series-explicit-false.pptx",
+      "InputSha256": "E3A5646E93E48A69AA3CE05BD909C998081B4873E2136ED7DD9B42F86DEC54FF",
+      "OfficePdfSha256": "48C5A6B358BC7F0562439134545392F060B7A969D439C10971D5AD1D6142CE8E",
+      "ExpectedDataLabels": [
+        "25",
+        "45",
+        "65",
+        "85",
+        "20",
+        "40",
+        "60",
+        "80",
+        "15",
+        "35",
+        "55",
+        "75"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": true
+    },
+    {
+      "Id": "deleted-plot-series-visible",
+      "Input": "deleted-plot-series-visible.pptx",
+      "InputSha256": "63D2733C4DB26CA3D03B17E20F5277BEB21550635DE060F439A95747F8D18521",
+      "OfficePdfSha256": "21494ECB07DCBB3F310DF74364C0BE9442EB4E02650F05895AD90F396406F41A",
+      "ExpectedDataLabels": [
+        "25",
+        "45",
+        "65",
+        "85"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": true
+    },
+    {
+      "Id": "deleted-series-point-request",
+      "Input": "deleted-series-point-request.pptx",
+      "InputSha256": "C31A9C0CB2EE2DDA6B4CE45F888BBF12FB1545BBB55DC5F5A56618E5636871BD",
+      "OfficePdfSha256": "CF0483CBC29020B9263BCAEDFFF038A625325075AF2423EE7BA1C81B2604742E",
+      "ExpectedDataLabels": [
+        "SeriesA, N1, 25",
+        "20",
+        "40",
+        "60",
+        "80",
+        "15",
+        "35",
+        "55",
+        "75"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": false
+    },
+    {
+      "Id": "no-plot-first-series-visible",
+      "Input": "no-plot-first-series-visible.pptx",
+      "InputSha256": "71772A40F6DAA740E96BBD0097B533A9E84C567C50E0A078DF8734C451FBA173",
+      "OfficePdfSha256": "85C45D3369F9A0DF8375C191FF05EBA71BA8799D6BC943B92EEA6B818EB281B3",
+      "ExpectedDataLabels": [
+        "25",
+        "45",
+        "65",
+        "85"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": true
+    },
+    {
+      "Id": "no-plot-deleted-first-third-visible",
+      "Input": "no-plot-deleted-first-third-visible.pptx",
+      "InputSha256": "AFD2D919D12C67360B0DCF9F71653A13B04A98545FF35F5E850F9CDDAC8309F4",
+      "OfficePdfSha256": "6D6F2F27947EAF99352135E7A09E58AEA8884D6375E3E4A1EA1BC1D700245FC7",
+      "ExpectedDataLabels": [
+        "15",
+        "35",
+        "55",
+        "75"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": true
+    },
+    {
+      "Id": "deleted-plot-series-missing-delete",
+      "Input": "deleted-plot-series-missing-delete.pptx",
+      "InputSha256": "86B96DC96E7151FC2FB3B1CE4EFC23A3220DBCF020FE0F860E615A1BA7DBBCEC",
+      "OfficePdfSha256": "704F51566A795BB2148130E0DB417B81CE91FB2F7EEF2E5FC5D259A6BE922699",
+      "ExpectedDataLabels": [
+        "25",
+        "45",
+        "65",
+        "85"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": null
+    },
+    {
+      "Id": "deleted-plot-point-request",
+      "Input": "deleted-plot-point-request.pptx",
+      "InputSha256": "209D9E81AB4122E9B6AAD52E1D213DF224277B7C416170CDF138716BEB73FEF8",
+      "OfficePdfSha256": "3FC259B21D343C69148887072644B1541649709FB0684657F7F040B91E5BD483",
+      "ExpectedDataLabels": [
+        "SeriesA, N1, 25",
+        "SeriesB, N1, 20",
+        "SeriesC, N1, 15"
+      ],
+      "CountMatchesForecast": true,
+      "TextMatchesOriginalNumericForecast": null
+    }
+  ]
+}

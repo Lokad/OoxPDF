@@ -589,15 +589,16 @@ internal sealed partial class PptxRenderer
         "showBubbleSize"
     ];
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool ShowLeaderLines, bool ShowLegendKey, bool ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined, bool Date1904 = false)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool ShowLeaderLines, bool ShowLegendKey, bool ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined, bool Date1904 = false, bool? IsDeleted = null)
     {
         public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, NumberFormatInfo: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, TextBodyProperties: default, ShapeStyle: ChartShapeStyle.Empty, FlagOptions: EmptyChartDataLabelFlagOptions, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
-        public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
-            !string.IsNullOrWhiteSpace(CustomText) ||
+        public bool HasVisibleText => (IsDeleted != true &&
+            (ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
+             !string.IsNullOrWhiteSpace(CustomText))) ||
             Overrides.Values.Any(label => label.HasVisibleText);
 
-        public bool HasVisibleContent => HasVisibleText || ShowLegendKey ||
+        public bool HasVisibleContent => HasVisibleText || (IsDeleted != true && ShowLegendKey) ||
             Overrides.Values.Any(label => label.HasVisibleContent);
     }
 

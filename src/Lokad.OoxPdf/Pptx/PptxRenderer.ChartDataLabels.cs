@@ -152,6 +152,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions, overrideDefined: true);
         return options with
         {
+            IsDeleted = false,
             ShowValue = ChartDataLabelFlagValue(flags, "showVal", labelsDefined: true),
             ShowPercent = ChartDataLabelFlagValue(flags, "showPercent", labelsDefined: true),
             ShowCategoryName = ChartDataLabelFlagValue(flags, "showCatName", labelsDefined: true),
@@ -192,6 +193,7 @@ internal sealed partial class PptxRenderer
         bool labelsDefined = baseOptions.IsDefined || overrideOptions.IsDefined;
         return baseOptions with
         {
+            IsDeleted = overrideOptions.IsDefined ? overrideOptions.IsDeleted : baseOptions.IsDeleted,
             ShowValue = ChartDataLabelFlagValue(flags, "showVal", labelsDefined),
             ShowPercent = ChartDataLabelFlagValue(flags, "showPercent", labelsDefined),
             ShowCategoryName = ChartDataLabelFlagValue(flags, "showCatName", labelsDefined),
@@ -500,13 +502,14 @@ internal sealed partial class PptxRenderer
             flags,
             EmptyChartDataLabelOverrides,
             labels.IsDefined,
-            Date1904: date1904 || ResolveChartSpaceDate1904(chartElement));
-        // A plot-wide Cartesian disable suppresses its point requests. Series
-        // and sector plots have independent point-label scope. Within an active
-        // scope, each defined point owns defaults for its absent components.
+            Date1904: date1904 || ResolveChartSpaceDate1904(chartElement),
+            IsDeleted: labels.IsDeleted);
+        // A disabled Cartesian component set suppresses its point requests.
+        // Deletion hides default labels while retaining defined point scope.
+        // Series and sector plots also have independent point-label scope.
         bool independentPoints = seriesScope || chartElement.Name == ChartNamespace + "pieChart" ||
             chartElement.Name == ChartNamespace + "doughnutChart";
-        return independentPoints || options.HasVisibleContent
+        return independentPoints || options.HasVisibleContent || labels.IsDeleted == true
             ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides, defaults) }
             : options;
     }

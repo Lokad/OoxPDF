@@ -169,10 +169,7 @@ internal sealed partial class PptxSceneBuilder
 
     internal static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? labels = plot.Element(ChartNamespace + "dLbls") ??
-            plot.Elements(ChartNamespace + "ser")
-                .Select(series => series.Element(ChartNamespace + "dLbls"))
-                .FirstOrDefault(element => element is not null);
+        XElement? labels = plot.Element(ChartNamespace + "dLbls");
         if (labels is null)
         {
             return PptxSceneChartDataLabels.Defined(
@@ -205,6 +202,7 @@ internal sealed partial class PptxSceneBuilder
         }
 
         PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(labels);
+        (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "delete");
         (bool? showValue, string showValueValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showVal");
         (bool? showPercent, string showPercentValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showPercent");
         (bool? showCategoryName, string showCategoryNameValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showCatName");
@@ -238,7 +236,9 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap),
                 ReadRejectedChartNonNegativeIndexValues(labels, "dLbl"),
                 ReadChartDataLabelOverrides(labels, theme, colorMap),
-                isDefined: true);
+                isDefined: true,
+                isDeleted: isDeleted,
+                isDeletedValue: isDeletedValue);
     }
 
     private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme, PptxColorMap colorMap)

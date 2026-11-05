@@ -495,6 +495,10 @@ internal enum PptxSceneChartPlotKind
 // cannot carry a position enum that disagrees with the stored spelling.
 internal sealed record PptxSceneChartDataLabels
 {
+    public bool? IsDeleted { get; }
+
+    public string IsDeletedValue { get; }
+
     public bool? ShowValue { get; }
 
     public string ShowValueValue { get; }
@@ -576,8 +580,12 @@ internal sealed record PptxSceneChartDataLabels
         PptxSceneChartShapeStyle shapeStyle,
         IReadOnlyList<string> rejectedOverrideIndexValues,
         IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
-        bool isDefined)
+        bool isDefined,
+        bool? isDeleted,
+        string isDeletedValue)
     {
+        IsDeleted = isDeleted;
+        IsDeletedValue = isDeletedValue;
         ShowValue = showValue;
         ShowValueValue = showValueValue;
         ShowPercent = showPercent;
@@ -633,7 +641,9 @@ internal sealed record PptxSceneChartDataLabels
         PptxSceneChartShapeStyle shapeStyle,
         IReadOnlyList<string> rejectedOverrideIndexValues,
         IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
-        bool isDefined)
+        bool isDefined,
+        bool? isDeleted = null,
+        string isDeletedValue = "")
     {
         return new PptxSceneChartDataLabels(
             showValue,
@@ -662,7 +672,9 @@ internal sealed record PptxSceneChartDataLabels
             shapeStyle,
             rejectedOverrideIndexValues,
             overrides,
-            isDefined);
+            isDefined,
+            isDeleted,
+            isDeletedValue);
     }
 }
 
