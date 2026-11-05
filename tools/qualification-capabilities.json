@@ -1,4 +1,10 @@
 {
+  "pptx-reversed-reference-ends": [
+    "PptxReversedOnTickReferencesPreserveTheAuthoredSourceInterval",
+    "PptxInteriorRotatedCaptionsKeepSeparateLogicalReferences",
+    "PptxManualCategoryPlacementPreservesSourceSidesAndRectangle",
+    "PptxManualLineAndAreaAxesUseTheSourceCrossing"
+  ],
   "pptx-manual-category-placement": [
     "PptxManualCategoryPlacementPreservesSourceSidesAndRectangle",
     "PptxManualLineAndAreaAxesUseTheSourceCrossing",

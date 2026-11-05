@@ -87,7 +87,8 @@ internal static partial class PptxSourceUnitBoundsTests
         bool highSide = false, bool manual = false, bool hidden = false, int height = 360,
         int categoryFontSize = 1200, string? overflow = null, string? categoryText = null, int valueFontSize = 1000,
         int? builtInStyle = null, int? categoryRoleFontSize = null, int? chartFontSize = null,
-        int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d, int? labelSkip = null)
+        int? valueRoleFontSize = null, bool inheritAxisFontSizes = false, double manualHeight = .5d, int? labelSkip = null,
+        bool? onTickMarks = null, int? interiorCaptionIndex = null)
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -95,7 +96,9 @@ internal static partial class PptxSourceUnitBoundsTests
         XElement xml = XElement.Parse(Chart(sample, kind, false, false));
         XElement plot = xml.Descendants(c + "plotArea").Single();
         if (categoryText is not null)
-            foreach (XElement text in plot.Descendants(c + "cat").Descendants(c + "v")) text.Value = categoryText;
+            foreach (XElement point in plot.Descendants(c + "cat").Descendants(c + "pt"))
+                point.Element(c + "v")!.Value = interiorCaptionIndex is null || (int)point.Attribute("idx")! == interiorCaptionIndex
+                    ? categoryText : "I";
         XElement ordinal = plot.Element(c + "catAx")!;
         if (labelSkip is { } explicitSkip)
         {
@@ -111,7 +114,8 @@ internal static partial class PptxSourceUnitBoundsTests
         XElement numeric = plot.Element(c + "valAx")!;
         numeric.Descendants(a + "defRPr").Single().SetAttributeValue("sz", valueFontSize);
         numeric.Element(c + "numFmt")!.SetAttributeValue("formatCode", "0");
-        if (kind == "line") numeric.Add(new XElement(c + "crossBetween", new XAttribute("val", "midCat")));
+        if (kind == "line" || onTickMarks is not null)
+            numeric.Add(new XElement(c + "crossBetween", new XAttribute("val", (onTickMarks ?? true) ? "midCat" : "between")));
         if (manual) plot.AddFirst(XElement.Parse("""
             <c:layout xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="edge"/><c:yMode val="edge"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val=".1"/><c:y val=".1"/><c:w val=".8"/><c:h val=".5"/></c:manualLayout></c:layout>
             """));

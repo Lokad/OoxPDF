@@ -344,7 +344,9 @@ internal sealed partial class PptxRenderer
         double left = 0d, right = 0d;
         if (count == 0 || captions.Labels.Count == 0) return (left, right);
         double radians = -captions.RotationDegrees * Math.PI / 180d, cos = Math.Cos(radians);
-        double expansion = reversed ? referenceWidth / Math.Max(1, onTickMarks ? count - 1 : count) : 0d;
+        // On-tick ends are already anchored. Reversing between-tick slots
+        // retains their extra interval; it does not add one to on-tick ends.
+        double expansion = reversed && !onTickMarks ? referenceWidth / count : 0d;
         void Include(int index, ChartCategoryTextLine part)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -357,9 +359,10 @@ internal sealed partial class PptxRenderer
             left = Math.Max(left, leftSpan + inset + expansion - ratio * referenceWidth);
             right = Math.Max(right, rightSpan + inset + expansion - (1d - ratio) * referenceWidth);
         }
-        foreach (var (index, parts) in captions.Labels) Include(index, parts[0]);
         // Spacing selects paint, not the source interval's ends. Reuse the edge
         // fragments without measuring or painting an omitted source caption.
+        // Interior fragments retain their separate physical-ink admission;
+        // they do not become logical endpoint references.
         Include(0, captions.Labels.MinBy(entry => entry.Key).Value[0]);
         Include(count - 1, captions.Labels.MaxBy(entry => entry.Key).Value[0]);
         return (left, right);

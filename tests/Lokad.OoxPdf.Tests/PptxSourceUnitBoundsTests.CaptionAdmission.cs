@@ -5,6 +5,52 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxSourceUnitBoundsTests
 {
+    public static void PptxReversedOnTickReferencesPreserveTheAuthoredSourceInterval()
+    {
+        foreach (string kind in new[] { "line", "area" })
+        foreach (int angle in new[] { -60, -30, 30, 60 })
+        foreach (bool high in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (int skip in new[] { 1, 2 })
+        {
+            PdfPage page = RenderCaptionFrames(angle, 2, kind, reversed: reversed, highSide: high,
+                manual: true, valueFontSize: 2400, categoryText: "I", manualHeight: .96d,
+                labelSkip: skip, onTickMarks: true);
+            var interval = CaptionHorizontalInterval(page);
+            TestAssert.True(Math.Abs(interval.Left - (72d + 576d * .1d)) < .003 &&
+                Math.Abs(interval.Width - 576d * .8d) < .003,
+                "Mirroring short on-tick captions retains the authored source interval during numeric admission.");
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(captions.Length == (19 + skip - 1) / skip && captions.All(show => show.Text == "I"),
+                "Reversing on-tick placement preserves the selected source captions.");
+        }
+    }
+
+    public static void PptxInteriorRotatedCaptionsKeepSeparateLogicalReferences()
+    {
+        const string word = "WideCaption";
+        foreach (string kind in new[] { "line", "area" })
+        foreach (int angle in new[] { -45, 45 })
+        foreach (bool high in new[] { false, true })
+        foreach (bool reversed in new[] { false, true })
+        foreach (bool onTicks in new[] { false, true })
+        {
+            PdfPage Render(bool interior) => RenderCaptionFrames(angle, 2, kind, reversed: reversed,
+                highSide: high, manual: true, valueFontSize: 2400, categoryText: interior ? word : "I",
+                manualHeight: .96d, labelSkip: 1, onTickMarks: onTicks, interiorCaptionIndex: interior ? 17 : null);
+            PdfPage baseline = Render(false), changed = Render(true);
+            var a = CaptionHorizontalInterval(baseline); var b = CaptionHorizontalInterval(changed);
+            TestAssert.True(Math.Abs(a.Left - b.Left) < .003 && Math.Abs(a.Width - b.Width) < .003,
+                "An interior word owns its painted span without changing the logical endpoint references.");
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(changed, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(captions.Length == 19 && captions.Count(show => show.Text == word) == 1 &&
+                captions.Count(show => show.Text == "I") == 18, "Every selected source caption survives reference admission.");
+            CheckCaptionInk(changed, angle);
+        }
+    }
+
     public static void PptxInnerSourceReferencesPrecedeRestoredCaptions()
     {
         foreach (string kind in new[] { "bar", "line", "area" })
@@ -341,6 +387,13 @@ internal static partial class PptxSourceUnitBoundsTests
             TestAssert.True(Math.Abs(CaptionPlotHeight(explicitFonts) - CaptionPlotHeight(inheritedFonts)) < .003,
                 "Equivalent font declarations retain the occupied caption frame.");
         }
+    }
+
+    private static (double Left, double Width) CaptionHorizontalInterval(PdfPage page)
+    {
+        var grid = PptxColumnIntervalTests.Lines(page).Where(line => line.Color == new RgbColor(0, 0, 255) &&
+            Math.Abs(line.V[1] - line.V[3]) < .001).MaxBy(line => Math.Abs(line.V[2] - line.V[0]));
+        return (Math.Min(grid.V[0], grid.V[2]), Math.Abs(grid.V[2] - grid.V[0]));
     }
 
     private static double CaptionPlotHeight(PdfPage page)
