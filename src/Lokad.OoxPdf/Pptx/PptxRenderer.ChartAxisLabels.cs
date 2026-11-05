@@ -95,10 +95,10 @@ internal sealed partial class PptxRenderer
                         double normal = ((labelsHighSide ? rotatedParts.Length - 1 : 0) - lineIndex) * stackAdvance;
                         double centerShift = (labelsHighSide ? 1d : -1d) *
                             (rotatedParts.Length - 1) * stackAdvance * sin / 2d;
-                        double alignment = (rightAnchor ? -1d : 1d) * (widestLine - part.Width) / 2d;
-                        double shiftX = centerShift - normal * sin + alignment * cos;
+                        double lineAlignment = (rightAnchor ? -1d : 1d) * (widestLine - part.Width) / 2d;
+                        double shiftX = centerShift - normal * sin + lineAlignment * cos;
                         pivotX += shiftX;
-                        pivotY += normal * cos + alignment * sin;
+                        pivotY += normal * cos + lineAlignment * sin;
                         horizontal = (pivotX, horizontal.Left + shiftX, horizontal.Right + shiftX);
                     }
                     double localX = pivotX - anchorAdvance;
