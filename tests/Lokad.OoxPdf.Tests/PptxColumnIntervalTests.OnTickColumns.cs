@@ -57,8 +57,15 @@ internal static partial class PptxColumnIntervalTests
                 editChart: chart => SetColumnCrossBetween(chart, "midCat"));
             var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CBD", StringComparison.Ordinal)).ToArray();
-            TestAssert.Equal(row.GetProperty("Bars").GetArrayLength(), labels.Length);
-            foreach (var expected in row.GetProperty("Bars").EnumerateArray())
+            var plot = AdmissionBounds(page);
+            var visible = row.GetProperty("Bars").EnumerateArray().Where(expected =>
+            {
+                double[] bar = ColumnDirectionBar(page, expected);
+                double center = bar[0] + bar[2] / 2d;
+                return center >= plot.Left - .003d && center <= plot.Right + .003d;
+            }).ToArray();
+            TestAssert.Equal(visible.Length, labels.Length);
+            foreach (var expected in visible)
             {
                 double[] bar = ColumnDirectionBar(page, expected);
                 string value = expected.GetProperty("Value").GetInt32().ToString(CultureInfo.InvariantCulture);
@@ -72,14 +79,19 @@ internal static partial class PptxColumnIntervalTests
         var linkedPage = RenderAdmission(linked, link: true, caseDirectory: ColumnDirectionCases, editChart: chart =>
         {
             SetColumnCrossBetween(chart, "midCat");
-            chart.Descendants(CrossingC + "dLbl").Single().Add(new XElement(CrossingC + "showLegendKey", new XAttribute("val", "0")));
+            var label = chart.Descendants(CrossingC + "dLbl").Single();
+            label.Element(CrossingC + "idx")!.SetAttributeValue("val", "1");
+            label.Add(new XElement(CrossingC + "showLegendKey", new XAttribute("val", "0")));
         });
         double[] target = ColumnDirectionBar(linkedPage, linked.GetProperty("Bars").EnumerateArray().Single(bar =>
-            bar.GetProperty("Series").GetInt32() == 0 && bar.GetProperty("Index").GetInt32() == 0));
+            bar.GetProperty("Series").GetInt32() == 0 && bar.GetProperty("Index").GetInt32() == 1));
         var annotation = linkedPage.Annotations.Single();
         TestAssert.Equal("https://example.invalid/manual-caption", annotation.Uri);
         TestAssert.True(Math.Abs(annotation.X + annotation.Width / 2d - target[0] - target[2] / 2d) < .02d,
             "The on-tick rich-label link follows its source column.");
+        var outside = RenderAdmission(linked, link: true, caseDirectory: ColumnDirectionCases,
+            editChart: chart => SetColumnCrossBetween(chart, "midCat"));
+        TestAssert.Equal(0, outside.Annotations.Count);
     }
 
     private static void SetColumnCrossBetween(XDocument chart, string value)

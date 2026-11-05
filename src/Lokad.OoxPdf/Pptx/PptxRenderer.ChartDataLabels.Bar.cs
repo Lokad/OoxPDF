@@ -265,6 +265,11 @@ internal sealed partial class PptxRenderer
                         ? ChartValueToPlotCoordinate(extents, barBase, plotBox.Y, plotBox.Height, valueAxisReversed)
                         : zeroY;
                     double barEndY = ChartValueToPlotCoordinate(extents, barEnd, plotBox.Y, plotBox.Height, valueAxisReversed);
+                    double columnCenterX = stacked ? 0d : ColumnCenter(category, seriesIndex);
+                    // Outside-end labels can extend along the value axis, but
+                    // their category anchor must belong to the plot interval.
+                    if (!stacked && (columnCenterX < plotBox.X - PptxChartMetricRules.AxisValueEpsilon ||
+                        columnCenterX > plotBox.X + plotBox.Width + PptxChartMetricRules.AxisValueEpsilon)) continue;
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     if (!effectiveOptions.HasVisibleContent)
                     {
@@ -292,11 +297,10 @@ internal sealed partial class PptxRenderer
                             ResolveChartDataLabelPosition(labelPosition) == PptxSceneChartDataLabelPosition.OutsideEnd &&
                             CanWrapAutomaticColumnLabel(effectiveOptions) && !string.IsNullOrEmpty(label))
                         {
-                            double centerX = ColumnCenter(category, seriesIndex);
                             ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
                                 ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category)) : null;
                             await AddAutomaticColumnLabelAsync(runs, graphics, label, effectiveOptions, style,
-                                textMeasurer, chartFrame, centerX, barEndY, keyFill, context.CancellationToken).ConfigureAwait(false);
+                                textMeasurer, chartFrame, columnCenterX, barEndY, keyFill, context.CancellationToken).ConfigureAwait(false);
                             continue;
                         }
                         double legendKeyWidth = effectiveOptions.ShowLegendKey
@@ -304,7 +308,7 @@ internal sealed partial class PptxRenderer
                             : 0d;
                         double labelWidth = Math.Max(legendKeyWidth + 1d, barSlot * PptxChartMetricRules.VerticalBarDataLabelWidthRatio);
                         double x = stacked ? plotBox.X + category * categoryWidth + (categoryWidth - barSlot) / 2d
-                            : ColumnCenter(category, seriesIndex) - labelWidth / 2d;
+                            : columnCenterX - labelWidth / 2d;
                         ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
                         RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
                         double textX = labelBox.X;
@@ -317,8 +321,7 @@ internal sealed partial class PptxRenderer
                             // Office centers the swatch+text unit on the bar middle (other
                             // groupings and plain labels keep the legacy slot math, unobserved).
                             double barLegendKeyTextWidth = string.IsNullOrEmpty(label) ? 0d : Math.Max(0d, (await new ChartTextMeasurer(fontResolver).MeasureAsync(label, style).ConfigureAwait(false)));
-                            double barLegendKeyBarCenterX = ColumnCenter(category, seriesIndex);
-                            double barLegendKeyUnitLeft = ComputeBarLegendKeyUnitLeft(barLegendKeyBarCenterX, barLegendKeySwatch, barLegendKeyTextWidth);
+                            double barLegendKeyUnitLeft = ComputeBarLegendKeyUnitLeft(columnCenterX, barLegendKeySwatch, barLegendKeyTextWidth);
                             labelBox = new ChartLayoutBox(barLegendKeyUnitLeft, labelBox.Y, labelBox.Width, labelBox.Height);
                             textX = barLegendKeyUnitLeft + barLegendKeySwatch + barLegendKeySwatch;
                         }
