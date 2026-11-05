@@ -5,6 +5,51 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxSourceUnitBoundsTests
 {
+    public static void PptxInnerRotatedAdmissionKeepsCompleteSourceCaptions()
+    {
+        const string text = "LongQuarterSummary";
+        foreach (string kind in new[] { "bar", "line", "area" })
+        foreach (int angle in new[] { -90, -45, 45, 90 })
+        foreach (bool high in new[] { false, true })
+        foreach (int size in new[] { 1200, 1800 })
+        foreach (string? overflow in new string?[] { null, "ellipsis", "clip" })
+        {
+            PdfPage page = RenderCaptionFrames(angle, 2, kind, highSide: high, manual: true,
+                categoryFontSize: size, valueFontSize: 2400, overflow: overflow,
+                categoryText: text, manualHeight: .96d, labelSkip: 1);
+            var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+            TestAssert.Equal(19, captions.Length);
+            TestAssert.True(captions.All(show => show.Text == text),
+                $"Numeric endcap admission keeps complete {kind}/{angle}/{high}/{size}/{overflow} source captions.");
+            TestAssert.True(Labels(page).SequenceEqual(new double[] { 0, 2, 4, 6 }),
+                "Shared placement preserves the authored numeric interval.");
+        }
+    }
+
+    public static void PptxInnerRotatedAdmissionFollowsNumericEndcaps()
+    {
+        const string text = "LongQuarterSummary";
+        foreach (int angle in new[] { -45, 45 })
+        foreach (bool high in new[] { false, true })
+        {
+            PdfPage Render(int numericSize) => RenderCaptionFrames(angle, 2, highSide: high, manual: true,
+                categoryFontSize: 1800, valueFontSize: numericSize, categoryText: text,
+                manualHeight: .88d, labelSkip: 1);
+            PdfPage retained = Render(800), admitted = Render(2400);
+            string[] Captions(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal))
+                .Select(show => show.Text).ToArray();
+            string[] fitted = Captions(retained), complete = Captions(admitted);
+            TestAssert.True(fitted.Length == 19 && fitted.All(value => value.EndsWith('\u2026')) &&
+                Math.Abs(CaptionPlotHeight(retained) - 360d * .88d) < .003,
+                "When numeric endcaps fit, category size alone retains the authored rectangle and fitting owner.");
+            TestAssert.True(complete.Length == 19 && complete.All(value => value == text) &&
+                CaptionPlotHeight(admitted) < CaptionPlotHeight(retained),
+                "Numeric endcap overflow admits full source captions through shared placement.");
+        }
+    }
+
     public static void PptxInnerCategoryEllipsisRetainsACompleteSourceCharacter()
     {
         // Independent Office controls retain a source character when a tight
@@ -17,7 +62,7 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (string? overflow in new string?[] { null, "ellipsis" })
         {
             PdfPage page = RenderCaptionFrames(angle, 2, kind, highSide: high, manual: true,
-                categoryFontSize: 1800, overflow: overflow, categoryText: first + "QuarterSummary", manualHeight: .9d, labelSkip: 1);
+                categoryFontSize: 1800, overflow: overflow, categoryText: first + "QuarterSummary", manualHeight: .86d, labelSkip: 1);
             var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(19, captions.Length);
@@ -33,7 +78,7 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (string text in new[] { "W", "\U0001F600" })
         {
             PdfPage page = RenderCaptionFrames(angle, 2, highSide: high, manual: true,
-                categoryFontSize: 1800, overflow: "ellipsis", categoryText: text, manualHeight: .9d, labelSkip: 1);
+                categoryFontSize: 1800, overflow: "ellipsis", categoryText: text, manualHeight: .86d, labelSkip: 1);
             var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(19, captions.Length);

@@ -49,19 +49,24 @@ internal sealed partial class PptxRenderer
             else layout = layout with { PlotBox = source with { X = source.X + (labelsRight ? 0d : numericBand),
                 Width = source.Width - numericBand } };
         }
+        if (innerTarget)
+            (numericClearance, numericBand) = await MeasureNumericFrameAsync().ConfigureAwait(false);
+        // Numeric endcaps activate shared inner placement. Rotated captions
+        // then retain their full source text for that placement to admit;
+        // fitting against the unadmitted rectangle would discard it first.
+        bool admitInnerCaptions = innerTarget && EndcapsOverflow(numericClearance);
         bool categoryVisible = categoryAxis.SceneAxis is { } axis ? axis.IsDeleted != true : !IsChartAxisDeleted(categoryAxis.XmlAxis);
         if (categoryVisible)
             layout = await PrepareCategoryLabelLayoutAsync(layout, theme, chart, xml, categoryAxis, labels,
                 onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox,
-                outer ? Math.Max(0d, source.Height - 2d * numericClearance) : null).ConfigureAwait(false);
+                outer ? Math.Max(0d, source.Height - 2d * numericClearance) : null, admitInnerCaptions).ConfigureAwait(false);
         if (!innerTarget && !outer) return layout;
         if (layout.CategoryLabels?.Labels.Values.Any(parts => parts.Length != 1) == true)
             return outer ? await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
                 onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false) : layout;
         if (innerTarget)
         {
-            if (layout.CategoryLabels is { RotationDegrees: not 0d }) return layout;
-            (numericClearance, numericBand) = await MeasureNumericFrameAsync().ConfigureAwait(false);
+            if (layout.CategoryLabels is { RotationDegrees: not 0d } && !admitInnerCaptions) return layout;
             source = layout.PlotBox;
         }
         if (outer && layout.CategoryLabels is { RotationDegrees: not 0d } rotated)
@@ -93,7 +98,7 @@ internal sealed partial class PptxRenderer
             {
                 categoryBand = category.AxisGap + (category.OccupiedHeight ?? category.Labels.Values.Max(parts =>
                     (parts[0].Width - parts[0].OverflowAdvance) * Math.Abs(captionSin) + category.LineHeight * captionCos)) +
-                    PptxChartMetricRules.OuterPlotCaptionPadding;
+                    (outer ? PptxChartMetricRules.OuterPlotCaptionPadding : 0d);
             }
         }
         else if (outer && layout.CategoryLabels is { RotationDegrees: 0d } emptyCategory &&
@@ -497,7 +502,8 @@ internal sealed partial class PptxRenderer
         ChartLayout layout, PptxTheme theme, PptxSceneChart chart, XDocument xml,
         ChartAxisSource axis, IReadOnlyList<ChartIndexedTextPoint?> labels,
         bool onTickMarks, bool topSide, double axisRatio,
-        PresentationFontResolver resolver, ChartLegendBox? legendBox = null, double? availableCaptionHeight = null)
+        PresentationFontResolver resolver, ChartLegendBox? legendBox = null, double? availableCaptionHeight = null,
+        bool admitInnerCaptions = false)
     {
         if (labels.Count == 0 || !IsSceneOrXmlChartAxisLabelVisible(axis.SceneAxis, axis.XmlAxis))
             return layout;
@@ -637,7 +643,7 @@ internal sealed partial class PptxRenderer
         const double fittingPixel = 72d / 96d;
         ChartTextStyle fittingStyle = style with
         { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize), CharacterSpacing = 0d };
-        if (angle != 0d && (overflowFrame || availableExtra < requested))
+        if (angle != 0d && !admitInnerCaptions && (overflowFrame || availableExtra < requested))
         {
             // Bootstrap controls distinguish the fitting grid from the source
             // advances used for geometry and painting. This remains an

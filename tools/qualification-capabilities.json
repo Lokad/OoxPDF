@@ -1,4 +1,14 @@
 {
+  "pptx-inner-rotated-admission": [
+    "PptxInnerRotatedAdmissionKeepsCompleteSourceCaptions",
+    "PptxInnerRotatedAdmissionFollowsNumericEndcaps",
+    "PptxManualInnerNumericStripsFitTheirIndependentOfficeSide",
+    "PptxManualInnerVerticalAdmissionMatchesIndependentOfficeFrames",
+    "PptxManualInnerFaceBoundaryKeepsSourceCaptions",
+    "PptxManualInnerAdmissionPreservesQualifiedAuthoredFrames",
+    "PptxManualAxisAdmissionMovesLinkedLabelsWithTheirSourcePlot",
+    "PptxInnerFactorPlotOriginsMatchIndependentOfficeControls"
+  ],
   "pptx-automatic-caption-ends": [
     "PptxAutomaticCategoryReferencesKeepSourceEndpoints",
     "PptxObliqueCategoryCaptionsAdmitTheirHorizontalFrames",
