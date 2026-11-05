@@ -29,6 +29,7 @@ internal sealed class PdfGraphicsBuilder
     private readonly IMemoryReservation? construction;
     private readonly long constructionBaseBytes;
     private readonly long svgSourceBytes;
+    private long admittedTextCapacity;
 
     public PdfGraphicsBuilder() { }
 
@@ -51,6 +52,20 @@ internal sealed class PdfGraphicsBuilder
         long density = checked((sampledBytes + sourceBytes - 1L) / sourceBytes);
         long capacity = checked(constructionBaseBytes + 4L * precedingCharacters + density * Math.Max(svgSourceBytes, sourceBytes));
         if (capacity > construction.Bytes) OoxMemory.Resize(construction, capacity);
+    }
+
+    private void AdmitTextConstruction(long characters)
+    {
+        if (construction is null) return;
+        long required = checked(builder.Length + characters);
+        // Append can grow the current chunk. Keep doubling headroom without
+        // changing StringBuilder's allocation policy. The page owner holds
+        // both its UTF16 storage and the final immutable content snapshot.
+        long capacity = required > builder.Capacity ? Math.Max(required, 2L * builder.Capacity) : builder.Capacity;
+        if (capacity <= admittedTextCapacity) return;
+        long bytes = checked(constructionBaseBytes + 4L * capacity);
+        if (bytes > construction.Bytes) OoxMemory.Resize(construction, bytes);
+        admittedTextCapacity = capacity;
     }
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
@@ -498,6 +513,10 @@ internal sealed class PdfGraphicsBuilder
             return;
         }
 
+        string name = PdfEmbeddedFont.SanitizeName(fontResourceName);
+        string size = PdfDocumentWriter.FormatNumber(fontSize);
+        AdmitTextConstruction(64L + name.Length + size.Length);
+
         RegisterFontUse(fontResourceName);
 
         builder.AppendLine("BT");
@@ -506,11 +525,13 @@ internal sealed class PdfGraphicsBuilder
             builder.Append(PdfDocumentWriter.FormatColor(red)).Append(" ").Append(PdfDocumentWriter.FormatColor(green)).Append(" ").Append(PdfDocumentWriter.FormatColor(blue)).AppendLine(" rg");
         }
 
-        builder.Append("/").Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(" ").Append(PdfDocumentWriter.FormatNumber(fontSize)).AppendLine(" Tf");
+        builder.Append("/").Append(name).Append(" ").Append(size).AppendLine(" Tf");
         builder.AppendLine("0 Tc");
         foreach (PdfFallbackGlyph glyph in glyphs)
         {
-            builder.Append("1 0 0 1 ").Append(PdfDocumentWriter.FormatNumber(glyph.X)).Append(" ").Append(PdfDocumentWriter.FormatNumber(glyph.Y)).AppendLine(" Tm");
+            string x = PdfDocumentWriter.FormatNumber(glyph.X), y = PdfDocumentWriter.FormatNumber(glyph.Y);
+            AdmitTextConstruction(32L + x.Length + y.Length);
+            builder.Append("1 0 0 1 ").Append(x).Append(" ").Append(y).AppendLine(" Tm");
             builder.Append("<").Append(glyph.Code.ToString("X2", CultureInfo.InvariantCulture)).AppendLine("> Tj");
         }
 
@@ -535,6 +556,16 @@ internal sealed class PdfGraphicsBuilder
         double strokeWidth,
         int textRotationQuarterTurns = 0)
     {
+        string name = PdfEmbeddedFont.SanitizeName(fontResourceName);
+        string size = PdfDocumentWriter.FormatNumber(fontSize);
+        string spacing = Math.Abs(characterSpacing) > 0.001d ? PdfDocumentWriter.FormatNumber(characterSpacing) : "0";
+        string xPosition = PdfDocumentWriter.FormatNumber(x), yPosition = PdfDocumentWriter.FormatNumber(y);
+        string stroke = textRenderingMode is 1 or 2 ? PdfDocumentWriter.FormatNumber(strokeWidth) : string.Empty;
+        string shear = textRotationQuarterTurns == 0 ? PdfDocumentWriter.FormatNumber(italic ? SyntheticItalicShear : 0d) : string.Empty;
+        // Fixed operators, byte colors, quarter turns and line endings fit in
+        // 128 characters; all variable-length tokens are counted separately.
+        AdmitTextConstruction(128L + textOperator.Length + name.Length + size.Length + spacing.Length +
+            xPosition.Length + yPosition.Length + stroke.Length + shear.Length);
         RegisterFontUse(fontResourceName);
         builder.AppendLine("BT");
         if (!TryAppendFillGray(red, green, blue))
@@ -549,17 +580,16 @@ internal sealed class PdfGraphicsBuilder
                 builder.Append(PdfDocumentWriter.FormatColor(strokeRed)).Append(' ').Append(PdfDocumentWriter.FormatColor(strokeGreen)).Append(' ').Append(PdfDocumentWriter.FormatColor(strokeBlue)).AppendLine(" RG");
             }
 
-            builder.Append(PdfDocumentWriter.FormatNumber(strokeWidth)).AppendLine(" w");
+            builder.Append(stroke).AppendLine(" w");
             builder.Append(textRenderingMode.ToString(CultureInfo.InvariantCulture)).AppendLine(" Tr");
         }
 
-        builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(' ').Append(PdfDocumentWriter.FormatNumber(fontSize)).AppendLine(" Tf");
-        builder.Append(Math.Abs(characterSpacing) > 0.001d ? PdfDocumentWriter.FormatNumber(characterSpacing) : "0").AppendLine(" Tc");
+        builder.Append('/').Append(name).Append(' ').Append(size).AppendLine(" Tf");
+        builder.Append(spacing).AppendLine(" Tc");
 
         if (textRotationQuarterTurns == 0)
         {
-            double shear = italic ? SyntheticItalicShear : 0d;
-            builder.Append("1 0 ").Append(PdfDocumentWriter.FormatNumber(shear)).Append(" 1 ").Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" Tm");
+            builder.Append("1 0 ").Append(shear).Append(" 1 ").Append(xPosition).Append(' ').Append(yPosition).AppendLine(" Tm");
         }
         else
         {
@@ -574,7 +604,7 @@ internal sealed class PdfGraphicsBuilder
                 3 => (0d, 1d, -1d, 0d),
                 _ => (1d, 0d, 0d, 1d),
             };
-            builder.Append(PdfDocumentWriter.FormatNumber(ra)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rb)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rc)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rd)).Append(' ').Append(PdfDocumentWriter.FormatNumber(x)).Append(' ').Append(PdfDocumentWriter.FormatNumber(y)).AppendLine(" Tm");
+            builder.Append(PdfDocumentWriter.FormatNumber(ra)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rb)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rc)).Append(' ').Append(PdfDocumentWriter.FormatNumber(rd)).Append(' ').Append(xPosition).Append(' ').Append(yPosition).AppendLine(" Tm");
         }
         builder.AppendLine(textOperator);
         if (textRenderingMode is 1 or 2)
@@ -710,6 +740,7 @@ internal sealed class PdfGraphicsBuilder
     {
         if (!Rune.IsValid(sourceCodePoint)) throw new ArgumentOutOfRangeException(nameof(sourceCodePoint));
         if (actualTextOpen) throw new InvalidOperationException("ActualText spans cannot be nested.");
+        AdmitTextConstruction(64);
         string hex = Convert.ToHexString(Encoding.BigEndianUnicode.GetBytes(char.ConvertFromUtf32(sourceCodePoint)));
         builder.Append("/Span << /ActualText <FEFF").Append(hex).AppendLine("> >> BDC");
         actualTextOpen = true;

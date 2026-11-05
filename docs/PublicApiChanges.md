@@ -2,6 +2,11 @@
 
 ## 0.3.0
 
+Generated PDF text buffers and their immutable snapshots now grow the existing
+page construction grant before acquisition. Expanding number formats can increase
+admission requirements and cause an earlier `MemoryAdmission` refusal. This
+changes capacity planning for governed conversions, without adding an option.
+
 `WindowsFontResolver.CreateAsync(cancellationToken)` prepares installed-font
 metadata with awaited file reads. `Resolve` and catalog queries then use the
 published snapshot without file I/O; program bytes remain lazy. The existing
