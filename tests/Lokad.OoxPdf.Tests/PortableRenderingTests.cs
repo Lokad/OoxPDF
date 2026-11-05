@@ -52,6 +52,12 @@ internal static class PortableRenderingTests
     public static void PortableRenderingComposedAxisLabelsRetainSourceVisibility() =>
         PptxComposedAxisTests.CheckLabels(hidePrimary: true);
 
+    public static void PortableRenderingComposedSameSideAxesFitAutomaticContainer() =>
+        PptxComposedAxisTests.CheckSameSideAdmission();
+
+    public static void PortableRenderingComposedAutoAxesUseTheirOwningScale() =>
+        PptxComposedAxisTests.CheckAutoScaleAdmission();
+
     public static void PortableRenderingAdjacentMathGroupsNormalizeSourceFormatting() =>
         DocxInlineCompositionTests.CheckAdjacentMathGroups();
 
