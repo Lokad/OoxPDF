@@ -77,7 +77,7 @@ internal static partial class PptxSourceUnitBoundsTests
                 TestAssert.True(first[index].Text == second[index].Text &&
                     Math.Abs(first[index].X - second[index].X - sourceShift - markerShift) < .003 &&
                     Math.Abs(first[index].Y - second[index].Y - expectedOriginShift) < .003,
-                    $"Generated marker origins follow the admitted source interval and rotated prefix anchor: {size}/{angle}/{high}/{index}.");
+                    $"Generated marker origins follow the admitted source interval and rotated prefix anchor: {size}/{angle}/{high}/{index}, X={first[index].X - second[index].X}, source={sourceShift}, marker={markerShift}, Y={first[index].Y - second[index].Y}, expectedY={expectedOriginShift}.");
             }
             TestAssert.True(Math.Abs(CaptionPlotHeight(generated) - CaptionPlotHeight(authored) - expected) < .003,
                 "Generated markers hang outside occupied height; an authored ellipsis keeps its normal advance.");
