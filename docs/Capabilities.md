@@ -266,6 +266,11 @@ Approximate or restricted:
   interval and its opposite edge before restoring complete caption spans;
   category-endpoint overflow retains whole-interval admission. References remain
   uncalibrated against the application view.
+  Explicit overflow in inner rotated captions without numeric readmission keeps
+  wrapped source lines; authored `wrap="none"` keeps the full source on one line.
+  Measured line stacks share the physical chart clip. Long-caption reference
+  extents remain approximate in some directions, including right-angle rotation;
+  matching the data rectangle alone does not establish caption-placement parity.
   Complete factor-sized outer column/line/area declarations also center their
   source area before allocating numeric and category-caption bands inside it.
   Shortened endpoint captions release their measured space; a present category
