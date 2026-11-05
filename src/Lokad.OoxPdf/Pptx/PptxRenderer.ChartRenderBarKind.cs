@@ -132,14 +132,17 @@ internal sealed partial class PptxRenderer
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
                 ChartLegendBox? preparedLegendBox = null;
                 bool measuredHorizontalLegend = UsesMeasuredBarLegend(barOptions, sceneChart, chartLayout.Legend);
+                bool manualPlotBottomLegend = chartLayout.ManualPlotLayoutApplied &&
+                    chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom &&
+                    !chartLayout.Legend.Layout.HasGeometryValues;
                 // Outer captions consume their authored area, independently of
                 // the legend's row container. Prepare it before plot admission
                 // so a narrower data rectangle cannot truncate its names.
-                if (categoryLegend || measuredHorizontalLegend || !horizontalBars &&
+                if (categoryLegend || measuredHorizontalLegend || manualPlotBottomLegend || !horizontalBars &&
                     sceneChart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Outer)
                 {
                     var prepared = (await LayoutChartLegendRowsAsync(chartLayout, legendEntries, legendTextStyle, fontResolver, context,
-                        chartLayout.Frame.Width, measuredHorizontalLegend).ConfigureAwait(false));
+                        chartLayout.Frame.Width, measuredHorizontalLegend || manualPlotBottomLegend).ConfigureAwait(false));
                     chartLayout = prepared.Layout;
                     preparedLegendBox = prepared.Box;
                 }

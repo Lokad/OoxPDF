@@ -58,7 +58,7 @@ internal sealed partial class PptxRenderer
     }
 
     // Measure once, reserve automatic plot space, then give painting the same rows.
-    // Manual frames and overlay legends retain their authored placement contract.
+    // Authored data frames and overlay legends do not reserve plot space.
     private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box)> LayoutChartLegendRowsAsync(
         ChartLayout layout, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style,
         PresentationFontResolver resolver, PptxRenderContext context, double maximumRowWidth, bool measuredBand)
@@ -83,7 +83,8 @@ internal sealed partial class PptxRenderer
         double availableWidth = layout.Legend.Layout.HasGeometryValues ? box.Width : Math.Min(layout.Frame.Width, maximumRowWidth);
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
-        bool automaticLegend = !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
+        bool automaticLegend = !layout.Legend.Layout.HasGeometryValues &&
+            (measuredBand || !layout.ManualPlotLayoutApplied);
         // Filled keys share natural-row admission and wrapped columns. Series
         // cells retain their measured key/text gap; category cells also own
         // the independently observed marker-sized tail.
@@ -223,7 +224,8 @@ internal sealed partial class PptxRenderer
         {
             double occupied = placementRowCount * box.LineHeight - (placementRowCount > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
             double requiredBand = admittedRowCount == 0 ? 0d : occupied + HorizontalLegendFrameInset;
-            double reserved = layout.Legend.Overlay ? 0d : Math.Min(requiredBand, Math.Max(0d, layout.PlotBox.Height - 1d));
+            double reserved = layout.Legend.Overlay || layout.ManualPlotLayoutApplied
+                ? 0d : Math.Min(requiredBand, Math.Max(0d, layout.PlotBox.Height - 1d));
             double topContent = Math.Max(0d, layout.Frame.Y + layout.Frame.Height -
                 PptxChartMetricRules.HorizontalBarPlotTopReserve - layout.PlotBox.Y - layout.PlotBox.Height);
             double legendTop = bottom

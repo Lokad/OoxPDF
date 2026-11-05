@@ -149,7 +149,7 @@ internal static partial class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null)
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "")
     {
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
             <c:ser><c:idx val="{{i - 1}}"/><c:order val="{{i - 1}}"/><c:tx><c:v>North West Region {{i}}</c:v></c:tx>
@@ -169,7 +169,7 @@ internal static partial class PptxLegendRowsTests
         string plot = bar ? "barChart" : "lineChart";
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
+              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{plotLayout}}<c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
                 <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
                 <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/>{{(categoryLegend ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>

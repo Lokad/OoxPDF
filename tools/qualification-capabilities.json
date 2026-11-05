@@ -2246,6 +2246,8 @@
     "CffChartUnresolvableRunesSubstituteQuestionMark"
   ],
   "pptx-legend-rows": [
+    "PptxManualPlotWidthDoesNotConstrainTheBottomLegend",
+    "PptxManualPlotLegendsWrapWithoutReservingTheAuthoredDataFrame",
     "PptxEmptyLegendLayoutMetadataKeepsWrappedContent",
     "PptxBottomLineLegendWrapKeepsNamesInsideTheChartFrame",
     "PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame",
