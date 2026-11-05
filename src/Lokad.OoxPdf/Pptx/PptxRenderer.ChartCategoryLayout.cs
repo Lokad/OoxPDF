@@ -51,19 +51,19 @@ internal sealed partial class PptxRenderer
         }
         if (innerTarget)
             (numericClearance, numericBand) = await MeasureNumericFrameAsync().ConfigureAwait(false);
-        // Numeric endcaps activate shared inner placement. Rotated captions
-        // then retain their full source text for that placement to admit;
-        // fitting against the unadmitted rectangle would discard it first.
+        // Numeric endcaps activate shared inner placement. Source-fit references
+        // establish its outer rectangle before complete captions are admitted.
         bool admitInnerCaptions = innerTarget && EndcapsOverflow(numericClearance);
         bool categoryVisible = categoryAxis.SceneAxis is { } axis ? axis.IsDeleted != true : !IsChartAxisDeleted(categoryAxis.XmlAxis);
+        (double Left, double Right)? sourceReferences = null;
         if (categoryVisible)
-            layout = await PrepareCategoryLabelLayoutAsync(layout, theme, chart, xml, categoryAxis, labels,
+            (layout, sourceReferences) = await PrepareCategoryLabelLayoutAsync(layout, theme, chart, xml, categoryAxis, labels,
                 onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox,
                 outer ? Math.Max(0d, source.Height - 2d * numericClearance) : null, admitInnerCaptions).ConfigureAwait(false);
         if (!innerTarget && !outer) return layout;
         if (layout.CategoryLabels?.Labels.Values.Any(parts => parts.Length != 1) == true)
-            return outer ? await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
-                onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false) : layout;
+            return outer ? (await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
+                onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false)).Layout : layout;
         if (innerTarget)
         {
             if (layout.CategoryLabels is { RotationDegrees: not 0d } && !admitInnerCaptions) return layout;
@@ -98,7 +98,7 @@ internal sealed partial class PptxRenderer
             {
                 categoryBand = category.AxisGap + (category.OccupiedHeight ?? category.Labels.Values.Max(parts =>
                     (parts[0].Width - parts[0].OverflowAdvance) * Math.Abs(captionSin) + category.LineHeight * captionCos)) +
-                    (outer ? PptxChartMetricRules.OuterPlotCaptionPadding : 0d);
+                    PptxChartMetricRules.OuterPlotCaptionPadding;
             }
         }
         else if (outer && layout.CategoryLabels is { RotationDegrees: 0d } emptyCategory &&
@@ -155,8 +155,8 @@ internal sealed partial class PptxRenderer
             }
             else bands = AdmitChartCaptionBands(source.Width, source.Width, RequiredBands);
             if (bands is null)
-                return await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
-                    onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false);
+                return (await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
+                    onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false)).Layout;
             var verticalBand = AdmitChartCaptionInterval(source.Y, source.Height, source.Y, source.Height,
                 numericClearance, numericClearance, categoryBand, new(0d, categoryRatio, categoryHighSide, categoryHighSide));
             ChartPlotBox inner = new(source.X + bands.Value.Left, verticalBand.Start, bands.Value.Width, verticalBand.Length);
@@ -166,6 +166,20 @@ internal sealed partial class PptxRenderer
         }
         var horizontal = AdmitChartCaptionInterval(layout.Frame.X, layout.Frame.Width, source.X, source.Width,
             0d, 0d, numericBand, new(0d, labelsRight ? 1d : 0d, labelsRight, labelsRight));
+        if (sourceReferences is { } before && layout.CategoryLabels is { } innerCaptions)
+        {
+            double numericLeft = labelsRight ? 0d : numericBand, numericRight = labelsRight ? numericBand : 0d;
+            double left = Math.Max(numericLeft, before.Left), right = Math.Max(numericRight, before.Right);
+            double outerWidth = source.Width + left + right;
+            var after = ChartRotatedCategoryReferenceBands(innerCaptions, labels.Count, onTickMarks,
+                ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis), outerWidth,
+                PptxChartMetricRules.ChartContentFrameInset, resolver.CancellationToken);
+            // Both stages use the same reference rule. The first owns expansion;
+            // full restored fragments then allocate the data interval inside it.
+            double innerLeft = Math.Max(numericLeft, after.Left), innerRight = Math.Max(numericRight, after.Right);
+            if (outerWidth - innerLeft - innerRight >= 1d)
+                horizontal = (source.X - left + innerLeft, outerWidth - innerLeft - innerRight);
+        }
         // Each role activates its own constraint. An overflowing category endcap
         // admits the occupied frame as a unit. If only numeric endcaps overflow,
         // retain their admitted interval and allocate the category band inside
@@ -498,7 +512,7 @@ internal sealed partial class PptxRenderer
     // Resolve spacing before placing the plot, then paint these same measured
     // labels. Automatic angles use the outer plot strip; authored angles use
     // the inner plot. Office PDF/API controls distinguish these two owners.
-    private static async ValueTask<ChartLayout> PrepareCategoryLabelLayoutAsync(
+    private static async ValueTask<(ChartLayout Layout, (double Left, double Right)? SourceReferences)> PrepareCategoryLabelLayoutAsync(
         ChartLayout layout, PptxTheme theme, PptxSceneChart chart, XDocument xml,
         ChartAxisSource axis, IReadOnlyList<ChartIndexedTextPoint?> labels,
         bool onTickMarks, bool topSide, double axisRatio,
@@ -506,7 +520,7 @@ internal sealed partial class PptxRenderer
         bool admitInnerCaptions = false)
     {
         if (labels.Count == 0 || !IsSceneOrXmlChartAxisLabelVisible(axis.SceneAxis, axis.XmlAxis))
-            return layout;
+            return (layout, null);
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, axis.SceneAxis, xml, axis.XmlAxis,
             PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
         PptxSceneChartTextBodyProperties body = axis.SceneAxis?.TextBodyProperties ?? PptxSceneBuilder.ReadChartTextBodyProperties(axis.XmlAxis);
@@ -577,6 +591,17 @@ internal sealed partial class PptxRenderer
         }
         if (automaticSkip) skip = RequiredSkip(angle);
 
+        bool innerRotated = angle != 0d && layout.ManualPlotLayoutApplied &&
+            chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner;
+        double offsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(axis.SceneAxis, axis.XmlAxis);
+        // Independent native glyph origins share this inner normal-line gap on
+        // either side. Automatic and outer containers keep their baseline owner.
+        double axisGap = Math.Max(0d, innerRotated
+            ? line.Ascent * 2d / 3d + (layout.CategoryLabelOffsetAdjustment ??
+                line.Height * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (offsetScale - 1d))
+            : ChartCategoryLabelBaselineDistance(style.FontSize, topSide, offsetScale,
+                layout.CategoryLabelOffsetAdjustment) - (topSide ? line.Descent : line.Ascent));
+
         double innerPitch = layout.PlotBox.Width / labels.Count;
         double flatWidth = Math.Max(1d, innerPitch * Math.Min(skip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor);
         var measured = new Dictionary<int, ChartCategoryTextLine[]>();
@@ -643,7 +668,19 @@ internal sealed partial class PptxRenderer
         const double fittingPixel = 72d / 96d;
         ChartTextStyle fittingStyle = style with
         { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize), CharacterSpacing = 0d };
-        if (angle != 0d && !admitInnerCaptions && (overflowFrame || availableExtra < requested))
+        if (innerRotated)
+        {
+            double remaining = topSide ? freeEdge - axisY : axisY - freeEdge;
+            double cap = (remaining - axisGap - line.Height * cos - PptxChartMetricRules.OuterPlotCaptionPadding) / sin;
+            // An overfull original line retains full source references when
+            // numeric endcaps readmit the frame. Otherwise its source prefix,
+            // excluding a generated marker, establishes the outer rectangle.
+            if (!admitInnerCaptions || cap >= 0d)
+                for (int index = 0; index < labels.Count; index++)
+                    if (measured.TryGetValue(index, out var parts))
+                        measured[index] = [await FitAsync(parts[0].Text, Math.Max(0d, cap), admitInnerCaptions).ConfigureAwait(false)];
+        }
+        else if (angle != 0d && (overflowFrame || availableExtra < requested))
         {
             // Bootstrap controls distinguish the fitting grid from the source
             // advances used for geometry and painting. This remains an
@@ -696,19 +733,32 @@ internal sealed partial class PptxRenderer
                 PlotAreaBox = layout.PlotAreaBox with { Y = layout.PlotAreaBox.Y + shift, Height = Math.Max(1d, layout.PlotAreaBox.Height - admitted) }
             };
         }
-        double axisGap = Math.Max(0d, ChartCategoryLabelBaselineDistance(style.FontSize, topSide,
-            ResolveSceneOrXmlCategoryAxisLabelOffsetScale(axis.SceneAxis, axis.XmlAxis),
-            layout.CategoryLabelOffsetAdjustment) - (topSide ? line.Descent : line.Ascent));
         // Explicit overflow retains its fitting capacity even when truncation
         // leaves a shorter painted prefix. Clip and ellipsis reserve only their
         // occupied content; a generated marker hangs outside that prefix.
         double? occupiedHeight = angle != 0d && overflowMode == "overflow" && availableCaptionHeight is { } outerHeight
             ? Math.Min(widest * sin + line.Height * cos, outerHeight / 2d) : null;
         layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, axisGap, measured, occupiedHeight) };
-        return AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
-            ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), topSide, resolver.CancellationToken);
+        (double Left, double Right)? sourceReferences = null;
+        if (innerRotated && admitInnerCaptions)
+        {
+            sourceReferences = ChartRotatedCategoryReferenceBands(layout.CategoryLabels, labels.Count, onTickMarks,
+                ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), layout.PlotBox.Width,
+                PptxChartMetricRules.ChartContentFrameInset, resolver.CancellationToken);
+            // Reuse the measured collection; original source strings already
+            // belong to the chart, and the measurer caches their advances.
+            for (int index = 0; index < labels.Count; index++)
+            {
+                resolver.CancellationToken.ThrowIfCancellationRequested();
+                if (!measured.ContainsKey(index)) continue;
+                string text = labels[index]!.Text;
+                measured[index] = [new(text, await measure.MeasureAsync(text, style).ConfigureAwait(false))];
+            }
+        }
+        return (AdmitObliqueCategoryCaptionFrames(layout, labels.Count, onTickMarks,
+            ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), topSide, resolver.CancellationToken), sourceReferences);
 
-        async ValueTask<ChartCategoryTextLine> FitAsync(string text, double cap)
+        async ValueTask<ChartCategoryTextLine> FitAsync(string text, double cap, bool sourceReference = false)
         {
             double fullWidth = await measure.MeasureAsync(text, style).ConfigureAwait(false);
             double fittingWidth = overflowFrame ? await FitWidthAsync(text).ConfigureAwait(false) : fullWidth;
@@ -740,7 +790,7 @@ internal sealed partial class PptxRenderer
             double width = await measure.MeasureAsync(fitted, style).ConfigureAwait(false);
             // An authored inner frame retains its text origins. The outer and
             // automatic admission owners separate occupied and painted bounds.
-            double overflow = suffix.Length > 0 && (overflowFrame || availableCaptionHeight is not null)
+            double overflow = suffix.Length > 0 && (sourceReference || overflowFrame || availableCaptionHeight is not null)
                 ? width - await measure.MeasureAsync(text[..best], style).ConfigureAwait(false) : 0d;
             return new(fitted, width, Math.Max(0d, overflow));
         }

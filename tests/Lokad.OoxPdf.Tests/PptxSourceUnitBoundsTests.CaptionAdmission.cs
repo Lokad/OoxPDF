@@ -5,6 +5,65 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxSourceUnitBoundsTests
 {
+    public static void PptxInnerSourceReferencesPrecedeRestoredCaptions()
+    {
+        foreach (string kind in new[] { "bar", "line", "area" })
+        foreach (int angle in new[] { 30, 45, 60 })
+        {
+            PdfPage Render(string text) => RenderCaptionFrames(angle, 2, kind,
+                highSide: true, manual: true, categoryFontSize: 1800, valueFontSize: 2400,
+                categoryText: text, manualHeight: .88d, labelSkip: 1);
+            PdfPage shortSource = Render("L"), longSource = Render("LongQuarterSummary");
+            TestAssert.True(Width(longSource) + 10d < Width(shortSource),
+                "Restored long captions allocate space inside the admitted source-reference frame.");
+            foreach (var (page, text) in new[] { (shortSource, "L"), (longSource, "LongQuarterSummary") })
+            {
+                var captions = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                    fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(captions.Length == 19 && captions.All(show => show.Text == text),
+                    "Both reference stages preserve all source captions during numeric endcap admission.");
+                TestAssert.True(Labels(page).SequenceEqual(new double[] { 0, 2, 4, 6 }),
+                    "Reference admission preserves the authored numeric interval.");
+            }
+        }
+
+        static double Width(PdfPage page) => PptxColumnIntervalTests.Lines(page)
+            .Where(line => line.Color == new RgbColor(0, 0, 255) && Math.Abs(line.V[1] - line.V[3]) < .001)
+            .Max(line => Math.Abs(line.V[2] - line.V[0]));
+    }
+
+    public static void PptxRotatedInnerCaptionGapIsSideIndependent()
+    {
+        foreach (int size in new[] { 1200, 1800 })
+        foreach (int angle in new[] { -60, -45, -30, 30, 45, 60 })
+        {
+            double Gap(bool high)
+            {
+                PdfPage page = RenderCaptionFrames(angle, 2, highSide: high, manual: true,
+                    categoryFontSize: size, categoryText: "I", labelSkip: 1);
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                    fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(shows.Length == 19 && shows.All(show => show.Text == "I"),
+                    "Changing the caption side preserves every source fragment.");
+                var show = shows[0]; var font = show.Font.Font;
+                double scale = show.Size / font.UnitsPerEm;
+                double ascent = font.Os2.WindowsAscender * scale, descent = font.Os2.WindowsDescender * scale;
+                double advance = font.GetAdvanceWidth(font.MapCodePoint('I')) * scale;
+                double radians = -angle * Math.PI / 180d, cos = Math.Cos(radians), sin = Math.Sin(radians);
+                bool rightAnchor = (angle < 0) != high;
+                double[] axis = PptxColumnIntervalTests.Lines(page).Single(line =>
+                    line.Color == new RgbColor(255, 0, 0) && Math.Abs(line.V[0] - line.V[2]) < .001 &&
+                    Math.Abs(line.V[1] - line.V[3]) > 1).V;
+                double axisY = high ? Math.Max(axis[1], axis[3]) : Math.Min(axis[1], axis[3]);
+                return high ? show.Y - axisY - descent * cos + (rightAnchor ? advance * sin : 0d)
+                    : axisY - show.Y - ascent * cos - (rightAnchor ? advance * sin : 0d);
+            }
+            double low = Gap(false), high = Gap(true);
+            TestAssert.True(low >= 0d && Math.Abs(high - low) < .005,
+                $"Mirrored inner captions retain their normal-line gap: {size}/{angle}, low={low}, high={high}.");
+        }
+    }
+
     public static void PptxInnerRotatedAdmissionKeepsCompleteSourceCaptions()
     {
         const string text = "LongQuarterSummary";

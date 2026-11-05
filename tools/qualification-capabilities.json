@@ -1,4 +1,8 @@
 {
+  "pptx-inner-source-references": [
+    "PptxInnerSourceReferencesPrecedeRestoredCaptions",
+    "PptxRotatedInnerCaptionGapIsSideIndependent"
+  ],
   "pptx-inner-rotated-admission": [
     "PptxInnerRotatedAdmissionKeepsCompleteSourceCaptions",
     "PptxInnerRotatedAdmissionFollowsNumericEndcaps",
