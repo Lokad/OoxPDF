@@ -74,8 +74,10 @@ internal static partial class PptxSourceUnitBoundsTests
                 double sourceShift = generatedPlot.Left - authoredPlot.Left +
                     ratio * (generatedPlot.Width - authoredPlot.Width);
                 double markerShift = trailingEndAtAxis ? marker * Math.Cos(Math.Abs(angle) * Math.PI / 180d) : 0d;
+                // The X identity combines separately rounded PDF axis/text
+                // coordinates and rotation; allow their sub-.005pt error.
                 TestAssert.True(first[index].Text == second[index].Text &&
-                    Math.Abs(first[index].X - second[index].X - sourceShift - markerShift) < .003 &&
+                    Math.Abs(first[index].X - second[index].X - sourceShift - markerShift) < .005 &&
                     Math.Abs(first[index].Y - second[index].Y - expectedOriginShift) < .003,
                     $"Generated marker origins follow the admitted source interval and rotated prefix anchor: {size}/{angle}/{high}/{index}, X={first[index].X - second[index].X}, source={sourceShift}, marker={markerShift}, Y={first[index].Y - second[index].Y}, expectedY={expectedOriginShift}.");
             }
