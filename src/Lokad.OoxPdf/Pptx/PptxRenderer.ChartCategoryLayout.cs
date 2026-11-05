@@ -371,11 +371,34 @@ internal sealed partial class PptxRenderer
         }
         // Spacing selects paint, not the source interval's ends. Reuse the edge
         // fragments without measuring or painting an omitted source caption.
-        // Manual painted-fragment admission stays separate from these logical
-        // source endpoints.
+        // Painted fragments do not become logical endpoint references; their
+        // clipping belongs to the chart's paint frame.
         Include(0, captions.Labels.MinBy(entry => entry.Key).Value[0]);
         Include(count - 1, captions.Labels.MaxBy(entry => entry.Key).Value[0]);
         return (left, right);
+    }
+
+    private static ChartLayout AdmitAutomaticCategoryReferenceBands(ChartLayout layout, int count,
+        bool onTickMarks, bool reversed, CancellationToken cancellationToken)
+    {
+        if (layout.ManualPlotLayoutApplied || layout.CategoryLabels is not { } captions ||
+            captions.RotationDegrees == 0d || Math.Abs(captions.RotationDegrees) == 90d) return layout;
+        double outerLeft = layout.Frame.X + PptxChartMetricRules.ChartContentFrameInset;
+        double outerRight = layout.Frame.X + layout.Frame.Width - PptxChartMetricRules.ChartContentFrameInset;
+        var references = ChartRotatedCategoryReferenceBands(captions, count, onTickMarks, reversed,
+            Math.Max(0d, layout.Frame.Width - 2d * PptxChartMetricRules.AutomaticCartesianFramePadding),
+            PptxChartMetricRules.ColumnPlotRightReserve - PptxChartMetricRules.ChartContentFrameInset, cancellationToken);
+        double left = Math.Max(layout.PlotBox.X - outerLeft, references.Left);
+        double right = Math.Max(outerRight - layout.PlotBox.X - layout.PlotBox.Width, references.Right);
+        double width = Math.Min(layout.PlotBox.Width, outerRight - outerLeft - left - right);
+        if (width <= 0d || width >= layout.PlotBox.Width) return layout;
+        double x = outerLeft + left;
+        return layout with
+        {
+            PlotBox = layout.PlotBox with { X = x, Width = width },
+            PlotAreaBox = layout.PlotAreaBox with { X = layout.PlotAreaBox.X + x - layout.PlotBox.X,
+                Width = Math.Max(1d, layout.PlotAreaBox.Width + width - layout.PlotBox.Width) }
+        };
     }
 
     private static bool CanOwnColumnCategoryPlacement(PptxSceneChart chart, ChartAxisSource category, ChartAxisSource value) =>
@@ -747,7 +770,8 @@ internal sealed partial class PptxRenderer
                     : new(text, await measure.MeasureAsync(text, style).ConfigureAwait(false))];
             }
         }
-        return (layout, sourceReferences);
+        return (AdmitAutomaticCategoryReferenceBands(layout, labels.Count, onTickMarks,
+            ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), resolver.CancellationToken), sourceReferences);
 
         async ValueTask<ChartCategoryTextLine> FitAsync(string text, double cap, bool hangingMarker = false)
         {

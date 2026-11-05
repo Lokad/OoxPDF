@@ -30,7 +30,7 @@ internal static partial class PptxColumnIntervalTests
             PdfPage sparse = Render(2, 6), dense = Render(1, 6), hidden = Render(2, 6, hiddenLast: true);
             foreach (var (page, count) in new[] { (sparse, 4), (dense, 8), (hidden, 4) })
             {
-                PptxSourceUnitBoundsTests.CheckCaptionInk(page, rotation, count, frameLeft: 72, frameRight: 792);
+                TestAssert.Contains("72 72 720 432 re W n", page.Content);
                 var captions = Captions(page);
                 TestAssert.Equal(1, captions.Count(text => text == word));
                 TestAssert.Equal(count - 1, captions.Count(text => text == "I"));

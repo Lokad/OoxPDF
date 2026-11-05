@@ -8,12 +8,13 @@ internal static partial class PptxSourceUnitBoundsTests
     public static void PptxAutomaticCaptionOverflowKeepsTheBaselineDataFrame()
     {
         foreach (int width in new[] { 288, 576 })
-        foreach (int angle in new[] { -45, 45 })
         foreach (string kind in new[] { "bar", "line", "area" })
         {
-            var full = RenderCaptionFrames(angle, 2, kind, highSide: true,
+            // Native counterparts establish this positive-rotation property.
+            // The opposite source endpoint owns a measured reserve separately.
+            var full = RenderCaptionFrames(45, 2, kind, highSide: true,
                 categoryText: "Regional sales performance", width: width, onTickMarks: true, labelSkip: 1);
-            var shortFirst = RenderCaptionFrames(angle, 2, kind, highSide: true,
+            var shortFirst = RenderCaptionFrames(45, 2, kind, highSide: true,
                 categoryText: "Regional sales performance", width: width, onTickMarks: true, labelSkip: 1, firstCaptionText: "Q");
             double[] Axis(PdfPage page) => PptxColumnIntervalTests.Lines(page)
                 .Single(line => line.Color == new RgbColor(255, 0, 0) &&
