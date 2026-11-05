@@ -492,7 +492,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartTextBodyProperties body = axis.SceneAxis?.TextBodyProperties ?? PptxSceneBuilder.ReadChartTextBodyProperties(axis.XmlAxis);
         // Category captions default to ellipsis in Office. Shape text keeps
         // its separate overflow policy; explicit caption overrides still win.
-        string? overflowMode = body.VerticalOverflowValue ?? "ellipsis";
+        string overflowMode = string.IsNullOrEmpty(body.VerticalOverflowValue) ? "ellipsis" : body.VerticalOverflowValue;
         // Empty axis body properties inherit Office's automatic orientation.
         // An authored horizontal orientation with omitted rotation means zero.
         bool automaticAngle = body.RotationValue == "-60000000" ||

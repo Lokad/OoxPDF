@@ -45,7 +45,7 @@ internal static partial class PptxColumnIntervalTests
                 TestAssert.True(CaptionText(overflow) == clipped && source.StartsWith(clipped, StringComparison.Ordinal) &&
                     !clipped.EndsWith('\u2026') && clipped.Length >= prefix.Length,
                     "Explicit clip and overflow preserve the same source prefix without a generated marker.");
-                var cb = AdmissionBounds(clip); var ob = AdmissionBounds(overflow);
+                var cb = Bounds(clip); var ob = Bounds(overflow);
                 TestAssert.True(ob.Bottom - ob.Top <= cb.Bottom - cb.Top + .003 &&
                     Math.Abs(high ? ob.Bottom - cb.Bottom : ob.Top - cb.Top) < .003,
                     "Explicit overflow retains capacity on the caption edge; clipping reclaims unused capacity.");
@@ -71,13 +71,26 @@ internal static partial class PptxColumnIntervalTests
 
         static void AssertSame(PdfPage first, PdfPage second)
         {
-            var left = AdmissionBounds(first); var right = AdmissionBounds(second);
+            var left = Bounds(first); var right = Bounds(second);
             TestAssert.True(left == right, "Default and explicit ellipsis reserve the same data rectangle.");
             var x = DocxCommentsTests.ReadEmbeddedGlyphTextShows(first, usePageCoordinates: true).ToArray();
             var y = DocxCommentsTests.ReadEmbeddedGlyphTextShows(second, usePageCoordinates: true).ToArray();
             TestAssert.True(x.Length == y.Length && x.Zip(y).All(pair => pair.First.Text == pair.Second.Text &&
                 pair.First.X == pair.Second.X && pair.First.Y == pair.Second.Y && pair.First.Size == pair.Second.Size),
                 "Equivalent overflow declarations preserve all caption/numeric content and origins.");
+        }
+
+        static (double Left, double Top, double Right, double Bottom) Bounds(PdfPage page)
+        {
+            // Fitting can leave a data axis shorter than 100pt. Identify the
+            // authored colored axes without assuming the old fixture's span.
+            var lines = Lines(page);
+            var vertical = lines.Single(line => line.Color == new RgbColor(255, 0, 0) &&
+                Math.Abs(line.V[0] - line.V[2]) < .001 && Math.Abs(line.V[1] - line.V[3]) > 1).V;
+            var horizontal = lines.Single(line => line.Color == new RgbColor(0, 170, 0) &&
+                Math.Abs(line.V[1] - line.V[3]) < .001 && Math.Abs(line.V[0] - line.V[2]) > 1).V;
+            return (Math.Min(horizontal[0], horizontal[2]), page.Height - Math.Max(vertical[1], vertical[3]),
+                Math.Max(horizontal[0], horizontal[2]), page.Height - Math.Min(vertical[1], vertical[3]));
         }
     }
 }
