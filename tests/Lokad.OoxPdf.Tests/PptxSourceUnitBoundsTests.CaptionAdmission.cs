@@ -320,7 +320,7 @@ internal static partial class PptxSourceUnitBoundsTests
         {
             PdfPage generated = RenderCaptionFrames(angle, 2, highSide: high, height: 154,
                 categoryFontSize: size, overflow: "ellipsis", categoryText: new string('W', 80));
-            var first = DocxCommentsTests.ReadEmbeddedGlyphTextShows(generated, usePageCoordinates: true,
+            var first = DocxCommentsTests.ReadEmbeddedGlyphTextShows(generated, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(19, first.Length);
             string fitted = first[0].Text;
@@ -328,13 +328,13 @@ internal static partial class PptxSourceUnitBoundsTests
                 "Expected a common fitted caption with a generated overflow marker.");
             PdfPage authored = RenderCaptionFrames(angle, 2, highSide: high, height: 154,
                 categoryFontSize: size, overflow: "ellipsis", categoryText: fitted);
-            var second = DocxCommentsTests.ReadEmbeddedGlyphTextShows(authored, usePageCoordinates: true,
+            var second = DocxCommentsTests.ReadEmbeddedGlyphTextShows(authored, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal)).ToArray();
             var font = first[0].Font.Font;
             double marker = font.GetAdvanceWidth(font.MapCodePoint('\u2026')) * (size / 100d) / font.UnitsPerEm;
             double expected = marker * Math.Sin(Math.Abs(angle) * Math.PI / 180d);
             bool trailingEndAtAxis = (angle < 0) != high;
-            double expectedOriginShift = trailingEndAtAxis ? 0d : high ? expected : -expected;
+            double expectedOriginShift = high ? expected : -expected;
             TestAssert.Equal(first.Length, second.Length);
             var generatedPlot = Interval(generated); var authoredPlot = Interval(authored);
             for (int index = 0; index < first.Length; index++)
@@ -342,12 +342,13 @@ internal static partial class PptxSourceUnitBoundsTests
                 double ratio = (index + .5d) / first.Length;
                 double sourceShift = generatedPlot.Left - authoredPlot.Left +
                     ratio * (generatedPlot.Width - authoredPlot.Width);
-                double markerShift = trailingEndAtAxis ? marker * Math.Cos(Math.Abs(angle) * Math.PI / 180d) : 0d;
-                // Both identities combine separately rounded PDF axis/text
-                // coordinates and rotation; allow their sub-.005pt error.
+                double markerShift = trailingEndAtAxis ? marker : 0d;
+                // Compare source anchors in the raw-Tm view. Applying rounded
+                // PDF rotations adds unrelated quantization to this identity;
+                // native/raster comparisons validate the final painted geometry.
                 TestAssert.True(first[index].Text == second[index].Text &&
                     Math.Abs(first[index].X - second[index].X - sourceShift - markerShift) < .005 &&
-                    Math.Abs(first[index].Y - second[index].Y - expectedOriginShift) < .005,
+                    Math.Abs(first[index].Y - second[index].Y - expectedOriginShift) < .003,
                     $"Generated marker origins follow the admitted source interval and rotated prefix anchor: {size}/{angle}/{high}/{index}, X={first[index].X - second[index].X}, source={sourceShift}, marker={markerShift}, Y={first[index].Y - second[index].Y}, expectedY={expectedOriginShift}.");
             }
             TestAssert.True(Math.Abs(CaptionPlotHeight(generated) - CaptionPlotHeight(authored) - expected) < .003,
