@@ -1000,9 +1000,8 @@ internal sealed partial class PptxRenderer
 
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
-            double leftStripWidth = 0d;
             double rightStripWidth = 0d;
-            int leftStripCount = 0;
+            double rightSingleReserve = 0d;
             int rightStripCount = 0;
             var leftStrips = new List<ChartValueAxisStripMeasure>();
             foreach (var (valueAxis, owner) in visibleValueAxes)
@@ -1039,22 +1038,27 @@ internal sealed partial class PptxRenderer
                 if (labelsRight)
                 {
                     rightStripWidth = Math.Max(rightStripWidth, stripWidth);
+                    rightSingleReserve = Math.Max(rightSingleReserve,
+                        ComputeCartesianAxisLabelSideReserve(strip.MaxLabelWidth, strip.FontSize));
                     rightStripCount++;
                 }
                 else
                 {
-                    leftStripWidth = Math.Max(leftStripWidth, stripWidth);
                     leftStrips.Add(strip);
-                    leftStripCount++;
                 }
             }
 
             // Same-side axis pairs chain their strips (Office lays dual left axes side by side)
             // instead of maxing one; right-side pairs keep the legacy factor (unobserved).
-            double requiredLeftReserve = leftStrips.Count >= 2
-                ? Math.Max(leftReserve, ComputeChainedLeftValueAxisReserve(leftStrips))
-                : Math.Max(leftReserve, leftStripWidth * GetMultiValueAxisStripFactor(leftStripCount, labelsRight: false));
-            double requiredRightReserve = Math.Max(rightReserve, rightStripWidth * GetMultiValueAxisStripFactor(rightStripCount, labelsRight: true));
+            double requiredLeftReserve = Math.Max(leftReserve, leftStrips.Count switch
+            {
+                0 => 0d,
+                1 => ComputeCartesianAxisLabelSideReserve(leftStrips[0].MaxLabelWidth, leftStrips[0].FontSize),
+                _ => ComputeChainedLeftValueAxisReserve(leftStrips)
+            });
+            double requiredRightReserve = Math.Max(rightReserve, rightStripCount == 1
+                ? rightSingleReserve
+                : rightStripWidth * PptxChartMetricRules.BarMultiValueAxisSecondaryStripFactor);
             double x = frame.X + requiredLeftReserve;
             double right = frame.X + frame.Width - requiredRightReserve;
             double width = Math.Max(1d, right - x);
@@ -1225,17 +1229,6 @@ internal sealed partial class PptxRenderer
         }
 
         return reserve + strips[strips.Count - 1].FontSize * PptxChartMetricRules.BarValueAxisLabelGapFactor;
-    }
-    private static double GetMultiValueAxisStripFactor(int sameSideAxisCount, bool labelsRight)
-    {
-        if (sameSideAxisCount <= 1)
-        {
-            return 1d;
-        }
-
-        return labelsRight
-            ? PptxChartMetricRules.BarMultiValueAxisSecondaryStripFactor
-            : PptxChartMetricRules.BarMultiValueAxisPrimaryStripFactor;
     }
 
     // Minimum top clearance for untitled legendless columns: Office keeps the plot top

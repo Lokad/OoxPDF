@@ -244,7 +244,6 @@ internal sealed partial class PptxRenderer
         public const double BarTitleNoLegendInsideCrossingPlotBoxYRatio = 0.0370d;
         public const double BarTitleNoLegendInsideCrossingPlotBoxWidthRatio = 0.9195d;
         public const double BarTitleNoLegendInsideCrossingPlotBoxHeightRatio = 0.8441d;
-        public const double BarMultiValueAxisPrimaryStripFactor = 1.85d;
         public const double BarMultiValueAxisSecondaryStripFactor = 1.2d;
         // Inter-axis gap addend for chained same-side value axes: the middle gap reads
         // sideGap plus this on three Office renders (7/9/12pt, within 0.08pt).

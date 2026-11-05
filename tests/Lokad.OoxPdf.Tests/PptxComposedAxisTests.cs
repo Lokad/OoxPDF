@@ -50,13 +50,26 @@ internal static class PptxComposedAxisTests
         }
     }
 
-    private static (string Text, double X)[] NumericShows(PdfPage page) =>
+    internal static void CheckOppositeSideAdmission()
+    {
+        // Independent opposite-side-calibri9 Office PDF: primary left78.504pt,
+        // secondary right785.593pt. Use the same1pt portable geometry gate.
+        var shows = NumericShows(RenderSameSide(9d, columns: false, oppositeSides: true));
+        TestAssert.True(shows.Select(show => show.Text).SequenceEqual(
+            new[] { "0", "25", "50", "75", "100", "0", "50", "100", "150", "200" }),
+            "Opposite-side bands retain both complete authored intervals.");
+        TestAssert.True(Math.Abs(shows.Take(5).Min(show => show.X) - 78.504d) <= 1d &&
+            Math.Abs(shows.Skip(5).Max(show => show.Right) - 785.593d) <= 1d,
+            "Each side uses its own independently observed single-axis band.");
+    }
+
+    private static (string Text, double X, double Right)[] NumericShows(PdfPage page) =>
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
             fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal))
-        .Select(show => (show.Text, show.X)).ToArray();
+        .Select(show => (show.Text, show.X, show.X + show.Font.MeasureTextPoints(show.Text, show.Size))).ToArray();
 
     private static PdfPage RenderSameSide(double fontSize, bool columns, bool overlayLegend = false,
-        double? automaticMaximum = null)
+        double? automaticMaximum = null, bool oppositeSides = false)
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ComposedAxes"));
         using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "office-labels.json")));
@@ -81,6 +94,12 @@ internal static class PptxComposedAxisTests
             axis.Add(new XElement(c + "txPr", new XElement(a + "bodyPr"), new XElement(a + "lstStyle"),
                 new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr",
                     new XAttribute("sz", (int)(fontSize * 100d)), new XElement(a + "latin", new XAttribute("typeface", "Calibri")))))));
+        }
+        if (oppositeSides)
+        {
+            var axis = xml.Descendants(c + "valAx").Last();
+            axis.Element(c + "axPos")!.SetAttributeValue("val", "r");
+            axis.Element(c + "tickLblPos")!.SetAttributeValue("val", "high");
         }
         var secondary = xml.Descendants(c + "lineChart").Single();
         if (automaticMaximum is double maximum)

@@ -58,6 +58,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingComposedAutoAxesUseTheirOwningScale() =>
         PptxComposedAxisTests.CheckAutoScaleAdmission();
 
+    public static void PortableRenderingComposedOppositeAxesKeepIndependentBands() =>
+        PptxComposedAxisTests.CheckOppositeSideAdmission();
+
     public static void PortableRenderingAdjacentMathGroupsNormalizeSourceFormatting() =>
         DocxInlineCompositionTests.CheckAdjacentMathGroups();
 
