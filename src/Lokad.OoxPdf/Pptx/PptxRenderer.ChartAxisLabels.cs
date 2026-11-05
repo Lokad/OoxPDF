@@ -182,6 +182,11 @@ internal sealed partial class PptxRenderer
             maximum + style.FontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor));
     }
 
+    private static double ChartValueAxisLabelSideGap(ChartTextMeasurer measurer, ChartTextStyle style)
+        => Math.Max(3d, measurer.TryMeasureNormalLineHeight(style, out double height)
+            ? height * PptxChartMetricRules.ValueAxisLabelSideGapLineHeightRatio
+            : style.FontSize * PptxChartMetricRules.ValueAxisLabelSideGapFallbackFontSizeRatio);
+
     private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null, PptxRenderContext? context = null)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
@@ -194,6 +199,7 @@ internal sealed partial class PptxRenderer
             axisUnits, autoTickTargetCount, tickPolicy, defaultNumberFormat, reserveEndpoints: false, context: context).ConfigureAwait(false);
         IReadOnlyList<double> tickValues = captions.Values;
         double valueAxisLabelWidth = captions.SlotWidth;
+        double sideGap = ChartValueAxisLabelSideGap(textMeasurer, style);
         var runs = new List<TextRun>(tickValues.Count);
         foreach (double value in tickValues)
         {
@@ -222,7 +228,6 @@ internal sealed partial class PptxRenderer
                     : labelsRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                 width = useTextSizedWidth ? valueAxisLabelWidth : Math.Max(valueAxisLabelWidth,
                     plotBox.Width * PptxChartMetricRules.VerticalValueAxisWidthRatio);
-                double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
                 // Outer same-side strips anchor to the inner strip ink edge: Office keeps a
                 // fixed sideGap-plus-inter-axis gap between the ink blocks instead of chaining
                 // text-sized slot boxes (three dual-column probes agree within 0.13 with zero fitting).

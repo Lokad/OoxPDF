@@ -1,0 +1,186 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "Uncalibrated against application view",
+  "Rows": [
+    {
+      "Id": "numeric-arial12",
+      "Input": "numeric-arial12.pptx",
+      "InputSha256": "8703EBF4BD40EDD2C3BAFA43CEAC9AB58574EEDEBB248463163B70A517CDD573",
+      "OfficePdfSha256": "FBEA79E0BA60388D1C2035D58578F13CAE39EABC8F7B111B6CF83F508ED781C9",
+      "NativeFrame": [
+        247.85000610351562,
+        172.0,
+        567.0399780273438,
+        385.69000244140625
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 20.021484375,
+      "NativeNumericLineHeight": 13.40625,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-arial36",
+      "Input": "numeric-arial36.pptx",
+      "InputSha256": "C60900A21A9C892BEC520EC2384DA3989E9B32BC8E3B21D45AD02138328BCFBC",
+      "OfficePdfSha256": "CDA31E1BA754A246F04EA1B8602130DEE642884CA3B40B57152D784502293C4F",
+      "NativeFrame": [
+        308.5299987792969,
+        172.0,
+        567.0399780273438,
+        372.28997802734375
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 60.064453125,
+      "NativeNumericLineHeight": 40.21875,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-arial24",
+      "Input": "numeric-arial24.pptx",
+      "InputSha256": "DFC847C01BECE3436A1D64D19C7E3F93FD0571E33A91C147C0965DED1D7149BB",
+      "OfficePdfSha256": "B6D9FB603F9081E216F41B7A697D59B7EDC0204E121C81E1854C8EE0FB003B49",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 40.04296875,
+      "NativeNumericLineHeight": 26.8125,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-times24",
+      "Input": "numeric-times24.pptx",
+      "InputSha256": "973862B1332838C97758403556705BCC3A7033AEF6C137DE4E32FC44E2C93A31",
+      "OfficePdfSha256": "3D9832BBC15DCA3134059A0A3B0D491911168083DED3D7A51917312118E6AE96",
+      "NativeFrame": [
+        273.9200134277344,
+        172.0,
+        567.0399780273438,
+        379.1099853515625
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 36.0,
+      "NativeNumericLineHeight": 26.578125,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-calibri24",
+      "Input": "numeric-calibri24.pptx",
+      "InputSha256": "33C9D1222A66A5AD3A81E4CB16C27384BB21781B7FAAB4B6E5F7FFAA55477F01",
+      "OfficePdfSha256": "F1CC11285445665917E0CCD4C93CD33BF1F96B9A5361C1B5B0CE80EE066BBE91",
+      "NativeFrame": [
+        276.260009765625,
+        172.0,
+        567.0399780273438,
+        377.75
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 36.4921875,
+      "NativeNumericLineHeight": 29.296875,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-segoe24",
+      "Input": "numeric-segoe24.pptx",
+      "InputSha256": "7F75125ACA473B2833B0AA33604D0DAD339C7106814E697B04BC688E1C9C3406",
+      "OfficePdfSha256": "21FDA85BC72A1D4A9391BB60A378FA041FAC16F59E024D38B2368E4FAE5CF6FE",
+      "NativeFrame": [
+        280.9200134277344,
+        172.0,
+        567.0399780273438,
+        376.44000244140625
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 38.8125,
+      "NativeNumericLineHeight": 31.921875,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-arial-bold24",
+      "Input": "numeric-arial-bold24.pptx",
+      "InputSha256": "61D720FE6A0A4D1BD01A3CC4092CE35FB9C4F47EBCC7A162215D421F78D6D1D1",
+      "OfficePdfSha256": "5D4FF31AD47EBAF232FE32EF96891CFAB40301ECAE08172920D73BBC6008C449",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 40.04296875,
+      "NativeNumericLineHeight": 26.8125,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-arial-italic24",
+      "Input": "numeric-arial-italic24.pptx",
+      "InputSha256": "E88AD8CD09EA17E1285D41DFA03D0D67486F5E98273B4185DCDEF0820160FDA2",
+      "OfficePdfSha256": "645EC1B97EEB59B3E8215176AE727DDA528F92AB6F263A927FC795544152FF41",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 40.04296875,
+      "NativeNumericLineHeight": 26.8125,
+      "HeldOut": false
+    },
+    {
+      "Id": "numeric-verdana20-heldout",
+      "Input": "numeric-verdana20-heldout.pptx",
+      "InputSha256": "83CB26C5AE0A0A4BF3073EA7AD022AD0DC3BF0E3D56B04F574D53E43FD43D9FF",
+      "OfficePdfSha256": "114BC3022B8A3D72FCACEADA52BD82A6BC4B513F38ABEFCAE693C04E9648A967",
+      "NativeFrame": [
+        274.5,
+        172.0,
+        567.0399780273438,
+        380.25
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 38.14453125,
+      "NativeNumericLineHeight": 24.306640625,
+      "HeldOut": true
+    },
+    {
+      "Id": "numeric-georgia30-heldout",
+      "Input": "numeric-georgia30-heldout.pptx",
+      "InputSha256": "011DF4BDDF49D8ECDD9F0A5F14C84458D68D2BE6F09EF9451A7216E793D72467",
+      "OfficePdfSha256": "381AB66D9106FBAE24097F4FFFBB76DC848F7443E287EBEA897FF03D2F98CED3",
+      "NativeFrame": [
+        290.0899963378906,
+        172.0,
+        567.0399780273438,
+        375.3599853515625
+      ],
+      "SourceLeft": 216,
+      "SourceRight": 576,
+      "OuterPadding": 1.5,
+      "NativeNumericAdvance": 46.376953125,
+      "NativeNumericLineHeight": 34.0869140625,
+      "HeldOut": true
+    }
+  ]
+}

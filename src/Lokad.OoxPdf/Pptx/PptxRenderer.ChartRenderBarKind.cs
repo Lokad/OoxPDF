@@ -360,8 +360,7 @@ internal sealed partial class PptxRenderer
                             if (!secondaryLabelsRightSide && sideSlot == 1 && valueAxisLabelsVisible)
                             {
                                 ChartValueAxisStripMeasure primaryStrip = (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, valueAxis, valueSceneAxis, valueExtents, valueAxisOptions.Units, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver, context: context).ConfigureAwait(false));
-                                double primarySideGap = Math.Max(3d, primaryStrip.FontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
-                                secondaryInkAnchor = plotBox.X - primarySideGap - primaryStrip.MaxLabelWidth;
+                                secondaryInkAnchor = plotBox.X - primaryStrip.SideGap - primaryStrip.MaxLabelWidth;
                             }
                             await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: secondaryValueAxisRightSide, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0, manualPlotLayoutApplied: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, innerStripInkEdge: secondaryInkAnchor, context: context).ConfigureAwait(false);
                         }

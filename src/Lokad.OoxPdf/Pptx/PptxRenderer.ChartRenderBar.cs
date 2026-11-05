@@ -1217,8 +1217,7 @@ internal sealed partial class PptxRenderer
         double reserve = PptxChartMetricRules.BarValueAxisLabelFrameIndent + strips[0].MaxLabelWidth;
         for (int stripIndex = 1; stripIndex < strips.Count; stripIndex++)
         {
-            double sideGap = Math.Max(3d, strips[stripIndex].FontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
-            reserve += sideGap + PptxChartMetricRules.BarDualValueAxisInterAxisGap + strips[stripIndex].MaxLabelWidth;
+            reserve += strips[stripIndex].SideGap + PptxChartMetricRules.BarDualValueAxisInterAxisGap + strips[stripIndex].MaxLabelWidth;
         }
 
         return reserve + strips[strips.Count - 1].FontSize * PptxChartMetricRules.BarValueAxisLabelGapFactor;
@@ -1400,7 +1399,7 @@ internal sealed partial class PptxRenderer
         return Math.Max(presetRightReserve, maxValueLabelWidth / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
     }
 
-    private readonly record struct ChartValueAxisStripMeasure(double MaxLabelWidth, double FontSize, double StripWidth);
+    private readonly record struct ChartValueAxisStripMeasure(double MaxLabelWidth, double FontSize, double StripWidth, double SideGap);
 
     private static async ValueTask<double> EstimateVerticalValueAxisLabelStripWidthAsync(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
     {
@@ -1425,8 +1424,8 @@ internal sealed partial class PptxRenderer
         double labelWidth = Math.Max(
             fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
             maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
-        double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
-        return new ChartValueAxisStripMeasure(maxLabelWidth, fontSize, labelWidth + sideGap);
+        double sideGap = ChartValueAxisLabelSideGap(textMeasurer, style);
+        return new ChartValueAxisStripMeasure(maxLabelWidth, fontSize, labelWidth + sideGap, sideGap);
     }
 
     // Near-maximum headroom (the shared 0.96 rule) applies to vertical-bar value axes:

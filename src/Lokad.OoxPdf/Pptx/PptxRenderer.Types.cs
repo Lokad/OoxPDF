@@ -577,7 +577,10 @@ internal sealed partial class PptxRenderer
         public const double AxisLabelClipHeightFactor = 1.6d;
         public const double ValueAxisMinimumLabelWidthFactor = 1.6d;
         public const double ValueAxisLabelPaddingFactor = 0.45d;
-        public const double ValueAxisLabelSideGapFactor = 0.93d;
+        // Numeric strips use their selected face's normal line box. Keep the
+        // nominal-em fallback when usable font metrics are unavailable.
+        public const double ValueAxisLabelSideGapLineHeightRatio = 0.77d;
+        public const double ValueAxisLabelSideGapFallbackFontSizeRatio = 0.93d;
         public const double ValueAxisVerticalClipExtraHeightFactor = 2d;
         public const double HorizontalValueAxisSlotCount = 5d;
         public const double HorizontalValueAxisTopOffsetFactor = 1.18d;
