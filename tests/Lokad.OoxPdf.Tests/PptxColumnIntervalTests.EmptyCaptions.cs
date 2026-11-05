@@ -87,7 +87,7 @@ internal static partial class PptxColumnIntervalTests
 
     private static PdfPage RenderCaption(JsonElement row, double size, bool high, double numericSize,
         int offset, string mode, double rotation = 0d, string target = "outer", int? skip = 1,
-        string? text = null) => RenderAdmission(row, caseDirectory: OuterCases,
+        string? text = null, Action<System.Xml.Linq.XDocument>? edit = null) => RenderAdmission(row, caseDirectory: OuterCases,
         horizontalCategories: true, editChart: xml =>
         {
             XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
@@ -104,6 +104,7 @@ internal static partial class PptxColumnIntervalTests
             SetSize(axis, size);
             axis.Element(c + "txPr")!.Element(a + "bodyPr")!.SetAttributeValue("rot", (int)(rotation * 60000d));
             SetSize(xml.Descendants(c + "valAx").Single(), numericSize);
+            edit?.Invoke(xml);
 
             void SetSize(XElement owner, double points)
             {

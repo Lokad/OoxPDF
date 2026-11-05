@@ -125,22 +125,25 @@ internal sealed partial class PptxRenderer
             {
                 double left = labelsRight ? 0d : numericBand, right = labelsRight ? numericBand : 0d;
                 if (labels.Count > 0 && layout.CategoryLabels is { } captions)
+                {
+                    void IncludeRotatedReference(int index, double wordWidth)
+                    {
+                        // The authored area owns reference ends; word advance
+                        // and normal-line span exchange roles with rotation.
+                        double ratio = ChartCategoryToPlotCoordinate(index, labels.Count, 0d, 1d, onTickMarks, reversed);
+                        double leftSpan = (captionRadians < 0d ? captions.LineHeight : wordWidth) * captionCos;
+                        double rightSpan = (captionRadians < 0d ? wordWidth : captions.LineHeight) * captionCos;
+                        double inset = PptxChartMetricRules.ChartContentFrameInset + referenceExpansion;
+                        left = Math.Max(left, leftSpan + inset - ratio * source.Width);
+                        right = Math.Max(right, rightSpan + inset - (1d - ratio) * source.Width);
+                    }
                     foreach (var (index, parts) in captions.Labels)
                     {
                         resolver.CancellationToken.ThrowIfCancellationRequested();
                         double ratio = ChartCategoryToPlotCoordinate(index, labels.Count, 0d, 1d, onTickMarks, reversed);
                         if (rotatedCaptions)
                         {
-                            // Outer allocation uses the authored area before
-                            // numeric carving, not the painted caption bounds.
-                            // Word advance and normal-line span own opposite
-                            // reference ends; the rotation sign swaps roles.
-                            // Ordinal reversal expands both ends by one cell.
-                            double leftSpan = (captionRadians < 0d ? captions.LineHeight : parts[0].Width) * captionCos;
-                            double rightSpan = (captionRadians < 0d ? parts[0].Width : captions.LineHeight) * captionCos;
-                            double inset = PptxChartMetricRules.ChartContentFrameInset + referenceExpansion;
-                            left = Math.Max(left, leftSpan + inset - ratio * source.Width);
-                            right = Math.Max(right, rightSpan + inset - (1d - ratio) * source.Width);
+                            IncludeRotatedReference(index, parts[0].Width);
                             continue;
                         }
                         var frame = ChartCategoryCaptionHorizontalFrame(0d, parts[0].Width, captions.Ascent, captions.Descent,
@@ -148,6 +151,15 @@ internal sealed partial class PptxRenderer
                         left = Math.Max(left, -frame.Left + PptxChartMetricRules.DataLabelHorizontalPadding - ratio * width);
                         right = Math.Max(right, frame.Right + PptxChartMetricRules.DataLabelHorizontalPadding - (1d - ratio) * width);
                     }
+                    if (rotatedCaptions && captions.Labels.Count > 0)
+                    {
+                        // Spacing selects paint, not the source interval's ends.
+                        // Extend the edge captions' measured references without
+                        // painting or measuring an omitted source caption.
+                        IncludeRotatedReference(0, captions.Labels.MinBy(entry => entry.Key).Value[0].Width);
+                        IncludeRotatedReference(labels.Count - 1, captions.Labels.MaxBy(entry => entry.Key).Value[0].Width);
+                    }
+                }
                 return (left, right);
             }
             (double Left, double Width, double Right)? bands;

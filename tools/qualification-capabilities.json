@@ -1,4 +1,19 @@
 {
+  "pptx-logical-caption-ends": [
+    "PptxSkippedCategoryPaintKeepsLogicalReferenceEnds",
+    "PptxShortRotatedCaptionsKeepFiniteSpacingAndAuthoredSkips",
+    "PptxOuterCaptionReferenceIgnoresNumericAndDefaultTextRoles",
+    "PptxOuterCaptionReferenceTracksSourcePitchAndOrdinalReversal",
+    "PptxOuterCaptionReferenceKeepsEndpointContentAndWholeChartInk",
+    "PptxManualOuterHiddenAxesRetainTheirIndependentMinimumBand",
+    "PptxManualOuterRotatedEmptyCaptionsKeepTheirMinimumBand",
+    "PptxOuterCategoryAdmissionKeepsFillLegendAndLinkedLabelsTogether",
+    "PptxManualOuterLinkedLabelsFollowTheirAdmittedPlot",
+    "PptxManualOuterPlotFillUsesTheNativeDataRectangle",
+    "PptxManualOuterEndpointsOwnTheirMeasuredCaptionFrames",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-rotated-caption-density": [
     "PptxShortRotatedCaptionsKeepFiniteSpacingAndAuthoredSkips",
     "PptxCategoryOffsetsShareMeasuredUnitsAcrossPreparedContainers",
