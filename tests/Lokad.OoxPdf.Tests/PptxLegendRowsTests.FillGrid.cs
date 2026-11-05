@@ -12,9 +12,9 @@ internal static partial class PptxLegendRowsTests
             var series = Render(width, size, expected.Length, overlay: true, kind: "column").Page;
             var categories = Render(width, size, expected.Length, overlay: true, kind: "column",
                 categoryLegend: true, categoryNames: expected).Page;
-            var seriesNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(series,
+            var seriesNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(series, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
-            var categoryNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(categories,
+            var categoryNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(categories, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
             TestAssert.True(seriesNames.Select(show => show.Text).SequenceEqual(expected) &&
                     categoryNames.Select(show => show.Text).SequenceEqual(expected),
