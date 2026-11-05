@@ -37,7 +37,7 @@ internal static partial class PptxSourceUnitBoundsTests
                 categoryFontSize: 1800, valueFontSize: numericSize, categoryText: text,
                 manualHeight: .88d, labelSkip: 1);
             PdfPage retained = Render(800), admitted = Render(2400);
-            string[] Captions(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+            string[] Captions(PdfPage page) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
                 fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal))
                 .Select(show => show.Text).ToArray();
             string[] fitted = Captions(retained), complete = Captions(admitted);
