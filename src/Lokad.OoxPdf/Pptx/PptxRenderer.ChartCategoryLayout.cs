@@ -739,8 +739,7 @@ internal sealed partial class PptxRenderer
                 PptxChartMetricRules.ChartContentFrameInset, resolver.CancellationToken);
             (double NumericStart, double NumericLength, double OuterStart, double OuterLength)? vertical = null;
             double? finalCapacity = null;
-            if (measured.Count > 0 && (layout.PlotBox.Y - line.Height / 2d < layout.Frame.Y ||
-                layout.PlotBox.Y + layout.PlotBox.Height + line.Height / 2d > layout.Frame.Y + layout.Frame.Height))
+            if (measured.Count > 0)
             {
                 double beforeBand = ChartRotatedCategoryBand(layout.CategoryLabels, sin, cos);
                 var placement = new ChartAxisPlacement(0d, axisRatio, topSide, topSide);
@@ -750,10 +749,16 @@ internal sealed partial class PptxRenderer
                 double low = numeric.Start - numericClearance, high = numeric.Start + numeric.Length + numericClearance;
                 if (topSide) high = Math.Max(high, anchor + beforeBand);
                 else low = Math.Min(low, anchor - beforeBand);
-                // Admit the occupied source as one outer interval before
-                // replacing its fitted prefix with the final caption fragment.
-                var outer = AdmitChartCaptionInterval(layout.Frame.Y, layout.Frame.Height,
-                    low, high - low, 0d, 0d, 0d, placement);
+                // Category endcaps admit their occupied source as a unit.
+                // Numeric-only overflow clips the reference interval instead:
+                // preserve its opposite edge before restoring full captions.
+                bool categoryOverflows = layout.PlotBox.Y - line.Height / 2d < layout.Frame.Y ||
+                    layout.PlotBox.Y + layout.PlotBox.Height + line.Height / 2d > layout.Frame.Y + layout.Frame.Height;
+                double clippedLow = Math.Max(layout.Frame.Y, low);
+                var outer = categoryOverflows
+                    ? AdmitChartCaptionInterval(layout.Frame.Y, layout.Frame.Height,
+                        low, high - low, 0d, 0d, 0d, placement)
+                    : (Start: clippedLow, Length: Math.Min(layout.Frame.Y + layout.Frame.Height, high) - clippedLow);
                 vertical = (numeric.Start, numeric.Length, outer.Start, outer.Length);
                 finalCapacity = Math.Max(0d, ((outer.Length - 2d * numericClearance) / 2d - line.Height * cos) / sin);
             }

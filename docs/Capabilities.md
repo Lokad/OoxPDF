@@ -262,7 +262,10 @@ Approximate or restricted:
   authored title/legend geometry, explicit numeric crossings, secondary/log axes
   and rotated/wrapped categories retain their existing paths. Native-font
   geometry checks remain separate from portable content checks at font-dependent
-  admission boundaries. References remain uncalibrated against the application view.
+  admission boundaries. Numeric-only inner overflow retains the fitted source
+  interval and its opposite edge before restoring complete caption spans;
+  category-endpoint overflow retains whole-interval admission. References remain
+  uncalibrated against the application view.
   Complete factor-sized outer column/line/area declarations also center their
   source area before allocating numeric and category-caption bands inside it.
   Shortened endpoint captions release their measured space; a present category

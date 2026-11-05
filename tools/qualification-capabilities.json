@@ -3,6 +3,8 @@
     "PptxReadmittedSourceReferencesPrecedeValueDirection"
   ],
   "pptx-inner-vertical-reference-admission": [
+    "PptxNumericOnlyAdmissionRetainsFittedCaptionReferences",
+    "PptxNumericOnlySameEdgeAdmissionPreservesTheOppositeEndpoint",
     "PptxInnerReadmissionChargesOnlyTheRestoredCaptionSpan",
     "PptxReadmittedCaptionFittingTracksItsAdmittedContainer"
   ],
