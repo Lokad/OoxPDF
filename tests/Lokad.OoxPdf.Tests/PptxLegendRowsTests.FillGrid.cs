@@ -4,6 +4,29 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxLegendRowsTests
 {
+    public static void PptxWrappedSeriesAndCategoryFillLegendsShareMeasuredCells()
+    {
+        string[] expected = Enumerable.Range(1, 6).Select(i => $"North West Region {i}").ToArray();
+        foreach (var (width, size) in new[] { (288, 8), (288, 12), (576, 12), (576, 18) })
+        {
+            var series = Render(width, size, expected.Length, overlay: true, kind: "column").Page;
+            var categories = Render(width, size, expected.Length, overlay: true, kind: "column",
+                categoryLegend: true, categoryNames: expected).Page;
+            var seriesNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(series,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
+            var categoryNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(categories,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(seriesNames.Select(show => show.Text).SequenceEqual(expected) &&
+                    categoryNames.Select(show => show.Text).SequenceEqual(expected),
+                "Changing legend identity must preserve every supported visible name and source order.");
+            TestAssert.True(seriesNames.Select(show => (show.X, show.Y))
+                    .SequenceEqual(categoryNames.Select(show => (show.X, show.Y))),
+                "The same filled keys and names share wrapped geometry regardless of series/category identity.");
+            TestAssert.True(seriesNames.Select(show => show.Y).Distinct().Count() > 1,
+                "The counterpart exercises wrapped cells rather than single-row spacing.");
+        }
+    }
+
     public static void PptxWrappedFillLegendsShareColumnsAndPreserveSourceOrder()
     {
         foreach (int width in new[] { 576, 590 })

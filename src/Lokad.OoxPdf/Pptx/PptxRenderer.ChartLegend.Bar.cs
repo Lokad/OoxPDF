@@ -85,13 +85,11 @@ internal sealed partial class PptxRenderer
         var rows = new List<(int Start, int End, double Width)>();
         bool automaticLegend = !layout.Legend.Layout.HasGeometryValues &&
             (measuredBand || !layout.ManualPlotLayoutApplied);
-        // Filled keys share natural-row admission and wrapped columns. Series
-        // cells retain their measured key/text gap; category cells also own
-        // the independently observed marker-sized tail.
+        // Filled keys share natural-row admission and wrapped columns, whether
+        // they identify series or categories and whether their keys have strokes.
         bool measuredFillGrid = measuredBand && bottom && automaticLegend &&
             entries.All(entry => entry.Fill is not null);
-        bool categoryFillGrid = measuredFillGrid && entries.All(entry => entry.SeriesName is null);
-        double naturalWidth = 0d, widestCell = 0d, widestNaturalCell = 0d;
+        double naturalWidth = 0d, widestNaturalCell = 0d;
         for (int i = 0; i < entries.Count; i++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
@@ -100,10 +98,8 @@ internal sealed partial class PptxRenderer
             {
                 double advance = measure.Measure(entries[i].Name, style) + box.MarkerWidth;
                 double naturalCell = advance + box.MarkerSize;
-                double cell = categoryFillGrid ? naturalCell : widths[i];
                 naturalWidth += naturalCell;
                 widestNaturalCell = Math.Max(widestNaturalCell, naturalCell);
-                widestCell = Math.Max(widestCell, cell);
             }
         }
         if (measuredFillGrid)
@@ -137,12 +133,14 @@ internal sealed partial class PptxRenderer
                 int capacity = (int)Math.Min(entries.Count, Math.Max(1d, Math.Floor(availableWidth / widestNaturalCell)));
                 int rowCount = (entries.Count - 1) / capacity + 1;
                 int columns = (entries.Count - 1) / rowCount + 1;
-                Array.Fill(widths, widestCell);
-                if (categoryFillGrid) padding = 0d;
+                Array.Fill(widths, widestNaturalCell);
+                // Cell stride includes a marker-sized tail. The final cell's
+                // occupied extent ends with its key/text gap instead.
+                padding = box.MarkerSize - gap;
                 for (int start = 0; start < entries.Count; start += columns)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    rows.Add((start, Math.Min(entries.Count, start + columns), columns * widestCell - padding));
+                    rows.Add((start, Math.Min(entries.Count, start + columns), columns * widestNaturalCell - padding));
                 }
             }
         }
