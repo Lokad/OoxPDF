@@ -1,0 +1,677 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "Uncalibrated against application view",
+  "Rows": [
+    {
+      "Id": "outer-high45-no-data-labels",
+      "Input": "outer-high45-no-data-labels.pptx",
+      "InputSha256": "D69A66136FA5AF6D46745A2E19EDCBCA373DF0C7EB5D76B13068B6E96B9F1546",
+      "OfficePdfSha256": "E3244E9BDAD97899B730BCA14AAF1AF2CB665FECF158F06CD558885FF50E2B5C",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "outer-high45-no-legend",
+      "Input": "outer-high45-no-legend.pptx",
+      "InputSha256": "B73A4462A2076A9999F654985648E22CDDCBAE0236019E70DC7F4DEFFFD15E28",
+      "OfficePdfSha256": "B5C44D716AC2F29C938A6197A7FD20A299302B06244A2469C4601892B3C9A072",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "outer-high45-literal",
+      "Input": "outer-high45-literal.pptx",
+      "InputSha256": "D69A66136FA5AF6D46745A2E19EDCBCA373DF0C7EB5D76B13068B6E96B9F1546",
+      "OfficePdfSha256": "4A3C695768409E8085E1C70842F1B0436F363E9E523B94A4D4CC284B6DABCD72",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "outer-high45-thin",
+      "Input": "outer-high45-thin.pptx",
+      "InputSha256": "062C9FF5C7D1402840E56F276F95979DD18EFA305944B145B9FA150AFBC6B923",
+      "OfficePdfSha256": "6E1D9127990C7C7CEFB2ABDD82180DA066B8DFE8198E9410729D0408E414D85C",
+      "NativeFrame": [
+        278.20001220703125,
+        160.70001220703125,
+        576.0,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "I8"
+      ]
+    },
+    {
+      "Id": "outer-high45-wide",
+      "Input": "outer-high45-wide.pptx",
+      "InputSha256": "D66394B83A6DDC1F1D307B51B8BDB2CDF6247C9FEE82DEA96D57F610F096F513",
+      "OfficePdfSha256": "D88A1F524EF82E2969C14B2B1E21A7CE5968EADD8D087EBC8DA328FA0953975F",
+      "NativeFrame": [
+        278.20001220703125,
+        204.02999877929688,
+        535.010009765625,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "WWW1",
+        "WWW2",
+        "WWW3",
+        "WWW4",
+        "WWW5",
+        "WWW6",
+        "WWW7",
+        "WWW8"
+      ]
+    },
+    {
+      "Id": "outer-high45-align-left",
+      "Input": "outer-high45-align-left.pptx",
+      "InputSha256": "052112418553CE98779DA570922486CAB56D159B7C24D50962BB775553ADD264",
+      "OfficePdfSha256": "6BB3FA422839139407FC9C4CCE54FC2D965C49CE4277F33B767FFF70B6969B6B",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "outer-high45-align-right",
+      "Input": "outer-high45-align-right.pptx",
+      "InputSha256": "07048AF688C6BA766D1952DDA9AF6D0CF50596930BC0714621F9F85304116877",
+      "OfficePdfSha256": "F6C026579E4F805DF4582DA0CDAD027EB323EAA707A69A3A9B61988D6B793F48",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "outer-high45-last-wide",
+      "Input": "outer-high45-last-wide.pptx",
+      "InputSha256": "8BEF5F978713F5C9F6E2E5486B17329BA150DA7C25C08C542362691470F43836",
+      "OfficePdfSha256": "4D02AB635205EB670D35B0F4FEFC6C66EAC5664F7E6781ED8563DEE5CC36CB12",
+      "NativeFrame": [
+        278.20001220703125,
+        220.04000854492188,
+        519.0,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "WWWW8"
+      ]
+    },
+    {
+      "Id": "outer-high45-middle-wide",
+      "Input": "outer-high45-middle-wide.pptx",
+      "InputSha256": "7667C60653D4240F6A3CCB7CCF0B0AC6B8E4155021BA0E605990ABA3DABE27BF",
+      "OfficePdfSha256": "AC26D84A06089B80C40CA66B62DC493291C5E9301694EF7ABEC6A62B49DC7F14",
+      "NativeFrame": [
+        278.20001220703125,
+        220.04000854492188,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "WWWW4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "reference-root12",
+      "Input": "reference-root12.pptx",
+      "InputSha256": "78F9410C2916351A82C53BC4CE92A6A62D648FE4AC2F64AD7766B90860D385B2",
+      "OfficePdfSha256": "D0CD91E51B2D20F97BAD9C74BB4D939B604CE37F7AD66D813A81D648740E1C94",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "reference-root36",
+      "Input": "reference-root36.pptx",
+      "InputSha256": "EFDAC85BA493D5FA10072AEC72D3138F748CECC9BC9F112D54E7543F46D1AEB0",
+      "OfficePdfSha256": "296637EEBFBF2329C10A6CEEC5E5CFFF6B7A50DC312F91DDCFB80996F2A944A5",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "reference-root-times24",
+      "Input": "reference-root-times24.pptx",
+      "InputSha256": "118E41D8286A31323E620B14007E22244ADB76E104194E095E9C579D5D39BEE4",
+      "OfficePdfSha256": "93102D0A2E8A8ACF28E03CFA58E0EA2FE596B8EE13FA4C9157E5A06575D7D2F5",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "reference-root18-axis18",
+      "Input": "reference-root18-axis18.pptx",
+      "InputSha256": "7A6FFF76415B662356B4DC29C3842AB9105CE80A39997C3E34472736B128720A",
+      "OfficePdfSha256": "CC3AE748CA911AF0E46BFD3CE46FD97E32AB203091FBE6FD90C0BFF6EB445FE6",
+      "NativeFrame": [
+        263.0199890136719,
+        157.27999877929688,
+        573.4099731445312,
+        382.3399963378906
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "reference-negative30-last-wide",
+      "Input": "reference-negative30-last-wide.pptx",
+      "InputSha256": "9FEA1AE83C2C3BA29EA29A48C470E2C617EFADF4EBAC5207F450213DFD543BB6",
+      "OfficePdfSha256": "46426D01E69B3699356EA543172DFD3613533102CFFDC2B21C762F86CCD06D3E",
+      "NativeFrame": [
+        278.20001220703125,
+        202.77999877929688,
+        569.280029296875,
+        378.989990234375
+      ],
+      "ExpectedAngle": -30,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "WWWW8"
+      ]
+    },
+    {
+      "Id": "reference-negative45-wide",
+      "Input": "reference-negative45-wide.pptx",
+      "InputSha256": "E8BC8276138F2762471038312AA8CC8A5F9B1509474F892A92BB8701A5244A94",
+      "OfficePdfSha256": "936E66B930DCB6FF33D8CCE15A0D3A3A18B83B59064EE42531A9C9A3059756E4",
+      "NativeFrame": [
+        278.20001220703125,
+        204.02999877929688,
+        573.5399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": -45,
+      "ExpectedCaptions": [
+        "WWW1",
+        "WWW2",
+        "WWW3",
+        "WWW4",
+        "WWW5",
+        "WWW6",
+        "WWW7",
+        "WWW8"
+      ]
+    },
+    {
+      "Id": "reference-count4",
+      "Input": "reference-count4.pptx",
+      "InputSha256": "16A72FA4A5B44E496B9D138A27E1C1B4AE732D3ADD51711F99CD69E4504A530C",
+      "OfficePdfSha256": "5FA994D3D021313A2FB0AF42C1EC86258A6E4E630E241D25D7621529B7D559BB",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        576.0,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4"
+      ]
+    },
+    {
+      "Id": "reference-count12",
+      "Input": "reference-count12.pptx",
+      "InputSha256": "143849C80A75E08354A668540B4E6EADBE1391E5F3DB7E1E2F622E3807875B8F",
+      "OfficePdfSha256": "4C239960B2BCE2DB7D147A7B64DC4DEAE332BAFC1401E634CC5D37B67335ABE5",
+      "NativeFrame": [
+        278.20001220703125,
+        172.0,
+        559.5399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8",
+        "W1",
+        "W2",
+        "W3",
+        "W4"
+      ]
+    },
+    {
+      "Id": "reference-numeric-format",
+      "Input": "reference-numeric-format.pptx",
+      "InputSha256": "753EC68971C1A811C4C604DC4A37AF5F9DDCD290F7FB93890284065A2E953849",
+      "OfficePdfSha256": "85ED43199D5C45014AB00A5B01693935142FAD32F5A0BD5026563DE7CDF544AF",
+      "NativeFrame": [
+        311.57000732421875,
+        172.0,
+        567.0399780273438,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-hidden-numeric",
+      "Input": "logical-hidden-numeric.pptx",
+      "InputSha256": "6643A964C84B9920F228E6210F1F8C86DC5EF41815AF98B830250F8E06BB3C2B",
+      "OfficePdfSha256": "688FF8C7B5ED9DEE9093EE686B0221AEACB78E3961970D368488FDAA4E4DC58A",
+      "NativeFrame": [
+        218.4600067138672,
+        172.0,
+        567.0399780273438,
+        392.3999938964844
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-hidden-numeric30",
+      "Input": "logical-hidden-numeric30.pptx",
+      "InputSha256": "75E7FE7E9003178CDA1689CEBF5CEBF144359755693A8E95335EAAA01F044504",
+      "OfficePdfSha256": "482BB4C66FC6367E1779254A81B515A621DE8F80D29AFBC155E2B8E0B4CC341D",
+      "NativeFrame": [
+        222.72000122070312,
+        168.79998779296875,
+        561.3200073242188,
+        392.3999938964844
+      ],
+      "ExpectedAngle": 30,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-numeric-right",
+      "Input": "logical-numeric-right.pptx",
+      "InputSha256": "7C4C9BE26C3BE533D7ABCC016D80A8A53F48B7D676EFEF59C8FFE1A47CEBD2D5",
+      "OfficePdfSha256": "E9EC36D9366507CA46D16E6C1DC1ABB787D0FD54C8BE829AC6D34057AF13F8FF",
+      "NativeFrame": [
+        218.4600067138672,
+        172.0,
+        513.7999877929688,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-reversed",
+      "Input": "logical-reversed.pptx",
+      "InputSha256": "E782C2691F213D6CED1B8615844C5B7B8468FE5137FA3EA6A818C0AD1BE469AB",
+      "OfficePdfSha256": "36419CBFA16322581430046F468E3DAE1CC4B396DA57C8F8DD1C60D5F250E194",
+      "NativeFrame": [
+        263.4599914550781,
+        172.0,
+        513.7999877929688,
+        378.989990234375
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-hidden-negative30",
+      "Input": "logical-hidden-negative30.pptx",
+      "InputSha256": "A490AD7A5F03C57FA822E0A815B1988D87C72F3E869F7B597E202FCA5A13B5C3",
+      "OfficePdfSha256": "A0228EE5DBF2892331C56F4EE1EE25EE060E979C776648B821143EA45D3F3329",
+      "NativeFrame": [
+        230.67999267578125,
+        168.79998779296875,
+        569.280029296875,
+        392.3999938964844
+      ],
+      "ExpectedAngle": -30,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-negative-first-wide",
+      "Input": "logical-negative-first-wide.pptx",
+      "InputSha256": "45E2A0C023F9D03810BA45017D9F6C58BED8337BAD8F13E7762FF8BDD32B8DE6",
+      "OfficePdfSha256": "2F56F65717CEA5FB8FC6F3B27C599BFB3B314FC4FCDE5737EF5B595CEB586351",
+      "NativeFrame": [
+        289.5199890136719,
+        202.77999877929688,
+        569.280029296875,
+        392.3999938964844
+      ],
+      "ExpectedAngle": -30,
+      "ExpectedCaptions": [
+        "WWWW1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-times-negative30",
+      "Input": "logical-times-negative30.pptx",
+      "InputSha256": "D57E23C8AF3F89F93DF4721F08ADCA291CD30F5785929F588984A7F27C951EC4",
+      "OfficePdfSha256": "160BD8E24F613C9F74970DB3C9360873B39A506F7E14B39BF20E420A767E3848",
+      "NativeFrame": [
+        278.20001220703125,
+        167.70001220703125,
+        569.489990234375,
+        378.989990234375
+      ],
+      "ExpectedAngle": -30,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-wide-source30",
+      "Input": "logical-wide-source30.pptx",
+      "InputSha256": "0DC341D68F7ACD08C81D5903E4F3A9D269ADE79CD5B0CFED19734EC4E39AFF23",
+      "OfficePdfSha256": "0F45C951A4DF4C85BD66EF3890AB8E720C3F73FC4743B4705BEAB28D65B24D8E",
+      "NativeFrame": [
+        242.1999969482422,
+        168.79998779296875,
+        601.8200073242188,
+        378.989990234375
+      ],
+      "ExpectedAngle": 30,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-hidden-wide-source30",
+      "Input": "logical-hidden-wide-source30.pptx",
+      "InputSha256": "D6F0BE740A5C7FBA2AC35647E62684E470A6F7F735F0448DAFD006237820DFCE",
+      "OfficePdfSha256": "24D7B791468838124A2876DDA7C89B8067DA4D374A7FE2FF3F74C4670E21EC8B",
+      "NativeFrame": [
+        182.22000122070312,
+        168.79998779296875,
+        601.8200073242188,
+        392.3999938964844
+      ],
+      "ExpectedAngle": 30,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-reversed-hidden8",
+      "Input": "logical-reversed-hidden8.pptx",
+      "InputSha256": "F56F59229B1FB4B443554279AFF4BD5E20AB58C97A45C41DC0EB0C687347B5C6",
+      "OfficePdfSha256": "32647C31A4FF1D4AB5DC1ABA7E4C27EF85CC481A8EAF09417FDF98965FE6A1D6",
+      "NativeFrame": [
+        263.4599914550781,
+        172.0,
+        522.0399780273438,
+        392.3999938964844
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8"
+      ]
+    },
+    {
+      "Id": "logical-reversed-hidden12",
+      "Input": "logical-reversed-hidden12.pptx",
+      "InputSha256": "67BAEFA9791AC4122A92E8E389C8BCB589F6BA4749865D6799861FDC366B5478",
+      "OfficePdfSha256": "417B272D7B5AF3136549FD1A107CD0108E5A4EB60FE8C3FD8540AA0446C8B83C",
+      "NativeFrame": [
+        255.9600067138672,
+        172.0,
+        529.5399780273438,
+        392.3999938964844
+      ],
+      "ExpectedAngle": 45,
+      "ExpectedCaptions": [
+        "W1",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W7",
+        "W8",
+        "W1",
+        "W2",
+        "W3",
+        "W4"
+      ]
+    }
+  ]
+}

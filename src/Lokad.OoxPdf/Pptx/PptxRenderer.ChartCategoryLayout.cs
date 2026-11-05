@@ -109,6 +109,9 @@ internal sealed partial class PptxRenderer
                 categoryBand = Math.Max(categoryBand, style.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
             }
             bool reversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+            bool rotatedCaptions = layout.CategoryLabels is { RotationDegrees: not 0d };
+            double referenceExpansion = reversed
+                ? source.Width / Math.Max(1, onTickMarks ? labels.Count - 1 : labels.Count) : 0d;
             (double Left, double Right) RequiredBands(double width)
             {
                 double left = labelsRight ? 0d : numericBand, right = labelsRight ? numericBand : 0d;
@@ -117,6 +120,20 @@ internal sealed partial class PptxRenderer
                     {
                         resolver.CancellationToken.ThrowIfCancellationRequested();
                         double ratio = ChartCategoryToPlotCoordinate(index, labels.Count, 0d, 1d, onTickMarks, reversed);
+                        if (rotatedCaptions)
+                        {
+                            // Outer allocation uses the authored area before
+                            // numeric carving, not the painted caption bounds.
+                            // Word advance and normal-line span own opposite
+                            // reference ends; the rotation sign swaps roles.
+                            // Ordinal reversal expands both ends by one cell.
+                            double leftSpan = (captionRadians < 0d ? captions.LineHeight : parts[0].Width) * captionCos;
+                            double rightSpan = (captionRadians < 0d ? parts[0].Width : captions.LineHeight) * captionCos;
+                            double inset = PptxChartMetricRules.ChartContentFrameInset + referenceExpansion;
+                            left = Math.Max(left, leftSpan + inset - ratio * source.Width);
+                            right = Math.Max(right, rightSpan + inset - (1d - ratio) * source.Width);
+                            continue;
+                        }
                         var frame = ChartCategoryCaptionHorizontalFrame(0d, parts[0].Width, captions.Ascent, captions.Descent,
                             captionSin, captionCos, rightCaptionAnchor);
                         left = Math.Max(left, -frame.Left + PptxChartMetricRules.DataLabelHorizontalPadding - ratio * width);
@@ -124,7 +141,14 @@ internal sealed partial class PptxRenderer
                     }
                 return (left, right);
             }
-            var bands = AdmitChartCaptionBands(source.Width, source.Width, RequiredBands);
+            (double Left, double Width, double Right)? bands;
+            if (rotatedCaptions)
+            {
+                var required = RequiredBands(source.Width);
+                double width = source.Width - required.Left - required.Right;
+                bands = width >= 1d ? (required.Left, width, required.Right) : null;
+            }
+            else bands = AdmitChartCaptionBands(source.Width, source.Width, RequiredBands);
             if (bands is null)
                 return await PrepareCategoryLabelLayoutAsync(original, theme, chart, xml, categoryAxis, labels,
                     onTickMarks, categoryHighSide, categoryRatio, resolver, legendBox).ConfigureAwait(false);
