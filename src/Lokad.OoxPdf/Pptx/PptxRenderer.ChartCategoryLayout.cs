@@ -499,13 +499,16 @@ internal sealed partial class PptxRenderer
         // Tick spacing includes the horizontal-header line gap. Selecting the
         // OS/2 ink box instead admits too many Arial/Times labels (Office controls).
         double policyHeight = (await measure.MeasureLineBoxAsync(policyStyle, horizontalHeader: true).ConfigureAwait(false)).Height;
-        double widestWord = 0d;
+        double widestWord = 0d, widestCaption = 0d;
         foreach (var label in labels)
         {
             resolver.CancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(label?.Text)) continue;
+            double captionWidth = await measure.MeasureAsync(label.Text, policyStyle).ConfigureAwait(false);
+            widestCaption = Math.Max(widestCaption, captionWidth);
             foreach (string word in label.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                widestWord = Math.Max(widestWord, await measure.MeasureAsync(word, policyStyle).ConfigureAwait(false));
+                widestWord = Math.Max(widestWord, word.Length == label.Text.Length ? captionWidth :
+                    await measure.MeasureAsync(word, policyStyle).ConfigureAwait(false));
         }
         double availableWidth = automaticAngle && !layout.ManualPlotLayoutApplied
             ? Math.Max(1d, layout.Frame.Width - 2d * PptxChartMetricRules.ColumnPlotRightReserve)
@@ -513,7 +516,13 @@ internal sealed partial class PptxRenderer
         double pitch = availableWidth / Math.Max(1, onTickMarks ? labels.Count - 1 : labels.Count);
         int RequiredSkip(double degrees)
         {
-            double span = degrees == 0d ? widestWord : policyHeight / Math.Sin(Math.Abs(degrees) * Math.PI / 180d);
+            double radians = Math.Abs(degrees) * Math.PI / 180d;
+            double sine = Math.Sin(radians);
+            // Long captions share a normal-line strip; a finite short caption
+            // can occupy less than that strip. Its full advance includes spaces
+            // and every word, independently of the flat wrapping policy.
+            double span = degrees == 0d ? widestWord : Math.Min(policyHeight / sine,
+                widestCaption * Math.Cos(radians) + policyHeight * sine);
             return (int)Math.Clamp(Math.Ceiling(span / pitch), 1d, int.MaxValue);
         }
         if (automaticAngle)

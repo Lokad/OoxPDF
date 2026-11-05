@@ -86,7 +86,8 @@ internal static partial class PptxColumnIntervalTests
     }
 
     private static PdfPage RenderCaption(JsonElement row, double size, bool high, double numericSize,
-        int offset, string mode, double rotation = 0d, string target = "outer") => RenderAdmission(row, caseDirectory: OuterCases,
+        int offset, string mode, double rotation = 0d, string target = "outer", int? skip = 1,
+        string? text = null) => RenderAdmission(row, caseDirectory: OuterCases,
         horizontalCategories: true, editChart: xml =>
         {
             XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
@@ -94,8 +95,10 @@ internal static partial class PptxColumnIntervalTests
             if (target == "automatic") xml.Descendants(c + "plotArea").Single().Element(c + "layout")!.Remove();
             else xml.Descendants(c + "manualLayout").Single().Element(c + "layoutTarget")!.SetAttributeValue("val", target);
             foreach (var value in xml.Descendants(c + "cat").Descendants(c + "v"))
-                value.Value = mode == "empty" ? string.Empty : mode == "spaces" ? " " : "I";
+                value.Value = text ?? (mode == "empty" ? string.Empty : mode == "spaces" ? " " : "I");
             var axis = xml.Descendants(c + "catAx").Single();
+            axis.Element(c + "tickLblSkip")?.Remove();
+            if (skip is { } authoredSkip) axis.Add(new XElement(c + "tickLblSkip", new XAttribute("val", authoredSkip)));
             axis.Element(c + "tickLblPos")!.SetAttributeValue("val", mode == "hidden" ? "none" : high ? "high" : "nextTo");
             axis.Element(c + "lblOffset")!.SetAttributeValue("val", offset);
             SetSize(axis, size);
