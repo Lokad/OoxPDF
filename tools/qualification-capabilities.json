@@ -48,6 +48,9 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-rotated-outer-clearance": [
+    "PptxOuterCaptionReferenceIgnoresNumericAndDefaultTextRoles",
+    "PptxOuterCaptionReferenceTracksSourcePitchAndOrdinalReversal",
+    "PptxOuterCaptionReferenceKeepsEndpointContentAndWholeChartInk",
     "PptxOuterRotatedCaptionClearanceIsSideIndependent",
     "PptxOuterRotatedCaptionClearanceKeepsCompleteInkAndAngles",
     "PptxOuterProjectedCategoryInkStaysInsideItsChart",

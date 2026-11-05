@@ -266,12 +266,13 @@ Approximate or restricted:
   axis retains a nominal minimum band when labels/ticks are hidden. Data axes,
   plot fill and linked label geometry share the admitted inner rectangle.
   Numeric-caption admission precedes automatic category angle/skip fitting.
-  Rotated single-line category fragments allocate their projected bounds within
-  the same source area; measurement, clipping and painting share the baseline
-  and horizontal frame rules. Mirrored outer captions share their measured gap;
+  Rotated single-line category fragments allocate logical text advance and
+  normal-line spans against the authored width before numeric carving. Source
+  pitch and ordinal reversal own reference movements; measured painting and
+  clipping retain their anchors. Mirrored outer captions share their measured gap;
   authored label offsets add normal-line spacing rather than scaling the full
-  baseline reserve. Signed-angle horizontal reserves, baseline typography and
-  empty-caption spacing remain approximate, as do incomplete declarations and
+  baseline reserve. Numeric-side bands, baseline typography and empty-caption
+  spacing remain approximate, as do incomplete declarations and
   the exclusions above. Some Office references paint category text as vector
   outlines; their validation uses graphics/raster output as well as extraction.
   Line/area captions, data points and line data labels share category direction
