@@ -760,7 +760,10 @@ internal sealed partial class PptxRenderer
                         low, high - low, 0d, 0d, 0d, placement)
                     : (Start: clippedLow, Length: Math.Min(layout.Frame.Y + layout.Frame.Height, high) - clippedLow);
                 vertical = (numeric.Start, numeric.Length, outer.Start, outer.Length);
-                finalCapacity = Math.Max(0d, ((outer.Length - 2d * numericClearance) / 2d - line.Height * cos) / sin);
+                // Numeric-only admission restores the complete source as before;
+                // the existing half-height fitter belongs to category overflow.
+                if (categoryOverflows)
+                    finalCapacity = Math.Max(0d, ((outer.Length - 2d * numericClearance) / 2d - line.Height * cos) / sin);
             }
             sourceReferences = (horizontal.Left, horizontal.Right, vertical);
             // Reuse the measured collection; original source strings already
