@@ -16142,6 +16142,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-automatic-column-scale": [
+    "PptxAutomaticColumnScaleSeparatesAuthoredPlotPlacement",
+    "PptxAutomaticColumnScalePreservesPlacedDeclarationsAndFallbacks",
     "PptxAutomaticColumnScaleRespondsToFrameAndSharesItsDataCoordinates",
     "PptxAutomaticColumnScaleMatchesTheEquivalentAuthoredIntervals",
     "PptxAutomaticColumnScaleKeepsAuthoredAndUnknownDeclarations",

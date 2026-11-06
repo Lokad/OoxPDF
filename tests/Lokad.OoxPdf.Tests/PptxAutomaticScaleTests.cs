@@ -58,6 +58,55 @@ internal static class PptxAutomaticScaleTests
             "Reflected data retains its scale ratio; captions may change the occupied plot height.");
     }
 
+    public static void PptxAutomaticColumnScaleSeparatesAuthoredPlotPlacement()
+    {
+        foreach (int height in new[] { 120, 480 })
+        foreach (int innerHeight in new[] { 60, 90 })
+        {
+            string layout = ManualLayout(height, innerHeight, "inner");
+            double expectedMaximum = Read(Render(height)).Values.Max();
+            var automatic = Read(Render(height, plotLayout: layout));
+            TestAssert.Equal(expectedMaximum, automatic.Values.Max());
+            TestAssert.Equal(4, automatic.Bars.Length);
+            var equivalent = Read(Render(height, declaration: $"<c:min val=\"0\"/><c:max val=\"{expectedMaximum.ToString(CultureInfo.InvariantCulture)}\"/>",
+                major: expectedMaximum == 5d ? "5" : "0.5", plotLayout: layout));
+            TestAssert.Equal(4, equivalent.Bars.Length);
+            TestAssert.True(automatic.Bars.Zip(equivalent.Bars).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
+                "Automatic scale and equivalent declared bounds share the admitted rectangle, including frame clamping.");
+        }
+    }
+
+    public static void PptxAutomaticColumnScalePreservesPlacedDeclarationsAndFallbacks()
+    {
+        foreach (string target in new[] { "inner", "outer" })
+        {
+            string layout = ManualLayout(120, 90, target);
+            if (target == "inner")
+            {
+                var automatic = Read(Render(120, plotLayout: layout));
+                var equivalent = Read(Render(120, declaration: "<c:min val=\"0\"/><c:max val=\"5\"/>",
+                    major: "5", plotLayout: layout));
+                TestAssert.Equal(5d, automatic.Values.Max());
+                TestAssert.Equal(4, automatic.Bars.Length);
+                TestAssert.Equal(4, equivalent.Bars.Length);
+                TestAssert.True(automatic.Bars.Zip(equivalent.Bars).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
+                    "Equivalent authored and automatic bounds consume the same placed data rectangle.");
+            }
+            var authored = Read(Render(120, declaration: "<c:min val=\"0\"/><c:max val=\"8\"/>",
+                major: "2", plotLayout: layout));
+            TestAssert.True(authored.Values.SequenceEqual(new[] { 0d, 2d, 4d, 6d, 8d }),
+                "Explicit bounds and intervals retain ownership in either authored frame.");
+            TestAssert.Equal(4.5d, Read(Render(120, major: "future", plotLayout: layout)).Values.Max());
+        }
+    }
+
+    private static string ManualLayout(int height, int innerHeight, string target) =>
+        $"<c:layout><c:manualLayout><c:layoutTarget val=\"{target}\"/>" +
+        "<c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/>" +
+        "<c:x val=\"0.1\"/><c:y val=\"0.1\"/>" +
+        $"<c:w val=\"0.8\"/><c:h val=\"{((double)innerHeight / height).ToString(CultureInfo.InvariantCulture)}\"/>" +
+        "</c:manualLayout></c:layout>";
+
     private static (double[] Values, double[] Baselines, double[] Bars, double[] Xs, double[] BarXs) Read(PdfPage page)
     {
         var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("CVA", StringComparison.Ordinal))
@@ -71,7 +120,7 @@ internal static class PptxAutomaticScaleTests
             shows.Select(show => show.X).ToArray(), bars.Select(rect => rect[0]).ToArray());
     }
 
-    private static PdfPage Render(int height, double value = 4d, string declaration = "", string? major = null)
+    private static PdfPage Render(int height, double value = 4d, string declaration = "", string? major = null, string plotLayout = "")
     {
         string categories = string.Concat(Enumerable.Range(0, 4).Select(index => $"<c:pt idx=\"{index}\"><c:v>Area {index}</c:v></c:pt>"));
         string values = string.Concat(Enumerable.Range(0, 4).Select(index => $"<c:pt idx=\"{index}\"><c:v>{value.ToString(CultureInfo.InvariantCulture)}</c:v></c:pt>"));
@@ -82,7 +131,7 @@ internal static class PptxAutomaticScaleTests
             """;
         using var stream = PptxTests.CreateSingleChartPackageStream($$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>
+              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{plotLayout}}<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>
                 <c:ser><c:cat><c:strLit><c:ptCount val="4"/>{{categories}}</c:strLit></c:cat><c:val><c:numLit><c:ptCount val="4"/>{{values}}</c:numLit></c:val></c:ser>
                 <c:axId val="1"/><c:axId val="2"/>
               </c:barChart>

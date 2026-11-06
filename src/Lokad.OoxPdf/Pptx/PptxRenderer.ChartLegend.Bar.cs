@@ -59,16 +59,16 @@ internal sealed partial class PptxRenderer
 
     // Measure once, reserve automatic plot space, then give painting the same rows.
     // Authored data frames and overlay legends do not reserve plot space.
-    private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box)> LayoutChartLegendRowsAsync(
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox Box, double? AllocationBand)> LayoutChartLegendRowsAsync(
         ChartLayout layout, IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style,
         PresentationFontResolver resolver, PptxRenderContext context, double maximumRowWidth, bool measuredBand)
     {
-        if (!layout.Legend.Visible || entries.Count == 0) { return (layout, default); }
+        if (!layout.Legend.Visible || entries.Count == 0) { return (layout, default, 0d); }
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
         await measure.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         ChartLegendBox box = ResolveChartLegendBox(layout.Frame, layout.PlotBox, entries,
             layout.Legend, style, measure, ChartLegendPlacement.Default);
-        if (!box.Horizontal) { return (layout, box); }
+        if (!box.Horizontal) { return (layout, box, null); }
         bool bottom = layout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom;
         bool packedAsBottom = bottom || measuredBand;
         double gap = ComputeHorizontalLegendTextGap(style.FontSize, packedAsBottom);
@@ -218,10 +218,14 @@ internal sealed partial class PptxRenderer
             box = box with { X = x, Width = packedWidth };
         }
         double firstY, clipY, clipHeight;
+        double? allocationBand = null;
         if (measuredBand)
         {
             double occupied = placementRowCount * box.LineHeight - (placementRowCount > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
             double requiredBand = admittedRowCount == 0 ? 0d : occupied + HorizontalLegendFrameInset;
+            // Automatic scale allocation precedes authored plot placement.
+            // Its legend footprint survives even when the data frame reserves none.
+            allocationBand = layout.Legend.Overlay ? 0d : requiredBand;
             double reserved = layout.Legend.Overlay || layout.ManualPlotLayoutApplied
                 ? 0d : Math.Min(requiredBand, Math.Max(0d, layout.PlotBox.Height - 1d));
             double topContent = Math.Max(0d, layout.Frame.Y + layout.Frame.Height -
@@ -289,6 +293,6 @@ internal sealed partial class PptxRenderer
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning,
                 "Legend exceeds its available frame; overflowing entries are clipped.", context.SlidePartName, context.SlideNumber, "Approximate");
         }
-        return (layout, box with { FirstY = firstY, EntryFrames = frames });
+        return (layout, box with { FirstY = firstY, EntryFrames = frames }, allocationBand);
     }
 }

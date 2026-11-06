@@ -131,6 +131,7 @@ internal sealed partial class PptxRenderer
                         ? (valueExtents, valueAxisOptions.Units) : null).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
                 ChartLegendBox? preparedLegendBox = null;
+                double? measuredLegendAllocation = null;
                 ChartLayout unreservedLayout = chartLayout;
                 bool measuredHorizontalLegend = UsesMeasuredBarLegend(barOptions, sceneChart, chartLayout.Legend);
                 bool manualPlotBottomLegend = chartLayout.ManualPlotLayoutApplied &&
@@ -146,10 +147,15 @@ internal sealed partial class PptxRenderer
                         chartLayout.Frame.Width, measuredHorizontalLegend || manualPlotBottomLegend).ConfigureAwait(false));
                     chartLayout = prepared.Layout;
                     preparedLegendBox = prepared.Box;
+                    measuredLegendAllocation = prepared.AllocationBand;
                 }
                 double legendBand = unreservedLayout.PlotBox.Height - chartLayout.PlotBox.Height;
+                double? scaleLegendBand = legendBand;
+                if (sceneChart.PlotAreaLayout.HasGeometryValues)
+                    scaleLegendBand = !chartLayout.ManualPlotLayoutApplied ? null :
+                        !chartLayout.Legend.Visible || chartLayout.Legend.Overlay ? 0d : measuredLegendAllocation;
                 if (await MeasureAutomaticColumnScaleAsync(theme, sceneChart, chartXml, valueAxisSource, categoryAxis,
-                    dataExtents, chartLayout, legendBand, fontResolver).ConfigureAwait(false) is { } scale &&
+                    dataExtents, chartLayout, scaleLegendBand, fontResolver).ConfigureAwait(false) is { } scale &&
                     (scale.Extents != valueExtents || scale.Units != valueAxisOptions.Units))
                 {
                     valueExtents = scale.Extents;

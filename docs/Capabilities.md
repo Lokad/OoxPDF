@@ -173,8 +173,11 @@ Approximate or restricted:
   Automatic single clustered-column plots with one supported linear value axis
   select bounds and intervals from measured title, legend and numeric-font capacity.
   Numeric strips, labels, grids and data coordinates consume that same scale.
+  Authored inner data rectangles retain this automatic allocation while keeping
+  their source placement; the measured legend footprint is reused.
   Automatic limits and intervals remain approximate, including large-font and
-  range-boundary cases; manual, composed and secondary axes retain their fallbacks.
+  range-boundary cases; authored outer frames, manual furniture, composed and
+  secondary axes retain their fallbacks.
   Authored bounds and units remain authoritative within the supported
   single-axis scope above. Remaining horizontal frame geometry is approximate;
   Unqualified composed/secondary interval ownership retains its fallback.

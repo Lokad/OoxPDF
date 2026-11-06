@@ -12,26 +12,30 @@ internal sealed partial class PptxRenderer
         chart.Axes.Count(value => value.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
         axis is { OrientationKind: not PptxSceneChartAxisOrientation.Unknown } &&
         ReadChartAxisDeclaration(new(axis, null)) is { Minimum: null, Maximum: null, MajorUnit: null } &&
-        !chart.PlotAreaLayout.HasGeometryValues && !chart.Title.Layout.HasGeometryValues &&
+        // An inner data rectangle follows automatic scale allocation. An
+        // authored outer frame owns that allocation and keeps its fallback.
+        (!chart.PlotAreaLayout.HasGeometryValues ||
+            chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner) &&
+        !chart.Title.Layout.HasGeometryValues &&
         !chart.Legend.Layout.HasGeometryValues;
 
     private static async ValueTask<(ChartValueExtents Extents, ChartAxisUnits Units)?> MeasureAutomaticColumnScaleAsync(
         PptxTheme theme, PptxSceneChart chart, XDocument xml, ChartAxisSource axis, ChartAxisSource category,
-        ChartValueExtents data, ChartLayout layout, double legendBand, PresentationFontResolver resolver)
+        ChartValueExtents data, ChartLayout layout, double? legendBand, PresentationFontResolver resolver)
     {
-        if (!CanMeasureAutomaticColumnScale(chart, axis.SceneAxis) ||
+        if (!CanMeasureAutomaticColumnScale(chart, axis.SceneAxis) || legendBand is null ||
             category.SceneAxis?.CrossesAt is not null || data.Min < 0d && data.Max > 0d ||
             !double.IsFinite(data.Min) || !double.IsFinite(data.Max) ||
             Math.Max(Math.Abs(data.Min), Math.Abs(data.Max)) <= PptxChartMetricRules.AxisValueEpsilon)
             return null;
         var plot = chart.Plots[0];
         var header = await TryMeasureCartesianHeaderAsync(theme, chart, layout.Legend, plot, plot.Source,
-            xml, resolver).ConfigureAwait(false);
+            xml, resolver, automaticScaleAllocation: true).ConfigureAwait(false);
         if (header is null) return null;
         // The automatic outer allocation precedes caption fitting and authored
         // placement. Reuse the admitted legend band; do not pack its rows again.
         double titleBand = header.Value.Reserve - header.Value.NumericClearance;
-        double available = layout.Frame.Height - titleBand - legendBand -
+        double available = layout.Frame.Height - titleBand - legendBand.Value -
             2d * PptxChartMetricRules.HorizontalBarPlotTopReserve;
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, axis.SceneAxis, xml, axis.XmlAxis,
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");

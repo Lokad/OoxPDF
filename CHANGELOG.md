@@ -130,6 +130,8 @@
   when varying colors is off, and preserves explicit point no-fill.
 - PPTX: measures automatic column-chart horizontal reserves from axis labels,
   keeping titles and horizontal legends from shrinking the plot.
+  Automatic scales share measured font/title/legend capacity, including authored
+  inner data placement; outer-frame and boundary cases remain approximate.
 - PPTX: sizes clustered bars from the actual interseries gaps, preserving single-
   series widths when overlap changes.
 - PPTX: corrects authored tint/shade colors and transform order in shapes, charts
