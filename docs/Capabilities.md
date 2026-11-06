@@ -367,7 +367,7 @@ Approximate or restricted:
   accent recipes has not been generalized. Plain automatic outside-end labels
   above clustered columns wrap at measured word/text-element boundaries and
   admit their fitted text/key frame inside the chart. Whole text elements wider
-  than the fitting width retain their full glyphs and four-line/paragraph flow;
+  than the fitting width retain their full glyphs and normal paragraph flow;
   their fitted source width owns alignment, with residual native font geometry.
   Manual, rich-text,
   explicit no-wrap, negative-end, stacked and other placements retain their
