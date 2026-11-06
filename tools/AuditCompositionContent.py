@@ -280,7 +280,10 @@ def main():
         raise ValueError("Reference roots must be directories")
     inspector = args.inspector.resolve()
     pin = read(artifact / "identity.json")
-    library = artifact / "src/Lokad.OoxPdf/bin/Release/net10.0/Lokad.OoxPdf.dll"
+    framework = pin.get("Framework", "net10.0")
+    if framework not in {"net10.0", "net11.0"}:
+        raise ValueError("Unknown frozen artifact framework")
+    library = artifact / "src/Lokad.OoxPdf/bin/Release" / framework / "Lokad.OoxPdf.dll"
     inputs = args.input_root.resolve() if args.input_root else artifact
     public_cases = (inputs / "tests/Lokad.OoxPdf.Tests/Cases").resolve()
     manifest_name = Path(args.manifest).as_posix()
@@ -367,7 +370,8 @@ def main():
         raise ValueError("Audit runtime changed")
     report = {"Scope": "Public portfolio prose-token and simple-math presence screen; not reading order, ink, images, clipping or geometry proof",
               "ToolSha256": sha(Path(__file__)),
-              "FrozenRevision": pin["Revision"], "LibrarySha256": pin["LibrarySha256"], "InspectorSha256": inspector_hash,
+              "FrozenRevision": pin["Revision"], "Framework": framework,
+              "LibrarySha256": pin["LibrarySha256"], "InspectorSha256": inspector_hash,
               "ManifestSha256": sha(manifest), "Conversions": 0, "LibraryBuilds": 0,
               "ReferenceDirectories": [str(directory) for directory in references],
               "InputRoot": str(inputs), "InputRevision": input_revision,

@@ -28,6 +28,13 @@ Those are retained historical results: sixteen original Office reference PDFs
 are no longer available locally. Fresh 0.3.0 references use explicit new identities;
 image captures remain uncalibrated until checked against the visible application.
 
+The 2026-11-06 source checkpoint refreshes all sixteen outcomes against fresh
+Office PDF references. Page counts agree, and the content screen finds no missing
+Office prose tokens or simple math. Two dynamic-field source flags remain
+unresolved. Strict image results remain two PPTX passes and fourteen DOCX
+failures; token presence does not prove glyph ink, clipping or placement.
+This validates the development runtime, without promoting a release candidate.
+
 The 0.2.0 maintenance checkpoint is complete. Development toward 0.3.0 now
 prioritizes composed DOCX layout, generalized PPTX chart styles and effective
 properties, and calibrated Office image references alongside the retained PDF

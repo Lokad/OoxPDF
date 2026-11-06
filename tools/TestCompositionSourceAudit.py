@@ -1,6 +1,8 @@
 """Adversarial controls for cached-result source auditing; no rendering/builds."""
 import sys
 import json
+import subprocess
+from zipfile import ZipFile
 sys.dont_write_bytecode = True
 from xml.etree import ElementTree as E
 import unittest
@@ -228,6 +230,72 @@ class ReferenceInspectionTests(unittest.TestCase):
                 log.write_text("2 0 obj: pages\n", encoding="utf-8")
                 with self.assertRaises(ValueError):
                     inspect_reference(pdf, inspector, cache)
+
+class AuditFrameworkBindingTests(unittest.TestCase):
+    def test_audit_uses_pinned_framework_and_preserves_legacy_identity(self):
+        for framework in [None, 'net10.0', 'net11.0']:
+            with self.subTest(framework=framework), TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                artifact, candidate, references = (root / name for name in ['artifact', 'candidate', 'references'])
+                for path in [artifact, candidate, references]:
+                    path.mkdir()
+                inspector = root / 'inspector.dll'
+                inspector.write_bytes(b'inspector-control')
+                selected = framework or 'net10.0'
+                for tfm in ['net10.0', 'net11.0']:
+                    library = artifact / 'src/Lokad.OoxPdf/bin/Release' / tfm / 'Lokad.OoxPdf.dll'
+                    library.parent.mkdir(parents=True)
+                    library.write_bytes(tfm.encode())
+                library = artifact / 'src/Lokad.OoxPdf/bin/Release' / selected / 'Lokad.OoxPdf.dll'
+                source = artifact / 'tests/Lokad.OoxPdf.Tests/Cases/control.pptx'
+                source.parent.mkdir(parents=True)
+                with ZipFile(source, 'w') as package:
+                    package.writestr('ppt/slides/slide1.xml', '<slide/>')
+                manifest_name = 'tests/Lokad.OoxPdf.Tests/Cases/portfolio.json'
+                manifest = artifact / manifest_name
+                manifest.write_text(json.dumps([dict(Id='control', Input=source.relative_to(artifact).as_posix(),
+                                                     Sha256=sha(source), HeldOut=False)]), encoding='utf-8')
+                identity = dict(Revision='control', LibrarySha256=sha(library),
+                                Inputs={manifest_name: sha(manifest), source.relative_to(artifact).as_posix(): sha(source)})
+                if framework is not None:
+                    identity['Framework'] = framework
+                (artifact / 'identity.json').write_text(json.dumps(identity), encoding='utf-8')
+                run = candidate / 'control-presentation'
+                (run / 'inspect').mkdir(parents=True)
+                pdf = run / 'candidate.pdf'
+                pdf.write_bytes(b'%PDF-cached-control')
+                (run / 'inspect/text-operations.json').write_text('[]', encoding='utf-8')
+                reference = references / 'control-presentation/reference.pdf'
+                reference.parent.mkdir()
+                reference.write_bytes(pdf.read_bytes())
+                cache = root / 'cache' / (sha(reference) + '-' + sha(inspector)[:12])
+                cache.mkdir(parents=True)
+                ops = cache / 'text-operations.json'
+                ops.write_text('[]', encoding='utf-8')
+                (cache / 'identity.json').write_text(json.dumps(dict(PdfSha256=sha(reference), InspectorSha256=sha(inspector),
+                                                                    OperationsSha256=sha(ops))), encoding='utf-8')
+                (cache / 'inspect.log').write_text('2 0 obj: pages\n3 0 obj: page\n', encoding='utf-8')
+                row = dict(Id='control', Mode='presentation', InputSha256=sha(source), PdfSha256=sha(pdf),
+                           InspectedPages=1, IgnoredEquationDiagnostics=0)
+                (candidate / 'outcomes.json').write_text(json.dumps(dict(LibrarySha256=sha(library), ManifestSha256=sha(manifest),
+                                                                       InspectorSha256=sha(inspector), Rows=[row])), encoding='utf-8')
+                comparison = dict(Id='control', Mode='presentation', CandidatePdfSha256=sha(pdf), ReferencePdfSha256=sha(reference), Failures=[])
+                (candidate / 'office-comparisons.json').write_text(json.dumps(dict(CandidateLibrarySha256=sha(library), Rows=[comparison])), encoding='utf-8')
+                output = root / 'result.json'
+                arguments = [sys.executable, str(Path(__file__).with_name('AuditCompositionContent.py')),
+                             '--artifact', str(artifact), '--candidate', str(candidate), '--inspector', str(inspector),
+                             '--references', str(references), '--cache', str(root / 'cache'), '--output', str(output),
+                             '--manifest', manifest_name]
+                result = subprocess.run(arguments, capture_output=True, text=True)
+                self.assertEqual(0, result.returncode, result.stderr)
+                report = json.loads(output.read_text(encoding='utf-8'))
+                self.assertEqual(selected, report.get('Framework', 'net10.0'))
+                self.assertEqual(0, report['LibraryBuilds'])
+                # Never borrow another installed target when the selected asset changes.
+                library.write_bytes(b'wrong-selected-asset')
+                result = subprocess.run(arguments, capture_output=True, text=True)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn('Candidate/frozen library identity differs', result.stderr)
 
 if __name__ == '__main__':
     unittest.main()
