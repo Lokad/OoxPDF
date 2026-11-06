@@ -36,6 +36,7 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style, ChartTextMeasurer measurer, ChartFrameBox frame,
         double centerX, double barEnd, ChartSeriesFill? keyFill, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         double horizontalPadding = PptxChartMetricRules.DataLabelHorizontalPadding;
         double verticalPadding = PptxChartMetricRules.DataLabelVerticalPadding;
         var layout = options.Layout;

@@ -378,7 +378,7 @@ Approximate or restricted:
   vertically and uses word-aware ellipsis when the height cannot hold all lines;
   no-wrap keeps complete paragraphs. Missing dimensions, explicit zero extents
   and rejected declarations follow independently observed Office behavior.
-  Empty point text-property bodies, edge-sized labels, explicit overflow modes,
+  Empty point text-property bodies, edge-sized labels, explicit overflow/clip modes,
   rich-text,
   negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
