@@ -19,7 +19,8 @@ internal sealed record DocxMeasuredInlineFragment(DocxInlineItem Source, double 
 internal sealed record DocxMeasuredInlineLine(IReadOnlyList<DocxMeasuredInlineFragment> Fragments,
     double Advance, double BaselineInset, double OccupiedHeight)
 {
-    public DocxTextAlignment? DisplayAlignment { get; init; }
+    public DocxMathDisplayAlignment? DisplayAlignment { get; init; }
+    public double? DisplayGroupAdvance { get; init; }
     public bool IsDisplayGroup => DisplayAlignment is not null;
     public double TextBaselineInset { get; init; }
     public DocxInlineSourceCursor EndCursor { get; init; }
@@ -41,7 +42,7 @@ internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     public int? BoundPageNumber { get; init; }
     public int? BoundPageCount { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
-    public DocxTextAlignment? DisplayAlignment { get; init; }
+    public DocxMathDisplayAlignment? DisplayAlignment { get; init; }
 }
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
@@ -49,11 +50,18 @@ internal sealed partial class DocxLayoutEngine
 {
     private static double ResolveOrderedInlineAlignment(DocxMeasuredInlineLine line,
         DocxTextAlignment alignment, double available) =>
-        (line.DisplayAlignment ?? alignment) switch
+        line.DisplayAlignment switch
         {
-            DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
-            DocxTextAlignment.Right => Math.Max(0d, available - line.Advance),
-            _ => 0d
+            DocxMathDisplayAlignment.CenterGroup => Math.Max(0d, available - (line.DisplayGroupAdvance ?? line.Advance)) / 2d,
+            DocxMathDisplayAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
+            DocxMathDisplayAlignment.Right => Math.Max(0d, available - line.Advance),
+            DocxMathDisplayAlignment.Left => 0d,
+            _ => alignment switch
+            {
+                DocxTextAlignment.Center => Math.Max(0d, available - line.Advance) / 2d,
+                DocxTextAlignment.Right => Math.Max(0d, available - line.Advance),
+                _ => 0d
+            }
         };
 
     private static double ResolveOrderedBodyBaselineInset(DocxParagraph paragraph, double size,
@@ -712,6 +720,28 @@ internal sealed partial class DocxLayoutEngine
             }
         }
         if (current.Count != 0 || output.Count == 0 || authoredLineStart) Flush(new(measured.Count + 1));
+        if (!stopAfterFirstLine && atoms.DisplayAlignment == DocxMathDisplayAlignment.CenterGroup)
+        {
+            // A prose/image row ends the display group. Center the widest
+            // occupied row once, preserving each fraction's own internal frame.
+            for (int first = 0; first < output.Count;)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!output[first].IsDisplayGroup) { first++; continue; }
+                int end = first;
+                double groupAdvance = 0d;
+                while (end < output.Count && output[end].IsDisplayGroup)
+                {
+                    token.ThrowIfCancellationRequested();
+                    groupAdvance = Math.Max(groupAdvance, output[end++].Advance);
+                }
+                for (; first < end; first++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    output[first] = output[first] with { DisplayGroupAdvance = groupAdvance };
+                }
+            }
+        }
         lines = output; return true;
 
         DocxInlineSourceCursor? CursorAfterSpan(DocxTextSpan span, int begin, int end)

@@ -4,6 +4,8 @@ namespace Lokad.OoxPdf.Docx;
 // a prose run or change ownership of fields, notes, bookmarks or pictures.
 internal sealed record DocxEquationPartSource(string PartName, int SourceCount, IReadOnlyList<DocxBodyElement> BodyElements);
 
+internal enum DocxMathDisplayAlignment { CenterGroup, Center, Left, Right }
+
 internal sealed record DocxEquation(
     DocxMathRow Content,
     int TextRunIndex,
@@ -18,6 +20,12 @@ internal sealed record DocxEquation(
     public double? ParentFontSize { get; init; }
     public bool Cramped { get; init; }
     public DocxMathLimitSettings LimitSettings { get; init; } = DocxMathLimitSettings.Empty;
+    public string? DefaultAlignmentValue { get; init; }
+    // Local provenance stays distinct from the document default. Unknown global
+    // values retain the previous row-centered approximation; unknown local
+    // values keep their existing unsupported-equation fallback.
+    public string? EffectiveAlignmentValue => AlignmentValue ?? (DefaultAlignmentValue is
+        null or "centerGroup" or "center" or "left" or "right" ? DefaultAlignmentValue : "center");
 }
 
 internal abstract record DocxMathNode

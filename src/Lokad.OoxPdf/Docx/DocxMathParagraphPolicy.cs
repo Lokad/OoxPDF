@@ -176,7 +176,7 @@ internal static class DocxMathParagraphPolicy
             !TryGetDisplayLineSpacingFactor(paragraph, out _))
         { return null; }
         DocxEquation equation = paragraph.Equations[0];
-        return equation.AlignmentValue is null or "center" or "centerGroup" or "left" or "right" ? equation : null;
+        return equation.EffectiveAlignmentValue is null or "center" or "centerGroup" or "left" or "right" ? equation : null;
     }
 
     public static bool TryGetDisplayLineSpacingFactor(DocxParagraph paragraph, out double factor)
@@ -308,18 +308,19 @@ internal static class DocxMathParagraphPolicy
         paragraph.Runs.All(run => run.FieldKind != DocxFieldKind.NumPages) &&
         paragraph.FieldReferences.All(field => field.Kind != DocxFieldKind.NumPages);
 
-    public static DocxTextAlignment? ResolveDisplayAlignment(IEnumerable<DocxEquation> equations, CancellationToken token)
+    public static DocxMathDisplayAlignment? ResolveDisplayAlignment(IEnumerable<DocxEquation> equations, CancellationToken token)
     {
-        DocxTextAlignment? alignment = null;
+        DocxMathDisplayAlignment? alignment = null;
         bool hasDisplayContainer = false;
         foreach (var equation in equations)
         {
             token.ThrowIfCancellationRequested();
-            DocxTextAlignment? current = equation.AlignmentValue switch
+            DocxMathDisplayAlignment? current = equation.EffectiveAlignmentValue switch
             {
-                null or "center" or "centerGroup" => DocxTextAlignment.Center,
-                "left" => DocxTextAlignment.Left,
-                "right" => DocxTextAlignment.Right,
+                null or "centerGroup" => DocxMathDisplayAlignment.CenterGroup,
+                "center" => DocxMathDisplayAlignment.Center,
+                "left" => DocxMathDisplayAlignment.Left,
+                "right" => DocxMathDisplayAlignment.Right,
                 _ => null
             };
             if (current is null) return null;
@@ -332,14 +333,14 @@ internal static class DocxMathParagraphPolicy
         return alignment;
     }
 
-    public static DocxTextAlignment? ResolveParagraphDisplayAlignment(DocxParagraph paragraph, CancellationToken token)
+    public static DocxMathDisplayAlignment? ResolveParagraphDisplayAlignment(DocxParagraph paragraph, CancellationToken token)
     {
         // Known source values remain required even when a row is measured inline.
         var fallback = ResolveDisplayAlignment(paragraph.Equations, token);
         if (fallback is null || paragraph.InlineContent is not { } items) return fallback;
         // The first effective display row owns paragraph justification. Inline
         // rows retain their source properties without governing later display.
-        DocxTextAlignment? owner = null;
+        DocxMathDisplayAlignment? owner = null;
         var promoted = GetDisplaySourceEquations(paragraph, token);
         var row = new List<DocxEquation>();
         foreach (var item in items)

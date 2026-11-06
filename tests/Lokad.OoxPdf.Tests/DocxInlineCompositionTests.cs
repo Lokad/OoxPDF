@@ -2358,7 +2358,7 @@ internal static partial class DocxInlineCompositionTests
                     new XElement(m + "jc", new XAttribute(m + "val", "right"))), second));
             }).Paragraphs.Single(value => value.Equations.Count == 2);
         TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(normalizedSource).Count);
-        TestAssert.Equal(DocxTextAlignment.Right, DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(normalizedSource, default));
+        TestAssert.Equal(DocxMathDisplayAlignment.Right, DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(normalizedSource, default));
         TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
             12d, 8d, 8d, 9d, 16d, 1d, default, out _), "An individual box wider than every line retains fallback.");
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
@@ -2481,28 +2481,28 @@ internal static partial class DocxInlineCompositionTests
         var paragraph = ReadPlacedComposition(OoxPdfDocxMarkupMode.Final, "math-explicit-display-right-body")
             .Paragraphs.Single(value => value.Equations.Count == 2);
         TestAssert.True(paragraph.Alignment == DocxTextAlignment.Justified &&
-            DocxMathParagraphPolicy.ResolveDisplayAlignment(paragraph.Equations, default) == DocxTextAlignment.Right,
+            DocxMathParagraphPolicy.ResolveDisplayAlignment(paragraph.Equations, default) == DocxMathDisplayAlignment.Right,
             "Authored math alignment is a separate owner from the surrounding paragraph alignment.");
         TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
         var math = paragraph.Equations.ToDictionary(equation => equation,
             equation => new DocxPreparedMathParagraph(equation, new(10d, 6d, 1d, []), 9d, 16d));
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(paragraph, math, new TrackingMeasurer(),
             12d, 100d, 100d, 9d, 16d, 1d, default, out var lines), "A math-owned paragraph alignment must measure.");
-        TestAssert.True(TestAssert.NotNull(lines).Single().DisplayAlignment == DocxTextAlignment.Right,
+        TestAssert.True(TestAssert.NotNull(lines).Single().DisplayAlignment == DocxMathDisplayAlignment.Right,
             "The measured line retains one display alignment instead of a centering flag.");
         var differing = paragraph.Equations.Select((equation, index) => equation with
             { AlignmentValue = index == 0 ? "right" : "left" }).ToArray();
         var hardBreak = new DocxTextRun("\n", 12d, null, false, false, false, null, null);
         var separateRows = paragraph with { Equations = differing, Runs = [hardBreak], InlineContent =
             [new DocxInlineEquation(differing[0]), new DocxInlineBreak(hardBreak, 0), new DocxInlineEquation(differing[1])] };
-        TestAssert.Equal(DocxTextAlignment.Right, DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows, default));
+        TestAssert.Equal(DocxMathDisplayAlignment.Right, DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows, default));
         var inlinePrefix = differing[0] with { Display = false, AlignmentValue = null };
-        TestAssert.Equal(DocxTextAlignment.Center,
+        TestAssert.Equal(DocxMathDisplayAlignment.CenterGroup,
             DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows with
             { Equations = [inlinePrefix, .. differing], InlineContent = [new DocxInlineEquation(inlinePrefix),
                 new DocxInlineBreak(hardBreak, 0), .. separateRows.InlineContent!] }, default));
         var prefixText = new DocxTextRun("Inline prefix ", 12d, null, false, false, false, null, null);
-        TestAssert.Equal(DocxTextAlignment.Right,
+        TestAssert.Equal(DocxMathDisplayAlignment.Right,
             DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(separateRows with
             { Equations = [inlinePrefix, .. differing], Runs = [prefixText, hardBreak], InlineContent =
                 [new DocxInlineText(prefixText, 0, prefixText.Text.Length), new DocxInlineEquation(inlinePrefix),
@@ -2523,7 +2523,7 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(mixed).Count);
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineContent(mixed, math, new TrackingMeasurer(),
             12d, 100d, 100d, 9d, 16d, 1d, default, out var mixedLines) &&
-            TestAssert.NotNull(mixedLines)[0].DisplayAlignment == DocxTextAlignment.Right &&
+            TestAssert.NotNull(mixedLines)[0].DisplayAlignment == DocxMathDisplayAlignment.Right &&
             mixedLines[^1].DisplayAlignment is null,
             "An authored display row retains alignment beside a separately justified prose row.");
         var unknown = paragraph.Equations.Select(equation => equation with { AlignmentValue = "unknown" }).ToArray();

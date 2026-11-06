@@ -11,6 +11,7 @@ internal static class TestCatalog
         .. FromType("api", typeof(PublicApiTests)),
         .. FromType("api", typeof(TestRunnerTests)),
         .. FromType("rendering-portable", typeof(PortableRenderingTests)),
+        .. FromType("rendering-portable", typeof(DocxMathCenterGroupTests)),
         new("rendering-portable", PptxColumnIntervalTests.PptxCategoryOffsetsShareMeasuredUnitsAcrossPreparedContainers),
         new("rendering-portable", PptxColumnIntervalTests.PptxShortRotatedCaptionsKeepFiniteSpacingAndAuthoredSkips),
         new("rendering-portable", PptxColumnIntervalTests.PptxSkippedCategoryPaintKeepsLogicalReferenceEnds),

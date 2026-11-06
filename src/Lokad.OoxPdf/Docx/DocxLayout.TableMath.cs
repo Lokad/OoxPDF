@@ -54,7 +54,7 @@ internal sealed partial class DocxLayoutEngine
         double inset = GetParagraphTextStartOffset(paragraph, scale);
         double width = textWidth - inset - GetParagraphRightInset(paragraph, scale);
         double boxWidth = math.Box.AdvanceWidth * scale;
-        double alignment = math.Equation.AlignmentValue switch
+        double alignment = math.Equation.EffectiveAlignmentValue switch
         { "left" => 0d, "right" => width - boxWidth, _ => (width - boxWidth) / 2d };
         double size = math.Equation.ParentFontSize ?? GetParagraphFontSize(paragraph);
         var style = paragraph.ParagraphMarkRun ?? new DocxTextRun(string.Empty, size, null, false, false, false, null, null);

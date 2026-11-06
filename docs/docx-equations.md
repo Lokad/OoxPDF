@@ -19,12 +19,18 @@ without replacing the container's properties. The first effective display row
 owns subsequent display-row placement in the text paragraph. Authored properties
 remain available; separate paragraphs stay independent. Unknown justification
 values retain their diagnosed fallback.
+`centerGroup` centers the maximum occupied row width and preserves each equation
+box inside that group. Explicit `center` centers rows individually; prose ends a
+group. An omitted local choice inherits `mathPr/defJc`, defaulting to `centerGroup`.
+Raw local and document values remain distinct. Unknown document defaults keep
+the prior row-centered approximation; unknown local values keep their diagnosed
+fallback. Geometry and ink thresholds still apply.
 A math-only row can promote an inline source formula to that display owner;
 an inline formula beside prose does not.
 Ordinary source characters, including spaces and hidden text, keep math inline.
 Links and pictures also determine the shared row mode. Hidden text stays unpainted;
-its presence still affects equation layout. Hidden manual-break combinations and
-centerGroup geometry remain approximate.
+its presence still affects equation layout. Hidden manual-break combinations
+remain approximate.
 
 Authored body page breaks can separate supported formulas without discarding
 prose, pictures or notes. Spanning links follow content on each page; a spanning

@@ -1501,7 +1501,7 @@ internal sealed partial class DocxLayoutEngine
                     double leftInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                     double areaWidth = width - leftInset - GetParagraphRightInset(paragraph, paragraphSpacingScale);
                     double boxWidth = math.Box.AdvanceWidth * paragraphSpacingScale;
-                    double alignment = math.Equation.AlignmentValue switch
+                    double alignment = math.Equation.EffectiveAlignmentValue switch
                     { "left" => 0d, "right" => areaWidth - boxWidth, _ => (areaWidth - boxWidth) / 2d };
                     currentItems.Add(new DocxEquationLayout(math, x + leftInset + alignment,
                         cursorY - math.BaselineInset * paragraphSpacingScale, paragraphSpacingScale, elementIndex, paragraph)
@@ -1542,6 +1542,7 @@ internal sealed partial class DocxLayoutEngine
                     var sourceCursor = new DocxInlineSourceCursor();
                     var bound = atoms;
                     int boundPage = pages.Count + 1;
+                    int referenceLine = 0;
                     while (!sourceCursor.IsComplete(atoms))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -1577,6 +1578,19 @@ internal sealed partial class DocxLayoutEngine
                             AdvanceColumnOrPage();
                             RegisterInFlightFootnotesForSourceBlock(elementIndex);
                             continue;
+                        }
+                        if (atoms.CounterFragmentIndices.Count != 0 && line.DisplayAlignment == DocxMathDisplayAlignment.CenterGroup)
+                        {
+                            // Counter reflow can change line counts, but pure math
+                            // retains its source cursor and measured group frame.
+                            // Walk the existing wrap once instead of remeasuring it.
+                            while (referenceLine < measured.Count && measured[referenceLine].EndCursor.AtomIndex < line.EndCursor.AtomIndex)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                referenceLine++;
+                            }
+                            if (referenceLine < measured.Count && measured[referenceLine].EndCursor.AtomIndex == line.EndCursor.AtomIndex)
+                                line = line with { DisplayGroupAdvance = measured[referenceLine].DisplayGroupAdvance };
                         }
                         double objectInset = 0d;
                         foreach (var fragment in line.Fragments)

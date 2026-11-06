@@ -411,6 +411,7 @@ internal sealed partial class DocxReader
                     ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,
                     LimitSettings = (documentSettings ?? DocxDocumentSettings.Empty).MathLimitSettings,
+                    DefaultAlignmentValue = documentSettings?.MathParagraphAlignmentValue,
                     HasRunRevisions = hasMathRunRevisions
                 });
                 inlineItems!.Add(new DocxInlineEquation(equations[^1]));

@@ -502,9 +502,12 @@ Approximate or restricted:
   content in qualified body paragraphs, simple cells and direct headers/footers.
   Adjacent display containers combine using the later container's justification;
   subsequent display rows share the first effective display row's owner.
+  `centerGroup` and the omitted default center one maximum-width group across
+  consecutive display rows; explicit `center` centers each row. Prose ends a
+  group. Local declarations override the retained document math default.
   Ordinary source text, including spaces and hidden text, links and pictures
   retain inline math without discarding neighboring formulas. Hidden text is
-  unpainted; hidden manual-break and centerGroup geometry remain approximate.
+  unpainted; hidden manual-break geometry remains approximate.
   Authored body page breaks retain supported formulas, prose, pictures and note
   references in source order. Links can span the resulting pages; bookmarks target
   the first placed source content. This content-preservation coverage does not

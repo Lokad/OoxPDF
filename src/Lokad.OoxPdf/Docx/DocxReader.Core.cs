@@ -297,6 +297,7 @@ internal sealed partial class DocxReader
             compatSettings)
         {
             MathFontFamily = (string?)root.Element(MathNamespace + "mathPr")?.Element(MathNamespace + "mathFont")?.Attribute(MathNamespace + "val"),
+            MathParagraphAlignmentValue = (string?)root.Element(MathNamespace + "mathPr")?.Element(MathNamespace + "defJc")?.Attribute(MathNamespace + "val"),
             MathLimitSettings = DocxMathLimitSettings.Read(root, cancellationToken)
         };
     }
