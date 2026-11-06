@@ -128,7 +128,7 @@ internal static class PptxTypographyTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.866 -0.5 0.5 0.866", pdf);
+        TestAssert.Contains("0.866025 -0.5 0.5 0.866025", pdf);
         TestAssert.Contains("0052", pdf);
     }
 
