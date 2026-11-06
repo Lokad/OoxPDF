@@ -161,6 +161,8 @@
   and neighboring tables/wrapped text; links and background paint retain geometry.
 - DOCX: continuation pages use their own body print origins, keeping text,
   bookmarks, links and following endnotes independent of page-one font sizes.
+  In mixed paragraph/table notes, oversized rows defer from occupied frames
+  before bounded clipping, preserving more content and following notes' page order.
 - DOCX: resolves table bands, edge styles and corner styles in one precedence
   order for both explicit conditional flags and positional styling, including
   merged edges and single-row/column tables. Unset or zero band sizes suppress

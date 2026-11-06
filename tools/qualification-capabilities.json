@@ -16209,6 +16209,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-complete-endnote-rows": [
+    "DocxOversizedEndnoteRowsDeferBeforeTheirBoundedClip",
+    "DocxOversizedEndnoteRowsRetainHeightOnlyProgress",
     "DocxBalloonlessUnitScaleOriginsDoNotRequireBodyText",
     "DocxEndnoteOnlyContinuationsKeepUnscaledTextMathPictureAndClipOrigins",
     "DocxWordCompatiblePrintScaleSkipsBalloonlessDocuments",

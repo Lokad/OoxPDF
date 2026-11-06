@@ -22,8 +22,8 @@ internal sealed partial class DocxLayoutEngine
             continuationCharge = Math.Max(0d, -continuation.TextLines[0].BaselineY) +
                 ResolveSeparatorGapPoints(mark, size, measurer);
         }
-        // Complete rows are atomic. Rows larger than a fresh note frame retain
-        // their existing diagnosed/approximate path; never cut through glyphs.
+        // Ordered text/row stories defer oversized rows from occupied frames.
+        // Height-only stories retain their existing continuation owner.
         double fullHeight = page.Height - page.MarginTop - page.MarginBottom - continuationCharge;
         var blocks = new List<(DocxRelatedStoryLayout Layout, bool Row)>();
         int lineIndex = 0;
@@ -33,7 +33,7 @@ internal sealed partial class DocxLayoutEngine
             token.ThrowIfCancellationRequested();
             double rowTop = -row.Y - row.Height;
             if (!double.IsFinite(rowTop) || !double.IsFinite(row.Height) || row.Height <= 0d ||
-                row.Height > fullHeight || rowTop < offset - .001d) return false;
+                rowTop < offset - .001d || row.Height > fullHeight && story.TextLines.Count == 0) return false;
             AddTextBefore(row.Table.SourceBlockIndex, rowTop);
             blocks.Add((story with { TextLines = [], InlineImages = [],
                 TableRows = ShiftTableRows([row], rowTop, 0d), ContentHeight = row.Height }, true));
@@ -57,7 +57,10 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
             double bottom = frameBottom?.Invoke(page, pageIndex + 1, outputPages.Count) ?? page.MarginBottom;
-            if (block.Layout.ContentHeight > top - bottom + .001d)
+            bool occupied = page.Items.Count != 0 ||
+                placed.Any(item => item.StoryLayout.Story.IsNormalStoryType);
+            if (block.Layout.ContentHeight > top - bottom + .001d &&
+                (block.Layout.ContentHeight <= fullHeight || occupied))
             {
                 MoveToRelatedStoryContinuationPage(outputPages, ref pageIndex, ref page, ref placed,
                     ref top, insertAfterPage, headerKeepOut);

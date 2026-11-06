@@ -492,8 +492,11 @@ Supported within the following constraints:
   and annotations. Without printed balloons, unit-scale Review pages preserve
   the Final text, equation and picture origins on note-only continuation pages.
   Complete unscaled endnote rows that fit a fresh note frame move intact to
-  the next page; measured paragraphs and rows retain source order. Scaled,
-  oversized, clipped or unsupported block compositions keep their fallbacks.
+  the next page; measured paragraphs and rows retain source order. In mixed
+  paragraph/table notes, oversized measured rows also defer from occupied frames
+  before bounded clipping; empty frames make progress. Height-only continuation,
+  scaled, already-clipped and unsupported compositions retain their fallbacks.
+  General fragmentation of note rows remains unsupported.
   Adjacent ordinary unscaled endnotes share paragraph before/after spacing even
   after an earlier table; first-note/page-turn geometry remains approximate.
   An already-started final next-page section keeps its document-end notes even
