@@ -3229,7 +3229,7 @@ internal static class PptxChartsTests
                       <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
                       <c:val><c:numLit><c:pt idx="0"><c:v>0</c:v></c:pt><c:pt idx="1"><c:v>30</c:v></c:pt></c:numLit></c:val>
                     </c:ser>
-                    <c:dLbls><c:showVal val="1"/><c:dLblPos val="t"/></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showLegendKey val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/><c:dLblPos val="t"/></c:dLbls>
                     <c:axId val="1"/><c:axId val="2"/>
                   </c:lineChart>
                   <c:catAx>
