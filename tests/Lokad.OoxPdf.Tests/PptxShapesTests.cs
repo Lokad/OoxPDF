@@ -1395,7 +1395,7 @@ internal static class PptxShapesTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("q", pdf);
-        TestAssert.Contains("-0.707 0.707 0.707 0.707", pdf);
+        TestAssert.Contains("-0.707107 0.707107 0.707107 0.707107", pdf);
         TestAssert.Contains(" cm", pdf);
         TestAssert.Contains("Q", pdf);
     }
