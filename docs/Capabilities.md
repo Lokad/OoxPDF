@@ -170,9 +170,12 @@ Approximate or restricted:
   Category/value axis sizes in those charts inherit from chart text and local
   axis formatting. External role sizes do not fill a missing size; other role
   formatting and custom-style fallbacks retain their existing owners.
-  Automatic linear-axis limits and major intervals can differ from Office,
-  changing the visible numeric scale in short charts or when numeric fonts
-  change. Authored bounds and units remain authoritative within the supported
+  Automatic single clustered-column plots with one supported linear value axis
+  select bounds and intervals from measured title, legend and numeric-font capacity.
+  Numeric strips, labels, grids and data coordinates consume that same scale.
+  Automatic limits and intervals remain approximate, including large-font and
+  range-boundary cases; manual, composed and secondary axes retain their fallbacks.
+  Authored bounds and units remain authoritative within the supported
   single-axis scope above. Remaining horizontal frame geometry is approximate;
   Unqualified composed/secondary interval ownership retains its fallback.
   Bar/line and additional-column plots sharing the primary value-axis identity
@@ -265,7 +268,7 @@ Approximate or restricted:
   their measured fonts. Category and numeric constraints activate independently;
   geometry shared by plots, labels and links follows the resulting rectangle.
   Independent Office PDFs correct displacements of28.4pt vertically and38.38pt
-  horizontally; two Arial baseline residuals remain1.18–1.52pt. Outer layouts,
+  horizontally; two Arial baseline residuals remain1.18â€“1.52pt. Outer layouts,
   authored title/legend geometry, explicit numeric crossings, secondary/log axes
   and rotated/wrapped categories retain their existing paths. Native-font
   geometry checks remain separate from portable content checks at font-dependent

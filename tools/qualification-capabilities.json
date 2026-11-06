@@ -16167,6 +16167,14 @@
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "XrefTablePointsAtObjectHeaders",
+    "PptxChartAxisRefusalAndCancellationPreservePublication",
+    "PptxChartAxisTickExpansionRejectsNonprogressAndInvalidBounds",
+    "PptxChartAxisTickExpansionConversionPropagatesLimitFailure",
+    "PptxChartSourceMinimumIntervalsRetainWorkAndProgressBounds",
+    "PptxPointAxisFallbackOwnsLegacyZeroAndUnitBounds",
+    "PptxChartMinorGridlinesRetainTickBounds",
+    "ConvertAsyncPptxChartCancellationWaitsForTheAcquisitionBorrow",
+    "ConvertAsyncPptxChartCopyRefusalPreservesPublication"
   ]
 }

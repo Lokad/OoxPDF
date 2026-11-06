@@ -56,7 +56,7 @@ are uncalibrated against the visible application view. Local evidence:
 `artifacts/tbar-label-wrap-1104/qualification.json`.
 
 The 0.3.0 factor/edge-height correction resolves three displaced or distorted
-Cartesian plot rectangles, reducing 25.9–87.7pt errors to at most 0.003pt against
+Cartesian plot rectangles, reducing 25.9â€“87.7pt errors to at most 0.003pt against
 Office PDF strokes. Forty source controls retain their API/PDF audit; thirty-seven
 candidate PDFs and twelve retained neighbors, including both portfolio decks,
 remain byte-identical. Forty-six focused Windows/Linux checks pass across both
@@ -80,6 +80,17 @@ numeric-axis maximum crossing. The references remain uncalibrated against the
 application view. A stale admission assertion found by CI was repaired through
 harness-only builds; qualified runtime assets, images and package are reused.
 Local evidence: `artifacts/thorizontal-source-range-1104/qualification.json`.
+
+The measured automatic-column scale checkpoint improves unchanged image gates
+from 12 to 36 passes across 43 source-pinned chart controls, with 33 lower errors
+and no lost pass. Numeric ranges and grid intervals agree with Office in 38,
+printed numeric text in 37; five range/interval errors and one further manual-label
+admission difference remain. Seven image failures and the uncalibrated direct
+Office-image failure remain explicit. All bars, admitted legend text/keys and
+source-data ratios survive; the sixteen fixed-portfolio PDFs remain byte-identical.
+All 136 focused Windows/Linux checks pass across .NET 10/11. This is an improved
+approximation, not an exact Office scale algorithm. Local evidence:
+`artifacts/taxis-measured-capacity-1106/qualification.json`.
 
 The complete 9,570-line development and qualification journal remains in
 [checkpoint history at the reviewed revision](https://github.com/Lokad/OoxPDF/blob/6584386f9f36bd0c32dc59c7f3043f5b39f8d062/docs/CompositionCheckpoint.md).
