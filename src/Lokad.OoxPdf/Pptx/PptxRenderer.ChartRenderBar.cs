@@ -730,7 +730,7 @@ internal sealed partial class PptxRenderer
                 : maxCategoryWidth + PptxChartMetricRules.LineRightLegendValueAxisPadding;
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
-            bool labelsRight = ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultRightSide: false);
+            bool labelsRight = ResolveSceneCategoryAxisRightSide(categoryAxis.SceneAxis, defaultRightSide: false);
             if (labelsRight)
             {
                 rightReserve = Math.Max(rightReserve, requiredReserve);
@@ -857,7 +857,7 @@ internal sealed partial class PptxRenderer
 
                 ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(categoryTickStyle.FontSize);
-                double offsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                double offsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
                 if (measuredFrame && offsetScale != 1d)
                 {
                     var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -1153,8 +1153,8 @@ internal sealed partial class PptxRenderer
             if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
             {
                 ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-                double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
-                int tickLabelSkip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
+                int tickLabelSkip = ResolveSceneCategoryAxisTickLabelSkip(categoryAxis.SceneAxis);
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double maxCategoryWidth = 0d;
                 int labelIndex = 0;
@@ -1187,14 +1187,14 @@ internal sealed partial class PptxRenderer
             ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
             {
-                double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
                 double outsideFactor =
                     PptxChartMetricRules.CategoryAxisHorizontalLeftOffsetRatio * labelOffsetScale +
                     PptxChartMetricRules.CategoryAxisHorizontalWidthRatio;
                 leftReserve = plotAreaBox.Width * outsideFactor / (1d + outsideFactor);
             }
 
-            double rightReserve = ReadSceneOrXmlChartAxisMajorTickMark(categoryAxis.SceneAxis, categoryAxis.XmlAxis) == PptxSceneChartAxisTickMark.Outside
+            double rightReserve = ReadSceneChartAxisMajorTickMark(categoryAxis.SceneAxis) == PptxSceneChartAxisTickMark.Outside
                 ? PptxChartMetricRules.CategoryAxisMajorTickLength + Math.Max(3d, PptxChartMetricRules.ValueAxisFallbackFontSize * 0.35d)
                 : 0d;
             double topReserve = 0d;

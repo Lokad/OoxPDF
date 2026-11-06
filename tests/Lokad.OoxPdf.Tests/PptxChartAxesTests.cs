@@ -1215,30 +1215,38 @@ internal static class PptxChartAxesTests
         TestAssert.True(sceneAxis.TickLabelSkip is null, "Expected unparseable scene tick-label skip to stay distinct from an authored value.");
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedAxis = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:catAx><c:axId val="10"/><c:lblOffset val="200"/><c:tickLblSkip val="3"/></c:catAx>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "catAx").Single();
+        XDocument source = TestAssert.NotNull(chart.ChartXml);
+        XElement offset = source.Descendants(c + "lblOffset").Single();
+        XElement skip = source.Descendants(c + "tickLblSkip").Single();
+        offset.SetAttributeValue("val", "200");
+        skip.SetAttributeValue("val", "3");
         System.Reflection.MethodInfo resolveLabelOffset = typeof(PptxRenderer).GetMethod(
-            "ResolveSceneOrXmlCategoryAxisLabelOffsetScale",
+            "ResolveSceneCategoryAxisLabelOffsetScale",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis label-offset resolver.");
         System.Reflection.MethodInfo resolveTickLabelSkip = typeof(PptxRenderer).GetMethod(
-            "ResolveSceneOrXmlCategoryAxisTickLabelSkip",
+            "ResolveSceneCategoryAxisTickLabelSkip",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis tick-label-skip resolver.");
 
-        double sceneOffsetScale = (double)resolveLabelOffset.Invoke(null, [sceneAxis, mismatchedAxis])!;
-        int sceneSkip = (int)resolveTickLabelSkip.Invoke(null, [sceneAxis, mismatchedAxis])!;
-        double xmlOnlyOffsetScale = (double)resolveLabelOffset.Invoke(null, [null, mismatchedAxis])!;
-        int xmlOnlySkip = (int)resolveTickLabelSkip.Invoke(null, [null, mismatchedAxis])!;
+        TestAssert.Equal(1d, (double)resolveLabelOffset.Invoke(null, [sceneAxis])!);
+        TestAssert.Equal(1, (int)resolveTickLabelSkip.Invoke(null, [sceneAxis])!);
+        TestAssert.Equal(1d, (double)resolveLabelOffset.Invoke(null, [null])!);
+        TestAssert.Equal(1, (int)resolveTickLabelSkip.Invoke(null, [null])!);
 
-        TestAssert.Equal(1d, sceneOffsetScale);
-        TestAssert.Equal(1, sceneSkip);
-        TestAssert.Equal(2d, xmlOnlyOffsetScale);
-        TestAssert.Equal(3, xmlOnlySkip);
+        PptxSceneChart authored = TestAssert.NotNull(PptxTests.BuildSingleChartScene(source.ToString()));
+        PptxSceneChartAxis authoredAxis = authored.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
+        TestAssert.Equal(2d, (double)resolveLabelOffset.Invoke(null, [authoredAxis])!);
+        TestAssert.Equal(3, (int)resolveTickLabelSkip.Invoke(null, [authoredAxis])!);
+        foreach (var control in new[] { (Offset: -1, Skip: 0, Scale: 0d, ExpectedSkip: 1),
+            (Offset: 1001, Skip: -1, Scale: 10d, ExpectedSkip: 1),
+            (Offset: 50, Skip: 2, Scale: .5d, ExpectedSkip: 2) })
+        {
+            offset.SetAttributeValue("val", control.Offset);
+            skip.SetAttributeValue("val", control.Skip);
+            PptxSceneChart parsed = TestAssert.NotNull(PptxTests.BuildSingleChartScene(source.ToString()));
+            PptxSceneChartAxis parsedAxis = parsed.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
+            TestAssert.Equal(control.Scale, (double)resolveLabelOffset.Invoke(null, [parsedAxis])!);
+            TestAssert.Equal(control.ExpectedSkip, (int)resolveTickLabelSkip.Invoke(null, [parsedAxis])!);
+        }
     }
 
     public static void PptxChartScatterOptionsUseSceneAuthoritativeDefaults()
@@ -1832,18 +1840,18 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("bogus", valueAxis.CrossBetween);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:valAx><c:crossBetween val="midCat"/></c:valAx></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "valAx").Single();
+        XDocument source = TestAssert.NotNull(chart.ChartXml);
+        source.Descendants(c + "crossBetween").Single().SetAttributeValue("val", "midCat");
         System.Reflection.MethodInfo labelsOnTickMarks = typeof(PptxRenderer).GetMethod(
-            "ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks",
+            "ResolveSceneCategoryAxisLabelsOnTickMarks",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis label placement resolver.");
-        object onTickMarks = labelsOnTickMarks.Invoke(null, [valueAxis, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved category-axis label placement.");
+        object onTickMarks = labelsOnTickMarks.Invoke(null, [valueAxis]) ?? throw new InvalidOperationException("Expected resolved category-axis label placement.");
 
-        TestAssert.True(!(bool)onTickMarks, "Unknown scene-owned crossBetween should resolve to the Office default between, not fall back to mismatched XML.");
+        TestAssert.True(!(bool)onTickMarks, "Unknown scene-owned crossBetween must retain the between default after its XML provenance changes.");
+        PptxSceneChart authored = TestAssert.NotNull(PptxTests.BuildSingleChartScene(source.ToString()));
+        PptxSceneChartAxis authoredAxis = authored.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+        TestAssert.True((bool)labelsOnTickMarks.Invoke(null, [authoredAxis])!, "Authored midCat places categories on ticks.");
+        TestAssert.True(!(bool)labelsOnTickMarks.Invoke(null, [null])!, "A missing axis uses the between default.");
     }
 
     public static void PptxChartUnknownTickLabelPositionUsesSceneAuthoritativeDefault()
@@ -1900,11 +1908,31 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(string.Empty, categoryAxis.MajorTickMark);
 
         System.Reflection.MethodInfo readMajorTickMark = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartAxisMajorTickMark",
+            "ReadSceneChartAxisMajorTickMark",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart major tick-mark resolver.");
-        object tickMark = readMajorTickMark.Invoke(null, [categoryAxis, null]) ?? throw new InvalidOperationException("Expected resolved major tick mark.");
+        object tickMark = readMajorTickMark.Invoke(null, [categoryAxis]) ?? throw new InvalidOperationException("Expected resolved major tick mark.");
 
         TestAssert.Equal(PptxSceneChartAxisTickMark.None, (PptxSceneChartAxisTickMark)tickMark);
+        TestAssert.Equal(PptxSceneChartAxisTickMark.None,
+            (PptxSceneChartAxisTickMark)readMajorTickMark.Invoke(null, [null])!);
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XDocument source = TestAssert.NotNull(chart.ChartXml);
+        XElement axisSource = source.Descendants(c + "catAx").Single();
+        XElement tickSource = new(c + "majorTickMark");
+        axisSource.Add(tickSource);
+        foreach (var control in new[] { (Token: "none", Expected: PptxSceneChartAxisTickMark.None),
+            (Token: "in", Expected: PptxSceneChartAxisTickMark.Inside),
+            (Token: "out", Expected: PptxSceneChartAxisTickMark.Outside),
+            (Token: "cross", Expected: PptxSceneChartAxisTickMark.Cross),
+            (Token: "future", Expected: PptxSceneChartAxisTickMark.None) })
+        {
+            tickSource.SetAttributeValue("val", control.Token);
+            PptxSceneChart parsed = TestAssert.NotNull(PptxTests.BuildSingleChartScene(source.ToString()));
+            PptxSceneChartAxis parsedAxis = parsed.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
+            TestAssert.Equal(control.Expected, (PptxSceneChartAxisTickMark)readMajorTickMark.Invoke(null, [parsedAxis])!);
+            TestAssert.Equal(PptxSceneChartAxisTickMark.None,
+                (PptxSceneChartAxisTickMark)readMajorTickMark.Invoke(null, [categoryAxis])!);
+        }
     }
 
     public static void PptxChartValueAxisRenderOptionsUseSceneAuthoritativeDefaults()

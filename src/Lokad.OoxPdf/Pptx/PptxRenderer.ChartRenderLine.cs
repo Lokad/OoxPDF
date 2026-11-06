@@ -555,7 +555,7 @@ internal sealed partial class PptxRenderer
                 var clearance = headerClearance ?? await MeasureCartesianHeaderReserveAsync(theme, sceneChart, fontResolver, numericLineHeight).ConfigureAwait(false);
                 double topReserve = clearance.Reserve;
                 double bottomReserve = ComputeCartesianLabelStripBottomReserve(categoryStyle.FontSize);
-                double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
                 double? measuredOffsetAdjustment = await TryMeasureCategoryLabelOffsetAdjustmentAsync(textMeasurer, categoryStyle, labelOffsetScale).ConfigureAwait(false);
                 if (measuredOffsetAdjustment is { } offsetAdjustment)
                 {
@@ -843,7 +843,7 @@ internal sealed partial class PptxRenderer
         ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, plot);
         ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, plotElement, workbook, plotVisibleOnly);
-        int skip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+        int skip = ResolveSceneCategoryAxisTickLabelSkip(categoryAxis.SceneAxis);
         int last = -1;
         for (int i = labels.Count - 1; i >= 0; i--)
         {

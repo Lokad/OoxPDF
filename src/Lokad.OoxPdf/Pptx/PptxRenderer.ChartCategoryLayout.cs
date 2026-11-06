@@ -43,7 +43,7 @@ internal sealed partial class PptxRenderer
         ChartPlotBox source = layout.PlotBox;
         double numericClearance = 0d, numericBand = 0d;
         bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(chart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide);
-        bool onTickMarks = ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis);
+        bool onTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
         // Outer captions fit the area remaining after numeric admission. Inner
         // and automatic layouts retain their established preparation order.
         if (outer)
@@ -85,7 +85,7 @@ internal sealed partial class PptxRenderer
             // An authored offset is an increment in normal-line units, as on
             // the automatic path; it does not scale the full baseline distance.
             double offset = rotated.LineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio *
-                (ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis) - 1d);
+                (ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis) - 1d);
             double gap = Math.Max(0d, ChartCategoryLabelBaselineDistance(rotated.Style.FontSize, highSide: false,
                 offsetScale: 1d, adjustment: offset) - rotated.Ascent);
             layout = layout with { CategoryLabels = rotated with { AxisGap = gap } };
@@ -98,7 +98,7 @@ internal sealed partial class PptxRenderer
         {
             categoryClearance = category.LineHeight / 2d;
             double baseline = ChartCategoryLabelBaselineDistance(category.Style.FontSize, categoryHighSide,
-                ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
+                ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis),
                 layout.CategoryLabelOffsetAdjustment);
             if (category.RotationDegrees == 0d)
                 categoryBand = baseline + (categoryHighSide ? category.Ascent : category.Descent) + PptxChartMetricRules.OuterPlotCaptionPadding;
@@ -444,8 +444,8 @@ internal sealed partial class PptxRenderer
         var labels = ResolveChartAxisLabelPlacement(axis, null, ratio, reversed, maximum);
         bool axisTop = explicitCrossing is not null
             ? horizontal
-                ? ResolveSceneOrXmlCategoryAxisTopSide(axis, null, defaultTopSide: false)
-                : ResolveSceneOrXmlCategoryAxisRightSide(axis, null, defaultRightSide: false)
+                ? ResolveSceneCategoryAxisTopSide(axis, defaultTopSide: false)
+                : ResolveSceneCategoryAxisRightSide(axis, defaultRightSide: false)
             : maximum != reversed;
         return new(crossing, labels.LabelPlotRatio, labels.LabelsHighSide, axisTop);
     }
@@ -513,7 +513,7 @@ internal sealed partial class PptxRenderer
         double angle = body.RotationDegrees is >= -90d and <= 90d ? body.RotationDegrees.Value : 0d;
         string skipSpelling = axis.SceneAxis?.TickLabelSkipValue ?? PptxSceneBuilder.ReadChartElementIntWithValue(axis.XmlAxis, "tickLblSkip").RawValue;
         bool automaticSkip = string.IsNullOrEmpty(skipSpelling);
-        int skip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(axis.SceneAxis, axis.XmlAxis);
+        int skip = ResolveSceneCategoryAxisTickLabelSkip(axis.SceneAxis);
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
         // Office's chart font getter quantizes hundredths of a point to twips.
         // Keep emission at its existing size; this is the spacing measurement.
@@ -524,7 +524,7 @@ internal sealed partial class PptxRenderer
         // container; missing metrics retain the existing baseline fallback.
         if (layout.CategoryLabelOffsetAdjustment is null)
             layout = layout with { CategoryLabelOffsetAdjustment = await TryMeasureCategoryLabelOffsetAdjustmentAsync(measure,
-                style, ResolveSceneOrXmlCategoryAxisLabelOffsetScale(axis.SceneAxis, axis.XmlAxis)).ConfigureAwait(false) };
+                style, ResolveSceneCategoryAxisLabelOffsetScale(axis.SceneAxis)).ConfigureAwait(false) };
         // Tick spacing includes the horizontal-header line gap. Selecting the
         // OS/2 ink box instead admits too many Arial/Times labels (Office controls).
         double policyHeight = (await measure.MeasureLineBoxAsync(policyStyle, horizontalHeader: true).ConfigureAwait(false)).Height;
@@ -572,7 +572,7 @@ internal sealed partial class PptxRenderer
 
         bool innerRotated = angle != 0d && layout.ManualPlotLayoutApplied &&
             chart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner;
-        double offsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(axis.SceneAxis, axis.XmlAxis);
+        double offsetScale = ResolveSceneCategoryAxisLabelOffsetScale(axis.SceneAxis);
         // Independent native glyph origins share this inner normal-line gap on
         // either side. Automatic and outer containers keep their baseline owner.
         double axisGap = Math.Max(0d, innerRotated

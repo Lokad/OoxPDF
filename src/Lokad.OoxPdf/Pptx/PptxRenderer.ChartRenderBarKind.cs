@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
                         barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
                         ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
                     CategoryPointsOnTickMarks = !horizontalBars && ownsColumnCategories &&
-                        ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis)
+                        ResolveSceneCategoryAxisLabelsOnTickMarks(valueSceneAxis)
                 };
                 ChartAxisPlacement? resolvedCategory = horizontalBars
                     ? ReadHorizontalBarCategoryPlacement(sceneChart, categoryAxis, valueAxisSource, valueExtents, valueAxisOptions.Reversed) :
@@ -372,7 +372,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelCoordinate = horizontalBars
                         ? resolvedCategory is { } horizontalPlacement ? plotBox.X + plotBox.Width * horizontalPlacement.LabelPlotRatio : null
                         : plotBox.Y + plotBox.Height * categoryPlacement.LabelPlotRatio;
-                    await RenderChartCategoryLabelsAsync(theme, graphics, chartLayout.Frame, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: barOptions.CategoryAxisReversed).ConfigureAwait(false);
+                    await RenderChartCategoryLabelsAsync(theme, graphics, chartLayout.Frame, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneCategoryAxisLabelsOnTickMarks(valueSceneAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: barOptions.CategoryAxisReversed).ConfigureAwait(false);
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -423,7 +423,7 @@ internal sealed partial class PptxRenderer
                 if (!horizontalBars)
                 {
                     ChartAxisSource tickCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-                    PptxSceneChartAxisTickMark categoryTickMark = ReadSceneOrXmlChartAxisMajorTickMark(tickCategoryAxis.SceneAxis, tickCategoryAxis.XmlAxis);
+                    PptxSceneChartAxisTickMark categoryTickMark = ReadSceneChartAxisMajorTickMark(tickCategoryAxis.SceneAxis);
                     if (axesStyle.CategoryAxisVisible && categoryTickMark != PptxSceneChartAxisTickMark.None)
                     {
                         ChartSeriesStroke categoryTickStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
@@ -439,7 +439,7 @@ internal sealed partial class PptxRenderer
                         }
                     }
 
-                    PptxSceneChartAxisTickMark valueTickMark = ReadSceneOrXmlChartAxisMajorTickMark(valueSceneAxis, valueAxis);
+                    PptxSceneChartAxisTickMark valueTickMark = ReadSceneChartAxisMajorTickMark(valueSceneAxis);
                     if (axesStyle.ValueAxisVisible && valueTickMark != PptxSceneChartAxisTickMark.None)
                     {
                         ChartSeriesStroke valueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
@@ -465,7 +465,7 @@ internal sealed partial class PptxRenderer
                 if (horizontalBars)
                 {
                     ChartAxisSource tickValueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-                    PptxSceneChartAxisTickMark horizontalValueTickMark = ReadSceneOrXmlChartAxisMajorTickMark(tickValueAxis.SceneAxis, tickValueAxis.XmlAxis);
+                    PptxSceneChartAxisTickMark horizontalValueTickMark = ReadSceneChartAxisMajorTickMark(tickValueAxis.SceneAxis);
                     if (axesStyle.CategoryAxisVisible && horizontalValueTickMark != PptxSceneChartAxisTickMark.None)
                     {
                         ChartSeriesStroke horizontalValueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
@@ -486,7 +486,7 @@ internal sealed partial class PptxRenderer
                     }
 
                     ChartAxisSource tickCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-                    PptxSceneChartAxisTickMark horizontalCategoryTickMark = ReadSceneOrXmlChartAxisMajorTickMark(tickCategoryAxis.SceneAxis, tickCategoryAxis.XmlAxis);
+                    PptxSceneChartAxisTickMark horizontalCategoryTickMark = ReadSceneChartAxisMajorTickMark(tickCategoryAxis.SceneAxis);
                     if (axesStyle.ValueAxisVisible && horizontalCategoryTickMark != PptxSceneChartAxisTickMark.None)
                     {
                         ChartSeriesStroke horizontalCategoryTickStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;

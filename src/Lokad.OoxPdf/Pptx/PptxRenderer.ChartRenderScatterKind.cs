@@ -172,7 +172,7 @@ internal sealed partial class PptxRenderer
     // with the same font-relative length as bars and lines).
     private static void RenderScatterBubbleMajorTicks(PdfGraphicsBuilder graphics, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartPlotBox plotBox, ChartAxisSource xValueAxis, ChartAxisSource yValueAxis, ChartValueExtents xExtents, ChartValueExtents yExtents, ChartValueAxisRenderOptions xAxisOptions, ChartValueAxisRenderOptions yAxisOptions, ChartAxisPlacement xPlacement, ChartAxisPlacement yPlacement, PptxRenderContext? context = null)
     {
-                PptxSceneChartAxisTickMark xTickMark = ReadSceneOrXmlChartAxisMajorTickMark(xValueAxis.SceneAxis, xValueAxis.XmlAxis);
+                PptxSceneChartAxisTickMark xTickMark = ReadSceneChartAxisMajorTickMark(xValueAxis.SceneAxis);
                 if (xTickMark != PptxSceneChartAxisTickMark.None)
                 {
                     ChartSeriesStroke xTickStroke = xAxisOptions.GridlineStyle.Major ?? DefaultChartGridlineStroke(major: true);
@@ -192,7 +192,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                PptxSceneChartAxisTickMark yTickMark = ReadSceneOrXmlChartAxisMajorTickMark(yValueAxis.SceneAxis, yValueAxis.XmlAxis);
+                PptxSceneChartAxisTickMark yTickMark = ReadSceneChartAxisMajorTickMark(yValueAxis.SceneAxis);
                 if (yTickMark != PptxSceneChartAxisTickMark.None)
                 {
                     ChartSeriesStroke yTickStroke = yAxisOptions.GridlineStyle.Major ?? DefaultChartGridlineStroke(major: true);

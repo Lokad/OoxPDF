@@ -41,7 +41,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, areaPlot).FirstOrDefault();
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, areaPlot);
                 bool categoryAxisReversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
-                bool categoryPointsOnTickMarks = ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis);
+                bool categoryPointsOnTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
                 ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetAreaChartValueExtents(areaSeriesVectors, areaOptions.Stacked, areaOptions.PercentStacked), areaOptions.PercentStacked, useNearMaximumHeadroom: areaOptions.Stacked && !areaOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
                 ChartLayout chartLayout = await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver,
                     resolvedValueExtents: valueAxis.SceneAxis is { HasLogarithmicScale: true } ? null : valueExtents, context: context).ConfigureAwait(false);
@@ -109,7 +109,7 @@ internal sealed partial class PptxRenderer
                 }
                 // Category ticks share the line chart's source slot boundaries;
                 // value ticks retain the emitted interval lattice below.
-                PptxSceneChartAxisTickMark areaCategoryTickMark = ReadSceneOrXmlChartAxisMajorTickMark(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                PptxSceneChartAxisTickMark areaCategoryTickMark = ReadSceneChartAxisMajorTickMark(categoryAxis.SceneAxis);
                 if (axesStyle.CategoryAxisVisible && areaCategoryTickMark != PptxSceneChartAxisTickMark.None)
                 {
                     ChartSeriesStroke areaCategoryTickStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
@@ -123,7 +123,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                PptxSceneChartAxisTickMark areaValueTickMark = ReadSceneOrXmlChartAxisMajorTickMark(valueAxis.SceneAxis, valueAxis.XmlAxis);
+                PptxSceneChartAxisTickMark areaValueTickMark = ReadSceneChartAxisMajorTickMark(valueAxis.SceneAxis);
                 if (axesStyle.ValueAxisVisible && areaValueTickMark != PptxSceneChartAxisTickMark.None)
                 {
                     ChartSeriesStroke areaValueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;

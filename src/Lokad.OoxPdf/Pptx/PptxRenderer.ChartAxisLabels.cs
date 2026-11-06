@@ -29,8 +29,8 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style = prepared?.Style ?? ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         double fontSize = style.FontSize;
         RgbColor color = style.Color;
-        double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(sceneAxis, categoryAxis);
-        int tickLabelSkip = prepared?.TickLabelSkip ?? ResolveSceneOrXmlCategoryAxisTickLabelSkip(sceneAxis, categoryAxis);
+        double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(sceneAxis);
+        int tickLabelSkip = prepared?.TickLabelSkip ?? ResolveSceneCategoryAxisTickLabelSkip(sceneAxis);
         double widestCategoryLabel = 0d;
         if (horizontalBars)
         {

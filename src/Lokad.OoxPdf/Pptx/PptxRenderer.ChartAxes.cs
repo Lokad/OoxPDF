@@ -695,31 +695,18 @@ internal sealed partial class PptxRenderer
             ToChartSeriesStroke(categoryAxis?.Line ?? default, null),
             ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis, null, defaultRightSide: false),
             ResolveSceneOrXmlValueAxisRightSide(sceneChart, secondaryValueAxis, null, defaultRightSide: true),
-            ResolveSceneOrXmlValueAxisBottomSide(valueAxis, null, defaultBottomSide: true),
-            ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis, null, defaultRightSide: false),
+            ResolveSceneValueAxisBottomSide(valueAxis, defaultBottomSide: true),
+            ResolveSceneCategoryAxisRightSide(categoryAxis, defaultRightSide: false),
             valueAxis?.IsDeleted != true,
             categoryAxis?.IsDeleted != true,
-            ReadSceneOrXmlChartAxisMajorTickMark(categoryAxis, null),
-            ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis, null, defaultTopSide: false));
+            ReadSceneChartAxisMajorTickMark(categoryAxis),
+            ResolveSceneCategoryAxisTopSide(categoryAxis, defaultTopSide: false));
     }
 
-    private static PptxSceneChartAxisTickMark ReadSceneOrXmlChartAxisMajorTickMark(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis)
+    private static PptxSceneChartAxisTickMark ReadSceneChartAxisMajorTickMark(PptxSceneChartAxis? sceneAxis)
     {
-        if (sceneAxis is not null)
-        {
-            return ResolveChartAxisTickMark(sceneAxis.MajorTickMarkKind);
-        }
-
-        string majorTickMark = PptxSceneBuilder.ReadChartElementValue(xmlAxis, "majorTickMark");
-        return ResolveChartAxisTickMark(PptxSceneBuilder.ParseChartAxisTickMark(
-            string.IsNullOrEmpty(majorTickMark) ? "none" : majorTickMark));
-
-        PptxSceneChartAxisTickMark ResolveChartAxisTickMark(PptxSceneChartAxisTickMark tickMark)
-        {
-            return tickMark == PptxSceneChartAxisTickMark.Unknown
-                ? PptxSceneChartAxisTickMark.None
-                : tickMark;
-        }
+        PptxSceneChartAxisTickMark tickMark = sceneAxis?.MajorTickMarkKind ?? PptxSceneChartAxisTickMark.Unknown;
+        return tickMark == PptxSceneChartAxisTickMark.Unknown ? PptxSceneChartAxisTickMark.None : tickMark;
     }
 
     private static PptxSceneChartTickLabelPosition ResolveChartTickLabelPosition(PptxSceneChartTickLabelPosition position)
@@ -772,20 +759,9 @@ internal sealed partial class PptxRenderer
             ReadChartAxisId(candidate) == crossId && PptxSceneBuilder.ReadChartElementValue(candidate, "crossAx") == id));
     }
 
-    private static bool ResolveSceneOrXmlValueAxisBottomSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultBottomSide)
+    private static bool ResolveSceneValueAxisBottomSide(PptxSceneChartAxis? sceneAxis, bool defaultBottomSide)
     {
-        if (sceneAxis is not null)
-        {
-            return sceneAxis.PositionKind switch
-            {
-                PptxSceneChartAxisPosition.Bottom => true,
-                PptxSceneChartAxisPosition.Top => false,
-                _ => defaultBottomSide
-            };
-        }
-
-        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
-        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
+        return sceneAxis?.PositionKind switch
         {
             PptxSceneChartAxisPosition.Bottom => true,
             PptxSceneChartAxisPosition.Top => false,
@@ -793,20 +769,9 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static bool ResolveSceneOrXmlCategoryAxisRightSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
+    private static bool ResolveSceneCategoryAxisRightSide(PptxSceneChartAxis? sceneAxis, bool defaultRightSide)
     {
-        if (sceneAxis is not null)
-        {
-            return sceneAxis.PositionKind switch
-            {
-                PptxSceneChartAxisPosition.Right => true,
-                PptxSceneChartAxisPosition.Left => false,
-                _ => defaultRightSide
-            };
-        }
-
-        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
-        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
+        return sceneAxis?.PositionKind switch
         {
             PptxSceneChartAxisPosition.Right => true,
             PptxSceneChartAxisPosition.Left => false,
@@ -814,20 +779,9 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static bool ResolveSceneOrXmlCategoryAxisTopSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultTopSide)
+    private static bool ResolveSceneCategoryAxisTopSide(PptxSceneChartAxis? sceneAxis, bool defaultTopSide)
     {
-        if (sceneAxis is not null)
-        {
-            return sceneAxis.PositionKind switch
-            {
-                PptxSceneChartAxisPosition.Top => true,
-                PptxSceneChartAxisPosition.Bottom => false,
-                _ => defaultTopSide
-            };
-        }
-
-        string position = PptxSceneBuilder.ReadChartElementValue(axis, "axPos");
-        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
+        return sceneAxis?.PositionKind switch
         {
             PptxSceneChartAxisPosition.Top => true,
             PptxSceneChartAxisPosition.Bottom => false,
@@ -876,44 +830,24 @@ internal sealed partial class PptxRenderer
         return (position == PptxSceneChartTickLabelPosition.High) != reversed;
     }
 
-    private static double ResolveSceneOrXmlCategoryAxisLabelOffsetScale(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    private static double ResolveSceneCategoryAxisLabelOffsetScale(PptxSceneChartAxis? sceneAxis)
     {
-        int offset = sceneAxis is not null
-            ? sceneAxis.LabelOffset ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset
-            : PptxSceneBuilder.ReadChartElementIntWithValue(axis, "lblOffset").Value ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
-
+        int offset = sceneAxis?.LabelOffset ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
         offset = Math.Clamp(
             offset,
             PptxChartMetricRules.CategoryAxisMinimumLabelOffset,
             PptxChartMetricRules.CategoryAxisMaximumLabelOffset);
-
         return offset / (double)PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
     }
 
-    private static int ResolveSceneOrXmlCategoryAxisTickLabelSkip(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    private static int ResolveSceneCategoryAxisTickLabelSkip(PptxSceneChartAxis? sceneAxis)
     {
-        int skip = sceneAxis is not null
-            ? sceneAxis.TickLabelSkip ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip
-            : PptxSceneBuilder.ReadChartElementIntWithValue(axis, "tickLblSkip").Value ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip;
-
-        return Math.Max(PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip, skip);
+        return Math.Max(PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip,
+            sceneAxis?.TickLabelSkip ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip);
     }
 
-    private static bool ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    private static bool ResolveSceneCategoryAxisLabelsOnTickMarks(PptxSceneChartAxis? sceneAxis)
     {
-        if (sceneAxis is not null)
-        {
-            return ResolveChartAxisCrossBetween(sceneAxis.CrossBetweenKind) == PptxSceneChartAxisCrossBetween.MidpointCategory;
-        }
-
-        string crossBetween = PptxSceneBuilder.ReadChartElementValue(axis, "crossBetween");
-        return ResolveChartAxisCrossBetween(PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween)) == PptxSceneChartAxisCrossBetween.MidpointCategory;
-
-        PptxSceneChartAxisCrossBetween ResolveChartAxisCrossBetween(PptxSceneChartAxisCrossBetween crossBetween)
-        {
-            return crossBetween == PptxSceneChartAxisCrossBetween.Unknown
-                ? PptxSceneChartAxisCrossBetween.Between
-                : crossBetween;
-        }
+        return sceneAxis?.CrossBetweenKind == PptxSceneChartAxisCrossBetween.MidpointCategory;
     }
 }

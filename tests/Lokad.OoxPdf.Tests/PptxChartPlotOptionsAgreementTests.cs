@@ -146,20 +146,18 @@ internal static class PptxChartPlotOptionsAgreementTests
         string[] gridlines = new[] { "", "<c:majorGridlines/>", "<c:minorGridlines/>", "<c:majorGridlines/><c:minorGridlines/>" };
         string[] units = new[] { "", "<c:majorUnit val=\"10\"/>", "<c:minorUnit val=\"5\"/>", "<c:majorUnit val=\"bogus\"/>" };
         string[] formats = new[] { "", "<c:numFmt formatCode=\"0.0\" sourceLinked=\"1\"/>", "<c:numFmt formatCode=\"General\" sourceLinked=\"0\"/>" };
-        string[] ticks = new[] { "", "<c:majorTickMark val=\"out\"/>", "<c:majorTickMark val=\"bogus\"/>" };
-        foreach (string axisInner in AllAxisForms(scalings, gridlines, units, formats, ticks))
+        foreach (string axisInner in AllAxisForms(scalings, gridlines, units, formats))
         {
             (object? axis, XElement element) = LoadAxis(axisInner);
             AssertAxisReaderAgrees("ReadSceneOrXmlValueAxisReversed", axis, element, axisInner);
             AssertAxisReaderAgrees("ReadSceneOrXmlMajorGridlines", axis, element, axisInner);
             AssertAxisReaderAgrees("ReadSceneOrXmlMinorGridlines", axis, element, axisInner);
             AssertAxisReaderAgrees("ReadSceneOrXmlChartValueAxisUnits", axis, element, axisInner);
-            AssertAxisReaderAgrees("ReadSceneOrXmlChartAxisMajorTickMark", axis, element, axisInner);
             AssertAxisReaderAgrees("ReadSceneOrXmlChartAxisNumberFormat", axis, element, axisInner);
         }
     }
 
-    private static IEnumerable<string> AllAxisForms(string[] scalings, string[] gridlines, string[] units, string[] formats, string[] ticks)
+    private static IEnumerable<string> AllAxisForms(string[] scalings, string[] gridlines, string[] units, string[] formats)
     {
         foreach (string scaling in scalings)
         {
@@ -190,13 +188,6 @@ internal static class PptxChartPlotOptionsAgreementTests
             }
         }
 
-        foreach (string tick in ticks)
-        {
-            if (tick.Length != 0)
-            {
-                yield return tick;
-            }
-        }
     }
 
     private static void AssertAxisReaderAgrees(string name, object? axis, XElement element, string axisInner)
