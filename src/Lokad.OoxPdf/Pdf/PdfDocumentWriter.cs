@@ -710,7 +710,9 @@ internal sealed class PdfDocumentWriter
             $"<< /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(start.Red)} {FormatColor(start.Green)} {FormatColor(start.Blue)}] /C1 [{FormatColor(end.Red)} {FormatColor(end.Green)} {FormatColor(end.Blue)}] /N 1 >>");
     }
 
-    internal static string FormatNumber(double value, string format = "0.###")
+    internal static string FormatNumber(double value) => FormatNumber(value, "0.###");
+
+    internal static string FormatNumber(double value, string format)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
         {
