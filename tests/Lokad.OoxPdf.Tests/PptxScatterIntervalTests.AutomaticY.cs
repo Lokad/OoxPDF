@@ -25,9 +25,8 @@ internal static partial class PptxScatterIntervalTests
     public static void PptxScatterAutomaticYMatchesIndependentOfficeBoundsAndUnits()
     {
         foreach (RangeCase sample in AutomaticYCases())
-        foreach (bool scene in new[] { false, true })
         {
-            var (extents, options) = ResolveRange(sample, scene);
+            var (extents, options) = ResolveRange(sample);
             TestAssert.Equal(new PptxRenderer.ChartValueExtents(sample.ExpectedMinimum, sample.ExpectedMaximum), extents);
             object units = options.GetType().GetProperty("Units")!.GetValue(options)!;
             TestAssert.Equal(sample.ExpectedUnit, (double?)units.GetType().GetProperty("MajorUnit")!.GetValue(units));
@@ -65,7 +64,7 @@ internal static partial class PptxScatterIntervalTests
     {
         RangeCase sample = AutomaticYCases().Single(c => c.Id == "range-scatter-103-auto");
         XElement mismatch = XElement.Parse(Axis("2", "l", "1", "400", "500", "100", "0000FF"));
-        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-17d, 103d), ResolveRange(sample, true, mismatch).Extents);
+        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-17d, 103d), ResolveRange(sample, mismatch).Extents);
         foreach (RangeCase rejected in new[] { sample with { MajorUnit = double.NaN }, sample with { MajorUnit = -1d },
             sample with { MajorUnit = double.PositiveInfinity }, sample with { Minimum = double.NaN } })
             CheckFallback(rejected);
@@ -76,10 +75,10 @@ internal static partial class PptxScatterIntervalTests
         missingScaling.Element(CurveC + "scaling")!.Remove();
         var legacy = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneOrXmlBubbleChartValueAxisExtents", null, missingScaling,
             new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
-        TestAssert.Equal(legacy, ResolveRange(sample, false, missingScaling).Extents);
+        TestAssert.Equal(legacy, ResolveRange(sample, includeScaling: false).Extents);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => ResolveRange(sample, true, cancellationToken: cancellation.Token));
+        TestAssert.Throws<OperationCanceledException>(() => ResolveRange(sample, cancellationToken: cancellation.Token));
 
         static void CheckFallback(RangeCase source, bool logarithmic = false, bool bubble = false)
         {
@@ -89,7 +88,7 @@ internal static partial class PptxScatterIntervalTests
             XElement element = XDocument.Parse(xml).Descendants(CurveC + "valAx").Last();
             var expected = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneOrXmlBubbleChartValueAxisExtents", axis, element,
                 new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
-            TestAssert.Equal(expected, ResolveRange(source, true, logarithmic: logarithmic, bubble: bubble).Extents);
+            TestAssert.Equal(expected, ResolveRange(source, logarithmic: logarithmic, bubble: bubble).Extents);
         }
     }
 

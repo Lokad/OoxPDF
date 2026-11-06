@@ -32,7 +32,15 @@
     "PptxBubbleFixedBoundsAndReversalSharePreparedPlacement",
     "PptxScatterIntervalPolicyKeepsSceneAuthorityAndFallbacks",
     "PptxPointAxisFallbackOwnsLegacyZeroAndUnitBounds",
-    "PptxScatterBetweenCrossingsKeepValueUnitsAndMaximumOwnership"
+    "PptxScatterBetweenCrossingsKeepValueUnitsAndMaximumOwnership",
+    "PptxScatterFixedUnitRangesMatchIndependentOfficeBounds",
+    "PptxScatterFixedUnitLabelsMarksAndGridsUseOneScale",
+    "PptxScatterCurveOrderOwnsBoundsAndHiddenLinesKeepPointBounds",
+    "PptxScatterFixedUnitFallbacksKeepSceneAuthorityAndCancellation",
+    "PptxScatterAutomaticYKeepsNativeClusteredIntervals",
+    "PptxScatterAutomaticYMatchesIndependentOfficeBoundsAndUnits",
+    "PptxScatterAutomaticYLabelsMarksAndGridsShareNativeIntervals",
+    "PptxScatterAutomaticYRetainsSceneFallbackAndCancellationOwnership"
   ],
   "docx-note-row-clipping": [
     "DocxUnfitNoteRowsReportClippingWithoutChangingPdf",
