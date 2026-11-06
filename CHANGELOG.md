@@ -6,6 +6,8 @@
   references share an XML run; authored text and note destinations stay separate.
   Complete notes follow their measured fragments across pages when equal-format
   runs are merged. Kerning adjustments retain each generated marker owner.
+  Custom markers sharing a run with other references preserve supported equations,
+  links and page counters.
 
 - PPTX: chart axis selection uses the resolved scene, removing duplicate XML-only
   selection paths while preserving source order and missing-axis fallbacks.

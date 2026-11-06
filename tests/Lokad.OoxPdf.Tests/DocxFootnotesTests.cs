@@ -1521,8 +1521,8 @@ internal static class DocxFootnotesTests
                 { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
             {
                 PdfLinkAnnotation[] links = RenderCustomNoteLinks(document, geometry);
-                TestAssert.Equal(2, links.Length);
-                TestAssert.Equal(2, links.Select(l => l.Destination).Distinct().Count());
+                TestAssert.Equal(4, links.Length);
+                TestAssert.Equal(4, links.Select(l => l.Destination).Distinct().Count());
             }
             DocxDocument prefixed = ReadSectionNumberingFixture(kind, (xml, _, parts) =>
             {

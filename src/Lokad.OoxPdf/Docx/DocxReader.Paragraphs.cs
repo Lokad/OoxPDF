@@ -1493,7 +1493,6 @@ internal sealed partial class DocxReader
             // reference in the same source run. Never guess from another run.
             XElement? following = child.ElementsAfterSelf().FirstOrDefault();
             if (!OoxBoolean.IsTrue(customMarkFollows) || following?.Name != WordprocessingNamespace + "t" ||
-                child.Parent?.Elements().Count(e => ResolveInlineReferenceKind(e) is not null) != 1 ||
                 following.Value.Length == 0 || char.IsWhiteSpace(following.Value[0]) || char.IsSurrogate(following.Value[0]))
             {
                 return null;

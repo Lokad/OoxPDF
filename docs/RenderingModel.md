@@ -27,6 +27,10 @@ The PPTX parser discovers the presentation part, slide order, slide size, slide 
 
 The DOCX parser discovers the main document part, styles, numbering, section properties, headers, footers, paragraphs, runs, inline images, and fixed-grid tables. It applies a simple style cascade for document defaults, paragraph styles, character styles, and direct formatting.
 
+Note markers retain source-character or generated-run ownership independently of
+XML run grouping. Numbering and admission use those owners; custom marks bind only
+to an immediately following source character.
+
 Unsupported features are detected as early as practical and emitted through `OoxPdfOptions.DiagnosticSink`.
 
 ## Layout Layer

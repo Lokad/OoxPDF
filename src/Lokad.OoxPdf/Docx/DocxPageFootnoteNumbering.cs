@@ -279,7 +279,6 @@ internal static class DocxPageFootnoteNumbering
                 .ToDictionary(g => g.Key, g => g.ToArray());
             var ownedRuns = new HashSet<DocxTextRun>(ReferenceEqualityComparer.Instance);
             Dictionary<(int Run, int Offset), DocxTextRun?>? customRuns = null;
-            Dictionary<int, int>? referenceCounts = null;
             foreach (var reference in p.InlineReferences)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -289,11 +288,7 @@ internal static class DocxPageFootnoteNumbering
                 DocxTextRun? marker;
                 if (custom)
                 {
-                    // Custom glyph binding still requires one reference in its
-                    // source run; automatic markers have their own exact owner.
-                    referenceCounts ??= p.InlineReferences.GroupBy(r => r.SourceRunIndex).ToDictionary(g => g.Key, g => g.Count());
                     if (!forNumbering || reference.DisplayText is not null ||
-                        referenceCounts[reference.SourceRunIndex] != 1 ||
                         !DocxCustomNoteMarkerOwners.TryGetSourceRun(reference,
                             customRuns ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(p.Runs, cancellationToken), out marker)) return false;
                 }

@@ -489,6 +489,9 @@ Supported within the following constraints:
   drawing-level `docPr hidden` alone retains Word's print behavior. Floating pictures/textboxes
   have bounded positioning, clipping, z-order and first-pass wrap exclusions;
   arbitrary Word reflow around floating content is unsupported.
+- Custom footnote/endnote marks support a nonwhitespace BMP character immediately
+  after the reference in the same XML run. Each retains its own link alongside
+  other note references and supported inline mathematics. Note layout remains approximate.
 - Default headers/footers, simple page fields, supported notes and source-owned
   links/bookmarks. Static-story placement shares physical frames with painting
   and annotations. Without printed balloons, unit-scale Review pages preserve

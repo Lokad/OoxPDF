@@ -1,4 +1,20 @@
 {
+  "docx-custom-run-owners": [
+    "DocxSharedCustomRunReferencesPreserveSupportedMathAndMarkerOwners",
+    "DocxSharedCustomRunReferencesKeepAutomaticPageCountersAndStableOwners",
+    "DocxSharedCustomRunReferencesKeepImmediateCharacterFallbacks",
+    "DocxCustomNoteMarksOwnOffsetsWithinSharedSourceRuns",
+    "DocxCustomNoteMarksKeepRepeatedMarksAndDestinationsDistinct",
+    "DocxCustomNoteMarksRequireOwnedVisibleSourceAndTarget",
+    "DocxCustomNoteMarksHonorExplicitFalseFlags",
+    "DocxCustomNoteMarksLinkOnlyTheirFirstVisibleCharacter",
+    "DocxInlineCompositionCustomNotesRetainExactSourceOwnersAndFallbacks",
+    "DocxCompleteFootnoteKerningProtectsOwnedCustomBaselinePrefixes",
+    "DocxCompleteFootnoteKerningRejectsAmbiguousCustomSourceOwners",
+    "DocxCustomNoteLineMetricsPreserveMinimumBottomBearingsAndSourceOwners",
+    "DocxCustomNoteSuffixMetricsFollowActualSourceSpans",
+    "DocxCustomNoteLineMetricsRetainFixedRichScaledAndAmbiguousFallbacks"
+  ],
   "docx-shared-note-admission": [
     "DocxNominalGlyphAdvanceRetainsPitchAndCompleteNoteNavigation",
     "DocxMetGlyphAdvanceRetainsCompleteOwnerPagesAndActualTargets",
