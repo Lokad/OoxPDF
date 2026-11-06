@@ -1,0 +1,19 @@
+{
+  "CaseRelativePath": "endnote-empty-final-section.docx",
+  "InputSha256": "DA5611C0003229E2980C2AEA890378D1AB707A9A66DA9FCF7F3E312970C14AF9",
+  "Reference": "Independent native Word exports of the unchanged registered public paragraph-tail-80 control. OfficePdf; application-view calibration is unavailable.",
+  "Rows": [
+    {
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "14A30BF51B02F601EDEB7AF0FB39464D360239263DB78D3CF60DABFC6C04C843",
+      "ExpectedPages": 3,
+      "FirstEndnotePage": 2
+    },
+    {
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "31CD635A6AED98B71126E7416F0566A24D125E49F495375035AA72728C9D32F0",
+      "ExpectedPages": 3,
+      "FirstEndnotePage": 2
+    }
+  ]
+}
