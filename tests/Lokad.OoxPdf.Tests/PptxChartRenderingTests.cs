@@ -332,7 +332,7 @@ internal static class PptxChartRenderingTests
             "The automatic label box stays centered on its plotted category point inside the authored plot frame.");
         TestAssert.Contains("0.8 0.933 1 rg", pdf);
         Match sizedShape = Regex.Match(pdf, @"0\.8 0\.933 1 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) 28\.8 17\.28 re f");
-        TestAssert.True(sizedShape.Success, "The authored0.1×0.08 label scales with its288×216pt chart frame.");
+        TestAssert.True(sizedShape.Success, "The authored0.1Ã—0.08 label scales with its288Ã—216pt chart frame.");
         TestAssert.Contains("0.4 0 0.8 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 9 Tf"), "Expected per-label custom data label text style to drive font size.");
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
@@ -1604,21 +1604,21 @@ internal static class PptxChartRenderingTests
         PptxSceneChartPlot plot = chart.Plots.Single();
         XElement lineChart = chart.ChartXml?.Descendants(c + "lineChart").Single() ?? throw new InvalidOperationException("Expected line chart XML.");
         System.Reflection.MethodInfo readCategoryAxis = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartCategoryAxisForPlot",
+            "ReadChartCategoryAxisForPlot",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis source helper.");
 
-        object source = readCategoryAxis.Invoke(null, [chart, plot, chart.ChartXml!, lineChart]) ?? throw new InvalidOperationException("Expected category-axis source.");
+        object source = readCategoryAxis.Invoke(null, [chart, plot]) ?? throw new InvalidOperationException("Expected category-axis source.");
         PptxSceneChartAxis sceneAxis = (PptxSceneChartAxis?)source.GetType().GetProperty("SceneAxis")?.GetValue(source) ?? throw new InvalidOperationException("Expected scene date axis source.");
         XElement xmlAxis = (XElement?)source.GetType().GetProperty("XmlAxis")?.GetValue(source) ?? throw new InvalidOperationException("Expected XML date axis source.");
-        object xmlOnlySource = readCategoryAxis.Invoke(null, [null, null, chart.ChartXml!, lineChart]) ?? throw new InvalidOperationException("Expected XML-only category-axis source.");
-        XElement xmlOnlyAxis = (XElement?)xmlOnlySource.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlySource) ?? throw new InvalidOperationException("Expected XML-only date axis source.");
+        object rebuiltSource = readCategoryAxis.Invoke(null, [PptxTests.BuildSingleChartScene(chart.ChartXml!.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene category-axis source.");
+        XElement rebuiltAxis = (XElement?)rebuiltSource.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltSource) ?? throw new InvalidOperationException("Expected Rebuilt-scene date axis source.");
 
         TestAssert.Equal(PptxSceneChartAxisKind.Date, sceneAxis.AxisKind);
         TestAssert.Equal("dateAx", sceneAxis.Kind);
         TestAssert.Equal("10", sceneAxis.Id);
         TestAssert.Equal("dateAx", xmlAxis.Name.LocalName);
         TestAssert.Equal("10", xmlAxis.Element(c + "axId")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("dateAx", xmlOnlyAxis.Name.LocalName);
+        TestAssert.Equal("dateAx", rebuiltAxis.Name.LocalName);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()

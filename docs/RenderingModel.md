@@ -10,6 +10,11 @@ Lokad.OoxPdf is organized as a small pipeline:
 
 The production library does not shell out to Office, PDFium, PowerShell, or external tools.
 
+Chart painting requires a resolved scene. Plot and secondary axes are selected
+from that scene, preserving declared ID order and explicit absence. The selected
+axis retains its scene-owned XML evidence for properties still read from markup;
+a second XML document cannot supply a missing axis.
+
 ## Package Layer
 
 The OOXML layer reads ZIP entries by normalized package part name. It rejects path traversal and applies entry-count and uncompressed-size limits before higher-level parsers touch XML or binary media.

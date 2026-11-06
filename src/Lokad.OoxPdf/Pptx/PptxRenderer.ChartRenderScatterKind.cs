@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme, colorMap, null);
                 IReadOnlyList<bool> seriesLineHidden = ReadSceneOrXmlSeriesLineHidden(scatterPlot, scatterChart);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme, colorMap);
-                IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, scatterPlot, chartXml, scatterChart);
+                IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, scatterPlot);
                 ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
                 ChartAxisSource yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : xValueAxis;
                 double? xTickTargetCount = ReadScatterSourceIntervalTarget(theme, sceneChart, chartXml, GetChartFrameBox(document, bounds), xValueAxis);
@@ -242,7 +242,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, bubblePlot, chartXml, bubbleChart);
+                IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, bubblePlot);
                 ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
                 ChartAxisSource yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : xValueAxis;
                 var measured = MeasureScatterChartExtents(bubbleSeries, null, null, context.CancellationToken);

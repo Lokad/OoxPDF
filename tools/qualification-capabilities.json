@@ -1,4 +1,28 @@
 {
+  "pptx-chart-axis-selection": [
+    "PptxChartAxisSelectionKeepsDeclaredOrderAndMissingSources",
+    "PptxChartSceneAxesUseSceneOwnedXmlEvidence",
+    "PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence",
+    "PptxChartSecondaryRightValueAxisSelectionUsesSceneSource",
+    "PptxChartSecondaryValueAxisStyleSelectionUsesSceneSource",
+    "PptxChartRightLegendReserveUsesLegendTextStyle",
+    "PptxSyntheticNoTitleRightLegendPlotBoxSitsOnOfficeAxisLine",
+    "PptxChartRightLegendValueAxisReserveUsesAxisTextStyle",
+    "PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes",
+    "PptxChartCategoryAxisSourceAcceptsDateAxes",
+    "AxisOptionsAgreeBetweenSceneAndXml",
+    "PptxChartRangeConsolidationKeepsSceneAuthorityAndXmlFallback",
+    "PptxChartBarOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartLineOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartAreaOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartScatterOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartRadarOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartAxisTickExpansionConversionPropagatesLimitFailure",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-preset-arc-guides": [
     "PptxPresetArcClampsFiniteGuidesBeforeTracing",
     "PptxPresetArcNonfiniteGuidesUseDefaults",

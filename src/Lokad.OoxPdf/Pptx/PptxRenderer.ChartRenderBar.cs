@@ -323,7 +323,7 @@ internal sealed partial class PptxRenderer
             context?.CancellationToken.ThrowIfCancellationRequested();
             if (CountRenderableSeries(ReadSharedChartSeriesVectors(owner, owner.Source, workbook, plotVisibleOnly)) == 0)
                 continue;
-            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, owner, chartXml, owner.Source)
+            ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, owner)
                 .FirstOrDefault();
             if (!IsSceneOrXmlVisibleValueAxis(valueAxis.SceneAxis, valueAxis.XmlAxis) ||
                 !IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -389,7 +389,7 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
         if (cartesianHeader is null)
             defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
-        ChartAxisSource rightReserveCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+        ChartAxisSource rightReserveCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
         bool rightReserveLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis, rightReserveCategoryAxis.XmlAxis);
         defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
         if (cartesianHeader is { } measuredHeader)
@@ -429,7 +429,7 @@ internal sealed partial class PptxRenderer
         }
         if (numericPlacement is { LabelsHighSide: true })
         {
-            ChartAxisSource numericAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            ChartAxisSource numericAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             if (IsSceneOrXmlChartAxisLabelVisible(numericAxis.SceneAxis, numericAxis.XmlAxis))
             {
                 // Transfer only the numeric band. Title and legend owners keep
@@ -500,7 +500,7 @@ internal sealed partial class PptxRenderer
             {
                 double topReserve = legacyBandReserve;
                 double bottomReserve = legacyBandReserve;
-                ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+                ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                 if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
                 {
                     ChartTextStyle valueTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
@@ -536,7 +536,7 @@ internal sealed partial class PptxRenderer
 
             double ResolveDefaultAxisTitleVerticalSideReserve(double legacyReserve, PptxSceneChartAxisPosition titlePosition)
             {
-                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
                 if (!IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
                     return legacyReserve;
@@ -566,7 +566,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
             {
                 return plotBox;
@@ -632,7 +632,7 @@ internal sealed partial class PptxRenderer
                 return usesAutomaticTop ? plotBox with { Height = Math.Max(1d, automaticTop - plotBox.Y) } : plotBox;
             }
 
-            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
             {
                 double bottom = frame.Y + PptxChartMetricRules.HorizontalBarPlotTopReserve;
@@ -685,7 +685,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxCategoryWidth = 0d;
@@ -702,7 +702,7 @@ internal sealed partial class PptxRenderer
             if (usesMeasuredAxisInsets && categoryPlacement is { } placement)
             {
                 double endpointLeft = PptxChartMetricRules.ColumnPlotRightReserve, endpointRight = endpointLeft;
-                ChartAxisSource value = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+                ChartAxisSource value = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                 if (IsSceneOrXmlChartAxisLabelVisible(value.SceneAxis, value.XmlAxis))
                 {
                     bool percent = IsPercentStackedChartGrouping(barOptions.Grouping);
@@ -758,7 +758,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
             {
                 return plotBox;
@@ -828,7 +828,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             bool labelsVisible = IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
             // Reserve and painting share the category offset measurement, under
             // the existing frame/source-furniture eligibility.
@@ -912,7 +912,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
             {
                 return plotBox;
@@ -1074,13 +1074,13 @@ internal sealed partial class PptxRenderer
             }
 
             PptxSceneChartGrouping grouping = barOptions.Grouping;
-            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(
                 valueAxis.SceneAxis,
                 valueAxis.XmlAxis,
                 GetSharedBarChartValueExtents(barPlot, barChart, grouping, workbook, plotVisibleOnly),
                 IsPercentStackedChartGrouping(grouping), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-            ChartAxisSource category = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            ChartAxisSource category = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             double? crossing = ReadSceneOrXmlValueAxisCrossingValue(category.SceneAxis, category.XmlAxis, valueExtents);
             return crossing > valueExtents.Min + PptxChartMetricRules.AxisValueEpsilon &&
                 crossing < valueExtents.Max - PptxChartMetricRules.AxisValueEpsilon;
@@ -1103,7 +1103,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<ChartPlotLayout> ResolveBarManualPlotLayoutTargetAsync(
         PptxTheme theme,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         PptxSceneChartPlot? barPlot,
         XElement barChart,
         ChartPlotLayout layout,
@@ -1129,7 +1129,7 @@ internal sealed partial class PptxRenderer
         // bound on larger x, while centering fits all six exactly.
         ChartLayoutBox ResolveCenteredOuterAreaBox(ChartLayoutBox areaBox)
         {
-            PptxSceneChartManualLayout manual = sceneChart?.PlotAreaLayout ?? PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml);
+            PptxSceneChartManualLayout manual = sceneChart.PlotAreaLayout;
             if (manual.XModeKind != PptxSceneChartManualLayoutMode.Factor || manual.X is not { } xFactor)
             {
                 return areaBox;
@@ -1148,7 +1148,7 @@ internal sealed partial class PptxRenderer
         // constant 10.5pt here; the measured carve lands within 0.1pt on all six probes.
         async ValueTask<ChartPlotBox> DeriveHorizontalBarOuterPlotBoxAsync(ChartLayoutBox plotAreaBox)
         {
-            ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             double leftReserve = 0d;
             if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
             {
@@ -1184,7 +1184,7 @@ internal sealed partial class PptxRenderer
         ChartPlotBox DeriveHorizontalBarInnerPlotBox(ChartLayoutBox plotAreaBox)
         {
             double leftReserve = 0d;
-            ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
             {
                 double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
@@ -1198,7 +1198,7 @@ internal sealed partial class PptxRenderer
                 ? PptxChartMetricRules.CategoryAxisMajorTickLength + Math.Max(3d, PptxChartMetricRules.ValueAxisFallbackFontSize * 0.35d)
                 : 0d;
             double topReserve = 0d;
-            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+            ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
             {
                 double labelHeight = PptxChartMetricRules.ValueAxisFallbackFontSize * PptxChartMetricRules.AxisLabelHeightFactor;
@@ -1316,7 +1316,7 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame,
         PptxTheme theme,
         PptxColorMap colorMap,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         XDocument chartXml,
         PptxSceneChartPlot? barPlot,
         XElement barChart,
@@ -1332,8 +1332,8 @@ internal sealed partial class PptxRenderer
         ChartTextStyle legendStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
         bool horizontalStrip = horizontalBars && usesMeasuredAxisInsets;
         ChartAxisSource tickAxis = horizontalStrip
-            ? ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault()
-            : ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+            ? ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault()
+            : ReadChartCategoryAxisForPlot(sceneChart, barPlot);
         ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickAxis.SceneAxis, chartXml, tickAxis.XmlAxis,
             fallbackFontSize: horizontalStrip ? PptxChartMetricRules.ValueAxisFallbackFontSize : PptxChartMetricRules.CategoryAxisFallbackFontSize,
             chartStyleRole: horizontalStrip ? "valueAxis" : "categoryAxis");

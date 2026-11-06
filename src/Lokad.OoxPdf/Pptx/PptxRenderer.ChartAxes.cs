@@ -11,61 +11,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<XElement> ReadChartValueAxesForChart(XDocument chartXml, XElement chartElement)
-    {
-        string[] axisIds = chartElement
-            .Elements(ChartNamespace + "axId")
-            .Select(PptxSceneBuilder.ReadChartValueAttribute)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToArray();
-        if (axisIds.Length == 0)
-        {
-            return chartXml.Descendants(ChartNamespace + "valAx").ToArray();
-        }
-
-        var axes = new List<XElement>();
-        foreach (string axisId in axisIds)
-        {
-            XElement? axis = chartXml
-                .Descendants(ChartNamespace + "valAx")
-                .FirstOrDefault(candidate => string.Equals(ReadChartAxisId(candidate), axisId, StringComparison.Ordinal));
-            if (axis is not null)
-            {
-                axes.Add(axis);
-            }
-        }
-
-        return axes;
-    }
-
-    private static IReadOnlyList<XElement> ReadChartCategoryAxesForChart(XDocument chartXml, XElement chartElement)
-    {
-        string[] axisIds = chartElement
-            .Elements(ChartNamespace + "axId")
-            .Select(PptxSceneBuilder.ReadChartValueAttribute)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToArray();
-        if (axisIds.Length == 0)
-        {
-            return ReadChartCategoryAxes(chartXml).ToArray();
-        }
-
-        var axes = new List<XElement>();
-        foreach (string axisId in axisIds)
-        {
-            XElement? axis = ReadChartCategoryAxes(chartXml)
-                .FirstOrDefault(candidate => string.Equals(ReadChartAxisId(candidate), axisId, StringComparison.Ordinal));
-            if (axis is not null)
-            {
-                axes.Add(axis);
-            }
-        }
-
-        return axes.Count == 0
-            ? ReadChartCategoryAxes(chartXml).Take(1).ToArray()
-            : axes;
-    }
-
     private static IEnumerable<XElement> ReadChartCategoryAxes(XDocument chartXml)
     {
         return chartXml
@@ -572,29 +517,6 @@ internal sealed partial class PptxRenderer
         return !string.IsNullOrWhiteSpace(firstId) && string.Equals(firstId, secondId, StringComparison.Ordinal);
     }
 
-    private static XElement? ReadSecondaryRightValueAxis(XDocument chartXml)
-    {
-        return chartXml
-            .Descendants(ChartNamespace + "valAx")
-            .Where(IsRightValueAxis)
-            .FirstOrDefault();
-    }
-
-    private static XElement? ReadSecondaryValueAxisForChart(XDocument chartXml, XElement? primaryValueAxis)
-    {
-        string? primaryAxisId = ReadChartAxisId(primaryValueAxis);
-        if (string.IsNullOrWhiteSpace(primaryAxisId))
-        {
-            return ReadSecondaryRightValueAxis(chartXml);
-        }
-
-        return chartXml
-            .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault(axis =>
-                !string.Equals(ReadChartAxisId(axis), primaryAxisId, StringComparison.Ordinal) &&
-                !IsChartAxisDeleted(axis));
-    }
-
     private static bool IsSceneOrXmlVisibleValueAxis(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
         if (sceneAxis is not null)
@@ -604,13 +526,6 @@ internal sealed partial class PptxRenderer
         }
 
         return axis is not null &&
-            !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
-    }
-
-    private static bool IsRightValueAxis(XElement? axis)
-    {
-        return axis is not null &&
-            PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos")) == PptxSceneChartAxisPosition.Right &&
             !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
     }
 
@@ -774,13 +689,13 @@ internal sealed partial class PptxRenderer
         return ToChartSeriesStroke(PptxSceneBuilder.ReadChartGridlineLine(gridlines, theme), null);
     }
 
-    private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)
+    private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)
     {
-        ChartAxisSource valueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, chartElement).FirstOrDefault();
-        XElement? valueAxisElement = ResolveXmlValueAxisForSource(sceneChart, valueAxisSource, chartXml);
-        ChartAxisSource categoryAxisSource = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, chartElement);
+        ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, plot).FirstOrDefault();
+        XElement? valueAxisElement = valueAxisSource.XmlAxis;
+        ChartAxisSource categoryAxisSource = ReadChartCategoryAxisForPlot(sceneChart, plot);
         XElement? categoryAxisElement = categoryAxisSource.XmlAxis;
-        ChartAxisSource secondaryValueAxisSource = ReadSceneOrXmlSecondaryValueAxisForChart(sceneChart, chartXml, valueAxisSource);
+        ChartAxisSource secondaryValueAxisSource = ReadSceneSecondaryValueAxisForChart(sceneChart, valueAxisSource);
         XElement? secondaryValueAxisElement = secondaryValueAxisSource.XmlAxis;
         PptxSceneChartAxis? valueAxis = valueAxisSource.SceneAxis;
         PptxSceneChartAxis? categoryAxis = categoryAxisSource.SceneAxis;

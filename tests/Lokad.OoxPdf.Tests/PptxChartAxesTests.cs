@@ -657,26 +657,60 @@ internal static class PptxChartAxesTests
         XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XElement mismatchedPlot = mismatchedChartXml.Descendants(chartNamespace + "lineChart").First();
         System.Reflection.MethodInfo readValueAxes = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartValueAxesForPlot",
+            "ReadChartValueAxesForPlot",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer value-axis bridge.");
         System.Reflection.MethodInfo readCategoryAxis = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartCategoryAxisForPlot",
+            "ReadChartCategoryAxisForPlot",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer category-axis bridge.");
 
-        object sceneValueAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [chart, chart.Plots[0], mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected scene value-axis collection."))).Cast<object>().Single();
-        object xmlOnlyValueAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [null, null, mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected XML-only value-axis collection."))).Cast<object>().Single();
-        object sceneCategoryAxis = readCategoryAxis.Invoke(null, [chart, chart.Plots[0], mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected scene category-axis source.");
-        object xmlOnlyCategoryAxis = readCategoryAxis.Invoke(null, [null, null, mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected XML-only category-axis source.");
+        object sceneValueAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [chart, chart.Plots[0]]) ?? throw new InvalidOperationException("Expected scene value-axis collection."))).Cast<object>().Single();
+        object rebuiltValueAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedChartXml.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene value-axis collection."))).Cast<object>().Single();
+        object sceneCategoryAxis = readCategoryAxis.Invoke(null, [chart, chart.Plots[0]]) ?? throw new InvalidOperationException("Expected scene category-axis source.");
+        object rebuiltCategoryAxis = readCategoryAxis.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedChartXml.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene category-axis source.");
 
         XElement sceneValueXmlAxis = (XElement?)sceneValueAxis.GetType().GetProperty("XmlAxis")?.GetValue(sceneValueAxis) ?? throw new InvalidOperationException("Expected scene value-axis XML evidence.");
-        XElement xmlOnlyValueXmlAxis = (XElement?)xmlOnlyValueAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyValueAxis) ?? throw new InvalidOperationException("Expected XML-only value-axis XML evidence.");
+        XElement rebuiltValueXmlAxis = (XElement?)rebuiltValueAxis.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltValueAxis) ?? throw new InvalidOperationException("Expected Rebuilt-scene value-axis XML evidence.");
         XElement sceneCategoryXmlAxis = (XElement?)sceneCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(sceneCategoryAxis) ?? throw new InvalidOperationException("Expected scene category-axis XML evidence.");
-        XElement xmlOnlyCategoryXmlAxis = (XElement?)xmlOnlyCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyCategoryAxis) ?? throw new InvalidOperationException("Expected XML-only category-axis XML evidence.");
+        XElement rebuiltCategoryXmlAxis = (XElement?)rebuiltCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltCategoryAxis) ?? throw new InvalidOperationException("Expected Rebuilt-scene category-axis XML evidence.");
 
         TestAssert.True(sceneValueXmlAxis.Element(chartNamespace + "majorUnit") is null, "Expected scene value axis to keep scene-owned XML evidence.");
-        TestAssert.Equal("99", xmlOnlyValueXmlAxis.Element(chartNamespace + "majorUnit")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("99", rebuiltValueXmlAxis.Element(chartNamespace + "majorUnit")?.Attribute("val")?.Value ?? string.Empty);
         TestAssert.Equal("low", sceneCategoryXmlAxis.Element(chartNamespace + "tickLblPos")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("high", xmlOnlyCategoryXmlAxis.Element(chartNamespace + "tickLblPos")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("high", rebuiltCategoryXmlAxis.Element(chartNamespace + "tickLblPos")?.Attribute("val")?.Value ?? string.Empty);
+    }
+
+    public static void PptxChartAxisSelectionKeepsDeclaredOrderAndMissingSources()
+    {
+        PptxSceneChart chart = TestAssert.NotNull(PptxTests.BuildSingleChartScene("""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart><c:axId val="30"/><c:axId val="404"/><c:axId val="10"/><c:axId val="20"/><c:axId val="30"/></c:lineChart>
+                <c:lineChart><c:axId val="404"/></c:lineChart>
+                <c:lineChart/>
+                <c:dateAx><c:axId val="10"/></c:dateAx>
+                <c:valAx><c:axId val="20"/><c:axPos val="l"/></c:valAx>
+                <c:valAx><c:axId val="30"/><c:axPos val="r"/><c:delete val="1"/></c:valAx>
+                <c:valAx><c:axId val="40"/><c:axPos val="r"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """));
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        var values = TestAssert.NotNull(typeof(PptxRenderer).GetMethod("ReadChartValueAxesForPlot", flags));
+        var category = TestAssert.NotNull(typeof(PptxRenderer).GetMethod("ReadChartCategoryAxisForPlot", flags));
+        var secondary = TestAssert.NotNull(typeof(PptxRenderer).GetMethod("ReadSceneSecondaryRightValueAxis", flags));
+        PptxSceneChartAxis? Axis(object source) => (PptxSceneChartAxis?)source.GetType().GetProperty("SceneAxis")!.GetValue(source);
+        object[] Select(PptxSceneChartPlot plot) => ((System.Collections.IEnumerable)values.Invoke(null, [chart, plot])!).Cast<object>().ToArray();
+
+        object[] declared = Select(chart.Plots[0]);
+        TestAssert.Equal("30,20,30", string.Join(",", declared.Select(source => Axis(source)!.Id)));
+        TestAssert.True(ReferenceEquals(Axis(declared[0]), chart.Axes.Single(axis => axis.Id == "30")), "Selection keeps the original scene axis.");
+        TestAssert.True(ReferenceEquals(Axis(declared[0]), Axis(declared[2])), "Repeated IDs retain their source owner.");
+        TestAssert.Equal(PptxSceneChartAxisKind.Date, Axis(category.Invoke(null, [chart, chart.Plots[0]])!)!.AxisKind);
+        TestAssert.Equal(0, Select(chart.Plots[1]).Length);
+        object missing = category.Invoke(null, [chart, chart.Plots[1]])!;
+        TestAssert.True(Axis(missing) is null && missing.GetType().GetProperty("XmlAxis")!.GetValue(missing) is null, "Unmatched IDs cannot borrow unrelated scene or XML axes.");
+        TestAssert.Equal("20,30,40", string.Join(",", Select(chart.Plots[2]).Select(source => Axis(source)!.Id)));
+        TestAssert.Equal("40", Axis(secondary.Invoke(null, [chart])!)!.Id);
     }
 
     public static void PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence()
@@ -702,19 +736,16 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """);
 
-        Type axisSourceType = typeof(PptxRenderer).GetNestedType(
-            "ChartAxisSource",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart axis-source type.");
-        object emptyAxisSource = Activator.CreateInstance(axisSourceType, [null, null]) ?? throw new InvalidOperationException("Expected empty axis source.");
-        System.Reflection.MethodInfo resolveValueAxis = typeof(PptxRenderer).GetMethod(
-            "ResolveXmlValueAxisForSource",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis fallback resolver.");
-
-        object? sceneAxis = resolveValueAxis.Invoke(null, [chart, emptyAxisSource, mismatchedChartXml]);
-        object? xmlOnlyAxis = resolveValueAxis.Invoke(null, [null, emptyAxisSource, mismatchedChartXml]);
-
-        TestAssert.True(sceneAxis is null, "Expected scene-backed missing value axis not to be repaired from fallback XML for scale/layout estimation.");
-        TestAssert.True(xmlOnlyAxis is XElement, "Expected XML-only value-axis scale lookup to keep reading XML.");
+        System.Reflection.MethodInfo readValueAxes = typeof(PptxRenderer).GetMethod(
+            "ReadChartValueAxesForPlot",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis selector.");
+        var absent = (System.Collections.ICollection)readValueAxes.Invoke(null, [chart, chart.Plots[0]])!;
+        PptxSceneChart rebuilt = TestAssert.NotNull(PptxTests.BuildSingleChartScene(mismatchedChartXml.ToString()));
+        var present = (System.Collections.ICollection)readValueAxes.Invoke(null, [rebuilt, null])!;
+        TestAssert.Equal(0, absent.Count);
+        TestAssert.Equal(1, present.Count);
+        TestAssert.Equal(-100d, rebuilt.Axes.Single().Minimum!.Value);
+        TestAssert.Equal(100d, rebuilt.Axes.Single().Maximum!.Value);
     }
 
     public static void PptxChartUnknownDataLabelPositionResolvesThroughExplicitDefault()
@@ -2160,20 +2191,20 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """);
         System.Reflection.MethodInfo readSecondaryAxis = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlSecondaryRightValueAxis",
+            "ReadSceneSecondaryRightValueAxis",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected secondary value-axis resolver.");
-        object sceneBacked = readSecondaryAxis.Invoke(null, [chart, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected scene-backed secondary value axis.");
-        object xmlBacked = readSecondaryAxis.Invoke(null, [null, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected XML-backed secondary value axis.");
+        object sceneBacked = readSecondaryAxis.Invoke(null, [chart]) ?? throw new InvalidOperationException("Expected scene-backed secondary value axis.");
+        object rebuiltBacked = readSecondaryAxis.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedXmlFallback.ToString())!]) ?? throw new InvalidOperationException("Expected Rebuilt-scene secondary value axis.");
 
         PptxSceneChartAxis? sceneAxis = (PptxSceneChartAxis?)sceneBacked.GetType().GetProperty("SceneAxis")?.GetValue(sceneBacked);
         XElement? sceneXmlAxis = (XElement?)sceneBacked.GetType().GetProperty("XmlAxis")?.GetValue(sceneBacked);
-        PptxSceneChartAxis? xmlSceneAxis = (PptxSceneChartAxis?)xmlBacked.GetType().GetProperty("SceneAxis")?.GetValue(xmlBacked);
-        XElement? xmlAxis = (XElement?)xmlBacked.GetType().GetProperty("XmlAxis")?.GetValue(xmlBacked);
+        PptxSceneChartAxis? rebuiltSceneAxis = (PptxSceneChartAxis?)rebuiltBacked.GetType().GetProperty("SceneAxis")?.GetValue(rebuiltBacked);
+        XElement? xmlAxis = (XElement?)rebuiltBacked.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltBacked);
 
         XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         TestAssert.Equal("30", sceneAxis?.Id ?? string.Empty);
         TestAssert.Equal("30", sceneXmlAxis?.Element(chartNamespace + "axId")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.True(xmlSceneAxis is null, "Expected XML-only secondary axis selection to remain XML-backed.");
+        TestAssert.Equal("20", rebuiltSceneAxis?.Id ?? string.Empty);
         TestAssert.Equal("20", xmlAxis?.Element(chartNamespace + "axId")?.Attribute("val")?.Value ?? string.Empty);
     }
 
@@ -2232,25 +2263,25 @@ internal static class PptxChartAxesTests
         XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XElement mismatchedPlot = mismatchedXmlFallback.Descendants(chartNamespace + "barChart").First();
         System.Reflection.MethodInfo readValueAxes = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartValueAxesForPlot",
+            "ReadChartValueAxesForPlot",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer value-axis bridge.");
         System.Reflection.MethodInfo readSecondaryAxis = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlSecondaryValueAxisForChart",
+            "ReadSceneSecondaryValueAxisForChart",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected secondary style value-axis resolver.");
 
-        object scenePrimaryAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [chart, chart.Plots[0], mismatchedXmlFallback, mismatchedPlot]) ?? throw new InvalidOperationException("Expected scene value axes."))).Cast<object>().First();
-        object xmlPrimaryAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [null, null, mismatchedXmlFallback, mismatchedPlot]) ?? throw new InvalidOperationException("Expected XML value axes."))).Cast<object>().First();
-        object sceneBacked = readSecondaryAxis.Invoke(null, [chart, mismatchedXmlFallback, scenePrimaryAxis]) ?? throw new InvalidOperationException("Expected scene-backed secondary style axis.");
-        object xmlBacked = readSecondaryAxis.Invoke(null, [null, mismatchedXmlFallback, xmlPrimaryAxis]) ?? throw new InvalidOperationException("Expected XML-backed secondary style axis.");
+        object scenePrimaryAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [chart, chart.Plots[0]]) ?? throw new InvalidOperationException("Expected scene value axes."))).Cast<object>().First();
+        object rebuiltPrimaryAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedXmlFallback.ToString())!, null]) ?? throw new InvalidOperationException("Expected XML value axes."))).Cast<object>().First();
+        object sceneBacked = readSecondaryAxis.Invoke(null, [chart, scenePrimaryAxis]) ?? throw new InvalidOperationException("Expected scene-backed secondary style axis.");
+        object rebuiltBacked = readSecondaryAxis.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedXmlFallback.ToString())!, rebuiltPrimaryAxis]) ?? throw new InvalidOperationException("Expected rebuilt-scene secondary style axis.");
 
         PptxSceneChartAxis? sceneAxis = (PptxSceneChartAxis?)sceneBacked.GetType().GetProperty("SceneAxis")?.GetValue(sceneBacked);
         XElement? sceneXmlAxis = (XElement?)sceneBacked.GetType().GetProperty("XmlAxis")?.GetValue(sceneBacked);
-        PptxSceneChartAxis? xmlSceneAxis = (PptxSceneChartAxis?)xmlBacked.GetType().GetProperty("SceneAxis")?.GetValue(xmlBacked);
-        XElement? xmlAxis = (XElement?)xmlBacked.GetType().GetProperty("XmlAxis")?.GetValue(xmlBacked);
+        PptxSceneChartAxis? rebuiltSceneAxis = (PptxSceneChartAxis?)rebuiltBacked.GetType().GetProperty("SceneAxis")?.GetValue(rebuiltBacked);
+        XElement? xmlAxis = (XElement?)rebuiltBacked.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltBacked);
 
         TestAssert.Equal("30", sceneAxis?.Id ?? string.Empty);
         TestAssert.Equal("30", sceneXmlAxis?.Element(chartNamespace + "axId")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.True(xmlSceneAxis is null, "Expected XML-only secondary style axis selection to remain XML-backed.");
+        TestAssert.Equal("99", rebuiltSceneAxis?.Id ?? string.Empty);
         TestAssert.Equal("99", xmlAxis?.Element(chartNamespace + "axId")?.Attribute("val")?.Value ?? string.Empty);
     }
 

@@ -43,7 +43,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme, colorMap);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, barPlot, chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
-                ChartAxisSource valueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+                ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                 XElement? valueAxis = valueAxisSource.XmlAxis;
                 PptxSceneChartAxis? valueSceneAxis = valueAxisSource.SceneAxis;
                 bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
@@ -54,7 +54,7 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueSceneAxis, valueAxis, dataExtents, percentStacked, ResolveBarValueAxisHeadroom(horizontalBars, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme, valueExtents, percentStacked);
                 valueAxisOptions = valueAxisOptions with { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueSceneAxis, valueExtents, percentStacked) };
-                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
                 bool ownsColumnCategories = barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
                     CanOwnColumnCategoryPlacement(sceneChart, categoryAxis, valueAxisSource);
                 barOptions = barOptions with
@@ -230,11 +230,11 @@ internal sealed partial class PptxRenderer
                     ChartBarPlotOptions extraBarOptions = ReadSceneOrXmlChartBarOptions(extraBarPlot, extraBarChart, PptxSceneChartGrouping.Clustered);
                     ChartColorPalette extraPalette = WithSourceSeries(chartPalette, extraBarPlot);
                     bool extraHorizontalBars = extraBarOptions.BarDirection == PptxSceneChartBarDirection.Bar;
-                    ChartAxisSource extraCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, extraBarPlot, chartXml, extraBarChart);
+                    ChartAxisSource extraCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, extraBarPlot);
                     extraBarOptions = extraBarOptions with { CategoryAxisReversed = extraHorizontalBars &&
                         extraBarOptions.Grouping == PptxSceneChartGrouping.Clustered &&
                         ReadSceneOrXmlValueAxisReversed(extraCategoryAxis.SceneAxis, extraCategoryAxis.XmlAxis) };
-                    ChartAxisSource extraValueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, extraBarPlot, chartXml, extraBarChart).FirstOrDefault();
+                    ChartAxisSource extraValueAxisSource = ReadChartValueAxesForPlot(sceneChart, extraBarPlot).FirstOrDefault();
                     XElement? extraValueAxis = extraValueAxisSource.XmlAxis;
                     PptxSceneChartAxis? extraValueSceneAxis = extraValueAxisSource.SceneAxis;
                     bool extraPercentStacked = IsPercentStackedChartGrouping(extraBarOptions.Grouping);
@@ -306,7 +306,7 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    ChartAxisSource lineValueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, linePlot, chartXml, comboLineChart).FirstOrDefault();
+                    ChartAxisSource lineValueAxisSource = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
                     XElement? lineValueAxis = lineValueAxisSource.XmlAxis;
                     XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
                     PptxSceneChartAxis? lineValueSceneAxis = lineValueAxisSource.SceneAxis;
@@ -325,7 +325,7 @@ internal sealed partial class PptxRenderer
                         secondaryAxisReversed = lineValueAxisOptions.Reversed;
                     }
 
-                    ChartAxisSource comboCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                    ChartAxisSource comboCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
                     // Keep the independently qualified composed-chart defaults while
                     // sharing the painter's resolved appearance contract.
                     IReadOnlyList<ChartLineAppearance> lineAppearance = ReadLineSeriesAppearance(
@@ -422,7 +422,7 @@ internal sealed partial class PptxRenderer
                 // for lack of tick evidence).
                 if (!horizontalBars)
                 {
-                    ChartAxisSource tickCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                    ChartAxisSource tickCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
                     PptxSceneChartAxisTickMark categoryTickMark = ReadSceneOrXmlChartAxisMajorTickMark(tickCategoryAxis.SceneAxis, tickCategoryAxis.XmlAxis);
                     if (axesStyle.CategoryAxisVisible && categoryTickMark != PptxSceneChartAxisTickMark.None)
                     {
@@ -464,7 +464,7 @@ internal sealed partial class PptxRenderer
                 // gridlines and category slot boundaries; lengths share the 0.315fs law).
                 if (horizontalBars)
                 {
-                    ChartAxisSource tickValueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, barPlot, chartXml, barChart).FirstOrDefault();
+                    ChartAxisSource tickValueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                     PptxSceneChartAxisTickMark horizontalValueTickMark = ReadSceneOrXmlChartAxisMajorTickMark(tickValueAxis.SceneAxis, tickValueAxis.XmlAxis);
                     if (axesStyle.CategoryAxisVisible && horizontalValueTickMark != PptxSceneChartAxisTickMark.None)
                     {
@@ -485,7 +485,7 @@ internal sealed partial class PptxRenderer
                         }
                     }
 
-                    ChartAxisSource tickCategoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                    ChartAxisSource tickCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
                     PptxSceneChartAxisTickMark horizontalCategoryTickMark = ReadSceneOrXmlChartAxisMajorTickMark(tickCategoryAxis.SceneAxis, tickCategoryAxis.XmlAxis);
                     if (axesStyle.ValueAxisVisible && horizontalCategoryTickMark != PptxSceneChartAxisTickMark.None)
                     {

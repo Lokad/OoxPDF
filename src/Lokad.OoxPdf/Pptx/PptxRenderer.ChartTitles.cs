@@ -561,14 +561,14 @@ internal sealed partial class PptxRenderer
             titles.HasHorizontalTitle || titles.HasVerticalTitle ||
             legend.Visible && !legend.Overlay && legend.PositionKind != PptxSceneChartLegendPosition.Bottom)
             return null;
-        IReadOnlyList<ChartAxisSource> axes = ReadSceneOrXmlChartValueAxesForPlot(chart, plot, chartXml, plotElement);
+        IReadOnlyList<ChartAxisSource> axes = ReadChartValueAxesForPlot(chart, plot);
         if (axes.Count != 1 || axes[0].SceneAxis is not { } axis ||
             axis.PositionKind is not (PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right))
             return null;
         // One reciprocal shared scale also owns one measured header and
         // category band. Unsupported composed axes retain their fallback.
         if (chart.Plots.Count != 1 && !HasSharedCartesianChartValueAxis(chart, axis)) return null;
-        ChartAxisSource category = ReadSceneOrXmlChartCategoryAxisForPlot(chart, plot, chartXml, plotElement);
+        ChartAxisSource category = ReadChartCategoryAxisForPlot(chart, plot);
         if (categoryPlacement is null && IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis) &&
             (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } categoryAxis ||
              categoryAxis.TickLabelPositionKind == PptxSceneChartTickLabelPosition.High ||

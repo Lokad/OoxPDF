@@ -1639,8 +1639,8 @@ internal static class PptxChartLegendsTests
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendChart, null, null, true, null, smallLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small legend plot box.");
-        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendChart, null, null, true, null, largeLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large legend plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallLegendChart, PptxTests.BuildSingleChartScene(smallLegendChart.ToString())!, null, true, null, smallLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small legend plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeLegendChart, PptxTests.BuildSingleChartScene(largeLegendChart.ToString())!, null, true, null, largeLegendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large legend plot box.");
         double smallWidth = (double)(smallPlotBox.GetType().GetProperty("Width")?.GetValue(smallPlotBox) ?? 0d);
         double largeWidth = (double)(largePlotBox.GetType().GetProperty("Width")?.GetValue(largePlotBox) ?? 0d);
 
@@ -1683,7 +1683,7 @@ internal static class PptxChartLegendsTests
         System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
-        object plotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, null, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected plot box.");
+        object plotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, chartXml, PptxTests.BuildSingleChartScene(chartXml.ToString())!, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected plot box.");
         double y = (double)(plotBox.GetType().GetProperty("Y")?.GetValue(plotBox) ?? 0d);
         double height = (double)(plotBox.GetType().GetProperty("Height")?.GetValue(plotBox) ?? 0d);
         TestAssert.True(Math.Abs(y - 75.90d) < 0.05d, "Plot bottom should sit 39.9pt below the frame top, on the Office category-axis line. Got " + y);
@@ -1731,8 +1731,8 @@ internal static class PptxChartLegendsTests
             "GetCartesianNoTitleRightLegendPlotBoxAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
 
-        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisChart, null, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small axis plot box.");
-        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisChart, null, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large axis plot box.");
+        object smallPlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, smallAxisChart, PptxTests.BuildSingleChartScene(smallAxisChart.ToString())!, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected small axis plot box.");
+        object largePlotBox = AwaitPrivatePlotBox(getPlotBox.Invoke(null, [frame, PptxTheme.Empty, largeAxisChart, PptxTests.BuildSingleChartScene(largeAxisChart.ToString())!, null, true, null, legendStyle, null, null])!) ?? throw new InvalidOperationException("Expected large axis plot box.");
         double smallX = (double)(smallPlotBox.GetType().GetProperty("X")?.GetValue(smallPlotBox) ?? 0d);
         double largeX = (double)(largePlotBox.GetType().GetProperty("X")?.GetValue(largePlotBox) ?? 0d);
 
@@ -2120,21 +2120,21 @@ internal static class PptxChartLegendsTests
         XElement mismatchedPlot = mismatchedChartXml.Descendants(chartNamespace + "lineChart").First();
 
         System.Reflection.MethodInfo readValueAxes = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartValueAxesForPlot",
+            "ReadChartValueAxesForPlot",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer value-axis bridge.");
         System.Reflection.MethodInfo readCategoryAxis = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartCategoryAxisForPlot",
+            "ReadChartCategoryAxisForPlot",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer category-axis bridge.");
 
-        var sceneValueAxes = (System.Collections.ICollection)(readValueAxes.Invoke(null, [chart, chart.Plots[0], mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected scene value-axis collection."));
-        var xmlOnlyValueAxes = (System.Collections.ICollection)(readValueAxes.Invoke(null, [null, null, mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected XML-only value-axis collection."));
-        object sceneCategoryAxis = readCategoryAxis.Invoke(null, [chart, chart.Plots[0], mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected scene category-axis source.");
-        object xmlOnlyCategoryAxis = readCategoryAxis.Invoke(null, [null, null, mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected XML-only category-axis source.");
+        var sceneValueAxes = (System.Collections.ICollection)(readValueAxes.Invoke(null, [chart, chart.Plots[0]]) ?? throw new InvalidOperationException("Expected scene value-axis collection."));
+        var rebuiltValueAxes = (System.Collections.ICollection)(readValueAxes.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedChartXml.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene value-axis collection."));
+        object sceneCategoryAxis = readCategoryAxis.Invoke(null, [chart, chart.Plots[0]]) ?? throw new InvalidOperationException("Expected scene category-axis source.");
+        object rebuiltCategoryAxis = readCategoryAxis.Invoke(null, [PptxTests.BuildSingleChartScene(mismatchedChartXml.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene category-axis source.");
 
         TestAssert.Equal(0, sceneValueAxes.Count);
-        TestAssert.Equal(1, xmlOnlyValueAxes.Count);
+        TestAssert.Equal(1, rebuiltValueAxes.Count);
         TestAssert.True(sceneCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(sceneCategoryAxis) is null, "Expected missing scene category axes not to be repaired from fallback XML.");
-        TestAssert.True(xmlOnlyCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyCategoryAxis) is not null, "Expected XML-only category-axis lookup to keep reading XML.");
+        TestAssert.True(rebuiltCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltCategoryAxis) is not null, "Expected Rebuilt-scene category-axis lookup to keep reading XML.");
     }
     public static void PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers()
     {

@@ -233,203 +233,57 @@ internal sealed partial class PptxRenderer
             .ToArray() ?? [];
     }
 
-    private static IReadOnlyList<ChartAxisSource> ReadSceneOrXmlChartValueAxesForPlot(
-        PptxSceneChart? sceneChart,
-        PptxSceneChartPlot? scenePlot,
-        XDocument chartXml,
-        XElement? chartElement)
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxesForPlot(
+        PptxSceneChart chart,
+        PptxSceneChartPlot? plot,
+        Func<PptxSceneChartAxis, bool> matches)
     {
-        IReadOnlyList<PptxSceneChartAxis> ReadSceneChartAxes(PptxSceneChart? chart, PptxSceneChartPlot? plot, PptxSceneChartAxisKind kind)
-        {
-            if (chart is null)
-            {
-                return [];
-            }
-    
-            if (plot is not null && plot.AxisIds.Count != 0)
-            {
-                return plot.AxisIds
-                    .Select(axisId => chart.Axes.FirstOrDefault(candidate =>
-                        string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
-                        candidate.AxisKind == kind))
-                    .Where(axis => axis is not null)
-                    .OfType<PptxSceneChartAxis>()
-                    .ToArray();
-            }
-    
-            return chart.Axes
-                .Where(axis => axis.AxisKind == kind)
-                .ToArray();
-        }
+        if (plot is null || plot.AxisIds.Count == 0)
+            return chart.Axes.Where(matches).ToArray();
 
-        IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartAxes(sceneChart, scenePlot, PptxSceneChartAxisKind.Value);
-        if (sceneAxes.Count == 0)
-        {
-            if (sceneChart is not null)
-            {
-                return [];
-            }
-
-            XElement[] fallbackXmlAxes = chartElement is null
-                ? chartXml.Descendants(ChartNamespace + "valAx").ToArray()
-                : ReadChartValueAxesForChart(chartXml, chartElement).ToArray();
-            return fallbackXmlAxes
-                .Select(axis => new ChartAxisSource(null, axis))
-                .ToArray();
-        }
-
-        XElement[] ReadSceneChartValueAxisElements()
-        {
-            if (sceneChart.ChartXml is null)
-            {
-                return [];
-            }
-    
-            return scenePlot is null
-                ? sceneChart.ChartXml.Descendants(ChartNamespace + "valAx").ToArray()
-                : ReadChartValueAxesForChart(sceneChart.ChartXml, scenePlot.Source).ToArray();
-        }
-
-        XElement[] xmlAxes = sceneChart is not null
-            ? ReadSceneChartValueAxisElements()
-            : chartElement is null
-                ? chartXml.Descendants(ChartNamespace + "valAx").ToArray()
-                : ReadChartValueAxesForChart(chartXml, chartElement).ToArray();
-        var sources = new List<ChartAxisSource>(sceneAxes.Count);
-        foreach (PptxSceneChartAxis sceneAxis in sceneAxes)
-        {
-            XElement? xmlAxis = xmlAxes.FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis.Id, StringComparison.Ordinal));
-            sources.Add(new ChartAxisSource(sceneAxis, xmlAxis));
-        }
-
-        return sources;
+        // Preserve declared order and duplicates. Missing IDs stay missing;
+        // neither source XML nor another plot supplies a replacement axis.
+        return plot.AxisIds.Select(id => chart.Axes.FirstOrDefault(axis =>
+                string.Equals(axis.Id, id, StringComparison.Ordinal) && matches(axis)))
+            .OfType<PptxSceneChartAxis>().ToArray();
     }
 
-    private static ChartAxisSource ReadSceneOrXmlChartCategoryAxisForPlot(
-        PptxSceneChart? sceneChart,
-        PptxSceneChartPlot? scenePlot,
-        XDocument chartXml,
-        XElement? chartElement)
+    private static IReadOnlyList<ChartAxisSource> ReadChartValueAxesForPlot(
+        PptxSceneChart chart, PptxSceneChartPlot? plot) =>
+        ReadChartAxesForPlot(chart, plot, static axis => axis.AxisKind == PptxSceneChartAxisKind.Value)
+            .Select(axis => ReadChartAxisSource(chart, axis)).ToArray();
+
+    private static ChartAxisSource ReadChartCategoryAxisForPlot(
+        PptxSceneChart chart, PptxSceneChartPlot? plot) =>
+        ReadChartAxisSource(chart, ReadChartAxesForPlot(chart, plot,
+            static axis => axis.AxisKind is PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date).FirstOrDefault());
+
+    private static ChartAxisSource ReadSceneSecondaryRightValueAxis(PptxSceneChart chart) =>
+        ReadChartAxisSource(chart, chart.Axes.FirstOrDefault(axis =>
+            axis.AxisKind == PptxSceneChartAxisKind.Value && axis.IsDeleted != true &&
+            axis.PositionKind == PptxSceneChartAxisPosition.Right));
+
+    private static ChartAxisSource ReadSceneSecondaryValueAxisForChart(PptxSceneChart chart, ChartAxisSource primary)
     {
-        IReadOnlyList<PptxSceneChartAxis> ReadSceneChartCategoryAxes(PptxSceneChart? chart, PptxSceneChartPlot? plot)
-        {
-            if (chart is null)
-            {
-                return [];
-            }
-    
-            static bool IsCategoryLike(PptxSceneChartAxis axis)
-            {
-                return axis.AxisKind is PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date;
-            }
-    
-            if (plot is not null && plot.AxisIds.Count != 0)
-            {
-                return plot.AxisIds
-                    .Select(axisId => chart.Axes.FirstOrDefault(candidate =>
-                        string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
-                        IsCategoryLike(candidate)))
-                    .Where(axis => axis is not null)
-                    .OfType<PptxSceneChartAxis>()
-                    .ToArray();
-            }
-    
-            return chart.Axes
-                .Where(IsCategoryLike)
-                .ToArray();
-        }
-
-        IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartCategoryAxes(sceneChart, scenePlot);
-        if (sceneAxes.Count == 0)
-        {
-            if (sceneChart is not null)
-            {
-                return new ChartAxisSource(null, null);
-            }
-
-            XElement[] fallbackXmlAxes = chartElement is null
-                ? ReadChartCategoryAxes(chartXml).ToArray()
-                : ReadChartCategoryAxesForChart(chartXml, chartElement).ToArray();
-            XElement? xmlAxis = fallbackXmlAxes.FirstOrDefault();
-            return new ChartAxisSource(null, xmlAxis);
-        }
-
-        XElement[] ReadSceneChartCategoryAxisElements()
-        {
-            if (sceneChart.ChartXml is null)
-            {
-                return [];
-            }
-    
-            return scenePlot is null
-                ? ReadChartCategoryAxes(sceneChart.ChartXml).ToArray()
-                : ReadChartCategoryAxesForChart(sceneChart.ChartXml, scenePlot.Source).ToArray();
-        }
-
-        XElement[] xmlAxes = sceneChart is not null
-            ? ReadSceneChartCategoryAxisElements()
-            : chartElement is null
-                ? ReadChartCategoryAxes(chartXml).ToArray()
-                : ReadChartCategoryAxesForChart(chartXml, chartElement).ToArray();
-        PptxSceneChartAxis sceneAxis = sceneAxes[0];
-        XElement? matchedXmlAxis = xmlAxes.FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis.Id, StringComparison.Ordinal));
-        return new ChartAxisSource(sceneAxis, matchedXmlAxis);
+        string? primaryId = primary.SceneAxis?.Id;
+        PptxSceneChartAxis? selected = !string.IsNullOrWhiteSpace(primaryId)
+            ? chart.Axes.FirstOrDefault(axis => axis.AxisKind == PptxSceneChartAxisKind.Value &&
+                !string.Equals(axis.Id, primaryId, StringComparison.Ordinal) && axis.IsDeleted != true)
+            : chart.Axes.FirstOrDefault(axis => axis.AxisKind == PptxSceneChartAxisKind.Value &&
+                axis.IsDeleted != true && axis.PositionKind == PptxSceneChartAxisPosition.Right);
+        return ReadChartAxisSource(chart, selected);
     }
 
-    private static ChartAxisSource ReadSceneOrXmlSecondaryRightValueAxis(PptxSceneChart? sceneChart, XDocument chartXml)
+    private static ChartAxisSource ReadChartAxisSource(PptxSceneChart chart, PptxSceneChartAxis? axis)
     {
-        if (sceneChart is null)
-        {
-            return new ChartAxisSource(null, ReadSecondaryRightValueAxis(chartXml));
-        }
-
-        PptxSceneChartAxis? sceneAxis = sceneChart.Axes.FirstOrDefault(axis =>
-            axis.AxisKind == PptxSceneChartAxisKind.Value &&
-            axis.IsDeleted != true &&
-            axis.PositionKind == PptxSceneChartAxisPosition.Right);
-        XElement? sceneXmlAxis = sceneChart.ChartXml?
-            .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis?.Id, StringComparison.Ordinal));
-        return sceneAxis is null
-            ? new ChartAxisSource(null, null)
-            : new ChartAxisSource(sceneAxis, sceneXmlAxis);
-    }
-
-    private static ChartAxisSource ReadSceneOrXmlSecondaryValueAxisForChart(PptxSceneChart? sceneChart, XDocument chartXml, ChartAxisSource primaryValueAxis)
-    {
-        if (sceneChart is null)
-        {
-            return new ChartAxisSource(null, ReadSecondaryValueAxisForChart(chartXml, primaryValueAxis.XmlAxis));
-        }
-
-        string? primaryAxisId = primaryValueAxis.SceneAxis?.Id;
-        PptxSceneChartAxis? sceneAxis = !string.IsNullOrWhiteSpace(primaryAxisId)
-            ? sceneChart.Axes.FirstOrDefault(axis =>
-                axis.AxisKind == PptxSceneChartAxisKind.Value &&
-                !string.Equals(axis.Id, primaryAxisId, StringComparison.Ordinal) &&
-                axis.IsDeleted != true)
-            : sceneChart.Axes.FirstOrDefault(axis =>
-                axis.AxisKind == PptxSceneChartAxisKind.Value &&
-                axis.IsDeleted != true &&
-                axis.PositionKind == PptxSceneChartAxisPosition.Right);
-        XElement? sceneXmlAxis = sceneChart.ChartXml?
-            .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis?.Id, StringComparison.Ordinal));
-        return sceneAxis is null
-            ? new ChartAxisSource(null, null)
-            : new ChartAxisSource(sceneAxis, sceneXmlAxis);
-    }
-
-    private static XElement? ResolveXmlValueAxisForSource(PptxSceneChart? sceneChart, ChartAxisSource source, XDocument chartXml)
-    {
-        if (source.XmlAxis is not null)
-        {
-            return source.XmlAxis;
-        }
-
-        return sceneChart is null && source.SceneAxis is null
-            ? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault()
-            : null;
+        if (axis is null) return default;
+        // Keep original scene-owned XML as provenance for properties not yet
+        // represented in the scene. XML does not select or manufacture axes.
+        IEnumerable<XElement> evidence = chart.ChartXml is not { } xml ? [] :
+            axis.AxisKind == PptxSceneChartAxisKind.Value
+                ? xml.Descendants(ChartNamespace + "valAx") : ReadChartCategoryAxes(xml);
+        return new(axis, evidence.FirstOrDefault(element =>
+            string.Equals(ReadChartAxisId(element), axis.Id, StringComparison.Ordinal)));
     }
 
     private static PptxSceneChartGrouping ReadSceneOrXmlChartGrouping(PptxSceneChartPlot? scenePlot, XElement plotElement, PptxSceneChartGrouping defaultGrouping)

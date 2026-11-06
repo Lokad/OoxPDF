@@ -346,9 +346,9 @@ internal sealed partial class PptxRenderer
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CVA", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
 
-    private static async ValueTask RenderSecondaryChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxSceneChartAxis? primarySceneAxis = null, XElement? primaryXmlAxis = null, PptxRenderContext? context = null)
+    private static async ValueTask RenderSecondaryChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart sceneChart, ChartValueExtents fallback, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxSceneChartAxis? primarySceneAxis = null, XElement? primaryXmlAxis = null, PptxRenderContext? context = null)
     {
-        ChartAxisSource rightValueAxisSource = ReadSceneOrXmlSecondaryRightValueAxis(sceneChart, chartXml);
+        ChartAxisSource rightValueAxisSource = ReadSceneSecondaryRightValueAxis(sceneChart);
         if (primarySceneAxis is not null && rightValueAxisSource.SceneAxis is not null && string.Equals(primarySceneAxis.Id, rightValueAxisSource.SceneAxis.Id, StringComparison.Ordinal))
         {
             return;
