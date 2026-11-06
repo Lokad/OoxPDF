@@ -137,7 +137,7 @@ internal sealed partial class DocxReader
             }
         }
 
-        return NormalizeDeletedParagraphMarkElements(bodyElements, markupMode);
+        return NormalizeDeletedParagraphMarkElements(bodyElements, markupMode, cancellationToken);
     }
 
     private static IReadOnlyList<DocxInlineImage> ReadInlineImages(

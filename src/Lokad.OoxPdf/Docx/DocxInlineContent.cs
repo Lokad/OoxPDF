@@ -231,7 +231,8 @@ internal static class DocxInlineContent
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
-            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations);
+            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
+            paragraph.ConsumedParagraphMarks);
 
     // Reference identity and measured source position establish actual owners.
     // The hint avoids rediscovering unchanged math; it cannot invent ownership.
@@ -277,7 +278,8 @@ internal static class DocxInlineContent
 
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
         IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null,
-        IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null, IReadOnlyList<DocxEquation>? equations = null)
+        IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null, IReadOnlyList<DocxEquation>? equations = null,
+        IReadOnlyList<DocxTextRun>? consumedParagraphMarks = null)
     {
         List<DocxRevisionInfo>? equationOwners = null;
         if (equations is not null)
@@ -344,6 +346,20 @@ internal static class DocxInlineContent
                 token.ThrowIfCancellationRequested();
                 if (revision.Kind == DocxRevisionKind.Insertion && revision.SourceElement == "ins")
                     remaining.Remove(revision);
+            }
+        // Only a join's actual deleted marks can discharge this metadata.
+        // Unconsumed, misplaced and value-equal revisions keep their fallback.
+        if (consumedParagraphMarks is not null)
+            foreach (var mark in consumedParagraphMarks)
+            {
+                token.ThrowIfCancellationRequested();
+                if (mark.SourceRunIndex != -1 || !string.IsNullOrWhiteSpace(mark.Text)) return false;
+                foreach (var revision in mark.Revisions)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del")
+                        remaining.Remove(revision);
+                }
             }
         return remaining.Count == 0;
     }

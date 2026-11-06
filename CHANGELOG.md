@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- DOCX: Final/Simple joins across deleted paragraph marks retain supported
+  equations, pictures and navigation together with their ordered source.
+
 - DOCX: warn when an automatic note-table row loses complete text lines below
   its page frame; existing rendering and intentional exact-height clipping remain.
 

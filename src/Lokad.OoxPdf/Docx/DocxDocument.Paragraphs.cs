@@ -59,6 +59,9 @@ internal sealed record DocxParagraph(
     // text, font resources or layout metrics.
     public IReadOnlyList<DocxNonRenderingRunOwner> NonRenderingRunOwners { get; init; } = [];
     public bool HasDeletedParagraphMark { get; init; }
+    // Final/Simple paragraph joins consume actual source marks. Their revision
+    // objects remain available for review without owning visible inline content.
+    public IReadOnlyList<DocxTextRun> ConsumedParagraphMarks { get; init; } = [];
 
     // Hidden deletions/move-from text in Final/Simple views still size Office
     // autofit columns. Original rejects insertions/move-to text and excludes

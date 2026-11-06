@@ -167,14 +167,14 @@ internal sealed partial class DocxReader
             }
         }
 
-        elements = NormalizeDeletedParagraphMarkElements(elements, markupMode).ToList();
+        elements = NormalizeDeletedParagraphMarkElements(elements, markupMode, cancellationToken).ToList();
         AddImplicitTerminalTableParagraph(elements);
         return elements;
     }
 
     private static IReadOnlyList<DocxBodyElement> NormalizeDeletedParagraphMarkElements(
         IReadOnlyList<DocxBodyElement> elements,
-        OoxPdfDocxMarkupMode markupMode)
+        OoxPdfDocxMarkupMode markupMode, CancellationToken cancellationToken)
     {
         if (DocxMarkupContext.FromMode(markupMode).IncludesDeletions || elements.Count < 2)
         {
@@ -184,6 +184,7 @@ internal sealed partial class DocxReader
         var output = new List<DocxBodyElement>(elements.Count);
         foreach (DocxBodyElement element in elements)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (element is DocxParagraphElement paragraphElement &&
                 output.Count != 0 &&
                 output[^1] is DocxParagraphElement previousParagraphElement &&
@@ -191,7 +192,7 @@ internal sealed partial class DocxReader
             {
                 output[^1] = DocxBodyElementFactory.CreateParagraph(MergeParagraphsAcrossDeletedMark(
                     previousParagraphElement.Paragraph,
-                    paragraphElement.Paragraph));
+                    paragraphElement.Paragraph, cancellationToken));
                 continue;
             }
 
@@ -201,40 +202,123 @@ internal sealed partial class DocxReader
         return output;
     }
 
-    private static DocxParagraph MergeParagraphsAcrossDeletedMark(DocxParagraph first, DocxParagraph second)
+    private static DocxParagraph MergeParagraphsAcrossDeletedMark(DocxParagraph first, DocxParagraph second,
+        CancellationToken token)
     {
-            int MaxSourceRunIndex(DocxParagraph paragraph)
-            {
-                return paragraph.Runs
-                    .Select(run => run.SourceRunIndex)
-                    .Concat(paragraph.InlineReferences.Select(reference => reference.SourceRunIndex))
-                    .Concat(paragraph.CommentRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex, range.ReferenceSourceRunIndex }).OfType<int>())
-                    .Concat(paragraph.RevisionRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex }).OfType<int>())
-                    .Concat(paragraph.FieldReferences.Select(field => field.SourceRunIndex))
-                    .Concat(paragraph.Hyperlinks.Select(link => link.SourceRunStartIndex))
-                    .Concat(paragraph.BookmarkAnchors.Select(anchor => anchor.SourceRunIndex))
-                    .Where(index => index >= 0)
-                    .DefaultIfEmpty(-1)
-                    .Max();
-            }
-
+        token.ThrowIfCancellationRequested();
         int sourceRunOffset = MaxSourceRunIndex(first) + 1;
         int textRunOffset = first.Runs.Count;
         int textOffset = first.Runs.Sum(run => run.Text.Length);
+        var runs = new Dictionary<DocxTextRun, DocxTextRun>(ReferenceEqualityComparer.Instance);
+        var images = new Dictionary<DocxInlineImage, DocxInlineImage>(ReferenceEqualityComparer.Instance);
+        var equations = new Dictionary<DocxEquation, DocxEquation>(ReferenceEqualityComparer.Instance);
+        var boxes = new Dictionary<DocxInlineTextBox, DocxInlineTextBox>(ReferenceEqualityComparer.Instance);
+
+        // Rebind every reference to the same shifted source object. Lists,
+        // measured items and generated note references must not diverge.
+        DocxTextRun ShiftRun(DocxTextRun source)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!runs.TryGetValue(source, out var shifted))
+                runs.Add(source, shifted = source with { SourceRunIndex = ShiftSourceRunIndex(source.SourceRunIndex, sourceRunOffset) });
+            return shifted;
+        }
+        DocxInlineImage ShiftImage(DocxInlineImage source)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!images.TryGetValue(source, out var shifted))
+                images.Add(source, shifted = source with {
+                    SourceRunIndex = ShiftSourceRunIndex(source.SourceRunIndex, sourceRunOffset),
+                    SourceRunStyle = source.SourceRunStyle is { } style ? ShiftRun(style) : null });
+            return shifted;
+        }
+        DocxEquation ShiftEquation(DocxEquation source)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!equations.TryGetValue(source, out var shifted))
+                equations.Add(source, shifted = source with {
+                    SourceRunIndex = ShiftSourceRunIndex(source.SourceRunIndex, sourceRunOffset),
+                    TextRunIndex = source.TextRunIndex + textRunOffset });
+            return shifted;
+        }
+        DocxInlineTextBox ShiftBox(DocxInlineTextBox source)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!boxes.TryGetValue(source, out var shifted))
+                boxes.Add(source, shifted = source with { SourceRunIndex = ShiftSourceRunIndex(source.SourceRunIndex, sourceRunOffset) });
+            return shifted;
+        }
+        DocxInlineItem ShiftItem(DocxInlineItem source) => source switch {
+            DocxInlineText text => text with { Run = ShiftRun(text.Run) },
+            DocxInlineTab tab => tab with { Run = ShiftRun(tab.Run) },
+            DocxInlineBreak lineBreak => lineBreak with { Run = ShiftRun(lineBreak.Run) },
+            DocxInlinePicture picture => picture with { Image = ShiftImage(picture.Image) },
+            DocxInlineEquation math => math with { Equation = ShiftEquation(math.Equation) },
+            DocxInlineBox box => box with { Box = ShiftBox(box.Box) },
+            _ => source
+        };
+        var firstItems = first.InlineContent;
+        var secondItems = second.InlineContent;
+        // Plain prefixes/suffixes need no permanent source view until an object
+        // or measured annotation requires one. Never reconstruct missing math.
+        if (firstItems is not null || secondItems is not null)
+        {
+            if (firstItems is null && first.Equations.Count == 0)
+                firstItems = DocxInlineContent.FromPrefix(first.Runs, first.Images, token, first.InlineTextBoxes);
+            if (secondItems is null && second.Equations.Count == 0)
+                secondItems = DocxInlineContent.FromPrefix(second.Runs, second.Images, token, second.InlineTextBoxes);
+        }
+        bool hasItems = firstItems is not null && secondItems is not null;
+        int itemOffset = firstItems?.Count ?? 0;
+        DocxBookmarkAnchor BindTerminalBookmark(DocxParagraph paragraph, DocxBookmarkAnchor anchor, int? itemCount) =>
+            anchor.InlineItemIndex is null && itemCount is not null && anchor.TextRunIndex == paragraph.Runs.Count &&
+                paragraph.Equations.Count == 0 && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0
+                ? anchor with { InlineItemIndex = itemCount } : anchor;
         return first with
         {
-            Runs = first.Runs.Concat(second.Runs.Select(run => ShiftRun(run, sourceRunOffset))).ToArray(),
-            Images = first.Images.Concat(second.Images).ToArray(),
+            Runs = first.Runs.Concat(second.Runs.Select(ShiftRun)).ToArray(),
+            Images = first.Images.Concat(second.Images.Select(ShiftImage)).ToArray(),
+            Equations = first.Equations.Concat(second.Equations.Select(ShiftEquation)).ToArray(),
+            InlineTextBoxes = first.InlineTextBoxes.Concat(second.InlineTextBoxes.Select(ShiftBox)).ToArray(),
+            InlineContent = hasItems ? firstItems!.Concat(secondItems!.Select(ShiftItem)).ToArray() : null,
             SpacingAfterPoints = second.SpacingAfterPoints,
-            InlineReferences = first.InlineReferences.Concat(second.InlineReferences.Select(reference => ShiftInlineReference(reference, sourceRunOffset))).ToArray(),
-            CommentRanges = first.CommentRanges.Concat(second.CommentRanges.Select(range => ShiftCommentRange(range, sourceRunOffset, textOffset))).ToArray(),
+            InlineReferences = first.InlineReferences.Concat(second.InlineReferences.Select(reference => reference with {
+                SourceRunIndex = ShiftSourceRunIndex(reference.SourceRunIndex, sourceRunOffset),
+                DisplayRun = reference.DisplayRun is { } run ? ShiftRun(run) : null })).ToArray(),
+            CommentRanges = first.CommentRanges.Concat(second.CommentRanges.Select(range => ShiftCommentRange(range, sourceRunOffset, textOffset, itemOffset))).ToArray(),
             RevisionRanges = first.RevisionRanges.Concat(second.RevisionRanges.Select(range => ShiftRevisionRange(range, sourceRunOffset, textOffset))).ToArray(),
             FieldReferences = first.FieldReferences.Concat(second.FieldReferences.Select(field => ShiftFieldReference(field, sourceRunOffset, textRunOffset))).ToArray(),
-            Hyperlinks = first.Hyperlinks.Concat(second.Hyperlinks.Select(link => ShiftHyperlink(link, sourceRunOffset, textRunOffset))).ToArray(),
-            BookmarkAnchors = first.BookmarkAnchors.Concat(second.BookmarkAnchors.Select(anchor => ShiftBookmarkAnchor(anchor, sourceRunOffset, textRunOffset))).ToArray(),
+            Hyperlinks = first.Hyperlinks.Concat(second.Hyperlinks.Select(link => ShiftHyperlink(link, sourceRunOffset, textRunOffset, itemOffset))).ToArray(),
+            BookmarkAnchors = first.BookmarkAnchors.Select(anchor => BindTerminalBookmark(first, anchor, hasItems ? itemOffset : null))
+                .Concat(second.BookmarkAnchors.Select(anchor => ShiftBookmarkAnchor(
+                    BindTerminalBookmark(second, anchor, hasItems ? secondItems!.Count : null), sourceRunOffset, textRunOffset, itemOffset))).ToArray(),
             Revisions = first.Revisions.Concat(second.Revisions).ToArray(),
-            HasDeletedParagraphMark = second.HasDeletedParagraphMark
+            NonRenderingRunOwners = first.NonRenderingRunOwners.Concat(second.NonRenderingRunOwners.Select(owner =>
+                owner with { SourceRunIndex = ShiftSourceRunIndex(owner.SourceRunIndex, sourceRunOffset) })).ToArray(),
+            ConsumedParagraphMarks = first.ConsumedParagraphMarks
+                .Concat(first.HasDeletedParagraphMark && first.ParagraphMarkRun is { } mark ? [mark] : [])
+                .Concat(second.ConsumedParagraphMarks).ToArray(),
+            ParagraphMarkRun = second.ParagraphMarkRun,
+            HasDeletedParagraphMark = second.HasDeletedParagraphMark,
+            DeletedText = first.DeletedText + second.DeletedText
         };
+
+        int MaxSourceRunIndex(DocxParagraph paragraph)
+        {
+            token.ThrowIfCancellationRequested();
+            return paragraph.Runs.Select(run => run.SourceRunIndex)
+                .Concat(paragraph.Images.Select(image => image.SourceRunIndex))
+                .Concat(paragraph.Equations.Select(equation => equation.SourceRunIndex))
+                .Concat(paragraph.InlineTextBoxes.Select(box => box.SourceRunIndex))
+                .Concat(paragraph.NonRenderingRunOwners.Select(owner => owner.SourceRunIndex))
+                .Concat(paragraph.InlineReferences.Select(reference => reference.SourceRunIndex))
+                .Concat(paragraph.CommentRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex, range.ReferenceSourceRunIndex }).OfType<int>())
+                .Concat(paragraph.RevisionRanges.SelectMany(range => new[] { range.StartSourceRunIndex, range.EndSourceRunIndex }).OfType<int>())
+                .Concat(paragraph.FieldReferences.Select(field => field.SourceRunIndex))
+                .Concat(paragraph.Hyperlinks.Select(link => link.SourceRunStartIndex))
+                .Concat(paragraph.BookmarkAnchors.Select(anchor => anchor.SourceRunIndex))
+                .Where(index => index >= 0).DefaultIfEmpty(-1).Max();
+        }
     }
 
 
@@ -253,17 +337,7 @@ internal sealed partial class DocxReader
         return textOffset is null ? null : textOffset + offset;
     }
 
-    private static DocxTextRun ShiftRun(DocxTextRun run, int sourceRunOffset)
-    {
-        return run with { SourceRunIndex = ShiftSourceRunIndex(run.SourceRunIndex, sourceRunOffset) };
-    }
-
-    private static DocxInlineReference ShiftInlineReference(DocxInlineReference reference, int sourceRunOffset)
-    {
-        return reference with { SourceRunIndex = ShiftSourceRunIndex(reference.SourceRunIndex, sourceRunOffset) };
-    }
-
-    private static DocxCommentRange ShiftCommentRange(DocxCommentRange range, int sourceRunOffset, int textOffset)
+    private static DocxCommentRange ShiftCommentRange(DocxCommentRange range, int sourceRunOffset, int textOffset, int itemOffset)
     {
         return range with
         {
@@ -272,7 +346,9 @@ internal sealed partial class DocxReader
             EndSourceRunIndex = ShiftSourceRunIndex(range.EndSourceRunIndex, sourceRunOffset),
             EndTextOffset = ShiftTextOffset(range.EndTextOffset, textOffset),
             ReferenceSourceRunIndex = ShiftSourceRunIndex(range.ReferenceSourceRunIndex, sourceRunOffset),
-            ReferenceTextOffset = ShiftTextOffset(range.ReferenceTextOffset, textOffset)
+            ReferenceTextOffset = ShiftTextOffset(range.ReferenceTextOffset, textOffset),
+            StartInlineItemIndex = ShiftSourceRunIndex(range.StartInlineItemIndex, itemOffset),
+            EndInlineItemIndex = ShiftSourceRunIndex(range.EndInlineItemIndex, itemOffset)
         };
     }
 
@@ -296,21 +372,24 @@ internal sealed partial class DocxReader
         };
     }
 
-    private static DocxHyperlinkSpan ShiftHyperlink(DocxHyperlinkSpan hyperlink, int sourceRunOffset, int textRunOffset)
+    private static DocxHyperlinkSpan ShiftHyperlink(DocxHyperlinkSpan hyperlink, int sourceRunOffset, int textRunOffset, int itemOffset)
     {
         return hyperlink with
         {
             SourceRunStartIndex = ShiftSourceRunIndex(hyperlink.SourceRunStartIndex, sourceRunOffset),
-            TextRunStartIndex = hyperlink.TextRunStartIndex + textRunOffset
+            TextRunStartIndex = hyperlink.TextRunStartIndex + textRunOffset,
+            StartInlineItemIndex = ShiftSourceRunIndex(hyperlink.StartInlineItemIndex, itemOffset),
+            EndInlineItemIndex = ShiftSourceRunIndex(hyperlink.EndInlineItemIndex, itemOffset)
         };
     }
 
-    private static DocxBookmarkAnchor ShiftBookmarkAnchor(DocxBookmarkAnchor anchor, int sourceRunOffset, int textRunOffset)
+    private static DocxBookmarkAnchor ShiftBookmarkAnchor(DocxBookmarkAnchor anchor, int sourceRunOffset, int textRunOffset, int itemOffset)
     {
         return anchor with
         {
             SourceRunIndex = ShiftSourceRunIndex(anchor.SourceRunIndex, sourceRunOffset),
-            TextRunIndex = anchor.TextRunIndex + textRunOffset
+            TextRunIndex = anchor.TextRunIndex + textRunOffset,
+            InlineItemIndex = ShiftSourceRunIndex(anchor.InlineItemIndex, itemOffset)
         };
     }
 

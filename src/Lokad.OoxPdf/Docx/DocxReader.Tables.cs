@@ -469,7 +469,7 @@ internal sealed partial class DocxReader
             }
         }
 
-        return NormalizeDeletedParagraphMarkElements(elements, markupMode);
+        return NormalizeDeletedParagraphMarkElements(elements, markupMode, cancellationToken);
     }
 
 

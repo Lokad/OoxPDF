@@ -431,6 +431,12 @@ layout and general OpenType shaping. Static fallback diagnostics are listed belo
 
 ## DOCX
 
+Final/Simple joins across deleted paragraph marks retain supported inline
+equations, pictures, links and bookmarks in source order. Consumed marks keep
+their revision provenance. Original/AllMarkup retain the source paragraphs;
+unconsumed mark revisions keep their existing equation eligibility fallback.
+General paragraph-format changes and unrestricted revision layout remain partial.
+
 - Optional styles, settings, numbering, fonts/themes and related stories follow
   the document's owning relationships. Unreferenced package parts retain the
   corresponding empty/default behavior rather than configuring active content.

@@ -322,9 +322,9 @@ internal sealed partial class DocxReader
             Equations = equations,
             // Page fields retain their canonical source placeholders. Layout
             // eligibility separately requires the actual page inputs.
-            InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs, cancellationToken) &&
-                DocxInlineContent.HasSupportedRunRevisionOwners(paragraphRevisions, runs, cancellationToken,
-                    listLabel is null ? null : retainedMark, images, nonRenderingRunOwners, equations)
+            // Keep source order independently of revision eligibility. A later
+            // paragraph join can consume a mark; layout still checks its owners.
+            InlineContent = inlineItems is not null && DocxInlineContent.HasSourceFieldResults(fieldReferences, runs) && DocxInlineContent.HasSupportedReferences(inlineReferences, runs, cancellationToken)
                 ? inlineItems : null,
             InlineReferences = inlineReferences,
             CommentRanges = commentRanges,
