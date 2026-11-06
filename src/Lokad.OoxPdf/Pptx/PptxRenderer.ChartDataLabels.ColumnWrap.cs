@@ -26,7 +26,9 @@ internal sealed partial class PptxRenderer
         // Native Arial/Times controls distinguish line advance (hhea plus gap)
         // from the Windows baseline descent. Calibri's two heights coincide.
         double lineAdvance = (await measurer.MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false)).Height;
-        double textWidth = lines.Max(line => line.Width);
+        // Forced overfull text elements keep their full ink advance; the
+        // fitted source frame still owns the box and each line's alignment.
+        double textWidth = Math.Min(cap, lines.Max(line => line.Width));
         double swatch = style.FontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
         double keyReserve = keyFill is not null ? 2d * (swatch + PptxChartMetricRules.BarLegendKeyUnitCenterOffset) : 0d;
         double width = textWidth + 2d * horizontalPadding + keyReserve;
@@ -45,7 +47,7 @@ internal sealed partial class PptxRenderer
         foreach (var line in lines)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            double lineX = textX + (textWidth - line.Width) / 2d;
+            double lineX = textX + (textWidth - Math.Min(cap, line.Width)) / 2d;
             runs.Add(CreateChartTextRun(line.Text, lineX, baseline, Math.Max(1d, line.Width), metrics.Height,
                 frame.X, frame.Y, frame.Width, frame.Height, style, TextAlignment.Left));
             baseline -= lineAdvance;

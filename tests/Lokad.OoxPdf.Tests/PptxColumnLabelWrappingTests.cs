@@ -59,6 +59,74 @@ internal static class PptxColumnLabelWrappingTests
         TestAssert.Equal(string.Empty, PptxSceneBuilder.ReadChartTextBodyProperties(null).WrapValue);
     }
 
+    public static void PptxAutomaticColumnOverfullGlyphsKeepFittedReferenceWidths()
+    {
+        const double cap = 12d; // 90pt chart /5, less the two existing3pt insets.
+        foreach (string source in new[] { "WWWL", "LWWW" })
+        {
+            PdfPage page = Render(OverfullColumnFixture(source));
+            var shows = Shows(page).ToArray();
+            TestAssert.True(shows.Length == 4 && string.Concat(shows.Select(x => x.Text)) == source,
+                "Forced overfull glyphs preserve all source text and four actual wrapped lines.");
+            var narrow = shows.Single(x => x.Text == "L");
+            var font = narrow.Font.Font;
+            double scale = narrow.Size / font.UnitsPerEm;
+            double narrowAdvance = font.GetAdvanceWidth(font.MapCodePoint('L')) * scale;
+            double wideAdvance = font.GetAdvanceWidth(font.MapCodePoint('W')) * scale;
+            TestAssert.True(narrowAdvance < cap && wideAdvance > cap,
+                "The pinned source challenges a fitting glyph and a forced overfull text element.");
+            TestAssert.True(shows.Where(x => x.Text == "W").All(x =>
+                Math.Abs(narrow.X - x.X - (cap - narrowAdvance) / 2d) < .004),
+                "The fitted source width owns line alignment while full overfull glyphs remain painted.");
+            double advance = (font.Hhea.HorizontalAscender - font.Hhea.HorizontalDescender + font.Hhea.HorizontalLineGap) * scale;
+            for (int index = 1; index < shows.Length; index++)
+                TestAssert.True(Math.Abs(shows[index - 1].Y - shows[index].Y - advance) < .004,
+                    "Overfull fragments keep the existing four-line normal advance.");
+            PdfContentValidator.ValidatePage(page, 0, default);
+        }
+    }
+
+    private static byte[] OverfullColumnFixture(string text)
+    {
+        using var stream = new MemoryStream();
+        stream.Write(File.ReadAllBytes(Path.Combine(Cases, "ColumnLabelWrapping/single-long-word.pptx")));
+        stream.Position = 0;
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
+            void Edit(string name, Action<XDocument> edit)
+            {
+                var entry = archive.GetEntry(name)!;
+                XDocument xml;
+                using (var input = entry.Open()) xml = XDocument.Load(input);
+                edit(xml); entry.Delete();
+                using var output = archive.CreateEntry(name).Open(); xml.Save(output);
+            }
+            Edit("ppt/charts/chart1.xml", xml =>
+            {
+                XElement series = xml.Descendants(c + "ser").First();
+                series.Element(c + "tx")!.Element(c + "v")!.Value = text;
+                foreach (string name in new[] { "cat", "val" })
+                {
+                    XElement literal = series.Element(c + name)!.Elements().Single();
+                    literal.Element(c + "ptCount")!.SetAttributeValue("val", 1);
+                    literal.Elements(c + "pt").Where(point => (int)point.Attribute("idx")! != 0).Remove();
+                    literal.Element(c + "pt")!.Element(c + "v")!.Value = name == "cat" ? "A" : "20";
+                }
+                XElement labels = xml.Descendants(c + "dLbls").First();
+                foreach (string name in new[] { "showVal", "showCatName", "showLegendKey" })
+                    labels.Element(c + name)!.SetAttributeValue("val", 0);
+                labels.Element(c + "txPr")!.Element(a + "bodyPr")!.SetAttributeValue("wrap", "square");
+                xml.Descendants(c + "legend").Remove();
+            });
+            Edit("ppt/slides/slide1.xml", xml => xml.Descendants(p + "graphicFrame").First()
+                .Element(p + "xfrm")!.Element(a + "ext")!.SetAttributeValue("cx", 90 * 12700));
+        }
+        return stream.ToArray();
+    }
+
     internal static void CheckUnicode()
     {
         byte[] source = File.ReadAllBytes(Path.Combine(Cases, "ColumnLabelWrapping/single-long-word.pptx"));

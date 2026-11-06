@@ -15888,6 +15888,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-column-label-wrapping": [
+    "PptxAutomaticColumnOverfullGlyphsKeepFittedReferenceWidths",
     "PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames",
     "PortableRenderingAutomaticColumnLabelsKeepComposedValueSuffixes",
     "PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks",
