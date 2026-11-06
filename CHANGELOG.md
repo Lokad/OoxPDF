@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 — Unreleased
+## 0.3.0 â€” Unreleased
 
 - PPTX: chart axis selection uses the resolved scene, removing duplicate XML-only
   selection paths while preserving source order and missing-axis fallbacks.
@@ -192,7 +192,7 @@
   images, equations and related stories. Strict dialect warnings remain; this
   does not add general Strict OOXML or Strict PPTX support.
 
-## 0.2.0 — 2026-10-29
+## 0.2.0 â€” 2026-10-29
 
 ### Rendering
 

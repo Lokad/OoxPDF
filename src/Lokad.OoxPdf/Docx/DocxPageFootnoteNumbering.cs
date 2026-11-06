@@ -83,7 +83,7 @@ internal static class DocxPageFootnoteNumbering
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (paragraph.InlineReferences.Count == 0) continue;
-            var runLabels = new Dictionary<int, string>();
+            var runLabels = new Dictionary<DocxTextRun, string>(ReferenceEqualityComparer.Instance);
             var references = new List<DocxInlineReference>();
             foreach (var reference in paragraph.InlineReferences)
             {
@@ -96,12 +96,12 @@ internal static class DocxPageFootnoteNumbering
                 int value = checked((settings.NumberStart ?? 1) + count);
                 counts[page] = count + 1;
                 string label = value.ToString(settings.NumberFormatValue == "decimalZero" ? "D2" : "D", CultureInfo.InvariantCulture);
-                runLabels.Add(reference.SourceRunIndex, label);
+                runLabels.Add(reference.DisplayRun!, label);
                 references.Add(reference with { DisplayText = label });
                 labels.Add(reference.Id!, (reference.DisplayText!, label));
             }
-            // Only the generated marker in its own source run changes. Authored
-            // digits and original source offsets retain their identities.
+            // Only the owned generated marker changes. Several markers can
+            // share an XML run; authored text keeps its original identity.
             if (!TryReplaceMarkerRuns(paragraph, runLabels, references, out var replacement)) return false;
             replacements.Add(paragraph, replacement);
         }
@@ -135,14 +135,14 @@ internal static class DocxPageFootnoteNumbering
         return true;
     }
 
-    private static bool TryReplaceMarkerRuns(DocxParagraph paragraph, IReadOnlyDictionary<int, string> labels,
+    private static bool TryReplaceMarkerRuns(DocxParagraph paragraph, IReadOnlyDictionary<DocxTextRun, string> labels,
         IReadOnlyList<DocxInlineReference> references, out DocxParagraph replacement)
     {
         replacement = paragraph;
         var changed = new Dictionary<DocxTextRun, DocxTextRun>(ReferenceEqualityComparer.Instance);
         var runs = paragraph.Runs.Select(run =>
         {
-            if (!labels.TryGetValue(run.SourceRunIndex, out string? label) || run.Text == label) return run;
+            if (!labels.TryGetValue(run, out string? label) || run.Text == label) return run;
             var updated = run with { Text = label };
             changed.Add(run, updated);
             return updated;
@@ -154,7 +154,7 @@ internal static class DocxPageFootnoteNumbering
             {
                 if (item is DocxInlineText text && changed.TryGetValue(text.Run, out var updated))
                 {
-                    // The complete measured marker owns one numeric source run.
+                    // The complete measured marker owns one generated run.
                     // A partial source slice retains the original numbering.
                     if (text.Start != 0 || text.Length != text.Run.Text.Length) return false;
                     items.Add(text with { Run = updated, Length = updated.Text.Length });
@@ -272,36 +272,43 @@ internal static class DocxPageFootnoteNumbering
             // Index source runs and actual text segments once per paragraph.
             // Numbering can own every marker; layout/kerning purposes retain
             // their independently qualified single-reference paragraph scope.
-            var markerRuns = p.Runs.GroupBy(r => r.SourceRunIndex).ToDictionary(g => g.Key, g => g.ToArray());
+            var markerRuns = new HashSet<DocxTextRun>(p.Runs, ReferenceEqualityComparer.Instance);
             var markerLines = lines.SelectMany(l => l.Line.Segments.Where(s => s.Role == DocxTextSegmentRole.Text)
                 .Select(s => (l.Page, Segment: s, l.Clip)))
                 .GroupBy(l => (l.Segment.SourceTextRunIndex, l.Segment.SourceTextOffsetInRun))
                 .ToDictionary(g => g.Key, g => g.ToArray());
-            var ownedRuns = new HashSet<int>();
+            var ownedRuns = new HashSet<DocxTextRun>(ReferenceEqualityComparer.Instance);
             Dictionary<(int Run, int Offset), DocxTextRun?>? customRuns = null;
+            Dictionary<int, int>? referenceCounts = null;
             foreach (var reference in p.InlineReferences)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (reference.Kind != DocxRelatedStoryKind.Footnote || string.IsNullOrEmpty(reference.Id) ||
-                    reference.Revision is not null || reference.Revisions.Count != 0 ||
-                    !ownedRuns.Add(reference.SourceRunIndex)) return false;
+                    reference.Revision is not null || reference.Revisions.Count != 0) return false;
                 bool custom = reference.CustomMarkText is not null;
+                DocxTextRun? marker;
                 if (custom)
                 {
+                    // Custom glyph binding still requires one reference in its
+                    // source run; automatic markers have their own exact owner.
+                    referenceCounts ??= p.InlineReferences.GroupBy(r => r.SourceRunIndex).ToDictionary(g => g.Key, g => g.Count());
                     if (!forNumbering || reference.DisplayText is not null ||
+                        referenceCounts[reference.SourceRunIndex] != 1 ||
                         !DocxCustomNoteMarkerOwners.TryGetSourceRun(reference,
-                            customRuns ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(p.Runs, cancellationToken), out _)) return false;
+                            customRuns ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(p.Runs, cancellationToken), out marker)) return false;
                 }
                 else if (string.IsNullOrEmpty(reference.DisplayText) || !reference.DisplayText.All(char.IsAsciiDigit) ||
                     !string.IsNullOrEmpty(reference.CustomMarkFollowsValue) && !OoxBoolean.IsOff(reference.CustomMarkFollowsValue) ||
-                    !markerRuns.TryGetValue(reference.SourceRunIndex, out var marker) || marker.Length != 1 ||
-                    marker[0].SourceTextOffsetInRun != reference.TextOffsetInRun || marker[0].Text != reference.DisplayText) return false;
+                    !DocxInlineContent.TryGetAutomaticNoteRun(reference, out marker) || !markerRuns.Contains(marker) ||
+                    marker.SourceRunIndex != reference.SourceRunIndex || marker.SourceTextOffsetInRun != reference.TextOffsetInRun) return false;
+                if (!ownedRuns.Add(marker)) return false;
                 bool completeSegmentOwner = custom || wrapped || ownerScope == DocxFootnoteOwnerScope.AllSourceReferences;
                 markerLines.TryGetValue((reference.SourceRunIndex, reference.TextOffsetInRun), out var ownedLines);
                 int matches = 0, measuredPage = 0;
                 if (ownedLines is not null)
                     foreach (var owned in ownedLines)
-                        if (DocxTableCellClipGeometry.ContainsSegment(owned.Clip, owned.Segment) &&
+                        if (ReferenceEquals(owned.Segment.StyleRun, marker) &&
+                            DocxTableCellClipGeometry.ContainsSegment(owned.Clip, owned.Segment) &&
                             (custom ? owned.Segment.Text.StartsWith(reference.CustomMarkText!, StringComparison.Ordinal) &&
                                 !owned.Segment.StyleRun.EffectiveProperties.Hidden
                             : owned.Segment.Text == reference.DisplayText))

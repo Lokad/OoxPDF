@@ -248,11 +248,6 @@ internal static partial class DocxPageFootnoteNumberingTests
             (xml, _, _) => {
                 XElement[] refs = xml.Descendants(Word + "footnoteReference").Take(2).ToArray();
                 refs[1].SetAttributeValue(Word + "id", refs[0].Attribute(Word + "id")!.Value);
-            },
-            (xml, _, _) => {
-                XElement[] refs = xml.Descendants(Word + "footnoteReference").Take(2).ToArray();
-                XElement shared = refs[0].Parent!;
-                shared.Add(new XElement(refs[1])); refs[1].Parent!.Remove();
             }
         ];
         foreach (var exclusion in exclusions)
