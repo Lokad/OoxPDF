@@ -683,36 +683,24 @@ internal sealed partial class PptxRenderer
         return ToChartSeriesStroke(PptxSceneBuilder.ReadChartGridlineLine(gridlines, theme), null);
     }
 
-    private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)
+    private static ChartAxesStyle ReadSceneChartAxesStyle(PptxSceneChart sceneChart, PptxSceneChartPlot? plot)
     {
         ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, plot).FirstOrDefault();
-        XElement? valueAxisElement = valueAxisSource.XmlAxis;
-        ChartAxisSource categoryAxisSource = ReadChartCategoryAxisForPlot(sceneChart, plot);
-        XElement? categoryAxisElement = categoryAxisSource.XmlAxis;
-        ChartAxisSource secondaryValueAxisSource = ReadSceneSecondaryValueAxisForChart(sceneChart, valueAxisSource);
-        XElement? secondaryValueAxisElement = secondaryValueAxisSource.XmlAxis;
         PptxSceneChartAxis? valueAxis = valueAxisSource.SceneAxis;
-        PptxSceneChartAxis? categoryAxis = categoryAxisSource.SceneAxis;
-        PptxSceneChartAxis? secondaryValueAxis = secondaryValueAxisSource.SceneAxis;
+        PptxSceneChartAxis? categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, plot).SceneAxis;
+        PptxSceneChartAxis? secondaryValueAxis = ReadSceneSecondaryValueAxisForChart(sceneChart, valueAxisSource).SceneAxis;
         return new ChartAxesStyle(
-            ReadSceneOrXmlChartAxisStroke(valueAxis, valueAxisElement, theme),
-            ReadSceneOrXmlChartAxisStroke(secondaryValueAxis, secondaryValueAxisElement, theme),
-            ReadSceneOrXmlChartAxisStroke(categoryAxis, categoryAxisElement, theme),
-            ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis, valueAxisElement, defaultRightSide: false),
-            ResolveSceneOrXmlValueAxisRightSide(sceneChart, secondaryValueAxis, secondaryValueAxisElement, defaultRightSide: true),
-            ResolveSceneOrXmlValueAxisBottomSide(valueAxis, valueAxisElement, defaultBottomSide: true),
-            ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis, categoryAxisElement, defaultRightSide: false),
-            valueAxis is null ? !IsChartAxisDeleted(valueAxisElement) : valueAxis.IsDeleted != true,
-            categoryAxis is null ? !IsChartAxisDeleted(categoryAxisElement) : categoryAxis.IsDeleted != true,
-            ReadSceneOrXmlChartAxisMajorTickMark(categoryAxis, categoryAxisElement),
-            ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis, categoryAxisElement, defaultTopSide: false));
-    }
-
-    private static ChartSeriesStroke? ReadSceneOrXmlChartAxisStroke(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
-    {
-        return sceneAxis is not null
-            ? ToChartSeriesStroke(sceneAxis.Line, null)
-            : ReadChartAxisStroke(xmlAxis, theme);
+            ToChartSeriesStroke(valueAxis?.Line ?? default, null),
+            ToChartSeriesStroke(secondaryValueAxis?.Line ?? default, null),
+            ToChartSeriesStroke(categoryAxis?.Line ?? default, null),
+            ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis, null, defaultRightSide: false),
+            ResolveSceneOrXmlValueAxisRightSide(sceneChart, secondaryValueAxis, null, defaultRightSide: true),
+            ResolveSceneOrXmlValueAxisBottomSide(valueAxis, null, defaultBottomSide: true),
+            ResolveSceneOrXmlCategoryAxisRightSide(categoryAxis, null, defaultRightSide: false),
+            valueAxis?.IsDeleted != true,
+            categoryAxis?.IsDeleted != true,
+            ReadSceneOrXmlChartAxisMajorTickMark(categoryAxis, null),
+            ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis, null, defaultTopSide: false));
     }
 
     private static PptxSceneChartAxisTickMark ReadSceneOrXmlChartAxisMajorTickMark(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis)
@@ -928,12 +916,4 @@ internal sealed partial class PptxRenderer
                 : crossBetween;
         }
     }
-
-    private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)
-    {
-        return axis is null
-            ? null
-            : ToChartSeriesStroke(PptxSceneBuilder.ReadChartAxisLine(axis, theme), null);
-    }
-
 }

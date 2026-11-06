@@ -45,7 +45,7 @@ internal sealed partial class PptxRenderer
                 Func<int, int, ChartLineAppearance>? pointAppearance = ReadLinePointAppearance(
                     theme, colorMap, chartPalette, lineSeriesVectors, varyPointColors, sourceSeries, seriesAppearance,
                     ReadChartStyleId(chartXml), themeLineWidth, context.CancellationToken);
-                ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, linePlot, chartXml, theme, lineChart);
+                ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, linePlot);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
                 XElement? valueAxisForScale = valueAxis.XmlAxis;

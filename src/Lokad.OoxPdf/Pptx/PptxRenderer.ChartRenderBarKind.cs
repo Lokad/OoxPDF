@@ -41,7 +41,7 @@ internal sealed partial class PptxRenderer
                 ChartColorPalette barPalette = WithSourceSeries(chartPalette, barPlot);
                 bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme, colorMap);
-                ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, barPlot, chartXml, theme, barChart);
+                ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, barPlot);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
                 ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                 XElement? valueAxis = valueAxisSource.XmlAxis;
