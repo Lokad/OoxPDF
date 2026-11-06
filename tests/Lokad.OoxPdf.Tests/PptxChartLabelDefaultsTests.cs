@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -196,7 +197,7 @@ internal static partial class PptxChartLabelDefaultsTests
         return RenderChartPage(new XDocument(plot.Document!));
     }
 
-    private static PdfPage RenderChartPage(XDocument xml, IReadOnlyDictionary<string, byte[]>? additionalParts = null)
+    private static PdfPage RenderChartPage(XDocument xml, IReadOnlyDictionary<string, byte[]>? additionalParts = null, IFontResolver? fontResolver = null)
     {
         const string slide = """
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="457200"/><a:ext cx="9144000" cy="5486400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
@@ -207,7 +208,7 @@ internal static partial class PptxChartLabelDefaultsTests
         using var stream = PptxTests.CreateSingleChartPackageStream(xml.ToString(), parts);
         using var package = OoxPackage.Open(stream, default);
         var document = new PptxReader().Read(package, default);
-        return new PptxRenderer(new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+        return new PptxRenderer(fontResolver ?? new TestFaceFontResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
     }
 
     private static readonly XNamespace C = "http://schemas.openxmlformats.org/drawingml/2006/chart";

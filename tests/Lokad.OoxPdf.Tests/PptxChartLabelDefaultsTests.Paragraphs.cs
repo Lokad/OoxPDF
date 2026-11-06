@@ -16,7 +16,7 @@ internal static partial class PptxChartLabelDefaultsTests
             TestAssert.Equal("Actual,W3,3", string.Concat(shows.Select(s => s.Text)).Replace(" ", "", StringComparison.Ordinal));
             var font = shows[0].Font.Font;
             double advance = (font.Hhea.HorizontalAscender - font.Hhea.HorizontalDescender + font.Hhea.HorizontalLineGap) *
-                shows[0].Size / font.UnitsPerEm;
+                20d / font.UnitsPerEm; // Source size; PDF font emission quantizes20 to20.04.
             for (int i = 1; i < shows.Length; i++)
                 TestAssert.True(Math.Abs(shows[i - 1].Y - shows[i].Y - advance) < .004,
                     "Wrapped lines use the same normal advance as other measured chart paragraphs.");
@@ -39,8 +39,8 @@ internal static partial class PptxChartLabelDefaultsTests
 
     public static void PptxSizedLineLabelHeightCentersTextAndKeepsKeyAtTop()
     {
-        var small = LineParagraphPage(LineParagraphSource(true, .15d, .2d));
-        var tall = LineParagraphPage(LineParagraphSource(true, .15d, .4d));
+        var small = LineParagraphPage(LineParagraphSource(true, .2d, .2d));
+        var tall = LineParagraphPage(LineParagraphSource(true, .2d, .4d));
         var a = LineParagraphShows(small); var b = LineParagraphShows(tall);
         TestAssert.True(a.Length > 1 && a.Length == b.Length, "Both independent native-height controls retain the complete wrapped paragraph.");
         for (int i = 0; i < a.Length; i++)
@@ -93,5 +93,5 @@ internal static partial class PptxChartLabelDefaultsTests
         ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
             <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="1828800" y="914400"/><a:ext cx="6096000" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld></p:sld>
             """)
-    });
+    }, fontResolver: new PortableRenderingTests.PinnedResolver());
 }
