@@ -366,7 +366,10 @@ Approximate or restricted:
   adopting authored point fills. Source-index handling for custom and single-
   accent recipes has not been generalized. Plain automatic outside-end labels
   above clustered columns wrap at measured word/text-element boundaries and
-  admit their occupied text/key frame inside the chart. Manual, rich-text,
+  admit their fitted text/key frame inside the chart. Whole text elements wider
+  than the fitting width retain their full glyphs and four-line/paragraph flow;
+  their fitted source width owns alignment, with residual native font geometry.
+  Manual, rich-text,
   explicit no-wrap, negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
   is claimed.
