@@ -22,7 +22,7 @@ internal sealed partial class PptxRenderer
         // count, plot width, font and key presence change. Key space is additional.
         double cap = Math.Max(1d, frame.Width / 5d - 2d * horizontalPadding);
         bool wrapText = options.TextBodyProperties.WrapValue != "none";
-        var lines = await WrapChartTextAsync(text, wrapText ? cap : double.MaxValue, style, measurer, cancellationToken).ConfigureAwait(false);
+        var lines = await MeasureChartTextLinesAsync(text, cap, style, measurer, cancellationToken, wrapText).ConfigureAwait(false);
         var metrics = await measurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
         // Native Arial/Times controls distinguish line advance (hhea plus gap)
         // from the Windows baseline descent. Calibri's two heights coincide.
@@ -60,8 +60,8 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static async ValueTask<List<(string Text, double Width)>> WrapChartTextAsync(
-        string text, double cap, ChartTextStyle style, ChartTextMeasurer measurer, CancellationToken cancellationToken)
+    private static async ValueTask<List<(string Text, double Width)>> MeasureChartTextLinesAsync(
+        string text, double cap, ChartTextStyle style, ChartTextMeasurer measurer, CancellationToken cancellationToken, bool wrapText = true)
     {
         await measurer.PrepareAsync(text, style).ConfigureAwait(false);
         var lines = new List<(string Text, double Width)>();
@@ -72,6 +72,12 @@ internal sealed partial class PptxRenderer
         }
         foreach (string paragraph in text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n'))
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!wrapText)
+            {
+                lines.Add((paragraph, Math.Max(0d, measurer.Measure(paragraph, style))));
+                continue;
+            }
             string current = string.Empty;
             int cursor = 0;
             while (cursor < paragraph.Length)

@@ -90,7 +90,7 @@ internal static class PptxColumnLabelWrappingTests
     {
         var reference = Shows(Render(OverfullColumnFixture("L", "none"))).Single();
         double center = reference.X + ColumnAdvance(reference.Font, reference.Size, "L") / 2d;
-        foreach (string source in new[] { "WWWL", "LWWW", "WWWL\nLWWW" })
+        foreach (string source in new[] { "WWWL", "LWWW", "W W W L", "WWWL\nLWWW" })
         {
             PdfPage page = Render(OverfullColumnFixture(source, "none"));
             var shows = Shows(page).ToArray();

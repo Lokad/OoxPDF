@@ -679,7 +679,7 @@ internal sealed partial class PptxRenderer
                     for (int index = 0; index < labels.Count; index++)
                         if (measured.TryGetValue(index, out var parts))
                         {
-                            var lines = await WrapChartTextAsync(parts[0].Text, Math.Max(0d, cap), style,
+                            var lines = await MeasureChartTextLinesAsync(parts[0].Text, Math.Max(0d, cap), style,
                                 measure, resolver.CancellationToken).ConfigureAwait(false);
                             measured[index] = lines.Select(part => new ChartCategoryTextLine(part.Text, part.Width)).ToArray();
                             if (lines.Count > 1)
