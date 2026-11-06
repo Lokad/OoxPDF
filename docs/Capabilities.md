@@ -486,7 +486,10 @@ Supported within the following constraints:
   arbitrary Word reflow around floating content is unsupported.
 - Default headers/footers, simple page fields, supported notes and source-owned
   links/bookmarks. Static-story placement shares physical frames with painting
-  and annotations. Complex/continued/page-dependent note compositions and arbitrary
+  and annotations. Without printed balloons, unit-scale Review pages preserve
+  the Final text, equation and picture origins on note-only continuation pages.
+  Oversized note-table rows retain clipping/pagination limitations.
+  Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.
 - Simple/complex fields with stored results, including supported nested cached
   fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
