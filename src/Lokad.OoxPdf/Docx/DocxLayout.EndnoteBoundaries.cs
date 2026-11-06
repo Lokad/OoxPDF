@@ -10,9 +10,8 @@ internal sealed partial class DocxLayoutEngine
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (printScale != 1d || page.ColumnFrames.Count > 1 || stories.Count == 0 ||
-            !DocxPlainBodyFrame.HasKnownBodyFrame(document) || !DocxPlainBodyFrame.HasNoStaticStories(document) ||
-            !HasEmptyNoteSeparator(separator) || !HasNumericTrailingBodyAfterSpacing(page) ||
+        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale) || stories.Count == 0 ||
+            !HasNumericTrailingBodyAfterSpacing(page) ||
             placed.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)) return false;
         double available = ResolveEndnoteStartTop(page, placed, printScale) - page.MarginBottom;
         double height = separator!.ContentHeight;
@@ -38,6 +37,12 @@ internal sealed partial class DocxLayoutEngine
         }
         return true;
     }
+
+    private static bool CanUseUnscaledEndnoteParagraphBoundaries(DocxDocument document,
+        DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale) =>
+        printScale == 1d && page.ColumnFrames.Count <= 1 &&
+        DocxPlainBodyFrame.HasKnownBodyFrame(document) && DocxPlainBodyFrame.HasNoStaticStories(document) &&
+        HasEmptyNoteSeparator(separator);
 
     // Fitting-boundary collapse and complete-block admission use the same source
     // and occupied-frame proof. A measured first line alone cannot admit a cell

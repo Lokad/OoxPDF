@@ -491,6 +491,8 @@ Supported within the following constraints:
   Complete unscaled endnote rows that fit a fresh note frame move intact to
   the next page; measured paragraphs and rows retain source order. Scaled,
   oversized, clipped or unsupported block compositions keep their fallbacks.
+  Adjacent ordinary unscaled endnotes share paragraph before/after spacing even
+  after an earlier table; first-note/page-turn geometry remains approximate.
   Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.
 - Simple/complex fields with stored results, including supported nested cached

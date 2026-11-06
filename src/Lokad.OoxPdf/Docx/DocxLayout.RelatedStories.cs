@@ -417,23 +417,32 @@ internal sealed partial class DocxLayoutEngine
                     cursorTop - completeEndnoteHeight >= Math.Max(FrameBottom(),
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
                             .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
+                bool localEndnoteBoundaries = !hasFootnotes &&
+                    CanUseUnscaledEndnoteParagraphBoundaries(document, activePage, documentEndSeparatorLayout, printScale);
                 DocxRelatedStoryLayout? previousEndnote = null;
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    double boundaryOverlap = (collapseEndnoteBoundaries || plainEndnoteFlow) && previousEndnote is not null
+                    // Adjacent ordinary paragraphs own their shared spacing even
+                    // when an earlier note needs table/block placement. That source
+                    // does not give these later paragraphs another separator gap.
+                    bool localBoundary = !collapseEndnoteBoundaries && !plainEndnoteFlow && localEndnoteBoundaries &&
+                        previousEndnote is not null && HasPlainNoteFlowStory(previousEndnote) &&
+                        HasPlainNoteFlowStory(endnoteStoryLayout);
+                    double boundaryOverlap = (collapseEndnoteBoundaries || plainEndnoteFlow || localBoundary) && previousEndnote is not null
                         ? ResolveDocumentEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout) : 0d;
+                    double boundaryGap = localBoundary ? FootnoteSeparatorGapPoints : 0d;
                     // A shared paragraph boundary belongs on this page only when
                     // the next paragraph's head fits. A page turn retains its
                     // existing placement and destination policy.
-                    if (!collapseEndnoteBoundaries && plainEndnoteFlow &&
-                        cursorTop + boundaryOverlap - ResolveStoryTextLineBoxHeight(endnoteStoryLayout.TextLines[0],
+                    if (!collapseEndnoteBoundaries && (plainEndnoteFlow || localBoundary) &&
+                        cursorTop + boundaryGap + boundaryOverlap - ResolveStoryTextLineBoxHeight(endnoteStoryLayout.TextLines[0],
                             endnoteStoryLayout.TextLines.Count == 1
                                 ? endnoteStoryLayout.TextLines[0].ParagraphAfterSpacing ?? 0d : 0d) < FrameBottom())
                     {
                         boundaryOverlap = 0d;
                     }
-                    cursorTop += boundaryOverlap;
+                    cursorTop += boundaryGap + boundaryOverlap;
                     PlaceRelatedStorySlices(
                         documentEndPages,
                         ref activePageIndex,
