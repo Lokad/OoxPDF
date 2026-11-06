@@ -79,10 +79,34 @@ internal sealed partial class DocxRenderer
             DocxLayoutItem item = items[itemIndex];
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
+            if (diagnosticSink is not null && item is DocxTableRowLayout row &&
+                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+                HasClippedNoteTableText(row, clip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
+                diagnosticSink(new OoxPdfDiagnostic("DOCX_CLIPPED_NOTE_TABLE_ROW", OoxPdfSeverity.Warning,
+                    "A note-table row exceeds its available frame; complete text lines are clipped. Row fragmentation for this content is unsupported.",
+                    story.StoryLayout.Story.PartName, PageIndex: pageNumber, Feature: "note table row", Fallback: "Clipped"));
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
         }
 
         graphics.RestoreState();
+    }
+
+    private static bool HasClippedNoteTableText(DocxTableRowLayout row, PdfRectangle clip,
+        double baselineOffset, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        // Authored exact heights and rows with real continuation fragments keep
+        // their intentional clipping. The cell iterator excludes text already
+        // clipped by a cell/ancestor, including nested exact-height cells.
+        if (row.FragmentCount != 1 ||
+            !DocxLayoutEngine.HasAutomaticTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue)) return false;
+        foreach (var (line, _) in DocxTableCellClipGeometry.EnumerateCellLines(row, null, token))
+        {
+            if (!string.IsNullOrWhiteSpace(line.Text) &&
+                DocxInlineLineGeometry.TryGetOccupiedBounds(line, out _, out double top) &&
+                top + baselineOffset < clip.Y - .000001d) return true;
+        }
+        return false;
     }
 
     // Separator text lines render as a single pilcrow-sized mark space at the rule tab

@@ -501,7 +501,8 @@ Supported within the following constraints:
   paragraph/table notes, oversized measured rows also defer from occupied frames
   before bounded clipping; empty frames make progress. Height-only continuation,
   scaled, already-clipped and unsupported compositions retain their fallbacks.
-  General fragmentation of note rows remains unsupported.
+  General fragmentation of note rows remains unsupported. Automatic complete rows
+  with text wholly below the note frame report `DOCX_CLIPPED_NOTE_TABLE_ROW`.
   Adjacent ordinary unscaled endnotes share paragraph before/after spacing even
   after an earlier table; first-note/page-turn geometry remains approximate.
   An already-started final next-page section keeps its document-end notes even

@@ -1,4 +1,16 @@
 {
+  "docx-note-row-clipping": [
+    "DocxUnfitNoteRowsReportClippingWithoutChangingPdf",
+    "DocxFittingAndAuthoredExactNoteRowsKeepTheirClippingPolicy",
+    "DocxNoteClippingUsesContainedFramesAndEmissionCoordinates",
+    "DocxNoteClippingObserversPreserveAtomicPublication",
+    "DocxOversizedEndnoteRowsDeferBeforeTheirBoundedClip",
+    "DocxOversizedEndnoteRowsRetainHeightOnlyProgress",
+    "DocxCompleteEndnoteRowDefersWithoutClippingItsContent",
+    "DocxCompleteEndnoteRowsAdvanceIndependentlyOfDirectTextLines",
+    "ModelAdmissionPendingFontBorrowKeepsCapacityThroughCancellation",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched"
+  ],
   "docx-math-source-admission": [
     "ModelAdmissionMathLiteralCapacityStaysWithSourceOwner",
     "ModelAdmissionMathLiteralRefusalAndCancellationPrecedePreparation",

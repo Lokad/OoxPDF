@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- DOCX: warn when an automatic note-table row loses complete text lines below
+  its page frame; existing rendering and intentional exact-height clipping remain.
+
 - DOCX: long literal equations admit preparation headroom with their source model;
   host refusal remains clean and rendering is unchanged.
 
