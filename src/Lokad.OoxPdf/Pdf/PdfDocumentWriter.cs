@@ -710,14 +710,14 @@ internal sealed class PdfDocumentWriter
             $"<< /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(start.Red)} {FormatColor(start.Green)} {FormatColor(start.Blue)}] /C1 [{FormatColor(end.Red)} {FormatColor(end.Green)} {FormatColor(end.Blue)}] /N 1 >>");
     }
 
-    internal static string FormatNumber(double value)
+    internal static string FormatNumber(double value, string format = "0.###")
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
         {
             throw new ArgumentOutOfRangeException(nameof(value), "PDF numbers must be finite.");
         }
 
-        return value.ToString("0.###", CultureInfo.InvariantCulture);
+        return value.ToString(format, CultureInfo.InvariantCulture);
     }
 
     internal static string EscapePdfUriString(string value)

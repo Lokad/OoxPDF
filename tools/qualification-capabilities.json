@@ -16007,5 +16007,9 @@
     "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
       "PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels",
       "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale"
+  ],
+  "pdf-transform-precision": [
+    "PdfTransformsKeepDistantRotationPivotsAndLocalGeometry",
+    "PdfTransformNumbersKeepFiniteInvariantPlainDecimalEncoding"
   ]
 }

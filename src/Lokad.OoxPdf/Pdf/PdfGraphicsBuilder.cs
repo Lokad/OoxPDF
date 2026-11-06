@@ -225,8 +225,10 @@ internal sealed class PdfGraphicsBuilder
 
     public void Transform(double a, double b, double c, double d, double e, double f)
     {
-        builder.Append(PdfDocumentWriter.FormatNumber(a)).Append(' ').Append(PdfDocumentWriter.FormatNumber(b)).Append(' ');
-        builder.Append(PdfDocumentWriter.FormatNumber(c)).Append(' ').Append(PdfDocumentWriter.FormatNumber(d)).Append(' ');
+        // Linear coefficients multiply page coordinates. Coordinate precision
+        // here can move a distant rotation pivot by tenths of a point.
+        builder.Append(PdfDocumentWriter.FormatNumber(a, "0.######")).Append(' ').Append(PdfDocumentWriter.FormatNumber(b, "0.######")).Append(' ');
+        builder.Append(PdfDocumentWriter.FormatNumber(c, "0.######")).Append(' ').Append(PdfDocumentWriter.FormatNumber(d, "0.######")).Append(' ');
         builder.Append(PdfDocumentWriter.FormatNumber(e)).Append(' ').Append(PdfDocumentWriter.FormatNumber(f)).AppendLine(" cm");
     }
 
