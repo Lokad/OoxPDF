@@ -37,6 +37,10 @@ internal static class OoxMemory
         token.ThrowIfCancellationRequested();
     }
 
+    // Prepared math retains glyph placements/encodings and temporary atoms before
+    // page admission. Keep their coarse headroom with the source model owner.
+    private static readonly XName MathLiteral = XName.Get("t", "http://schemas.openxmlformats.org/officeDocument/2006/math");
+
     // Shared source-shape summary; page painting adds its own expansion headroom.
     internal static long EstimateMarkupCapacity(XContainer source, CancellationToken token)
     {
@@ -44,7 +48,8 @@ internal static class OoxMemory
         foreach (XNode node in source.DescendantNodes())
         {
             token.ThrowIfCancellationRequested();
-            capacity = checked(capacity + (node is XElement ? 1024L : node is XText text ? 64L * text.Value.Length : 0));
+            capacity = checked(capacity + (node is XElement ? 1024L : node is XText text
+                ? (text.Parent?.Name == MathLiteral ? 512L : 64L) * text.Value.Length : 0));
         }
         return capacity;
     }

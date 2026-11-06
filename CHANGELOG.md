@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- DOCX: long literal equations admit preparation headroom with their source model;
+  host refusal remains clean and rendering is unchanged.
+
 - DOCX: page-restarted footnotes retain distinct generated markers when several
   references share an XML run; authored text and note destinations stay separate.
   Complete notes follow their measured fragments across pages when equal-format

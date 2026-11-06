@@ -1,4 +1,16 @@
 {
+  "docx-math-source-admission": [
+    "ModelAdmissionMathLiteralCapacityStaysWithSourceOwner",
+    "ModelAdmissionMathLiteralRefusalAndCancellationPrecedePreparation",
+    "ModelAdmissionMathLiteralConversionRefundsAndPreservesPdf",
+    "ModelAdmissionDocxStorageOutlivesItsPackage",
+    "ModelAdmissionRefusalAndCancellationPrecedeDocxConstruction",
+    "ModelAdmissionPendingFontBorrowKeepsCapacityThroughCancellation",
+    "MemoryBudgetXmlCacheOwnsStorageThroughPackageLifetime",
+    "MemoryBudgetXmlCacheRefusalCancellationAndMalformedInputRefundGrowth",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "MemoryAdmissionRefundsOnFailureCancellationAndObserverException"
+  ],
   "docx-custom-run-owners": [
     "DocxSharedCustomRunReferencesPreserveSupportedMathAndMarkerOwners",
     "DocxSharedCustomRunReferencesKeepAutomaticPageCountersAndStableOwners",
