@@ -85,7 +85,7 @@ internal static class DocxMathCenterGroupTests
         OoxPdfDocxMarkupGeometryMode mode = OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
     {
         var layout = new DocxLayoutEngine(mode).Create(document, new Measurer(), default, mathEquations: Prepare(Paragraph(document)));
-        return layout.Pages.SelectMany(page => page.Items).SelectMany(item => item switch
+        return layout.Pages.SelectMany(page => page.Items.Concat(page.StaticTextLines)).SelectMany(item => item switch
         {
             DocxTextLineLayout line => new[] { line },
             DocxTableRowLayout row => row.Cells.SelectMany(cell => cell.TextLines),
