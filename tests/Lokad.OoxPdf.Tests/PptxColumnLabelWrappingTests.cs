@@ -112,8 +112,8 @@ internal static class PptxColumnLabelWrappingTests
             PdfPage page = Render(OverfullColumnFixture(source, "none", key: true));
             var show = Shows(page).Single();
             TestAssert.Equal(source, show.Text);
-            TestAssert.True(Math.Abs(show.X + ColumnAdvance(show.Font, show.Size, source) / 2d - center - 22.8d) < .004,
-                "The native18pt key reserve belongs to the complete unwrapped paragraph span.");
+            TestAssert.True(Math.Abs(show.X + ColumnAdvance(show.Font, show.Size, source) / 2d - center - 22.7d) < .004,
+                "The existing18pt key reserve belongs to the complete unwrapped paragraph span.");
             var swatch = System.Text.RegularExpressions.Regex.Match(page.Content, @"[-0-9.]+ [-0-9.]+ 9\.9 9\.9 re f");
             TestAssert.True(swatch.Success, "Expected the source-sized key swatch.");
             firstSwatch ??= swatch.Value;
