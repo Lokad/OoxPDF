@@ -52,7 +52,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxTableCellLayout cell = row.Cells[cellIndex];
-                IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell.VisualCell));
+                IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell.VisualCell));
                 if (cell.TextLines.Count == 0 && cell.NestedRows.Count == 0 ||
                     !HasOrderedInlineObjectOwners(cell, cancellationToken) ||
                     cell.Cell.HasVerticalMerge ||
@@ -106,7 +106,7 @@ internal sealed partial class DocxLayoutEngine
             foreach (var cell in row.Cells)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var elements = GetTableCellLayoutBodyElements(cell.VisualCell);
+                var elements = DocxTableCellContent.GetBodyElements(cell.VisualCell);
                 if (elements.Any(element => element is not (DocxParagraphElement or DocxTableElement))) return false;
                 var paragraphs = GetParagraphsFromBodyElements(elements);
                 if (cell.TextLines.Any(line => line.SourceParagraphIndex is not { } index || index < 0 ||
@@ -175,7 +175,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     paragraphReductions = new();
                     int paragraphIndex = 0, nestedRowIndex = 0;
-                    foreach (var element in GetTableCellLayoutBodyElements(cell.VisualCell))
+                    foreach (var element in DocxTableCellContent.GetBodyElements(cell.VisualCell))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (element is DocxParagraphElement) paragraphReductions.Add(paragraphIndex++, precedingReduction);
@@ -505,10 +505,10 @@ internal sealed partial class DocxLayoutEngine
                 if (fragmentBaselineScale < 1d)
                 {
                     double correction = ResolveTableCellFirstBaselineInset(
-                        GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textMeasurer) * (1d - fragmentBaselineScale);
+                        GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell)), textMeasurer) * (1d - fragmentBaselineScale);
                     textLines = textLines.Select(line => line with { BaselineY = line.BaselineY + correction }).ToArray();
                 }
-                laidOutCells.Add((GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)), textLines, measuredCell.UsedHeight));
+                laidOutCells.Add((GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell)), textLines, measuredCell.UsedHeight));
                 splitLineBaselines.AddRange(textLines.Select(line => line.BaselineY));
             }
 
@@ -667,8 +667,8 @@ internal sealed partial class DocxLayoutEngine
                         cell.VerticalAlignment != DocxTableCellVerticalAlignment.Top ||
                         cell.VerticalAlignmentValue is not (null or "top") ||
                         cell.Borders.Any(border => DocxTableBorderGeometry.ResolveVisibleWidth(border) > 0d && border.Value != "single") ||
-                        GetTableCellLayoutBodyElements(cell).Any(element => element is not DocxParagraphElement) ||
-                        (DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell), cancellationToken) & DocxCounterDependencies.PageNumber) != 0))
+                        DocxTableCellContent.GetBodyElements(cell).Any(element => element is not DocxParagraphElement) ||
+                        (DocxFieldText.GetDependencies(DocxTableCellContent.GetBodyElements(cell), cancellationToken) & DocxCounterDependencies.PageNumber) != 0))
                     return false;
                 var topInsets = row.Cells.Select(cell => rowTopPadding + ResolveTableCellTopBorderContentInset(cell, paragraphSpacingScale)).ToArray();
                 double BottomInset(DocxTableCell cell, bool exposed) => ResolveTableCellVerticalPadding(cell.Margins.BottomPoints, paragraphSpacingScale) +
@@ -833,7 +833,7 @@ internal sealed partial class DocxLayoutEngine
             foreach (DocxTableCell cell in row.Cells)
             {
                 if (!HasNaturalReviewCellLineMetrics(cell)) return false;
-                DocxParagraph paragraph = ((DocxParagraphElement)GetTableCellLayoutBodyElements(cell)[0]).Paragraph;
+                DocxParagraph paragraph = ((DocxParagraphElement)DocxTableCellContent.GetBodyElements(cell)[0]).Paragraph;
                 if (paragraph.Equations.Count != 0 || paragraph.KeepRules.KeepLines == true || paragraph.KeepRules.KeepNext == true) return false;
             }
         }
@@ -1310,7 +1310,7 @@ internal sealed partial class DocxLayoutEngine
                 var (first, count, singlesOnly) = ContentColumns(start, end);
                 if (count <= 0) return null;
                 start = end;
-                hasUnmeasuredBlocks |= GetTableCellLayoutBodyElements(cell).Any(element => element is DocxTableElement);
+                hasUnmeasuredBlocks |= DocxTableCellContent.GetBodyElements(cell).Any(element => element is DocxTableElement);
                 double cellVisibleMax = MeasureTableCellMaxContentWidth(cell, textMeasurer, defaultTabStopPoints, pageNumber, pageCount, fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
                 double cellDeletedTotal = MeasureTableCellDeletedTextWidth(cell, textMeasurer);
                 hasDeletedContent |= cellDeletedTotal > 0d;
@@ -1462,7 +1462,7 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken)
     {
         double minimum = 0d;
-        foreach (DocxBodyElement element in GetTableCellLayoutBodyElements(cell))
+        foreach (DocxBodyElement element in DocxTableCellContent.GetBodyElements(cell))
         {
             if (element is not DocxParagraphElement paragraphElement)
             {
@@ -1546,7 +1546,7 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken)
     {
         double maxWidth = 0d;
-        foreach (DocxBodyElement bodyElement in GetTableCellLayoutBodyElements(cell))
+        foreach (DocxBodyElement bodyElement in DocxTableCellContent.GetBodyElements(cell))
         {
             if (bodyElement is not DocxParagraphElement paragraphElement)
             {
@@ -1615,7 +1615,7 @@ internal sealed partial class DocxLayoutEngine
     private static double MeasureTableCellDeletedTextWidth(DocxTableCell cell, IDocxTextMeasurer textMeasurer)
     {
         double total = 0d;
-        foreach (DocxBodyElement bodyElement in GetTableCellLayoutBodyElements(cell))
+        foreach (DocxBodyElement bodyElement in DocxTableCellContent.GetBodyElements(cell))
         {
             if (bodyElement is not DocxParagraphElement paragraphElement)
             {
@@ -1748,7 +1748,7 @@ internal sealed partial class DocxLayoutEngine
     {
         if (mathEquations is null || mathEquations.Count == 0) return false;
         foreach (var cell in row.Cells)
-        foreach (var nested in GetTableCellLayoutBodyElements(cell).OfType<DocxTableElement>())
+        foreach (var nested in DocxTableCellContent.GetBodyElements(cell).OfType<DocxTableElement>())
         foreach (var paragraph in DocxBlockTraversal.EnumerateTableParagraphs(nested.Table))
         {
             token.ThrowIfCancellationRequested();
@@ -1767,7 +1767,7 @@ internal sealed partial class DocxLayoutEngine
             if (cell.HasVerticalMerge || cell.FitText || cell.GridSpan > 1 ||
                 cell.TextDirectionValue is not (null or "lrTb") ||
                 cell.VerticalAlignmentValue is not (null or "top")) return false;
-            var elements = GetTableCellLayoutBodyElements(cell);
+            var elements = DocxTableCellContent.GetBodyElements(cell);
             if (elements.Count != 1 || elements[0] is not DocxParagraphElement element) return false;
             var paragraph = element.Paragraph;
             if (paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 ||
@@ -2002,7 +2002,7 @@ internal sealed partial class DocxLayoutEngine
             PageNumber: pageNumber,
             PageCount: pageCount,
             CellMemo: null);
-        IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -2317,7 +2317,7 @@ internal sealed partial class DocxLayoutEngine
             // admitted line is painted at the same position inside its clip.
             double fragmentBaselineScale = ResolveTableRowFragmentBaselineScale(row, paragraphSpacingScale, FragmentCount);
             double fragmentBaselineCorrection = fragmentBaselineScale < 1d && textMeasurer is not null
-                ? ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(contentCell)),
+                ? ResolveTableCellFirstBaselineInset(GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(contentCell)),
                     textMeasurer) * (1d - fragmentBaselineScale) : 0d;
             if (fragmentBaselineCorrection != 0d)
             {

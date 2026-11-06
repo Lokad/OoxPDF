@@ -60,7 +60,7 @@ internal sealed partial class DocxLayoutEngine
                 var row = table.Rows[index];
                 if (!admission.rowIndices.TryAdd(row, index)) return null;
                 foreach (var cell in row.Cells)
-                foreach (var paragraph in GetParagraphsFromBodyElements(GetTableCellLayoutBodyElements(cell)))
+                foreach (var paragraph in GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell)))
                 {
                     token.ThrowIfCancellationRequested();
                     if (admission.bySource.ContainsKey(paragraph) && !admission.sourceRows.TryAdd(paragraph, index))

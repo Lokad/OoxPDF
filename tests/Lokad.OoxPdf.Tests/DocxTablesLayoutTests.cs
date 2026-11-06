@@ -1633,19 +1633,9 @@ internal static class DocxTablesLayoutTests
 
     public static void DocxTableLayoutStageKeepsTableCellColumnBreakInline()
     {
-        DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Left", 10d, 10d);
-        DocxParagraph after = DocxTests.CreateDocxLayoutParagraph("Right", 10d, 10d);
-        var cell = new DocxTableCell(string.Empty, [before, after], null, null, null, null, [], DocxTableCellMargins.Empty)
-        {
-            BodyElements =
-            [
-                new DocxParagraphElement(before),
-                new DocxManualBreakElement(DocxBreakSourceKind.RunBreak, "column", null),
-                new DocxParagraphElement(after)
-            ]
-        };
-        DocxTable table = new(null, [90d], [new DocxTableRow([cell], null)]);
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        // Exercise the actual cell reader; production no longer manufactures
+        // a manual-column block and a second text-only paragraph interpretation.
+        DocxDocument document = DocxCellColumnBreakTests.Read("plain");
 
         DocxTableCellLayout cellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None)

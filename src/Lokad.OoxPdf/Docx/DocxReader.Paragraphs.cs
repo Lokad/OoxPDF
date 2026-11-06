@@ -609,9 +609,12 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
+            // A cell column token is nonpainting just like an empty text run;
+            // retain its actual revision owner without admitting unknown objects.
             if (effectiveRevisions.Count != 0 && text.Length == 0 && run.Elements().All(child =>
                 child.Name == WordprocessingNamespace + "rPr" ||
-                (child.Name == WordprocessingNamespace + "t" || child.Name == WordprocessingNamespace + "delText") && child.Value.Length == 0))
+                (child.Name == WordprocessingNamespace + "t" || child.Name == WordprocessingNamespace + "delText") && child.Value.Length == 0 ||
+                tableCellStyle is not null && child.Name == WordprocessingNamespace + "br" && IsColumnBreak(child)))
             {
                 (nonRenderingRunOwners ??= []).Add(new(currentSourceRunIndex, effectiveRevisions));
             }

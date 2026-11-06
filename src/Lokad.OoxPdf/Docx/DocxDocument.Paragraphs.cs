@@ -55,8 +55,8 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
-    // Actual empty source runs own review metadata without contributing visible
-    // text, font resources or layout metrics.
+    // Actual nonpainting source runs (empty text or cell-transparent column
+    // tokens) own review metadata without contributing text/font/layout metrics.
     public IReadOnlyList<DocxNonRenderingRunOwner> NonRenderingRunOwners { get; init; } = [];
     public bool HasDeletedParagraphMark { get; init; }
     // Final/Simple paragraph joins consume actual source marks. Their revision

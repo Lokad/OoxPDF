@@ -16,6 +16,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxEndnoteBlockTests)),
         .. FromType("rendering-portable", typeof(DocxNoteClippingTests)),
         .. FromType("rendering-portable", typeof(DocxDeletedParagraphMarkTests)),
+        .. FromType("rendering-portable", typeof(DocxCellColumnBreakTests)),
         .. FromType("rendering-portable", typeof(DocxEndnoteParagraphBoundaryTests)),
         .. FromType("rendering-portable", typeof(DocxEndnoteFinalSectionTests)),
         new("rendering-portable", PptxColumnIntervalTests.PptxCategoryOffsetsShareMeasuredUnitsAcrossPreparedContainers),

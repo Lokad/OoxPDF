@@ -20,8 +20,8 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool IsStaticTopAlignedMergeSource(DocxTableCell cell) =>
-        DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell)) == DocxCounterDependencies.None &&
-        GetTableCellLayoutBodyElements(cell).All(element => element is DocxParagraphElement) &&
+        DocxFieldText.GetDependencies(DocxTableCellContent.GetBodyElements(cell)) == DocxCounterDependencies.None &&
+        DocxTableCellContent.GetBodyElements(cell).All(element => element is DocxParagraphElement) &&
         (string.IsNullOrEmpty(cell.VerticalAlignmentValue) ||
             string.Equals(cell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase));
 
@@ -57,8 +57,8 @@ internal sealed partial class DocxLayoutEngine
             token.ThrowIfCancellationRequested();
             if (row.IsHeader || string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase)) return result;
             foreach (var cell in row.Cells)
-                if (GetTableCellLayoutBodyElements(cell).Any(element => element is not DocxParagraphElement) ||
-                    DocxFieldText.GetDependencies(GetTableCellLayoutBodyElements(cell)) != DocxCounterDependencies.None ||
+                if (DocxTableCellContent.GetBodyElements(cell).Any(element => element is not DocxParagraphElement) ||
+                    DocxFieldText.GetDependencies(DocxTableCellContent.GetBodyElements(cell)) != DocxCounterDependencies.None ||
                     cell.Paragraphs.Any(paragraph => paragraph.InlineReferences.Count != 0)) return result;
         }
         for (int first = 0; first < table.Rows.Count; first++)

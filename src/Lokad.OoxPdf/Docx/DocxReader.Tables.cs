@@ -382,35 +382,17 @@ internal sealed partial class DocxReader
 
             if (child.Name == WordprocessingNamespace + "p")
             {
-                if (IsRunColumnBreakOnlyParagraph(child, markupMode))
+                // Column breaks are transparent inside a cell. Read the original
+                // paragraph once so math, pictures and annotations share its
+                // source order before preparation; real page breaks still split.
+                if (child.Elements().Any(element => HasVisibleRunBreak(element, IsPageBreak, markupMode)))
                 {
-                    DocxParagraph? breakParagraph = ReadParagraph(
-                        child,
-                        styles,
-                        numbering,
-                        numberingCounters,
-                        package,
-                        relationships,
-                        tableCellStyle,
-                        inlineReferenceCounters: inlineReferenceCounters,
-                        documentSettings: documentSettings,
-                        inheritedRevision: childRevision,
-                        markupMode: markupMode,
-                        cancellationToken: cancellationToken);
-                    elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph));
-                    continue;
-                }
-
-                if (HasRunPageOrColumnBreak(child, markupMode))
-                {
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode, isBreak: IsPageBreak))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
                         {
-                            elements.Add(string.Equals(part.BreakValue, "column", StringComparison.OrdinalIgnoreCase)
-                                ? DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", null)
-                                : DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, part.BreakValue, null, null));
+                            elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, part.BreakValue, null, null));
                             continue;
                         }
 

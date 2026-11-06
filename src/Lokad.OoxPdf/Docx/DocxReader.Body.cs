@@ -105,7 +105,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (HasRunPageOrColumnBreak(element, markupMode))
+                if (element.Elements().Any(child => HasVisibleRunBreak(child, IsPageOrColumnBreak, markupMode)))
                 {
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode, retainEmptyColumnTail: true))
                     {
@@ -393,13 +393,6 @@ internal sealed partial class DocxReader
         };
     }
 
-    private static bool HasRunPageOrColumnBreak(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
-    {
-        return paragraph
-            .Elements()
-            .Any(element => HasVisibleRunPageOrColumnBreak(element, markupMode));
-    }
-
     private static DocxParagraph AdjustBreakParagraphFragment(DocxParagraph paragraph, ParagraphBreakPart part)
     {
         return paragraph with
@@ -410,8 +403,10 @@ internal sealed partial class DocxReader
         };
     }
 
-    private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode, bool retainEmptyColumnTail = false)
+    private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode,
+        bool retainEmptyColumnTail = false, Func<XElement, bool>? isBreak = null)
     {
+        isBreak ??= IsPageOrColumnBreak;
         var parts = new List<ParagraphBreakPart>();
         var currentChildren = new List<XElement>();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -447,7 +442,7 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            if (TrySplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, markupMode))
+            if (TrySplitRunBreakContainer(child, currentChildren, AddParagraphPart, parts, ref startsAfterBreak, markupMode, isBreak))
             {
                 continue;
             }
@@ -472,7 +467,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (runChild.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(runChild))
+                if (runChild.Name == WordprocessingNamespace + "br" && isBreak(runChild))
                 {
                     AddRunPart(currentChildren, runProperties, runChildren);
                     AddParagraphPart(endsBeforeBreak: true);
@@ -503,14 +498,14 @@ internal sealed partial class DocxReader
         Action<bool> addParagraphPart,
         List<ParagraphBreakPart> parts,
         ref bool startsAfterBreak,
-        OoxPdfDocxMarkupMode markupMode)
+        OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak)
     {
-        if (!IsVisibleRunContainer(child, markupMode) || !HasVisibleRunPageOrColumnBreak(child, markupMode))
+        if (!IsVisibleRunContainer(child, markupMode) || !HasVisibleRunBreak(child, isBreak, markupMode))
         {
             return false;
         }
 
-        SplitRunBreakContainer(child, paragraphChildren, addParagraphPart, parts, ref startsAfterBreak, markupMode);
+        SplitRunBreakContainer(child, paragraphChildren, addParagraphPart, parts, ref startsAfterBreak, markupMode, isBreak);
         return true;
     }
 
@@ -520,7 +515,7 @@ internal sealed partial class DocxReader
         Action<bool> flushOwnerAndParagraph,
         List<ParagraphBreakPart> parts,
         ref bool startsAfterBreak,
-        OoxPdfDocxMarkupMode markupMode)
+        OoxPdfDocxMarkupMode markupMode, Func<XElement, bool> isBreak)
     {
         var containerChildren = new List<XElement>();
 
@@ -534,9 +529,9 @@ internal sealed partial class DocxReader
         {
             if (containerChild.Name != WordprocessingNamespace + "r")
             {
-                if (IsVisibleRunContainer(containerChild, markupMode) && HasVisibleRunPageOrColumnBreak(containerChild, markupMode))
+                if (IsVisibleRunContainer(containerChild, markupMode) && HasVisibleRunBreak(containerChild, isBreak, markupMode))
                 {
-                    SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, markupMode);
+                    SplitRunBreakContainer(containerChild, containerChildren, FlushThisContainerAndParagraph, parts, ref startsAfterBreak, markupMode, isBreak);
                 }
                 else
                 {
@@ -560,7 +555,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (runChild.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(runChild))
+                if (runChild.Name == WordprocessingNamespace + "br" && isBreak(runChild))
                 {
                     AddRunPart(containerChildren, runProperties, runChildren);
                     FlushThisContainerAndParagraph(true);
@@ -672,17 +667,6 @@ internal sealed partial class DocxReader
             element.Name == WordprocessingNamespace + "proofErr" ||
             element.Name == WordprocessingNamespace + "sdtPr" ||
             element.Name == WordprocessingNamespace + "sdtEndPr";
-    }
-
-    private static bool HasVisibleRunPageOrColumnBreak(XElement element, OoxPdfDocxMarkupMode markupMode)
-    {
-        if (element.Name == WordprocessingNamespace + "r")
-        {
-            return element.Elements(WordprocessingNamespace + "br").Any(IsPageOrColumnBreak);
-        }
-
-        return IsVisibleRunContainer(element, markupMode) &&
-            element.Elements().Any(child => HasVisibleRunPageOrColumnBreak(child, markupMode));
     }
 
     private static bool IsPageOrColumnBreak(XElement breakElement)

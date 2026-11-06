@@ -21,7 +21,7 @@ internal sealed partial class DocxLayoutEngine
     // falls back. Capacity eligibility separately excludes object-height owners.
     private static bool HasNaturalReviewCellLineMetrics(DocxTableCell cell)
     {
-        IReadOnlyList<DocxBodyElement> elements = GetTableCellLayoutBodyElements(cell);
+        IReadOnlyList<DocxBodyElement> elements = DocxTableCellContent.GetBodyElements(cell);
         return elements.Count == 1 && elements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
             !cell.HasVerticalMerge && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 &&
             paragraph.InlineReferences.Count == 0 && paragraph.EffectiveProperties.LineSpacingPoints is null &&
@@ -166,7 +166,7 @@ var context = new DocxTableCellLayoutContext(
             PageNumber: pageNumber,
             PageCount: pageCount,
             CellMemo: null);
-                IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
+                IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -239,7 +239,7 @@ var context = new DocxTableCellLayoutContext(
             PageNumber: pageNumber,
             PageCount: pageCount,
             CellMemo: null);
-                IReadOnlyList<DocxBodyElement> bodyElements = GetTableCellLayoutBodyElements(cell);
+                IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
         if (bodyElements.Count == 0)
         {
             return false;
@@ -464,61 +464,9 @@ var context = new DocxTableCellLayoutContext(
         return widths;
     }
 
-    private static IReadOnlyList<DocxBodyElement> GetTableCellLayoutBodyElements(DocxTableCell cell)
-    {
-        IReadOnlyList<DocxBodyElement> authoredElements = DocxTableCellContent.GetBodyElements(cell);
-        if (!authoredElements.Any(IsTableCellColumnBreakElement))
-        {
-            return authoredElements;
-        }
-
-        var layoutElements = new List<DocxBodyElement>(authoredElements.Count);
-        for (int index = 0; index < authoredElements.Count; index++)
-        {
-            if (authoredElements[index] is not DocxParagraphElement paragraphElement)
-            {
-                if (!IsTableCellColumnBreakElement(authoredElements[index]))
-                {
-                    layoutElements.Add(authoredElements[index]);
-                }
-
-                continue;
-            }
-
-            DocxParagraph paragraph = paragraphElement.Paragraph;
-            DocxParagraph MergeTableCellColumnBreakParagraphs(DocxParagraph first, DocxParagraph second)
-            {
-                return first with
-                {
-                    Runs = first.Runs.Concat(second.Runs).ToArray(),
-                    Images = first.Images.Concat(second.Images).ToArray(),
-                    SpacingAfterPoints = second.EffectiveProperties.SpacingAfterPoints,
-                    Spacing = second.EffectiveProperties.Spacing
-                };
-            }
-
-            while (index + 2 < authoredElements.Count &&
-                IsTableCellColumnBreakElement(authoredElements[index + 1]) &&
-                authoredElements[index + 2] is DocxParagraphElement continuationElement)
-            {
-                paragraph = MergeTableCellColumnBreakParagraphs(paragraph, continuationElement.Paragraph);
-                index += 2;
-            }
-
-            layoutElements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
-        }
-
-        return layoutElements;
-    }
-
     private static IReadOnlyList<DocxParagraph> GetParagraphsFromBodyElements(IReadOnlyList<DocxBodyElement> bodyElements)
     {
         return DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
     }
 
-    private static bool IsTableCellColumnBreakElement(DocxBodyElement element)
-    {
-        return element is DocxManualBreakElement manualBreak &&
-            manualBreak.Value?.Equals("column", StringComparison.OrdinalIgnoreCase) == true;
-    }
 }
