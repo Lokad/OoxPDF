@@ -365,12 +365,13 @@ Approximate or restricted:
   keys retain point fills; series keys preserve negative inversion without
   adopting authored point fills. Source-index handling for custom and single-
   accent recipes has not been generalized. Plain automatic outside-end labels
-  above clustered columns wrap at measured word/text-element boundaries and
-  admit their fitted text/key frame inside the chart. Whole text elements wider
+  above clustered columns use measured word/text-element lines or authored
+  no-wrap paragraphs and admit their fitted text/key frame inside the chart.
+  Mandatory paragraph breaks remain. Whole text elements wider
   than the fitting width retain their full glyphs and normal paragraph flow;
   their fitted source width owns alignment, with residual native font geometry.
   Manual, rich-text,
-  explicit no-wrap, negative-end, stacked and other placements retain their
+  negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
   is claimed.
   Authored inner Cartesian plots resolve factor positions and edge-sized

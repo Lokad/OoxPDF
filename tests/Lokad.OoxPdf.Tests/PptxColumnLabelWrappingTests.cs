@@ -86,7 +86,57 @@ internal static class PptxColumnLabelWrappingTests
         }
     }
 
-    private static byte[] OverfullColumnFixture(string text)
+    public static void PptxAutomaticColumnNoWrapKeepsCenteredSourceParagraphs()
+    {
+        var reference = Shows(Render(OverfullColumnFixture("L", "none"))).Single();
+        double center = reference.X + ColumnAdvance(reference.Font, reference.Size, "L") / 2d;
+        foreach (string source in new[] { "WWWL", "LWWW", "WWWL\nLWWW" })
+        {
+            PdfPage page = Render(OverfullColumnFixture(source, "none"));
+            var shows = Shows(page).ToArray();
+            TestAssert.True(string.Join("\n", shows.Select(x => x.Text)) == source,
+                "Authored no-wrap keeps complete source lines and mandatory paragraph breaks.");
+            TestAssert.True(shows.All(x => Math.Abs(x.X + ColumnAdvance(x.Font, x.Size, x.Text) / 2d - center) < .004),
+                "Unwrapped overfull text centers its full advance on the source reference.");
+            PdfContentValidator.ValidatePage(page, 0, default);
+        }
+    }
+
+    public static void PptxAutomaticColumnNoWrapKeysKeepParagraphAndSwatchReferences()
+    {
+        var plain = Shows(Render(OverfullColumnFixture("WWWL", "none"))).Single();
+        double center = plain.X + ColumnAdvance(plain.Font, plain.Size, plain.Text) / 2d;
+        string? firstSwatch = null;
+        foreach (string source in new[] { "WWWL", "LLLL" })
+        {
+            PdfPage page = Render(OverfullColumnFixture(source, "none", key: true));
+            var show = Shows(page).Single();
+            TestAssert.Equal(source, show.Text);
+            TestAssert.True(Math.Abs(show.X + ColumnAdvance(show.Font, show.Size, source) / 2d - center - 22.8d) < .004,
+                "The native18pt key reserve belongs to the complete unwrapped paragraph span.");
+            var swatch = System.Text.RegularExpressions.Regex.Match(page.Content, @"[-0-9.]+ [-0-9.]+ 9\.9 9\.9 re f");
+            TestAssert.True(swatch.Success, "Expected the source-sized key swatch.");
+            firstSwatch ??= swatch.Value;
+            TestAssert.Equal(firstSwatch, swatch.Value);
+            PdfContentValidator.ValidatePage(page, 0, default);
+        }
+    }
+
+    private static double ColumnAdvance(PdfEmbeddedFont embedded, double size, string text)
+    {
+        var font = embedded.Font;
+        double units = 0d;
+        ushort previous = 0;
+        foreach (var rune in text.EnumerateRunes())
+        {
+            ushort glyph = font.MapCodePoint(rune.Value);
+            units += font.GetAdvanceWidth(glyph) + (previous == 0 ? 0 : font.GetKerning(previous, glyph));
+            previous = glyph;
+        }
+        return units * size / font.UnitsPerEm;
+    }
+
+    private static byte[] OverfullColumnFixture(string text, string wrap = "square", bool key = false)
     {
         using var stream = new MemoryStream();
         stream.Write(File.ReadAllBytes(Path.Combine(Cases, "ColumnLabelWrapping/single-long-word.pptx")));
@@ -118,7 +168,8 @@ internal static class PptxColumnLabelWrappingTests
                 XElement labels = xml.Descendants(c + "dLbls").First();
                 foreach (string name in new[] { "showVal", "showCatName", "showLegendKey" })
                     labels.Element(c + name)!.SetAttributeValue("val", 0);
-                labels.Element(c + "txPr")!.Element(a + "bodyPr")!.SetAttributeValue("wrap", "square");
+                if (key) labels.Element(c + "showLegendKey")!.SetAttributeValue("val", 1);
+                labels.Element(c + "txPr")!.Element(a + "bodyPr")!.SetAttributeValue("wrap", wrap);
                 xml.Descendants(c + "legend").Remove();
             });
             Edit("ppt/slides/slide1.xml", xml => xml.Descendants(p + "graphicFrame").First()

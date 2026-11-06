@@ -5,9 +5,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool CanWrapAutomaticColumnLabel(ChartDataLabelOptions options) =>
+    private static bool CanUseMeasuredColumnLabelFrame(ChartDataLabelOptions options) =>
         !options.Layout.HasLayout && options.CustomTextRuns.Count == 0 &&
-        options.TextBodyProperties.WrapValue is null or "" or "square" &&
+        options.TextBodyProperties.WrapValue is null or "" or "square" or "none" &&
         options.TextBodyProperties.RotationDegrees.GetValueOrDefault() == 0d &&
         options.TextBodyProperties.OrientationValue is null or "" or "horz";
 
@@ -21,7 +21,8 @@ internal sealed partial class PptxRenderer
         // Independent Office controls retain this frame-owned cap when category
         // count, plot width, font and key presence change. Key space is additional.
         double cap = Math.Max(1d, frame.Width / 5d - 2d * horizontalPadding);
-        var lines = await WrapChartTextAsync(text, cap, style, measurer, cancellationToken).ConfigureAwait(false);
+        bool wrapText = options.TextBodyProperties.WrapValue != "none";
+        var lines = await WrapChartTextAsync(text, wrapText ? cap : double.MaxValue, style, measurer, cancellationToken).ConfigureAwait(false);
         var metrics = await measurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
         // Native Arial/Times controls distinguish line advance (hhea plus gap)
         // from the Windows baseline descent. Calibri's two heights coincide.
@@ -47,7 +48,12 @@ internal sealed partial class PptxRenderer
         foreach (var line in lines)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            double lineX = textX + (textWidth - Math.Min(cap, line.Width)) / 2d;
+            // Unwrapped paragraphs keep their full advance and the complete
+            // fitted paragraph span, including key space. Wrapped fragments
+            // align within the text portion remaining after the key.
+            double paragraphWidth = textWidth + (wrapText ? 0d : keyReserve);
+            double lineWidth = wrapText ? Math.Min(cap, line.Width) : line.Width;
+            double lineX = textX + (paragraphWidth - lineWidth) / 2d;
             runs.Add(CreateChartTextRun(line.Text, lineX, baseline, Math.Max(1d, line.Width), metrics.Height,
                 frame.X, frame.Y, frame.Width, frame.Height, style, TextAlignment.Left));
             baseline -= lineAdvance;
