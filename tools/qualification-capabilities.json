@@ -15888,6 +15888,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-column-label-wrapping": [
+    "PptxPositionedColumnLabelsMoveMeasuredTextFramesAndKeysTogether",
+    "PptxPositionedColumnLabelsUseFullChartEdgesAndFrameAdmission",
     "PptxAutomaticColumnNoWrapKeepsCenteredSourceParagraphs",
     "PptxAutomaticColumnNoWrapKeysKeepParagraphAndSwatchReferences",
     "PptxAutomaticColumnOverfullGlyphsKeepFittedReferenceWidths",

@@ -5,13 +5,26 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool CanUseMeasuredColumnLabelFrame(ChartDataLabelOptions options) =>
-        !options.Layout.HasLayout && options.CustomTextRuns.Count == 0 &&
-        options.TextBodyProperties.WrapValue is null or "" or "square" or "none" &&
-        options.TextBodyProperties.RotationDegrees.GetValueOrDefault() == 0d &&
-        options.TextBodyProperties.OrientationValue is null or "" or "horz";
+    private static bool CanUseMeasuredColumnLabelFrame(ChartDataLabelOptions options)
+    {
+        var layout = options.Layout;
+        // Position-only layouts translate a measured frame. Authored sizes and
+        // malformed/unknown coordinates retain their existing placement fallback.
+        bool measuredPlacement = !layout.HasLayout ||
+            (layout.X.HasValue || layout.Y.HasValue) &&
+            layout.Width is null && layout.Height is null &&
+            string.IsNullOrEmpty(layout.WidthValue) && string.IsNullOrEmpty(layout.HeightValue) &&
+            (layout.X.HasValue || string.IsNullOrEmpty(layout.XValue)) &&
+            (layout.Y.HasValue || string.IsNullOrEmpty(layout.YValue)) &&
+            layout.XMode is null or "" or "factor" or "edge" &&
+            layout.YMode is null or "" or "factor" or "edge";
+        return measuredPlacement && options.CustomTextRuns.Count == 0 &&
+            options.TextBodyProperties.WrapValue is null or "" or "square" or "none" &&
+            options.TextBodyProperties.RotationDegrees.GetValueOrDefault() == 0d &&
+            options.TextBodyProperties.OrientationValue is null or "" or "horz";
+    }
 
-    private static async ValueTask AddAutomaticColumnLabelAsync(
+    private static async ValueTask AddMeasuredColumnLabelAsync(
         List<TextRun> runs, PdfGraphicsBuilder graphics, string text, ChartDataLabelOptions options,
         ChartTextStyle style, ChartTextMeasurer measurer, ChartFrameBox frame,
         double centerX, double barEnd, ChartSeriesFill? keyFill, CancellationToken cancellationToken)
@@ -36,9 +49,20 @@ internal sealed partial class PptxRenderer
         double height = lines.Count * lineAdvance + 2d * verticalPadding;
         // Admit the complete occupied frame before painting its shape and text.
         // Positive outside-end labels sit above the bar, with the existing box gap.
-        double x = Math.Clamp(centerX - width / 2d, frame.X, Math.Max(frame.X, frame.X + frame.Width - width));
-        double y = Math.Clamp(barEnd + PptxChartMetricRules.BarLegendKeyOutEndBoxPad,
-            frame.Y, Math.Max(frame.Y, frame.Y + frame.Height - height));
+        double maxX = Math.Max(frame.X, frame.X + frame.Width - width);
+        double maxY = Math.Max(frame.Y, frame.Y + frame.Height - height);
+        double x = Math.Clamp(centerX - width / 2d, frame.X, maxX);
+        double y = Math.Clamp(barEnd + PptxChartMetricRules.BarLegendKeyOutEndBoxPad, frame.Y, maxY);
+        // Native inward controls apply factor offsets to the admitted automatic
+        // frame; edge coordinates use the full chart. Admit the resulting frame
+        // before shape, swatch and paragraph painting share its geometry.
+        if (options.Layout.HasLayout && TryBuildManualLayoutBox(options.Layout, frame,
+            new ChartLayoutBox(x, y, width, height), out ChartLayoutBox placed,
+            clampToFrame: false, missingPositionModesAreFactor: true))
+        {
+            x = Math.Clamp(placed.X, frame.X, maxX);
+            y = Math.Clamp(placed.Y, frame.Y, maxY);
+        }
         RenderChartShapeStyle(graphics, x, y, width, height, options.ShapeStyle);
         double textX = x + horizontalPadding + keyReserve;
         double baseline = y + verticalPadding + metrics.Descent + (lines.Count - 1) * lineAdvance;

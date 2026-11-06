@@ -299,7 +299,7 @@ internal sealed partial class PptxRenderer
                         {
                             ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
                                 ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category)) : null;
-                            await AddAutomaticColumnLabelAsync(runs, graphics, label, effectiveOptions, style,
+                            await AddMeasuredColumnLabelAsync(runs, graphics, label, effectiveOptions, style,
                                 textMeasurer, chartFrame, columnCenterX, barEndY, keyFill, context.CancellationToken).ConfigureAwait(false);
                             continue;
                         }

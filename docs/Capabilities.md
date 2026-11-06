@@ -370,7 +370,9 @@ Approximate or restricted:
   Mandatory paragraph breaks remain. Whole text elements wider
   than the fitting width retain their full glyphs and normal paragraph flow;
   their fitted source width owns alignment, with residual native font geometry.
-  Manual, rich-text,
+  Position-only manual labels share that measured frame: factor offsets move its
+  admitted automatic position, edge coordinates use the full chart, and text,
+  shape and key retain one placement. Authored-size manual labels, rich-text,
   negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
   is claimed.

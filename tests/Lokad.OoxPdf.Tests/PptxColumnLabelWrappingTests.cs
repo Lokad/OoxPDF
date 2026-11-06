@@ -122,6 +122,111 @@ internal static class PptxColumnLabelWrappingTests
         }
     }
 
+    public static void PptxPositionedColumnLabelsMoveMeasuredTextFramesAndKeysTogether()
+    {
+        foreach (bool key in new[] { false, true })
+        foreach (string wrap in new[] { "square", "none" })
+        {
+            PdfPage before = Render(PositionedColumnFixture("WWWL\nLWWW", wrap, key, 0d, 0d, "factor"));
+            PdfPage after = Render(PositionedColumnFixture("WWWL\nLWWW", wrap, key, .02d, .02d, "factor"));
+            var a = Shows(before).ToArray();
+            var b = Shows(after).ToArray();
+            TestAssert.Equal(a.Length, b.Length);
+            TestAssert.Equal("WWWLLWWW", string.Concat(b.Select(show => show.Text)));
+            for (int index = 0; index < a.Length; index++)
+            {
+                TestAssert.Equal(a[index].Text, b[index].Text);
+                CheckTranslation(a[index].X, a[index].Y, b[index].X, b[index].Y, 1.8d, -8.64d);
+            }
+            var frameA = PaintedLabelFrame(before);
+            var frameB = PaintedLabelFrame(after);
+            CheckTranslation(frameA.X, frameA.Y, frameB.X, frameB.Y, 1.8d, -8.64d);
+            if (key)
+            {
+                var swatchA = LabelSwatch(before);
+                var swatchB = LabelSwatch(after);
+                CheckTranslation(swatchA.X, swatchA.Y, swatchB.X, swatchB.Y, 1.8d, -8.64d);
+            }
+            PdfContentValidator.ValidatePage(after, 0, default);
+        }
+    }
+
+    public static void PptxPositionedColumnLabelsUseFullChartEdgesAndFrameAdmission()
+    {
+        foreach (bool key in new[] { false, true })
+        {
+            PdfPage first = Render(PositionedColumnFixture("LLLL", "none", key, .1d, .2d, "edge"));
+            PdfPage second = Render(PositionedColumnFixture("LLLL", "none", key, .3d, .3d, "edge"));
+            var a = Shows(first).Single();
+            var b = Shows(second).Single();
+            TestAssert.Equal("LLLL", b.Text);
+            CheckTranslation(a.X, a.Y, b.X, b.Y, 18d, -43.2d);
+            var frame = PaintedLabelFrame(first);
+            TestAssert.True(Math.Abs(frame.X - 81d) < .004 &&
+                Math.Abs(frame.Y + frame.Height - (504d - .2d * 432d)) < .004,
+                "Edge coordinates locate the complete occupied frame in the full90x432pt chart.");
+            PdfPage clipped = Render(PositionedColumnFixture("LLLL", "none", key, 1d, 0d, "edge"));
+            frame = PaintedLabelFrame(clipped);
+            TestAssert.True(Math.Abs(frame.X + frame.Width - 162d) < .004 &&
+                Math.Abs(frame.Y + frame.Height - 504d) < .004,
+                "The admitted occupied frame, including key space, fits the physical chart edges.");
+            PdfContentValidator.ValidatePage(clipped, 0, default);
+        }
+    }
+
+    private static void CheckTranslation(double ax, double ay, double bx, double by, double dx, double dy) =>
+        TestAssert.True(Math.Abs(bx - ax - dx) < .004 && Math.Abs(by - ay - dy) < .004,
+            "Text, frame and swatch must share chart-wide position offsets.");
+
+    private static (double X, double Y, double Width, double Height) PaintedLabelFrame(PdfPage page) =>
+        Rectangle(page, @"1 0 1 rg\s+([-0-9.]+) ([-0-9.]+) ([-0-9.]+) ([-0-9.]+) re f");
+
+    private static (double X, double Y) LabelSwatch(PdfPage page)
+    {
+        var rectangle = Rectangle(page, @"([-0-9.]+) ([-0-9.]+) (9\.9) (9\.9) re f");
+        return (rectangle.X, rectangle.Y);
+    }
+
+    private static (double X, double Y, double Width, double Height) Rectangle(PdfPage page, string pattern)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(page.Content, pattern);
+        TestAssert.True(match.Success, "Expected a painted label frame or legend-key swatch.");
+        double Read(int group) => double.Parse(match.Groups[group].Value, System.Globalization.CultureInfo.InvariantCulture);
+        return (Read(1), Read(2), Read(3), Read(4));
+    }
+
+    private static byte[] PositionedColumnFixture(string text, string wrap, bool key, double x, double y, string mode)
+    {
+        using var stream = new MemoryStream();
+        stream.Write(OverfullColumnFixture(text, wrap, key));
+        stream.Position = 0;
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
+            XDocument xml;
+            using (var input = entry.Open()) xml = XDocument.Load(input);
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            xml.Descendants(c + "dLbls").First().Add(new XElement(c + "dLbl",
+                new XElement(c + "idx", new XAttribute("val", 0)),
+                new XElement(c + "layout", new XElement(c + "manualLayout",
+                    new XElement(c + "xMode", new XAttribute("val", mode)),
+                    new XElement(c + "yMode", new XAttribute("val", mode)),
+                    new XElement(c + "x", new XAttribute("val", x)),
+                    new XElement(c + "y", new XAttribute("val", y)))),
+                new XElement(c + "spPr", new XElement(a + "solidFill",
+                    new XElement(a + "srgbClr", new XAttribute("val", "FF00FF")))),
+                new XElement(c + "showVal", new XAttribute("val", 0)),
+                new XElement(c + "showCatName", new XAttribute("val", 0)),
+                new XElement(c + "showSerName", new XAttribute("val", 1)),
+                new XElement(c + "showLegendKey", new XAttribute("val", key ? 1 : 0))));
+            entry.Delete();
+            using var output = archive.CreateEntry("ppt/charts/chart1.xml").Open();
+            xml.Save(output);
+        }
+        return stream.ToArray();
+    }
+
     private static double ColumnAdvance(PdfEmbeddedFont embedded, double size, string text)
     {
         var font = embedded.Font;
