@@ -3018,7 +3018,7 @@ internal static partial class DocxInlineCompositionTests
             (text.Contains("F ", StringComparison.Ordinal) ? 2d : 0d);
     }
 
-    private static DocxDocument ReadMutation(string fixture, OoxPdfDocxMarkupMode mode, bool bookmark, bool split,
+    internal static DocxDocument ReadMutation(string fixture, OoxPdfDocxMarkupMode mode, bool bookmark, bool split,
         Action<XDocument, XNamespace, XNamespace>? change = null, string? partOverride = null)
     {
         string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));

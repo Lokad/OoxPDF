@@ -964,14 +964,16 @@ internal sealed partial class DocxRenderer
             return 0d;
         }
 
-        if (firstBaselineY is null)
-        {
-            return WordCompatibleTextYOffsetReferenceAnchorPoints;
-        }
-
+        // Unit-scale pages without balloons retain their physical origin even
+        // when they contain only note continuations and have no body baseline.
         if (Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d)
         {
             return hasBalloonContent ? WordCompatibleTextYOffsetReferenceAnchorPoints : 0d;
+        }
+
+        if (firstBaselineY is null)
+        {
+            return WordCompatibleTextYOffsetReferenceAnchorPoints;
         }
 
         return new DocxPrintedPageFrame(pageHeight, markupContext.WordCompatiblePrintScale)
