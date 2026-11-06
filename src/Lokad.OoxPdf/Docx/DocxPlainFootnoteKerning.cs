@@ -32,7 +32,19 @@ internal static class DocxPlainFootnoteKerning
         foreach (DocxParagraph p in source.Paragraphs.Concat(source.RelatedStories.SelectMany(s => s.Paragraphs)))
         {
             var runs = p.Runs.ToArray();
+            var references = p.InlineReferences;
             bool changed = false;
+            void ReplaceRun(int index, DocxTextRun updated)
+            {
+                var original = runs[index];
+                runs[index] = updated;
+                changed = true;
+                // Emission clones keep the reference bound to its actual
+                // generated marker, including superscript pair changes.
+                if (original.IsAutomaticNoteReferenceMarker)
+                    references = references.Select(reference => ReferenceEquals(reference.DisplayRun, original)
+                        ? reference with { DisplayRun = updated } : reference).ToArray();
+            }
             for (int i = 0; i < runs.Length; i++)
             {
                 var run = runs[i];
@@ -46,8 +58,7 @@ internal static class DocxPlainFootnoteKerning
                 {
                     if (run.PairKerningEnabled)
                     {
-                        runs[i] = run with { PairKerningEnabled = false };
-                        changed = true;
+                        ReplaceRun(i, run with { PairKerningEnabled = false });
                     }
                     continue;
                 }
@@ -67,10 +78,9 @@ internal static class DocxPlainFootnoteKerning
                 bool enabled = DocxKerningThreshold.IsMet(minimum, run.FontSize);
                 bool logicalAdvances = nominalBody && (!enabled || metElevenPointFrame);
                 if (enabled == run.PairKerningEnabled && logicalAdvances == run.UseLogicalSizeForPdfAdvances) continue;
-                runs[i] = run with { PairKerningEnabled = enabled, UseLogicalSizeForPdfAdvances = logicalAdvances };
-                changed = true;
+                ReplaceRun(i, run with { PairKerningEnabled = enabled, UseLogicalSizeForPdfAdvances = logicalAdvances });
             }
-            if (changed) replacements.Add(p, p with { Runs = runs });
+            if (changed) replacements.Add(p, p with { Runs = runs, InlineReferences = references });
         }
         if (replacements.Count == 0 ||
             !ordinary && !DocxPageFootnoteNumbering.TryGetReferencePages(source, layout, out pages)) return false;

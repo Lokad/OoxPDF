@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.3.0 â€” Unreleased
+## 0.3.0 — Unreleased
+
+- DOCX: page-restarted footnotes retain distinct generated markers when several
+  references share an XML run; authored text and note destinations stay separate.
+  Complete notes follow their measured fragments across pages when equal-format
+  runs are merged. Kerning adjustments retain each generated marker owner.
 
 - PPTX: chart axis selection uses the resolved scene, removing duplicate XML-only
   selection paths while preserving source order and missing-axis fallbacks.
@@ -192,7 +197,7 @@
   images, equations and related stories. Strict dialect warnings remain; this
   does not add general Strict OOXML or Strict PPTX support.
 
-## 0.2.0 â€” 2026-10-29
+## 0.2.0 — 2026-10-29
 
 ### Rendering
 

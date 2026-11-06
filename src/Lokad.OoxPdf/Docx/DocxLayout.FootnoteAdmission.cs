@@ -6,7 +6,7 @@ internal sealed partial class DocxLayoutEngine
     // fragments can own admission directly instead of reserving an entire
     // paragraph's future notes before its first line arrives.
     private sealed class CompleteFootnoteAdmission(
-        IReadOnlyDictionary<int, Dictionary<int, DocxInlineReferenceLocation>> owners,
+        IReadOnlyDictionary<int, Dictionary<DocxTextRun, DocxInlineReferenceLocation>> owners,
         IReadOnlyDictionary<int, List<DocxInlineReferenceLocation>> tableOwners,
         double separatorHeight)
     {
@@ -23,7 +23,8 @@ internal sealed partial class DocxLayoutEngine
             foreach (var span in spans)
             {
                 token.ThrowIfCancellationRequested();
-                if (runs.TryGetValue(span.SourceTextRunIndex, out var location) &&
+                if (runs.TryGetValue(span.StyleRun, out var location) &&
+                    span.SourceTextRunIndex == location.Reference.SourceRunIndex &&
                     span.SourceTextOffsetInRun <= location.Reference.TextOffsetInRun &&
                     location.Reference.TextOffsetInRun < (long)span.SourceTextOffsetInRun + span.Text.Length)
                     (selected ??= []).Add(location);
@@ -67,13 +68,14 @@ internal sealed partial class DocxLayoutEngine
             if (boxes.Length != 1 || !double.IsFinite(boxes[0]) || boxes[0] <= 0d) return null;
         }
         if (notes.Count == 0) return null;
-        var owners = new Dictionary<int, Dictionary<int, DocxInlineReferenceLocation>>();
+        var owners = new Dictionary<int, Dictionary<DocxTextRun, DocxInlineReferenceLocation>>();
         var tableOwners = new Dictionary<int, List<DocxInlineReferenceLocation>>();
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (block, references) in locations)
         {
             token.ThrowIfCancellationRequested();
             var paragraphs = IndexCompleteNoteParagraphs(document.BodyElements[block], token);
+            var paragraphRuns = new Dictionary<DocxParagraph, HashSet<DocxTextRun>>(ReferenceEqualityComparer.Instance);
             var sourceRunsByParagraph = new Dictionary<DocxParagraph, Dictionary<(int Run, int Offset), DocxTextRun?>>(ReferenceEqualityComparer.Instance);
             foreach (var location in references.Where(location => location.Reference.Kind == DocxRelatedStoryKind.Footnote))
             {
@@ -85,20 +87,26 @@ internal sealed partial class DocxLayoutEngine
                     block > 0 && document.BodyElements[block - 1] is DocxParagraphElement { Paragraph.KeepRules.KeepNext: true } ||
                     reference.Id is not { } id || !ids.Add(id) || !notes.TryGetValue(id, out var note) ||
                     reference.Revision is not null || reference.Revisions.Count != 0) return null;
-                if (!sourceRunsByParagraph.TryGetValue(paragraph, out var sourceRuns))
-                    sourceRunsByParagraph.Add(paragraph, sourceRuns = DocxCustomNoteMarkerOwners.IndexSourceRuns(paragraph.Runs, token));
-                if (!sourceRuns.TryGetValue((reference.SourceRunIndex, reference.TextOffsetInRun), out var run) ||
-                    run is null || run.EffectiveProperties.Hidden) return null;
+                DocxTextRun? run;
                 if (reference.CustomMarkText is { } custom)
                 {
-                    if (!DocxCustomNoteMarkerOwners.TryGetSourceRun(reference, sourceRuns, out _) ||
+                    if (!sourceRunsByParagraph.TryGetValue(paragraph, out var sourceRuns))
+                        sourceRunsByParagraph.Add(paragraph, sourceRuns = DocxCustomNoteMarkerOwners.IndexSourceRuns(paragraph.Runs, token));
+                    if (!DocxCustomNoteMarkerOwners.TryGetSourceRun(reference, sourceRuns, out run) ||
                         !DocxCustomNoteMarkerOwners.TryGetTargetRun(note.Story, custom, out var target) ||
                         target.EffectiveProperties.Hidden) return null;
                 }
                 // Physical admission needs the owned body reference and unique
                 // target story, even when that story has no painted number.
                 // Numbering and custom-mark rewriting keep their own checks.
-                else if (!DocxInlineContent.TryGetAutomaticNoteRun(reference, out var marker) || !ReferenceEquals(run, marker)) return null;
+                else
+                {
+                    if (!paragraphRuns.TryGetValue(paragraph, out var runs))
+                        paragraphRuns.Add(paragraph, runs = new(paragraph.Runs, ReferenceEqualityComparer.Instance));
+                    if (!DocxInlineContent.TryGetAutomaticNoteRun(reference, out run) || !runs.Contains(run) ||
+                        run.SourceRunIndex != reference.SourceRunIndex || run.SourceTextOffsetInRun != reference.TextOffsetInRun) return null;
+                }
+                if (run.EffectiveProperties.Hidden) return null;
                 if (document.BodyElements[block] is DocxTableElement)
                 {
                     if (!tableOwners.TryGetValue(block, out var indexed)) tableOwners.Add(block, indexed = []);
@@ -106,8 +114,9 @@ internal sealed partial class DocxLayoutEngine
                 }
                 else
                 {
-                    if (!owners.TryGetValue(block, out var indexed)) owners.Add(block, indexed = []);
-                    if (!indexed.TryAdd(reference.SourceRunIndex, location)) return null;
+                    if (!owners.TryGetValue(block, out var indexed))
+                        owners.Add(block, indexed = new(ReferenceEqualityComparer.Instance));
+                    if (!indexed.TryAdd(run, location)) return null;
                 }
             }
         }
