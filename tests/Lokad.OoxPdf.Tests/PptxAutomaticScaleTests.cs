@@ -52,8 +52,10 @@ internal static class PptxAutomaticScaleTests
         var negative = Read(Render(120, value: -4d));
         TestAssert.True(positive.Values.Select(value => -value).Order().SequenceEqual(negative.Values.Order()),
             "Negative-only source values retain the reflected scale contract.");
-        TestAssert.True(Math.Abs(positive.Bars[0] - negative.Bars[0]) < .002d,
-            "Reflecting the source preserves the data length.");
+        double positiveHeight = positive.Baselines.Max() - positive.Baselines.Min();
+        double negativeHeight = negative.Baselines.Max() - negative.Baselines.Min();
+        TestAssert.True(Math.Abs(positive.Bars[0] / positiveHeight - negative.Bars[0] / negativeHeight) < .001d,
+            "Reflected data retains its scale ratio; captions may change the occupied plot height.");
     }
 
     private static (double[] Values, double[] Baselines, double[] Bars, double[] Xs, double[] BarXs) Read(PdfPage page)
