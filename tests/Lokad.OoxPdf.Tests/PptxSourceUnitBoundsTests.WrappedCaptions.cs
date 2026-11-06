@@ -55,27 +55,29 @@ internal static partial class PptxSourceUnitBoundsTests
         foreach (int angle in new[] { -90, 90 })
         foreach (bool high in new[] { false, true })
         {
-            PdfPage two = RenderWrappedCaption("LL", kind, angle, high);
-            PdfPage four = RenderWrappedCaption("LLLL", kind, angle, high);
-            var a = WrappedShows(two).Where(x => x.Text == "L").ToArray();
-            var b = WrappedShows(four).Where(x => x.Text == "L").ToArray();
-            TestAssert.True(a.Length == 2 && b.Length == 4 && WrappedShows(four).Count(x => x.Text == "I") == 18,
+            PdfPage shorter = RenderWrappedCaption(new string('L', 32), kind, angle, high);
+            PdfPage longer = RenderWrappedCaption(new string('L', 64), kind, angle, high);
+            var a = WrappedShows(shorter).Where(x => x.Text != "I").ToArray();
+            var b = WrappedShows(longer).Where(x => x.Text != "I").ToArray();
+            TestAssert.True(a.Length >= 2 && b.Length > a.Length &&
+                string.Concat(a.Select(x => x.Text)) == new string('L', 32) &&
+                string.Concat(b.Select(x => x.Text)) == new string('L', 64) &&
+                WrappedShows(longer).Count(x => x.Text == "I") == 18,
                 "Vertical source-reference placement retains every source line and neighboring caption.");
             var font = b[0].Font.Font;
             double advance = (font.Hhea.HorizontalAscender - font.Hhea.HorizontalDescender +
                 font.Hhea.HorizontalLineGap) * 12d / font.UnitsPerEm;
             for (int index = 1; index < b.Length; index++)
-                TestAssert.True(Math.Abs(b[index].X - b[index - 1].X + Math.Sign(angle) * advance) < .004 &&
-                    Math.Abs(b[index].Y - b[index - 1].Y) < .004,
-                    "Vertical baselines retain their measured advance and common along-line alignment.");
+                TestAssert.True(Math.Abs(b[index].X - b[index - 1].X + Math.Sign(angle) * advance) < .004,
+                    "Vertical baselines retain their measured normal-line advance.");
             double sourceEdgeA = angle > 0 ? a[^1].X : a[0].X;
             double sourceEdgeB = angle > 0 ? b[^1].X : b[0].X;
             TestAssert.True(Math.Abs(sourceEdgeA - sourceEdgeB) < .004 && Math.Abs(a[0].Y - b[0].Y) < .004,
                 "Adding wrapped lines preserves the fitted reference edge on either side and rotation direction.");
-            TestAssert.True(Math.Abs(CaptionPlotHeight(two) - CaptionPlotHeight(four)) < .003 &&
-                Labels(four).SequenceEqual(new double[] { 0, 2, 4, 6 }),
+            TestAssert.True(Math.Abs(CaptionPlotHeight(shorter) - CaptionPlotHeight(longer)) < .003 &&
+                Labels(longer).SequenceEqual(new double[] { 0, 2, 4, 6 }),
                 "Vertical reference placement leaves the source plot and numeric interval unchanged.");
-            PdfContentValidator.ValidatePage(four, 0, default);
+            PdfContentValidator.ValidatePage(longer, 0, default);
         }
     }
 

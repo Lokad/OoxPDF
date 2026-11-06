@@ -268,8 +268,10 @@ Approximate or restricted:
   uncalibrated against the application view.
   Explicit overflow in inner rotated captions without numeric readmission keeps
   wrapped source lines; authored `wrap="none"` keeps the full source on one line.
-  Measured line stacks share the physical chart clip. Long-caption reference
-  extents remain approximate in some directions, including right-angle rotation;
+  Measured line stacks share the physical chart clip. Right-angle wrapped bodies
+  retain their fitted source-reference edge on either side and rotation direction.
+  Long-caption reference extents remain approximate: right-angle font/size
+  residuals below one point and larger oblique displacements remain unresolved;
   matching the data rectangle alone does not establish caption-placement parity.
   Complete factor-sized outer column/line/area declarations also center their
   source area before allocating numeric and category-caption bands inside it.
