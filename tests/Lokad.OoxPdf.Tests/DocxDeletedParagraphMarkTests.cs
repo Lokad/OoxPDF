@@ -24,6 +24,8 @@ internal static class DocxDeletedParagraphMarkTests
             TestAssert.Equal(merged ? 1 : chained ? 3 : 2, paragraphs.Count);
             TestAssert.Equal(2, paragraphs.Sum(p => p.Equations.Count));
             TestAssert.Equal(1, paragraphs.Sum(p => p.Images.Count));
+            TestAssert.True(paragraphs.SelectMany(p => p.Images).All(image => image.PartName is not null && image.Bytes is { Length: > 0 }),
+                "Each container resolves its picture through its own relationships.");
             if (!merged)
             {
                 TestAssert.True(paragraphs.All(p => p.ConsumedParagraphMarks.Count == 0),
@@ -147,6 +149,14 @@ internal static class DocxDeletedParagraphMarkTests
         {
             using var header = new MemoryStream(); new XDocument(new XElement(w + "hdr", groups)).Save(header);
             parts["word/header1.xml"] = header.ToArray();
+            using var relationships = new MemoryStream(parts["word/_rels/document.xml.rels"]);
+            var documentRelationships = XDocument.Load(relationships);
+            XNamespace rel = "http://schemas.openxmlformats.org/package/2006/relationships";
+            using var headerRelationships = new MemoryStream();
+            new XDocument(new XElement(rel + "Relationships", documentRelationships.Root!.Elements(rel + "Relationship")
+                .Where(relationship => ((string?)relationship.Attribute("Type"))?.EndsWith("/image", StringComparison.Ordinal) == true)
+                .Select(relationship => new XElement(relationship)))).Save(headerRelationships);
+            parts["word/_rels/header1.xml.rels"] = headerRelationships.ToArray();
             paragraph.ReplaceWith(new XElement(w + "p", Text("Public body")));
         }
         else paragraph.ReplaceWith(groups);
