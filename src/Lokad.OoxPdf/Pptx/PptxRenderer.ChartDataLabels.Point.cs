@@ -36,7 +36,8 @@ internal sealed partial class PptxRenderer
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         Func<int, int, ChartLineAppearance>? pointAppearance = null, IReadOnlyList<ChartLineAppearance>? seriesAppearance = null, bool categoryAxisReversed = false,
-        ChartAreaPlotOptions? areaOptions = null, IReadOnlyList<ChartSeriesFill?>? areaSeriesFills = null, double? areaCrossingValue = null)
+        ChartAreaPlotOptions? areaOptions = null, IReadOnlyList<ChartSeriesFill?>? areaSeriesFills = null, double? areaCrossingValue = null,
+        double? chartRootFontSize = null)
     {
         if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
@@ -134,23 +135,63 @@ internal sealed partial class PptxRenderer
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(hasPoint ? point.Index : i, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
+                    bool measured = areaOptions is null && CanMeasurePlainChartLabelFrame(effectiveOptions);
                     ChartLineAppearance? appearance = pointAppearance?.Invoke(seriesIndex, i) ?? seriesAppearance?[seriesIndex];
                     ChartMarkerStyle labelMarker = appearance?.Marker ?? ChartMarker(seriesIndex, markerStyles);
                     double pointMarkerRadius = areaOptions is null ? labelMarker.Size / 2d : 0d;
-                    labelMarker = labelMarker with { Size = PptxChartMarkerMetricRules.QuantizeMarkerExtent(Math.Min(labelMarker.Size, PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit)) };
+                    double keyScale = measured && chartRootFontSize is > 0d
+                        ? PptxChartMetricRules.CategoryPointLabelKeyReferenceFontSize / chartRootFontSize.Value : 1d;
+                    double markerLimit = measured ? Math.Round(PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit / keyScale,
+                        MidpointRounding.AwayFromZero) : PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit;
+                    labelMarker = labelMarker with { Size = PptxChartMarkerMetricRules.QuantizeMarkerExtent(Math.Min(labelMarker.Size, markerLimit)) };
                     double strokeKeyLength = lineBox.Height * PptxChartMetricRules.CategoryPointLabelStrokeKeyLengthFactor;
+                    if (measured) strokeKeyLength *= keyScale;
                     double strokeKeyInset = fontSize * PptxChartMetricRules.CategoryPointLabelKeyInsetFactor;
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
                         ? areaOptions is not null
                             ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
                             : strokeKeyInset + strokeKeyLength + PptxChartMetricRules.CategoryPointLabelKeyTextGap
                         : 0d;
-                    double textWidth = await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false);
+                    if (measured && effectiveOptions.ShowLegendKey)
+                    {
+                        // The key's reference span includes symmetric space around
+                        // its stroke. Root typography scales the key independently
+                        // of the label's own font; stroke width does not move it.
+                        legendKeyWidth = strokeKeyLength * PptxChartMetricRules.CategoryPointLabelKeyStrokeReserveFactor +
+                            PptxChartMetricRules.DataLabelHorizontalPadding;
+                        strokeKeyInset = (legendKeyWidth - strokeKeyLength) / 2d +
+                            PptxChartMetricRules.CategoryPointLabelKeyCenterOffset;
+                    }
                     double textPadding = edgeSize ? 0d : PptxChartMetricRules.DataLabelHorizontalPadding;
                     double verticalPadding = edgeSize ? 0d : PptxChartMetricRules.DataLabelVerticalPadding;
+                    double cap = Math.Max(1d, (authoredSize ? Math.Min(1d, layout.Width.GetValueOrDefault()) * chartFrame.Width
+                        : chartFrame.Width / 5d) - textPadding * 2d);
+                    List<(string Text, double Width)>? lines = measured
+                        ? await MeasureChartTextLinesAsync(label, cap, style, textMeasurer, context.CancellationToken,
+                            effectiveOptions.TextBodyProperties.WrapValue != "none").ConfigureAwait(false) : null;
+                    double lineAdvance = measured
+                        ? (await textMeasurer.MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false)).Height : lineBox.Height;
+                    double? lastAlignmentWidth = null;
+                    if (lines is not null && authoredSize)
+                    {
+                        int limit = Math.Max(1, (int)Math.Min(lines.Count, Math.Max(0d,
+                            Math.Floor((Math.Min(1d, layout.Height.GetValueOrDefault()) * chartFrame.Height - verticalPadding * 2d) / lineAdvance))));
+                        if (limit < lines.Count)
+                        {
+                            var fitted = await FitChartLabelLineAsync(lines[limit - 1].Text, cap, style,
+                                textMeasurer, context.CancellationToken).ConfigureAwait(false);
+                            lines[limit - 1] = (fitted.Text, fitted.Width);
+                            lines.RemoveRange(limit, lines.Count - limit);
+                            lastAlignmentWidth = limit == 1 ? fitted.PrefixWidth : fitted.Width;
+                        }
+                    }
+                    double textWidth = lines is null ? await textMeasurer.MeasureAsync(label, style).ConfigureAwait(false)
+                        : Math.Min(cap, lines.Max(line => line.Width));
+                    double paragraphExtraHeight = lines is null ? 0d : (lines.Count - 1) * lineAdvance;
+                    double paragraphHeight = lineBox.Height + paragraphExtraHeight;
                     double occupiedHeight = authoredSize && !edgeSize
-                        ? Math.Min(1d, layout.Height.GetValueOrDefault()) * chartFrame.Height : lineBox.Height + verticalPadding * 2d;
-                    double verticalExpansion = (occupiedHeight - lineBox.Height - verticalPadding * 2d) / 2d;
+                        ? Math.Min(1d, layout.Height.GetValueOrDefault()) * chartFrame.Height : paragraphHeight + verticalPadding * 2d;
+                    double verticalExpansion = (occupiedHeight - paragraphHeight - verticalPadding * 2d) / 2d;
                     double effectiveLabelWidth = edgeSize
                         ? Math.Max(labelWidth, textWidth + legendKeyWidth +
                             (effectiveOptions.ShowLegendKey ? fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor : 0d))
@@ -163,7 +204,7 @@ internal sealed partial class PptxRenderer
                     (double labelX, double labelY, TextAlignment alignment) = edgeSize
                         ? ResolveLineDataLabelPosition(position, pointX, pointY, effectiveLabelWidth, labelHeight)
                         : ResolveCategoryPointLabelPosition(position, pointX, pointY, effectiveLabelWidth,
-                            lineBox.Ascent, lineBox.Height, pointMarkerRadius, verticalExpansion);
+                            lineBox.Ascent, paragraphHeight, pointMarkerRadius, verticalExpansion);
                     if (authoredSize && !edgeSize)
                     {
                         labelX += legendKeyWidth / 2d;
@@ -173,7 +214,7 @@ internal sealed partial class PptxRenderer
                         ? ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, effectiveLabelWidth, labelHeight)
                         : new ChartLayoutBox(labelX, labelY, effectiveLabelWidth, labelHeight);
                     ChartLayoutBox textBox = edgeSize ? labelBox : new ChartLayoutBox(
-                        labelBox.X + legendKeyWidth, labelBox.Y - descent - verticalPadding - verticalExpansion,
+                        labelBox.X + legendKeyWidth, labelBox.Y - descent - verticalPadding - verticalExpansion - paragraphExtraHeight,
                         Math.Max(1d, labelBox.Width - legendKeyWidth), occupiedHeight);
                     if (!edgeSize && layout.HasLayout)
                     {
@@ -226,12 +267,26 @@ internal sealed partial class PptxRenderer
                                 marker = marker with { Stroke = new ChartSeriesStroke(pointStyle.MarkerOutlineColor, 1d, pointStyle.MarkerOutlineWidth ?? PptxChartMarkerMetricRules.DefaultMarkerOutlineWidth) with { Join = 1 } };
                             RenderStrokeMarkerDataLabelLegendKey(graphics, keyBox, marker, stroke, strokeKeyLength, appearance?.MarkerColor);
                         }
-                        if (!authoredSize || edgeSize) alignment = TextAlignment.Left;
+                        if (lines is null && (!authoredSize || edgeSize)) alignment = TextAlignment.Left;
                     }
 
                     if (!string.IsNullOrEmpty(label))
                     {
-                        await AddChartLabelRunsAsync(
+                        if (lines is not null)
+                        {
+                            for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
+                            {
+                                context.CancellationToken.ThrowIfCancellationRequested();
+                                var fragment = lines[lineIndex];
+                                double alignedWidth = lineIndex == lines.Count - 1 && lastAlignmentWidth is { } finalWidth
+                                    ? finalWidth : fragment.Width;
+                                double lineX = textX + (textRunWidth - alignedWidth) / 2d;
+                                await AddChartLabelRunsAsync(runs, fragment.Text, effectiveOptions, lineX,
+                                    labelBox.Y - lineIndex * lineAdvance, Math.Max(1d, fragment.Width), lineBox.Height,
+                                    plotBox, style, TextAlignment.Left, fontResolver, labelLinks, descent).ConfigureAwait(false);
+                            }
+                        }
+                        else await AddChartLabelRunsAsync(
                             runs,
                             label,
                             effectiveOptions,

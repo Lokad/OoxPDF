@@ -85,6 +85,12 @@ Supported within the following constraints:
   Measured line boxes determine baseline; occupied frames keep three-point
   clearance from authored marker extents independently of font size. Text
   backgrounds enclose padded text, with keys alongside.
+  Plain line labels share chart-relative word/text-element wrapping and
+  authored no-wrap paragraphs. Factor-sized bodies center text and use ellipsis
+  when height is exhausted. Their stroke-key reference and marker capacity follow
+  chart-root typography independently of the label's own font. Rich, rotated,
+  edge-sized and unknown-property labels retain the existing approximate path;
+  key and absolute text geometry still have measured residuals.
   Line/area label layouts use the outer chart frame for factor offsets, edge
   origins and factor-sized extents. Sized labels center text, retain measured
   baselines and fit before offsets; zero or missing extents leave no label.

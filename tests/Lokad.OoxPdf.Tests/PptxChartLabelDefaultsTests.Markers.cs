@@ -82,7 +82,13 @@ internal static partial class PptxChartLabelDefaultsTests
         string large = RedMarker.Replace("<c:spPr>", "<c:size val=\"12\"/><c:spPr>", StringComparison.Ordinal);
         foreach (int font in new[] { 9, 18, 36 })
         {
-            var page = RenderChartPage(MarkerSource([PointMarker(1, large)], fontSize: font));
+            // Native controls vary the label font while the chart root stays18.
+            // Changing the root instead changes the key's independent capacity.
+            var xml = MarkerSource([PointMarker(1, large)]);
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            xml.Descendants(C + "dLbls").Single().Add(new XElement(C + "txPr",
+                new XElement(a + "p", new XElement(a + "pPr", new XElement(a + "defRPr", new XAttribute("sz", font * 100))))));
+            var page = RenderChartPage(xml);
             double[] sizes = MarkerRectangles(page, new RgbColor(255, 0, 0)).Select(r => r.Width).Order().ToArray();
             TestAssert.Equal(2, sizes.Length);
             TestAssert.True(Math.Abs(sizes[0] - 9.96d) < .002d && Math.Abs(sizes[1] - 12d) < .002d,

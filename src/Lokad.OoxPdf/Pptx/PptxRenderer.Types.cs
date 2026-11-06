@@ -531,6 +531,12 @@ internal sealed partial class PptxRenderer
         // Native Calibri/Arial/Cambria controls and9/18/36pt text use the
         // font line box for segment extent, independently of point-marker size.
         public const double CategoryPointLabelStrokeKeyLengthFactor = 0.875d;
+        // Independent root6/10/12/14/18/24 controls keep the label font fixed:
+        // stroke extent scales inversely with the chart root's reference size.
+        public const double CategoryPointLabelKeyReferenceFontSize = 18d;
+        public const double CategoryPointLabelKeyStrokeReserveFactor = 1.25d;
+        // Explicit0.5/4pt strokes preserve this physical unit-center offset.
+        public const double CategoryPointLabelKeyCenterOffset = 2.25d;
         public const double CategoryPointLabelKeyInsetFactor = 1d / 3d;
         public const double CategoryPointLabelKeyTextGap = 1.5d;
         // Native label backgrounds enclose text and its insets; keys paint

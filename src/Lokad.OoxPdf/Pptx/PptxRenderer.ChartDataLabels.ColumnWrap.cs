@@ -5,7 +5,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool CanUseMeasuredColumnLabelFrame(ChartDataLabelOptions options)
+    private static bool CanMeasurePlainChartLabelFrame(ChartDataLabelOptions options)
     {
         var layout = options.Layout;
         bool sized = layout.Width.HasValue || layout.Height.HasValue;
@@ -85,7 +85,7 @@ internal sealed partial class PptxRenderer
                 Math.Max(0d, Math.Floor((height - 2d * verticalPadding) / lineAdvance))));
             if (limit < lines.Count)
             {
-                var fitted = await FitColumnLabelLineAsync(lines[limit - 1].Text,
+                var fitted = await FitChartLabelLineAsync(lines[limit - 1].Text,
                     sourceWidth - 2d * horizontalPadding, style, measurer, cancellationToken).ConfigureAwait(false);
                 lines[limit - 1] = (fitted.Text, fitted.Width);
                 lines.RemoveRange(limit, lines.Count - limit);
@@ -141,7 +141,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static async ValueTask<(string Text, double Width, double PrefixWidth)> FitColumnLabelLineAsync(
+    private static async ValueTask<(string Text, double Width, double PrefixWidth)> FitChartLabelLineAsync(
         string text, double width, ChartTextStyle style, ChartTextMeasurer measurer, CancellationToken cancellationToken)
     {
         const string marker = "\u2026";

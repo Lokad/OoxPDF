@@ -295,7 +295,7 @@ internal sealed partial class PptxRenderer
                     {
                         if (!stacked && barEndY >= barBaseY &&
                             ResolveChartDataLabelPosition(labelPosition) == PptxSceneChartDataLabelPosition.OutsideEnd &&
-                            CanUseMeasuredColumnLabelFrame(effectiveOptions) && !string.IsNullOrEmpty(label))
+                            CanMeasurePlainChartLabelFrame(effectiveOptions) && !string.IsNullOrEmpty(label))
                         {
                             ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
                                 ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category)) : null;
