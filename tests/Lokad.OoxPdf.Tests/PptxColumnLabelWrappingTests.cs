@@ -174,6 +174,105 @@ internal static class PptxColumnLabelWrappingTests
         }
     }
 
+    public static void PptxSizedColumnLabelsKeepTextCenterAndKeyTopReferences()
+    {
+        PdfPage first = Render(SizedColumnFixture("WWWW LLLL", "square", true, .8d, .3d));
+        PdfPage second = Render(SizedColumnFixture("WWWW LLLL", "square", true, .8d, .4d));
+        var a = Shows(first).ToArray();
+        var b = Shows(second).ToArray();
+        TestAssert.Equal(a.Length, b.Length);
+        TestAssert.True(a.Length > 1 && string.Concat(a.Select(x => x.Text)).Replace(" ", "", StringComparison.Ordinal) == "WWWWLLLL",
+            "The sized body retains every source word across measured lines.");
+        for (int i = 0; i < a.Length; i++)
+        {
+            TestAssert.Equal(a[i].Text, b[i].Text);
+            CheckTranslation(a[i].X, a[i].Y, b[i].X, b[i].Y, 0d, -21.6d);
+        }
+        var frame = PaintedLabelFrame(first);
+        TestAssert.True(Math.Abs(frame.Width - 72d) < .004 && Math.Abs(frame.Height - 129.6d) < .004 &&
+            Math.Abs(frame.X - 81d) < .004 && Math.Abs(frame.Y + frame.Height - 417.6d) < .004,
+            "Authored dimensions and edge positions belong to the complete chart frame.");
+        var keyA = LabelSwatch(first);
+        var keyB = LabelSwatch(second);
+        CheckTranslation(keyA.X, keyA.Y, keyB.X, keyB.Y, 0d, 0d);
+        PdfContentValidator.ValidatePage(second, 0, default);
+    }
+
+    public static void PptxSizedColumnLabelsElideWordsAndKeepTextElementsWhole()
+    {
+        foreach (var (source, width, expected) in new[]
+        {
+            ("Alpha Beta Gamma", 1d, "Alpha\u2026"),
+            ("WWWWWWWW", .6d, "W\u2026"),
+            (string.Concat(Enumerable.Repeat("\U0001f600\u0301", 8)), .6d, "\U0001f600\u0301\u2026")
+        })
+        {
+            PdfPage page = Render(SizedColumnFixture(source, "square", true, width, .08d));
+            var show = Shows(page).Single();
+            TestAssert.Equal(expected, show.Text);
+            PdfContentValidator.ValidatePage(page, 0, default);
+        }
+        PdfPage tiny = Render(SizedColumnFixture("WWWWWWWW", "square", true, .005d, .02d));
+        TestAssert.Equal("W", Shows(tiny).Single().Text);
+    }
+
+    public static void PptxSizedColumnNoWrapKeepsWholeMandatoryParagraphs()
+    {
+        PdfPage page = Render(SizedColumnFixture("WWWL\nLWWW", "none", true, .4d, .2d));
+        TestAssert.Equal("WWWL\nLWWW", string.Join("\n", Shows(page).Select(x => x.Text)));
+        PdfContentValidator.ValidatePage(page, 0, default);
+    }
+
+    public static void PptxSizedColumnLabelsDistinguishMissingZeroAndRejectedExtents()
+    {
+        PdfPage keyOnly = Render(SizedColumnFixture("LLLL", "square", true, null, .1d));
+        TestAssert.Equal(0, Shows(keyOnly).Count());
+        TestAssert.True(Math.Abs(PaintedLabelFrame(keyOnly).Width - 22.7d) < .004,
+            "An absent width retains only the source key reference.");
+        LabelSwatch(keyOnly);
+        foreach (var (width, height, key) in new (double?, double?, bool)[]
+        {
+            (0d, .1d, true), (.4d, 0d, true), (.4d, null, true), (null, .1d, false)
+        })
+        {
+            PdfPage page = Render(SizedColumnFixture("LLLL", "square", key, width, height));
+            TestAssert.Equal(0, Shows(page).Count());
+            TestAssert.True(!page.Content.Contains("1 0 1 rg", StringComparison.Ordinal) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(page.Content, @"[-0-9.]+ [-0-9.]+ 9\.9 9\.9 re f"),
+                "An empty declared area does not paint a label shape or key.");
+        }
+        PdfPage automatic = Render(PositionedColumnFixture("LLLL", "square", true, 0d, 0d, "factor"));
+        foreach (var (width, height) in new[] { (-.1d, .1d), (.4d, -.1d), (1.2d, .1d) })
+        {
+            PdfPage page = Render(SizedColumnFixture("LLLL", "square", true, width, height));
+            TestAssert.Equal(automatic.Content, page.Content);
+            PdfContentValidator.ValidatePage(page, 0, default);
+        }
+    }
+
+    private static byte[] SizedColumnFixture(string text, string wrap, bool key, double? width, double? height)
+    {
+        using var stream = new MemoryStream();
+        stream.Write(PositionedColumnFixture(text, wrap, key, .1d, .2d, "edge"));
+        stream.Position = 0;
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
+            XDocument xml;
+            using (var input = entry.Open()) xml = XDocument.Load(input);
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            XElement layout = xml.Descendants(c + "manualLayout").Single();
+            if (width is { } w) layout.Add(new XElement(c + "wMode", new XAttribute("val", "factor")),
+                new XElement(c + "w", new XAttribute("val", w)));
+            if (height is { } h) layout.Add(new XElement(c + "hMode", new XAttribute("val", "factor")),
+                new XElement(c + "h", new XAttribute("val", h)));
+            entry.Delete();
+            using var output = archive.CreateEntry("ppt/charts/chart1.xml").Open();
+            xml.Save(output);
+        }
+        return stream.ToArray();
+    }
+
     private static void CheckTranslation(double ax, double ay, double bx, double by, double dx, double dy) =>
         TestAssert.True(Math.Abs(bx - ax - dx) < .004 && Math.Abs(by - ay - dy) < .004,
             "Text, frame and swatch must share chart-wide position offsets.");

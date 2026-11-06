@@ -373,8 +373,13 @@ Approximate or restricted:
   their fitted source width owns alignment, with residual native font geometry.
   Position-only manual labels share that measured frame: factor offsets move its
   admitted automatic position, edge coordinates use the full chart, and text,
-  shape and key retain one placement. Empty point text-property bodies retain
-  an approximate fallback. Authored-size manual labels, rich-text,
+  shape and key retain one placement. Factor-sized manual labels retain their
+  requested text extents and a separate key reference. Wrapped text is centered
+  vertically and uses word-aware ellipsis when the height cannot hold all lines;
+  no-wrap keeps complete paragraphs. Missing dimensions, explicit zero extents
+  and rejected declarations follow independently observed Office behavior.
+  Empty point text-property bodies, edge-sized labels, explicit overflow modes,
+  rich-text,
   negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
   is claimed.
