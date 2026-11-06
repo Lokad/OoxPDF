@@ -89,7 +89,7 @@ jobs:
           $pdf = Get-ChildItem artifacts/text-content -Recurse -Filter output.pdf -File | Select-Object -First 1
           & ./tools/TestRasterizePdfPaths.ps1 -InputPdf $pdf.FullName -RasterizerPath tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Release/net11.0/Lokad.OoxPdf.PdfiumRasterizer.dll
       - name: Allocation probe self-test
-        run: pwsh -NoProfile -File tools/MeasureAllocation.ps1 -SelfTest
+        run: pwsh -NoProfile -File tools/NewFrozenAllocationRuntime.ps1 -ArtifactDirectory artifacts/ci-candidate -OutputDirectory artifacts/ci-allocation-probe
       - name: .NET 10 compatibility checks
         run: |
           $env:OOXPDF_TEST_CLI_ASSEMBLY = "$env:GITHUB_WORKSPACE/artifacts/ci-candidate-net10/src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.Cli.dll"

@@ -12,6 +12,11 @@ $framework=if ($pin.Framework) {$pin.Framework} else {'net10.0'}
 if ($framework -notin @('net10.0','net11.0')) { throw 'Unknown frozen target framework' }
 $library=Join-Path $artifact "src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll"
 if ((Get-FileHash -LiteralPath $library).Hash -ne $pin.LibrarySha256) { throw 'Frozen library identity differs' }
+# Exercise real SFNT preparation with a font belonging to this frozen input set.
+$fontRelative='tests/Lokad.OoxPdf.Tests/Cases/PortableFonts/DejaVuSans.ttf'
+$font=Join-Path $artifact $fontRelative
+$fontHash=$pin.Inputs.$fontRelative
+if (!$fontHash -or (Get-FileHash -LiteralPath $font).Hash -ne $fontHash) { throw 'Frozen self-test font identity differs' }
 $output=[IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw 'Use a fresh allocation runtime directory' }
 $sources=@(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Lokad.OoxPdf.AllocProbe') -Filter '*.cs' -File)
@@ -55,7 +60,11 @@ $runtime=Join-Path $output "bin/Release/$framework"
 if ((Get-FileHash -LiteralPath (Join-Path $runtime 'Lokad.OoxPdf.dll')).Hash -ne $pin.LibrarySha256 -or
     (Get-FileHash -LiteralPath $library).Hash -ne $pin.LibrarySha256) { throw 'Qualified library changed during probe preparation' }
 $probe=Join-Path $runtime 'Lokad.OoxPdf.AllocProbe.dll'
-& dotnet $probe --self-test *> (Join-Path $output 'self-test.log')
+$selfTestFont=Join-Path $output 'DejaVuSans.ttf'
+# Copy bytes without inheriting frozen read-only permissions on shared drives.
+[IO.File]::WriteAllBytes($selfTestFont, [IO.File]::ReadAllBytes($font))
+if ((Get-FileHash -LiteralPath $selfTestFont).Hash -ne $fontHash) { throw 'Self-test font copy differs' }
+& dotnet $probe --self-test --font-file $selfTestFont *> (Join-Path $output 'self-test.log')
 if ($LASTEXITCODE -ne 0) { throw ('Allocation probe self-test failed; inspect '+(Join-Path $output 'self-test.log')) }
 [ordered]@{
     FrozenRevision=$pin.Revision;Framework=$framework;LibrarySha256=$pin.LibrarySha256
@@ -63,5 +72,6 @@ if ($LASTEXITCODE -ne 0) { throw ('Allocation probe self-test failed; inspect '+
     ProjectSha256=(Get-FileHash -LiteralPath $project).Hash
     ProbeSha256=(Get-FileHash -LiteralPath $probe).Hash
     SelfTestPassed=$true;ProbePath=$probe
+    SelfTestFont=$fontRelative;SelfTestFontSha256=$fontHash;SelfTestStages=$true
 } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'identity.json') -Encoding utf8
 Write-Output ('Allocation probe prepared against frozen '+$pin.Revision+'; library not rebuilt.')

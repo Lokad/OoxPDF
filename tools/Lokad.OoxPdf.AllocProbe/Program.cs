@@ -14,8 +14,8 @@ using Lokad.OoxPdf.Pptx;
 
 // Whole-pipeline allocation probe (G01 slice 1): measures calling-thread
 // allocated bytes, GC counts, wall time, output size/pages, and byte
-// stability across cold + warm conversions. Stage split (parse/layout/
-// emission/write) and corpus generation stay open for later slices.
+// stability across cold + warm conversions, with optional overlapping
+// diagnostic stages. Calling-thread counters exclude background font loading.
 if (args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || string.Equals(arg, "-h", StringComparison.Ordinal)))
 {
     Console.WriteLine("Usage: Lokad.OoxPdf.AllocProbe --out <report.json> [--warmup <n>] [--iterations <n>] [--stages] [--resident-window bytes] <input...> | --self-test | --font-breadth <n,...> --out <report.json>");
@@ -525,11 +525,11 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
         (_, object initialPlanMetrics) = MeasureStep(() => DocxFontPlan.Create(detailDocument, planResolver,
             CancellationToken.None, context.CommentMarkerLabels is not null),
             "standalone initial font-plan construction; source/context and resolver construction excluded");
-        var fontMethod = typeof(DocxRenderer).GetMethod("PrepareFontResourcesCore", BindingFlags.Static | BindingFlags.NonPublic)
+        var fontMethod = typeof(DocxRenderer).GetMethod("PrepareFontResourcesCoreAsync", BindingFlags.Static | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("DOCX font preparation method is unavailable.");
-        var prepareFonts = fontMethod.CreateDelegate<Func<DocxDocument, IFontResolver, Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>?, CancellationToken, bool, int?, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>, DocxFontResources>>();
+        var prepareFonts = fontMethod.CreateDelegate<Func<DocxDocument, IFontResolver, Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>?, CancellationToken, bool, int?, Dictionary<(string StableId, int FaceIndex), OpenTypeFont?>, ValueTask<DocxFontResources>>>();
         (DocxFontResources preparedFonts, object initialFontMetrics) = MeasureStep(() => prepareFonts(detailDocument, detailResolver, null,
-            CancellationToken.None, context.CommentMarkerLabels is not null, null, new()),
+            CancellationToken.None, context.CommentMarkerLabels is not null, null, new()).GetAwaiter().GetResult(),
             "standalone initial font-resource preparation; parsed source/context, resolver construction and delegate setup excluded");
         var parsedFaceMetrics = new List<object>();
         foreach (OpenTypeFont font in preparedFonts.Resources.Select(resource => resource.Font.Font).Distinct())
@@ -540,7 +540,7 @@ static object MeasureStages(string kind, byte[] inputBytes, string wholeOutputSh
                 ?? throw new InvalidOperationException("Font table directory is unavailable.");
             var kerningMethod = typeof(OpenTypeFont).GetMethod("ReadKerningPairs", BindingFlags.Static | BindingFlags.NonPublic)
                 ?? throw new InvalidOperationException("Font kerning preparation method is unavailable.");
-            object?[] kerningArguments = [font.Bytes.ToArray(), tableField.GetValue(font), CancellationToken.None];
+            object?[] kerningArguments = [font.Bytes.ToArray(), tableField.GetValue(font), CancellationToken.None, null];
             (IReadOnlyDictionary<uint, short> pairs, object kerningMetrics) = MeasureStep(() =>
                 (IReadOnlyDictionary<uint, short>)kerningMethod.Invoke(null, kerningArguments)!,
                 "standalone legacy kern/GPOS preparation; SFNT bytes/table directory excluded; reflection invocation included");
@@ -729,7 +729,7 @@ static int RunSelfTest(ProbeFont? probeFont)
     {
         try
         {
-            dynamic report = MeasureInput(name, package, warmup: 0, iterations: 1, measureStages: false, outputMode: "buffer", probeFont: probeFont);
+            dynamic report = MeasureInput(name, package, warmup: 0, iterations: 1, measureStages: true, outputMode: "buffer", probeFont: probeFont);
             bool stable = report.outputStable;
             int pages = report.pageCount;
             int bytes = report.outputBytes;
@@ -738,6 +738,12 @@ static int RunSelfTest(ProbeFont? probeFont)
             {
                 ok = false;
             }
+            if (!(bool)report.stages.stagedMatchesWhole)
+            {
+                Console.WriteLine("FAIL self-test stages: bytes differ for " + name);
+                ok = false;
+            }
+            else Console.WriteLine("PASS self-test stages: " + name + " matches whole-pipeline output.");
             if (probeFont is not null && (int)report.cold.embeddedTrueTypeFontCount < 1)
             {
                 Console.WriteLine("FAIL self-test explicit font: no embedded TrueType font in " + name);
