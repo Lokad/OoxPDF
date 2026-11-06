@@ -96,9 +96,10 @@ Supported within the following constraints:
   Label-set deletion hides default labels while preserving explicit child
   requests. Defined series and points own their deletion default; absent plot
   containers keep series settings local to their source series.
-  Defined point and series text styles combine chart defaults with local
-  formatting; unoverridden labels retain their container style. Font provenance
-  and raw source presence remain inspectable.
+  Point labels without local formatting retain their container's text style,
+  including geometry and component overrides. Explicit point shape/text markup
+  starts a local scope from chart defaults; series formatting keeps its own
+  scope. Font provenance and raw source presence remain inspectable.
 - Failed slide nodes rewind partial paint/annotations and report a diagnostic;
   neighboring nodes may still render. Inspect diagnostic severity and fallback.
 
@@ -372,8 +373,8 @@ Approximate or restricted:
   their fitted source width owns alignment, with residual native font geometry.
   Position-only manual labels share that measured frame: factor offsets move its
   admitted automatic position, edge coordinates use the full chart, and text,
-  shape and key retain one placement. Point-label font inheritance in styled
-  column containers remains approximate. Authored-size manual labels, rich-text,
+  shape and key retain one placement. Empty point text-property bodies retain
+  an approximate fallback. Authored-size manual labels, rich-text,
   negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
   is claimed.

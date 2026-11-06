@@ -708,7 +708,8 @@ internal sealed record PptxSceneChartDataLabelOverride(
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartTextBodyProperties TextBodyProperties,
-    PptxSceneChartShapeStyle ShapeStyle);
+    PptxSceneChartShapeStyle ShapeStyle,
+    bool HasLocalFormatting);
 
 internal readonly record struct PptxSceneChartTextBodyProperties(
     double? RotationDegrees,

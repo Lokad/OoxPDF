@@ -479,6 +479,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartTextStyleOverride defaults, bool date1904 = false, bool seriesScope = false)
     {
         IReadOnlyDictionary<string, ChartBooleanOption> flags = ToChartDataLabelFlagOptions(labels);
+        var containerStyle = PptxSceneBuilder.MergeChartTextStyleOverride(defaults, labels.TextStyle);
         var options = new ChartDataLabelOptions(
             ChartDataLabelFlagValue(flags, "showVal", labels.IsDefined),
             ChartDataLabelFlagValue(flags, "showPercent", labels.IsDefined),
@@ -496,7 +497,7 @@ internal sealed partial class PptxRenderer
             labels.NumberFormat,
             ToChartNumberFormat(labels.NumberFormatInfo),
             labels.Layout,
-            ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(defaults, labels.TextStyle)),
+            ToChartTextStyleOverride(containerStyle),
             labels.TextBodyProperties,
             ToChartShapeStyle(labels.ShapeStyle),
             flags,
@@ -510,12 +511,12 @@ internal sealed partial class PptxRenderer
         bool independentPoints = seriesScope || chartElement.Name == ChartNamespace + "pieChart" ||
             chartElement.Name == ChartNamespace + "doughnutChart";
         return independentPoints || options.HasVisibleContent || labels.IsDeleted == true
-            ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides, defaults) }
+            ? options with { Overrides = ToChartDataLabelOverrides(labels.Overrides, defaults, containerStyle) }
             : options;
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> ToChartDataLabelOverrides(IReadOnlyList<PptxSceneChartDataLabelOverride> overrides,
-        PptxSceneChartTextStyleOverride defaults)
+        PptxSceneChartTextStyleOverride defaults, PptxSceneChartTextStyleOverride containerStyle)
     {
         if (overrides.Count == 0)
         {
@@ -543,10 +544,11 @@ internal sealed partial class PptxRenderer
                 dataLabel.NumberFormat,
                 ToChartNumberFormat(dataLabel.NumberFormatInfo),
                 dataLabel.Layout,
-                // A defined point owns text defaults independently of its label
-                // container. Resolve once from chart defaults and the point itself;
-                // nullable source fields remain untouched in the scene model.
-                ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(defaults, dataLabel.TextStyle)),
+                // Local shape/text formatting starts a point-owned scope, even
+                // for an empty spPr. Geometry and component declarations alone
+                // retain container formatting. Keep raw nullable fields intact.
+                ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(
+                    dataLabel.HasLocalFormatting ? defaults : containerStyle, dataLabel.TextStyle)),
                 dataLabel.TextBodyProperties,
                 ToChartShapeStyle(dataLabel.ShapeStyle),
                 ToChartDataLabelOverrideFlagOptions(dataLabel));

@@ -5,15 +5,15 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxChartLabelDefaultsTests
 {
-    public static void PptxPointTextStylesOwnChartDefaultsAcrossKinds()
+    public static void PptxFormattedPointTextStylesOwnChartDefaultsAcrossKinds()
     {
         foreach (string kind in new[] { "barChart", "lineChart", "areaChart", "scatterChart", "bubbleChart", "pieChart", "doughnutChart" })
         foreach (bool sparseRoot in new[] { false, true })
         foreach (bool scene in new[] { false, true })
         {
-            var (first, firstPlot) = TextScopeSource(kind, TextScopeParent, "", sparseRoot: sparseRoot);
-            var (other, otherPlot) = TextScopeSource(kind, TextScopeOtherParent, "", sparseRoot: sparseRoot);
-            var (plain, plainPlot) = TextScopeSource(kind, "", "", sparseRoot: sparseRoot);
+            var (first, firstPlot) = TextScopeSource(kind, TextScopeParent, "<c:spPr/>", sparseRoot: sparseRoot);
+            var (other, otherPlot) = TextScopeSource(kind, TextScopeOtherParent, "<c:spPr/>", sparseRoot: sparseRoot);
+            var (plain, plainPlot) = TextScopeSource(kind, "", "<c:spPr/>", sparseRoot: sparseRoot);
             object Point(PptxSceneChart chart, XElement plot) => Invoke("ResolveChartDataLabelOptions", Read(chart, plot, scene), 2);
             object firstStyle = TextScopeStyle(Point(first, firstPlot));
             TestAssert.Equal(TextScopeStyle(Point(plain, plainPlot)), firstStyle);
@@ -23,6 +23,29 @@ internal static partial class PptxChartLabelDefaultsTests
                 "Changing container style still changes an unoverridden label.");
             TestAssert.Equal(null, first.Plots[0].DataLabels.Overrides.Single().TextStyle.FontFamily);
             TestAssert.Equal(null, first.Plots[0].DataLabels.Overrides.Single().TextStyle.FontSize);
+        }
+    }
+
+    public static void PptxUnformattedPointTextRetainsContainerStyleAcrossKinds()
+    {
+        foreach (string kind in new[] { "barChart", "lineChart", "areaChart", "scatterChart", "bubbleChart", "pieChart", "doughnutChart" })
+        foreach (string point in new[]
+        {
+            "", "<c:showVal val=\"1\"/>", "<c:dLblPos val=\"r\"/>",
+            "<c:layout><c:manualLayout><c:xMode val=\"factor\"/><c:x val=\".1\"/></c:manualLayout></c:layout>"
+        })
+        foreach (bool sparseRoot in new[] { false, true })
+        foreach (bool scene in new[] { false, true })
+        {
+            foreach (string parent in new[] { TextScopeParent, TextScopeOtherParent })
+            {
+                var (chart, plot) = TextScopeSource(kind, parent, point, sparseRoot: sparseRoot);
+                object options = Read(chart, plot, scene);
+                TestAssert.Equal(TextScopeStyle(options),
+                    TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2)));
+                TestAssert.Equal(null, chart.Plots[0].DataLabels.Overrides.Single().TextStyle.FontFamily);
+                TestAssert.Equal(null, chart.Plots[0].DataLabels.Overrides.Single().TextStyle.FontSize);
+            }
         }
     }
 
