@@ -1,5 +1,6 @@
 {
   "pptx-overflow-category-wrapping": [
+    "PptxVerticalWrappedCaptionsKeepTheirFittedSourceReferenceEdge",
     "PptxOverflowCategoryCaptionsShareMeasuredWrappedLines",
     "PptxOverflowCategoryNoWrapRetainsItsCompleteSourceLine",
     "PptxOverflowCategoryWrappingKeepsCompleteTextElements"

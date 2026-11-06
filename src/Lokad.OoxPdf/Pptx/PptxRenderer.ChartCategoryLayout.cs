@@ -589,6 +589,7 @@ internal sealed partial class PptxRenderer
         double flatWidth = Math.Max(1d, innerPitch * Math.Min(skip, labels.Count) * PptxChartMetricRules.CategoryAxisVerticalWidthFactor);
         var measured = new Dictionary<int, ChartCategoryTextLine[]>();
         double? wrappedLineAdvance = null;
+        double? sourceReferenceWidth = null;
         double widest = 0d;
         int maxLines = 1;
         for (int i = 0; i < labels.Count; i++)
@@ -673,6 +674,8 @@ internal sealed partial class PptxRenderer
                 // retains its full line; other bodies share chart word wrapping.
                 // Numeric readmission keeps its existing source/fitting owner.
                 if (body.WrapValue != "none")
+                {
+                    sourceReferenceWidth = Math.Max(0d, cap);
                     for (int index = 0; index < labels.Count; index++)
                         if (measured.TryGetValue(index, out var parts))
                         {
@@ -682,6 +685,7 @@ internal sealed partial class PptxRenderer
                             if (lines.Count > 1)
                                 wrappedLineAdvance ??= (await measure.MeasureLineBoxAsync(style, horizontalHeader: true).ConfigureAwait(false)).Height;
                         }
+                }
             }
             else if (!admitInnerCaptions || cap >= 0d)
                 for (int index = 0; index < labels.Count; index++)
@@ -746,7 +750,7 @@ internal sealed partial class PptxRenderer
         // occupied content; a generated marker hangs outside that prefix.
         double? occupiedHeight = angle != 0d && overflowMode == "overflow" && availableCaptionHeight is { } outerHeight
             ? Math.Min(widest * sin + line.Height * cos, outerHeight / 2d) : null;
-        layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, axisGap, measured, occupiedHeight, wrappedLineAdvance) };
+        layout = layout with { CategoryLabels = new(style, angle, skip, line.Ascent, line.Descent, line.Height, axisGap, measured, occupiedHeight, wrappedLineAdvance, sourceReferenceWidth) };
         (double Left, double Right,
             (double NumericStart, double NumericLength, double OuterStart, double OuterLength)? Vertical)? sourceReferences = null;
         if (innerRotated && admitInnerCaptions)

@@ -455,7 +455,7 @@ internal sealed partial class PptxRenderer
 
     private sealed record ChartCategoryLabelLayout(ChartTextStyle Style, double RotationDegrees, int TickLabelSkip,
         double Ascent, double Descent, double LineHeight, double AxisGap, IReadOnlyDictionary<int, ChartCategoryTextLine[]> Labels,
-        double? OccupiedHeight = null, double? LineAdvance = null);
+        double? OccupiedHeight = null, double? LineAdvance = null, double? SourceReferenceWidth = null);
 
     private readonly record struct ChartCategoryTextLine(string Text, double Width, double OverflowAdvance = 0d);
 

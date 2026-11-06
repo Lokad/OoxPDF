@@ -97,6 +97,16 @@ internal sealed partial class PptxRenderer
                             (rotatedParts.Length - 1) * stackAdvance * sin / 2d;
                         double lineAlignment = (rightAnchor ? -1d : 1d) * (widestLine - part.Width) / 2d;
                         double shiftX = centerShift - normal * sin + lineAlignment * cos;
+                        if (Math.Abs(rotated.RotationDegrees) == 90d && rotated.SourceReferenceWidth is { } referenceWidth)
+                        {
+                            // A vertical wrapped body uses its fitted source edge,
+                            // not the center of the painted stack. Rotation and
+                            // axis side change line order, not this reference.
+                            double centeredEdge = center - ((rotatedParts.Length - 1) * stackAdvance +
+                                rotated.Ascent - rotated.Descent) / 2d;
+                            double sourceEdge = center - referenceWidth / 2d;
+                            shiftX += sourceEdge - centeredEdge;
+                        }
                         pivotX += shiftX;
                         pivotY += normal * cos + lineAlignment * sin;
                         horizontal = (pivotX, horizontal.Left + shiftX, horizontal.Right + shiftX);
