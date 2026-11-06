@@ -56,7 +56,8 @@ internal static class DocxMathCenterGroupTests
         {
             var grouped = Layout(Read("centerGroup", container: container), mode);
             var centered = Layout(Read("center", container: container), mode);
-            TestAssert.Equal(2, grouped.Length); TestAssert.Equal(2, centered.Length);
+            TestAssert.True(grouped.Length == 2 && centered.Length == 2,
+                $"Expected two measured math rows in {container}/{mode}, got {grouped.Length}/{centered.Length}.");
             TestAssert.True(Math.Abs(grouped[0].X - grouped[1].X) < .000001,
                 "Containers place both rows inside the same centered maximum-width group.");
             TestAssert.True(Math.Abs(centered[1].X - centered[0].X - (centered[0].Width - centered[1].Width) / 2d) < .000001,
@@ -73,6 +74,8 @@ internal static class DocxMathCenterGroupTests
         var plain = Layout(Read("centerGroup"));
         var counter = Layout(Read("centerGroup", counter: true));
         TestAssert.Equal(2, counter.Length);
+        TestAssert.True(Math.Abs(counter[0].X - counter[1].X) < .000001,
+            "Counter-driven placement must preserve the common display-group origin, not two equally wrong row centers.");
         for (int i = 0; i < counter.Length; i++)
             TestAssert.True(Math.Abs(plain[i].X - counter[i].X) < .000001 && plain[i].Width == counter[i].Width,
                 "PAGE forces source-cursor resumption without losing the already measured group frame.");
@@ -99,9 +102,11 @@ internal static class DocxMathCenterGroupTests
             .ToDictionary(pair => pair.equation, pair => new DocxPreparedMathParagraph(pair.equation,
                 new(pair.width, 6d, 1d, []), 9d, 16d));
 
-    private sealed class Measurer : IDocxTextMeasurer
+    private sealed class Measurer : IDocxTextMeasurer, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double fontSize) => text.Length * 5d;
+        public double MeasureWindowsAscender(DocxTextRun? run, double fontSize) => fontSize * .8d;
+        public double MeasureWindowsDescender(DocxTextRun? run, double fontSize) => fontSize * .2d;
     }
 
     private static DocxDocument Read(string? local, string? global = null, bool prose = false,
@@ -123,7 +128,7 @@ internal static class DocxMathCenterGroupTests
             ["word/document.xml"] = $"<w:document {namespaces}><w:body>" + (container switch
             {
                 "cell" => "<w:tbl><w:tblPr><w:tblW w:w=\"9360\" w:type=\"dxa\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"9360\"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"9360\" w:type=\"dxa\"/></w:tcPr>" + paragraph + "</w:tc></w:tr></w:tbl>",
-                "footer" => "<w:p/>",
+                "footer" => "<w:p><w:r><w:t>Body</w:t></w:r></w:p>",
                 _ => paragraph
             }) + "<w:sectPr>" + (container == "footer" ? "<w:footerReference w:type=\"default\" r:id=\"footer\"/>" : "") +
                 "<w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>"
