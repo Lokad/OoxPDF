@@ -67,7 +67,7 @@ internal sealed partial class PptxRenderer
                 };
                 ChartAxisPlacement? resolvedCategory = horizontalBars
                     ? ReadHorizontalBarCategoryPlacement(sceneChart, categoryAxis, valueAxisSource, valueExtents, valueAxisOptions.Reversed) :
-                    ReadChartAxisPlacement(categoryAxis, valueExtents, valueAxisOptions.Reversed);
+                    ReadChartAxisPlacement(categoryAxis.SceneAxis, valueExtents, valueAxisOptions.Reversed);
                 if (resolvedCategory is { } resolved)
                 {
                     valueAxisOptions = valueAxisOptions with { CrossingValue = resolved.CrossingValue };
@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
                     valueSceneAxis is { CrossesAt: null, CrossesKind: not PptxSceneChartAxisCrosses.Unknown }
                     // Numeric X bounds do not describe this crossing: it lies on
                     // the paired ordinal Y axis. Reuse its direction and edges.
-                    ? ReadChartAxisPlacement(valueAxisSource, new(0d, Math.Max(1, MaxDensePointCount(barSeriesVectors))),
+                    ? ReadChartAxisPlacement(valueAxisSource.SceneAxis, new(0d, Math.Max(1, MaxDensePointCount(barSeriesVectors))),
                         barOptions.CategoryAxisReversed)
                     : null;
                 if (numericPlacement is { } numeric)
@@ -161,7 +161,7 @@ internal sealed partial class PptxRenderer
                     valueExtents = scale.Extents;
                     valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme,
                         valueExtents, percentStacked) with { Units = scale.Units };
-                    resolvedCategory = ReadChartAxisPlacement(categoryAxis, valueExtents, valueAxisOptions.Reversed);
+                    resolvedCategory = ReadChartAxisPlacement(categoryAxis.SceneAxis, valueExtents, valueAxisOptions.Reversed);
                     if (resolvedCategory is { } scaledCategory)
                     {
                         valueAxisOptions = valueAxisOptions with { CrossingValue = scaledCategory.CrossingValue };

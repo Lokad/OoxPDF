@@ -17,6 +17,8 @@
 
 - PPTX: chart axis selection uses the resolved scene, removing duplicate XML-only
   selection paths while preserving source order and missing-axis fallbacks.
+  Numeric declarations, crossings and explicit-scale admission also use scene
+  properties; the live combination-chart XML fallback remains.
 
 - PPTX: preset arcs share bounded angle handling for strokes and arrow outlines.
   Invalid numeric guides use defaults; extreme values no longer stall conversion.

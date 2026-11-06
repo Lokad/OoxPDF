@@ -419,23 +419,19 @@ internal sealed partial class PptxRenderer
             value.SceneAxis is not { HasScaling: true, HasLogarithmicScale: false } numeric ||
             string.IsNullOrEmpty(ordinal.Id) || string.IsNullOrEmpty(numeric.Id) ||
             ordinal.CrossAxisId != numeric.Id || numeric.CrossAxisId != ordinal.Id) return null;
-        return ReadChartAxisPlacement(category, extents, reversed, horizontal: false);
+        return ReadChartAxisPlacement(category.SceneAxis, extents, reversed, horizontal: false);
     }
 
-    private static ChartAxisPlacement? ReadChartAxisPlacement(ChartAxisSource axis, ChartValueExtents extents, bool reversed, bool horizontal = true)
+    private static ChartAxisPlacement? ReadChartAxisPlacement(PptxSceneChartAxis? axis, ChartValueExtents extents, bool reversed, bool horizontal = true)
     {
-        if (axis.SceneAxis is null && axis.XmlAxis is null) return null;
-        if (ReadSceneOrXmlValueAxisCrossingValue(axis.SceneAxis, axis.XmlAxis, extents) is not { } crossing || !double.IsFinite(crossing))
+        if (axis is null) return null;
+        if (ReadSceneOrXmlValueAxisCrossingValue(axis, null, extents) is not { } crossing || !double.IsFinite(crossing))
             return null;
-        double? explicitCrossing = axis.SceneAxis is not null ? axis.SceneAxis.CrossesAt :
-            PptxSceneBuilder.ReadChartElementDoubleWithValue(axis.XmlAxis, "crossesAt").Value;
-        PptxSceneChartAxisCrosses crosses = axis.SceneAxis?.CrossesKind ??
-            PptxSceneBuilder.ParseChartAxisCrosses(PptxSceneBuilder.ReadChartElementValue(axis.XmlAxis, "crosses"));
+        double? explicitCrossing = axis.CrossesAt;
+        PptxSceneChartAxisCrosses crosses = axis.CrossesKind;
         bool maximum = explicitCrossing is null && crosses == PptxSceneChartAxisCrosses.Maximum;
-        bool numeric = axis.SceneAxis is { } scene ? scene.AxisKind == PptxSceneChartAxisKind.Value
-            : axis.XmlAxis?.Name == ChartNamespace + "valAx";
-        PptxSceneChartAxisCrossBetween between = axis.SceneAxis?.CrossBetweenKind ??
-            PptxSceneBuilder.ParseChartAxisCrossBetween(PptxSceneBuilder.ReadChartElementValue(axis.XmlAxis, "crossBetween"));
+        bool numeric = axis.AxisKind == PptxSceneChartAxisKind.Value;
+        PptxSceneChartAxisCrossBetween between = axis.CrossBetweenKind;
         // On numeric pairs, explicit between uses half a value unit, even when
         // the source range, data or major unit changes. Omitted/midpoint modes
         // keep the numeric crossing; min/max enums still own their range edge.
@@ -445,11 +441,11 @@ internal sealed partial class PptxRenderer
         // Office admits reversed upper numeric next-to captions to the low band;
         // the stroke keeps its numeric coordinate and explicit low/high still win.
         if (explicitCrossing is not null && reversed && ratio == 0d) ratio = 1d;
-        var labels = ResolveChartAxisLabelPlacement(axis.SceneAxis, axis.XmlAxis, ratio, reversed, maximum);
+        var labels = ResolveChartAxisLabelPlacement(axis, null, ratio, reversed, maximum);
         bool axisTop = explicitCrossing is not null
             ? horizontal
-                ? ResolveSceneOrXmlCategoryAxisTopSide(axis.SceneAxis, axis.XmlAxis, defaultTopSide: false)
-                : ResolveSceneOrXmlCategoryAxisRightSide(axis.SceneAxis, axis.XmlAxis, defaultRightSide: false)
+                ? ResolveSceneOrXmlCategoryAxisTopSide(axis, null, defaultTopSide: false)
+                : ResolveSceneOrXmlCategoryAxisRightSide(axis, null, defaultRightSide: false)
             : maximum != reversed;
         return new(crossing, labels.LabelPlotRatio, labels.LabelsHighSide, axisTop);
     }

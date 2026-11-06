@@ -11,7 +11,7 @@ internal sealed partial class PptxRenderer
               GroupingKind: PptxSceneChartGrouping.Clustered } &&
         chart.Axes.Count(value => value.AxisKind == PptxSceneChartAxisKind.Value) == 1 &&
         axis is { OrientationKind: not PptxSceneChartAxisOrientation.Unknown } &&
-        ReadChartAxisDeclaration(new(axis, null)) is { Minimum: null, Maximum: null, MajorUnit: null } &&
+        ReadChartAxisDeclaration(axis) is { Minimum: null, Maximum: null, MajorUnit: null } &&
         // An inner data rectangle follows automatic scale allocation. An
         // authored outer frame owns that allocation and keeps its fallback.
         (!chart.PlotAreaLayout.HasGeometryValues ||

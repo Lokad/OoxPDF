@@ -49,8 +49,8 @@ internal sealed partial class PptxRenderer
                 var measured = MeasureScatterChartExtents(scatterSeries, scatterOptions, seriesLineHidden, context.CancellationToken);
                 var (xExtents, xAxisOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, xTickTargetCount);
                 var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale(theme, yValueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
-                ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
-                ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
+                ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis.SceneAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
+                ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis.SceneAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
                 chartLayout = await AdmitScatterSourcePlotAsync(theme, sceneChart, chartXml, chartLayout,
                     xValueAxis, yValueAxis, xExtents, yExtents, xAxisOptions, yAxisOptions, xPlacement, yPlacement, fontResolver, context: context).ConfigureAwait(false);
                 plotBox = chartLayout.PlotBox;
@@ -265,8 +265,8 @@ internal sealed partial class PptxRenderer
                         Marker = new ChartMarkerStyle(PptxSceneChartMarkerSymbol.Circle, "circle", null, 0d, entry.Fill, entry.Stroke, true)
                     }).ToArray();
                 }
-                ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
-                ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
+                ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis.SceneAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
+                ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis.SceneAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
                 xAxisOptions = xAxisOptions with { CrossingValue = Math.Clamp(yPlacement.CrossingValue, xExtents.Min, xExtents.Max) };
                 yAxisOptions = yAxisOptions with { CrossingValue = Math.Clamp(xPlacement.CrossingValue, yExtents.Min, yExtents.Max) };
                 DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisOptions.Units, yAxisOptions.CrossingValue, yAxisOptions.Reversed, major: true, yAxisOptions.GridlineStyle.Major, hasMajorGridlineElement: true, yAxisOptions.TickPolicy, context: context);

@@ -24,7 +24,7 @@ internal sealed partial class PptxRenderer
             fallback.Legend.Visible && (fallback.Legend.Overlay || fallback.Legend.PositionKind != PptxSceneChartLegendPosition.Right) ||
             !string.IsNullOrEmpty(plot.BubbleSizeRepresents) && !plot.BubbleSizeRepresents.Equals("area", StringComparison.OrdinalIgnoreCase) ||
             !string.IsNullOrEmpty(plot.ShowNegativeBubblesValue) && plot.ShowNegativeBubblesValue is not ("0" or "false") ||
-            ReadChartAxisDeclaration(xAxis) is not { } xSource || ReadChartAxisDeclaration(yAxis) is not { } ySource ||
+            ReadChartAxisDeclaration(xAxis.SceneAxis) is not { } xSource || ReadChartAxisDeclaration(yAxis.SceneAxis) is not { } ySource ||
             xSource.Minimum is null || xSource.Maximum is null || xSource.MajorUnit is null)
             return null;
         // Automatic horizontal interval density is unresolved. Keep its whole
@@ -95,8 +95,8 @@ internal sealed partial class PptxRenderer
                 PptxChartMetricRules.AxisNiceTickTargetCount);
             xOptions = xOptions with { Units = xOptions.Units with { MajorUnit = xUnit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
             yOptions = yOptions with { Units = yOptions.Units with { MajorUnit = yUnit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
-            ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xAxis, y, yOptions.Reversed) ?? new(y.Min, 0d, false, false);
-            ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yAxis, x, xOptions.Reversed, horizontal: false) ?? new(x.Min, 0d, false, false);
+            ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xAxis.SceneAxis, y, yOptions.Reversed) ?? new(y.Min, 0d, false, false);
+            ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yAxis.SceneAxis, x, xOptions.Reversed, horizontal: false) ?? new(x.Min, 0d, false, false);
             double firstWidth = 0d, lastWidth = 0d, sideSlot = 0d;
             if (xLabels)
             {

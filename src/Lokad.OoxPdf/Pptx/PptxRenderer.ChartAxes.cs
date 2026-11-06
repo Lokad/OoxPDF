@@ -41,7 +41,7 @@ internal sealed partial class PptxRenderer
             scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, !scatterX);
         PptxSceneChartAxis? axis = source.SceneAxis;
         XElement? xml = source.XmlAxis;
-        ChartAxisDeclaration? declaration = ReadChartAxisDeclaration(source);
+        ChartAxisDeclaration? declaration = ReadChartAxisDeclaration(source.SceneAxis);
         double? automaticTarget = !bubble && !horizontal
             ? PptxChartMetricRules.AxisNiceTickTargetCount : automaticTickTargetCount;
         bool automaticUnit = !bubble && automaticTarget is { } count && count >= 2d && double.IsFinite(count) &&
@@ -62,18 +62,12 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartAxisDeclaration(double? Minimum, double? Maximum, double? MajorUnit);
 
-    private static ChartAxisDeclaration? ReadChartAxisDeclaration(ChartAxisSource source)
+    private static ChartAxisDeclaration? ReadChartAxisDeclaration(PptxSceneChartAxis? axis)
     {
-        PptxSceneChartAxis? axis = source.SceneAxis;
-        XElement? xml = source.XmlAxis;
-        if (!(axis?.HasScaling ?? xml?.Element(ChartNamespace + "scaling") is not null) ||
-            (axis?.HasLogarithmicScale ?? xml?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null)) return null;
-        var minimum = axis is not null ? (axis.Minimum, axis.MinimumValue) :
-            PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xml!, "min");
-        var maximum = axis is not null ? (axis.Maximum, axis.MaximumValue) :
-            PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xml!, "max");
-        var major = axis is not null ? (axis.MajorUnit, axis.MajorUnitValue) :
-            PptxSceneBuilder.ReadChartAxisUnitValueWithValue(xml!, "majorUnit");
+        if (axis is not { HasScaling: true, HasLogarithmicScale: false }) return null;
+        var minimum = (axis.Minimum, axis.MinimumValue);
+        var maximum = (axis.Maximum, axis.MaximumValue);
+        var major = (axis.MajorUnit, axis.MajorUnitValue);
         if (minimum.Item1 is null && !string.IsNullOrEmpty(minimum.Item2) ||
             maximum.Item1 is null && !string.IsNullOrEmpty(maximum.Item2) ||
             major.Item1 is null && !string.IsNullOrEmpty(major.Item2) ||

@@ -440,7 +440,7 @@ internal sealed partial class PptxRenderer
                     return null;
             }
             bool reversed = ReadSceneOrXmlValueAxisReversed(valueAxis, axes[0].XmlAxis);
-            return ReadChartAxisPlacement(category, extents, reversed);
+            return ReadChartAxisPlacement(category.SceneAxis, extents, reversed);
         }
 
         async ValueTask<ChartPlotLayout> GetPlotLayoutAsync()
@@ -711,7 +711,7 @@ internal sealed partial class PptxRenderer
                     : valueAxes.Count > 0
                         ? valueAxes[0]
                         : default;
-                explicitValueAxisScale = HasSceneOrXmlExplicitValueAxisScale(valueAxis.SceneAxis, valueAxis.XmlAxis);
+                explicitValueAxisScale = HasExplicitChartValueAxisScale(valueAxis.SceneAxis);
                 var measured = MeasureScatterChartExtents(series, ReadSceneOrXmlChartScatterOptions(plot, plotElement),
                     ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
                 var (valueExtents, pointOptions) = ReadChartPointValueAxisScale(theme, valueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
@@ -732,7 +732,7 @@ internal sealed partial class PptxRenderer
             {
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, plot).FirstOrDefault();
                 XElement? valueAxisForScale = valueAxis.XmlAxis;
-                explicitValueAxisScale = HasSceneOrXmlExplicitValueAxisScale(valueAxis.SceneAxis, valueAxisForScale);
+                explicitValueAxisScale = HasExplicitChartValueAxisScale(valueAxis.SceneAxis);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, context: context);
@@ -773,23 +773,8 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static bool HasSceneOrXmlExplicitValueAxisScale(PptxSceneChartAxis? axis, XElement? valueAxis)
-    {
-        if (axis is not null)
-        {
-            return axis.Minimum is not null &&
-                axis.Maximum is not null &&
-                axis.MajorUnit is not null;
-        }
-
-        return valueAxis?
-            .Element(ChartNamespace + "scaling")
-            ?.Element(ChartNamespace + "min") is not null &&
-            valueAxis
-                .Element(ChartNamespace + "scaling")
-                ?.Element(ChartNamespace + "max") is not null &&
-            valueAxis.Element(ChartNamespace + "majorUnit") is not null;
-    }
+    private static bool HasExplicitChartValueAxisScale(PptxSceneChartAxis? axis) =>
+        axis is { Minimum: not null, Maximum: not null, MajorUnit: not null };
 
     private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, PptxColorMap colorMap)
     {
