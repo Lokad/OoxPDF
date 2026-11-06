@@ -1,4 +1,19 @@
 {
+  "pptx-preset-arc-guides": [
+    "PptxPresetArcClampsFiniteGuidesBeforeTracing",
+    "PptxPresetArcNonfiniteGuidesUseDefaults",
+    "PptxPresetArcEqualAndReversedGuidesKeepTheirSweep",
+    "PptxSyntheticPresetArcRendersArcInsteadOfRectangle",
+    "PptxSyntheticPresetArcConvertsVisualAnglesOnEllipse",
+    "PptxSyntheticPresetArcStealthTailUsesFilledOutline",
+    "PptxSyntheticPresetArcUsesOfficeDefaultAdjustments",
+    "PptxSyntheticShapeRoundRectHonorsAdjustment",
+    "PptxSyntheticCustomGeometryArcPathRendersCurve",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-overflow-category-wrapping": [
     "PptxVerticalWrappedCaptionsKeepTheirFittedSourceReferenceEdge",
     "PptxOverflowCategoryCaptionsShareMeasuredWrappedLines",

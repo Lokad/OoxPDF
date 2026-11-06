@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: preset arcs share bounded angle handling for strokes and arrow outlines.
+  Invalid numeric guides use defaults; extreme values no longer stall conversion.
+
 - PPTX: clustered horizontal plots sharing an axis now use one source range,
   interval lattice and category crossing for bars, grids and labels. Authored
   zero maxima retain lower headroom across supported Cartesian plots.

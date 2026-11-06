@@ -47,6 +47,8 @@ Supported within the following constraints:
   saturation modifiers retain source transform order.
 - Common solid shapes, paths, straight lines, rotation/flips and nested group
   translation/scaling. Advanced/custom geometry and effects remain partial.
+  Preset arcs pin finite adjustment angles to the preset range; non-finite
+  numeric guides use defaults in both stroked and arrow-outline paths.
 - JPEG/PNG pictures and bounded native SVG paint. Crop/fill clipping, source
   transforms and supported rectangle/ellipse/rounded/polygon picture masks share
   paint geometry. Unsupported masks retain diagnosed rectangular frames; bounded

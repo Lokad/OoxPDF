@@ -14,7 +14,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxShapesTests
+internal static partial class PptxShapesTests
 {
     public static void PptxSyntheticShapesProduceDrawingOperators()
     {

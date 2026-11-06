@@ -322,13 +322,7 @@ internal sealed partial class PptxRenderer
         double height,
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
-        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", OfficePresetArcDefaultStartGuide) / 60000d;
-        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", OfficePresetArcDefaultEndGuide) / 60000d;
-        double sweepDegrees = endDegrees - startDegrees;
-        while (sweepDegrees <= 0d)
-        {
-            sweepDegrees += 360d;
-        }
+        (double startDegrees, double sweepDegrees) = ReadPresetArcAngles(shapeProperties, presetAdjustmentsOverride);
 
         double centerX = x + width / 2d;
         double centerY = y + height / 2d;
@@ -365,13 +359,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", OfficePresetArcDefaultStartGuide) / 60000d;
-        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", OfficePresetArcDefaultEndGuide) / 60000d;
-        double sweepDegrees = endDegrees - startDegrees;
-        while (sweepDegrees <= 0d)
-        {
-            sweepDegrees += 360d;
-        }
+        (double startDegrees, double sweepDegrees) = ReadPresetArcAngles(shapeProperties, presetAdjustmentsOverride);
 
         double centerX = x + width / 2d;
         double centerY = y + height / 2d;
@@ -459,6 +447,25 @@ internal sealed partial class PptxRenderer
 
         graphics.FillCurrentPath();
         return true;
+    }
+
+    private static (double StartDegrees, double SweepDegrees) ReadPresetArcAngles(
+        XElement shapeProperties,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+    {
+        // The arc preset pins each guide to [0, 21599999] and adds one turn
+        // only when end <= start. This also bounds stroke construction to four
+        // segments. Invalid numeric literals retain the preset's default angle.
+        double start = ReadAngle("adj1", OfficePresetArcDefaultStartGuide);
+        double end = ReadAngle("adj2", OfficePresetArcDefaultEndGuide);
+        double sweep = end - start;
+        return (start, sweep > 0d ? sweep : sweep + 360d);
+
+        double ReadAngle(string name, double fallback)
+        {
+            double value = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, name, fallback);
+            return Math.Clamp(double.IsFinite(value) ? value : fallback, 0d, 21599999d) / 60000d;
+        }
     }
 
     private static List<CurveSample> SamplePresetArc(
