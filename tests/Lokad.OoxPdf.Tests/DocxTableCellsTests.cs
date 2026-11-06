@@ -3180,19 +3180,18 @@ internal static class DocxTableCellsTests
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         DocxDocument document = new DocxReader().Read(package, diagnostics.Add, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
 
-        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Visible table-cell column breaks should be preserved structurally without a stale unsupported diagnostic.");
+        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Transparent table-cell column breaks remain supported.");
 
         DocxTableCell cell = document.Tables[0].Rows[0].Cells[0];
-        TestAssert.Equal("Left Right", cell.Text);
-        TestAssert.Equal(3, cell.BodyElements.Count);
-        TestAssert.Equal(2, cell.Paragraphs.Count);
-        TestAssert.Equal("Left", cell.Paragraphs[0].Runs.Single().Text);
-        TestAssert.True(cell.BodyElements[1] is DocxManualBreakElement, "The table-cell body stream should preserve the typed column break.");
-        TestAssert.Equal("Right", cell.Paragraphs[1].Runs.Single().Text);
+        TestAssert.Equal("LeftRight", cell.Text);
+        TestAssert.Equal(1, cell.BodyElements.Count);
+        TestAssert.Equal(1, cell.Paragraphs.Count);
+        TestAssert.Equal("LeftRight", cell.Paragraphs[0].Runs.Single().Text);
+        TestAssert.True(cell.BodyElements[0] is DocxParagraphElement, "The source paragraph stays intact before preparation and inspection.");
 
         DocxStructureTableCellSnapshot cellSnapshot = DocxStructureSnapshot.FromDocument(document).Tables.Single().Rows.Single().Cells.Single();
-        TestAssert.Equal(3, cellSnapshot.BodyElementCount);
-        TestAssert.Equal(1, cellSnapshot.ManualBreakElementCount);
+        TestAssert.Equal(1, cellSnapshot.BodyElementCount);
+        TestAssert.Equal(0, cellSnapshot.ManualBreakElementCount);
         TestAssert.Equal(0, cellSnapshot.PageBreakElementCount);
     }
 
