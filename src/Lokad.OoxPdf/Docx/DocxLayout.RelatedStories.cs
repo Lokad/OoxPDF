@@ -452,7 +452,7 @@ internal sealed partial class DocxLayoutEngine
                         // complementary footnote retains legacy pagination.
                         plainDocumentEndnoteTypography: plainEndnoteTypography,
                         noteDestinationTopOffset: boundaryOverlap,
-                        frameBottom: endnoteFrameBottom);
+                        frameBottom: endnoteFrameBottom, cancellationToken: cancellationToken);
                     if (collapseEndnoteBoundaries)
                     {
                         activePlacedStories[^1] = activePlacedStories[^1] with
@@ -521,7 +521,7 @@ internal sealed partial class DocxLayoutEngine
                 endnoteContinuationLayout,
                 separatorMeasurer,
                 printScale,
-                headerKeepOut);
+                headerKeepOut, cancellationToken: cancellationToken);
         }
     }
 
@@ -821,8 +821,14 @@ internal sealed partial class DocxLayoutEngine
         bool plainDocumentEndnoteTypography = false,
         double noteDestinationTopOffset = 0d,
         Func<DocxLayoutPage, int, int, double>? frameBottom = null,
-        bool usesPlainFootnoteFrame = true)
+        bool usesPlainFootnoteFrame = true,
+        CancellationToken cancellationToken = default)
     {
+        if (inFlight is null && !stopAfterCurrentPage &&
+            TryPlaceCompleteEndnoteBlocks(outputPages, ref activePageIndex, ref activePage,
+                ref activePlacedStories, ref cursorTop, storyLayout, sourceBlockIndex,
+                insertContinuationAfterActivePage, continuationSeparatorLayout, separatorMeasurer,
+                printScale, headerKeepOut, frameBottom, cancellationToken)) return;
         if (storyLayout.TextLines.Count == 0)
         {
             PlaceRelatedStorySlicesByHeight(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, storyLayout, sourceBlockIndex, insertContinuationAfterActivePage);
@@ -865,8 +871,9 @@ internal sealed partial class DocxLayoutEngine
                 ? TakeParagraphStoryLines(storyLayout.TextLines[0].SourceParagraph!, lineBoxes, lineIndex,
                     remainingLines, availableHeight, fitAfters, hasPageContent,
                     isFreshHead)
-                : TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters);
-            if (plainParagraphFlow && hasPageContent && takeCount == 0)
+                : TakeStoryLines(lineBoxes, lineIndex, remainingLines, availableHeight, fitAfters,
+                    forceProgress: !hasPageContent || storyLayout.Story.Kind != DocxRelatedStoryKind.Endnote);
+            if (hasPageContent && takeCount == 0)
             {
                 if (stopAfterCurrentPage) return;
                 // An occupied frame must fit a source line before placing it;

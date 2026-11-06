@@ -488,7 +488,9 @@ Supported within the following constraints:
   links/bookmarks. Static-story placement shares physical frames with painting
   and annotations. Without printed balloons, unit-scale Review pages preserve
   the Final text, equation and picture origins on note-only continuation pages.
-  Oversized note-table rows retain clipping/pagination limitations.
+  Complete unscaled endnote rows that fit a fresh note frame move intact to
+  the next page; measured paragraphs and rows retain source order. Scaled,
+  oversized, clipped or unsupported block compositions keep their fallbacks.
   Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.
 - Simple/complex fields with stored results, including supported nested cached
