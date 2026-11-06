@@ -38,6 +38,7 @@ internal sealed record DocxDocument(
     public DocxDocumentSettings Settings { get; init; } = DocxDocumentSettings.Empty;
     public OoxPdfDocxMarkupMode MarkupMode { get; init; } = OoxPdfDocxMarkupMode.Final;
     public DocxSectionBreakElement? FinalSectionBreak { get; init; }
+    public DocxParagraph? EmptyFinalSectionParagraph { get; init; }
     public IReadOnlyList<DocxParagraph> Paragraphs => BodyElements.Count == 0
         ? FallbackParagraphs
         : DocxBlockTraversal.EnumerateDirectParagraphs(BodyElements).ToArray();

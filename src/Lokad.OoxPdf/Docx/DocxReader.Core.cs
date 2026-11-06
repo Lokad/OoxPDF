@@ -94,6 +94,14 @@ internal sealed partial class DocxReader
                 ? null
                 : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
             IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships, settings, documentSettings, revisionFilteringMarkupMode, cancellationToken, storyCache);
+            // An empty final section has a Word paragraph mark even when its
+            // paragraph is absent from the XML. Resolve its defaults through
+            // the same reader as an authored paragraph; placement decides use.
+            DocxParagraph? emptyFinalSectionParagraph = bodyElements.LastOrDefault() is DocxSectionBreakElement &&
+                finalSectionBreak is { TypeValue: null or DocxSectionBreakType.NextPage }
+                ? ReadParagraph(new XElement(WordprocessingNamespace + "p"), styles, numbering,
+                    new DocxNumberingCounters(), package, relationships, null, null, documentSettings,
+                    null, revisionFilteringMarkupMode, cancellationToken) : null;
             IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, HeaderRelationshipType, "headerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
             IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = ReadReferencedHeaderFooterBodyElementsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
             IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = ToStaticParagraphsByType(headerBodyElementsByType);
@@ -163,7 +171,8 @@ internal sealed partial class DocxReader
                     HiddenCommentAnchorIds = commentAnchorInventory.HiddenAnchorIds,
                     Settings = documentSettings,
                     MarkupMode = markupMode,
-                    FinalSectionBreak = finalSectionBreak
+                    FinalSectionBreak = finalSectionBreak,
+                    EmptyFinalSectionParagraph = emptyFinalSectionParagraph
                 };
             }
 
@@ -211,7 +220,8 @@ internal sealed partial class DocxReader
                 HiddenCommentAnchorIds = commentAnchorInventory.HiddenAnchorIds,
                 Settings = documentSettings,
                 MarkupMode = markupMode,
-                FinalSectionBreak = finalSectionBreak
+                FinalSectionBreak = finalSectionBreak,
+                EmptyFinalSectionParagraph = emptyFinalSectionParagraph
             };
         }
         finally

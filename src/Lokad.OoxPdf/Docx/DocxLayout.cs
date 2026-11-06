@@ -308,6 +308,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        document = DocxFinalSectionParagraph.Materialize(document, cancellationToken, paragraphSpacingScale);
         var pages = new List<DocxLayoutPage>();
         var currentItems = new List<DocxLayoutItem>();
         var inFlightNotes = new Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>();
@@ -2144,44 +2145,13 @@ internal sealed partial class DocxLayoutEngine
             previousParagraph = paragraph;
         }
 
-        if (HasPageContent() || pages.Count == 0 || PendingFinalSectionOwnsDocumentEndnotes())
+        if (HasPageContent() || pages.Count == 0 ||
+            currentSectionStartIndex == document.BodyElements.Count && DocxFinalSectionParagraph.OwnsDocumentEndnotes(document, cancellationToken))
         {
             FinishPage();
         }
 
         DrainRemainingInFlightFootnotes();
-
-        bool PendingFinalSectionOwnsDocumentEndnotes()
-        {
-            // A next-page section can have no body items but still own the
-            // document-end notes. Keep its already-started frame before note
-            // placement selects the last output page. Continuous and parity
-            // sections retain their existing fallback.
-            if (currentSectionStartIndex != document.BodyElements.Count ||
-                document.FinalSectionBreak is not { TypeValue: null or DocxSectionBreakType.NextPage }) return false;
-            foreach (var bodyPage in pages)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (string.Equals(bodyPage.PageSettings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase)) continue;
-                foreach (int block in EnumeratePageSourceBlockIndexes(bodyPage))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (!locationsByBlock.TryGetValue(block, out var locations)) continue;
-                    foreach (var location in locations)
-                    {
-                        if (location.Reference.Kind != DocxRelatedStoryKind.Endnote) continue;
-                        double widthKey = Math.Max(1d, ResolvePageBodyWidth(pages[0]));
-                        if (!storyLookupByWidth.TryGetValue(widthKey, out var storyByKey))
-                        {
-                            storyByKey = CreateRelatedStoryLookup(relatedStoryLayouts);
-                            storyLookupByWidth[widthKey] = storyByKey;
-                        }
-                        if (TryResolveReferencedRelatedStoryLayout(storyByKey, location, out _)) return true;
-                    }
-                }
-            }
-            return false;
-        }
 
         DocxStaticStoryLayoutResult? GetContinuationHeader(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {

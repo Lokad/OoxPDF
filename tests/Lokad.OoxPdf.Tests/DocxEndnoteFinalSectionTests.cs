@@ -17,8 +17,9 @@ internal static class DocxEndnoteFinalSectionTests
             var layout = Layout(source);
             TestAssert.Equal(expectedPages, layout.Pages.Count);
             TestAssert.Equal(expectedFirstNotePage, FirstEndnotePage(layout));
-            TestAssert.True(layout.Pages[1].Items.Count == 0 && layout.Pages[1].PlacedRelatedStories.Count != 0,
-                "The section's first page owns note content even though it has no body items.");
+            TestAssert.True(layout.Pages[1].Items is [DocxTextLineLayout { SourceParagraph: not null } mark] &&
+                string.IsNullOrWhiteSpace(mark.Text) && layout.Pages[1].PlacedRelatedStories.Count != 0,
+                "The implicit paragraph uses the ordinary source-owned body flow before the notes.");
             TestAssert.Equal(81, layout.Pages.SelectMany(page => page.PlacedRelatedStories)
                 .Where(note => note.StoryLayout.Story.IsNormalStoryType)
                 .Select(note => note.StoryLayout.Story).Distinct().Count());
@@ -58,6 +59,86 @@ internal static class DocxEndnoteFinalSectionTests
         TestAssert.Equal(3, layout.Pages.Count);
         TestAssert.Equal(1, FirstEndnotePage(layout));
     }
+
+    public static void DocxImplicitFinalSectionParagraphUsesOrdinaryFlow()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var (family, size) in new[] { ("Calibri", 12d), ("Calibri", 14d), ("Arial", 12d) })
+        {
+            var source = DocxInlineCompositionTests.ReadMutation("CompositionProbes/endnote-empty-final-section", mode,
+                false, false, (xml, w, _) =>
+                {
+                    var defaults = xml.Root!.Element(w + "docDefaults")!.Element(w + "rPrDefault")!.Element(w + "rPr")!;
+                    defaults.Element(w + "sz")!.SetAttributeValue(w + "val", size * 2d);
+                    defaults.Element(w + "rFonts")!.SetAttributeValue(w + "ascii", family);
+                    defaults.Element(w + "rFonts")!.SetAttributeValue(w + "hAnsi", family);
+                }, partOverride: "word/styles.xml");
+            var blank = source.EmptyFinalSectionParagraph ?? throw new InvalidOperationException("Resolve the source paragraph defaults.");
+            TestAssert.True(blank.Runs.Count != 0 && blank.Runs.All(run => run.FontSize == size && run.FontFamily == family),
+                "The implicit paragraph inherits the source default font and size.");
+            var implicitFlow = Layout(source);
+            var explicitFlow = Layout(source with { BodyElements = [.. source.BodyElements, new DocxParagraphElement(blank)] });
+            TestAssert.Equal(explicitFlow.Pages.Count, implicitFlow.Pages.Count);
+            var left = NoteLines(implicitFlow);
+            var right = NoteLines(explicitFlow);
+            TestAssert.Equal(81, left.Length);
+            TestAssert.Equal(right.Length, left.Length);
+            for (int i = 0; i < left.Length; i++)
+            {
+                TestAssert.Equal(right[i].Id, left[i].Id);
+                TestAssert.Equal(right[i].Page, left[i].Page);
+                TestAssert.True(Math.Abs(right[i].Baseline - left[i].Baseline) < .001d,
+                    $"Implicit and ordinary paragraph flow agree for {family} {size}, {mode}, note {left[i].Id}.");
+            }
+        }
+    }
+
+    public static void DocxMissingFinalParagraphDefaultsRetainTheBoundedFrame()
+    {
+        var source = Read(OoxPdfDocxMarkupMode.Final).Source with { EmptyFinalSectionParagraph = null };
+        var layout = Layout(source);
+        TestAssert.Equal(3, layout.Pages.Count);
+        TestAssert.Equal(2, FirstEndnotePage(layout));
+        TestAssert.Equal(0, layout.Pages[1].Items.Count);
+    }
+
+    public static void DocxImplicitFinalParagraphRetainsStaticAndScaledFallbacks()
+    {
+        var source = Read(OoxPdfDocxMarkupMode.AllMarkup).Source;
+        var defaults = source.EmptyFinalSectionParagraph ?? throw new InvalidOperationException("Resolve paragraph defaults.");
+        foreach (string variant in new[] { "static", "scaled", "mirror", "alignment" })
+        {
+            var document = variant switch
+            {
+                "static" => source with { HeaderParagraphs = [DocxTests.CreateDocxLayoutParagraph("Public header", 12d, 14d)] },
+                "mirror" => source with { Settings = source.Settings with { MirrorMargins = true } },
+                "alignment" => source with { EmptyFinalSectionParagraph = defaults with { Alignment = DocxTextAlignment.Center } },
+                _ => source
+            };
+            var geometry = variant == "scaled" ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
+            var expected = new DocxLayoutEngine(geometry, wordCompatiblePrintScale: .8d)
+                .Create(document with { EmptyFinalSectionParagraph = null }, new DocxTests.FamilyWidthTextMeasurer(), default);
+            var actual = new DocxLayoutEngine(geometry, wordCompatiblePrintScale: .8d)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.Equal(expected.Pages.Count, actual.Pages.Count);
+            TestAssert.Equal(0, actual.Pages[1].Items.Count);
+            var left = NoteLines(expected);
+            var right = NoteLines(actual);
+            TestAssert.Equal(left.Length, right.Length);
+            for (int i = 0; i < left.Length; i++)
+            {
+                TestAssert.Equal(left[i].Id, right[i].Id);
+                TestAssert.Equal(left[i].Page, right[i].Page);
+                TestAssert.True(Math.Abs(left[i].Baseline - right[i].Baseline) < .001d,
+                    "Unqualified paragraph/frame defaults retain the previous placement: " + variant);
+            }
+        }
+    }
+
+    private static (string? Id, int Page, double Baseline)[] NoteLines(DocxLayout layout) => layout.Pages
+        .SelectMany((page, index) => page.PlacedRelatedStories.Where(note => note.StoryLayout.Story.IsNormalStoryType)
+            .SelectMany(note => note.TextLines.Select(line => (note.StoryLayout.Story.Id, index + 1, line.BaselineY)))).ToArray();
 
     private static (DocxDocument Source, int Pages, int FirstNotePage) Read(OoxPdfDocxMarkupMode mode)
     {

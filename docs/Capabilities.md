@@ -494,7 +494,9 @@ Supported within the following constraints:
   Adjacent ordinary unscaled endnotes share paragraph before/after spacing even
   after an earlier table; first-note/page-turn geometry remains approximate.
   An already-started final next-page section keeps its document-end notes even
-  without body text. Empty continuous/parity sections retain existing fallbacks.
+  without body text. In known unscaled frames, its default empty paragraph uses
+  ordinary paragraph flow; remaining font metrics still affect the note origin.
+  Empty continuous/parity sections retain existing fallbacks.
   Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.
 - Simple/complex fields with stored results, including supported nested cached

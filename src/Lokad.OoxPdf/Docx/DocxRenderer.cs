@@ -218,14 +218,17 @@ internal sealed partial class DocxRenderer
 
     internal DocxFontPlanSnapshot InspectFontPlan(DocxDocument document)
     {
+        var context = ResolveEffectiveMarkupContext(document);
+        var geometry = ResolveEffectiveMarkupGeometryMode(context);
         if (DocxPageFootnoteNumbering.IsEligibleDocument(document))
         {
-            var context = ResolveEffectiveMarkupContext(document);
-            var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, context, ResolveEffectiveMarkupGeometryMode(context), null, CancellationToken.None).GetAwaiter().GetResult();
+            var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, context, geometry, null, CancellationToken.None).GetAwaiter().GetResult();
             return DocxFontPlanSnapshot.FromPlan(prepared.FontResources.Plan);
         }
+        document = DocxFinalSectionParagraph.Materialize(document, CancellationToken.None,
+            geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ? context.WordCompatiblePrintScale : 1d);
         return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, CancellationToken.None,
-            ResolveEffectiveMarkupContext(document).CommentMarkerLabels is not null));
+            context.CommentMarkerLabels is not null));
     }
 
     internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
@@ -345,6 +348,8 @@ internal sealed partial class DocxRenderer
         DocxDocument document, IFontResolver resolver, DocxMarkupContext context, OoxPdfDocxMarkupGeometryMode geometry,
         Action<OoxPdfDiagnostic>? diagnostics, CancellationToken cancellationToken)
     {
+        document = DocxFinalSectionParagraph.Materialize(document, cancellationToken,
+            geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ? context.WordCompatiblePrintScale : 1d);
         List<OoxPdfDiagnostic>? messages = diagnostics is null ? null : [];
         // Source identities/face indices retain immutable programs throughout
         // this preparation. Changed numbering/kerning needs new subsets; a count

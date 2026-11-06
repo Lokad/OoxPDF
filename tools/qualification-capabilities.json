@@ -16247,6 +16247,9 @@
     "ConvertAsyncDocxFontCopyRefusalReleasesLeaseAndPreservesPublication"
   ],
   "docx-final-endnote-frame": [
+    "DocxImplicitFinalSectionParagraphUsesOrdinaryFlow",
+    "DocxImplicitFinalParagraphRetainsStaticAndScaledFallbacks",
+    "DocxMissingFinalParagraphDefaultsRetainTheBoundedFrame",
     "DocxEmptyFinalNextPageSectionOwnsDocumentEndnoteFrame",
     "DocxEmptyFinalSectionDoesNotCreateUnreferencedNotePages",
     "DocxEmptyFinalSectionRetainsContinuousAndParityFallbacks",
