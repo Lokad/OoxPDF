@@ -55,6 +55,11 @@ These warnings are slide-scoped when a slide index is available. Duplicate occur
 
 ## DOCX
 
+DOCX probe messages follow the declared fallback. Approximation wording now
+agrees with `Fallback=Approximated` for notes, style spacing, border styles and
+numbering indents. IDs, severity and part provenance are unchanged; use those
+structured fields for programmatic handling instead of matching message prose.
+
 Unsupported feature warnings:
 
 - `DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT`: character-unit paragraph indents are ignored; twip-based indents render.

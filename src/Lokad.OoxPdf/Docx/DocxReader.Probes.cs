@@ -56,12 +56,7 @@ internal sealed partial class DocxReader
                 Fallback: "Partial compatibility"));
         }
 
-        void EmitUnsupported(string id, string feature)
-        {
-            Emit(id, feature, "", "Ignored", false);
-        }
-
-        void Emit(string id, string feature, string diagnosticPartName, string fallback, bool approximated)
+        void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored")
         {
             cancellationToken.ThrowIfCancellationRequested();
             string key = id == "DOCX_UNSUPPORTED_EQUATION" ? id + "\0" + diagnosticPartName : id;
@@ -73,7 +68,7 @@ internal sealed partial class DocxReader
             diagnosticSink(new OoxPdfDiagnostic(
                 id,
                 OoxPdfSeverity.Warning,
-                approximated
+                fallback == "Approximated"
                     ? $"DOCX feature '{feature}' was detected and approximated."
                     : $"Unsupported DOCX feature '{feature}' was detected and ignored or approximated.",
                 diagnosticPartName.Length == 0 ? partName : diagnosticPartName,
@@ -89,30 +84,30 @@ internal sealed partial class DocxReader
             cancellationToken.ThrowIfCancellationRequested();
             if (HasUnsupportedComplexFields(probeDocument))
             {
-                Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field", probePartName, "Ignored");
             }
 
             cancellationToken.ThrowIfCancellationRequested();
             if (probeDocument.Descendants(MathNamespace + "oMath").Any() ||
                 probeDocument.Descendants(MathNamespace + "oMathPara").Any())
             {
-                Emit("DOCX_UNSUPPORTED_EQUATION", "equation", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_EQUATION", "equation", probePartName, "Ignored");
             }
 
             cancellationToken.ThrowIfCancellationRequested();
             if (probeDocument.Descendants(WordprocessingNamespace + "object").Any())
             {
-                Emit("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object", probePartName, "Ignored");
             }
             cancellationToken.ThrowIfCancellationRequested();
             if (probeDocument.Descendants(ChartNamespace + "chart").Any())
             {
-                Emit("DOCX_UNSUPPORTED_CHART", "chart drawing payload", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_CHART", "chart drawing payload", probePartName, "Ignored");
             }
             cancellationToken.ThrowIfCancellationRequested();
             if (probeDocument.Descendants().Any(element => element.Name.Namespace == DiagramNamespace))
             {
-                Emit("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_SMARTART", "SmartArt diagram payload", probePartName, "Ignored");
             }
 
         }
@@ -124,19 +119,19 @@ internal sealed partial class DocxReader
             if (probeDocument.Descendants(WordprocessingDrawingNamespace + "anchor")
                 .Any(anchor => IsUnsupportedFloatingDrawingAnchor(anchor, probeRelationships)))
             {
-                Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing", probePartName, "Ignored");
             }
 
             cancellationToken.ThrowIfCancellationRequested();
             if (HasUnsupportedVml(probeDocument, probeRelationships))
             {
-                Emit("DOCX_UNSUPPORTED_VML", "VML drawing payload", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_VML", "VML drawing payload", probePartName, "Ignored");
             }
 
             cancellationToken.ThrowIfCancellationRequested();
             if (HasExternalDrawingImage(probeDocument, probeRelationships))
             {
-                Emit("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image", probePartName, "Ignored", false);
+                Emit("DOCX_UNSUPPORTED_EXTERNAL_IMAGE", "external drawing image", probePartName, "Ignored");
             }
         }
 
@@ -150,8 +145,7 @@ internal sealed partial class DocxReader
                     "DOCX_APPROXIMATED_COMMENTS",
                     "comments",
                     diagnosticPartName,
-                    fallback: "Approximated",
-                    approximated: true);
+                    fallback: "Approximated");
             }
             else
             {
@@ -159,8 +153,7 @@ internal sealed partial class DocxReader
                     "DOCX_UNSUPPORTED_COMMENTS",
                     "comments",
                     diagnosticPartName,
-                    "Ignored",
-                    false);
+                    "Ignored");
             }
         }
 
@@ -173,12 +166,11 @@ internal sealed partial class DocxReader
                     "DOCX_APPROXIMATED_TRACKED_CHANGES",
                     "tracked changes",
                     diagnosticPartName: "",
-                    fallback: "Approximated",
-                    approximated: true);
+                    fallback: "Approximated");
             }
             else
             {
-                EmitUnsupported("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
+                Emit("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
             }
         }
 
@@ -191,8 +183,7 @@ internal sealed partial class DocxReader
                     : "DOCX_UNSUPPORTED_FORMATTING_REVISIONS",
                 "formatting revisions",
                 diagnosticPartName: "",
-                fallback: markupContext.ApproximatesFormattingRevisions ? "Approximated" : "Ignored",
-                approximated: markupContext.ApproximatesFormattingRevisions);
+                fallback: markupContext.ApproximatesFormattingRevisions ? "Approximated" : "Ignored");
         }
 
         EmitStaticPayloadDiagnostics(document, partName);
@@ -206,7 +197,7 @@ internal sealed partial class DocxReader
                 "DOCX_APPROXIMATED_FOOTNOTE",
                 "footnote",
                 ResolveRelatedPartNameOrDefault(package, partName, FootnotesRelationshipType, cancellationToken),
-                "Approximated", false);
+                "Approximated");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -216,19 +207,19 @@ internal sealed partial class DocxReader
                 "DOCX_APPROXIMATED_ENDNOTE",
                 "endnote",
                 ResolveRelatedPartNameOrDefault(package, partName, EndnotesRelationshipType, cancellationToken),
-                "Approximated", false);
+                "Approximated");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedMultiColumnSection(document))
         {
-            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", diagnosticPartName: "", fallback: "Explicit break-only column flow is supported", approximated: false);
+            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", diagnosticPartName: "", fallback: "Explicit break-only column flow is supported");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (document.Descendants(WordprocessingNamespace + "br").Any(IsUnsupportedColumnBreak))
         {
-            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "unsupported manual column break container", diagnosticPartName: "", fallback: "Visible body column breaks are supported", approximated: false);
+            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "unsupported manual column break container", diagnosticPartName: "", fallback: "Visible body column breaks are supported");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -236,7 +227,7 @@ internal sealed partial class DocxReader
             .Elements(WordprocessingNamespace + "sectPr")
             .Any(IsUnsupportedParagraphSectionBreak))
         {
-            Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "continuous or unknown paragraph section break", diagnosticPartName: "", fallback: "Partially supported", approximated: false);
+            Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "continuous or unknown paragraph section break", diagnosticPartName: "", fallback: "Partially supported");
         }
 
         XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, out string? stylesPartName, cancellationToken, diagnosticSink, warnedParts);
@@ -248,29 +239,29 @@ internal sealed partial class DocxReader
                 .Elements(WordprocessingNamespace + "spacing")
                 .Any(HasUnsupportedParagraphSpacingVariant))
             {
-                Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated", false);
+                Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated");
             }
 
             if (HasUnsupportedTableBorderStyle(styles))
             {
-                Emit("DOCX_TABLE_BORDER_STYLE", "table border style", stylesPartName ?? partName, "Approximated", false);
+                Emit("DOCX_TABLE_BORDER_STYLE", "table border style", stylesPartName ?? partName, "Approximated");
             }
 
             if (HasUnsupportedTableCellTextDirection(styles))
             {
-                Emit("DOCX_TABLE_TEXT_DIRECTION", "table cell text direction", stylesPartName ?? partName, "Approximated", approximated: true);
+                Emit("DOCX_TABLE_TEXT_DIRECTION", "table cell text direction", stylesPartName ?? partName, "Approximated");
             }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedTableBorderStyle(document))
         {
-            Emit("DOCX_TABLE_BORDER_STYLE", "table border style", partName, "Approximated", false);
+            Emit("DOCX_TABLE_BORDER_STYLE", "table border style", partName, "Approximated");
         }
 
         if (HasUnsupportedTableCellTextDirection(document))
         {
-            Emit("DOCX_TABLE_TEXT_DIRECTION", "table cell text direction", partName, "Approximated", approximated: true);
+            Emit("DOCX_TABLE_TEXT_DIRECTION", "table cell text direction", partName, "Approximated");
         }
 
         XDocument? numbering = LoadRelatedXmlPart(package, partName, NumberingRelationshipType, out string? numberingPartName, cancellationToken, diagnosticSink, warnedParts);
@@ -278,7 +269,7 @@ internal sealed partial class DocxReader
             numbering.Descendants(WordprocessingNamespace + "lvl")
                 .Any(HasUnsupportedNumberingIndent))
         {
-            Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated", false);
+            Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Approximated");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -286,13 +277,13 @@ internal sealed partial class DocxReader
             styles?.Descendants(WordprocessingNamespace + "ind").Any(HasCharacterUnitIndent) == true ||
             numbering?.Descendants(WordprocessingNamespace + "ind").Any(HasCharacterUnitIndent) == true)
         {
-            EmitUnsupported("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", "character-unit paragraph indent");
+            Emit("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", "character-unit paragraph indent");
         }
 
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
             p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
         {
-            EmitUnsupported("DOCX_UNSUPPORTED_MACRO", "macro");
+            Emit("DOCX_UNSUPPORTED_MACRO", "macro");
         }
         // Related-story payloads render through their own stories, so probe them too.
         foreach ((string storyPartName, XDocument storyDocument) in LoadProbeStoryDocuments(package, document, relationships, cancellationToken))

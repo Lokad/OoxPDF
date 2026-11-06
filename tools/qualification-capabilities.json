@@ -16289,5 +16289,19 @@
     "ConvertAsyncDocxFontCopyRefusalReleasesLeaseAndPreservesPublication",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "docx-diagnostic-fallback-wording": [
+    "DocxUnsupportedStoryDiagnosticsPreferRelatedPartNames",
+    "DocxStyleAndNumberingLayoutRisksEmitDiagnostics",
+    "DocxUnsupportedTableBorderStylesEmitDiagnostics",
+    "DocxUnsupportedFeaturesEmitDiagnostics",
+    "DocxMarkupDiagnosticsApproximateCommentsInMarkupModes",
+    "DocxMarkupDiagnosticsApproximateTrackedChangesInMarkupModes",
+    "DocxMarkupDiagnosticsCoverFormattingRevisions",
+    "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
+    "DocxSupportedNumberingLeftHangingTabsDoNotEmitIndentDiagnostic",
+    "DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic",
+    "DocxSupportedTableStyleAtomsDoNotEmitBroadTableStyleDiagnostic",
+    "DocxSupportedBodyKeepRulesDoNotEmitUnsupportedKeepDiagnostic"
   ]
 }
