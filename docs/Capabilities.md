@@ -372,7 +372,8 @@ Approximate or restricted:
   their fitted source width owns alignment, with residual native font geometry.
   Position-only manual labels share that measured frame: factor offsets move its
   admitted automatic position, edge coordinates use the full chart, and text,
-  shape and key retain one placement. Authored-size manual labels, rich-text,
+  shape and key retain one placement. Point-label font inheritance in styled
+  column containers remains approximate. Authored-size manual labels, rich-text,
   negative-end, stacked and other placements retain their
   existing paths and can still clip long text; no general collision avoidance
   is claimed.
