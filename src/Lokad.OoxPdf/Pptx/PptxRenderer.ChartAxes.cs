@@ -96,7 +96,7 @@ internal sealed partial class PptxRenderer
             scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, !scatterX);
         PptxSceneChartAxis? axis = source.SceneAxis;
         XElement? xml = source.XmlAxis;
-        ChartPointAxisDeclaration? declaration = ReadChartPointAxisDeclaration(source);
+        ChartAxisDeclaration? declaration = ReadChartAxisDeclaration(source);
         double? automaticTarget = !bubble && !horizontal
             ? PptxChartMetricRules.AxisNiceTickTargetCount : automaticTickTargetCount;
         bool automaticUnit = !bubble && automaticTarget is { } count && count >= 2d && double.IsFinite(count) &&
@@ -115,9 +115,9 @@ internal sealed partial class PptxRenderer
         return (extents, options);
     }
 
-    private readonly record struct ChartPointAxisDeclaration(double? Minimum, double? Maximum, double? MajorUnit);
+    private readonly record struct ChartAxisDeclaration(double? Minimum, double? Maximum, double? MajorUnit);
 
-    private static ChartPointAxisDeclaration? ReadChartPointAxisDeclaration(ChartAxisSource source)
+    private static ChartAxisDeclaration? ReadChartAxisDeclaration(ChartAxisSource source)
     {
         PptxSceneChartAxis? axis = source.SceneAxis;
         XElement? xml = source.XmlAxis;
@@ -443,6 +443,16 @@ internal sealed partial class PptxRenderer
         {
             await PrepareAsync(string.Empty, style).ConfigureAwait(false);
             return TryMeasureNormalLineHeight(style, out double height) ? height : null;
+        }
+
+        public async ValueTask<double?> TryMeasureWindowsLineHeightAsync(ChartTextStyle style)
+        {
+            await PrepareAsync(string.Empty, style).ConfigureAwait(false);
+            var font = estimator.ResolveOpenTypeFont(style.FontFamily, style.Bold, style.Italic);
+            if (font is null || font.UnitsPerEm == 0) return null;
+            double ratio = ((double)font.Os2.WindowsAscender + font.Os2.WindowsDescender) / font.UnitsPerEm;
+            return ratio > PptxTextMetricRules.MinimumFontLineBoxMetricRatio &&
+                ratio <= PptxTextMetricRules.MaximumFontLineBoxMetricRatio ? style.FontSize * ratio : null;
         }
 
         public bool TryMeasureNormalLineHeight(ChartTextStyle style, out double height) =>

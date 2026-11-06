@@ -16140,5 +16140,33 @@
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "pptx-automatic-column-scale": [
+    "PptxAutomaticColumnScaleRespondsToFrameAndSharesItsDataCoordinates",
+    "PptxAutomaticColumnScaleMatchesTheEquivalentAuthoredIntervals",
+    "PptxAutomaticColumnScaleKeepsAuthoredAndUnknownDeclarations",
+    "PptxVerticalAxisMeasurementMatchesEquivalentAuthoredIntervals",
+    "PptxColumnAxisPositionPreservesTheDataZeroOrigin",
+    "PptxColumnCaptionsFollowNumericPositionAndValueDirection",
+    "PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds",
+    "PptxChartRangeConsolidationKeepsSceneAuthorityAndXmlFallback",
+    "PptxAuthoredAxisGeometrySurvivesChangesOfUnits",
+    "PptxAutomaticIntervalsScaleWithSubUnitBounds",
+    "PptxAutomaticValueLabelsAvoidInkOverlapOnCrowdedFrames",
+    "PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence",
+    "PptxAuthoredUnitsOwnAutomaticCartesianBounds",
+    "PptxAuthoredUnitBoundsShareTicksGridsAndBarGeometry",
+    "PptxSourceUnitBoundsPreserveSceneAuthorityAndFallbacks",
+    "PptxBottomColumnLegendWrapKeepsNamesInsideTheChartFrame",
+    "PortableRenderingSharedAxisFramesMatchIndependentOfficePairs",
+    "PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels",
+    "PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale",
+    "PortableRenderingComposedPlotsShareOnePrimaryAxisLabelStrip",
+    "PortableRenderingComposedAxisLabelsRetainSourceVisibility",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 }

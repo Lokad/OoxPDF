@@ -127,10 +127,11 @@ internal sealed partial class PptxRenderer
                         strokes, markers, reverseOrder: options.Stacked, workbook: workbook, chartStyleId: barStyleId));
                 }
                 ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver, resolvedCategory, sourceLegend, numericPlacement, context: context,
-                    resolvedValueExtents: sharedValueAxis || horizontalBars && CanOwnCartesianChartSourceRange(sceneChart, valueSceneAxis)
-                        ? valueExtents : null).ConfigureAwait(false));
+                    resolvedValueScale: sharedValueAxis || horizontalBars && CanOwnCartesianChartSourceRange(sceneChart, valueSceneAxis)
+                        ? (valueExtents, valueAxisOptions.Units) : null).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
                 ChartLegendBox? preparedLegendBox = null;
+                ChartLayout unreservedLayout = chartLayout;
                 bool measuredHorizontalLegend = UsesMeasuredBarLegend(barOptions, sceneChart, chartLayout.Legend);
                 bool manualPlotBottomLegend = chartLayout.ManualPlotLayoutApplied &&
                     chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom &&
@@ -145,6 +146,33 @@ internal sealed partial class PptxRenderer
                         chartLayout.Frame.Width, measuredHorizontalLegend || manualPlotBottomLegend).ConfigureAwait(false));
                     chartLayout = prepared.Layout;
                     preparedLegendBox = prepared.Box;
+                }
+                double legendBand = unreservedLayout.PlotBox.Height - chartLayout.PlotBox.Height;
+                if (await MeasureAutomaticColumnScaleAsync(theme, sceneChart, chartXml, valueAxisSource, categoryAxis,
+                    dataExtents, chartLayout, legendBand, fontResolver).ConfigureAwait(false) is { } scale &&
+                    (scale.Extents != valueExtents || scale.Units != valueAxisOptions.Units))
+                {
+                    valueExtents = scale.Extents;
+                    valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme,
+                        valueExtents, percentStacked) with { Units = scale.Units };
+                    resolvedCategory = ReadChartAxisPlacement(categoryAxis, valueExtents, valueAxisOptions.Reversed);
+                    if (resolvedCategory is { } scaledCategory)
+                    {
+                        valueAxisOptions = valueAxisOptions with { CrossingValue = scaledCategory.CrossingValue };
+                        axesStyle = axesStyle with { CategoryAxisTopSide = scaledCategory.AxisHighSide };
+                    }
+                    // Bounds and units change numeric strip widths together. Reuse
+                    // packed legend frames; only the dependent plot measurement reruns.
+                    ChartLayout resized = await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart,
+                        colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver,
+                        resolvedCategory, sourceLegend, numericPlacement, context, scale).ConfigureAwait(false);
+                    chartLayout = resized with
+                    {
+                        PlotBox = resized.PlotBox with { Y = resized.PlotBox.Y + chartLayout.PlotBox.Y - unreservedLayout.PlotBox.Y,
+                            Height = resized.PlotBox.Height - legendBand },
+                        PlotAreaBox = resized.PlotAreaBox with { Y = resized.PlotAreaBox.Y + chartLayout.PlotAreaBox.Y - unreservedLayout.PlotAreaBox.Y,
+                            Height = Math.Max(1d, resized.PlotAreaBox.Height - legendBand) }
+                    };
                 }
                 var categoryLabels = ReadSharedCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly);
                 var categoryPlacement = resolvedCategory is { } placed ? (placed.LabelPlotRatio, placed.LabelsHighSide) :

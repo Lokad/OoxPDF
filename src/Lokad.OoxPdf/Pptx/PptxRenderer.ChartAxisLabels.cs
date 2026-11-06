@@ -312,7 +312,7 @@ internal sealed partial class PptxRenderer
                 FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false));
         }
 
-        if (!horizontalBars && axisUnits.MajorUnit is null && runs.Count > 2)
+        if (!horizontalBars && (axisUnits.MajorUnit is null || CanMeasureAutomaticColumnScale(sceneChart, sceneAxis)) && runs.Count > 2)
         {
             // Automatic labels may be thinned when the actual glyph ink would
             // overlap. Preserve both range endpoints and authored intervals.

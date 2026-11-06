@@ -24,7 +24,7 @@ internal sealed partial class PptxRenderer
             fallback.Legend.Visible && (fallback.Legend.Overlay || fallback.Legend.PositionKind != PptxSceneChartLegendPosition.Right) ||
             !string.IsNullOrEmpty(plot.BubbleSizeRepresents) && !plot.BubbleSizeRepresents.Equals("area", StringComparison.OrdinalIgnoreCase) ||
             !string.IsNullOrEmpty(plot.ShowNegativeBubblesValue) && plot.ShowNegativeBubblesValue is not ("0" or "false") ||
-            ReadChartPointAxisDeclaration(xAxis) is not { } xSource || ReadChartPointAxisDeclaration(yAxis) is not { } ySource ||
+            ReadChartAxisDeclaration(xAxis) is not { } xSource || ReadChartAxisDeclaration(yAxis) is not { } ySource ||
             xSource.Minimum is null || xSource.Maximum is null || xSource.MajorUnit is null)
             return null;
         // Automatic horizontal interval density is unresolved. Keep its whole
@@ -135,7 +135,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryResolveBubbleAxis(IReadOnlyList<ScatterSeries> series, bool horizontal,
-        ChartPointAxisDeclaration source, ChartValueExtents data, ChartValueExtents current, double relativeRadius,
+        ChartAxisDeclaration source, ChartValueExtents data, ChartValueExtents current, double relativeRadius,
         double maximumSize, CancellationToken token, out ChartValueExtents range, out double unit)
     {
         range = default; unit = 0d;
