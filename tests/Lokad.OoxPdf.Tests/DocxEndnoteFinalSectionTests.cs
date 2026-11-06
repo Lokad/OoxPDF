@@ -136,6 +136,46 @@ internal static class DocxEndnoteFinalSectionTests
         }
     }
 
+    public static void DocxEndnoteOriginConsumesTheFinalAutomaticLeadingOnce()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (double factor in new[] { 1d, 1.5d, 2d })
+        {
+            var source = Read(mode).Source;
+            var paragraph = source.EmptyFinalSectionParagraph!;
+            var single = source with { EmptyFinalSectionParagraph = paragraph with { LineSpacingFactor = 1d } };
+            var multiple = source with { EmptyFinalSectionParagraph = paragraph with { LineSpacingFactor = factor } };
+            var baseline = Layout(single);
+            var actual = Layout(multiple);
+            var mark = actual.Pages[1].Items.OfType<DocxTextLineLayout>().Single();
+            var before = NoteLines(baseline).First();
+            var after = NoteLines(actual).First();
+            double leading = mark.LineHeight!.Value * (1d - 1d / factor);
+            TestAssert.Equal(before.Page, after.Page);
+            TestAssert.True(Math.Abs(before.Baseline - after.Baseline - leading) < .001d,
+                "The note boundary consumes only the final automatic slot's added leading, independently of paragraph-after spacing.");
+            TestAssert.Equal(81, NoteLines(actual).Length);
+        }
+    }
+
+    public static void DocxEndnoteAutomaticLeadingRetainsTheScaledOriginFallback()
+    {
+        var source = Read(OoxPdfDocxMarkupMode.AllMarkup).Source;
+        var paragraph = source.EmptyFinalSectionParagraph!;
+        DocxLayout Create(double factor) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
+            wordCompatiblePrintScale: .8d).Create(source with { BodyElements = [.. source.BodyElements,
+                new DocxParagraphElement(paragraph with { LineSpacingFactor = factor })] }, new DocxTests.FamilyWidthTextMeasurer(), default);
+        var single = NoteLines(Create(1d));
+        var doubled = NoteLines(Create(2d));
+        TestAssert.Equal(single.Length, doubled.Length);
+        for (int i = 0; i < single.Length; i++)
+        {
+            TestAssert.Equal(single[i].Page, doubled[i].Page);
+            TestAssert.True(Math.Abs(single[i].Baseline - doubled[i].Baseline) < .001d,
+                "The unqualified scaled frame keeps its previous baseline origin.");
+        }
+    }
+
     private static (string? Id, int Page, double Baseline)[] NoteLines(DocxLayout layout) => layout.Pages
         .SelectMany((page, index) => page.PlacedRelatedStories.Where(note => note.StoryLayout.Story.IsNormalStoryType)
             .SelectMany(note => note.TextLines.Select(line => (note.StoryLayout.Story.Id, index + 1, line.BaselineY)))).ToArray();

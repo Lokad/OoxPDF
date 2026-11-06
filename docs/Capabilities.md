@@ -496,6 +496,8 @@ Supported within the following constraints:
   An already-started final next-page section keeps its document-end notes even
   without body text. In known unscaled frames, its default empty paragraph uses
   ordinary paragraph flow; remaining font metrics still affect the note origin.
+  Document-endnote boundaries include the trailing ordinary paragraph's measured
+  automatic leading. Scaled and mixed-inline frames retain their existing policy.
   Empty continuous/parity sections retain existing fallbacks.
   Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.

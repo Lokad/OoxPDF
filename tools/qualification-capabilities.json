@@ -16249,6 +16249,8 @@
   "docx-final-endnote-frame": [
     "DocxImplicitFinalSectionParagraphUsesOrdinaryFlow",
     "DocxImplicitFinalParagraphRetainsStaticAndScaledFallbacks",
+    "DocxEndnoteOriginConsumesTheFinalAutomaticLeadingOnce",
+    "DocxEndnoteAutomaticLeadingRetainsTheScaledOriginFallback",
     "DocxMissingFinalParagraphDefaultsRetainTheBoundedFrame",
     "DocxEmptyFinalNextPageSectionOwnsDocumentEndnoteFrame",
     "DocxEmptyFinalSectionDoesNotCreateUnreferencedNotePages",

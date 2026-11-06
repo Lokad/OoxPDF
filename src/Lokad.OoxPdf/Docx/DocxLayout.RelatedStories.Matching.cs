@@ -240,9 +240,18 @@ internal sealed partial class DocxLayoutEngine
         Func<DocxLayoutPage, int, double, double?>? bodyBoundaryToNoteDesign = null,
         int pageIndex = 0)
     {
-        double bodyBottom = page.Items.Count == 0
+        DocxLayoutItem? trailingBodyItem = page.Items.MinBy(item => GetVerticalBounds(item).Y);
+        double bodyBottom = trailingBodyItem is null
             ? page.Height - page.MarginTop
-            : page.Items.Min(item => GetVerticalBounds(item).Y);
+            : GetVerticalBounds(trailingBodyItem).Y;
+        // The legacy baseline boundary already owns ordinary text descent,
+        // but not the additional leading of the last automatic spacing slot.
+        // Admission and placement consume that source contribution once.
+        if (printScale == 1d && trailingBodyItem is DocxTextLineLayout {
+            InlineFrame: null, LineHeightSource: DocxLineHeightSource.BodySingleLineAuto,
+            EffectiveLineSpacingFactor: > 1d, LineHeight: > 0d } trailing &&
+            double.IsFinite(trailing.LineHeight.Value) && double.IsFinite(trailing.EffectiveLineSpacingFactor.Value))
+            bodyBottom -= trailing.LineHeight.Value * (1d - 1d / trailing.EffectiveLineSpacingFactor.Value);
         double? firstBaselineInset = page.Items.OfType<DocxTextLineLayout>().Select(line => (double?)line.BaselineY).FirstOrDefault() is { } firstBaseline
             ? page.Height - page.MarginTop - firstBaseline
             : null;
