@@ -26,7 +26,7 @@ internal static partial class DocxInlineCompositionTests
                 var source = kind == "display" ? display : mixed;
                 bool math = kind is "math" or "picture-math" or "display";
                 bool picture = kind is "picture" or "picture-math";
-                var image = new DocxInlineImage(18d, 72d, "image/png", null, "frame.png");
+                var image = new DocxInlineImage(18d, 72d, "image/png", null, "frame.png") { SourceRunIndex = 0 };
                 var items = source.InlineContent!.Where(item => math || item is not DocxInlineEquation).ToList();
                 if (kind == "picture") items.Clear();
                 if (picture) items.Add(new DocxInlinePicture(image));
@@ -43,7 +43,7 @@ internal static partial class DocxInlineCompositionTests
                 }
                 TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
                     12d, 9d * scale, 14.4d * factor * scale, scale, default, out var atoms, allowStaticFallback: true),
-                    "Supported source content shares one ordered measurement path.");
+                    $"Supported {kind} source content shares one ordered measurement path at scale {scale}.");
                 TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(TestAssert.NotNull(atoms), 600d, 600d,
                     default, out var lines), "The complete row fits without changing its content.");
                 return TestAssert.NotNull(lines).Single();
