@@ -22,6 +22,8 @@
     "DocxFittingEndnotePageMeasurementUsesTwoDigitReferencePage",
     "DocxEndnotePageBindingRetainsUnfitAndUnsupportedOwners",
     "DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry",
+    "DocxContinuedEndnoteKerningAdmitsFittingStaticFramesAndRetainsFrameFallbacks",
+    "DocxContinuedEndnoteFooterFramesKeepSelectedStoriesClearAndPreserveSourceLines",
     "DocxSectionEndnotePageCountersPreserveReferenceAndFollowingSection",
     "DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata",
     "DocxInlineCompositionCellPageNotesPublishOneOwnedParagraphAcrossViews",

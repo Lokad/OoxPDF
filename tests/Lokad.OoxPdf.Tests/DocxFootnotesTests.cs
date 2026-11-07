@@ -2877,8 +2877,11 @@ internal static class DocxFootnotesTests
         var mixedNotes = mixedLayout.Pages.SelectMany(p => p.PlacedRelatedStories)
             .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote).ToArray();
         TestAssert.Equal(2, mixedNotes.Length);
-        TestAssert.True(Math.Abs(mixedNotes[0].TopY - mixedNotes[1].TopY - mixedNotes[0].Height - 3d) < .000001d,
-            "Mixed-note static compositions retain their original complete-note boundary spacing.");
+        var withoutStatic = engine.Create(mixedBody, measurer, default).Pages.SelectMany(p => p.PlacedRelatedStories)
+            .Where(s => s.StoryLayout.Story.IsNormalStoryType && s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote).ToArray();
+        TestAssert.True(mixedNotes.Select(note => (note.TopY, note.Height)).SequenceEqual(
+            withoutStatic.Select(note => (note.TopY, note.Height))),
+            "Independent static stories and unreferenced footnote sources preserve complete endnote paragraph boundaries.");
         TestAssert.True(!DocxNoteKerning.TryCreateDocument(mixed, mixedLayout, out _, out _, default),
             "The static-frame extension preserves the existing mixed-note typography fallback.");
     }
