@@ -600,6 +600,8 @@ Approximate or restricted:
   for admitted plain flow. Unrendered references and other unqualified
   owners retain their fallback. Mixed/unfit table rows and other
   unqualified note PAGE values remain approximate; full field parity is not promised.
+  Complete fitting section-end groups share separator and paragraph-boundary
+  spacing with document-end groups; continuation and unqualified frames keep their fallback.
   Highlighting and run shading retain these text metrics while painting their
   backgrounds; font-changing and unsupported layout combinations keep fallbacks.
   Automatic text and equation colors adapt to solid paragraph/cell/run shading;

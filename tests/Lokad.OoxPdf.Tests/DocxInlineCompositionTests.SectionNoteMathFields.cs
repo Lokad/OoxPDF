@@ -5,6 +5,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxNoteMathFieldsSingleSectionSharesPlacementAcrossEndnotePositions()
+    {
+        foreach (bool direct in new[] { false, true })
+        foreach (string? instruction in new string?[] { null, "PAGE" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = ReadNoteMathField("endnote", mode, instruction, instruction is null ? "1" : "9", direct);
+            source = source with { BodyElements = source.BodyElements.Where(element => element is not DocxSectionBreakElement).ToArray() };
+            DocxDocument Position(string position) => source with { Settings = source.Settings with { EndnoteReferenceSettings =
+                source.Settings.EndnoteReferenceSettings with { PositionValue = position } } };
+            var renderer = PictureRangeRenderer(mode);
+            var document = renderer.RenderPagesAsync(Position("docEnd"), null, default).ToBlockingEnumerable().Single();
+            var section = renderer.RenderPagesAsync(Position("sectEnd"), null, default).ToBlockingEnumerable().Single();
+            var a = DocxCommentsTests.ReadEmbeddedGlyphTextShows(document, true).Select(g => (g.Text, g.X, g.Y, g.Size));
+            var b = DocxCommentsTests.ReadEmbeddedGlyphTextShows(section, true).Select(g => (g.Text, g.X, g.Y, g.Size));
+            TestAssert.True(a.SequenceEqual(b), "A complete group has the same paragraph/separator geometry when the only section ends the document.");
+            TestAssert.True(document.Annotations.SequenceEqual(section.Annotations), "Navigation uses the same completed source boundaries.");
+            TestAssert.Equal(document.Images.Count, section.Images.Count);
+        }
+    }
+
     public static void DocxNoteMathFieldsSectionPlacementKeepsMixedFramesAndFollowingBody()
     {
         foreach (bool direct in new[] { false, true })

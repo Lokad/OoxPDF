@@ -227,7 +227,7 @@ internal sealed partial class DocxLayoutEngine
                                 sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
                     }
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
-                    PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, headerKeepOut, bodyBoundaryToNoteDesign);
+                    PlaceSectionEndEndnoteStories(document, outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, headerKeepOut, bodyBoundaryToNoteDesign);
                 }
             }
 
@@ -441,15 +441,8 @@ internal sealed partial class DocxLayoutEngine
                     (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, separatorTop, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight, ruleFirstBearingPoints: separatorRuleFirstBearing);
                     activePlacedStories.Add(placedSeparator);
                     documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-                    double endnoteContentGapPoints = 0d;
-                    foreach (DocxRelatedStoryLayout endnoteContentLayout in documentEndStories)
-                    {
-                        endnoteContentGapPoints = System.Math.Max(endnoteContentGapPoints, ResolveFootnoteContentGapPoints(endnoteContentLayout.TextLines, endnoteMarkRun, endnoteMarkSize, separatorMeasurer));
-                    }
-
-                    cursorTop = separatorBottom - (ownsSeparatorFirstBearing
-                        ? ResolveSourceInsetNoteContentGap(endnoteContentGapPoints, endnoteMarkRun, endnoteMarkSize, separatorMeasurer)
-                        : Math.Max(ResolveSeparatorGapPoints(endnoteMarkRun, endnoteMarkSize, separatorMeasurer), endnoteContentGapPoints));
+                    cursorTop = separatorBottom - ResolveEndnoteContentGap(documentEndStories,
+                        endnoteMarkRun, endnoteMarkSize, separatorMeasurer, ownsSeparatorFirstBearing);
                 }
                 double completeEndnoteHeight = 0d;
                 bool plainEndnoteTypography = CanUsePlainDocumentEndnoteFrame(document, activePage,
@@ -486,7 +479,7 @@ internal sealed partial class DocxLayoutEngine
                         previousEndnote is not null && HasPlainNoteFlowStory(previousEndnote) &&
                         HasPlainNoteFlowStory(endnoteStoryLayout);
                     double boundaryOverlap = (collapseEndnoteBoundaries || plainEndnoteFlow || localBoundary) && previousEndnote is not null
-                        ? ResolveDocumentEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout) : 0d;
+                        ? ResolveEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout) : 0d;
                     double boundaryGap = localBoundary ? FootnoteSeparatorGapPoints : 0d;
                     // A shared paragraph boundary belongs on this page only when
                     // the next paragraph's head fits. A page turn retains its
@@ -544,6 +537,7 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static void PlaceSectionEndEndnoteStories(
+        DocxDocument document,
         List<DocxLayoutPage> outputPages,
         int sectionEndPageIndex,
         IReadOnlyList<DocxReferencedRelatedStoryLayout> sectionEndStories,
@@ -558,10 +552,14 @@ internal sealed partial class DocxLayoutEngine
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        bool followsBodyParagraph = CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories, endnoteSeparatorLayout,
-            printScale, sectionEndStories.Select(story => story.StoryLayout).ToArray());
+        var storyLayouts = sectionEndStories.Select(story => story.StoryLayout).ToArray();
+        bool completeBoundaries = CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
+            endnoteSeparatorLayout, printScale, storyLayouts, cancellationToken);
+        bool followsBodyParagraph = completeBoundaries || CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories,
+            endnoteSeparatorLayout, printScale, storyLayouts);
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
             followsBodyParagraph ? bodyBoundaryToNoteDesign : null, activePageIndex);
+        if (completeBoundaries) cursorTop -= ResolveTrailingBodyBoundarySpacing(activePage);
         if (endnoteSeparatorLayout is not null && sectionEndStories.Count > 0)
         {
             // RV06 endnote probes: the separator space sits exactly one body pitch below
@@ -569,18 +567,27 @@ internal sealed partial class DocxLayoutEngine
             // gap is added back); content keeps its gap below the separator.
             // The admitted paragraph boundary uses the normalized default source
             // spacing. Unqualified stories retain their legacy separator frame.
-            double? separatorHeight = followsBodyParagraph
+            double? separatorHeight = completeBoundaries
+                ? ResolveParagraphBoundarySeparatorHeight(endnoteSeparatorLayout, activePage, separatorMeasurer, storyLayouts)
+                : followsBodyParagraph
                 ? Math.Max(0d, ResolvePlacedStoryHeight(endnoteSeparatorLayout, activePage) -
                     ResolveLatentSeparatorSpacing(endnoteSeparatorLayout.Story) * printScale) : null;
             (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, endnoteSeparatorLayout, sectionEndStories[0].Location.SourceBlockIndex, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer,
+                useSizeDrivenPlacementHeight: completeBoundaries, contentStoriesForHhea: storyLayouts,
                 placementHeightOverride: separatorHeight);
             activePlacedStories.Add(placedSeparator);
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-            cursorTop = separatorBottom - FootnoteSeparatorGapPoints;
+            var (mark, size) = FindSeparatorMarkFont(endnoteSeparatorLayout.TextLines);
+            cursorTop = separatorBottom - (completeBoundaries
+                ? ResolveEndnoteContentGap(storyLayouts, mark, size, separatorMeasurer) : FootnoteSeparatorGapPoints);
         }
+        DocxRelatedStoryLayout? previous = null;
         foreach (DocxReferencedRelatedStoryLayout story in sectionEndStories)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            double overlap = completeBoundaries && previous is not null
+                ? ResolveEndnoteBoundaryOverlap(previous, story.StoryLayout) : 0d;
+            cursorTop += overlap;
             PlaceRelatedStorySlices(
                 outputPages,
                 ref activePageIndex,
@@ -593,7 +600,9 @@ internal sealed partial class DocxLayoutEngine
                 endnoteContinuationLayout,
                 separatorMeasurer,
                 printScale,
-                headerKeepOut, cancellationToken: cancellationToken);
+                headerKeepOut, noteDestinationTopOffset: overlap, cancellationToken: cancellationToken);
+            if (completeBoundaries) cursorTop += FootnoteSeparatorGapPoints;
+            previous = story.StoryLayout;
         }
     }
 
@@ -1425,6 +1434,16 @@ internal sealed partial class DocxLayoutEngine
     // single-spaced line box minus the first-baseline inset, so it derives from the mark
     // font through the measurer. Measurers without single-line metrics keep the legacy
     // 3pt footnote gap.
+    private static double ResolveEndnoteContentGap(IReadOnlyList<DocxRelatedStoryLayout> stories,
+        DocxTextRun? mark, double markSize, IDocxTextMeasurer? measurer, bool ownsFirstBearing = false)
+    {
+        double contentGap = 0d;
+        foreach (var story in stories)
+            contentGap = Math.Max(contentGap, ResolveFootnoteContentGapPoints(story.TextLines, mark, markSize, measurer));
+        return ownsFirstBearing ? ResolveSourceInsetNoteContentGap(contentGap, mark, markSize, measurer)
+            : Math.Max(ResolveSeparatorGapPoints(mark, markSize, measurer), contentGap);
+    }
+
     private static double ResolveSeparatorGapPoints(
         DocxTextRun? markRun,
         double markFontSizePoints,

@@ -479,7 +479,7 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken.ThrowIfCancellationRequested();
             if (!HasPlainNoteFlowStory(story)) return false;
             contentHeight += story.ContentHeight;
-            if (previous is not null) contentHeight -= ResolveDocumentEndnoteBoundaryOverlap(previous, story);
+            if (previous is not null) contentHeight -= ResolveEndnoteBoundaryOverlap(previous, story);
             previous = story;
         }
         return true;
@@ -626,7 +626,7 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    private static double ResolveDocumentEndnoteBoundaryOverlap(
+    private static double ResolveEndnoteBoundaryOverlap(
         DocxRelatedStoryLayout previous, DocxRelatedStoryLayout current)
     {
         DocxTextLineLayout previousLine = previous.TextLines[^1], currentLine = current.TextLines[0];
