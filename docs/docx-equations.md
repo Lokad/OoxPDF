@@ -75,6 +75,10 @@ deletion strikes to revised literals; structural symbols retain qualified author
 ink. Unowned metadata, move ranges, unknown/deeper/multiple/nested revision wrappers
 retain fallbacks. This does not establish arbitrary revised-equation support.
 
+Empty bookmarks, proofing and permission boundaries inside these revision rows
+preserve supported formulas. Included bookmarks keep their measured source targets;
+excluded revisions do not publish their bookmarks or revive deleted text.
+
 Content controls and transparent inline metadata preserve the same qualified
 deleted-equation frames in Final. Their deleted text, links and other excluded
 content remain filtered; the metadata does not create another revision owner.

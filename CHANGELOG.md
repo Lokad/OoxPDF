@@ -17,6 +17,8 @@
   Endnote placement follows the document-wide position when section metadata differs.
   Endnote separators honor source paragraph spacing and continuation after-space;
   absent and unregistered separators share one normalized default.
+  Empty editing boundaries and bookmarks preserve supported revised equations
+  and their source-owned internal-link targets.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual
