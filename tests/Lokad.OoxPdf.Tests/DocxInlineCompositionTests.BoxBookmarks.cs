@@ -54,11 +54,11 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(frames.Any(frame =>
                 {
                     double Number(int index) => double.Parse(frame.Groups[index].Value, CultureInfo.InvariantCulture);
-                    return Math.Abs(destination.Left.Value + 3d * scale - Number(1)) < .001d &&
+                    return Math.Abs(destination.Left!.Value + 3d * scale - Number(1)) < .001d &&
                         Math.Abs(destination.Top!.Value - Number(2) - Number(4)) < .001d;
                 }), "Navigation uses an actual painted box frame rather than surrounding prose.");
                 if (targetX is not null)
-                    TestAssert.True(Math.Abs(destination.Left.Value - targetX.Value) < .000001d &&
+                    TestAssert.True(Math.Abs(destination.Left!.Value - targetX.Value) < .000001d &&
                         Math.Abs(destination.Top!.Value - targetY!.Value) < .000001d,
                         "Empty/hidden source runs cannot redirect the box target.");
                 targetX = destination.Left; targetY = destination.Top;
