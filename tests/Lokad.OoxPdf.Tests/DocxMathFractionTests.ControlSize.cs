@@ -17,12 +17,14 @@ internal static partial class DocxMathFractionTests
             foreach (double childSize in new[] { 9d, 18d, 30d })
             {
                 DocxMathRow Resize(DocxMathRow row) => row with { Children = row.Children.Select(node =>
-                    node is DocxMathRun run ? run with { Text = run.Text with { FontSize = childSize } } : node).ToArray() };
+                    node is DocxMathRun run ? run with { NormalTextValue = true,
+                        Text = run.Text with { FontSize = childSize } } : node).ToArray() };
                 var equation = source with { ParentFontSize = ownerSize, Content = new([fraction with
                     { Numerator = Resize(fraction.Numerator), Denominator = Resize(fraction.Denominator) }]) };
                 TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
                     resolveControlMetrics: _ => font), reason ?? "Expected a fraction with independent child sizes.");
                 var box = TestAssert.NotNull(measured);
+                TestAssert.Equal(ownerSize, TestAssert.NotNull(box.ParentMetrics).Size);
                 TestAssert.True(DocxMathLayout.TryGetLineMetrics(box, default, out double singleAbove, out double singleHeight),
                     "The ordinary slot retains the complete math box.");
                 TestAssert.True(DocxMathLayout.TryGetLineMetrics(box, default, out double expandedAbove, out double expandedHeight, 1.15d),
