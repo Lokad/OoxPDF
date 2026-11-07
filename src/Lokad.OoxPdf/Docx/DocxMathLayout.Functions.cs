@@ -74,7 +74,7 @@ internal static partial class DocxMathLayout
         var rules = new List<DocxMathRulePlacement>();
         foreach (var rule in argument.Rules) { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + argumentX }); }
         box = new(width, above, below, glyphs)
-        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size) { IncludeTypographicFrame = true },
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
             // The complete application owns its outgoing spacing; argument
             // edges continue to govern the argument's internal layout.
             Edges = new(DocxMathRowLayout.AtomKind.LargeOperator, DocxMathRowLayout.AtomKind.LargeOperator, false) };

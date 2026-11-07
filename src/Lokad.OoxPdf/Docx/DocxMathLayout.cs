@@ -29,7 +29,8 @@ internal static partial class DocxMathLayout
                 above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(font, glyph.FontSize));
             if (box.ParentMetrics is null)
                 below = Math.Max(below, -font.Os2.TypographicDescender * glyph.FontSize / font.UnitsPerEm);
-            naturalLine = Math.Max(naturalLine, DocxLineMetrics.MeasureTypographicLineHeight(font, glyph.FontSize));
+            if (box.ParentMetrics is null)
+                naturalLine = Math.Max(naturalLine, DocxLineMetrics.MeasureTypographicLineHeight(font, glyph.FontSize));
             if (box.ParentMetrics is null && font.TryGetMathConstants(out OpenTypeMathConstants constants))
                 leading = Math.Max(leading, constants.GetValue(OpenTypeMathConstant.MathLeading) * glyph.FontSize / font.UnitsPerEm);
         }
@@ -40,11 +41,10 @@ internal static partial class DocxMathLayout
             // unrelated typographic line gap above that occupied frame.
             above = Math.Max(above, DocxLineMetrics.MeasureTypographicBaselineInset(parent.Font,
                 OfficePdfTextEmissionProfile.FontSize(parent.Size)));
-            if (parent.IncludeTypographicFrame)
-            {
-                double parentGlyphSize = OfficePdfTextEmissionProfile.FontSize(parent.Size);
-                naturalLine = Math.Max(naturalLine, DocxLineMetrics.MeasureTypographicLineHeight(parent.Font, parentGlyphSize));
-            }
+            // Ordinary automatic spacing belongs to the nominal control too;
+            // larger painted children contribute ink, not another line strut.
+            naturalLine = DocxLineMetrics.MeasureTypographicLineHeight(parent.Font,
+                OfficePdfTextEmissionProfile.FontSize(parent.Size));
             // The same control owns the ordinary descent floor. Larger child
             // ink remains in the box; an unused child-font descender does not.
             below = Math.Max(below, -parent.Font.Os2.TypographicDescender *

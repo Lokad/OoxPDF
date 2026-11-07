@@ -4,6 +4,35 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxInlineCompositionDisplaySlotsRetainResolvedAutomaticSpacingDefaults()
+    {
+        var document = ReadMutation("CompositionProbes/math-minimum-line-72", OoxPdfDocxMarkupMode.Final, false, false);
+        var source = document.Paragraphs.First(p => p.Equations.Count != 0);
+        foreach ((string? raw, double resolved) in new (string?, double)[] { (null, 278d / 240d), (null, 1d), ("240", 1d), ("276", 1.15d) })
+        {
+            var paragraph = source with { LineSpacingPoints = null, LineSpacingFactor = resolved,
+                Spacing = source.Spacing with { LineRuleValue = "auto", LineValue = raw } };
+            TestAssert.True(DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(paragraph, out double actual),
+                "Absent and explicit raw spacing share the reader's resolved automatic slot.");
+            TestAssert.Equal(resolved, actual);
+            foreach (double invalid in new[] { .5d, double.NaN, double.PositiveInfinity })
+                TestAssert.True(!DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(
+                    paragraph with { LineSpacingFactor = invalid }, out _), "Invalid or compressed slots retain their fallback.");
+            foreach (string invalid in new[] { "future", "0", "-240" })
+                TestAssert.True(!DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(
+                    paragraph with { Spacing = paragraph.Spacing with { LineValue = invalid } }, out _),
+                    "Malformed explicit source spacing cannot be hidden by a resolved value.");
+        }
+        foreach (string rule in new[] { "exact", "atLeast" })
+        {
+            var paragraph = source with { LineSpacingPoints = 72d, LineSpacingFactor = 2d,
+                Spacing = source.Spacing with { LineRuleValue = rule, LineValue = "1440" } };
+            TestAssert.True(DocxMathParagraphPolicy.TryGetDisplayLineSpacingFactor(paragraph, out double factor),
+                "Authored fixed/minimum slots keep their independent placement contract.");
+            TestAssert.Equal(1d, factor);
+        }
+    }
+
     public static void DocxInlineCompositionMinimumLineSlotOwnsLeadingAndRetainsSpacingFallbacks()
     {
         var document = ReadMutation("CompositionProbes/math-minimum-line-72", OoxPdfDocxMarkupMode.Final, false, false);

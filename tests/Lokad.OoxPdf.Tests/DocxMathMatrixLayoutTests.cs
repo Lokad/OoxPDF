@@ -397,7 +397,7 @@ internal static class DocxMathMatrixLayoutTests
             double frameTop = measured.Glyphs[0].BaselineY + above, frameBottom = measured.Glyphs[3].BaselineY - (line - above);
             TestAssert.True(Math.Abs((frameTop + frameBottom) / 2d - size / 4d) < 1e-9,
                 "The whole grid frame centers on the metric font's mathematical axis.");
-            TestAssert.True(measured.ParentMetrics is { IncludeTypographicFrame: false } owner && ReferenceEquals(owner.Font, metric) && owner.Size == size &&
+            TestAssert.True(measured.ParentMetrics is { } owner && ReferenceEquals(owner.Font, metric) && owner.Size == size &&
                 ReferenceEquals(measured.Glyphs[0].Font, first) && measured.Glyphs[0].Color?.Blue == 255 &&
                 measured.Glyphs.Skip(3).Take(3).All(g => ReferenceEquals(g.Font, rest) && g.Color?.Green == 128) && measured.Rules.Count == 0,
                 "Internal control frames, source paint and occupied outer ink retain distinct ownership, without implicit delimiters.");

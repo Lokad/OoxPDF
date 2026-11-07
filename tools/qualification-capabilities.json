@@ -1,4 +1,24 @@
 {
+  "docx-math-automatic-slots": [
+      "MathFontFraction",
+      "MathFontFunction",
+      "MathFontMatrix",
+      "MathFontNary",
+      "MathFontMixedNary",
+      "MathFontDisplayNary",
+      "MathFontDelimiter",
+      "MathFontRadical",
+      "MathFontScript",
+      "MathFontStructuredSequences",
+      "DocxInlineCompositionDisplaySlots",
+      "DocxInlineCompositionMinimumLine",
+      "PortableRenderingMinimumLine",
+      "DocxNativeDisplay",
+      "DocxNativeInlineMathRetainsLiteralMeaningAndSharedProseBaseline",
+      "DocxNativeTableDisplayMath",
+      "DocxNativeDeclaredTableMath",
+      "DocxNativeMathMissingFontsAndUnqualifiedFormattingRetainIgnoredDiagnostics"
+  ],
   "docx-note-math-fields": [
     "DocxNoteMathFields",
     "DocxInlineCompositionNoteTables",

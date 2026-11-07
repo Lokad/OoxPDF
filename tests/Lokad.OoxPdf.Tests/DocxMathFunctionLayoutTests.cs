@@ -93,7 +93,7 @@ internal static class DocxMathFunctionLayoutTests
             TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, CancellationToken.None, out var box, out var reason,
                 resolveControlMetrics: _ => font), reason ?? "Expected contextual function row.");
             var measured = TestAssert.NotNull(box);
-            TestAssert.True(measured.ParentMetrics is { IncludeTypographicFrame: true } owner && owner.Size == parentSize,
+            TestAssert.True(measured.ParentMetrics is { } owner && owner.Size == parentSize,
                 "The surrounding row owns its frame in either control order, independent of authored standalone control sizes.");
             TestAssert.True(Math.Abs(measured.Glyphs[1].X - measured.Glyphs[0].Advance - parentSize / 6d) < 1e-9,
                 "An ordinary atom before a function consumes one thin math space.");
@@ -131,7 +131,7 @@ internal static class DocxMathFunctionLayoutTests
             measured.Glyphs.Take(6).All(g => ReferenceEquals(g.Font, names) && g.Color?.Blue == 255) &&
             ReferenceEquals(measured.Glyphs[^1].Font, arguments) && measured.Glyphs[^1].Color?.Green == 128,
             "Arbitrary literal names, argument fonts/colors and control-owned spacing remain independent.");
-        TestAssert.True(measured.ParentMetrics is { IncludeTypographicFrame: true } owner && ReferenceEquals(owner.Font, metric),
+        TestAssert.True(measured.ParentMetrics is { } owner && ReferenceEquals(owner.Font, metric),
             "The unpainted control explicitly owns its ordinary typographic frame.");
         TestAssert.True(DocxMathLayout.TryGetLineMetrics(measured, CancellationToken.None, out double above, out double height) &&
             height - above >= -metric.Os2.TypographicDescender * OfficePdfTextEmissionProfile.FontSize(20d) / metric.UnitsPerEm - 1e-9,

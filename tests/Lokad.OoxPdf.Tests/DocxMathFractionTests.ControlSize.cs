@@ -4,6 +4,47 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathFractionTests
 {
+    public static void MathFontFractionAutomaticSpacingUsesNominalControlAcrossChildSizes()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        var font = resource.Font.Font;
+        var source = Fraction();
+        var fraction = (DocxMathFraction)source.Content.Children.Single();
+        double? firstGrowth = null;
+        foreach (double ownerSize in new[] { 12d, 24d })
+        {
+            double? ownerGrowth = null;
+            foreach (double childSize in new[] { 9d, 18d, 30d })
+            {
+                DocxMathRow Resize(DocxMathRow row) => row with { Children = row.Children.Select(node =>
+                    node is DocxMathRun run ? run with { Text = run.Text with { FontSize = childSize } } : node).ToArray() };
+                var equation = source with { ParentFontSize = ownerSize, Content = new([fraction with
+                    { Numerator = Resize(fraction.Numerator), Denominator = Resize(fraction.Denominator) }]) };
+                TestAssert.True(DocxMathLayout.TryMeasure(equation, _ => resource, default, out var measured, out var reason,
+                    resolveControlMetrics: _ => font), reason ?? "Expected a fraction with independent child sizes.");
+                var box = TestAssert.NotNull(measured);
+                TestAssert.True(DocxMathLayout.TryGetLineMetrics(box, default, out double singleAbove, out double singleHeight),
+                    "The ordinary slot retains the complete math box.");
+                TestAssert.True(DocxMathLayout.TryGetLineMetrics(box, default, out double expandedAbove, out double expandedHeight, 1.15d),
+                    "Both automatic slots preserve the same complete math box.");
+                TestAssert.Equal(singleAbove, expandedAbove);
+                double growth = expandedHeight - singleHeight;
+                TestAssert.True(growth > 0d, "Expanded spacing adds occupied height without moving the intrinsic baseline.");
+                if (ownerGrowth is { } expected)
+                    TestAssert.True(Math.Abs(growth - expected) < 1e-9,
+                        "Changing painted child sizes must not change nominal automatic spacing.");
+                ownerGrowth = growth;
+            }
+            if (firstGrowth is { } smaller)
+                TestAssert.True(Math.Abs(ownerGrowth!.Value - smaller * 2d) < 1e-9,
+                    "Doubling the nominal owner doubles ordinary line expansion, independently of tall ink.");
+            firstGrowth = ownerGrowth;
+        }
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetLineMetrics(
+            new(1d, 1d, 1d, [new(65, 65, resource, "0001", 12d, 0d, 0d, 1d, null)]), cancelled.Token, out _, out _, 1.15d));
+    }
+
     public static void MathFontFractionControlSizeOwnsGeometryWithoutRescalingChildren()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));

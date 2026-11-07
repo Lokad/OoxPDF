@@ -187,9 +187,11 @@ internal static class DocxMathParagraphPolicy
         if (!DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
             return false;
         if (!DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) { return true; }
-        if (paragraph.Spacing.LineValue is null) { return true; }
-        if (!int.TryParse(paragraph.Spacing.LineValue, System.Globalization.NumberStyles.Integer,
-            System.Globalization.CultureInfo.InvariantCulture, out int line) || line <= 0) { return false; }
+        if (paragraph.Spacing.LineValue is { } raw &&
+            (!int.TryParse(raw, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out int line) || line <= 0)) { return false; }
+        // The reader has already resolved style/default spacing. An absent raw
+        // value does not mean single spacing, including for a math-only row.
         factor = paragraph.LineSpacingFactor;
         // Compressed automatic slots change Office's first math baseline and
         // need a separate placement contract. Expanded slots retain the box.

@@ -43,12 +43,7 @@ internal sealed record DocxMathBox(
     public bool AllowsInlineRelocation { get; init; } = true;
 }
 
-internal sealed record DocxMathMetricOwner(Lokad.OoxPdf.Fonts.OpenTypeFont Font, double Size)
-{
-    // Invisible controls own a font frame without a painted glyph. A parent
-    // used only for mathematical constants retains its existing frame profile.
-    public bool IncludeTypographicFrame { get; init; }
-}
+internal sealed record DocxMathMetricOwner(Lokad.OoxPdf.Fonts.OpenTypeFont Font, double Size);
 
 internal sealed record DocxMathRulePlacement(double X, double Y, double Width, double Thickness, RgbColor? Color)
 {
