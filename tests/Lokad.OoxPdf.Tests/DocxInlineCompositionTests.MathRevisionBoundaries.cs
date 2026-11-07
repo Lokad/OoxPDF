@@ -104,7 +104,7 @@ internal static partial class DocxInlineCompositionTests
             else if (marker == "foreign") revision.AddFirst(new XElement(XName.Get("proofErr", "urn:future")));
             else if (marker == "content") revision.AddFirst(new XElement(w + "proofErr", "Visible"));
             XNamespace relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-            var link = xml.Descendants(w + "hyperlink").Single();
+            var link = xml.Descendants(w + "hyperlink").Single(item => !item.Ancestors(m + "oMath").Any());
             link.Attribute(relationships + "id")!.Remove();
             link.SetAttributeValue(w + "anchor", "RevisionTarget");
         });
