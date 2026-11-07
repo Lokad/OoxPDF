@@ -16610,6 +16610,20 @@
     "DocxNoteCellPictureRangesFollowExistingPaintAndTargets",
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ],
+  "docx-note-placement-work": [
+      "DocxEndnoteMeasurementsSkipUnrelatedBodyWidths",
+      "DocxAtomicFootnoteHeadIgnoresFutureContinuationRule",
+      "DocxSimpleSectionPaginationUsesFollowingStartType",
+      "DocxSimpleSectionPaginationSeparatesPageBottomFootnotes",
+      "DocxSimpleSectionPaginationIgnoresNotesAlreadyPlacedOnEarlierPages",
+      "DocxSimpleSectionPaginationRetainsExcludedFlow",
+      "DocxSimpleSectionPaginationPreservesLabelsAndRepeatedDestinations",
+      "DocxLayoutPlacesSectEndEndnoteOnOwningSectionEndPage",
+      "DocxLayoutWrapsDocumentEndEndnoteUsingFinalSectionPageWidth",
+      "DocxLayoutWrapsSectEndEndnoteUsingOwningSectionPageWidth",
+      "DocxLayoutKeepsSectEndEndnoteOverflowPageBeforeFollowingSection",
+      "RelatedStoryPageIndexMatchesLegacyMatching"
+  ],
   "docx-counter-spacing": [
     "DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry",
     "RelatedStoryPageIndexMatchesLegacyMatching",

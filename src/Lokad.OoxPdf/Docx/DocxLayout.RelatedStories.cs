@@ -45,14 +45,21 @@ internal sealed partial class DocxLayoutEngine
         // paragraphs no longer re-walk on every fragment page), story layouts and lookups
         // are memoized by page body width, and page owners/blocks come from one index.
         Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
+        var outputPages = pages.ToList();
+        var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
+        // Endnote placement needs its own final frame, not a measurement for
+        // every body width visited by a footnote pass with nothing left to place.
+        if (!locationsByBlock.Values.Any(locations => locations.Any(location =>
+            location.Reference.Kind == DocxRelatedStoryKind.Footnote && location.Reference.Id is { } id &&
+            alreadyPlacedStoryKeys?.Contains((DocxRelatedStoryKind.Footnote, id)) != true)))
+            return AddPlacedEndnoteStories(outputPages);
+
         var storyLayoutsByWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
         var footnoteLayoutsByWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var footnoteLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
         RelatedStoryPageIndex referenceIndex = RelatedStoryPageIndex.Build(pages, cancellationToken);
-        var outputPages = pages.ToList();
         int outputShift = 0;
-        var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
