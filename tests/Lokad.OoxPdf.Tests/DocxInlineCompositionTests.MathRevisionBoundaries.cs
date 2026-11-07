@@ -61,7 +61,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadMathRevisionBoundary(OoxPdfDocxMarkupMode mode, string kind,
-        bool control, string marker, string? contentControl = null) => ReadMutation("CompositionProbes/math-run-revision-body-ins", mode, false, false,
+        bool control, string marker, string? contentControl = null, string carrier = "sdt") => ReadMutation("CompositionProbes/math-run-revision-body-ins", mode, false, false,
         (xml, w, m) =>
         {
             var revision = xml.Descendants(w + "ins").Single();
@@ -78,11 +78,11 @@ internal static partial class DocxInlineCompositionTests
             {
                 var children = revision.Elements().ToArray();
                 revision.RemoveNodes();
-                revision.Add(MathContentControl(children, w));
+                revision.Add(MathSourceContainer(children, w, carrier));
             }
             else if (contentControl == "outside")
             {
-                var metadata = MathContentControl([new XElement(revision)], w);
+                var metadata = MathSourceContainer([new XElement(revision)], w, carrier);
                 revision.ReplaceWith(metadata);
                 revision = metadata.Descendants(w + kind).Single();
             }

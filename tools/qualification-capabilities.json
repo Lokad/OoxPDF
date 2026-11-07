@@ -1,6 +1,7 @@
 {
   "docx-math-content-controls": [
-    "DocxMathContentControls"
+    "DocxMathContentControls",
+    "DocxMathCustomXml"
   ],
   "font-canonical-names": [
     "FontCanonical",

@@ -39,8 +39,8 @@ internal static partial class DocxMathParser
                 nodes.Add(element, new DocxMathRow([]));
                 continue;
             }
-            bool contentControl = IsContentControlContainer(element);
-            if (!revisionRow && !contentControl && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
+            bool sourceContainer = IsSourceContainer(element);
+            if (!revisionRow && !sourceContainer && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
             {
                 nodes.Add(element, ReadLeaf(element, readRun));
                 continue;
@@ -60,9 +60,9 @@ internal static partial class DocxMathParser
             }
 
             DocxMathNode node;
-            if (revisionRow || contentControl)
+            if (revisionRow || sourceContainer)
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
-            else if (IsRow(name) && (name == "oMath" || !IsContentControlContainer(element.Parent)) &&
+            else if (IsRow(name) && (name == "oMath" || !IsSourceContainer(element.Parent)) &&
                 (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
                 (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
             {
@@ -201,21 +201,24 @@ internal static partial class DocxMathParser
         while (pending.TryPop(out var child))
         {
             token.ThrowIfCancellationRequested();
-            if (IsContentControlContainer(child))
+            if (IsSourceContainer(child))
             {
                 foreach (var item in NonMarkerChildren(child).Reverse()) pending.Push(item);
             }
             else yield return child;
         }
     }
-    private static bool IsContentControlContainer(XElement? element) =>
-        element?.Name == WordprocessingNamespace + "sdt" ||
+    private static bool IsSourceContainer(XElement? element) =>
+        element?.Name == WordprocessingNamespace + "customXml" || element?.Name == WordprocessingNamespace + "sdt" ||
         element?.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt";
-    // Match paragraph content-control reading: properties describe the control;
-    // only its sdtContent children supply stored, visible content.
+    // Match paragraph reading: control/custom-XML properties describe metadata;
+    // only stored child content supplies mathematical operands.
     private static IEnumerable<XElement> SourceChildren(XElement element) =>
         element.Name == WordprocessingNamespace + "sdt"
-            ? element.Elements(WordprocessingNamespace + "sdtContent") : element.Elements();
+            ? element.Elements(WordprocessingNamespace + "sdtContent")
+            : element.Name == WordprocessingNamespace + "customXml"
+                ? element.Elements().Where(child => child.Name != WordprocessingNamespace + "customXmlPr")
+                : element.Elements();
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     // Editing boundaries have no mathematical operand or printed ink. Keep

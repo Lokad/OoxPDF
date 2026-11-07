@@ -6,6 +6,12 @@ namespace Lokad.OoxPdf.Tests;
 internal static partial class DocxInlineCompositionTests
 {
     public static void DocxMathContentControlsPreserveBodyAndCellPaintAcrossViews()
+        => AssertMathSourceContainerPaint("sdt");
+
+    public static void DocxMathCustomXmlPreservesBodyAndCellPaintAcrossViews()
+        => AssertMathSourceContainerPaint("customXml");
+
+    private static void AssertMathSourceContainerPaint(string carrier)
     {
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
         foreach (string fixture in new[] { "CompositionProbes/math-inner-bookmark-outer",
@@ -32,12 +38,18 @@ internal static partial class DocxInlineCompositionTests
                     var children = owner.Elements().Where(child =>
                         !(child.Name.Namespace == m && child.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal))).ToArray();
                     foreach (var child in children) child.Remove();
-                    owner.Add(MathContentControl(children, w));
+                    owner.Add(MathSourceContainer(children, w, carrier));
                 });
         }
     }
 
     public static void DocxMathContentControlsPreserveActualRevisionAndBookmarkOwners()
+        => AssertMathSourceContainerOwners("sdt");
+
+    public static void DocxMathCustomXmlPreservesActualRevisionAndBookmarkOwners()
+        => AssertMathSourceContainerOwners("customXml");
+
+    private static void AssertMathSourceContainerOwners(string carrier)
     {
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
         foreach (string kind in new[] { "ins", "del" })
@@ -48,7 +60,7 @@ internal static partial class DocxInlineCompositionTests
             var direct = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             foreach (string placement in new[] { "inside", "outside" })
             {
-                var document = ReadMathRevisionBoundary(mode, kind, control, "bookmark", placement);
+                var document = ReadMathRevisionBoundary(mode, kind, control, "bookmark", placement, carrier);
                 var paragraph = document.Paragraphs.First();
                 TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default),
                     "A content control cannot replace or invent the actual mathematical revision owner.");
@@ -81,8 +93,11 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static XElement MathContentControl(IEnumerable<XElement> children, XNamespace w) =>
-        new(w + "sdt", new XElement(w + "sdtPr", new XElement(w + "id", new XAttribute(w + "val", "19131")),
+    private static XElement MathSourceContainer(IEnumerable<XElement> children, XNamespace w, string carrier = "sdt") =>
+        carrier == "customXml"
+        ? new(w + "customXml", new XAttribute(w + "uri", "urn:public:math-control"),
+            new XAttribute(w + "element", "payload"), new XElement(w + "customXmlPr"), children)
+        : new(w + "sdt", new XElement(w + "sdtPr", new XElement(w + "id", new XAttribute(w + "val", "19131")),
             new XElement(w + "tag", new XAttribute(w + "val", "PublicMathControl"))),
             new XElement(w + "sdtContent", children));
 }

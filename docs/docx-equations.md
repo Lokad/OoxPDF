@@ -19,9 +19,9 @@ translations, including fraction/script placement and inline wrapping.
 Comment ranges may start or end inside supported equations without removing
 the formula or its comment body. Their geometry uses the containing inline
 equation's occupied frame; highlighting only part of a formula remains approximate.
-Rich-text content controls preserve supported mathematical rows and literals in
-their stored `sdtContent`, including qualified revisions and source annotations.
-Control properties do not supply printed content. Unknown structures, orphan
+Rich-text content controls and custom-XML metadata preserve supported mathematical
+rows and literals, including qualified revisions and source annotations. Controls
+read their stored `sdtContent`; metadata properties do not supply printed content. Unknown structures, orphan
 argument roles and nested revisions retain their existing fallbacks.
 Empty proofing and permission boundaries inside mathematical rows and arguments
 preserve supported formula content. Permission boundaries can retain sub-point
