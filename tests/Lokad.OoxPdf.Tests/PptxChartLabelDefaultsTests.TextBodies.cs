@@ -96,7 +96,10 @@ internal static partial class PptxChartLabelDefaultsTests
             return RenderChartPage(xml);
         }
         var plain = Render(false); var keyed = Render(true);
-        var a = LineParagraphShows(plain); var b = LineParagraphShows(keyed);
+        var a = DocxCommentsTests.ReadEmbeddedGlyphTextShows(plain, false,
+            fontResourceFilter: resource => resource.StartsWith("CBD", StringComparison.Ordinal)).ToArray();
+        var b = DocxCommentsTests.ReadEmbeddedGlyphTextShows(keyed, false,
+            fontResourceFilter: resource => resource.StartsWith("CBD", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal("Actual, W3, 3", string.Concat(a.Select(s => s.Text)));
         TestAssert.Equal(string.Concat(a.Select(s => s.Text)), string.Concat(b.Select(s => s.Text)));
         TestAssert.Equal(a.Length, b.Length);
