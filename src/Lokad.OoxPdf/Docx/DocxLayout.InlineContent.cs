@@ -43,6 +43,7 @@ internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     public int? BoundPageCount { get; init; }
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? MathEquations { get; init; }
     public DocxMathDisplayAlignment? DisplayAlignment { get; init; }
+    public double AutomaticSpacingPoints { get; init; }
 }
 internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
@@ -292,6 +293,15 @@ internal sealed partial class DocxLayoutEngine
             lineHeight = Math.Min(lineHeight, ResolveLineHeightProfile(paragraph with { LineSpacingPoints = 0d },
                 fontSize, measurer).LineHeight);
         }
+        // Measure the ordinary strut without expanded spacing. The completed
+        // row adds that spacing after its math/image maxima, so tall content
+        // cannot consume it. Authored fixed/minimum and compressed slots keep
+        // their existing contracts.
+        double automaticFactor = DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)
+            ? ResolveAutoLineSpacingFactor(paragraph, out _) : 1d;
+        double automaticSpacing = double.IsFinite(automaticFactor) && automaticFactor > 1d
+            ? lineHeight - lineHeight / automaticFactor : 0d;
+        lineHeight -= automaticSpacing;
         var runIndices = new Dictionary<DocxTextRun, int>(ReferenceEqualityComparer.Instance);
         for (int index = 0; index < paragraph.Runs.Count; index++)
         {
@@ -427,6 +437,7 @@ internal sealed partial class DocxLayoutEngine
                 .Where(item => item.fragment.CounterDependencies != DocxCounterDependencies.None)
                 .Select(item => item.index).ToArray())
             { BoundPageNumber = pageNumber, BoundPageCount = pageCount, MathEquations = equations,
+                AutomaticSpacingPoints = automaticSpacing,
                 DisplayAlignment = paragraph.Equations.Count == 0 ? null :
                     DocxMathParagraphPolicy.ResolveParagraphDisplayAlignment(paragraph, token) };
         return true;
@@ -880,7 +891,7 @@ internal sealed partial class DocxLayoutEngine
                 current.All(fragment => fragment.Math is { } math
                     ? !math.UsesDisplayStyle &&
                       math.Box.AboveBaseline * scale <= physicalInset &&
-                      math.Box.BelowBaseline * scale <= lineHeight - physicalInset
+                      math.Box.BelowBaseline * scale <= lineHeight + atoms.AutomaticSpacingPoints - physicalInset
                     : fragment.Source is DocxInlineText or DocxInlineTab))
             {
                 // Contained ink shares the ordinary physical text strut, but
@@ -918,7 +929,7 @@ internal sealed partial class DocxLayoutEngine
             // A discarded trailing space must not leave an unused text descent.
             // Short frames keep the paragraph strut; authored minimum/exact slots
             // and the empty row after a hard break are resolved independently.
-            if (onlyFrames && frameAbove >= above && frameAbove + frameBelow >= lineHeight)
+            if (onlyFrames && frameAbove >= above && frameAbove + frameBelow >= lineHeight + atoms.AutomaticSpacingPoints)
                 below = frameBelow;
             // Prepared mathematical rows retain their existing shared strut.
             // Its leading/descent contract is distinct from an ordinary text
@@ -936,6 +947,12 @@ internal sealed partial class DocxLayoutEngine
                     GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, scale, defaultTabStopPoints));
                 above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
             }
+            // A prepared display row already owns its automatic expansion;
+            // retain the ordinary expanded strut as a floor, without charging
+            // it again. Inline rows own expansion after their intrinsic frame.
+            below = displayGroup
+                ? Math.Max(below, lineHeight + atoms.AutomaticSpacingPoints - baselineInset)
+                : below + atoms.AutomaticSpacingPoints;
             if (paragraph.LineSpacingPoints is { } minimum && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
                 above += Math.Max(0d, minimum * scale - above - below);
             if (DocxPlainBodyFrame.HasFixedLineFlow(paragraph))

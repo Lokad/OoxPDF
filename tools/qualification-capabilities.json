@@ -1,4 +1,23 @@
 {
+  "docx-inline-automatic-slots": [
+      "DocxInlineCompositionAutomaticSpacing",
+      "DocxInlineCompositionMinimumLine",
+      "PortableRenderingMinimumLine",
+      "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
+      "DocxNativeInlineMathRetainsLiteralMeaningAndSharedProseBaseline",
+      "DocxNativeDisplaySpacingUsesTheMathFontLineRatherThanTheParentSize",
+      "DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback",
+      "DocxStaticPictureOnly",
+      "DocxPassiveStaticPicturesPreserveIndependentWordBodyBaselines",
+      "DocxStaticSvgFramesPreserveIndependentWordBodyBaselines",
+      "DocxInlineCompositionSourceCursorConsumesTrailingWhitespace",
+      "DocxInlineCompositionAuthoredWhitespaceRetainsSourceLineOwnership",
+      "DocxInlineCompositionSourceCursorMatchesWholeParagraphWrapping",
+      "DocxInlineCompositionSourceCursorRebindsUnplacedPageCounters",
+      "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
+      "DocxInlineCompositionSourceCursorKeepsSplitCounterValue",
+      "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters"
+  ],
   "docx-math-automatic-slots": [
       "MathFontFraction",
       "MathFontFunction",
