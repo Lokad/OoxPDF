@@ -15,6 +15,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
         Func<DocxRelatedStoryLayout, double, int, DocxRelatedStoryLayout> bindRelatedStoryPage,
+        Func<DocxLayoutPage, int, int, bool> hasIndependentEndnoteFrame,
         CancellationToken cancellationToken,
         double printScale = 1d,
         IDocxTextMeasurer? separatorMeasurer = null, 
@@ -47,18 +48,6 @@ internal sealed partial class DocxLayoutEngine
         Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
         var outputPages = pages.ToList();
         var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
-        bool HasIndependentEndnoteFrame(DocxLayoutPage page, int pageNumber, int pageCount)
-        {
-            if (DocxPlainBodyFrame.HasNoStaticStories(document)) return true;
-            if (!HasNaturalStaticNoteStories(document, page, separatorMeasurer, printScale, cancellationToken, hasPageInputs: true) ||
-                headerKeepOut is null || footerKeepOut is null) return false;
-            // These cached edges use the same selected section-relative story
-            // and coordinates as placement. A complete group needs only this
-            // page's frame; intrusive or unmeasured static stories keep fallback.
-            double headerBottom = headerKeepOut(page, pageNumber, pageCount);
-            double footerTop = footerKeepOut(page, pageNumber, pageCount);
-            return headerBottom >= page.Height - page.MarginTop && footerTop <= page.MarginBottom;
-        }
         // Endnote placement needs its own final frame, not a measurement for
         // every body width visited by a footnote pass with nothing left to place.
         if (!locationsByBlock.Values.Any(locations => locations.Any(location =>
@@ -227,7 +216,7 @@ internal sealed partial class DocxLayoutEngine
 
                 if (sectionEndStories.Count > 0)
                 {
-                    bool independentStaticFrame = HasIndependentEndnoteFrame(outputPages[sectionEndPageIndex],
+                    bool independentStaticFrame = hasIndependentEndnoteFrame(outputPages[sectionEndPageIndex],
                         sectionEndPageIndex + 1, outputPages.Count);
                     if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                         sectionEndStories.Any(story => !story.StoryLayout.HasResolvedCounterInputs))
@@ -304,7 +293,7 @@ internal sealed partial class DocxLayoutEngine
                 var documentEndStories = documentEndReferences.Select(story => story.StoryLayout).ToList();
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
-                bool independentStaticFrame = HasIndependentEndnoteFrame(activePage, activePageIndex + 1, documentEndPages.Count);
+                bool independentStaticFrame = hasIndependentEndnoteFrame(activePage, activePageIndex + 1, documentEndPages.Count);
                 if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                     documentEndStories.Any(story => !story.HasResolvedCounterInputs))
                 {

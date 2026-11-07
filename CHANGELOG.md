@@ -7,7 +7,7 @@
   the rendered reference page before placement.
   Complete fitting endnote groups share counter admission and paragraph/separator
   geometry at section and document end, preserving equations beside page fields.
-  Ordinary headers and footers, including owned PAGE/NUMPAGES fields, preserve this
+  Ordinary headers and footers, including inline pictures and owned PAGE/NUMPAGES fields, preserve this
   mixed-note content and geometry when measured wholly inside their margins;
   intrusive or unsupported static stories retain fallback.
 

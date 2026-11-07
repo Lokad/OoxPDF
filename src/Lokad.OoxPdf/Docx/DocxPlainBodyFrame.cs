@@ -61,11 +61,18 @@ internal static class DocxPlainBodyFrame
         return true;
     }
 
-    private static bool HasPlainStaticSource(IEnumerable<DocxBodyElement> elements,
-        IEnumerable<DocxFloatingDrawing> drawings) =>
-        !drawings.Any() && elements.All(element =>
-            element is DocxParagraphElement paragraph && IsPlainStaticContent(paragraph.Paragraph) &&
-            DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions));
+    internal static bool HasPlainStaticSource(IEnumerable<DocxBodyElement> elements,
+        IEnumerable<DocxFloatingDrawing> drawings, CancellationToken token = default)
+    {
+        if (drawings.Any()) return false;
+        foreach (var element in elements)
+        {
+            token.ThrowIfCancellationRequested();
+            if (element is not DocxParagraphElement paragraph || !IsPlainStaticContent(paragraph.Paragraph) ||
+                !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions, token)) return false;
+        }
+        return true;
+    }
 
     private static bool IsPlainStaticContent(DocxParagraph paragraph) =>
         HasPlainTextProperties(paragraph, allowImages: true) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0 &&
@@ -84,7 +91,7 @@ internal static class DocxPlainBodyFrame
         double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
         image.WidthPoints > 0d && image.HeightPoints > 0d;
 
-    private static bool IsIndependentMarginImage(DocxInlineImageLayout image, DocxLayoutPage page) =>
+    internal static bool IsIndependentMarginImage(DocxInlineImageLayout image, DocxLayoutPage page) =>
         IsPlainStaticImage(image.Image) &&
         double.IsFinite(image.X) && double.IsFinite(image.Y) &&
         double.IsFinite(image.Width) && double.IsFinite(image.Height) && image.Width > 0d && image.Height > 0d &&
@@ -149,9 +156,8 @@ internal static class DocxPlainBodyFrame
 
     // Navigation ranges do not change the flow frame. Their run formatting is
     // checked below; link and bookmark destinations follow the placed content.
-    internal static bool HasPlainTextContent(DocxParagraph p, bool hasPageInputs = false) =>
-        (hasPageInputs ? DocxInlineContent.HasCounterFieldResults(p.FieldReferences, p.Runs)
-            : p.FieldReferences.Count == 0) && HasPlainTextProperties(p);
+    internal static bool HasPlainTextContent(DocxParagraph p) =>
+        p.FieldReferences.Count == 0 && HasPlainTextProperties(p);
 
     private static bool HasPlainTextProperties(DocxParagraph p, bool allowImages = false) =>
         (allowImages || p.Images.Count == 0) && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&

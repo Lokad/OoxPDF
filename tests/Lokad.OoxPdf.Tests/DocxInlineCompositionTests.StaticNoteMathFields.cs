@@ -10,7 +10,11 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxNoteMathFieldsStaticCountersPreserveMixedFrames() => CheckIndependentStaticNoteFrames(true);
 
-    private static void CheckIndependentStaticNoteFrames(bool staticCounters)
+    public static void DocxNoteMathFieldsStaticPicturesAndCountersPreserveMixedFrames() => CheckIndependentStaticNoteFrames(true, true);
+
+    public static void DocxNoteMathFieldsPictureOnlyStaticStoriesPreserveMixedFrames() => CheckIndependentStaticNoteFrames(false, true, true);
+
+    private static void CheckIndependentStaticNoteFrames(bool staticCounters, bool staticPictures = false, bool pictureOnly = false)
     {
         foreach (string position in new[] { "docEnd", "sectEnd" })
         foreach (bool direct in new[] { false, true })
@@ -33,8 +37,11 @@ internal static partial class DocxInlineCompositionTests
                             new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), .. source.BodyElements]
                         : source.BodyElements
                 };
-                return withStatic ? WithNoteMathStaticStory(source, footer,
-                    staticCounters ? ReadNoteMathStaticCounters(mode, complex: footer) : PlainNoteMathStaticParagraph()) : source;
+                if (!withStatic) return source;
+                var paragraph = staticCounters ? ReadNoteMathStaticCounters(mode, complex: footer) : PlainNoteMathStaticParagraph();
+                if (staticPictures) paragraph = NoteMathStaticPictureParagraph(source, paragraph, pictureOnly) with
+                    { Alignment = footer ? DocxTextAlignment.Center : DocxTextAlignment.Left };
+                return WithNoteMathStaticStory(source, footer, paragraph);
             }
             var renderer = PictureRangeRenderer(mode);
             var baseline = renderer.RenderPagesAsync(Source(null, value, false), null, default).ToBlockingEnumerable().ToArray();
@@ -57,12 +64,13 @@ internal static partial class DocxInlineCompositionTests
                 var a = Math(baseline[page]); var b = Math(literal[page]); var c = Math(counter[page]);
                 TestAssert.True(a.SequenceEqual(b) && a.SequenceEqual(c), "Independent static content preserves every note math frame: " + context);
                 mathText.Append(string.Concat(c.Select(glyph => glyph.Text)));
-                TestAssert.Equal(baseline[page].Images.Count, counter[page].Images.Count);
+                TestAssert.Equal(literal[page].Images.Count, counter[page].Images.Count);
+                TestAssert.True(!staticPictures || counter[page].Images.Count > 0, "The selected static picture renders on every page.");
                 TestAssert.True(baseline[page].Annotations.SequenceEqual(counter[page].Annotations), "Navigation follows the unchanged note geometry: " + context);
                 PdfContentValidator.ValidatePage(counter[page], page, default);
             }
             TestAssert.Equal("ratetimeratetime", NormalizeNoteMathFieldText(mathText.ToString()));
-            TestAssert.True(string.Concat(counter.Select(DocxPageFootnoteNumberingTests.DecodeText)).Contains("Public margin story", StringComparison.Ordinal),
+            TestAssert.True(pictureOnly || string.Concat(counter.Select(DocxPageFootnoteNumberingTests.DecodeText)).Contains("Public margin story", StringComparison.Ordinal),
                 "The independent story actually renders.");
 
             static (string Text, double X, double Y, double Size)[] Math(PdfPage page) =>
@@ -82,13 +90,62 @@ internal static partial class DocxInlineCompositionTests
             source = source with { Settings = source.Settings with { EndnoteReferenceSettings =
                 source.Settings.EndnoteReferenceSettings with { PositionValue = position } } };
             var paragraph = PlainNoteMathStaticParagraph();
-            if (!intrusive) paragraph = paragraph with { Alignment = DocxTextAlignment.Center };
+            if (!intrusive) paragraph = paragraph with { LineSpacingPoints = 14d };
             source = WithNoteMathStaticStory(source, footer, paragraph, intrusive ? 120d : 36d);
             var layout = CreatePageCounterLayout(source);
             var notes = layout.Pages.SelectMany(page => page.PlacedRelatedStories).Where(note => note.StoryLayout.Story.Id == "37").ToArray();
             TestAssert.True(notes.Length > 0 && notes.All(note => !note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
                 $"An intrusive or unsupported static frame retains the existing fallback: {position}/footer={footer}/intrusive={intrusive}.");
         }
+    }
+
+    public static void DocxNoteMathFieldsStaticPicturesRespectSelectedUnsupportedAndIntrusiveOwners()
+    {
+        foreach (string position in new[] { "docEnd", "sectEnd" })
+        foreach (bool footer in new[] { false, true })
+        foreach (string variant in new[] { "rotated", "unowned", "tall", "earlier-rotated" })
+        {
+            var source = ReadNoteMathField("endnote", OoxPdfDocxMarkupMode.Final, "PAGE", "9", false);
+            source = source with { Settings = source.Settings with { EndnoteReferenceSettings =
+                source.Settings.EndnoteReferenceSettings with { PositionValue = position } } };
+            var paragraph = NoteMathStaticPictureParagraph(source, PlainNoteMathStaticParagraph(), false);
+            var image = paragraph.Images[0];
+            image = variant switch
+            {
+                "rotated" or "earlier-rotated" => image with { RotationDegrees = 90d },
+                "unowned" => image with { SourceRunIndex = -1 },
+                _ => image with { HeightPoints = 200d }
+            };
+            paragraph = paragraph with { Images = [image], InlineContent = DocxInlineContent.FromPrefix(paragraph.Runs, [image], default) };
+            source = WithNoteMathStaticStory(source, footer, paragraph);
+            if (variant == "earlier-rotated") source = source with
+            {
+                HeaderParagraphs = [], FooterParagraphs = [], HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                PageSettings = source.PageSettings with
+                {
+                    HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                    FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+                    HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+                    FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>()
+                }
+            };
+            var notes = CreatePageCounterLayout(source).Pages.SelectMany(page => page.PlacedRelatedStories)
+                .Where(note => note.StoryLayout.Story.Id == "37").ToArray();
+            TestAssert.True(notes.Length > 0 && notes.All(note => !note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
+                $"Selected unsupported/intrusive static pictures retain fallback independently of final document-level collections: {position}/{footer}/{variant}.");
+        }
+    }
+
+    private static DocxParagraph NoteMathStaticPictureParagraph(DocxDocument source, DocxParagraph paragraph, bool pictureOnly)
+    {
+        var image = source.RelatedStories.Where(story => story.Id == "37").SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs)
+            .SelectMany(p => p.Images).First() with { WidthPoints = 18d, HeightPoints = 12d, SourceRunIndex = 0,
+                SourceTextOffsetInRun = 0, ClickTarget = null, PictureFrame = null, Crop = default };
+        DocxTextRun[] runs = pictureOnly ? [] : paragraph.Runs.Select((run, index) => run with { SourceRunIndex = index + 1 }).ToArray();
+        return paragraph with { Runs = runs, Images = [image], InlineContent = DocxInlineContent.FromPrefix(runs, [image], default) };
     }
 
     public static void DocxNoteMathFieldsStaticCountersRetainUnknownAndInconsistentFallbacks()
