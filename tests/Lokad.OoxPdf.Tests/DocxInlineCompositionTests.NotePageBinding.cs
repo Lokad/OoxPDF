@@ -103,8 +103,12 @@ internal static partial class DocxInlineCompositionTests
             });
             if (sectionEnd) source = source with { Settings = source.Settings with { EndnoteReferenceSettings =
                 source.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } };
-            if (variant == "static") source = source with { HeaderParagraphs = [DocxTests.CreateDocxLayoutParagraph("Public header", 12d, 14d)] };
+            if (variant == "static") source = WithNoteMathStaticStory(source, false,
+                DocxTests.CreateDocxLayoutParagraph("Public header", 12d, 14d));
             var layout = CreatePageCounterLayout(source, scaled: variant == "scaled");
+            if (variant == "static") TestAssert.True(layout.Pages.First(page => page.PlacedRelatedStories.Any(note => note.StoryLayout.Story.Id == "37"))
+                .StaticTextLines.Any(line => line.Story?.Kind == DocxStoryKind.Header),
+                "The unsupported static story actually belongs to the note's selected page.");
             var notes = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.Id == "37").ToArray();
             TestAssert.True(notes.Length != 0 && notes.All(s => !s.StoryLayout.HasResolvedCounterInputs && !s.UsesCompleteDocumentEndnoteFlow),
                 "Unfit/unsupported ownership retains its unresolved placement fallback: " + variant + "/section=" + sectionEnd);
