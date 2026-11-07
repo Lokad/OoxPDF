@@ -96,6 +96,35 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxMathHyperlinksIncludeStructuralPaintWithoutAbsorbingOtherRanges()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = MathContentControlRenderer(mode);
+            var before = renderer.RenderPagesAsync(Read(null), null, default).ToBlockingEnumerable().Single();
+            var control = renderer.RenderPagesAsync(Read("control"), null, default).ToBlockingEnumerable().Single();
+            var argument = renderer.RenderPagesAsync(Read("argument"), null, default).ToBlockingEnumerable().Single();
+            AssertMathLinkPaint([before], [control]); AssertMathLinkPaint([before], [argument]);
+            var wholeLink = control.Annotations.Except(before.Annotations).Single();
+            var argumentLink = argument.Annotations.Except(before.Annotations).Single();
+            TestAssert.True(wholeLink.X < argumentLink.X && wholeLink.Width > argumentLink.Width &&
+                wholeLink.Height >= argumentLink.Height,
+                "The radical symbol and overbar belong to the control link;an argument link cannot absorb them.");
+
+            DocxDocument Read(string? scope) => ReadMutation("docx-omml-isolated-inline-body-fraction-left", mode, true, false,
+                (xml, w, m) =>
+                {
+                    var equation = xml.Descendants(m + "oMath").First(); equation.RemoveNodes();
+                    var run = new XElement(m + "r", new XElement(m + "t", "a+b"));
+                    var argument = new XElement(m + "e", scope == "argument" ? Link(run) : run);
+                    var radical = new XElement(m + "rad", new XElement(m + "radPr",
+                        new XElement(m + "degHide", new XAttribute(m + "val", "1"))), new XElement(m + "deg"), argument);
+                    equation.Add(scope == "control" ? Link(radical) : radical);
+                    XElement Link(XElement child) => new(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), child);
+                });
+        }
+    }
+
     private static void AssertMathLinkPaint(IReadOnlyList<PdfPage> before, IReadOnlyList<PdfPage> after)
     {
         TestAssert.Equal(before.Count, after.Count);
