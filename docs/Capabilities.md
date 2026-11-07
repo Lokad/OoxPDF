@@ -528,6 +528,8 @@ Supported within the following constraints:
   Empty continuous/parity sections retain existing fallbacks.
   Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.
+  Ordinary endnote placement follows the document-wide position, matching Word;
+  section numbering and authored position metadata remain independent.
 - Simple/complex fields with stored results, including supported nested cached
   fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
   their stored results, including empty results; nested fields own their locks.
