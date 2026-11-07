@@ -37,7 +37,8 @@ internal static class DocxRegisteredSeparatorTests
             foreach (var normalized in new[] { defaultA, missing, inheritedDefault })
                 TestAssert.True(normalized.Synthetic && normalized.Page == baseline.Page &&
                     Math.Abs(normalized.Top - baseline.Top) < .001d && Math.Abs(normalized.Rule - baseline.Rule) < .001d,
-                    "Absent/unregistered endnote separators normalize once to the same zero-spacing source frame.");
+                    "Absent/unregistered endnote separators normalize once to the same zero-spacing source frame: " +
+                    mode + "/" + position + " baseline=" + baseline + " normalized=" + normalized);
 
             (int Page, double Top, bool Synthetic, double Rule) Place(int beforePoints, int? afterPoints, bool registered,
                 bool absent = false, bool inheritedBefore = false)
@@ -121,7 +122,8 @@ internal static class DocxRegisteredSeparatorTests
         var notes = Load("word/endnotes.xml");
         var separator = notes.Root!.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "type") == "separator");
         if (registered) noteProperties.Add(new XElement(w + "endnote", new XAttribute(w + "id", (string)separator.Attribute(w + "id")!)));
-        var spacing = new XElement(w + "spacing", new XAttribute(w + "before", before * 20));
+        var spacing = new XElement(w + "spacing", new XAttribute(w + "before", before * 20),
+            new XAttribute(w + "line", "240"), new XAttribute(w + "lineRule", "auto"));
         if (after.HasValue) spacing.Add(new XAttribute(w + "after", after.Value * 20));
         separator.ReplaceNodes(new XElement(w + "p", new XElement(w + "pPr", spacing),
             new XElement(w + "r", new XElement(w + "separator"))));
@@ -140,7 +142,8 @@ internal static class DocxRegisteredSeparatorTests
                 .Single(note => (string?)note.Attribute(w + "type") == "continuationSeparator");
             noteProperties.Add(new XElement(w + "endnote", new XAttribute(w + "id", (string)continuation.Attribute(w + "id")!)));
             continuation.ReplaceNodes(new XElement(w + "p", new XElement(w + "pPr", new XElement(w + "spacing",
-                new XAttribute(w + "before", "0"), new XAttribute(w + "after", continuationAfter.Value * 20))),
+                new XAttribute(w + "before", "0"), new XAttribute(w + "after", continuationAfter.Value * 20),
+                new XAttribute(w + "line", "240"), new XAttribute(w + "lineRule", "auto"))),
                 new XElement(w + "r", new XElement(w + "continuationSeparator"))));
         }
         notes.Root.Elements(w + "endnote").Where(note => (string?)note.Attribute(w + "type") is null or "normal").Remove();
