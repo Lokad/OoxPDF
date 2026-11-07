@@ -24,6 +24,8 @@ internal static class DocxInlineLineGeometry
         bottom = top = 0d;
         double? height = line.InlineFrame?.Height ?? line.BodyLineBoxHeightPoints ?? line.OccupiedLineBox?.Height;
         double? inset = line.InlineFrame?.BaselineInset ?? line.BodyLineBoxBaselineInsetPoints ?? line.OccupiedLineBox?.BaselineInset;
+        if (height is null && inset is null && line.Math is not null)
+            return TryGetPreparedMathBounds(line, out bottom, out top);
         if (height is not > 0d || inset is null || !double.IsFinite(height.Value) || !double.IsFinite(inset.Value) ||
             inset.Value < 0d || inset.Value > height.Value || !double.IsFinite(line.BaselineY)) return false;
         var visible = VerticalExtents(line);

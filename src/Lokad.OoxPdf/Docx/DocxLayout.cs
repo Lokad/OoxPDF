@@ -2266,7 +2266,7 @@ internal sealed partial class DocxLayoutEngine
                 var footerSource = SelectStaticHeaderFooter(templatePage.PageSettings.FooterBodyElementsByType,
                     templatePage.PageSettings.FooterParagraphsByType, templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
                 bounds = (top, noteTop, footer?.PhysicalFooterFrameTop,
-                    HasIndependentStaticContent(footer, footerSource.BodyElements, templatePage, cancellationToken));
+                    HasIndependentStaticContent(footer, footerSource.BodyElements, templatePage, DocxStoryKind.Footer, cancellationToken));
                 continuationFooterTopByPage[key] = bounds;
             }
             return bounds;
@@ -2295,7 +2295,7 @@ internal sealed partial class DocxLayoutEngine
             // second story tree. All placement paths reuse the existing caches.
             return ResolveHeaderKeepOut(page, pageNumber, pageCount) >= page.Height - page.MarginTop &&
                 ResolveFooterKeepOut(page, pageNumber, pageCount) <= page.MarginBottom &&
-                HasIndependentStaticContent(GetContinuationHeader(page, pageNumber, pageCount), header, page, cancellationToken) &&
+                HasIndependentStaticContent(GetContinuationHeader(page, pageNumber, pageCount), header, page, DocxStoryKind.Header, cancellationToken) &&
                 ResolveFooterBounds(page, pageNumber, pageCount).IndependentContent;
         }
         double? MapBodyBoundaryToNoteDesign(DocxLayoutPage targetPage, int pageIndex, double bodyY)

@@ -599,7 +599,8 @@ Approximate or restricted:
   pass the source/frame/fit proof. Empty or ordinary headers preserve the binding
   for admitted plain flow. Complete fitting mixed groups also retain their equations
   and counters alongside ordinary headers/footers measured wholly within their margins,
-  including fully prepared equations, supported inline pictures and PAGE/NUMPAGES static fields with actual page inputs;
+  including complete simple tables, fully prepared equations, supported inline pictures
+  and PAGE/NUMPAGES static fields with actual page inputs;
   intrusive or unsupported static stories keep fallback. Unrendered references and other unqualified
   owners retain their fallback. Mixed/unfit table rows and other
   unqualified note PAGE values remain approximate; full field parity is not promised.

@@ -4,6 +4,36 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxTableCellClipGeometry
 {
+    internal static bool HasCompleteMeasuredRows(IReadOnlyList<DocxTableRowLayout> rows, CancellationToken token,
+        Func<DocxTextLineLayout, DocxTableCellClipSnapshot?, bool>? inspect = null)
+    {
+        long expected = 0, visible = 0;
+        bool Count(IReadOnlyList<DocxTableRowLayout> current)
+        {
+            foreach (var row in current)
+            {
+                token.ThrowIfCancellationRequested();
+                if (row.FragmentCount != 1) return false;
+                foreach (var cell in row.Cells)
+                {
+                    token.ThrowIfCancellationRequested();
+                    expected += cell.TextLines.Count;
+                    if (!Count(cell.NestedRows)) return false;
+                }
+            }
+            return true;
+        }
+        if (!Count(rows)) return false;
+        foreach (var row in rows)
+        foreach (var owner in EnumerateCellLines(row, null, token))
+        {
+            token.ThrowIfCancellationRequested();
+            visible++;
+            if (inspect is not null && !inspect(owner.Line, owner.Clip)) return false;
+        }
+        return visible == expected;
+    }
+
     // A complete inline frame may paint its stroke around the cell's content
     // boundary. Children still use the unchanged content clip. A partial drawing
     // viewport or a frame outside the cell retains the conservative clip.
@@ -44,25 +74,18 @@ internal static class DocxTableCellClipGeometry
     internal static IEnumerable<(DocxTextLineLayout Line, DocxTableCellClipSnapshot? Clip)> EnumerateCellLines(
         DocxTableRowLayout row, DocxTableCellClipSnapshot? parent, CancellationToken token)
     {
-        const double roundoff = .000001d;
         foreach (var cell in row.Cells)
         {
             token.ThrowIfCancellationRequested();
             if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell) continue;
-            var clip = Resolve(row, cell);
-            if (parent is not null)
-            {
-                double x = Math.Max(clip.X, parent.X), y = Math.Max(clip.Y, parent.Y);
-                clip = new(true, x, y, Math.Min(clip.X + clip.Width, parent.X + parent.Width) - x,
-                    Math.Min(clip.Y + clip.Height, parent.Y + parent.Height) - y);
-            }
+            var clip = Resolve(row, cell, parent);
             if (!double.IsFinite(clip.X) || !double.IsFinite(clip.Y) || !double.IsFinite(clip.Width) ||
                 !double.IsFinite(clip.Height) || clip.Width <= 0d || clip.Height <= 0d) continue;
             foreach (var line in cell.TextLines)
             {
                 token.ThrowIfCancellationRequested();
                 if (DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top) &&
-                    bottom >= clip.Y - roundoff && top <= clip.Y + clip.Height + roundoff)
+                    ContainsVerticalRange(clip, bottom, top))
                     yield return (line, clip);
             }
             foreach (var nested in cell.NestedRows)
@@ -71,10 +94,30 @@ internal static class DocxTableCellClipGeometry
     }
 
     internal static bool ContainsSegment(DocxTableCellClipSnapshot? clip, DocxTextSegmentLayout segment)
+        => clip is null || segment.Width > 0d && ContainsHorizontalRange(clip, segment.X, segment.Width);
+
+    internal static bool ContainsHorizontalRange(DocxTableCellClipSnapshot? clip, double x, double width)
     {
         const double roundoff = .000001d;
-        return clip is null || double.IsFinite(segment.X) && double.IsFinite(segment.Width) && segment.Width > 0d &&
-            segment.X >= clip.X - roundoff && segment.X + segment.Width <= clip.X + clip.Width + roundoff;
+        return clip is null || double.IsFinite(x) && double.IsFinite(width) && width >= 0d &&
+            x >= clip.X - roundoff && x + width <= clip.X + clip.Width + roundoff;
+    }
+
+    internal static bool ContainsVerticalRange(DocxTableCellClipSnapshot? clip, double bottom, double top)
+    {
+        const double roundoff = .000001d;
+        return clip is null || double.IsFinite(bottom) && double.IsFinite(top) && top >= bottom &&
+            bottom >= clip.Y - roundoff && top <= clip.Y + clip.Height + roundoff;
+    }
+
+    internal static DocxTableCellClipSnapshot Resolve(DocxTableRowLayout row, DocxTableCellLayout cell,
+        DocxTableCellClipSnapshot? parent)
+    {
+        var clip = Resolve(row, cell);
+        if (parent is null) return clip;
+        double x = Math.Max(clip.X, parent.X), y = Math.Max(clip.Y, parent.Y);
+        return new(true, x, y, Math.Min(clip.X + clip.Width, parent.X + parent.Width) - x,
+            Math.Min(clip.Y + clip.Height, parent.Y + parent.Height) - y);
     }
 
     internal static DocxTableCellClipSnapshot Resolve(

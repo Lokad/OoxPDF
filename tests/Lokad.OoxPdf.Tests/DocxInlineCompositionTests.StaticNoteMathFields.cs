@@ -194,16 +194,20 @@ internal static partial class DocxInlineCompositionTests
         DocxTests.CreateDocxLayoutParagraph("Public margin story", 12d, 14d) with { LineSpacingPoints = null };
 
     private static DocxDocument WithNoteMathStaticStory(DocxDocument source, bool footer, DocxParagraph paragraph, double distance = 36d)
+        => WithNoteMathStaticBlocks(source, footer, [new DocxParagraphElement(paragraph)], distance);
+
+    private static DocxDocument WithNoteMathStaticBlocks(DocxDocument source, bool footer, IReadOnlyList<DocxBodyElement> blocks, double distance = 36d)
     {
-        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [paragraph] };
-        var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = [new DocxParagraphElement(paragraph)] };
+        var content = DocxBlockTraversal.EnumerateBodyParagraphs(blocks).ToArray();
+        var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = content };
+        var elements = new Dictionary<string, IReadOnlyList<DocxBodyElement>> { ["default"] = blocks };
         DocxPageSettings Settings(DocxPageSettings settings) => footer
             ? settings with { FooterDistancePoints = distance, FooterParagraphsByType = paragraphs, FooterBodyElementsByType = elements }
             : settings with { HeaderDistancePoints = distance, HeaderParagraphsByType = paragraphs, HeaderBodyElementsByType = elements };
         return source with
         {
-            HeaderParagraphs = footer ? source.HeaderParagraphs : [paragraph],
-            FooterParagraphs = footer ? [paragraph] : source.FooterParagraphs,
+            HeaderParagraphs = footer ? source.HeaderParagraphs : content,
+            FooterParagraphs = footer ? content : source.FooterParagraphs,
             HeaderParagraphsByType = footer ? source.HeaderParagraphsByType : paragraphs,
             FooterParagraphsByType = footer ? paragraphs : source.FooterParagraphsByType,
             HeaderBodyElementsByType = footer ? source.HeaderBodyElementsByType : elements,

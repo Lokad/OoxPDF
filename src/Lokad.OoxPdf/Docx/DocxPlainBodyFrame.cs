@@ -69,8 +69,28 @@ internal static class DocxPlainBodyFrame
         foreach (var element in elements)
         {
             token.ThrowIfCancellationRequested();
-            if (element is not DocxParagraphElement paragraph || !IsPlainStaticContent(paragraph.Paragraph, preparedMath, token) ||
-                !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions, token)) return false;
+            if (element is DocxParagraphElement paragraph)
+            {
+                if (!IsPlainStaticContent(paragraph.Paragraph, preparedMath, token) ||
+                    !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions, token)) return false;
+            }
+            else if (element is DocxTableElement table)
+            {
+                if (element.Revisions.Count != 0 || table.Table.Revisions.Count != 0 || table.Table.Rows.Count == 0) return false;
+                foreach (var row in table.Table.Rows)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (row.Revisions.Count != 0 || row.Cells.Count == 0 || row.HeightRuleValue == "exact" ||
+                        !DocxMathParagraphPolicy.IsSupportedSimpleRow(row)) return false;
+                    foreach (var cell in row.Cells)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (cell.Revisions.Count != 0 || !DocxMathParagraphPolicy.IsSupportedCellProperties(cell) ||
+                            !HasPlainStaticSource(DocxTableCellContent.GetBodyElements(cell), [], token, preparedMath)) return false;
+                    }
+                }
+            }
+            else return false;
         }
         return true;
     }
@@ -104,13 +124,14 @@ internal static class DocxPlainBodyFrame
         double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
         image.WidthPoints > 0d && image.HeightPoints > 0d;
 
-    internal static bool IsIndependentMarginImage(DocxInlineImageLayout image, DocxLayoutPage page) =>
+    internal static bool IsIndependentMarginImage(DocxInlineImageLayout image, DocxLayoutPage page,
+        DocxStoryKind? containingStory = null) =>
         IsPlainStaticImage(image.Image) &&
         double.IsFinite(image.X) && double.IsFinite(image.Y) &&
         double.IsFinite(image.Width) && double.IsFinite(image.Height) && image.Width > 0d && image.Height > 0d &&
         image.X >= 0d && image.X + image.Width <= page.Width && image.Y >= 0d && image.Y + image.Height <= page.Height &&
-        (image.Story?.Kind == DocxStoryKind.Header && image.Y >= page.Height - page.MarginTop ||
-         image.Story?.Kind == DocxStoryKind.Footer && image.Y + image.Height <= page.MarginBottom);
+        ((containingStory ?? image.Story?.Kind) == DocxStoryKind.Header && image.Y >= page.Height - page.MarginTop ||
+         (containingStory ?? image.Story?.Kind) == DocxStoryKind.Footer && image.Y + image.Height <= page.MarginBottom);
 
     internal static bool IsEligible(DocxDocument document) =>
         HasPlainBody(document) && (HasNoStaticStories(document) || HasNoSelectableStaticStories(document));

@@ -81,34 +81,9 @@ internal sealed partial class DocxLayoutEngine
                 (paragraph.Images.Count == 0 && paragraph.Equations.Count == 0 || frame);
         }
         foreach (var line in story.TextLines) if (!Index(line)) return false;
-        long expectedCellLines = 0;
-        bool CompleteRows(IReadOnlyList<DocxTableRowLayout> rows)
-        {
-            foreach (var row in rows)
-            {
-                token.ThrowIfCancellationRequested();
-                if (row.FragmentCount != 1) return false;
-                foreach (var cell in row.Cells)
-                {
-                    token.ThrowIfCancellationRequested();
-                    expectedCellLines += cell.TextLines.Count;
-                    if (!CompleteRows(cell.NestedRows)) return false;
-                }
-            }
-            return true;
-        }
-        if (!CompleteRows(story.TableRows)) return false;
-        long visibleCellLines = 0;
-        foreach (var row in story.TableRows)
-        foreach (var owner in DocxTableCellClipGeometry.EnumerateCellLines(row, null, token))
-        {
-            token.ThrowIfCancellationRequested();
-            visibleCellLines++;
-            if (!Index(owner.Line)) return false;
-        }
         // A surviving first line cannot stand in for a partly clipped
         // paragraph. Every measured line must survive all ancestor clips.
-        if (visibleCellLines != expectedCellLines) return false;
+        if (!DocxTableCellClipGeometry.HasCompleteMeasuredRows(story.TableRows, token, (line, _) => Index(line))) return false;
         bool Elements(IReadOnlyList<DocxBodyElement> elements)
         {
             foreach (var element in elements)
