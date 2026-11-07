@@ -2,6 +2,44 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    private static bool HasIndependentStaticContent(DocxStaticStoryLayoutResult? story,
+        IReadOnlyList<DocxBodyElement> source, DocxLayoutPage page, CancellationToken token)
+    {
+        HashSet<DocxEquation>? remaining = null;
+        foreach (var paragraph in source.OfType<DocxParagraphElement>())
+        foreach (var equation in paragraph.Paragraph.Equations)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!(remaining ??= new(ReferenceEqualityComparer.Instance)).Add(equation)) return false;
+        }
+        if (story is null) return remaining is null;
+        if (story.TableRows.Count != 0 || story.InlineTextBoxes.Count != 0 ||
+            story.InlineImages.Any(image => !DocxPlainBodyFrame.IsIndependentMarginImage(image, page))) return false;
+        foreach (var line in story.TextLines)
+        {
+            token.ThrowIfCancellationRequested();
+            if (line.Math is null && line.InlineMath.Count == 0) continue;
+            if (!DocxInlineLineGeometry.TryGetPreparedMathBounds(line, out double bottom, out double top) ||
+                bottom < 0d || top > page.Height || !double.IsFinite(line.X) || !double.IsFinite(line.Width) ||
+                line.X < 0d || line.Width < 0d || line.X + line.Width > page.Width ||
+                !(line.Story?.Kind == DocxStoryKind.Header && bottom >= page.Height - page.MarginTop ||
+                  line.Story?.Kind == DocxStoryKind.Footer && top <= page.MarginBottom)) return false;
+            if (line.Math is { } standalone && !Consume(standalone,
+                line.X + (line.IsInlineMath ? line.InlineMathOffsetX : 0d), line.MathScale)) return false;
+            foreach (var placement in line.InlineMath)
+                if (!Consume(placement.Math, line.X + placement.OffsetX, line.MathScale)) return false;
+        }
+        return remaining is null || remaining.Count == 0;
+
+        bool Consume(DocxPreparedMathParagraph math, double x, double scale)
+        {
+            double width = Math.Max(math.Box.Width, math.Box.AdvanceWidth) * scale;
+            return double.IsFinite(x) && x >= 0d && double.IsFinite(scale) && scale > 0d &&
+                double.IsFinite(width) && width >= 0d && x + width <= page.Width &&
+                remaining?.Remove(math.Equation) == true;
+        }
+    }
+
     private static DocxStaticStoryLayoutResult CreatePageStaticStoryLayout(
         DocxLayoutPage page, DocxSelectedStaticStory story, double x, double width, double startY,
         bool isHeader, int pageNumber, int pageCount, IDocxTextMeasurer textMeasurer,

@@ -2,6 +2,23 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxInlineLineGeometry
 {
+    internal static bool TryGetPreparedMathBounds(DocxTextLineLayout line, out double bottom, out double top)
+    {
+        // Standalone boxes predate InlineFrame. Consume their existing measured
+        // advance and ink bounds without changing other placement contracts.
+        if (line.Math is { } math)
+        {
+            double scale = line.MathScale;
+            double above = Math.Max(math.BaselineInset, math.Box.AboveBaseline) * scale;
+            double below = Math.Max(math.LineHeight - math.BaselineInset, math.Box.BelowBaseline) * scale;
+            top = line.BaselineY + above;
+            bottom = line.BaselineY - below;
+            return double.IsFinite(scale) && scale > 0d && above >= 0d && below >= 0d &&
+                double.IsFinite(top) && double.IsFinite(bottom);
+        }
+        return TryGetOccupiedBounds(line, out bottom, out top);
+    }
+
     internal static bool TryGetOccupiedBounds(DocxTextLineLayout line, out double bottom, out double top)
     {
         bottom = top = 0d;

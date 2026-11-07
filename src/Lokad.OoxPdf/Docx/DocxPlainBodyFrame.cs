@@ -62,25 +62,38 @@ internal static class DocxPlainBodyFrame
     }
 
     internal static bool HasPlainStaticSource(IEnumerable<DocxBodyElement> elements,
-        IEnumerable<DocxFloatingDrawing> drawings, CancellationToken token = default)
+        IEnumerable<DocxFloatingDrawing> drawings, CancellationToken token = default,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? preparedMath = null)
     {
         if (drawings.Any()) return false;
         foreach (var element in elements)
         {
             token.ThrowIfCancellationRequested();
-            if (element is not DocxParagraphElement paragraph || !IsPlainStaticContent(paragraph.Paragraph) ||
+            if (element is not DocxParagraphElement paragraph || !IsPlainStaticContent(paragraph.Paragraph, preparedMath, token) ||
                 !DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph.Paragraph, element.Revisions, token)) return false;
         }
         return true;
     }
 
-    private static bool IsPlainStaticContent(DocxParagraph paragraph) =>
-        HasPlainTextProperties(paragraph, allowImages: true) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0 &&
+    private static bool IsPlainStaticContent(DocxParagraph paragraph,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? preparedMath = null, CancellationToken token = default)
+    {
+        if (paragraph.Equations.Count != 0)
+        {
+            // Preparation owns supported source metadata. Availability is a
+            // separate requirement; a diagnosed missing box is not a full frame.
+            if (preparedMath is null ||
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true, token).Count != paragraph.Equations.Count ||
+                paragraph.Equations.Any(equation => !preparedMath.ContainsKey(equation))) return false;
+            paragraph = paragraph with { Equations = [] };
+        }
+        return HasPlainTextProperties(paragraph, allowImages: true) && HasAutomaticLineFlow(paragraph) && paragraph.InlineReferences.Count == 0 &&
         paragraph.Images.All(IsPlainStaticImage) &&
         // PAGE/NUMPAGES already receive page inputs during static measurement.
         // Reuse their source/placeholder contract; arbitrary cached fields do
         // not gain admission merely because their current result is text.
         DocxInlineContent.HasCounterFieldResults(paragraph.FieldReferences, paragraph.Runs);
+    }
 
     internal static bool IsPlainPictureOnlyParagraph(DocxParagraph paragraph) =>
         paragraph.Images.Count != 0 && paragraph.Runs.Count == 0 && IsPlainStaticContent(paragraph);

@@ -323,7 +323,7 @@ internal sealed partial class DocxLayoutEngine
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int, int), DocxStaticStoryLayoutResult?>();
-        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool IndependentPictures)>();
+        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool IndependentContent)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
         bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
@@ -2246,7 +2246,7 @@ internal sealed partial class DocxLayoutEngine
             double takeScale = paragraphSpacingScale;
             return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale) - firstPinSourceOffset * takeScale) / takeScale;
         }
-        (double Body, double Note, double? Physical, bool IndependentPictures) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
+        (double Body, double Note, double? Physical, bool IndependentContent) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
             OoxConversionBudget.Current?.AdmitDocxLayoutPages(pageNumber);
@@ -2263,7 +2263,10 @@ internal sealed partial class DocxLayoutEngine
                 // remain in design coordinates until their common print map.
                 double noteTop = footer?.PhysicalFooterFrameTop is { } physicalTop
                     ? new DocxPrintedPageFrame(templatePage.Height, paragraphSpacingScale).UnmapY(physicalTop) : top;
-                bounds = (top, noteTop, footer?.PhysicalFooterFrameTop, HasIndependentStaticPictures(footer, templatePage));
+                var footerSource = SelectStaticHeaderFooter(templatePage.PageSettings.FooterBodyElementsByType,
+                    templatePage.PageSettings.FooterParagraphsByType, templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
+                bounds = (top, noteTop, footer?.PhysicalFooterFrameTop,
+                    HasIndependentStaticContent(footer, footerSource.BodyElements, templatePage, cancellationToken));
                 continuationFooterTopByPage[key] = bounds;
             }
             return bounds;
@@ -2272,9 +2275,6 @@ internal sealed partial class DocxLayoutEngine
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Body);
         double ResolveNoteFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount) =>
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Note);
-        static bool HasIndependentStaticPictures(DocxStaticStoryLayoutResult? story, DocxLayoutPage page) =>
-            story is null || story.TableRows.Count == 0 && story.InlineTextBoxes.Count == 0 &&
-                story.InlineImages.All(image => DocxPlainBodyFrame.IsIndependentMarginImage(image, page));
         bool HasIndependentEndnoteFrame(DocxLayoutPage page, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -2286,8 +2286,8 @@ internal sealed partial class DocxLayoutEngine
                 settings.FooterBodyElementsByType, settings.FooterParagraphsByType);
             var headerDrawings = settings.HeaderFloatingDrawingsByType.GetValueOrDefault(variant, []);
             var footerDrawings = settings.FooterFloatingDrawingsByType.GetValueOrDefault(variant, []);
-            if (!DocxPlainBodyFrame.HasPlainStaticSource(header, headerDrawings, cancellationToken) ||
-                !DocxPlainBodyFrame.HasPlainStaticSource(footer, footerDrawings, cancellationToken)) return false;
+            if (!DocxPlainBodyFrame.HasPlainStaticSource(header, headerDrawings, cancellationToken, mathEquations) ||
+                !DocxPlainBodyFrame.HasPlainStaticSource(footer, footerDrawings, cancellationToken, mathEquations)) return false;
             if (header.Count == 0 && footer.Count == 0) return true;
             if (paragraphSpacingScale != 1d || textMeasurer is not IDocxStaticTextMetricsProvider) return false;
             // Share selected source and occupied-picture rules with ordinary
@@ -2295,8 +2295,8 @@ internal sealed partial class DocxLayoutEngine
             // second story tree. All placement paths reuse the existing caches.
             return ResolveHeaderKeepOut(page, pageNumber, pageCount) >= page.Height - page.MarginTop &&
                 ResolveFooterKeepOut(page, pageNumber, pageCount) <= page.MarginBottom &&
-                HasIndependentStaticPictures(GetContinuationHeader(page, pageNumber, pageCount), page) &&
-                ResolveFooterBounds(page, pageNumber, pageCount).IndependentPictures;
+                HasIndependentStaticContent(GetContinuationHeader(page, pageNumber, pageCount), header, page, cancellationToken) &&
+                ResolveFooterBounds(page, pageNumber, pageCount).IndependentContent;
         }
         double? MapBodyBoundaryToNoteDesign(DocxLayoutPage targetPage, int pageIndex, double bodyY)
         {
