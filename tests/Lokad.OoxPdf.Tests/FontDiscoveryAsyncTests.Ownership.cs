@@ -116,8 +116,8 @@ internal static partial class FontDiscoveryAsyncTests
                 TestAssert.Equal(2, resolver.GetDiscoveredFonts().Count);
                 var first = resolver.Resolve(new("First")); var second = resolver.Resolve(new("Second"));
                 TestAssert.True(ReferenceEquals(first.Source, second.Source), "Collection faces share their live program source.");
-                TestAssert.Equal(0, first.FaceIndex);
-                TestAssert.Equal(1, second.FaceIndex);
+                TestAssert.Equal(0, first.FontFaceIndex);
+                TestAssert.Equal(1, second.FontFaceIndex);
             }
             TestAssert.Equal(0L, pool.Reserved);
         });
