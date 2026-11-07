@@ -171,7 +171,14 @@ internal static partial class DocxMathParser
             element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
-    private static IEnumerable<XElement> ContentChildren(XElement element) => element.Elements().Where(child => !IsProperty(child));
+    // Editing boundaries have no mathematical operand or printed ink. Keep
+    // content-bearing and unknown elements on the explicit unsupported path.
+    private static bool IsEditingMarker(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "proofErr" or "permStart" or "permEnd" &&
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
+    private static IEnumerable<XElement> ContentChildren(XElement element) =>
+        element.Elements().Where(child => !IsProperty(child) && !IsEditingMarker(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
     {
         XElement[] children = ContentChildren(element).ToArray();

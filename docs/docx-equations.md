@@ -13,6 +13,10 @@ inline pictures share measurement and placement in body paragraphs, simple table
 cells and direct headers/footers. Numbering owns the first authored row; formulas
 beside prose use inline sizing while a later math-only row owns display sizing.
 Links and annotations follow the resulting physical geometry.
+Empty proofing and permission boundaries inside mathematical rows and arguments
+preserve supported formula content. Permission boundaries can retain sub-point
+Office geometry differences. Bookmark/comment navigation and revision ownership
+remain separate from these editing markers.
 Adjacent display containers combine in source order; the later container supplies
 its justification, including the default when omitted. Bare formulas add content
 without replacing the container's properties. The first effective display row

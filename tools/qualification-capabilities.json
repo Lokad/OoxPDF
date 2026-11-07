@@ -4483,6 +4483,18 @@
     "DocxMarkupModesFilterTableCellAndNestedTableRevisions",
     "DocxAllMarkupRendererPlacesRelatedStoryTableRevisionBalloons"
   ],
+  "docx-math-editing-markers": [
+    "DocxMathEditingMarkers",
+    "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
+    "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
+    "DocxInlineCompositionEmptyFractionKeepsOnlyStructuralOwnership",
+    "PortableRenderingEmptyFractions",
+    "PortableRenderingEmptyFractionRevisions",
+    "DocxInlineCompositionMathRunRevisionsRequireActualOwners",
+    "DocxInlineCompositionEquationRevisionsRequireActualSourceOwners",
+    "DocxInlineCompositionEmptyFractionsMatchIndependentWord",
+    "DocxDeletedMathMetadata"
+  ],
   "docx-deleted-math-metadata": [
     "DocxDeletedMathMetadata",
     "DocxInlineCompositionEmptyFractionKeepsOnlyStructuralOwnership",

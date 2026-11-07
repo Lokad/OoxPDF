@@ -5,7 +5,7 @@ using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxMathTests
+internal static partial class DocxMathTests
 {
     public static void DocxMathMatrixColumnSpacingRetainsTypedUnitsAndBoundedScalars()
     {
