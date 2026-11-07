@@ -1,4 +1,32 @@
 {
+  "docx-note-math-fields": [
+    "DocxNoteMathFields",
+    "DocxInlineCompositionNormalNoteSourcesRetainEquationOwners",
+    "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
+    "PortableRenderingNormalNoteContentPreservesMixedMath",
+    "DocxInlineCompositionUnsupportedEquationRetainsAccuratePartialPartDiagnostics",
+    "DocxNativeStaticMathRetainsStoryFlowAndPerPartDiagnosticScope",
+    "DocxMathReaderUsesTheSameStructureForCellsAndStaticStories",
+    "DocxNativeMathMissingFontsAndUnqualifiedFormattingRetainIgnoredDiagnostics",
+    "DocxStaticTableMathPreparationSharesCellEligibilityAndSourceIdentity",
+    "DocxTableMathCandidatesShareStandalonePolicyAndKeepUnsupportedOwners",
+    "PortableRenderingTotalPageMathUsesFinalizedCountAndPreservesSource",
+    "PortableRenderingTotalPageMathConfirmsRestoredMathCount",
+    "PortableRenderingTotalPageMathRecomputesNormalNotePlacement",
+    "DocxNotePageCountResultsPreserveLiteralFramesAndWrapping",
+    "DocxNoteCounterMeasurementUsesBindingsAndRetainsPageFallback",
+    "DocxCounterSpacingKeepsUnknownAndInconsistentResultFallbacks",
+    "DocxFittingEndnotePageFieldsPreserveLiteralFramesAndWrapping",
+    "DocxFittingEndnotePageMeasurementUsesTwoDigitReferencePage",
+    "DocxEndnotePageBindingRetainsUnfitAndUnsupportedOwners",
+    "DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry",
+    "DocxSectionEndnotePageCountersPreserveReferenceAndFollowingSection",
+    "DocxInlineCompositionCellPageNotesPublishOneOwnedParagraphAcrossViews",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback"
+  ],
   "pptx-point-text-bodies": [
     "PptxPointTextBody"
   ],

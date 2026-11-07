@@ -117,7 +117,7 @@ internal static class DocxMathParagraphPolicy
 
     public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
     {
-        var pageOwners = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        var fieldInputOwners = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var paragraph in DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(
                 document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs)
             .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(
@@ -127,16 +127,18 @@ internal static class DocxMathParagraphPolicy
                 DocxBlockTraversal.EnumerateStaticStoryParagraphs(section.PageSettings))))
         {
             token.ThrowIfCancellationRequested();
-            pageOwners.Add(paragraph);
+            fieldInputOwners.Add(paragraph);
         }
         var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
-        var noteTables = new HashSet<DocxTable>(ReferenceEqualityComparer.Instance);
         foreach (var story in document.RelatedStories)
         {
             token.ThrowIfCancellationRequested();
             if (story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote) || !story.IsNormalStoryType) continue;
-            foreach (var table in story.Tables)
-            { token.ThrowIfCancellationRequested(); noteTables.Add(table); }
+            // Normal notes bind PAGE at placement and NUMPAGES through the
+            // existing finalized-count pass. Prepare their equation boxes from
+            // source metadata now; layout still requires actual field inputs.
+            foreach (var paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(story))
+            { token.ThrowIfCancellationRequested(); fieldInputOwners.Add(paragraph); }
         }
         foreach (DocxEquationPartSource part in document.EquationParts)
         {
@@ -148,14 +150,13 @@ internal static class DocxMathParagraphPolicy
                 IEnumerable<DocxParagraph> paragraphs = element switch
                 {
                     DocxParagraphElement direct => [direct.Paragraph],
-                    DocxTableElement table when noteTables.Contains(table.Table) => EnumerateSupportedTableParagraphs(table.Table, token),
-                    DocxTableElement table => EnumerateSupportedTableParagraphs(table.Table, token).Where(pageOwners.Contains),
+                    DocxTableElement table => EnumerateSupportedTableParagraphs(table.Table, token).Where(fieldInputOwners.Contains),
                     _ => []
                 };
                 foreach (DocxParagraph paragraph in paragraphs)
                 {
                     token.ThrowIfCancellationRequested();
-                    bool hasPageInputs = pageOwners.Contains(paragraph);
+                    bool hasPageInputs = fieldInputOwners.Contains(paragraph);
                     if (GetPreparationEquations(paragraph, hasPageInputs, token).Count != 0 && seen.Add(paragraph))
                         yield return (paragraph, hasPageInputs);
                 }
