@@ -79,15 +79,32 @@ internal sealed partial class DocxReader
         }
 
         void AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
+            => AddSourceContainerChild(child, revision, removeDeletedText: false);
+
+        void AddSourceContainerChild(XElement child, DocxRevisionInfo? revision, bool removeDeletedText)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (child.Name == WordprocessingNamespace + "r")
+            if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
+            {
+                AddEquation(child, revision, removeDeletedText);
+            }
+            else if (child.Name == WordprocessingNamespace + "sdt")
+            {
+                AddContentControl(child, revision, removeDeletedText);
+            }
+            else if (child.Name == WordprocessingNamespace + "sdtContent" || IsInlineMetadataContainer(child))
+            {
+                AddVisibleRunContainer(child, revision, removeDeletedText);
+            }
+            // An excluded deletion retains only supported math structure.
+            // Metadata does not change that owner or restore its other content.
+            else if (removeDeletedText)
+            {
+                return;
+            }
+            else if (child.Name == WordprocessingNamespace + "r")
             {
                 AddParagraphRun(child, ref pageInstructionSeen, revision);
-            }
-            else if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
-            {
-                AddEquation(child, revision);
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
@@ -105,14 +122,6 @@ internal sealed partial class DocxReader
             {
                 AddHyperlinkContainer(child, revision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
             }
-            else if (child.Name == WordprocessingNamespace + "sdt")
-            {
-                AddContentControl(child, revision);
-            }
-            else if (child.Name == WordprocessingNamespace + "sdtContent" || IsInlineMetadataContainer(child))
-            {
-                AddVisibleRunContainer(child, revision);
-            }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
                 EnsureInlineContent();
@@ -129,19 +138,19 @@ internal sealed partial class DocxReader
             }
         }
 
-        void AddVisibleRunContainer(XElement container, DocxRevisionInfo? revision)
+        void AddVisibleRunContainer(XElement container, DocxRevisionInfo? revision, bool removeDeletedText = false)
         {
             foreach (XElement containerChild in container.Elements())
             {
-                AddInlineContainerChild(containerChild, revision);
+                AddSourceContainerChild(containerChild, revision, removeDeletedText);
             }
         }
 
-        void AddContentControl(XElement contentControl, DocxRevisionInfo? revision)
+        void AddContentControl(XElement contentControl, DocxRevisionInfo? revision, bool removeDeletedText)
         {
             foreach (XElement content in contentControl.Elements(WordprocessingNamespace + "sdtContent"))
             {
-                AddVisibleRunContainer(content, revision);
+                AddVisibleRunContainer(content, revision, removeDeletedText);
             }
         }
 
@@ -163,12 +172,7 @@ internal sealed partial class DocxReader
                 // Final suppresses deleted mathematical text while supported
                 // literal argument frames and structural paint remain.
                 if (markupMode == OoxPdfDocxMarkupMode.Final && container.Name == WordprocessingNamespace + "del")
-                    foreach (XElement child in container.Elements())
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
-                            AddEquation(child, revision: null, removeDeletedText: true);
-                    }
+                    AddVisibleRunContainer(container, revision: null, removeDeletedText: true);
                 return;
             }
 

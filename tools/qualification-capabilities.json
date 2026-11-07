@@ -4483,6 +4483,21 @@
     "DocxMarkupModesFilterTableCellAndNestedTableRevisions",
     "DocxAllMarkupRendererPlacesRelatedStoryTableRevisionBalloons"
   ],
+  "docx-deleted-math-metadata": [
+    "DocxDeletedMathMetadata",
+    "DocxInlineCompositionEmptyFractionKeepsOnlyStructuralOwnership",
+    "DocxInlineCompositionEmptyFractionsMatchIndependentWord",
+    "PortableRenderingEmptyFractions",
+    "PortableRenderingEmptyFractionRevisions",
+    "DocxInlineCompositionMathRunRevisionsRequireActualOwners",
+    "DocxInlineMetadataWrappersKeepRevisionFieldAndLinkOwners",
+    "DocxInlineMetadataWrappersKeepHardBreakBoundaries",
+    "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
+    "PortableRenderingInlineMetadataWrappersRetainParentFrames",
+    "DocxReaderPreservesInlineReferencesInsideRunContainers",
+    "DocxComplexFieldWithCachedResultInsideInlineContentControlDoesNotEmitUnsupportedDiagnostic",
+    "DocxComplexFieldSpanningInlineContentControlUsesCachedResult"
+  ],
   "docx-inline-metadata-wrappers": [
     "DocxInlineMetadataWrappers",
     "PortableRenderingInlineMetadataWrappersRetainParentFrames",

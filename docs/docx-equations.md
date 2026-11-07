@@ -68,6 +68,10 @@ deletion strikes to revised literals; structural symbols retain qualified author
 ink. Unowned metadata, move ranges, unknown/deeper/multiple/nested revision wrappers
 retain fallbacks. This does not establish arbitrary revised-equation support.
 
+Content controls and transparent inline metadata preserve the same qualified
+deleted-equation frames in Final. Their deleted text, links and other excluded
+content remain filtered; the metadata does not create another revision owner.
+
 Qualified empty fraction/script/root/matrix/function/operator arguments use
 metric-only placeholder geometry, without dummy glyphs or font subsets. Remaining
 glyphs and structural paint stay visible, including applicable Final deletions.
