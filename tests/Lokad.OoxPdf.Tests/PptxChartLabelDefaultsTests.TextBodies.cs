@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
