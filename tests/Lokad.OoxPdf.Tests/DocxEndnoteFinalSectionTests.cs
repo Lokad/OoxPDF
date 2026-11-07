@@ -50,7 +50,8 @@ internal static class DocxEndnoteFinalSectionTests
     public static void DocxSectionEndNotesDoNotClaimEmptyFinalDocumentFrame()
     {
         var source = Read(OoxPdfDocxMarkupMode.Final).Source;
-        source = source with { BodyElements = source.BodyElements.Select(element => element is DocxSectionBreakElement section
+        source = source with { Settings = source.Settings with { EndnoteReferenceSettings =
+            source.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } }, BodyElements = source.BodyElements.Select(element => element is DocxSectionBreakElement section
             ? section with { PageSettings = section.PageSettings with { EndnoteReferenceSettings =
                 section.PageSettings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } } : element).ToArray() };
         var layout = Layout(source);

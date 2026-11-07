@@ -171,7 +171,9 @@ internal sealed partial class DocxLayoutEngine
                 cancellationToken.ThrowIfCancellationRequested();
                 int referencePageIndex = endnoteIndex.FindFirstPageWithReference(endnoteLocation);
                 if (referencePageIndex < 0 ||
-                    !string.Equals(outputPages[referencePageIndex].PageSettings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase))
+                    // Word takes endnote placement from settings.xml. Section
+                    // numbering and authored position metadata remain independent.
+                    !string.Equals(document.Settings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase))
                 {
                     documentEndLocations.Add(endnoteLocation);
                     continue;
@@ -187,7 +189,10 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 endnoteIndex = RelatedStoryPageIndex.Build(outputPages, cancellationToken);
-                int sectionEndPageIndex = ResolveSectionEndEndnotePageIndex(document.BodyElements, endnoteIndex, outputPages, sectionGroup.First());
+                int sectionEndPageIndex = endnoteIndex.FindLastPageWithBlockInRange(
+                    sectionGroup.Key.StartBlockIndex, sectionGroup.Key.EndBlockIndex);
+                if (sectionEndPageIndex < 0)
+                    sectionEndPageIndex = endnoteIndex.FindFirstPageWithReference(sectionGroup.First());
                 if (sectionEndPageIndex < 0)
                 {
                     documentEndLocations.AddRange(sectionGroup);

@@ -16611,6 +16611,7 @@
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ],
   "docx-note-placement-work": [
+    "DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata",
       "DocxEndnoteMeasurementsSkipUnrelatedBodyWidths",
       "DocxAtomicFootnoteHeadIgnoresFutureContinuationRule",
       "DocxSimpleSectionPaginationUsesFollowingStartType",

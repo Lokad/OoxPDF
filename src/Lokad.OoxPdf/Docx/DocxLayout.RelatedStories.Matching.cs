@@ -49,26 +49,6 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    // R12: reference and section-end page searches run against the once-per-group
-    // page index instead of re-walking page item trees per location.
-    private static int ResolveSectionEndEndnotePageIndex(
-        IReadOnlyList<DocxBodyElement> elements,
-        RelatedStoryPageIndex referenceIndex,
-        IReadOnlyList<DocxLayoutPage> pages,
-        DocxInlineReferenceLocation location)
-    {
-        int referencePageIndex = referenceIndex.FindFirstPageWithReference(location);
-        if (referencePageIndex < 0 ||
-            !string.Equals(pages[referencePageIndex].PageSettings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase))
-        {
-            return -1;
-        }
-
-        (int startBlockIndex, int endBlockIndex) = ResolveSectionBlockRange(elements, location.SourceBlockIndex);
-        int sectionEndPageIndex = referenceIndex.FindLastPageWithBlockInRange(startBlockIndex, endBlockIndex);
-        return sectionEndPageIndex >= 0 ? sectionEndPageIndex : referencePageIndex;
-    }
-
     private static Dictionary<int, List<DocxInlineReferenceLocation>> BuildInlineReferenceLocationsByBlock(
         DocxDocument document,
         CancellationToken cancellationToken)

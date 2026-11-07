@@ -6413,6 +6413,9 @@ internal static class DocxFootnotesTests
             RelatedStories = [endnoteStory]
         };
 
+        document = document with { Settings = document.Settings with { EndnoteReferenceSettings =
+            document.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } };
+
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
         DocxLayoutPageSnapshot endnotePage = snapshot.Pages.Single(page => page.PlacedEndnoteStoryCount == 1);
 
@@ -6594,6 +6597,9 @@ internal static class DocxFootnotesTests
             RelatedStories = [endnoteStory]
         };
 
+        document = document with { Settings = document.Settings with { EndnoteReferenceSettings =
+            document.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } };
+
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
         DocxPlacedRelatedStoryLayout placedStory = layout.Pages
             .SelectMany(page => page.PlacedRelatedStories)
@@ -6671,6 +6677,9 @@ internal static class DocxFootnotesTests
         {
             RelatedStories = [firstEndnoteStory, secondEndnoteStory]
         };
+
+        document = document with { Settings = document.Settings with { EndnoteReferenceSettings =
+            document.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } };
 
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
         int secondSectionPageIndex = snapshot.Pages
