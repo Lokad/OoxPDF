@@ -56,6 +56,7 @@ internal static partial class DocxMathLayout
             !double.IsFinite(slashX) || width <= 0d || slashX + bounds.XMin * glyphScale < 0d)
         { fallback = "InvalidMathSkewedFractionExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(numerator.Glyphs.Count + denominator.Glyphs.Count + 1);
+        List<DocxMathBookmarkPoint>? bookmarks = null;
         Append(numerator, 0d, numeratorY);
         Append(denominator, denominatorX, denominatorY);
         RgbColor? color = numerator.Glyphs[0].Color;
@@ -63,13 +64,14 @@ internal static partial class DocxMathLayout
         glyphs.Add(new(0x2044, 0x2044, resource, cid.ToString("X4", CultureInfo.InvariantCulture), glyphSize,
             slashX, slashY, slashAdvance, color) { OriginalGlyph = variant.Glyph, ControlOwner = fraction });
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size), EnclosureHeight = above + below,
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size), EnclosureHeight = above + below,
             Edges = new(DocxMathRowLayout.AtomKind.Inner, DocxMathRowLayout.AtomKind.Inner, false) };
         fallback = null;
         return true;
 
         void Append(DocxMathBox child, double x, double y)
         {
+            AppendBookmarkPoints(ref bookmarks, child, x, y, token);
             foreach (var glyph in child.Glyphs)
             { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + x, BaselineY = glyph.BaselineY + y }); }
         }

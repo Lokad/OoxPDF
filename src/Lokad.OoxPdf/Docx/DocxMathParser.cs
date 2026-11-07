@@ -11,11 +11,11 @@ internal static partial class DocxMathParser
         XElement equation,
         Func<XElement, string, DocxTextRun> readRun,
         CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
-        bool preserveDeletedStructure = false)
+        bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null)
     {
-        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision)>();
+        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision, bool IncludeBookmarks)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
-        pending.Push((equation, false, false));
+        pending.Push((equation, false, false, true));
         while (pending.TryPop(out var item))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -42,10 +42,11 @@ internal static partial class DocxMathParser
 
             if (!item.Expanded)
             {
-                pending.Push((element, true, item.InsideRevision));
+                pending.Push((element, true, item.InsideRevision, item.IncludeBookmarks));
                 foreach (XElement child in ContentChildren(element).Reverse())
                 {
-                    pending.Push((child, false, item.InsideRevision || revisionRow));
+                    pending.Push((child, false, item.InsideRevision || revisionRow,
+                        item.IncludeBookmarks && (!revisionRow || includeRevision!(element))));
                 }
                 continue;
             }
@@ -145,6 +146,27 @@ internal static partial class DocxMathParser
                         ContentChildren(element).Select(child => new DocxMathChild(
                             child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
             }
+            if (node is DocxMathRow sourceRow && item.IncludeBookmarks)
+            {
+                List<DocxMathBookmarkBoundary>? bookmarks = null;
+                int childIndex = 0;
+                foreach (var child in element.Elements())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (IsBookmarkMarker(child))
+                    {
+                        if (child.Name.LocalName == "bookmarkStart")
+                        {
+                            var bookmark = new DocxMathBookmark((string?)child.Attribute(WordprocessingNamespace + "id"),
+                                (string?)child.Attribute(WordprocessingNamespace + "name"));
+                            (bookmarks ??= []).Add(new(bookmark, childIndex));
+                            readBookmark?.Invoke(bookmark);
+                        }
+                    }
+                    else if (!IsProperty(child) && !IsEditingMarker(child)) childIndex++;
+                }
+                if (bookmarks is not null) node = sourceRow with { Bookmarks = bookmarks };
+            }
             nodes.Add(element, revisionRow ? node : node with { PropertiesXml = ReadProperties(element) });
         }
 
@@ -177,8 +199,12 @@ internal static partial class DocxMathParser
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "proofErr" or "permStart" or "permEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
+    private static bool IsBookmarkMarker(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "bookmarkStart" or "bookmarkEnd" &&
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
-        element.Elements().Where(child => !IsProperty(child) && !IsEditingMarker(child));
+        element.Elements().Where(child => !IsProperty(child) && !IsEditingMarker(child) && !IsBookmarkMarker(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
     {
         XElement[] children = ContentChildren(element).ToArray();

@@ -35,8 +35,11 @@ internal abstract record DocxMathNode
 }
 
 internal sealed record DocxMathArgumentProperties(int? Size, bool HasUnsupportedProperties);
+internal sealed record DocxMathBookmark(string? Id, string? Name);
+internal readonly record struct DocxMathBookmarkBoundary(DocxMathBookmark Source, int ChildIndex);
 internal sealed record DocxMathRow(IReadOnlyList<DocxMathNode> Children) : DocxMathNode
 {
+    public IReadOnlyList<DocxMathBookmarkBoundary> Bookmarks { get; init; } = [];
     public DocxMathArgumentProperties? ArgumentProperties { get; init; }
     public bool HasKnownArgumentProperties => ArgumentProperties is { HasUnsupportedProperties: false };
     public bool HasSupportedProperties => PropertiesXml.Count == 0 ||

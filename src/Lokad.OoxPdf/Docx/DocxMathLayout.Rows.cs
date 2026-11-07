@@ -16,24 +16,27 @@ internal static partial class DocxMathLayout
     private static StructuredRow? GetStructuredRow(DocxEquation equation, CancellationToken token)
     {
         var literals = new List<DocxMathNode>();
+        List<DocxMathBookmarkBoundary>? bookmarks = null;
         var parts = new List<StructuredPart>();
-        var pending = new Stack<DocxMathNode>(); pending.Push(equation.Content);
-        while (pending.TryPop(out DocxMathNode? node))
+        foreach (var (node, bookmark) in DocxMathRowLayout.EnumerateItems(equation.Content, token))
         {
             token.ThrowIfCancellationRequested();
-            if (node is DocxMathRow row && row.HasSupportedProperties)
+            if (bookmark is not null)
             {
-                for (int i = row.Children.Count - 1; i >= 0; i--) { pending.Push(row.Children[i]); }
+                (bookmarks ??= []).Add(new(bookmark, literals.Count));
             }
             else if (node is DocxMathRun) { literals.Add(node); }
-            else if (GetSupportedStructure(node, equation, token) is { } supported)
-            { parts.Add(new(new(literals), supported)); literals = []; }
+            else if (node is not null && GetSupportedStructure(node, equation, token) is { } supported)
+            {
+                parts.Add(new(new(literals) { Bookmarks = bookmarks is null ? [] : bookmarks }, supported));
+                literals = []; bookmarks = null;
+            }
             else { return null; }
         }
         // A lone structure is measured by its existing owner, so child
         // delegation below cannot recurse into this same sequence grammar.
         return parts.Count > 1 || parts.Count == 1 && parts[0].Before.Children.Count + literals.Count > 0
-            ? new(parts, new(literals)) : null;
+            ? new(parts, new(literals) { Bookmarks = bookmarks is null ? [] : bookmarks }) : null;
     }
 
     private static bool TryMeasureStructuredRow(DocxEquation equation, StructuredRow row,
@@ -45,6 +48,8 @@ internal static partial class DocxMathLayout
         box = null;
         var glyphs = new List<DocxMathGlyphPlacement>();
         var rules = new List<DocxMathRulePlacement>();
+        List<DocxMathBookmarkPoint>? bookmarks = null;
+        List<DocxMathBookmarkPoint>? rowBookmarks = null;
         double advance = 0d, width = 0d, above = 0d, below = 0d;
         DocxMathMetricOwner? leadingOwner = null;
         DocxMathRowLayout.RowEdges? leadingEdges = null;
@@ -87,10 +92,16 @@ internal static partial class DocxMathLayout
             neighbors: new(Before: previousEnd)) || after is null) { return false; }
         AppendLiteral(after);
         width = Math.Max(width, advance);
+        if (rowBookmarks is not null)
+        foreach (var point in rowBookmarks)
+        {
+            token.ThrowIfCancellationRequested();
+            (bookmarks ??= []).Add(point with { Top = above });
+        }
         if (!double.IsFinite(width) || width < 0d || !double.IsFinite(above) || !double.IsFinite(below))
         { fallback = "InvalidMathStructuredRowExtent"; return false; }
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = leadingOwner,
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = leadingOwner,
             Edges = leadingEdges is null ? null : leadingEdges with { Last = trailingKind } };
         fallback = null;
         return true;
@@ -104,6 +115,7 @@ internal static partial class DocxMathLayout
                 trailingKind = edges.Last;
             }
             width = Math.Max(width, x + child.Width);
+            AppendBookmarkPoints(ref bookmarks, child, x, 0d, token);
             above = Math.Max(above, child.AboveBaseline); below = Math.Max(below, child.BelowBaseline);
             if (child.ParentMetrics is { } owner && (leadingOwner is null || Leading(owner) > Leading(leadingOwner)))
                 leadingOwner = owner;
@@ -115,6 +127,13 @@ internal static partial class DocxMathLayout
         {
             if (afterStructure && literal.Edges is { FirstNormalText: false } right)
                 advance += DocxMathRowLayout.Glue(previousEnd, right.First) * literal.Glyphs[0].FontSize / 18d;
+            // Flattened source rows share the final row top, not the height of
+            // the synthetic literal prefix used for operator spacing.
+            if (literal.BookmarkPoints.Count != 0)
+            {
+                AppendBookmarkPoints(ref rowBookmarks, literal, advance, 0d, token);
+                literal = literal with { BookmarkPoints = [] };
+            }
             Append(literal, advance); advance += literal.AdvanceWidth;
         }
 

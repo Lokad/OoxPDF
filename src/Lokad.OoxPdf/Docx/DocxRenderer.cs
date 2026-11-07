@@ -1279,6 +1279,7 @@ internal sealed partial class DocxRenderer
         IReadOnlyDictionary<string, PdfLinkDestination> CreateBookmarkDestinations()
         {
             var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
+            Dictionary<DocxMathBox, Dictionary<DocxMathBookmark, DocxMathBookmarkPoint>>? mathBookmarkIndexes = null;
             const double viewportContextPoints = 3d;
             for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
             {
@@ -1302,7 +1303,7 @@ internal sealed partial class DocxRenderer
 
                     if (line.Math is { } math && !line.IsInlineMath && line.FrameOriginOffsetX is { } frameOffset)
                     {
-                        AddMathTargets(paragraph, line.X + frameOffset,
+                        AddMathTargets(paragraph, math, line.X, line.BaselineY, line.MathScale, line.X + frameOffset,
                             line.BaselineY + math.BaselineInset * line.MathScale, pageIndex, pageTextEmissionXOffset, pageTextEmissionBaselineOffset);
                         continue;
                     }
@@ -1365,7 +1366,8 @@ internal sealed partial class DocxRenderer
                                 // A source-bound formula must wait for its own placed
                                 // line, including a line with no prose segments.
                                 var placement = line.InlineMath.FirstOrDefault(value =>
-                                    ReferenceEquals(value.Math.Equation, sourceEquation.Equation));
+                                    ReferenceEquals(value.Math.Equation, sourceEquation.Equation) &&
+                                    (bookmark.MathSource is null || TryGetMathBookmarkPoint(value.Math.Box, bookmark.MathSource, out _)));
                                 // The qualified single-prose path retains its breaking
                                 // fallback but publishes the same measured math position.
                                 if (placement is null && line.IsInlineMath && line.Math is { } singleMath &&
@@ -1373,6 +1375,19 @@ internal sealed partial class DocxRenderer
                                     placement = new(singleMath, line.InlineMathOffsetX);
                                 if (placement is null && bodyEquation is not null)
                                     placement = new(bodyEquation.Math, bodyEquation.X - line.X);
+                                if (bookmark.MathSource is { } mathSource)
+                                {
+                                    if (placement is not null && TryGetMathBookmarkPoint(placement.Math.Box, mathSource, out var point))
+                                    {
+                                        double scale = bodyEquation?.Scale ?? line.MathScale;
+                                        destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
+                                            (bodyEquation?.X ?? line.X + placement.OffsetX) + point.X * scale +
+                                                pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
+                                            (bodyEquation?.BaselineY ?? line.BaselineY) + point.Top * scale -
+                                                pageTextEmissionBaselineOffset, Zoom: null));
+                                    }
+                                    continue;
+                                }
                                 double mathTop = bodyEquation is not null
                                     ? bodyEquation.BaselineY + bodyEquation.Math.BaselineInset * bodyEquation.Scale
                                     : line.BaselineY + (line.InlineFrame?.BaselineInset ?? (placement?.Math.BaselineInset ?? 0d) * line.MathScale);
@@ -1431,7 +1446,7 @@ internal sealed partial class DocxRenderer
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (equation.FrameOriginOffsetX is { } frameOffset)
-                        AddMathTargets(equation.SourceParagraph, equation.X + frameOffset,
+                        AddMathTargets(equation.SourceParagraph, equation.Math, equation.X, equation.BaselineY, equation.Scale, equation.X + frameOffset,
                             equation.BaselineY + equation.Math.BaselineInset * equation.Scale,
                             pageIndex, pageTextEmissionXOffset, pageTextEmissionBaselineOffset);
                 }
@@ -1439,16 +1454,44 @@ internal sealed partial class DocxRenderer
 
             return destinations;
 
-            void AddMathTargets(DocxParagraph paragraph, double originX, double top, int pageIndex, double xOffset, double yOffset)
+            void AddMathTargets(DocxParagraph paragraph, DocxPreparedMathParagraph math, double mathX, double baseline,
+                double scale, double originX, double top, int pageIndex, double xOffset, double yOffset)
             {
                 foreach (var bookmark in paragraph.BookmarkAnchors)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (!string.IsNullOrEmpty(bookmark.Name))
+                    {
+                        if (bookmark.MathSource is { } source)
+                        {
+                            if (TryGetMathBookmarkPoint(math.Box, source, out var point))
+                                destinations.TryAdd(bookmark.Name, new PdfLinkDestination(pageIndex,
+                                    mathX + point.X * scale + xOffset - viewportContextPoints * textEmissionFontScale,
+                                    baseline + point.Top * scale - yOffset, Zoom: null));
+                            continue;
+                        }
                         destinations.TryAdd(bookmark.Name, new PdfLinkDestination(pageIndex,
                             originX + xOffset - viewportContextPoints * textEmissionFontScale,
                             top - yOffset, Zoom: null));
+                    }
                 }
+            }
+
+            bool TryGetMathBookmarkPoint(DocxMathBox box, DocxMathBookmark source, out DocxMathBookmarkPoint point)
+            {
+                if (box.BookmarkPoints.Count == 0) { point = default; return false; }
+                mathBookmarkIndexes ??= new(ReferenceEqualityComparer.Instance);
+                if (!mathBookmarkIndexes.TryGetValue(box, out var points))
+                {
+                    points = new(ReferenceEqualityComparer.Instance);
+                    foreach (var value in box.BookmarkPoints)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        points.TryAdd(value.Source, value);
+                    }
+                    mathBookmarkIndexes.Add(box, points);
+                }
+                return points.TryGetValue(source, out point);
             }
         }
 

@@ -7,7 +7,7 @@ namespace Lokad.OoxPdf.Docx;
 
 // First component slice: literal rows. Scripts/fractions retain typed roles and
 // explicit fallback until they have their own independently qualified boxes.
-internal static class DocxMathRowLayout
+internal static partial class DocxMathRowLayout
 {
     internal enum AtomKind { Ordinary, Binary, Relation, Open, Close, Punctuation, LargeOperator, Inner }
     internal readonly record struct Neighbors(AtomKind? Before = null, AtomKind? After = null);
@@ -23,7 +23,7 @@ internal static class DocxMathRowLayout
         token.ThrowIfCancellationRequested();
         if (operatorSpacingFontSize is { } spacingSize && (!double.IsFinite(spacingSize) || spacingSize <= 0d))
         { fallback = "InvalidMathOperatorSpacingSize"; return false; }
-        if (!TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize)) { return false; }
+        if (!TryGetAtoms(row, token, out List<Atom> atoms, out var bookmarks, out fallback, allowArgumentSize)) { return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(atoms.Count);
         var inlineBreaks = new List<int>();
         Stack<int>? delimiters = null;
@@ -101,6 +101,18 @@ internal static class DocxMathRowLayout
             InlineBreakAfterGlyphs = balancedDelimiters && (delimiters is null || delimiters.Count == 0) ? inlineBreaks : [],
             AllowsInlineRelocation = balancedDelimiters && (delimiters is null || delimiters.Count == 0),
             Edges = atoms.Count == 0 ? null : new(firstKind, previous, atoms[0].Run.NormalText) };
+        if (bookmarks is not null)
+        {
+            var points = new DocxMathBookmarkPoint[bookmarks.Count];
+            for (int index = 0; index < points.Length; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                var item = bookmarks[index];
+                points[index] = new(item.Source,
+                    item.AtomIndex < glyphs.Count ? glyphs[item.AtomIndex].X : advanceWidth, above);
+            }
+            box = box with { BookmarkPoints = points };
+        }
         fallback = null;
         return true;
     }
@@ -108,23 +120,22 @@ internal static class DocxMathRowLayout
     public static bool TryGetRenderCodePoints(DocxMathRow row, CancellationToken token, out IReadOnlyList<int> codePoints, out string? fallback,
         bool allowArgumentSize = false)
     {
-        bool valid = TryGetAtoms(row, token, out List<Atom> atoms, out fallback, allowArgumentSize);
+        bool valid = TryGetAtoms(row, token, out List<Atom> atoms, out _, out fallback, allowArgumentSize);
         codePoints = valid ? atoms.Select(atom => atom.Render.Value).Distinct().ToArray() : [];
         return valid;
     }
 
-    private static bool TryGetAtoms(DocxMathRow row, CancellationToken token, out List<Atom> atoms, out string? fallback,
+    private static bool TryGetAtoms(DocxMathRow row, CancellationToken token, out List<Atom> atoms,
+        out List<(DocxMathBookmark Source, int AtomIndex)>? bookmarks, out string? fallback,
         bool allowArgumentSize = false)
     {
-        atoms = []; fallback = null;
-        var pending = new Stack<DocxMathNode>(); pending.Push(row);
-        while (pending.TryPop(out DocxMathNode? node))
+        atoms = []; bookmarks = null; fallback = null;
+        foreach (var (node, bookmark) in EnumerateItems(row, token, allowArgumentSize))
         {
             token.ThrowIfCancellationRequested();
-            if (node is DocxMathRow sequence && (sequence.HasSupportedProperties ||
-                ReferenceEquals(sequence, row) && allowArgumentSize && sequence.HasKnownArgumentProperties))
+            if (bookmark is not null)
             {
-                for (int i = sequence.Children.Count - 1; i >= 0; i--) { pending.Push(sequence.Children[i]); }
+                (bookmarks ??= []).Add((bookmark, atoms.Count));
             }
             else if (node is DocxMathRun run && HasSupportedStyle(run))
             {

@@ -364,6 +364,21 @@ internal sealed partial class DocxRenderer
             above += minimum - height;
             height = minimum;
         }
+        if (source.Content.Bookmarks.Count != 0 && box.BookmarkPoints.Count != 0)
+        {
+            // The equation row owns the prepared line frame. Nested argument
+            // points retain their own measured tops within that frame.
+            var roots = new HashSet<DocxMathBookmark>(
+                source.Content.Bookmarks.Select(boundary => boundary.Source), ReferenceEqualityComparer.Instance);
+            var points = new DocxMathBookmarkPoint[box.BookmarkPoints.Count];
+            for (int index = 0; index < points.Length; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                var point = box.BookmarkPoints[index];
+                points[index] = roots.Contains(point.Source) ? point with { Top = above } : point;
+            }
+            box = box with { BookmarkPoints = points };
+        }
         prepared = new(source, box, above, height) { UsesDisplayStyle = measured.Display };
         return true;
     }

@@ -133,6 +133,7 @@ internal static partial class DocxMathLayout
         var glyphs = new List<DocxMathGlyphPlacement> { new(point, point, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
             glyphSize, operatorX, baseline, operatorAdvance, color) { OriginalGlyph = variant.Glyph, ControlOwner = nary } };
         var rules = new List<DocxMathRulePlacement>();
+        List<DocxMathBookmarkPoint>? bookmarks = null;
         Append(body, bodyX, 0d);
         if (upper is not null) { Append(upper, upperX, upperY); }
         if (lower is not null) { Append(lower, lowerX, lowerY); }
@@ -140,13 +141,14 @@ internal static partial class DocxMathLayout
             lower is not null && lowerX < 0d || upper is not null && upperX < 0d)
         { fallback = "InvalidMathNaryExtent"; return false; }
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
             Edges = new(DocxMathRowLayout.AtomKind.LargeOperator, body.Edges?.Last ?? DocxMathRowLayout.AtomKind.Ordinary, false) };
         fallback = null;
         return true;
 
         void Append(DocxMathBox child, double x, double y)
         {
+            AppendBookmarkPoints(ref bookmarks, child, x, y, token);
             foreach (var glyph in child.Glyphs)
             { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + x, BaselineY = glyph.BaselineY + y }); }
             foreach (var rule in child.Rules)

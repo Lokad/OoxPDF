@@ -54,6 +54,11 @@ internal static partial class DocxMathLayout
         double argumentSize = size;
         if (scriptLevel != 0 && !DocxMathArgumentMetrics.TryGetScriptFontSize(font, size, scriptLevel, out argumentSize) ||
             !TryMeasureHiddenPlaceholder(font, OfficePdfTextEmissionProfile.FontSize(argumentSize), out box)) return false;
+        List<DocxMathBookmarkPoint>? bookmarks = null;
+        foreach (var (node, bookmark) in DocxMathRowLayout.EnumerateItems(row, token, allowArgumentSize))
+            if (bookmark is not null)
+                (bookmarks ??= []).Add(new(bookmark, 0d, box.AboveBaseline));
+        if (bookmarks is not null) box = box with { BookmarkPoints = bookmarks };
         fallback = null;
         return true;
     }

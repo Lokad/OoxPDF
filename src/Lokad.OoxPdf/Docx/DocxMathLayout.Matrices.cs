@@ -122,6 +122,7 @@ internal static partial class DocxMathLayout
         if (!double.IsFinite(height) || height <= 0d || !double.IsFinite(frameWidth) || frameWidth <= 0d || !double.IsFinite(axis))
         { fallback = "InvalidMathMatrixExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(); var rules = new List<DocxMathRulePlacement>();
+        List<DocxMathBookmarkPoint>? bookmarks = null;
         // Top/bottom alignment anchors the corresponding row baseline. Center
         // alignment keeps the complete row frame centered on the math axis.
         double top = matrix.BaseJustificationValue switch
@@ -139,6 +140,7 @@ internal static partial class DocxMathLayout
                 token.ThrowIfCancellationRequested(); var child = cells[r][c];
                 double spare = widths[c] - child.AdvanceWidth;
                 double cellX = x + (alignments[c] switch { MatrixColumnAlignment.Left => 0d, MatrixColumnAlignment.Right => spare, _ => spare / 2d });
+                AppendBookmarkPoints(ref bookmarks, child, cellX, baseline, token);
                 // Slots control alignment and the next column origin. The
                 // formula ends at its last argument's logical edge, including
                 // hidden placeholder boxes, rather than unused trailing padding.
@@ -154,7 +156,7 @@ internal static partial class DocxMathLayout
             top -= rowAbove[r] + rowBelow[r];
         }
         box = new(width, inkAbove, inkBelow, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size), Rules = rules,
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size), Rules = rules,
             EnclosureHeight = inkAbove + inkBelow };
         fallback = null;
         return true;

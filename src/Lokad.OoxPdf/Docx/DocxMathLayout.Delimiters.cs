@@ -87,12 +87,14 @@ internal static partial class DocxMathLayout
         if (delimiter.ControlText is { } control) { color = DocxTextColor.Read(control.ColorHex); }
         var glyphs = new List<DocxMathGlyphPlacement>();
         var rules = new List<DocxMathRulePlacement>();
+        List<DocxMathBookmarkPoint>? bookmarks = null;
         double advance = 0d, width = 0d, delimiterHeight = 0d;
         if (!AppendDelimiter(delimiter.BeginCharacter)) { fallback = "UnsupportedMathDelimiterVariant"; return false; }
         for (int i = 0; i < children.Count; i++)
         {
             if (i > 0 && !AppendDelimiter(delimiter.SeparatorCharacter)) { fallback = "UnsupportedMathDelimiterSeparator"; return false; }
             var child = children[i];double childX = advance;
+            AppendBookmarkPoints(ref bookmarks, child, childX, 0d, token);
             foreach (var glyph in child.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + childX }); }
             foreach (var rule in child.Rules) { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + childX }); }
             width = Math.Max(width, childX + child.Width); advance += child.AdvanceWidth;
@@ -106,7 +108,7 @@ internal static partial class DocxMathLayout
         // delimiter stays an opening/closing atom even around taller content.
         bool subformula = subformulaMinimum > 0d && delimiterHeight >= subformulaMinimum;
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size),
             Edges = new(delimiter.BeginCharacter.Length > 0 ? (subformula ? DocxMathRowLayout.AtomKind.Inner : DocxMathRowLayout.AtomKind.Open) : children[0].Edges?.First ?? DocxMathRowLayout.AtomKind.Ordinary,
                 delimiter.EndCharacter.Length > 0 ? (subformula ? DocxMathRowLayout.AtomKind.Inner : DocxMathRowLayout.AtomKind.Close) : children[^1].Edges?.Last ?? DocxMathRowLayout.AtomKind.Ordinary,
                 delimiter.BeginCharacter.Length == 0 && children[0].Edges?.FirstNormalText == true) };

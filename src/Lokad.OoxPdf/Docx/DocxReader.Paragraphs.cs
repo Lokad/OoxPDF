@@ -420,7 +420,11 @@ internal sealed partial class DocxReader
                 equationRevision = sourceEquation.Revision;
                 hasMathRunRevisions = false;
                 var content = DocxMathParser.Read(equation, ReadMathRun, cancellationToken,
-                    wrapper => IsIncludedRevisionContainer(wrapper, markupMode), preserveDeletedStructure: markupMode == OoxPdfDocxMarkupMode.Final);
+                    wrapper => IsIncludedRevisionContainer(wrapper, markupMode), preserveDeletedStructure: markupMode == OoxPdfDocxMarkupMode.Final,
+                    readBookmark: sourceEquation.RemoveDeletedText ? null : bookmark =>
+                        bookmarkAnchors.Add(new DocxBookmarkAnchor(bookmark.Id, bookmark.Name, sourceRunIndex, runs.Count,
+                            RelativeRunTextOffset(runs, sourceRunIndex))
+                            { InlineItemIndex = inlineItems!.Count, MathSource = bookmark }));
                 if (sourceEquation.RemoveDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);

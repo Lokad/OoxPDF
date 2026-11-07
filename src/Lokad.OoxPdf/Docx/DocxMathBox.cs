@@ -4,6 +4,7 @@ using Lokad.OoxPdf.Pptx;
 namespace Lokad.OoxPdf.Docx;
 
 internal readonly record struct DocxMathGlyphPartPlacement(ushort OriginalGlyph, string EncodedGlyph, double X, double BaselineY);
+internal readonly record struct DocxMathBookmarkPoint(DocxMathBookmark Source, double X, double Top);
 
 internal sealed record DocxMathGlyphPlacement(
     int SourceCodePoint, int RenderCodePoint, PdfFontResource Font, string EncodedGlyph,
@@ -32,6 +33,7 @@ internal sealed record DocxMathBox(
     public DocxMathMetricOwner? ParentMetrics { get; init; }
     public DocxMathRowLayout.RowEdges? Edges { get; init; }
     public IReadOnlyList<DocxMathRulePlacement> Rules { get; init; } = [];
+    public IReadOnlyList<DocxMathBookmarkPoint> BookmarkPoints { get; init; } = [];
     // Literal binary/relation boundaries, including balanced groups;
     // structured boxes stay atomic.
     public IReadOnlyList<int> InlineBreakAfterGlyphs { get; init; } = [];

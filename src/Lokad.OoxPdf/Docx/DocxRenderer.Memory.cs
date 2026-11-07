@@ -57,7 +57,8 @@ internal sealed partial class DocxRenderer
         }
         void Math(DocxPreparedMathParagraph math)
         {
-            capacity = checked(capacity + 4096L * math.Box.Glyphs.Count + 1024L * math.Box.Rules.Count);
+            capacity = checked(capacity + 4096L * math.Box.Glyphs.Count + 1024L * math.Box.Rules.Count +
+                256L * math.Box.BookmarkPoints.Count);
             foreach (var glyph in math.Box.Glyphs)
             {
                 token.ThrowIfCancellationRequested();

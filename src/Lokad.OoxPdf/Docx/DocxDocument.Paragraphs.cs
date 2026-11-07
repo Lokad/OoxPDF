@@ -142,6 +142,7 @@ internal sealed record DocxBookmarkAnchor(
     // Position in the retained ordered source, before the next inline item.
     // Null preserves the legacy run-relative fallback for unmigrated paragraphs.
     public int? InlineItemIndex { get; init; }
+    public DocxMathBookmark? MathSource { get; init; }
 }
 
 internal sealed record DocxInlineReference(

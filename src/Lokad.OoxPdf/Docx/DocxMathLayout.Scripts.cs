@@ -117,6 +117,7 @@ internal static partial class DocxMathLayout
         { fallback = "InvalidMathScriptExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(basis.Glyphs.Count + (subscript?.Glyphs.Count ?? 0) + (superscript?.Glyphs.Count ?? 0));
         var rules = new List<DocxMathRulePlacement>(basis.Rules.Count);
+        List<DocxMathBookmarkPoint>? bookmarks = null;
         Append(basis, 0d, 0d);
         if (subscript is not null) { Append(subscript, subX, -down); }
         if (superscript is not null) { Append(superscript, supX, up); }
@@ -134,13 +135,14 @@ internal static partial class DocxMathLayout
             enclosureBelow = descent;
         }
         box = new DocxMathBox(width, above, below, glyphs)
-        { LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics ?? (basis.Glyphs.Count == 0 ? new(font, styleSize) : null),
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advanceWidth == width ? null : advanceWidth, Rules = rules, ParentMetrics = basis.ParentMetrics ?? (basis.Glyphs.Count == 0 ? new(font, styleSize) : null),
             EnclosureBelowBaseline = enclosureBelow };
         fallback = null;
         return true;
 
         void Append(DocxMathBox child, double x, double baseline)
         {
+            AppendBookmarkPoints(ref bookmarks, child, x, baseline, token);
             foreach (DocxMathGlyphPlacement glyph in child.Glyphs)
             {
                 token.ThrowIfCancellationRequested();

@@ -66,12 +66,15 @@ internal static partial class DocxMathLayout
         double above = Math.Max(name.AboveBaseline, argument.AboveBaseline), below = Math.Max(name.BelowBaseline, argument.BelowBaseline);
         if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) || width <= 0d)
         { fallback = "InvalidMathFunctionExtent"; return false; }
+        List<DocxMathBookmarkPoint>? bookmarks = null;
+        AppendBookmarkPoints(ref bookmarks, name, 0d, 0d, token);
+        AppendBookmarkPoints(ref bookmarks, argument, argumentX, 0d, token);
         var glyphs = new List<DocxMathGlyphPlacement>(name.Glyphs);
         foreach (var glyph in argument.Glyphs) { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + argumentX }); }
         var rules = new List<DocxMathRulePlacement>();
         foreach (var rule in argument.Rules) { token.ThrowIfCancellationRequested(); rules.Add(rule with { X = rule.X + argumentX }); }
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size) { IncludeTypographicFrame = true },
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, Rules = rules, ParentMetrics = new(font, size) { IncludeTypographicFrame = true },
             // The complete application owns its outgoing spacing; argument
             // edges continue to govern the argument's internal layout.
             Edges = new(DocxMathRowLayout.AtomKind.LargeOperator, DocxMathRowLayout.AtomKind.LargeOperator, false) };

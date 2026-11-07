@@ -203,6 +203,17 @@ internal static partial class DocxMathLayout
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null,
         Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null, double? rowControlSize = null)
     {
+        bool measured = TryMeasureCore(equation, resolveFont, token, out box, out fallback, parentMetricsFont,
+            resolveControlFont, resolveControlMetrics, rowControlSize);
+        if (measured && box is not null) box = WithStandaloneBookmarks(equation, box, token);
+        return measured;
+    }
+
+    private static bool TryMeasureCore(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
+        CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont,
+        Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize)
+    {
         if (GetMatrix(equation, token) is { } matrix)
             return TryMeasureMatrix(equation, matrix, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize);
         if (GetFunction(equation) is { } function)
@@ -324,10 +335,11 @@ internal static partial class DocxMathLayout
             !double.IsFinite(thickness) || width <= 0d || above < 0d || below < 0d)
         { fallback = "InvalidMathFractionExtent"; return false; }
         var glyphs = new List<DocxMathGlyphPlacement>(numerator.Glyphs.Count + denominator.Glyphs.Count);
+        List<DocxMathBookmarkPoint>? bookmarks = null;
         Append(numerator, numeratorShift);
         Append(denominator, -denominatorShift);
         box = new DocxMathBox(width, above, below, glyphs)
-        { Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, ruleColor)],
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, ruleColor)],
             EnclosureHeight = above + below,
             Edges = new(DocxMathRowLayout.AtomKind.Inner, DocxMathRowLayout.AtomKind.Inner, false),
             ParentMetrics = useParentMetrics ? new(metricOwner, parentSize) : null };
@@ -337,6 +349,7 @@ internal static partial class DocxMathLayout
         void Append(DocxMathBox child, double baseline)
         {
             double x = (width - child.Width) / 2d;
+            AppendBookmarkPoints(ref bookmarks, child, x, baseline, token);
             foreach (DocxMathGlyphPlacement glyph in child.Glyphs)
             {
                 token.ThrowIfCancellationRequested();

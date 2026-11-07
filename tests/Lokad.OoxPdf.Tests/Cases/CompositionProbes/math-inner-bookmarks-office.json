@@ -1,0 +1,34 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Calibration": "PDF-backed bootstrap;not calibrated application view",
+  "ViewportTolerancePt": 1,
+  "Rows": [
+    {
+      "Fixture": "math-inner-bookmark-outer",
+      "InputSha256": "F749F710C188E7C7EDC511F6811234A4250449E1B7E9167B37FE8CBCEEE3F236",
+      "ReferencePdfSha256": "D61217D2053FFFD9A06998FAEED848A115F191D828C0197A7C8B0DC2844069B2",
+      "PageIndex": 0,
+      "Left": 149.0,
+      "TopFromPage": 72.0,
+      "Scope": "outer"
+    },
+    {
+      "Fixture": "math-inner-bookmark-math-row",
+      "InputSha256": "28CCE080B79FAE26255926E32B457FAA3B8B374AF3FB3AA17702E085F4E2BAA5",
+      "ReferencePdfSha256": "B83A2B22CC97B76C80355718595AC68A2B4985A512E1E6DA5D448B69170EA90A",
+      "PageIndex": 0,
+      "Left": 149.0,
+      "TopFromPage": 72.0,
+      "Scope": "math-row"
+    },
+    {
+      "Fixture": "math-inner-bookmark-numerator",
+      "InputSha256": "ED26D69DB7BF2FBD652F24B17BB0D52EBF69BF3B414354BFB3C031154FB14E72",
+      "ReferencePdfSha256": "70EE76CAE4339167AD73D2AC3A90199C3009E165D960A0C0ED3115CA25E53804",
+      "PageIndex": 0,
+      "Left": 149.0,
+      "TopFromPage": 74.0,
+      "Scope": "numerator"
+    }
+  ]
+}

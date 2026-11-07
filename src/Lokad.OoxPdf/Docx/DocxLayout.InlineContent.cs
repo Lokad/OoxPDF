@@ -460,7 +460,10 @@ internal sealed partial class DocxLayoutEngine
                         inkRight = Math.Max(inkRight, glyph.X + (bounds.XMax + glyph.TextShear * bounds.YMax) * glyph.FontSize / font.UnitsPerEm);
                 }
                 var part = prepared with { Box = box with { Width = inkRight,
-                    LogicalAdvance = endX - origin, Glyphs = glyphs, InlineBreakAfterGlyphs = [] } };
+                    LogicalAdvance = endX - origin, Glyphs = glyphs, InlineBreakAfterGlyphs = [],
+                    BookmarkPoints = box.BookmarkPoints.Where(point => point.X >= origin &&
+                        (end == box.Glyphs.Count || point.X < box.Glyphs[end].X))
+                        .Select(point => point with { X = point.X - origin }).ToArray() } };
                 measured.Add(new(source, part.Box.AdvanceWidth * scale, prepared.BaselineInset * scale,
                     prepared.LineHeight * scale, [], part)
                     { MathContinuationAdvance = start == 0 ? null : (origin - previousEnd) * scale });

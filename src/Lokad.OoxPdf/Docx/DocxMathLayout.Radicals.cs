@@ -76,6 +76,9 @@ internal static partial class DocxMathLayout
         if (!double.IsFinite(width) || !double.IsFinite(above) || !double.IsFinite(below) ||
             !double.IsFinite(baseline) || width <= 0d || above < 0d || below < 0d)
         { fallback = "InvalidMathRadicalExtent"; return false; }
+        List<DocxMathBookmarkPoint>? bookmarks = null;
+        AppendBookmarkPoints(ref bookmarks, child, childX, 0d, token);
+        if (degree is not null) AppendBookmarkPoints(ref bookmarks, degree, degreeX, degreeY, token);
         var glyphs = new List<DocxMathGlyphPlacement>(child.Glyphs.Count + 1 + (degree?.Glyphs.Count ?? 0));
         Lokad.OoxPdf.Pptx.RgbColor? color = child.Glyphs.Count == 0 ? default : child.Glyphs[0].Color;
         if (radical.ControlText is { } control)
@@ -91,7 +94,7 @@ internal static partial class DocxMathLayout
         foreach (var childRule in child.Rules)
         { token.ThrowIfCancellationRequested(); rules.Add(childRule with { X = childRule.X + childX }); }
         box = new(width, above, below, glyphs)
-        { LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size),
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, LogicalAdvance = advance == width ? null : advance, ParentMetrics = new(font, size),
             Rules = rules };
         fallback = null;
         return true;
