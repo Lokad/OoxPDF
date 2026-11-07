@@ -255,6 +255,8 @@
     "PptxScatterConnectionDefaultsKeepSceneOwnershipAndRawStyles",
     "PptxScatterConnectionsFollowSeriesSmoothingAndLineVisibility",
     "PptxScatterLineConnectionCoversSmoothStyles",
+    "PptxScatterFixedUnitRangesMatchIndependentOfficeBounds",
+    "PptxScatterFixedUnitLabelsMarksAndGridsUseOneScale",
     "PptxScatterCurveOrderOwnsBoundsAndHiddenLinesKeepPointBounds",
     "PptxScatterFixedUnitFallbacksKeepSceneAuthorityAndCancellation",
     "PptxChartPlotElementSelectionUsesSceneSource",
