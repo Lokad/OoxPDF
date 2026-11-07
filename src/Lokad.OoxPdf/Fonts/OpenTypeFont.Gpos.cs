@@ -353,8 +353,7 @@ internal sealed partial class OpenTypeFont
 
             Dictionary<ushort, ushort[]> rightGlyphsByClass = ReadClassGlyphs(bytes, classDef2, tableEnd);
             var leftClasses = new ushort[coverageGlyphs.Length];
-            var rowBatches = new List<(ushort[] Glyphs, short Advance)>?[class1Count];
-            var rowPairCounts = new long[class1Count];
+            var rowBatches = new Dictionary<ushort, (List<(ushort[] Glyphs, short Advance)> Adjustments, long PairCount)>();
             int leftLimit = coverageGlyphs.Length;
             long contributions = CountClassPairs();
             pairs.Register(contributions, writer =>
@@ -364,7 +363,7 @@ internal sealed partial class OpenTypeFont
                     pairs.CheckCancellation();
                     ushort leftClass = leftClasses[leftIndex];
                     if (leftClass >= class1Count) continue;
-                    foreach (var adjustment in rowBatches[leftClass]!)
+                    foreach (var adjustment in rowBatches[leftClass].Adjustments)
                         foreach (ushort rightGlyph in adjustment.Glyphs)
                             writer.Add(((uint)coverageGlyphs[leftIndex] << 16) | rightGlyph, adjustment.Advance);
                 }
@@ -379,13 +378,13 @@ internal sealed partial class OpenTypeFont
                     ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, coverageGlyphs[index], pairs);
                     leftClasses[index] = leftClass;
                     if (leftClass >= class1Count) continue;
-                    if (rowBatches[leftClass] is null)
+                    if (!rowBatches.TryGetValue(leftClass, out var row))
                     {
                         // A class row is identical for every covered left glyph.
-                        // Keep its source batches only for this subtable; the
-                        // final representation remains the ordinary pair map.
+                        // Cache only reached rows, including a valid partial row.
+                        // Declared but unused classes need no construction slots.
                         var batches = new List<(ushort[] Glyphs, short Advance)>();
-                        rowBatches[leftClass] = batches;
+                        rowBatches.Add(leftClass, (batches, 0));
                         long rowCount = 0;
                         foreach (var right in rightGlyphsByClass)
                         {
@@ -403,9 +402,10 @@ internal sealed partial class OpenTypeFont
                             rowCount += right.Value.Length;
                             pairs.CheckAdditionalCount(count + rowCount);
                         }
-                        rowPairCounts[leftClass] = rowCount;
+                        row = (batches, rowCount);
+                        rowBatches[leftClass] = row;
                     }
-                    count += rowPairCounts[leftClass];
+                    count += row.PairCount;
                     pairs.CheckAdditionalCount(count);
                 }
                 return count;

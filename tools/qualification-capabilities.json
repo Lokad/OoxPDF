@@ -1,4 +1,22 @@
 {
+  "font-kerning-row-ownership": [
+    "ClassKerning",
+    "CoverageExpansionBeyondCapThrows",
+    "SyntheticGposPairAdjustmentIsRead",
+    "SyntheticUnlinkedKernFeatureIsIgnored",
+    "SyntheticExtensionKernLookupIsRead",
+    "SyntheticRejectedScriptKernIsIgnored",
+    "SyntheticNonKernFeatureIsIgnored",
+    "SyntheticKerningAdjustsMeasuredAdvance",
+    "OpenTypeFontLoadObservesCancelledToken",
+    "FontProgramLoaderPropagatesParseCancellation",
+    "MemoryBudgetKerning",
+    "MemoryBudgetFontCharacterMaps",
+    "MemoryAdmissionCoversRenderingStagingAndEmission",
+    "MemoryAdmissionSharedCapacityRefusesConcurrentConversionAndRefunds",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance"
+  ],
   "pptx-chart-wide-styles": [
     "LegendOptionsUseParsedSceneDefaults",
     "PptxChartAxisTextStyleUsesSceneAuthoritativeMissingAxis",

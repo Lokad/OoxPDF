@@ -26,19 +26,47 @@ internal static partial class OoxLimitsTests
             OpenTypeFont font = OpenTypeFont.Load(bytes);
             return (font, GC.GetAllocatedBytesForCurrentThread() - before);
         }
+    }
 
-        static byte[] FontWithUnusedRows(ushort rows)
-        {
-            byte[] gpos = BuildClassKernGpos(1, 1, rangeCoverage: false);
-            int list = BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(8, 2));
-            int lookup = list + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(list + 2, 2));
-            int subtable = lookup + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookup + 6, 2));
-            // Keep the complete declared matrix. Coverage/class definitions can
-            // share bytes with unused rows; only row 1 is actually referenced.
-            Array.Resize(ref gpos, Math.Max(gpos.Length, subtable + 16 + rows * 2 * 2));
-            BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(subtable + 12, 2), rows);
-            return TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "GPOS", gpos);
-        }
+    public static void ClassKerningSparseRowsKeepHighIdsAndValidSourcePrefix()
+    {
+        byte[] bytes = FontWithUnusedRows(ushort.MaxValue, glyphCount: 2);
+        var table = TestFontBuilder.GetTableRange(bytes, "GPOS");
+        byte[] gpos = bytes.AsSpan(table.Offset, table.Length).ToArray();
+        int list = BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(8, 2));
+        int lookup = list + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(list + 2, 2));
+        int subtable = lookup + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookup + 6, 2));
+        int classDef = subtable + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(subtable + 8, 2));
+        const ushort highClass = ushort.MaxValue - 1;
+        BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(classDef + 8, 2), highClass);
+        BinaryPrimitives.WriteInt16BigEndian(gpos.AsSpan(subtable + 16 + (highClass * 2 + 1) * 2, 2), 75);
+        var complete = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(bytes, "GPOS", gpos));
+        TestAssert.Equal((short)-50, complete.GetKerning(0, 0));
+        TestAssert.Equal((short)-50, complete.GetKerning(0, 1));
+        TestAssert.Equal((short)75, complete.GetKerning(1, 0));
+        TestAssert.Equal((short)75, complete.GetKerning(1, 1));
+
+        // Existing malformed-font recovery retains the complete source prefix.
+        // The unreferenced tail is no reason to discard the earlier valid row.
+        Array.Resize(ref gpos, subtable + 60);
+        var partial = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(bytes, "GPOS", gpos));
+        TestAssert.Equal((short)-50, partial.GetKerning(0, 0));
+        TestAssert.Equal((short)-50, partial.GetKerning(0, 1));
+        TestAssert.Equal((short)0, partial.GetKerning(1, 0));
+        TestAssert.Equal((short)0, partial.GetKerning(1, 1));
+    }
+
+    private static byte[] FontWithUnusedRows(ushort rows, int glyphCount = 1)
+    {
+        byte[] gpos = BuildClassKernGpos(glyphCount, glyphCount, rangeCoverage: false);
+        int list = BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(8, 2));
+        int lookup = list + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(list + 2, 2));
+        int subtable = lookup + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookup + 6, 2));
+        // Keep the complete declared matrix. Coverage/class definitions can
+        // share bytes with unused rows; only row 1 is actually referenced.
+        Array.Resize(ref gpos, Math.Max(gpos.Length, subtable + 16 + rows * 2 * 2));
+        BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(subtable + 12, 2), rows);
+        return TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "GPOS", gpos);
     }
 
     public static void ClassKerningZeroAdvanceScanCompletesWithoutWorkQuota()
