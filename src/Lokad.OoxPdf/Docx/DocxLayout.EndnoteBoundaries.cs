@@ -2,6 +2,15 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
+    // Counter inputs belong to the rendered reference, independently of whether
+    // this container ends a section or the document. Plain notes may continue;
+    // mixed notes must prove their complete measured group fits before adoption.
+    private static bool CanUseReferenceBoundEndnoteGroup(DocxDocument document, DocxLayoutPage page,
+        IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
+        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token) =>
+        CanUsePlainDocumentEndnoteFlow(page, separator, printScale, stories, token, out _) ||
+        CanUseFittingEndnoteBoundaries(document, page, placed, separator, printScale, stories, token);
+
     // A complete measured block owns paragraph boundaries even when its middle
     // contains supported inline objects or complete nested tables. This admission does
     // not change typography or the separately qualified continuation policies.

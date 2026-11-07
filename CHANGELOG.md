@@ -5,6 +5,8 @@
 - DOCX: normal note paragraphs and cells prepare supported equations alongside
   PAGE and NUMPAGES fields. Fresh footnotes measure their full content using
   the rendered reference page before placement.
+  Complete fitting mixed endnote groups share counter admission at section and
+  document end, preserving equations beside page fields.
 
 - PPTX: point-label text bodies retain their own fallback typography and line-key
   measurement when paragraph default-run properties are absent.

@@ -89,6 +89,7 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxEndnotePageBindingRetainsUnfitAndUnsupportedOwners()
     {
+        foreach (bool sectionEnd in new[] { false, true })
         foreach (string variant in new[] { "keep", "overflow", "static", "scaled", "clipped" })
         {
             var source = ReadNoteCounter("endnote", OoxPdfDocxMarkupMode.Final, "PAGE", "2", false, (xml, w) =>
@@ -100,11 +101,13 @@ internal static partial class DocxInlineCompositionTests
                 if (variant == "clipped") note.Element(w + "tbl")!.Element(w + "tr")!.AddFirst(new XElement(w + "trPr",
                     new XElement(w + "trHeight", new XAttribute(w + "val", "20"), new XAttribute(w + "hRule", "exact"))));
             });
+            if (sectionEnd) source = source with { Settings = source.Settings with { EndnoteReferenceSettings =
+                source.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } };
             if (variant == "static") source = source with { HeaderParagraphs = [DocxTests.CreateDocxLayoutParagraph("Public header", 12d, 14d)] };
             var layout = CreatePageCounterLayout(source, scaled: variant == "scaled");
             var notes = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.Id == "37").ToArray();
             TestAssert.True(notes.Length != 0 && notes.All(s => !s.StoryLayout.HasResolvedCounterInputs && !s.UsesCompleteDocumentEndnoteFlow),
-                "Unfit/unsupported ownership retains its unresolved placement fallback: " + variant);
+                "Unfit/unsupported ownership retains its unresolved placement fallback: " + variant + "/section=" + sectionEnd);
         }
     }
 

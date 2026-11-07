@@ -220,8 +220,9 @@ internal sealed partial class DocxLayoutEngine
                     {
                         List<DocxRelatedStoryLayout> boundStories = BindReferencedEndnoteCounters(
                             sectionEndStories, outputPages[sectionEndPageIndex]);
-                        if (CanUsePlainDocumentEndnoteFlow(outputPages[sectionEndPageIndex], endnoteSeparatorLayout,
-                            printScale, boundStories, cancellationToken, out _))
+                        DocxLayoutPage sectionPage = outputPages[sectionEndPageIndex];
+                        if (CanUseReferenceBoundEndnoteGroup(document, sectionPage, sectionPage.PlacedRelatedStories,
+                            endnoteSeparatorLayout, printScale, boundStories, cancellationToken))
                             for (int index = 0; index < sectionEndStories.Count; index++)
                                 sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
                     }
@@ -297,9 +298,7 @@ internal sealed partial class DocxLayoutEngine
                     // wrapping. Existing plain paragraph flow can continue while
                     // retaining its reference-owned value. Mixed blocks still
                     // need the complete fitting proof before adopting this layout.
-                    if (CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
-                        boundStories, cancellationToken, out _) ||
-                        CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
+                    if (CanUseReferenceBoundEndnoteGroup(document, activePage, activePlacedStories,
                         documentEndSeparatorLayout, printScale, boundStories, cancellationToken))
                         documentEndStories = boundStories;
                 }

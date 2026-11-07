@@ -594,7 +594,8 @@ Approximate or restricted:
   Fresh footnotes measure counters with their rendered reference page before
   slicing; unresolved references retain their existing fallback.
   Endnote PAGE is measured with its rendered reference page for existing plain
-  paragraph flow, including section-end notes and continuation, and complete document-end groups that
+  paragraph flow, including section-end notes and continuation, and complete mixed
+  groups at section or document end that
   pass the source/frame/fit proof. Empty or ordinary headers preserve the binding
   for admitted plain flow. Unrendered references and other unqualified
   owners retain their fallback. Mixed/unfit table rows and other

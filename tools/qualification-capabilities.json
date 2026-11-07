@@ -23,6 +23,7 @@
     "DocxEndnotePageBindingRetainsUnfitAndUnsupportedOwners",
     "DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry",
     "DocxSectionEndnotePageCountersPreserveReferenceAndFollowingSection",
+    "DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata",
     "DocxInlineCompositionCellPageNotesPublishOneOwnedParagraphAcrossViews",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
