@@ -32,6 +32,7 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (string kind in new[] { "footnote", "endnote" })
         foreach (bool direct in new[] { false, true })
+        foreach (bool beforeMath in new[] { false, true })
         foreach (string instruction in new[] { "PAGE", "NUMPAGES" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
@@ -39,10 +40,10 @@ internal static partial class DocxInlineCompositionTests
             // Independent Word controls retain both formulas with PAGE1.
             string value = instruction == "PAGE" ? "1" : "2";
             var renderer = PictureRangeRenderer(mode);
-            var literal = renderer.RenderPagesAsync(ReadNoteMathField(kind, mode, null, value, direct), null, default)
+            var literal = renderer.RenderPagesAsync(ReadNoteMathField(kind, mode, null, value, direct, beforeMath: beforeMath), null, default)
                 .ToBlockingEnumerable().ToArray();
             var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
-            var counter = renderer.RenderPagesAsync(ReadNoteMathField(kind, mode, instruction, "9", direct), diagnostics.Add, default)
+            var counter = renderer.RenderPagesAsync(ReadNoteMathField(kind, mode, instruction, "9", direct, beforeMath: beforeMath), diagnostics.Add, default)
                 .ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, literal.Length); TestAssert.Equal(literal.Length, counter.Length);
             string Text(IEnumerable<PdfPage> pages) => NormalizeNoteMathFieldText(string.Concat(pages.SelectMany(page =>
@@ -60,7 +61,7 @@ internal static partial class DocxInlineCompositionTests
             for (int i = 0; i < a.Length; i++)
                 TestAssert.True(a[i].Text == b[i].Text && Math.Abs(a[i].X - b[i].X) < .000001 &&
                     Math.Abs(a[i].Y - b[i].Y) < .000001 && a[i].Size == b[i].Size,
-                    $"A resolved source-equivalent field preserves each formula's placed glyph frame: {kind}/direct={direct}/{instruction}/{mode}, glyph{i}, " +
+                    $"A resolved source-equivalent field preserves each formula's placed glyph frame: {kind}/direct={direct}/before={beforeMath}/{instruction}/{mode}, glyph{i}, " +
                     $"literal '{a[i].Text}'({a[i].X:R},{a[i].Y:R},{a[i].Size:R}) vs field '{b[i].Text}'({b[i].X:R},{b[i].Y:R},{b[i].Size:R}).");
             for (int i = 0; i < counter.Length; i++)
             {
@@ -99,7 +100,7 @@ internal static partial class DocxInlineCompositionTests
         string.Concat(text.Normalize(NormalizationForm.FormKC).Where(character => !char.IsWhiteSpace(character)));
 
     private static DocxDocument ReadNoteMathField(string kind, OoxPdfDocxMarkupMode mode, string? instruction, string value,
-        bool direct, bool includeResult = true, string? storyType = null) =>
+        bool direct, bool includeResult = true, string? storyType = null, bool beforeMath = false) =>
         ReadMutation("CompositionProbes/mixed-note-" + kind + (direct ? "-paragraph" : "-table"), mode, false, false,
             (xml, w, _) =>
             {
@@ -108,9 +109,12 @@ internal static partial class DocxInlineCompositionTests
                 if (storyType is not null) note.SetAttributeValue(w + "type", storyType);
                 var paragraph = note.Descendants(w + "p").First(item => item.Descendants(math + "oMath").Any());
                 XElement Run(string text) => new(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
-                paragraph.Add(Run(" Counter "));
-                paragraph.Add(instruction is null ? Run(value) : new XElement(w + "fldSimple", new XAttribute(w + "instr", instruction),
-                    includeResult ? Run(value) : null));
-                paragraph.Add(Run("."));
+                XElement[] counter = [Run(" Counter "),
+                    instruction is null ? Run(value) : new XElement(w + "fldSimple", new XAttribute(w + "instr", instruction),
+                        includeResult ? Run(value) : null), Run(". ")];
+                if (beforeMath)
+                    paragraph.Elements().First(item => item.Name == math + "oMath" || item.Descendants(math + "oMath").Any())
+                        .AddBeforeSelf(counter);
+                else paragraph.Add(counter);
             }, partOverride: "word/" + kind + "s.xml");
 }
