@@ -16600,5 +16600,14 @@
     "DocxInlinePictureLinksKeepUnsupportedActionsAndTransformsUnlinked",
     "DocxInlinePictureLinksRequireDecodedAndUnclippedPaint",
     "PortableRenderingPrintedHyperlinkFramesCoverSourceOrigins"
+  ],
+  "docx-navigation-spacing": [
+    "DocxHyperlinksPreserveCompleteEndnoteStoryPlacement",
+    "DocxHyperlinksPreserveContextualBodyAndMinimumCellSpacing",
+    "DocxInlineCompositionFittingEndnotesOwnBoundariesWithoutChangingTypography",
+    "DocxInlineCompositionFittingEndnotesRetainComplexFrameFallbacks",
+    "DocxContextualMinimumRejectsUnknownStyleIdentitiesAndRichFlow",
+    "DocxNoteCellPictureRangesFollowExistingPaintAndTargets",
+    "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ]
 }

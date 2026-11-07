@@ -578,6 +578,8 @@ Approximate or restricted:
   qualified behavior; they are not promises for every combination.
   Bookmarks and unchanged-format hyperlinks preserve qualified plain-body minimum
   line placement; their navigation targets follow the placed content.
+  Hyperlink metadata also preserves qualified paragraph spacing, minimum cell
+  slots and complete endnote-block boundaries; the measured run formatting remains.
   Highlighting and run shading retain these text metrics while painting their
   backgrounds; font-changing and unsupported layout combinations keep fallbacks.
   Automatic text and equation colors adapt to solid paragraph/cell/run shading;

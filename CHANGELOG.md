@@ -8,6 +8,8 @@
   Mixed picture/equation hyperlinks cover their decoded, unclipped picture frames;
   complete note cells share this coverage. Child drawing targets and unsupported
   placement fallbacks remain separate.
+  Hyperlink metadata preserves complete endnote placement and qualified minimum
+  cell spacing.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual

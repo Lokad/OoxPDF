@@ -365,6 +365,8 @@ internal sealed partial class DocxLayoutEngine
         paragraph.Spacing.BeforeAutoSpacingValue is null && paragraph.Spacing.BeforeLinesValue is null &&
         paragraph.Spacing.AfterAutoSpacingValue is null && paragraph.Spacing.AfterLinesValue is null;
 
+    // Navigation ranges do not own paragraph spacing. Their run formatting is
+    // measured normally; callers retain their content/clip/ownership contracts.
     internal static bool IsPlainContextualSpacingParagraph(DocxParagraph paragraph,
         bool allowSourceAffinedImages = false) =>
         HasAuthoredParagraphSpacing(paragraph) &&
@@ -375,7 +377,7 @@ internal sealed partial class DocxLayoutEngine
                 double.IsFinite(i.HeightPoints) && i.HeightPoints > 0d)) &&
         paragraph.InlineTextBoxes.Count == 0 && paragraph.FieldReferences.Count == 0 &&
         paragraph.CommentRanges.Count == 0 && paragraph.Revisions.Count == 0 && paragraph.RevisionRanges.Count == 0 &&
-        paragraph.ListLabel is null && paragraph.Hyperlinks.Count == 0 &&
+        paragraph.ListLabel is null &&
         paragraph.Runs.All(r => !r.Text.Contains('\n') && !r.Text.Contains('\r') && !r.Text.Contains('\t'));
 
     private static DocxParagraphSpacingProfile ResolveExplicitPageStartSpacing(
