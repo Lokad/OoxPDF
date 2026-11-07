@@ -21,7 +21,7 @@ internal static partial class DocxInlineCompositionTests
             var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(story).Single(paragraph => paragraph.Equations.Count != 0);
             var owner = DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(source, default)
                 .Single(item => ReferenceEquals(item.Paragraph, paragraph));
-            TestAssert.True(!owner.HasPageInputs, "Note cells do not acquire static/body page-counter inputs.");
+            TestAssert.True(owner.HasPageInputs, "Normal note preparation retains the counter-input owner; placement supplies the actual values.");
             TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
             var math = paragraph.Equations.ToDictionary(equation => equation,
                 equation => new DocxPreparedMathParagraph(equation, new(18d, 9d, 4d, []), 12d, 16d));

@@ -1,6 +1,7 @@
 {
   "docx-note-math-fields": [
     "DocxNoteMathFields",
+    "DocxInlineCompositionNoteTables",
     "DocxInlineCompositionNormalNoteSourcesRetainEquationOwners",
     "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
     "PortableRenderingNormalNoteContentPreservesMixedMath",
