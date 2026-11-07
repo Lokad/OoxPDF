@@ -1196,7 +1196,7 @@ internal sealed partial class OpenTypeFont
         // Bound source batches before publishing owned key/value storage.
         // Counts include overwritten keys; stable ordering preserves the
         // original stream's last-wins values without a mutable shared map.
-        var pairs = new KerningPairBuilder(cancellationToken, storage);
+        using var pairs = new KerningPairBuilder(cancellationToken, storage);
         ReadLegacyKerningPairs(bytes, tables, pairs);
         cancellationToken.ThrowIfCancellationRequested();
         ReadGposPairAdjustments(bytes, tables, pairs);

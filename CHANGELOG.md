@@ -11,6 +11,8 @@
 
 - Fonts: an opt-in disposable Windows font resolver funds catalog metadata and
   its bounded program cache through a host cache budget; existing shared defaults remain.
+  GPOS class decoding avoids per-class growable lists and admits its reusable
+  construction capacity through the conversion memory budget.
 
 - DOCX: nonpainting runs no longer redirect bookmarks from inline equations to
   later prose. Bookmarks on ordered inline pictures and boxes target their placed line

@@ -125,10 +125,12 @@ internal sealed partial class OpenTypeFont
     internal const int MaxCoverageGlyphs = 131_072;
     internal const int MaxClassGlyphs = 131_072;
 
-    private sealed class KerningPairBuilder(CancellationToken token, IMemoryReservation? storage)
+    private sealed class KerningPairBuilder(CancellationToken token, IMemoryReservation? storage) : IDisposable
     {
         private readonly List<Action<KerningPairWriter>> batches = new();
         private int sourceCount;
+        private long classCapacity;
+        private IMemoryReservation? construction;
         public void CheckCancellation() => token.ThrowIfCancellationRequested();
         public void CheckAdditionalCount(long additional)
         {
@@ -140,7 +142,23 @@ internal sealed partial class OpenTypeFont
             CheckCancellation();
             CheckAdditionalCount(additional);
             sourceCount += (int)additional;
+            if (classCapacity != 0) AdmitConstruction();
             if (additional != 0) batches.Add(write);
+        }
+        public void AdmitClassStorage(int glyphs, int classes)
+        {
+            // One reusable family window covers class-map construction while
+            // previously registered batches retain their glyph arrays. Actual
+            // source pairs bound retained batch storage; zero batches add none.
+            classCapacity = Math.Max(classCapacity, checked(128L * classes + 4L * glyphs));
+            AdmitConstruction();
+        }
+        private void AdmitConstruction()
+        {
+            long capacity = checked(classCapacity + 32L * sourceCount);
+            if (construction is null) construction = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, capacity);
+            else OoxMemory.Resize(construction, capacity);
+            CheckCancellation();
         }
         public IReadOnlyDictionary<uint, short> Build()
         {
@@ -153,6 +171,12 @@ internal sealed partial class OpenTypeFont
             var writer = new KerningPairWriter(sourceCount, token);
             foreach (var write in batches) { CheckCancellation(); write(writer); }
             return writer.Complete();
+        }
+        public void Dispose()
+        {
+            batches.Clear();
+            construction?.Dispose();
+            construction = null;
         }
     }
 
@@ -351,7 +375,7 @@ internal sealed partial class OpenTypeFont
                 return;
             }
 
-            Dictionary<ushort, ushort[]> rightGlyphsByClass = ReadClassGlyphs(bytes, classDef2, tableEnd);
+            Dictionary<ushort, ushort[]> rightGlyphsByClass = ReadClassGlyphs(bytes, classDef2, tableEnd, pairs);
             var leftClasses = new ushort[coverageGlyphs.Length];
             var rowBatches = new Dictionary<ushort, (List<(ushort[] Glyphs, short Advance)> Adjustments, long PairCount)>();
             int leftLimit = coverageGlyphs.Length;
@@ -554,13 +578,47 @@ internal sealed partial class OpenTypeFont
         return 0;
     }
 
-    private static Dictionary<ushort, ushort[]> ReadClassGlyphs(byte[] bytes, int offset, int tableEnd)
+    private static Dictionary<ushort, ushort[]> ReadClassGlyphs(byte[] bytes, int offset, int tableEnd, KerningPairBuilder pairs)
     {
-        var classes = new Dictionary<ushort, List<ushort>>();
+        Span<ulong> seen = stackalloc ulong[1024];
+        seen.Clear();
         int totalGlyphs = 0;
+        int classCount = 0;
+        foreach (var glyph in EnumerateClassGlyphs(bytes, offset, tableEnd, pairs))
+        {
+            if (totalGlyphs >= MaxClassGlyphs)
+                throw new InvalidDataException($"Font class definition expands beyond the maximum supported glyph count of {MaxClassGlyphs}.");
+            totalGlyphs++;
+            ulong bit = 1UL << (glyph.Class & 63);
+            ref ulong word = ref seen[glyph.Class >> 6];
+            if ((word & bit) == 0) { word |= bit; classCount++; }
+        }
+        if (totalGlyphs == 0) return [];
+        pairs.AdmitClassStorage(totalGlyphs, classCount);
+        var remaining = new Dictionary<ushort, int>(classCount);
+        foreach (var glyph in EnumerateClassGlyphs(bytes, offset, tableEnd, pairs))
+            remaining[glyph.Class] = remaining.GetValueOrDefault(glyph.Class) + 1;
+        var classes = new Dictionary<ushort, ushort[]>(classCount);
+        foreach (var entry in remaining) classes.Add(entry.Key, new ushort[entry.Value]);
+        // Dictionary insertion follows the source's first class occurrence,
+        // preserving the existing class-group order and duplicate last-wins rule.
+        // Exact arrays remove per-class lists, growth copies and ToArray copies.
+        foreach (var glyph in EnumerateClassGlyphs(bytes, offset, tableEnd, pairs))
+        {
+            ushort[] values = classes[glyph.Class];
+            int count = remaining[glyph.Class];
+            values[values.Length - count] = glyph.Glyph;
+            remaining[glyph.Class] = count - 1;
+        }
+        return classes;
+    }
+
+    private static IEnumerable<(ushort Glyph, ushort Class)> EnumerateClassGlyphs(
+        byte[] bytes, int offset, int tableEnd, KerningPairBuilder pairs)
+    {
         if (offset + 4 > tableEnd)
         {
-            return [];
+            yield break;
         }
 
         ushort format = U16(bytes, offset);
@@ -571,18 +629,19 @@ internal sealed partial class OpenTypeFont
             int classOffset = offset + 6;
             if (classOffset + count * 2 > tableEnd)
             {
-                return [];
+                yield break;
             }
 
             for (int i = 0; i < count; i++)
             {
+                if ((i & 1023) == 0) pairs.CheckCancellation();
                 ushort classValue = U16(bytes, classOffset + i * 2);
                 if (classValue == 0)
                 {
                     continue;
                 }
 
-                AddClassGlyph(classes, ref totalGlyphs, classValue, (ushort)(start + i));
+                yield return ((ushort)(start + i), classValue);
             }
         }
         else if (format == 2)
@@ -590,11 +649,12 @@ internal sealed partial class OpenTypeFont
             ushort rangeCount = U16(bytes, offset + 2);
             if (offset + 4 + rangeCount * 6 > tableEnd)
             {
-                return [];
+                yield break;
             }
 
             for (int i = 0; i < rangeCount; i++)
             {
+                pairs.CheckCancellation();
                 int range = offset + 4 + i * 6;
                 ushort start = U16(bytes, range);
                 ushort end = U16(bytes, range + 2);
@@ -606,28 +666,10 @@ internal sealed partial class OpenTypeFont
 
                 for (int glyph = start; glyph <= end; glyph++)
                 {
-                    AddClassGlyph(classes, ref totalGlyphs, classValue, (ushort)glyph);
+                    if ((glyph & 1023) == 0) pairs.CheckCancellation();
+                    yield return ((ushort)glyph, classValue);
                 }
             }
         }
-
-        return classes.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
-    }
-
-    private static void AddClassGlyph(Dictionary<ushort, List<ushort>> classes, ref int totalGlyphs, ushort classValue, ushort glyphId)
-    {
-        if (totalGlyphs >= MaxClassGlyphs)
-        {
-            throw new InvalidDataException($"Font class definition expands beyond the maximum supported glyph count of {MaxClassGlyphs}.");
-        }
-
-        if (!classes.TryGetValue(classValue, out List<ushort>? glyphs))
-        {
-            glyphs = [];
-            classes[classValue] = glyphs;
-        }
-
-        glyphs.Add(glyphId);
-        totalGlyphs++;
     }
 }
