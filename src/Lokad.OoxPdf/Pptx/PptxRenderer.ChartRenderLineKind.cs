@@ -28,15 +28,15 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? lineChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0)?.Source;
-        if (lineChart is not null)
+        PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
+        if (linePlot is not null)
         {
-            PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0);
+            XElement lineChart = linePlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, lineChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(lineSeriesVectors) != 0)
             {
                 double? themeLineWidth = ReadChartLineThemeWidth(theme);
-                ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, lineChart, PptxSceneChartGrouping.Standard, defaultSmooth: themeLineWidth is not null);
+                ChartLinePlotOptions lineOptions = ReadSceneChartLineOptions(sceneChart, linePlot, PptxSceneChartGrouping.Standard, defaultSmooth: themeLineWidth is not null);
                 IReadOnlyList<PptxSceneChartSeries> sourceSeries = linePlot?.Series ?? ReadXmlChartSeries(lineChart, theme, colorMap);
                 bool varyPointColors = sceneChart.Plots.Count == 1 && lineSeriesVectors.Count == 1 && lineOptions.VaryColors.Value;
                 IReadOnlyList<ChartLineAppearance> seriesAppearance = ReadLineSeriesAppearance(sourceSeries, lineOptions,

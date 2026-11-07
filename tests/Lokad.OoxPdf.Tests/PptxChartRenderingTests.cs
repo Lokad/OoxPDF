@@ -4341,12 +4341,15 @@ internal static class PptxChartRenderingTests
     public static void PptxScatterLineConnectionCoversSmoothStyles()
     {
         System.Reflection.MethodInfo read = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartScatterOptions",
+            "ReadSceneChartScatterOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter option reader.");
         bool Invoke(PptxSceneChartScatterStyle style)
         {
             XElement source = XElement.Parse($"<c:scatterChart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:scatterStyle val=\"{style}\"/></c:scatterChart>");
-            object options = read.Invoke(null, [null, source])!;
+            XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+            var xml = new XElement(c + "chartSpace", new XElement(c + "chart", new XElement(c + "plotArea", source)));
+            var plot = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml.ToString())).Plots[0];
+            object options = read.Invoke(null, [plot])!;
             return (bool)options.GetType().GetProperty("ConnectLines")!.GetValue(options)!;
         }
         TestAssert.True(Invoke(PptxSceneChartScatterStyle.Line), "Line scatter style should connect points.");

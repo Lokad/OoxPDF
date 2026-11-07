@@ -189,9 +189,6 @@ internal sealed partial class PptxRenderer
         series.XValues.Count != 0 && series.YValues.Count != 0 ||
         series.XValuePoints.Any(point => point.Value is not null) && series.YValuePoints.Any(point => point.Value is not null);
 
-    private static IReadOnlyList<XElement> ReadSceneChartPlotElements(PptxSceneChart chart, PptxSceneChartPlotKind kind) =>
-        ReadSceneChartPlots(chart, kind).Select(plot => plot.Source).ToArray();
-
     private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
     {
         return chart?.Plots
@@ -252,51 +249,14 @@ internal sealed partial class PptxRenderer
             string.Equals(ReadChartAxisId(element), axis.Id, StringComparison.Ordinal)));
     }
 
-    private static PptxSceneChartGrouping ReadSceneOrXmlChartGrouping(PptxSceneChartPlot? scenePlot, XElement plotElement, PptxSceneChartGrouping defaultGrouping)
-    {
-        if (scenePlot is not null)
-        {
-            return ResolveGrouping(scenePlot.GroupingKind);
-        }
+    private static PptxSceneChartGrouping ReadSceneChartGrouping(PptxSceneChartPlot plot, PptxSceneChartGrouping defaultGrouping) =>
+        plot.GroupingKind == PptxSceneChartGrouping.Unknown ? defaultGrouping : plot.GroupingKind;
 
-        return ResolveGrouping(
-            PptxSceneBuilder.ParseChartGrouping(PptxSceneBuilder.ReadChartElementValue(plotElement, "grouping")));
+    private static PptxSceneChartBarDirection ReadSceneChartBarDirection(PptxSceneChartPlot plot) =>
+        plot.BarDirectionKind == PptxSceneChartBarDirection.Unknown ? PptxSceneChartBarDirection.Column : plot.BarDirectionKind;
 
-        PptxSceneChartGrouping ResolveGrouping(PptxSceneChartGrouping value)
-        {
-            return value == PptxSceneChartGrouping.Unknown
-                ? defaultGrouping
-                : value;
-        }
-    }
-
-    private static PptxSceneChartBarDirection ReadSceneOrXmlChartBarDirection(PptxSceneChartPlot? scenePlot, XElement plotElement)
-    {
-        return scenePlot is not null
-            ? ResolveChartBarDirection(scenePlot.BarDirectionKind)
-            : ResolveChartBarDirection(PptxSceneBuilder.ParseChartBarDirection(PptxSceneBuilder.ReadChartElementValue(plotElement, "barDir")));
-
-        PptxSceneChartBarDirection ResolveChartBarDirection(PptxSceneChartBarDirection value)
-        {
-            return value == PptxSceneChartBarDirection.Unknown
-                ? PptxSceneChartBarDirection.Column
-                : value;
-        }
-    }
-
-    private static PptxSceneChartRadarStyle ReadSceneOrXmlChartRadarStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
-    {
-        return scenePlot is not null
-            ? ResolveChartRadarStyle(scenePlot.RadarStyleKind)
-            : ResolveChartRadarStyle(PptxSceneBuilder.ParseChartRadarStyle(PptxSceneBuilder.ReadChartElementValue(plotElement, "radarStyle")));
-
-        PptxSceneChartRadarStyle ResolveChartRadarStyle(PptxSceneChartRadarStyle value)
-        {
-            return value == PptxSceneChartRadarStyle.Unknown
-                ? PptxSceneChartRadarStyle.Standard
-                : value;
-        }
-    }
+    private static PptxSceneChartRadarStyle ReadSceneChartRadarStyle(PptxSceneChartPlot plot) =>
+        plot.RadarStyleKind == PptxSceneChartRadarStyle.Unknown ? PptxSceneChartRadarStyle.Standard : plot.RadarStyleKind;
 
     private static PptxSceneChartDisplayBlanksAs ResolveChartDisplayBlanksAs(PptxSceneChart chart) =>
         chart.Options.DisplayBlanksAsKind == PptxSceneChartDisplayBlanksAs.Unknown
@@ -843,21 +803,12 @@ internal sealed partial class PptxRenderer
     // RV04: plot-level smooth applies to series without their own smooth element on line
     // charts (COM plot-smooth-only probe smooths every series); series-explicit values win.
     // Scatter keeps the series-only legacy path (plot-level scatter smoothing unprobed).
-    private static IReadOnlyList<ChartBooleanOption> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement, bool applyPlotFallback, bool defaultValue = false)
+    private static IReadOnlyList<ChartBooleanOption> ReadSceneSmoothSeries(PptxSceneChartPlot plot, bool applyPlotFallback, bool defaultValue = false)
     {
         (bool? plotSmooth, string plotSmoothValue) = applyPlotFallback
-            ? PptxSceneBuilder.ReadChartSeriesSmooth(chartElement)
-            : (null, string.Empty);
-        return plot is not null
-            ? plot.Series.Select(series => ResolveSmoothOption(series.Smooth, series.SmoothValue, plotSmooth, plotSmoothValue, defaultValue)).ToArray()
-            : chartElement
-                .Elements(ChartNamespace + "ser")
-                .Select(series =>
-                {
-                    (bool? smooth, string smoothValue) = PptxSceneBuilder.ReadChartSeriesSmooth(series);
-                    return ResolveSmoothOption(smooth, smoothValue, plotSmooth, plotSmoothValue, defaultValue);
-                })
-                .ToArray();
+            ? PptxSceneBuilder.ReadChartSeriesSmooth(plot.Source) : (null, string.Empty);
+        return plot.Series.Select(series => ResolveSmoothOption(
+            series.Smooth, series.SmoothValue, plotSmooth, plotSmoothValue, defaultValue)).ToArray();
     }
 
     private static ChartBooleanOption ResolveSmoothOption(bool? seriesSmooth, string seriesSmoothValue, bool? plotSmooth, string plotSmoothValue, bool defaultValue)

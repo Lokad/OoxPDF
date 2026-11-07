@@ -11,22 +11,15 @@ internal static class PptxScatterSmoothingTests
 {
     public static void PptxScatterSmoothingKeepsSourceAuthorityAndExplicitFalse()
     {
-        var read = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlChartScatterOptions", BindingFlags.NonPublic | BindingFlags.Static)!;
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        var read = typeof(PptxRenderer).GetMethod("ReadSceneChartScatterOptions", BindingFlags.NonPublic | BindingFlags.Static)!;
         foreach (string style in new[] { "lineMarker", "smoothMarker" })
         foreach (string? smooth in new string?[] { null, "0", "1" })
         {
-            string source = Chart(style, smooth);
-            var scene = PptxTests.BuildSingleChartScene(source)!;
-            var xml = XDocument.Parse(source).Descendants(c + "scatterChart").Single();
-            var mismatch = XDocument.Parse(Chart(style, smooth == "0" ? "1" : "0")).Descendants(c + "scatterChart").Single();
-            foreach (var sourcePair in new[] { (Plot: (PptxSceneChartPlot?)null, Xml: xml), (Plot: scene.Plots[0], Xml: mismatch) })
-            {
-                object options = read.Invoke(null, [sourcePair.Plot, sourcePair.Xml])!;
-                object option = ((IEnumerable)options.GetType().GetProperty("SmoothSeries")!.GetValue(options)!).Cast<object>().Single();
-                TestAssert.Equal(smooth != "0", PptxTests.ChartBooleanOptionValue(option));
-                TestAssert.Equal(smooth is not null, PptxTests.ChartBooleanOptionIsDefined(option));
-            }
+            var scene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(Chart(style, smooth)));
+            object options = read.Invoke(null, [scene.Plots[0]])!;
+            object option = ((IEnumerable)options.GetType().GetProperty("SmoothSeries")!.GetValue(options)!).Cast<object>().Single();
+            TestAssert.Equal(smooth != "0", PptxTests.ChartBooleanOptionValue(option));
+            TestAssert.Equal(smooth is not null, PptxTests.ChartBooleanOptionIsDefined(option));
             TestAssert.Equal(smooth is null, scene.Plots[0].Series[0].Smooth is null);
         }
     }
@@ -49,20 +42,12 @@ internal static class PptxScatterSmoothingTests
 
     public static void PptxScatterConnectionDefaultsKeepSceneOwnershipAndRawStyles()
     {
-        var read = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlChartScatterOptions", BindingFlags.NonPublic | BindingFlags.Static)!;
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        var read = typeof(PptxRenderer).GetMethod("ReadSceneChartScatterOptions", BindingFlags.NonPublic | BindingFlags.Static)!;
         foreach (string? style in new string?[] { null, "marker", "line", "smooth", "none", "bogus" })
         {
-            string source = Chart(style, null);
-            var scene = PptxTests.BuildSingleChartScene(source)!;
-            XElement xml = XDocument.Parse(source).Descendants(c + "scatterChart").Single();
-            XElement mismatch = XDocument.Parse(Chart(style is "none" or "bogus" ? "lineMarker" : "bogus", null))
-                .Descendants(c + "scatterChart").Single();
-            foreach (var pair in new[] { (Plot: (PptxSceneChartPlot?)null, Xml: xml), (Plot: scene.Plots[0], Xml: mismatch) })
-            {
-                object options = read.Invoke(null, [pair.Plot, pair.Xml])!;
-                TestAssert.Equal(style is not ("none" or "bogus"), (bool)options.GetType().GetProperty("ConnectLines")!.GetValue(options)!);
-            }
+            var scene = TestAssert.NotNull(PptxTests.BuildSingleChartScene(Chart(style, null)));
+            object options = read.Invoke(null, [scene.Plots[0]])!;
+            TestAssert.Equal(style is not ("none" or "bogus"), (bool)options.GetType().GetProperty("ConnectLines")!.GetValue(options)!);
             TestAssert.Equal(style ?? string.Empty, scene.Plots[0].ScatterStyle);
             if (style is null)
                 TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, scene.Plots[0].ScatterStyleKind);

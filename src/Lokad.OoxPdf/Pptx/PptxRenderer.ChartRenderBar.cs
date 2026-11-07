@@ -938,9 +938,8 @@ internal sealed partial class PptxRenderer
             // measured rule applies to single-plot stacked charts while multi-plot charts
             // keep the shared estimator.
             IReadOnlyList<PptxSceneChartPlot> stackedBarPlots = ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Bar);
-            IReadOnlyList<XElement> stackedBarCharts = ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Bar);
             double requiredReserve;
-            if (UseMeasuredStackedValueAxisReserve(Math.Max(stackedBarCharts.Count, stackedBarPlots.Count)))
+            if (UseMeasuredStackedValueAxisReserve(stackedBarPlots.Count))
             {
                 ChartTextStyle stackedTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 var stackedTextMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -1011,7 +1010,7 @@ internal sealed partial class PptxRenderer
                     data = GetSharedBarChartValueExtents(owner, owner.Source, owner.GroupingKind, workbook, plotVisibleOnly);
                 else
                 {
-                    var line = ReadSceneOrXmlChartLineOptions(sceneChart, owner, owner.Source, PptxSceneChartGrouping.Standard);
+                    var line = ReadSceneChartLineOptions(sceneChart, owner, PptxSceneChartGrouping.Standard);
                     data = GetSharedLineChartValueExtents(owner, owner.Source, line.Stacked, line.PercentStacked, workbook, plotVisibleOnly);
                 }
                 ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis,

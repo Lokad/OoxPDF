@@ -28,14 +28,14 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? areaChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area, 0)?.Source;
-        if (areaChart is not null)
+        PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area, 0);
+        if (areaPlot is not null)
         {
-            PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area, 0);
+            XElement areaChart = areaPlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSharedChartSeriesVectors(areaPlot, areaChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(areaSeriesVectors) != 0)
             {
-                ChartAreaPlotOptions areaOptions = ReadSceneOrXmlChartAreaOptions(sceneChart, areaPlot, areaChart, PptxSceneChartGrouping.Standard);
+                ChartAreaPlotOptions areaOptions = ReadSceneChartAreaOptions(sceneChart, areaPlot, PptxSceneChartGrouping.Standard);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme, colorMap);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme, colorMap, ChartSeriesInheritedStrokeWidth);
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, areaPlot).FirstOrDefault();

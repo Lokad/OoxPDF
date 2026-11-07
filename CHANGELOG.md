@@ -40,6 +40,7 @@
 
 - PPTX: chart plot and axis selection use the resolved scene, removing duplicate XML-only
   selection paths while preserving source order and missing-axis fallbacks.
+  Plot scalars, smoothing and line visibility use the same parsed plot owner.
   Numeric declarations, crossings and explicit-scale admission also use scene
   properties; the live combination-chart XML fallback remains.
 

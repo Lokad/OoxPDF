@@ -28,10 +28,10 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? pieChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie, 0)?.Source;
-        if (pieChart is not null)
+        PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie, 0);
+        if (piePlot is not null)
         {
-            PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie, 0);
+            XElement pieChart = piePlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> pieSeriesVectors = ReadSharedChartSeriesVectors(piePlot, pieChart, workbook, plotVisibleOnly);
             IReadOnlyList<ChartIndexedPieSlice> pieSlices = pieSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(pieSeriesVectors[0]);
             if (pieSlices.Count != 0)
@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
                     seriesIndex: 0);
-                ChartPolarPointOptions polarPoints = ReadSceneOrXmlChartPolarPointOptions(piePlot, pieChart, theme, colorMap, workbook);
+                ChartPolarPointOptions polarPoints = ReadSceneChartPolarPointOptions(piePlot, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
@@ -75,10 +75,10 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? doughnutChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut, 0)?.Source;
-        if (doughnutChart is not null)
+        PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut, 0);
+        if (doughnutPlot is not null)
         {
-            PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut, 0);
+            XElement doughnutChart = doughnutPlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> doughnutSeriesVectors = ReadSharedChartSeriesVectors(doughnutPlot, doughnutChart, workbook, plotVisibleOnly);
             IReadOnlyList<ChartIndexedPieSlice> doughnutSlices = doughnutSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(doughnutSeriesVectors[0]);
             if (doughnutSlices.Count != 0)
@@ -89,7 +89,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),
                     seriesIndex: 0);
-                ChartDoughnutPlotOptions doughnutOptions = ReadSceneOrXmlChartDoughnutOptions(doughnutPlot, doughnutChart, theme, colorMap, workbook);
+                ChartDoughnutPlotOptions doughnutOptions = ReadSceneChartDoughnutOptions(doughnutPlot, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);

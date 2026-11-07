@@ -30,57 +30,17 @@ internal sealed partial class PptxRenderer
             NegativeInversions[seriesIndex].ForPoint(pointIndex);
     }
 
-    // D01: chart-level scene is authoritative below the frame early-return; only the
-    // plot-level fallback (absent scene plot) is retained.
-    private static ChartBarPlotOptions ReadSceneOrXmlChartBarOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
-    {
-        double ReadSceneOrXmlChartGapWidth()
-        {
-            // D01: one interpretation - the scene arm normalizes exactly like the
-            // XML arm (the scene stores the raw parsed value for provenance).
-            double ReadXmlChartGapWidth(XElement chartElement)
-            {
-                (double? gapWidth, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "gapWidth");
-                return NormalizeGapWidth(gapWidth);
-            }
-    
-            return plot is not null
-                ? NormalizeGapWidth(plot.GapWidth)
-                : ReadXmlChartGapWidth(chartElement);
-        }
+    // Parsed plot scalars share their source defaults and normalization here.
+    private static ChartBarPlotOptions ReadSceneChartBarOptions(PptxSceneChartPlot plot, PptxSceneChartGrouping defaultGrouping) => new(
+        ReadSceneChartGrouping(plot, defaultGrouping),
+        ReadSceneChartBarDirection(plot),
+        ReadSceneChartVaryColors(plot),
+        NormalizeGapWidth(plot.GapWidth),
+        NormalizeOverlap(plot.Overlap),
+        plot.Series.Select(series => series.NegativeInversion).ToArray());
 
-        double ReadSceneOrXmlChartOverlap()
-        {
-            // D01: one interpretation - see gap width above.
-            double ReadXmlChartOverlap(XElement chartElement)
-            {
-                (double? overlap, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "overlap");
-                return NormalizeOverlap(overlap);
-            }
-    
-            return plot is not null
-                ? NormalizeOverlap(plot.Overlap)
-                : ReadXmlChartOverlap(chartElement);
-        }
-
-        return new ChartBarPlotOptions(
-            ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping),
-            ReadSceneOrXmlChartBarDirection(plot, chartElement),
-            ReadSceneOrXmlChartVaryColors(plot, chartElement),
-            ReadSceneOrXmlChartGapWidth(),
-            ReadSceneOrXmlChartOverlap(),
-            plot is not null
-                ? plot.Series.Select(series => series.NegativeInversion).ToArray()
-                : chartElement.Elements(ChartNamespace + "ser").Select(PptxSceneBuilder.ReadChartNegativeInversion).ToArray());
-    }
-
-    private static ChartBooleanOption ReadSceneOrXmlChartVaryColors(PptxSceneChartPlot? plot, XElement chartElement)
-    {
-        if (plot is not null)
-            return new ChartBooleanOption(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null);
-        (bool? value, string raw) = PptxSceneBuilder.ReadChartPlotVaryColors(chartElement);
-        return new ChartBooleanOption(value ?? true, raw, value is not null);
-    }
+    private static ChartBooleanOption ReadSceneChartVaryColors(PptxSceneChartPlot plot) =>
+        new(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null);
 
     private readonly record struct ChartLinePlotOptions(
         PptxSceneChartGrouping Grouping,
@@ -90,15 +50,11 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartBooleanOption> SmoothSeries,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
-    private static ChartLinePlotOptions ReadSceneOrXmlChartLineOptions(PptxSceneChart sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping, bool defaultSmooth = false)
+    private static ChartLinePlotOptions ReadSceneChartLineOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot, PptxSceneChartGrouping defaultGrouping, bool defaultSmooth = false)
     {
-        PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping);
-        return new ChartLinePlotOptions(
-            grouping,
-            IsStackedChartGrouping(grouping),
-            IsPercentStackedChartGrouping(grouping),
-            ReadSceneOrXmlChartVaryColors(plot, chartElement),
-            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: true, defaultValue: defaultSmooth),
+        PptxSceneChartGrouping grouping = ReadSceneChartGrouping(plot, defaultGrouping);
+        return new ChartLinePlotOptions(grouping, IsStackedChartGrouping(grouping), IsPercentStackedChartGrouping(grouping),
+            ReadSceneChartVaryColors(plot), ReadSceneSmoothSeries(plot, applyPlotFallback: true, defaultValue: defaultSmooth),
             ResolveChartDisplayBlanksAs(sceneChart));
     }
 
@@ -108,13 +64,10 @@ internal sealed partial class PptxRenderer
         bool PercentStacked,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
-    private static ChartAreaPlotOptions ReadSceneOrXmlChartAreaOptions(PptxSceneChart sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
+    private static ChartAreaPlotOptions ReadSceneChartAreaOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot, PptxSceneChartGrouping defaultGrouping)
     {
-        PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping);
-        return new ChartAreaPlotOptions(
-            grouping,
-            IsStackedChartGrouping(grouping),
-            IsPercentStackedChartGrouping(grouping),
+        PptxSceneChartGrouping grouping = ReadSceneChartGrouping(plot, defaultGrouping);
+        return new ChartAreaPlotOptions(grouping, IsStackedChartGrouping(grouping), IsPercentStackedChartGrouping(grouping),
             ResolveChartDisplayBlanksAs(sceneChart));
     }
 
@@ -123,34 +76,17 @@ internal sealed partial class PptxRenderer
         bool ConnectLines,
         IReadOnlyList<ChartBooleanOption> SmoothSeries);
 
-    private static ChartScatterPlotOptions ReadSceneOrXmlChartScatterOptions(PptxSceneChartPlot? plot, XElement chartElement)
+    private static ChartScatterPlotOptions ReadSceneChartScatterOptions(PptxSceneChartPlot plot)
     {
-        string sourceStyle = plot is null
-            ? PptxSceneBuilder.ReadChartElementValue(chartElement, "scatterStyle")
-            : plot.ScatterStyle;
-        // Office loads omitted/marker-only styles as connected series. Series
-        // line noFill owns suppression; retain unknown/rejected-source fallbacks.
-        PptxSceneChartScatterStyle scatterStyle = string.IsNullOrEmpty(sourceStyle)
-            ? PptxSceneChartScatterStyle.LineMarker
-            : plot?.ScatterStyleKind ?? PptxSceneBuilder.ParseChartScatterStyle(sourceStyle);
-        return new ChartScatterPlotOptions(
-            scatterStyle,
+        // Omitted/marker-only styles connect; explicit series noFill suppresses
+        // the path. Unknown/rejected styles retain their existing fallback.
+        PptxSceneChartScatterStyle scatterStyle = string.IsNullOrEmpty(plot.ScatterStyle)
+            ? PptxSceneChartScatterStyle.LineMarker : plot.ScatterStyleKind;
+        return new ChartScatterPlotOptions(scatterStyle,
             scatterStyle is not (PptxSceneChartScatterStyle.None or PptxSceneChartScatterStyle.Unknown),
-            // PowerPoint smooths a connected scatter series when its smooth
-            // element is absent. An explicit false retains straight segments.
-            ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: false, defaultValue: true));
+            ReadSceneSmoothSeries(plot, applyPlotFallback: false, defaultValue: true));
     }
 
-    private readonly record struct ChartRadarPlotOptions(PptxSceneChartRadarStyle RadarStyle);
-
-    private static ChartRadarPlotOptions ReadSceneOrXmlChartRadarOptions(PptxSceneChartPlot? plot, XElement chartElement)
-    {
-        return new ChartRadarPlotOptions(ReadSceneOrXmlChartRadarStyle(plot, chartElement));
-    }
-
-    // D01: shared plot-scalar normalization - both the scene arm (raw parsed
-    // value stored at build time) and the XML arm (parsed at render time) resolve
-    // through these, so absent/out-of-range spellings have one interpretation.
     private static double NormalizeGapWidth(double? rawGapWidth)
     {
         return rawGapWidth is { } value
@@ -190,75 +126,24 @@ internal sealed partial class PptxRenderer
         return PptxSceneBuilder.ReadChartSeries(plotElement, theme, colorMap, plotKind, markersEnabled);
     }
 
-    private static ChartPolarPointOptions ReadSceneOrXmlChartPolarPointOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap, ChartWorkbookData? workbook)
+    private static ChartPolarPointOptions ReadSceneChartPolarPointOptions(PptxSceneChartPlot plot, ChartWorkbookData? workbook)
     {
-        double ReadSceneOrXmlFirstSliceAngle()
-        {
-            if (plot is not null)
-            {
-                return plot.FirstSliceAngle is { } sceneAngle
-                    ? NormalizeAngleDegrees(sceneAngle)
-                    : 0d;
-            }
-    
-            (double? firstSliceAngle, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(chartElement, "firstSliceAng");
-            return firstSliceAngle is { } rawFirstSliceAngle
-                ? NormalizeAngleDegrees(rawFirstSliceAngle)
-                : 0d;
-        }
-
-        IReadOnlyDictionary<int, ChartSeriesFill> ReadSceneOrXmlChartPointFills()
-        {
-            if (plot is not null)
-            {
-                return plot.Series.Count > 0 ? ReadSceneChartPointFills(plot.Series[0]) : new Dictionary<int, ChartSeriesFill>();
-            }
-    
-            IReadOnlyList<PptxSceneChartSeries> series = ReadXmlChartSeries(chartElement, theme, colorMap);
-            return series.Count == 0 ? new Dictionary<int, ChartSeriesFill>() : ReadSceneChartPointFills(series[0]);
-        }
-
-        IReadOnlyDictionary<int, ChartSeriesStroke> ReadSceneOrXmlChartPointStrokes()
-        {
-            if (plot is not null)
-            {
-                return plot.Series.Count > 0 ? ReadSceneChartPointStrokes(plot.Series[0]) : new Dictionary<int, ChartSeriesStroke>();
-            }
-    
-            IReadOnlyList<PptxSceneChartSeries> series = ReadXmlChartSeries(chartElement, theme, colorMap);
-            return series.Count == 0 ? new Dictionary<int, ChartSeriesStroke>() : ReadSceneChartPointStrokes(series[0]);
-        }
-
+        var first = plot.Series.FirstOrDefault();
         return new ChartPolarPointOptions(
-            ReadSceneOrXmlChartPointFills(),
-            ReadSceneOrXmlChartPointStrokes(),
-            ReadSceneOrXmlChartPointExplosions(plot, chartElement, workbook),
-            ReadSceneOrXmlFirstSliceAngle());
+            first is null ? new Dictionary<int, ChartSeriesFill>() : ReadSceneChartPointFills(first),
+            first is null ? new Dictionary<int, ChartSeriesStroke>() : ReadSceneChartPointStrokes(first),
+            ReadSceneOrXmlChartPointExplosions(plot, plot.Source, workbook),
+            plot.FirstSliceAngle is { } angle ? NormalizeAngleDegrees(angle) : 0d);
     }
 
     private readonly record struct ChartDoughnutPlotOptions(
         ChartPolarPointOptions PolarPoints,
         double HoleSize);
 
-    private static ChartDoughnutPlotOptions ReadSceneOrXmlChartDoughnutOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap, ChartWorkbookData? workbook)
-    {
-        double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
-        {
-            if (plot is not null)
-            {
-                return plot.HoleSize is { } rawHoleSize
-                    ? Math.Clamp(rawHoleSize / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio)
-                    : PptxChartMetricRules.DoughnutHoleFallbackRatio;
-            }
-    
-            (double? holeSize, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(doughnutChart, "holeSize");
-            return holeSize is { } xmlHoleSize
-                ? Math.Clamp(xmlHoleSize / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio)
-                : PptxChartMetricRules.DoughnutHoleFallbackRatio;
-        }
+    private static ChartDoughnutPlotOptions ReadSceneChartDoughnutOptions(PptxSceneChartPlot plot, ChartWorkbookData? workbook) => new(
+        ReadSceneChartPolarPointOptions(plot, workbook),
+        plot.HoleSize is { } size
+            ? Math.Clamp(size / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio)
+            : PptxChartMetricRules.DoughnutHoleFallbackRatio);
 
-        return new ChartDoughnutPlotOptions(
-            ReadSceneOrXmlChartPolarPointOptions(plot, chartElement, theme, colorMap, workbook),
-            ReadSceneDoughnutHoleSize(plot, chartElement));
-    }
 }

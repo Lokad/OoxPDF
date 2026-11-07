@@ -28,17 +28,17 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? scatterChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter, 0)?.Source;
-        if (scatterChart is not null)
+        PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter, 0);
+        if (scatterPlot is not null)
         {
-            PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter, 0);
+            XElement scatterChart = scatterPlot.Source;
             IReadOnlyList<ScatterSeries> scatterSeries = ReadSceneOrXmlScatterSeries(scatterPlot, scatterChart, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
             if (scatterSeries.Count != 0)
             {
-                ChartScatterPlotOptions scatterOptions = ReadSceneOrXmlChartScatterOptions(scatterPlot, scatterChart);
+                ChartScatterPlotOptions scatterOptions = ReadSceneChartScatterOptions(scatterPlot);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(scatterPlot, scatterChart, theme, colorMap);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme, colorMap, null);
-                IReadOnlyList<bool> seriesLineHidden = ReadSceneOrXmlSeriesLineHidden(scatterPlot, scatterChart);
+                IReadOnlyList<bool> seriesLineHidden = ReadSceneSeriesLineHidden(scatterPlot);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme, colorMap);
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, scatterPlot);
                 ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
@@ -153,20 +153,8 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static IReadOnlyList<bool> ReadSceneOrXmlSeriesLineHidden(PptxSceneChartPlot? plot, XElement chartElement)
-    {
-        // An explicit series line noFill suppresses the connecting path even when the
-        // scatter style itself requests lines; an absent line definition still connects.
-        if (plot is not null)
-        {
-            return plot.Series.Select(series => series.Line.NoFill).ToArray();
-        }
-
-        return chartElement
-            .Elements(ChartNamespace + "ser")
-            .Select(series => series.Element(ChartNamespace + "spPr")?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
-            .ToArray();
-    }
+    private static IReadOnlyList<bool> ReadSceneSeriesLineHidden(PptxSceneChartPlot plot) =>
+        plot.Series.Select(series => series.Line.NoFill).ToArray();
 
     // Shared scatter/bubble major ticks (Office honors out/in/cross at both value axes
     // with the same font-relative length as bars and lines).
@@ -230,10 +218,10 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? bubbleChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble, 0)?.Source;
-        if (bubbleChart is not null)
+        PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble, 0);
+        if (bubblePlot is not null)
         {
-            PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble, 0);
+            XElement bubbleChart = bubblePlot.Source;
             IReadOnlyList<ScatterSeries> bubbleSeries = ReadSceneOrXmlScatterSeries(bubblePlot, bubbleChart, readBubbleSize: true, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
             if (bubbleSeries.Count != 0)
             {

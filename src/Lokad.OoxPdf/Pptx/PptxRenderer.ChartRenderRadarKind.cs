@@ -25,10 +25,10 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver fontResolver,
         bool plotVisibleOnly, PptxRenderContext? context = null)
     {
-        XElement? radarChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar, 0)?.Source;
-        if (radarChart is not null)
+        PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar, 0);
+        if (radarPlot is not null)
         {
-            PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar, 0);
+            XElement radarChart = radarPlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSharedChartSeriesVectors(radarPlot, radarChart, workbook, plotVisibleOnly);
             IReadOnlyList<ChartRadarSeries> radarSeries = BuildRadarSeries(radarSeriesVectors);
             if (radarSeries.Count != 0)
@@ -43,9 +43,9 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
                 bool radarManualPlot = TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout radarManualLayout);
                 ChartPlotBox plotBox = radarManualPlot ? radarManualLayout.PlotBox : defaultPlotBox;
-                ChartRadarPlotOptions radarOptions = ReadSceneOrXmlChartRadarOptions(radarPlot, radarChart);
+                PptxSceneChartRadarStyle radarStyle = ReadSceneChartRadarStyle(radarPlot);
                 bool radarHasTitle = !string.IsNullOrWhiteSpace(sceneChart.Title.Text);
-                ChartRadarLayout radarLayout = ResolveRadarLayout(frame, plotBox, radarOptions.RadarStyle, radarSeries, radarHasTitle, radarManualPlot);
+                ChartRadarLayout radarLayout = ResolveRadarLayout(frame, plotBox, radarStyle, radarSeries, radarHasTitle, radarManualPlot);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 int? radarStyleId = ReadChartStyleId(chartXml);
                 RenderRadarChart(graphics, theme, colorMap, chartPalette, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits, radarStyleId, context: context);

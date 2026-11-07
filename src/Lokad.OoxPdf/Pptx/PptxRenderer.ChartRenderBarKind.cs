@@ -28,16 +28,15 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        IReadOnlyList<XElement> barCharts = ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Bar);
-        XElement? barChart = barCharts.FirstOrDefault();
-        if (barChart is not null)
+        IReadOnlyList<PptxSceneChartPlot> barPlots = ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Bar);
+        if (barPlots.FirstOrDefault() is { } barPlot)
         {
-            PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, 0);
+            XElement barChart = barPlot.Source;
             IReadOnlyList<ChartIndexedNumberVector> barSeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             int barSeriesCount = CountRenderableSeries(barSeriesVectors);
             if (barSeriesCount != 0)
             {
-                ChartBarPlotOptions barOptions = ReadSceneOrXmlChartBarOptions(barPlot, barChart, PptxSceneChartGrouping.Clustered);
+                ChartBarPlotOptions barOptions = ReadSceneChartBarOptions(barPlot, PptxSceneChartGrouping.Clustered);
                 ChartColorPalette barPalette = WithSourceSeries(chartPalette, barPlot);
                 bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme, colorMap);
@@ -101,11 +100,10 @@ internal sealed partial class PptxRenderer
                 int legendSeriesOffset = barSeriesCount;
                 // Collect every painted plot before measuring rows. A prepared
                 // legend box owns its complete entries, not a mutable prefix.
-                for (int index = 1; index < barCharts.Count; index++)
+                foreach (PptxSceneChartPlot plot in barPlots.Skip(1))
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    XElement element = barCharts[index];
-                    PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, index);
+                    XElement element = plot.Source;
                     int count = CountRenderableSeries(ReadSharedChartSeriesVectors(plot, element, workbook, plotVisibleOnly));
                     if (count == 0) continue;
                     var fills = ReadSceneOrXmlSeriesFills(plot, element, theme, colorMap);
@@ -114,13 +112,12 @@ internal sealed partial class PptxRenderer
                         plot, element, fills, strokes, legendSeriesOffset, workbook));
                     legendSeriesOffset += count;
                 }
-                int legendLineIndex = 0;
-                foreach (XElement element in ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Line))
+                foreach (PptxSceneChartPlot plot in ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Line))
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, legendLineIndex++);
+                    XElement element = plot.Source;
                     if (CountRenderableSeries(ReadSharedChartSeriesVectors(plot, element, workbook, plotVisibleOnly)) == 0) continue;
-                    var options = ReadSceneOrXmlChartLineOptions(sceneChart, plot, element, PptxSceneChartGrouping.Standard);
+                    var options = ReadSceneChartLineOptions(sceneChart, plot, PptxSceneChartGrouping.Standard);
                     var strokes = ReadSceneOrXmlSeriesStrokes(plot, element, theme, colorMap, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     var markers = ReadSceneOrXmlMarkerStyles(plot, element, theme, colorMap);
                     legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, plot, element,
@@ -195,7 +192,7 @@ internal sealed partial class PptxRenderer
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts
                 // (multi-plot dual-axis charts keep legacy output); explicit styles win by
                 // construction since only null entries are replaced.
-                if (barCharts.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart.StyleId) is { } galleryAxisDefault)
+                if (barPlots.Count == 1 && ResolveGalleryAxisFamilyDefault(sceneChart.StyleId) is { } galleryAxisDefault)
                 {
                     // SecondaryValueAxis stays untouched: its null-ness gates secondary-axis
                     // emission downstream, and filling it would conjure duplicate axis lines.
@@ -216,18 +213,16 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
                 bool secondaryAxisReversed = false;
-                int barChartIndex = 1;
-                foreach (XElement extraBarChart in barCharts.Skip(1))
+                foreach (PptxSceneChartPlot extraBarPlot in barPlots.Skip(1))
                 {
-                    PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, barChartIndex);
+                    XElement extraBarChart = extraBarPlot.Source;
                     IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSharedChartSeriesVectors(extraBarPlot, extraBarChart, workbook, plotVisibleOnly);
                     if (CountRenderableSeries(extraSeriesVectors) == 0)
                     {
-                        barChartIndex++;
                         continue;
                     }
 
-                    ChartBarPlotOptions extraBarOptions = ReadSceneOrXmlChartBarOptions(extraBarPlot, extraBarChart, PptxSceneChartGrouping.Clustered);
+                    ChartBarPlotOptions extraBarOptions = ReadSceneChartBarOptions(extraBarPlot, PptxSceneChartGrouping.Clustered);
                     ChartColorPalette extraPalette = WithSourceSeries(chartPalette, extraBarPlot);
                     bool extraHorizontalBars = extraBarOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                     ChartAxisSource extraCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, extraBarPlot);
@@ -292,17 +287,14 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook, plotVisibleOnly),
                         ReadSharedChartSeriesNames(extraBarPlot, extraBarChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
                         categoryPlacement: sharedValueAxis && extraHorizontalBars ? resolvedCategory : null).ConfigureAwait(false);
-                    barChartIndex++;
                 }
 
-                int lineChartIndex = 0;
-                foreach (XElement comboLineChart in ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Line))
+                foreach (PptxSceneChartPlot linePlot in ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Line))
                 {
-                    PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
+                    XElement comboLineChart = linePlot.Source;
                     IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, comboLineChart, workbook, plotVisibleOnly);
                     if (CountRenderableSeries(lineSeriesVectors) == 0)
                     {
-                        lineChartIndex++;
                         continue;
                     }
 
@@ -310,7 +302,7 @@ internal sealed partial class PptxRenderer
                     XElement? lineValueAxis = lineValueAxisSource.XmlAxis;
                     XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
                     PptxSceneChartAxis? lineValueSceneAxis = lineValueAxisSource.SceneAxis;
-                    ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, comboLineChart, PptxSceneChartGrouping.Standard);
+                    ChartLinePlotOptions lineOptions = ReadSceneChartLineOptions(sceneChart, linePlot, PptxSceneChartGrouping.Standard);
                     ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetSharedLineChartValueExtents(linePlot, comboLineChart, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(lineValueSceneAxis, lineValueAxisForScale, theme, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme, colorMap, ResolveLineKindInheritedStrokeWidth(barStyleId));
@@ -364,7 +356,6 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),
                         ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook, plotVisibleOnly),
                         ReadSharedChartSeriesNames(linePlot, comboLineChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
-                    lineChartIndex++;
                 }
 
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))

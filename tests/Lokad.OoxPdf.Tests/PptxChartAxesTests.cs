@@ -789,16 +789,10 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("bogus", chart.Plots[0].Grouping);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:lineChart><c:grouping val="stacked"/></c:lineChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "lineChart").Single();
         System.Reflection.MethodInfo readGrouping = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartGrouping",
+            "ReadSceneChartGrouping",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart grouping resolver.");
-        object grouping = readGrouping.Invoke(null, [chart.Plots[0], mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved grouping.");
+        object grouping = readGrouping.Invoke(null, [chart.Plots[0], PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved grouping.");
 
         TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)grouping);
     }
@@ -820,16 +814,10 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("bogus", chart.Plots[0].BarDirection);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:barChart><c:barDir val="bar"/></c:barChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "barChart").Single();
         System.Reflection.MethodInfo readBarDirection = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartBarDirection",
+            "ReadSceneChartBarDirection",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-direction resolver.");
-        object barDirection = readBarDirection.Invoke(null, [chart.Plots[0], mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved bar direction.");
+        object barDirection = readBarDirection.Invoke(null, [chart.Plots[0]]) ?? throw new InvalidOperationException("Expected resolved bar direction.");
 
         TestAssert.Equal(PptxSceneChartBarDirection.Column, (PptxSceneChartBarDirection)barDirection);
     }
@@ -859,22 +847,10 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(null, plot.Overlap);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:barChart>
-                <c:barDir val="bar"/>
-                <c:grouping val="stacked"/>
-                <c:varyColors val="0"/>
-                <c:gapWidth val="300"/>
-                <c:overlap val="75"/>
-              </c:barChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "barChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartBarOptions",
+            "ReadSceneChartBarOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-option resolver.");
-        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxSceneChartGrouping.Clustered]) ?? throw new InvalidOperationException("Expected resolved bar options.");
+        object options = readOptions.Invoke(null, [plot, PptxSceneChartGrouping.Clustered]) ?? throw new InvalidOperationException("Expected resolved bar options.");
         Type optionsType = options.GetType();
 
         TestAssert.Equal(PptxSceneChartGrouping.Clustered, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
@@ -1136,9 +1112,9 @@ internal static class PptxChartAxesTests
             """);
         XElement mismatchedXmlFallback = mismatchedChartXml.Descendants(c + "lineChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartLineOptions",
+            "ReadSceneChartLineOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart line-option resolver.");
-        object options = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxSceneChartGrouping.Standard, false]) ?? throw new InvalidOperationException("Expected resolved line options.");
+        object options = readOptions.Invoke(null, [chart, plot, PptxSceneChartGrouping.Standard, false]) ?? throw new InvalidOperationException("Expected resolved line options.");
         Type optionsType = options.GetType();
         object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
 
@@ -1182,9 +1158,9 @@ internal static class PptxChartAxesTests
             """);
         XElement mismatchedXmlFallback = mismatchedChartXml.Descendants(c + "areaChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartAreaOptions",
+            "ReadSceneChartAreaOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart area-option resolver.");
-        object options = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved area options.");
+        object options = readOptions.Invoke(null, [chart, plot, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved area options.");
         Type optionsType = options.GetType();
 
         TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
@@ -1267,19 +1243,10 @@ internal static class PptxChartAxesTests
         TestAssert.True(plot.Series[0].Smooth is null, "Expected missing scatter smooth metadata to remain distinct from the effective renderer default.");
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:scatterChart>
-                <c:scatterStyle val="lineMarker"/>
-                <c:ser><c:smooth val="0"/></c:ser>
-              </c:scatterChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "scatterChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartScatterOptions",
+            "ReadSceneChartScatterOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
-        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
+        object options = readOptions.Invoke(null, [plot]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
         Type optionsType = options.GetType();
         object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
 
@@ -1304,9 +1271,9 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """).Descendants(c + "scatterChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartScatterOptions",
+            "ReadSceneChartScatterOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
-        object options = readOptions.Invoke(null, [null, chartElement]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
+        object options = readOptions.Invoke(null, [TestAssert.NotNull(PptxTests.BuildSingleChartScene(chartElement.Document!.ToString())).Plots[0]]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
         Type optionsType = options.GetType();
         object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
 
@@ -1326,7 +1293,7 @@ internal static class PptxChartAxesTests
     {
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartBarOptions",
+            "ReadSceneChartBarOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-option resolver.");
 
         object shorthand = ReadBarOptions("""
@@ -1365,8 +1332,8 @@ internal static class PptxChartAxesTests
 
         object ReadBarOptions(string xml)
         {
-            XElement chartElement = XDocument.Parse(xml).Descendants(c + "barChart").Single();
-            return readOptions.Invoke(null, [null, chartElement, PptxSceneChartGrouping.Clustered]) ?? throw new InvalidOperationException("Expected resolved bar options.");
+            var source = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml)).Plots[0];
+            return readOptions.Invoke(null, [source, PptxSceneChartGrouping.Clustered]) ?? throw new InvalidOperationException("Expected resolved bar options.");
         }
     }
 
@@ -1553,20 +1520,12 @@ internal static class PptxChartAxesTests
         PptxSceneChartPlot plot = chart.Plots[0];
         TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, plot.RadarStyleKind);
 
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:radarChart><c:radarStyle val="filled"/></c:radarChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "radarChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartRadarOptions",
+            "ReadSceneChartRadarStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart radar-option resolver.");
-        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved radar options.");
-        Type optionsType = options.GetType();
+        object options = readOptions.Invoke(null, [plot]) ?? throw new InvalidOperationException("Expected resolved radar options.");
 
-        TestAssert.Equal(PptxSceneChartRadarStyle.Standard, (PptxSceneChartRadarStyle)(optionsType.GetProperty("RadarStyle")?.GetValue(options) ?? default(PptxSceneChartRadarStyle)));
+        TestAssert.Equal(PptxSceneChartRadarStyle.Standard, (PptxSceneChartRadarStyle)options);
     }
 
     public static void PptxChartPolarPointOptionsUseSceneAuthoritativeDefaults()
@@ -1586,19 +1545,10 @@ internal static class PptxChartAxesTests
         TestAssert.True(plot.Series[0].PointStyles.Count == 0, "Expected no scene point styles.");
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:pieChart>
-                <c:ser><c:dPt><c:idx val="0"/><c:explosion val="25"/></c:dPt></c:ser>
-                <c:firstSliceAng val="270"/>
-              </c:pieChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "pieChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartPolarPointOptions",
+            "ReadSceneChartPolarPointOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart polar-point option resolver.");
-        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null]) ?? throw new InvalidOperationException("Expected resolved polar point options.");
+        object options = readOptions.Invoke(null, [plot, null]) ?? throw new InvalidOperationException("Expected resolved polar point options.");
         Type optionsType = options.GetType();
         object pointExplosions = optionsType.GetProperty("PointExplosions")?.GetValue(options) ?? throw new InvalidOperationException("Expected point explosion options.");
 
@@ -1622,19 +1572,10 @@ internal static class PptxChartAxesTests
         TestAssert.True(plot.HoleSize is null, "Expected missing holeSize metadata to remain distinct from the effective renderer default.");
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:doughnutChart>
-                <c:holeSize val="10"/>
-                <c:firstSliceAng val="270"/>
-              </c:doughnutChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "doughnutChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartDoughnutOptions",
+            "ReadSceneChartDoughnutOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart doughnut option resolver.");
-        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null]) ?? throw new InvalidOperationException("Expected resolved doughnut options.");
+        object options = readOptions.Invoke(null, [plot, null]) ?? throw new InvalidOperationException("Expected resolved doughnut options.");
         Type optionsType = options.GetType();
         object polarPoints = optionsType.GetProperty("PolarPoints")?.GetValue(options) ?? throw new InvalidOperationException("Expected polar point options.");
 
@@ -1659,16 +1600,10 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("bogus", chart.Plots[0].ScatterStyle);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:scatterChart><c:scatterStyle val="lineMarker"/></c:scatterChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "scatterChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartScatterOptions",
+            "ReadSceneChartScatterOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
-        object options = readOptions.Invoke(null, [chart.Plots[0], mismatchedXmlFallback])!;
+        object options = readOptions.Invoke(null, [chart.Plots[0]])!;
         object scatterStyle = options.GetType().GetProperty("ScatterStyle")!.GetValue(options)!;
         object connectLines = options.GetType().GetProperty("ConnectLines")!.GetValue(options)!;
 
@@ -1693,16 +1628,10 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("bogus", chart.Plots[0].RadarStyle);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:radarChart><c:radarStyle val="filled"/></c:radarChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "radarChart").Single();
         System.Reflection.MethodInfo readRadarStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartRadarStyle",
+            "ReadSceneChartRadarStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart radar-style resolver.");
-        object radarStyle = readRadarStyle.Invoke(null, [chart.Plots[0], mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved radar style.");
+        object radarStyle = readRadarStyle.Invoke(null, [chart.Plots[0]]) ?? throw new InvalidOperationException("Expected resolved radar style.");
 
         TestAssert.Equal(PptxSceneChartRadarStyle.Standard, (PptxSceneChartRadarStyle)radarStyle);
     }
@@ -2138,16 +2067,16 @@ internal static class PptxChartAxesTests
             """) ?? throw new InvalidOperationException("Expected chart scene.");
 
         System.Reflection.MethodInfo readPlotElements = typeof(PptxRenderer).GetMethod(
-            "ReadSceneChartPlotElements",
+            "ReadSceneChartPlots",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected plot elements resolver.");
-        var scenePlots = (IReadOnlyList<XElement>)readPlotElements.Invoke(null, [chart, PptxSceneChartPlotKind.Bar])!;
+        var scenePlots = ((IReadOnlyList<PptxSceneChartPlot>)readPlotElements.Invoke(null, [chart, PptxSceneChartPlotKind.Bar])!).Select(plot => plot.Source).ToArray();
         XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        TestAssert.Equal(2, scenePlots.Count);
+        TestAssert.Equal(2, scenePlots.Length);
         TestAssert.True(ReferenceEquals(chart.Plots[0].Source, scenePlots[0]) &&
             ReferenceEquals(chart.Plots[1].Source, scenePlots[1]), "Plot sources retain parsed ownership and order.");
         TestAssert.Equal("col", scenePlots[0].Element(chartNamespace + "barDir")?.Attribute("val")?.Value ?? string.Empty);
         TestAssert.Equal("bar", scenePlots[1].Element(chartNamespace + "barDir")?.Attribute("val")?.Value ?? string.Empty);
-        var missing = (IReadOnlyList<XElement>)readPlotElements.Invoke(null, [chart, PptxSceneChartPlotKind.Line])!;
+        var missing = (IReadOnlyList<PptxSceneChartPlot>)readPlotElements.Invoke(null, [chart, PptxSceneChartPlotKind.Line])!;
         TestAssert.Equal(0, missing.Count);
     }
 
