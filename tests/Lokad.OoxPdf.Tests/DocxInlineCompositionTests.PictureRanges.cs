@@ -34,6 +34,8 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (int height in new[] { 6, 18, 36 })
         {
+            try
+            {
             var renderer = PictureRangeRenderer(mode);
             var control = renderer.RenderPagesAsync(ReadPictureRange(container, mode, height, includePicture: false), null, default)
                 .ToBlockingEnumerable().Single();
@@ -50,6 +52,11 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(link.X < control.Annotations.Single().X - 20d,
                 "Extending the source range makes its preceding picture clickable.");
             TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(control), DocxPageFootnoteNumberingTests.DecodeText(page));
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(container + "/" + mode + "/" + height + ": " + exception, exception);
+            }
         }
     }
 
