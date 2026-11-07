@@ -396,7 +396,7 @@ internal sealed partial class DocxLayoutEngine
                 (DocxFieldText.GetDependencies(layout.Story.BodyElements, cancellationToken) & DocxCounterDependencies.PageNumber) == 0)
                 return layout;
             // This candidate is placement-local, never published in the width memo.
-            // Its caller proves the complete group and rendered reference page.
+            // Its caller owns the rendered reference page before note admission.
             return CreateRelatedStoryLayout(layout.Story, layout.StoryIndex, bodyWidth, textMeasurer,
                 defaultTabStopPoints, paragraphSpacingScale, pageNumber, knownPageCount, cancellationToken,
                 unscaledTextMeasurer, customNoteTargets?.GetValueOrDefault(layout.Story), mathEquations);
@@ -883,6 +883,19 @@ internal sealed partial class DocxLayoutEngine
                     if (!matched)
                     {
                         continue;
+                    }
+
+                    // The body reference is now placed. Measure counters and all
+                    // inline content together before slicing the note; keep this
+                    // page-bound result out of the shared width-only memo.
+                    DocxRelatedStoryLayout boundLayout = BindRelatedStoryPage(storyLayout, FootnoteStoryLayoutWidth(page), pages.Count);
+                    if (!ReferenceEquals(boundLayout, storyLayout))
+                    {
+                        if (inFlightNotes.TryGetValue(key, out InFlightRelatedStory? pending) &&
+                            pending.PlacedLineCount == 0 && !pending.SeparatorPlaced)
+                            inFlightNotes[key] = new InFlightRelatedStory(boundLayout, pending.SeparatorLayout,
+                                pending.ContinuationLayout, pending.SourceBlockIndex, pending.Location);
+                        storyLayout = boundLayout;
                     }
 
                     pageFootnoteStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));

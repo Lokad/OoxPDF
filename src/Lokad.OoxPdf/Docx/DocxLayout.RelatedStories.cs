@@ -134,6 +134,7 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
+                    storyLayout = bindRelatedStoryPage(storyLayout, footnoteWidth, pageIndex + 1);
                     placedStoryKeys.Add((reference.Kind, reference.Id));
                     pageFootnoteStories.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
                 }
