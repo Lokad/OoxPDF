@@ -1,0 +1,28 @@
+{
+  "Id": "picture-math-range",
+  "Mode": "final-preserve",
+  "InputSha256": "E00FF93D7783866EE44152E6990D0E5EBE11C3477B03518760040773FEDFBBC0",
+  "PdfSha256": "4DE4020BD2EEB56C5983B4BBD31E0A7F6B339B5DF2122F81FA758472056E9365",
+  "ReferenceKind": "OfficePdf",
+  "OfficeView": {
+    "ShowRevisions": false,
+    "RevisionsView": 0,
+    "MarkupMode": 0,
+    "RevisionsMode": 0,
+    "ShowComments": false,
+    "ShowFormatChanges": false,
+    "ShowInsertionsAndDeletions": false,
+    "RejectAll": false
+  },
+  "ExportSettings": "ExportSettings: Word/16.0 ShowRevisions=False RevisionsView=0 MarkupMode=0 RevisionsMode=0 ShowComments=False ShowFormatChanges=False ShowInsertionsAndDeletions=False RejectAll=False (inherited MarkupMode=0 RevisionsMode=0)",
+  "ExportLogSha256": "4722F556F7068CE4372825B6B4688ED77F87CE88601F189E1F8389B70EC1CBA0",
+  "WordRect": [
+    140.7100067138672,
+    74.32000732421875,
+    229.66000366210938,
+    105.4000244140625
+  ],
+  "Gate": "Existing one-point horizontal/top comparison. Bottom remains about six points short; no full-rectangle or visible-view calibration claim.",
+  "Reference": "Word 16 Final OfficePdf",
+  "Input": "mixed-picture-equation-link-cell.docx"
+}

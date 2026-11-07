@@ -16588,5 +16588,15 @@
     "DocxSupportedNumberingFirstLineIndentDoesNotEmitIndentDiagnostic",
     "DocxSupportedTableStyleAtomsDoNotEmitBroadTableStyleDiagnostic",
     "DocxSupportedBodyKeepRulesDoNotEmitUnsupportedKeepDiagnostic"
+  ],
+  "docx-mixed-picture-ranges": [
+    "DocxMixedPictureRangesIncludePaintAcrossContainersAndPresets",
+    "DocxMixedPictureRangesKeepDecodeRotationClipAndChildTargetFallbacks",
+    "DocxPictureOnlySourceRangesRetainUnlinkedFallback",
+    "PortableRenderingInlinePictureLinksFollowVisibleFrames",
+    "PortableRenderingStaticPictureLinksRetainComposedFrames",
+    "DocxInlinePictureLinksKeepUnsupportedActionsAndTransformsUnlinked",
+    "DocxInlinePictureLinksRequireDecodedAndUnclippedPaint",
+    "DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs"
   ]
 }

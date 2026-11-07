@@ -1453,6 +1453,7 @@ internal sealed partial class DocxRenderer
             IReadOnlyList<PdfImageResource> paintedImages, IReadOnlyList<DocxLayoutItem> staticItems)
         {
             var annotations = new List<PdfLinkAnnotation>();
+            Dictionary<DocxInlineImage, DocxInlineImageLayout?>? linkedPictures = null;
             // Ordinary body paragraphs carry reference-qualified printed line boxes.
             // Other stories retain the earlier glyph-relative geometry until qualified.
             const double BodyHyperlinkRectHorizontalPadPoints = 2.25d;
@@ -1468,7 +1469,7 @@ internal sealed partial class DocxRenderer
             List<(DocxHyperlinkSpan Link, double MinX, double MaxX)>? previousLineLinks = null;
             double previousLineTop = 0d;
             double previousLineBottomFallback = 0d;
-            double previousPaintedMathBottom = double.PositiveInfinity;
+            double previousPaintedInlineBottom = double.PositiveInfinity;
             double? previousDelta = null;
             bool previousUsesBodyLineBox = false;
             foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
@@ -1499,7 +1500,7 @@ internal sealed partial class DocxRenderer
                         : flushNextTop < previousLineTop
                             ? Math.Max(flushNextTop, previousLineBottomFallback)
                             : previousLineBottomFallback;
-                    EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(flushBottom, previousPaintedMathBottom));
+                    EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(flushBottom, previousPaintedInlineBottom));
                     previousLineLinks = null;
                 }
 
@@ -1517,7 +1518,7 @@ internal sealed partial class DocxRenderer
                     ? BodyHyperlinkRectHorizontalPadPoints * textEmissionFontScale
                     : HyperlinkRectHorizontalPadEm * line.FontSize;
                 var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MaxX, double Top, double BaseBl, double BaseFs)>();
-                double paintedMathBottom = double.PositiveInfinity;
+                double paintedInlineBottom = double.PositiveInfinity;
                 foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, useWordCompatibleTextProfile, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1555,17 +1556,37 @@ internal sealed partial class DocxRenderer
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (!extent.IsMath || extent.EndOffset <= extent.StartOffset) continue;
-                    var link = links.FirstOrDefault(candidate => candidate.StartInlineItemIndex is int start &&
-                        candidate.EndInlineItemIndex is int end && extent.ItemIndex >= start && extent.ItemIndex < end);
+                    var link = FindInlineLink(paragraph, extent.ItemIndex);
                     if (link is null) continue;
                     double baseline = line.BaselineY - textEmissionBaselineOffset;
                     // A text line slot can be shallower than a fraction's final
                     // painted extent, especially after printed table placement.
-                    paintedMathBottom = Math.Min(paintedMathBottom, baseline - extent.BelowBaseline);
+                    paintedInlineBottom = Math.Min(paintedInlineBottom, baseline - extent.BelowBaseline);
                     AddLinkFragment(link, line.X + extent.StartOffset + textEmissionXOffset,
                         line.X + extent.EndOffset + textEmissionXOffset,
                         baseline + Math.Max(extent.AboveBaseline, line.InlineFrame?.BaselineInset ?? 0d),
                         baseline, line.FontSize * textEmissionFontScale);
+                }
+
+                // A picture extends an existing text/math link; an image-only
+                // source span retains its current fallback. Drawing URI targets
+                // own their separate annotations and are not absorbed here.
+                foreach (var extent in line.InlineSourceExtents)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (mergedLinkRects.Count == 0 || paragraph.InlineContent is not { } items ||
+                        (uint)extent.ItemIndex >= (uint)items.Count || items[extent.ItemIndex] is not DocxInlinePicture picture ||
+                        picture.Image.ClickTarget is not null || FindInlineLink(paragraph, extent.ItemIndex) is not { } link)
+                        continue;
+                    int index = mergedLinkRects.FindIndex(item => ReferenceEquals(item.Link, link));
+                    if (index < 0) continue;
+                    linkedPictures ??= ReadLinkedPictureFrames();
+                    if (!linkedPictures.TryGetValue(picture.Image, out var placed) || placed is null ||
+                        placed.SourceLineIndex is null || placed.SourceLineIndex != line.SourceLineIndex) continue;
+                    var merged = mergedLinkRects[index];
+                    mergedLinkRects[index] = (link, Math.Min(merged.MinX, placed.X), Math.Max(merged.MaxX, placed.X + placed.Width),
+                        Math.Max(merged.Top, placed.Y + placed.Height), merged.BaseBl, merged.BaseFs);
+                    paintedInlineBottom = Math.Min(paintedInlineBottom, placed.Y);
                 }
 
                 void AddLinkFragment(DocxHyperlinkSpan link, double fragmentMinX, double fragmentMaxX,
@@ -1622,7 +1643,7 @@ internal sealed partial class DocxRenderer
                     }
 
                     previousLineTop = heldTop;
-                    previousPaintedMathBottom = paintedMathBottom;
+                    previousPaintedInlineBottom = paintedInlineBottom;
                     // RV06: a page-last rectangle covers its line slot plus trailing paragraph space.
                     double heldSlotHeight = line.BodyLineBoxHeightPoints ?? line.LineHeight ?? ((HyperlinkRectTopEm + HyperlinkRectBottomEm) * heldFs);
                     double heldAfterSpacing = line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d;
@@ -1634,13 +1655,45 @@ internal sealed partial class DocxRenderer
 
             if (previousLineLinks is not null)
             {
-                EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedMathBottom));
+                EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedInlineBottom));
             }
 
             annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber, staticItems, paintedImages, imageCache, markupContext, cancellationToken));
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;
+
+        Dictionary<DocxInlineImage, DocxInlineImageLayout?> ReadLinkedPictureFrames()
+        {
+            var requested = new HashSet<DocxInlineImage>(ReferenceEqualityComparer.Instance);
+            foreach (var line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (line.SourceParagraph is not { InlineContent: { } items } paragraph || paragraph.Hyperlinks.Count == 0) continue;
+                foreach (var extent in line.InlineSourceExtents)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if ((uint)extent.ItemIndex < (uint)items.Count && items[extent.ItemIndex] is DocxInlinePicture picture &&
+                        picture.Image.ClickTarget is null && FindInlineLink(paragraph, extent.ItemIndex) is not null)
+                        requested.Add(picture.Image);
+                }
+            }
+            // These page-local identity sets fit the existing coarse construction
+            // reservation per placed item. Repeated placements are ambiguous and
+            // retain glyph-only bounds rather than selecting an arbitrary frame.
+            var frames = new Dictionary<DocxInlineImage, DocxInlineImageLayout?>(ReferenceEqualityComparer.Instance);
+            foreach (var image in EnumerateLinkedPictureFrames(page, pageNumber, staticItems, paintedImages, imageCache,
+                markupContext, requested.Contains, cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!frames.TryAdd(image.Image, image)) frames[image.Image] = null;
+            }
+            return frames;
+        }
+
+        static DocxHyperlinkSpan? FindInlineLink(DocxParagraph paragraph, int itemIndex) =>
+            paragraph.Hyperlinks.FirstOrDefault(link => link.StartInlineItemIndex is int start &&
+                link.EndInlineItemIndex is int end && itemIndex >= start && itemIndex < end);
 
         void EmitLineLinkRects(
             List<(DocxHyperlinkSpan Link, double MinX, double MaxX)> emissions,

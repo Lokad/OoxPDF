@@ -8,13 +8,25 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<PdfImageResource> resources, IReadOnlyDictionary<string, PdfImageXObject?> imageCache,
         DocxMarkupContext context, CancellationToken token)
     {
+        foreach (var image in EnumerateLinkedPictureFrames(page, pageNumber, staticItems, resources, imageCache,
+            context, static image => image.ClickTarget is not null, token))
+            yield return PdfLinkAnnotation.ToUri(image.X, image.Y, image.Width, image.Height, image.Image.ClickTarget!);
+    }
+
+    // Navigation consumes the same physical frames as painting. Both drawing URI
+    // links and mixed source ranges retain decode, ownership and clipping guards.
+    private static IEnumerable<DocxInlineImageLayout> EnumerateLinkedPictureFrames(DocxLayoutPage page, int pageNumber,
+        IReadOnlyList<DocxLayoutItem> staticItems, IReadOnlyList<PdfImageResource> resources,
+        IReadOnlyDictionary<string, PdfImageXObject?> imageCache, DocxMarkupContext context,
+        Func<DocxInlineImage, bool> select, CancellationToken token)
+    {
         if (resources.Count == 0) yield break;
         var pageClip = new PdfRectangle(0d, 0d, page.Width, page.Height);
         HashSet<PdfImageXObject>? painted = null;
         foreach (var (image, clip) in EnumerateImages())
         {
             token.ThrowIfCancellationRequested();
-            if (image.Image.ClickTarget is not { } uri || image.Image.RotationDegrees != 0d ||
+            if (image.Image.RotationDegrees != 0d ||
                 GetImageCacheKey(image.Image) is not { } key || !imageCache.TryGetValue(key, out var resource) || resource is null)
                 continue;
             var frame = new PdfRectangle(image.X, image.Y, image.Width, image.Height);
@@ -23,7 +35,7 @@ internal sealed partial class DocxRenderer
                 continue;
             painted ??= new HashSet<PdfImageXObject>(resources.Select(item => item.Image), ReferenceEqualityComparer.Instance);
             if (painted.Contains(resource))
-                yield return PdfLinkAnnotation.ToUri(frame.X, frame.Y, frame.Width, frame.Height, uri);
+                yield return image;
         }
 
         IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> EnumerateImages()
@@ -31,7 +43,7 @@ internal sealed partial class DocxRenderer
             foreach (var item in staticItems.Concat(page.Items))
             {
                 token.ThrowIfCancellationRequested();
-                if (item is DocxInlineImageLayout image && image.Image.ClickTarget is not null)
+                if (item is DocxInlineImageLayout image && select(image.Image))
                     yield return (PlaceInlineImageForPaint(image, context), pageClip);
                 else if (item is DocxTableRowLayout row)
                     foreach (var child in CellImages(row, pageClip)) yield return child;
@@ -45,7 +57,7 @@ internal sealed partial class DocxRenderer
                 foreach (var image in story.InlineImages)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (image.Image.ClickTarget is not null)
+                    if (select(image.Image))
                         yield return (PlaceInlineImageForPaint(mapped ? map.PrecompensateNoteImage(image, pageNumber) : image, context), clip);
                 }
             }
@@ -64,7 +76,7 @@ internal sealed partial class DocxRenderer
                 token.ThrowIfCancellationRequested();
                 var cell = row.Cells[index];
                 if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell || cell.Cell.HasVerticalMerge) continue;
-                if (!cell.InlineImages.Any(image => image.Image.ClickTarget is not null) && cell.NestedRows.Count == 0) continue;
+                if (!cell.InlineImages.Any(image => select(image.Image)) && cell.NestedRows.Count == 0) continue;
                 geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
                 var cellClip = ResolveTableCellContentClip(geometryRow, geometryRow.Cells[index]);
                 double left = Math.Max(parent.X, cellClip.X), bottom = Math.Max(parent.Y, cellClip.Y);
@@ -73,7 +85,7 @@ internal sealed partial class DocxRenderer
                 foreach (var image in cell.InlineImages)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (image.Image.ClickTarget is not null)
+                    if (select(image.Image))
                         yield return (PlaceCellImageForPaint(image, xOffset, yOffset, cellClip), clip);
                 }
                 foreach (var nested in cell.NestedRows)
