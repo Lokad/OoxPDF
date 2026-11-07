@@ -23,13 +23,12 @@ internal static partial class DocxMathParser
             string name = element.Name.LocalName;
             bool revisionSource = !item.InsideRevision && includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
                 name is "ins" or "del";
-            bool revisionRow = revisionSource && element.HasElements && element.Elements().All(IsRevisionContent);
-            bool structuralRevision = revisionRow && element.Elements().Count() == 1 &&
-                element.Elements().Single().Name.Namespace == MathNamespace &&
-                IsControl(element.Elements().Single().Name.LocalName);
-            bool retainDeletedFrame = revisionRow && preserveDeletedStructure && name == "del" && !includeRevision!(element) &&
+            XElement[]? revisionChildren = revisionSource ? NonMarkerChildren(element).ToArray() : null;
+            bool revisionRow = revisionChildren is { Length: > 0 } && revisionChildren.All(IsRevisionContent);
+            bool included = !revisionRow || includeRevision!(element);
+            bool retainDeletedFrame = revisionRow && preserveDeletedStructure && name == "del" && !included &&
                 element.Elements().Any(child => IsControl(child.Name.LocalName));
-            if (revisionRow && !item.Expanded && !includeRevision!(element) && !retainDeletedFrame)
+            if (revisionRow && !item.Expanded && !included && !retainDeletedFrame)
             {
                 nodes.Add(element, new DocxMathRow([]));
                 continue;
@@ -42,24 +41,17 @@ internal static partial class DocxMathParser
 
             if (!item.Expanded)
             {
-                pending.Push((element, true, item.InsideRevision, item.IncludeBookmarks));
+                pending.Push((element, true, item.InsideRevision, item.IncludeBookmarks && included));
                 foreach (XElement child in ContentChildren(element).Reverse())
                 {
                     pending.Push((child, false, item.InsideRevision || revisionRow,
-                        item.IncludeBookmarks && (!revisionRow || includeRevision!(element))));
+                        item.IncludeBookmarks && included));
                 }
                 continue;
             }
 
             DocxMathNode node;
-            if (structuralRevision)
-            {
-                // Revision syntax is transparent to the existing single-control
-                // grammar. Ownership already lives on actual control/literal sources.
-                var child = element.Elements().Single();
-                node = nodes[child];
-            }
-            else if (revisionRow)
+            if (revisionRow)
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
             else if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
                 (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
@@ -203,8 +195,10 @@ internal static partial class DocxMathParser
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "bookmarkStart" or "bookmarkEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
+    private static IEnumerable<XElement> NonMarkerChildren(XElement element) =>
+        element.Elements().Where(child => !IsEditingMarker(child) && !IsBookmarkMarker(child));
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
-        element.Elements().Where(child => !IsProperty(child) && !IsEditingMarker(child) && !IsBookmarkMarker(child));
+        NonMarkerChildren(element).Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
     {
         XElement[] children = ContentChildren(element).ToArray();

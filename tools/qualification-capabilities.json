@@ -1,4 +1,21 @@
 {
+  "docx-math-revision-boundaries": [
+    "DocxMathRevisionBoundaries",
+    "DocxInnerMathBookmarks",
+    "DocxMathEditingMarkers",
+    "DocxDeletedMathMetadata",
+    "DocxInlineCompositionEmptyFractionKeepsOnlyStructuralOwnership",
+    "PortableRenderingEmptyFractions",
+    "PortableRenderingEmptyFractionRevisions",
+    "DocxInlineCompositionMathRunRevisionsRequireActualOwners",
+    "DocxInlineCompositionEquationRevisionsRequireActualSourceOwners",
+    "DocxInlineCompositionExplicitDisplaysRetainSourceRowsAndFallbacks",
+    "DocxInlineCompositionExplicitDisplayLinksRetainSourceAndResolvedStyleOwnership",
+    "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets",
+    "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "MemoryAdmissionSharedCapacityRefusesConcurrentConversionAndRefunds"
+  ],
   "font-kerning-row-ownership": [
     "ClassKerning",
     "CoverageExpansionBeyondCapThrows",
