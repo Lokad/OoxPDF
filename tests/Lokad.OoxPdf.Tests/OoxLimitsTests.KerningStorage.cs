@@ -5,6 +5,42 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class OoxLimitsTests
 {
+    public static void ClassKerningUnusedRowsDoNotAllocateDeclaredCaches()
+    {
+        byte[] small = FontWithUnusedRows(2);
+        byte[] large = FontWithUnusedRows(ushort.MaxValue);
+        // Warm the parser before measuring the two source shapes. The source
+        // buffers are caller-owned and already exist outside this measurement.
+        OpenTypeFont.Load(small);
+        var smallResult = Read(small);
+        var largeResult = Read(large);
+        TestAssert.Equal((short)-50, smallResult.Font.GetKerning(0, 0));
+        TestAssert.Equal(smallResult.Font.GetKerning(0, 0), largeResult.Font.GetKerning(0, 0));
+        TestAssert.Equal((short)0, largeResult.Font.GetKerning(1, 0));
+        TestAssert.True(largeResult.Allocated - smallResult.Allocated < 64 * 1024,
+            $"Unused class rows must not allocate cache slots: small={smallResult.Allocated}, large={largeResult.Allocated}.");
+
+        static (OpenTypeFont Font, long Allocated) Read(byte[] bytes)
+        {
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            OpenTypeFont font = OpenTypeFont.Load(bytes);
+            return (font, GC.GetAllocatedBytesForCurrentThread() - before);
+        }
+
+        static byte[] FontWithUnusedRows(ushort rows)
+        {
+            byte[] gpos = BuildClassKernGpos(1, 1, rangeCoverage: false);
+            int list = BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(8, 2));
+            int lookup = list + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(list + 2, 2));
+            int subtable = lookup + BinaryPrimitives.ReadUInt16BigEndian(gpos.AsSpan(lookup + 6, 2));
+            // Keep the complete declared matrix. Coverage/class definitions can
+            // share bytes with unused rows; only row 1 is actually referenced.
+            Array.Resize(ref gpos, Math.Max(gpos.Length, subtable + 16 + rows * 2 * 2));
+            BinaryPrimitives.WriteUInt16BigEndian(gpos.AsSpan(subtable + 12, 2), rows);
+            return TestFontBuilder.ReplaceTable(TestFontBuilder.CreateTestFont(), "GPOS", gpos);
+        }
+    }
+
     public static void ClassKerningZeroAdvanceScanCompletesWithoutWorkQuota()
     {
         // Repeated zero-adjustment class ranges scan beyond the retired work
