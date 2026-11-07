@@ -29,17 +29,18 @@ internal static partial class DocxMathParser
             }
             bool revisionSource = !item.InsideRevision && includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
                 name is "ins" or "del";
-            XElement[]? revisionChildren = revisionSource ? NonMarkerChildren(element).ToArray() : null;
+            XElement[]? revisionChildren = revisionSource ? ReadRevisionChildren(element, cancellationToken).ToArray() : null;
             bool revisionRow = revisionChildren is { Length: > 0 } && revisionChildren.All(IsRevisionContent);
             bool included = !revisionRow || includeRevision!(element);
             bool retainDeletedFrame = revisionRow && preserveDeletedStructure && name == "del" && !included &&
-                element.Elements().Any(child => IsControl(child.Name.LocalName));
+                revisionChildren!.Any(child => IsControl(child.Name.LocalName));
             if (revisionRow && !item.Expanded && !included && !retainDeletedFrame)
             {
                 nodes.Add(element, new DocxMathRow([]));
                 continue;
             }
-            if (!revisionRow && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
+            bool contentControl = IsContentControlContainer(element);
+            if (!revisionRow && !contentControl && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
             {
                 nodes.Add(element, ReadLeaf(element, readRun));
                 continue;
@@ -59,9 +60,10 @@ internal static partial class DocxMathParser
             }
 
             DocxMathNode node;
-            if (revisionRow)
+            if (revisionRow || contentControl)
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray());
-            else if (IsRow(name) && (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
+            else if (IsRow(name) && (name == "oMath" || !IsContentControlContainer(element.Parent)) &&
+                (name != "deg" || element.Parent?.Name == MathNamespace + "rad") &&
                 (name != "fName" || element.Parent?.Name == MathNamespace + "func"))
             {
                 node = new DocxMathRow(ContentChildren(element).Select(child => nodes[child]).ToArray())
@@ -150,7 +152,7 @@ internal static partial class DocxMathParser
             {
                 List<DocxMathBookmarkBoundary>? bookmarks = null;
                 int childIndex = 0;
-                foreach (var child in element.Elements())
+                foreach (var child in SourceChildren(element))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (IsBookmarkMarker(child))
@@ -191,6 +193,29 @@ internal static partial class DocxMathParser
     private static bool IsRevisionContent(XElement element) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
             element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
+    // Revision admission and structural retention see the same stored content
+    // through metadata containers; role nodes still need their actual parent.
+    private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
+    {
+        var pending = new Stack<XElement>(NonMarkerChildren(source).Reverse());
+        while (pending.TryPop(out var child))
+        {
+            token.ThrowIfCancellationRequested();
+            if (IsContentControlContainer(child))
+            {
+                foreach (var item in NonMarkerChildren(child).Reverse()) pending.Push(item);
+            }
+            else yield return child;
+        }
+    }
+    private static bool IsContentControlContainer(XElement? element) =>
+        element?.Name == WordprocessingNamespace + "sdt" ||
+        element?.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt";
+    // Match paragraph content-control reading: properties describe the control;
+    // only its sdtContent children supply stored, visible content.
+    private static IEnumerable<XElement> SourceChildren(XElement element) =>
+        element.Name == WordprocessingNamespace + "sdt"
+            ? element.Elements(WordprocessingNamespace + "sdtContent") : element.Elements();
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     // Editing boundaries have no mathematical operand or printed ink. Keep
@@ -208,9 +233,9 @@ internal static partial class DocxMathParser
         element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
     private static IEnumerable<XElement> TraversalChildren(XElement element) =>
-        element.Elements().Where(child => !IsProperty(child) && !IsEditingMarker(child) && !IsBookmarkMarker(child));
+        SourceChildren(element).Where(child => !IsProperty(child) && !IsEditingMarker(child) && !IsBookmarkMarker(child));
     private static IEnumerable<XElement> NonMarkerChildren(XElement element) =>
-        element.Elements().Where(child => !IsEditingMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
+        SourceChildren(element).Where(child => !IsEditingMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
         NonMarkerChildren(element).Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
@@ -220,7 +245,7 @@ internal static partial class DocxMathParser
     }
     private static string? PropertyValue(XElement element, string property, string value) =>
         (string?)element.Element(MathNamespace + property)?.Element(MathNamespace + value)?.Attribute(MathNamespace + "val");
-    private static string[] ReadProperties(XElement element) => element.Elements().Where(IsProperty)
+    private static string[] ReadProperties(XElement element) => SourceChildren(element).Where(IsProperty)
         .Select(child => child.ToString(SaveOptions.DisableFormatting)).ToArray();
 
     private static DocxMathArgumentProperties? ReadArgumentProperties(XElement element)

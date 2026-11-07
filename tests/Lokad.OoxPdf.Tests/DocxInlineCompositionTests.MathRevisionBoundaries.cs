@@ -61,7 +61,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadMathRevisionBoundary(OoxPdfDocxMarkupMode mode, string kind,
-        bool control, string marker) => ReadMutation("CompositionProbes/math-run-revision-body-ins", mode, false, false,
+        bool control, string marker, string? contentControl = null) => ReadMutation("CompositionProbes/math-run-revision-body-ins", mode, false, false,
         (xml, w, m) =>
         {
             var revision = xml.Descendants(w + "ins").Single();
@@ -73,6 +73,18 @@ internal static partial class DocxInlineCompositionTests
                 var whole = new XElement(w + kind, revision.Attributes(), new XElement(fraction));
                 fraction.ReplaceWith(whole);
                 revision = whole;
+            }
+            if (contentControl == "inside")
+            {
+                var children = revision.Elements().ToArray();
+                revision.RemoveNodes();
+                revision.Add(MathContentControl(children, w));
+            }
+            else if (contentControl == "outside")
+            {
+                var metadata = MathContentControl([new XElement(revision)], w);
+                revision.ReplaceWith(metadata);
+                revision = metadata.Descendants(w + kind).Single();
             }
             var owner = marker == "bookmark" ? revision : revision.Parent!;
             owner.AddFirst(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "19114"),
