@@ -48,10 +48,12 @@ internal static partial class DocxInlineCompositionTests
                 [
                     new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public earlier page", 12d, 14d)),
                     new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
-                    .. source.BodyElements,
+                    new DocxParagraphElement(source.Paragraphs.First()),
+                    new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
+                    new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public trailing body", 12d, 14d)),
                     new DocxSectionBreakElement(settings, DocxSectionBreakType.NextPage, null, null, null, []),
                     new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public following section", 12d, 14d))
-                ] };
+                ], RelatedStories = source.RelatedStories.Where(story => !story.IsNormalStoryType || story.Id == "37").ToArray() };
             }
         }
     }

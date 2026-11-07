@@ -583,10 +583,10 @@ Approximate or restricted:
   Supported numeric field results share that spacing rule. NUMPAGES in normal
   notes is measured with the finalized count through the bounded count retry.
   Endnote PAGE is measured with its rendered reference page for existing plain
-  paragraph flow, including continuation, and complete document-end groups that
+  paragraph flow, including section-end notes and continuation, and complete document-end groups that
   pass the source/frame/fit proof. Empty or ordinary headers preserve the binding
   for admitted plain flow. Unrendered references and other unqualified
-  owners retain their fallback. Mixed/unfit table rows, section-end and other
+  owners retain their fallback. Mixed/unfit table rows and other
   unqualified note PAGE values remain approximate; full field parity is not promised.
   Highlighting and run shading retain these text metrics while painting their
   backgrounds; font-changing and unsupported layout combinations keep fallbacks.
