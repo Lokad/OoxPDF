@@ -16611,6 +16611,7 @@
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ],
   "docx-note-placement-work": [
+    "DocxRegisteredEndnoteContinuationSpacingOwnsItsPageCapacity",
     "DocxRegisteredEndnoteSeparatorsRetainSourceSpacingAndDefaultFallbacks",
     "DocxLayoutSplitsSingleSectEndEndnoteStoryBeforeFollowingSection",
     "DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata",

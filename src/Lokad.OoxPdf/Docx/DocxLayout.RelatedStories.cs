@@ -1207,7 +1207,13 @@ internal sealed partial class DocxLayoutEngine
             activePage, activePageIndex, continuationSeparatorLayout, sourceBlockIndex, markBaselineY, separatorMeasurer, printScale);
         activePlacedStories.Add(placedSeparator);
         outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-        return markBaselineY - separatorGapPoints;
+        // A registered empty endnote rule owns its measured trailing space.
+        // Returning the content cursor here also charges it to the next take;
+        // rich/unknown separators and footnotes retain their placement fallback.
+        double afterSpacing = HasAuthoredEndnoteSeparatorSpacing(continuationSeparatorLayout.Story) &&
+            HasEmptyNoteSeparator(continuationSeparatorLayout)
+            ? Math.Max(0d, continuationSeparatorLayout.TextLines[0].ParagraphAfterSpacing ?? 0d) : 0d;
+        return markBaselineY - separatorGapPoints - afterSpacing;
     }
 
     private static double ResolveContinuationRuleWidth(DocxLayoutPage page, double printScale)

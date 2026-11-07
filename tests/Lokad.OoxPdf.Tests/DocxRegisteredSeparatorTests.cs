@@ -44,8 +44,35 @@ internal static class DocxRegisteredSeparatorTests
         }
     }
 
+    public static void DocxRegisteredEndnoteContinuationSpacingOwnsItsPageCapacity()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string position in new[] { "sectEnd", "docEnd" })
+        {
+            var before = Layout(0);
+            var after = Layout(12);
+            var first = before.Pages.SelectMany(page => page.PlacedRelatedStories.Where(note => note.StoryLayout.Story.Id == "37")).ToArray();
+            var second = after.Pages.SelectMany(page => page.PlacedRelatedStories.Where(note => note.StoryLayout.Story.Id == "37")).ToArray();
+            TestAssert.True(first.Length >= 3 && second.Length >= 3, "The note actually reaches repeated continuation frames.");
+            TestAssert.Equal(first[0].TopY, second[0].TopY);
+            TestAssert.True(first[0].TextLines.Select(line => line.Text).SequenceEqual(second[0].TextLines.Select(line => line.Text)),
+                "Continuation-only formatting preserves the already placed head.");
+            TestAssert.True(Math.Abs(first[1].TopY - second[1].TopY - 12d) < .001d,
+                "The continued content frame owns the registered after-space.");
+            TestAssert.True(second[1].TextLines.Count <= first[1].TextLines.Count,
+                "Authored separator spacing also reduces the admitted continuation capacity.");
+            TestAssert.True(first.SelectMany(note => note.TextLines).Select(line => line.Text)
+                .SequenceEqual(second.SelectMany(note => note.TextLines).Select(line => line.Text)),
+                "Every source line survives once and in order through changed page takes.");
+
+            DocxLayout Layout(int points) => new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(Read(mode, position, 0, 0, true, continuationAfter: points, words: 900),
+                    new DocxTests.FamilyWidthTextMeasurer(), default);
+        }
+    }
+
     private static DocxDocument Read(OoxPdfDocxMarkupMode mode, string position,
-        int before, int? after, bool registered)
+        int before, int? after, bool registered, int? continuationAfter = null, int words = 3)
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
             "CompositionProbes", "mixed-note-endnote-table.docx"));
@@ -84,8 +111,18 @@ internal static class DocxRegisteredSeparatorTests
         if (after.HasValue) spacing.Add(new XAttribute(w + "after", after.Value * 20));
         separator.ReplaceNodes(new XElement(w + "p", new XElement(w + "pPr", spacing),
             new XElement(w + "r", new XElement(w + "separator"))));
+        if (continuationAfter.HasValue)
+        {
+            var continuation = notes.Root.Elements(w + "endnote")
+                .Single(note => (string?)note.Attribute(w + "type") == "continuationSeparator");
+            noteProperties.Add(new XElement(w + "endnote", new XAttribute(w + "id", (string)continuation.Attribute(w + "id")!)));
+            continuation.ReplaceNodes(new XElement(w + "p", new XElement(w + "pPr", new XElement(w + "spacing",
+                new XAttribute(w + "before", "0"), new XAttribute(w + "after", continuationAfter.Value * 20))),
+                new XElement(w + "r", new XElement(w + "continuationSeparator"))));
+        }
         notes.Root.Elements(w + "endnote").Where(note => (string?)note.Attribute(w + "type") is null or "normal").Remove();
-        notes.Root.Add(new XElement(w + "endnote", new XAttribute(w + "id", "37"), Paragraph("Public note body")));
+        notes.Root.Add(new XElement(w + "endnote", new XAttribute(w + "id", "37"),
+            Paragraph(string.Join(" ", Enumerable.Range(0, words).Select(index => "item" + index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture))))));
         Save("word/document.xml", document);
         Save("word/settings.xml", settings);
         Save("word/endnotes.xml", notes);
