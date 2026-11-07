@@ -3,7 +3,8 @@
 ## 0.3.0 — Unreleased
 
 - DOCX: nonpainting runs no longer redirect bookmarks from inline equations to
-  later prose.
+  later prose. Bookmarks on ordered inline pictures target their placed line
+  instead of following text, including links from another paragraph.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual

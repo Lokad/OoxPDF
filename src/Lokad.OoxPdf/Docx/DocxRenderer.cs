@@ -1315,6 +1315,25 @@ internal sealed partial class DocxRenderer
                             continue;
                         }
 
+                        if (line.InlineFrame is { } pictureLine && paragraph.InlineContent is { } pictureItems &&
+                            bookmark.InlineItemIndex is int pictureIndex && pictureIndex >= 0 && pictureIndex < pictureItems.Count &&
+                            pictureItems[pictureIndex] is DocxInlinePicture)
+                        {
+                            // Ordered source extents belong to the placed line. A picture
+                            // bookmark must wait for that line rather than bind later prose.
+                            foreach (var extent in line.InlineSourceExtents)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                if (extent.ItemIndex != pictureIndex || extent.EndOffset <= extent.StartOffset) continue;
+                                destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
+                                    line.X + (extent.StartOffset == 0d ? line.FrameOriginOffsetX ?? 0d : extent.StartOffset) +
+                                        pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
+                                    line.BaselineY + pictureLine.BaselineInset - pageTextEmissionBaselineOffset, Zoom: null));
+                                break;
+                            }
+                            continue;
+                        }
+
                         if (paragraph.InlineContent is { } sourceItems &&
                             bookmark.InlineItemIndex is int itemIndex && itemIndex >= 0 && itemIndex < sourceItems.Count &&
                             sourceItems[itemIndex] is DocxInlineEquation sourceEquation)

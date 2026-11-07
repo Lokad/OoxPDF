@@ -46,7 +46,7 @@ internal static class DocxInlineContent
         paragraph.RevisionRanges.Count == 0;
 
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
-        paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0;
+        paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0 || paragraph.BookmarkAnchors.Count != 0;
 
     public static bool HasValidHyperlinkSourceRanges(DocxParagraph paragraph, CancellationToken token)
     {
