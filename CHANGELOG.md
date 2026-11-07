@@ -5,6 +5,8 @@
 - DOCX: nonpainting runs no longer redirect bookmarks from inline equations to
   later prose. Bookmarks on ordered inline pictures and boxes target their placed line
   instead of following text, including links from another paragraph.
+  Mixed picture/equation hyperlinks cover their decoded, unclipped picture frames;
+  child drawing targets and unsupported placement fallbacks remain separate.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual

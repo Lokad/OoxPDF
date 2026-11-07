@@ -559,6 +559,11 @@ Approximate or restricted:
   Mid-line objects supply their horizontal extent; line-start objects retain the
   containing frame's viewport origin. Legacy picture-only paragraphs keep their
   existing navigation fallback.
+  On a line with an active text/equation hyperlink, an adjacent picture in the
+  same source range extends its clickable bounds using the painted frame.
+  Drawing URI targets stay separate. Image-only ranges, rotated/clipped pictures
+  and unresolved placement owners retain their fallbacks; vertical click bounds
+  remain approximate.
   Prepared display rows reuse math boxes and source frames. Mathematical layout
   emits DOCX_APPROXIMATED_EQUATION; omitted unsupported math is diagnosed separately.
 - Bounded literal/fraction/script/root/delimiter/n-ary/function/matrix/cases forms,
