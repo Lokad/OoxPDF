@@ -42,7 +42,7 @@ internal static class DocxMathParagraphPolicy
                 // Preparation preserves that source; placement still applies
                 // the existing merge geometry and continuation ownership.
                 if (!HasSupportedCellContentProperties(cell) || cell.HasVerticalMerge && !cell.IsVerticalMergeRestart ||
-                    !children.All(child => child is DocxParagraphElement or DocxTableElement)) { continue; }
+                    !children.All(child => child is DocxParagraphElement or DocxTableElement or DocxPageBreakElement)) { continue; }
                 foreach (var child in children)
                 {
                     token.ThrowIfCancellationRequested();

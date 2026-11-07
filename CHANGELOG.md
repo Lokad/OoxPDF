@@ -2,9 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
-- DOCX: column breaks inside table cells preserve equations, pictures and links.
-  Preparation and layout now consume the same source paragraphs; real paragraph
-  marks and page breaks retain their separate behavior.
+- DOCX: inline page/column tokens inside table cells preserve equations, pictures
+  and links. Preparation and layout consume the same source paragraphs; actual
+  paragraph marks and standalone page-break flow retain their separate behavior.
 
 - DOCX: Final/Simple joins across deleted paragraph marks retain supported
   equations, pictures and navigation together with their ordered source.

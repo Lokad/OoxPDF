@@ -9,17 +9,27 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxCellColumnBreakTests
 {
-    public static void DocxCellColumnsKeepCompleteParagraphSourcesBeforePreparation()
+    public static void DocxCellColumnsKeepCompleteParagraphSourcesBeforePreparation() =>
+        AssertCompleteSources("column", ["before", "same-run", "leading", "trailing", "wrapped", "nested", "column-paragraph", "page"]);
+
+    public static void DocxCellInlinePagesKeepCompleteParagraphSourcesBeforePreparation()
     {
-        foreach (string variant in new[] { "before", "same-run", "leading", "trailing", "wrapped", "nested", "column-paragraph" })
+        AssertCompleteSources("page", ["before", "same-run", "leading", "trailing", "wrapped", "nested", "page"]);
+        var paragraph = ContentCell(Read("plain", breakType: "page"), "plain").Paragraphs.Single();
+        TestAssert.Equal("LeftRight", string.Concat(paragraph.Runs.Select(run => run.Text)));
+    }
+
+    private static void AssertCompleteSources(string breakType, IEnumerable<string> variants)
+    {
+        foreach (string variant in variants)
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var document = Read(variant, mode);
+            var document = Read(variant, mode, breakType);
             var cell = ContentCell(document, variant);
             var elements = DocxTableCellContent.GetBodyElements(cell);
             TestAssert.Equal(variant == "column-paragraph" ? 3 : 1, elements.Count);
             TestAssert.True(elements.All(element => element is DocxParagraphElement),
-                "Cell column breaks do not manufacture block boundaries: " + variant);
+                "Inline cell flow tokens do not manufacture block boundaries: " + variant);
             var paragraph = elements.OfType<DocxParagraphElement>().Select(p => p.Paragraph).Single(p => p.Equations.Count != 0);
             var items = TestAssert.NotNull(paragraph.InlineContent);
             TestAssert.Equal(2, paragraph.Equations.Count);
@@ -47,40 +57,48 @@ internal static class DocxCellColumnBreakTests
         var paragraphs = ContentCell(Read("column-paragraph"), "column-paragraph").Paragraphs;
         TestAssert.Equal(3, paragraphs.Count);
         TestAssert.True(paragraphs[1].Runs.All(run => run.Text.Length == 0), "A real source paragraph mark is not discarded with its column break.");
-        var pageElements = ContentCell(Read("page"), "page").BodyElements;
+        var document = Read("column-paragraph", breakType: "page");
+        var pageElements = ContentCell(document, "column-paragraph").BodyElements;
         TestAssert.Equal(1, pageElements.OfType<DocxPageBreakElement>().Count());
-        TestAssert.True(!pageElements.OfType<DocxManualBreakElement>().Any(), "Mixed page/column runs retain only the actual cell page break.");
+        TestAssert.True(!pageElements.OfType<DocxManualBreakElement>().Any(), "A standalone cell page paragraph retains its existing flow owner.");
+        TestAssert.Equal(2, DocxMathParagraphPolicy.EnumeratePreparationCandidates(document, default).Sum(p => p.Equations.Count));
         var unsupported = ContentCell(Read("unsupported-owner"), "unsupported-owner").Paragraphs.Single();
         TestAssert.Equal(0, unsupported.NonRenderingRunOwners.Count);
         TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(unsupported) && DocxMathParagraphPolicy.GetPreparationEquations(unsupported).Count == 0,
             "An unknown object beside the ignored break retains the explicit unsupported-owner fallback.");
     }
 
-    public static void DocxCellColumnConversionKeepsFormulaPictureAndNavigationContent()
+    public static void DocxCellColumnConversionKeepsFormulaPictureAndNavigationContent() =>
+        AssertConversionContent("column", ["before", "same-run", "leading", "trailing", "nested", "column-paragraph", "wrapped", "page"]);
+
+    public static void DocxCellPageConversionKeepsFormulaPictureAndNavigationContent() =>
+        AssertConversionContent("page", ["before", "same-run", "leading", "trailing", "nested", "column-paragraph", "wrapped", "page"]);
+
+    private static void AssertConversionContent(string breakType, IEnumerable<string> variants)
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            foreach (string variant in new[] { "before", "same-run", "leading", "trailing", "nested", "column-paragraph", "wrapped" })
+            foreach (string variant in variants)
             {
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                     OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-                var pages = renderer.RenderPagesAsync(Read(variant, mode), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                var pages = renderer.RenderPagesAsync(Read(variant, mode, breakType), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)).Normalize(NormalizationForm.FormKC);
                 TestAssert.True(text.Contains("x+2", StringComparison.Ordinal) && text.Contains("u+v=w", StringComparison.Ordinal),
                     "Both body formulas survive: " + variant + "/" + mode);
                 TestAssert.Equal(1, pages.Sum(page => page.Images.Count));
                 TestAssert.True(pages.Sum(page => page.Annotations.Count(annotation => annotation.Destination is not null)) >= 1,
                     "The formula's destination survives: " + variant);
-                TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"), "Column breaks do not make ordinary equations unsupported.");
-                Convert(variant, mode);
+                TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"), "Known cell flow tokens do not make ordinary equations unsupported.");
+                Convert(variant, mode, breakType);
             }
         }
     }
 
-    private static void Convert(string variant, OoxPdfDocxMarkupMode mode)
+    private static void Convert(string variant, OoxPdfDocxMarkupMode mode, string breakType)
     {
-        using var input = Input(variant); using var output = new MemoryStream();
+        using var input = Input(variant, breakType); using var output = new MemoryStream();
         var diagnostics = new List<OoxPdfDiagnostic>();
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions {
             InputKind = OoxPdfInputKind.Docx, FontResolver = new PortableRenderingTests.PinnedResolver(mathFont: true),
@@ -88,9 +106,9 @@ internal static class DocxCellColumnBreakTests
         TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"), "Public conversion preserves supported math: " + variant);
     }
 
-    internal static DocxDocument Read(string variant, OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.Final)
+    internal static DocxDocument Read(string variant, OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.Final, string breakType = "column")
     {
-        using var input = Input(variant); using var package = OoxPackage.Open(input, default);
+        using var input = Input(variant, breakType); using var package = OoxPackage.Open(input, default);
         return new DocxReader().Read(package, null, default, mode);
     }
 
@@ -100,7 +118,7 @@ internal static class DocxCellColumnBreakTests
         return variant == "nested" ? cell.BodyElements.OfType<DocxTableElement>().Single().Table.Rows.Single().Cells.Single() : cell;
     }
 
-    private static MemoryStream Input(string variant)
+    private static MemoryStream Input(string variant, string breakType = "column")
     {
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes/body.docx"));
         using var source = ZipFile.OpenRead(path);
@@ -115,7 +133,7 @@ internal static class DocxCellColumnBreakTests
         paragraph.AddFirst(Text("PublicPrefix ")); paragraph.Add(Text(" PublicSuffix"));
         var cell = new XElement(w + "tc");
         var content = new XElement(paragraph);
-        var column = new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "column")));
+        var column = new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", breakType)));
         switch (variant)
         {
             case "before": case "nested":

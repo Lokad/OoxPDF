@@ -431,10 +431,11 @@ layout and general OpenType shaping. Static fallback diagnostics are listed belo
 
 ## DOCX
 
-Column breaks inside cells leave supported paragraph content inline, including
-equations, pictures and navigation. Actual paragraph boundaries remain present;
-real page breaks retain the existing cell-splitting behavior. General body column
-flow and revision pagination keep their stated limits.
+Inline page/column tokens inside cells leave supported paragraph content together,
+including equations, pictures and navigation. Actual paragraph boundaries remain
+present. Standalone page-break paragraphs keep their existing cell flow handling;
+neighboring equations still prepare. General body column flow, standalone cell
+break geometry and revision pagination keep their stated limits.
 
 Final/Simple joins across deleted paragraph marks retain supported inline
 equations, pictures, links and bookmarks in source order. Consumed marks keep

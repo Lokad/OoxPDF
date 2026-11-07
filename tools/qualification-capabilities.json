@@ -35,7 +35,9 @@
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
     "StreamLengthsMatchPayloads",
-    "XrefTablePointsAtObjectHeaders"
+    "XrefTablePointsAtObjectHeaders",
+    "DocxCellInlinePagesKeepCompleteParagraphSourcesBeforePreparation",
+    "DocxCellPageConversionKeepsFormulaPictureAndNavigationContent"
   ],
   "docx-deleted-paragraph-marks": [
     "DocxDeletedParagraphMarksRetainCompleteOrderedSources",
