@@ -69,8 +69,8 @@ internal static partial class PptxChartLabelDefaultsTests
         }
         var implicitPage = Render(false); var authoredPage = Render(true);
         var implicitShows = LineParagraphShows(implicitPage); var authoredShows = LineParagraphShows(authoredPage);
-        TestAssert.Equal("3", string.Concat(implicitShows.Select(s => s.Text)));
-        TestAssert.Equal("3", string.Concat(authoredShows.Select(s => s.Text)));
+        TestAssert.Equal("Actual, W3, 3", string.Concat(implicitShows.Select(s => s.Text)));
+        TestAssert.Equal("Actual, W3, 3", string.Concat(authoredShows.Select(s => s.Text)));
         TestAssert.True(implicitShows.Concat(authoredShows).All(s => Math.Abs(s.Size - 18d) < .002),
             "Implicit and explicit fallback bodies paint the same visible glyph size.");
         var first = LastKeySegment(implicitPage); var second = LastKeySegment(authoredPage);
