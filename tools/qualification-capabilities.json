@@ -16597,6 +16597,6 @@
     "PortableRenderingStaticPictureLinksRetainComposedFrames",
     "DocxInlinePictureLinksKeepUnsupportedActionsAndTransformsUnlinked",
     "DocxInlinePictureLinksRequireDecodedAndUnclippedPaint",
-    "DocxInlineCompositionAtomicFormulaHyperlinksCoverPaintedGlyphs"
+    "PortableRenderingPrintedHyperlinkFramesCoverSourceOrigins"
   ]
 }
