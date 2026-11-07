@@ -16625,6 +16625,7 @@
       "RelatedStoryPageIndexMatchesLegacyMatching"
   ],
   "docx-counter-spacing": [
+    "DocxSectionEndnotePageCountersPreserveReferenceAndFollowingSection",
     "DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry",
     "RelatedStoryPageIndexMatchesLegacyMatching",
     "DocxFittingEndnotePageFieldsPreserveLiteralFramesAndWrapping",

@@ -209,6 +209,16 @@ internal sealed partial class DocxLayoutEngine
 
                 if (sectionEndStories.Count > 0)
                 {
+                    if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
+                        sectionEndStories.Any(story => !story.StoryLayout.HasResolvedCounterInputs))
+                    {
+                        List<DocxRelatedStoryLayout> boundStories = BindReferencedEndnoteCounters(
+                            sectionEndStories, outputPages[sectionEndPageIndex]);
+                        if (CanUsePlainDocumentEndnoteFlow(outputPages[sectionEndPageIndex], endnoteSeparatorLayout,
+                            printScale, boundStories, cancellationToken, out _))
+                            for (int index = 0; index < sectionEndStories.Count; index++)
+                                sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
+                    }
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
                     PlaceSectionEndEndnoteStories(outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, headerKeepOut, bodyBoundaryToNoteDesign);
                 }
@@ -241,6 +251,24 @@ internal sealed partial class DocxLayoutEngine
                 return range;
             }
 
+            List<DocxRelatedStoryLayout> BindReferencedEndnoteCounters(
+                IReadOnlyList<DocxReferencedRelatedStoryLayout> stories, DocxLayoutPage page)
+            {
+                // Earlier section-end notes can have inserted pages. PAGE belongs
+                // to the rendered body reference, independently of the section or
+                // continuation page carrying its note. Measure before admission;
+                // the width-only memo must remain unbound.
+                RelatedStoryPageIndex referenceIndex = RelatedStoryPageIndex.Build(outputPages, cancellationToken);
+                double width = ResolvePageNoteTextWidth(page);
+                return stories.Select(story =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int referencePage = referenceIndex.FindFirstPageWithReference(story.Location, requireRendered: true);
+                    return referencePage < 0 ? story.StoryLayout :
+                        bindRelatedStoryPage(story.StoryLayout, width, referencePage + 1);
+                }).ToList();
+            }
+
             IReadOnlyList<DocxLayoutPage> AddDocumentEndnoteStories()
             {
                 if (documentEndReferences.Count == 0)
@@ -258,16 +286,7 @@ internal sealed partial class DocxLayoutEngine
                 if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                     documentEndStories.Any(story => !story.HasResolvedCounterInputs))
                 {
-                    // Earlier section-end placement can have inserted pages.
-                    // Endnote PAGE belongs to its rendered body reference,
-                    // independently of the later page carrying the note itself.
-                    endnoteIndex = RelatedStoryPageIndex.Build(documentEndPages, cancellationToken);
-                    var boundStories = documentEndReferences.Select(story =>
-                    {
-                        int referencePage = endnoteIndex.FindFirstPageWithReference(story.Location, requireRendered: true);
-                        return referencePage < 0 ? story.StoryLayout :
-                            bindRelatedStoryPage(story.StoryLayout, ResolvePageNoteTextWidth(activePage), referencePage + 1);
-                    }).ToList();
+                    List<DocxRelatedStoryLayout> boundStories = BindReferencedEndnoteCounters(documentEndReferences, activePage);
                     // A counter is measured before admission, not patched after
                     // wrapping. Existing plain paragraph flow can continue while
                     // retaining its reference-owned value. Mixed blocks still
