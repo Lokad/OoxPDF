@@ -28,7 +28,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? scatterChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Scatter);
+        XElement? scatterChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter, 0)?.Source;
         if (scatterChart is not null)
         {
             PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter, 0);
@@ -230,7 +230,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        XElement? bubbleChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Bubble);
+        XElement? bubbleChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble, 0)?.Source;
         if (bubbleChart is not null)
         {
             PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble, 0);

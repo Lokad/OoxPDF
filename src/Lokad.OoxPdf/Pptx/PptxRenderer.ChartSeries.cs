@@ -189,42 +189,8 @@ internal sealed partial class PptxRenderer
         series.XValues.Count != 0 && series.YValues.Count != 0 ||
         series.XValuePoints.Any(point => point.Value is not null) && series.YValuePoints.Any(point => point.Value is not null);
 
-    private static IReadOnlyList<XElement> ReadChartPlotElements(XDocument chartXml, string kind)
-    {
-        return chartXml
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault()?
-            .Elements(ChartNamespace + kind)
-            .ToArray() ?? [];
-    }
-
-    private static IReadOnlyList<XElement> ReadChartPlotElements(XDocument chartXml, PptxSceneChartPlotKind kind)
-    {
-        string? elementName = PptxSceneBuilder.GetChartPlotElementName(kind);
-        return elementName is null ? [] : ReadChartPlotElements(chartXml, elementName);
-    }
-
-    private static XElement? ReadSceneOrXmlFirstChartPlotElement(PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlotKind kind)
-    {
-        if (sceneChart is not null)
-        {
-            return ReadSceneChartPlot(sceneChart, kind, 0)?.Source;
-        }
-
-        return ReadChartPlotElements(chartXml, kind).FirstOrDefault();
-    }
-
-    private static IReadOnlyList<XElement> ReadSceneOrXmlChartPlotElements(PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlotKind kind)
-    {
-        if (sceneChart is not null)
-        {
-            return ReadSceneChartPlots(sceneChart, kind)
-                .Select(plot => plot.Source)
-                .ToArray();
-        }
-
-        return ReadChartPlotElements(chartXml, kind);
-    }
+    private static IReadOnlyList<XElement> ReadSceneChartPlotElements(PptxSceneChart chart, PptxSceneChartPlotKind kind) =>
+        ReadSceneChartPlots(chart, kind).Select(plot => plot.Source).ToArray();
 
     private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
     {

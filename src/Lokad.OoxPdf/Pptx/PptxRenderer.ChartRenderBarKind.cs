@@ -28,7 +28,7 @@ internal sealed partial class PptxRenderer
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds)
     {
-        IReadOnlyList<XElement> barCharts = ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
+        IReadOnlyList<XElement> barCharts = ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Bar);
         XElement? barChart = barCharts.FirstOrDefault();
         if (barChart is not null)
         {
@@ -115,7 +115,7 @@ internal sealed partial class PptxRenderer
                     legendSeriesOffset += count;
                 }
                 int legendLineIndex = 0;
-                foreach (XElement element in ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Line))
+                foreach (XElement element in ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Line))
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
                     PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, legendLineIndex++);
@@ -296,7 +296,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 int lineChartIndex = 0;
-                foreach (XElement comboLineChart in ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Line))
+                foreach (XElement comboLineChart in ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Line))
                 {
                     PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
                     IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, comboLineChart, workbook, plotVisibleOnly);

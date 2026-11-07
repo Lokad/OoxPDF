@@ -2105,22 +2105,16 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
 
-        XDocument mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:lineChart><c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser></c:lineChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-        System.Reflection.MethodInfo readPlotElement = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlFirstChartPlotElement",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected plot element resolver.");
-        object sceneBacked = readPlotElement.Invoke(null, [chart, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]) ?? throw new InvalidOperationException("Expected scene-backed bar plot.");
-        object? xmlBacked = readPlotElement.Invoke(null, [null, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]);
-
-        TestAssert.Equal("barChart", ((XElement)sceneBacked).Name.LocalName);
-        TestAssert.True(xmlBacked is null, "Expected XML-only fallback to report the missing bar plot instead of using scene data.");
+        System.Reflection.MethodInfo readPlot = typeof(PptxRenderer).GetMethod(
+            "ReadSceneChartPlot",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected plot resolver.");
+        var selected = (PptxSceneChartPlot?)readPlot.Invoke(null, [chart, PptxSceneChartPlotKind.Bar, 0]);
+        TestAssert.True(ReferenceEquals(chart.Plots.Single(), selected), "Selection retains the parsed plot owner.");
+        TestAssert.Equal("barChart", TestAssert.NotNull(selected).Source.Name.LocalName);
+        TestAssert.True(readPlot.Invoke(null, [chart, PptxSceneChartPlotKind.Line, 0]) is null,
+            "A missing kind does not select an unrelated plot.");
+        TestAssert.True(readPlot.Invoke(null, [chart, PptxSceneChartPlotKind.Bar, 1]) is null,
+            "A missing occurrence does not select an earlier plot.");
     }
 
     public static void PptxChartPlotElementsSelectionUsesSceneSources()
@@ -2143,27 +2137,18 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
 
-        XDocument mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:lineChart><c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser></c:lineChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
         System.Reflection.MethodInfo readPlotElements = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartPlotElements",
+            "ReadSceneChartPlotElements",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected plot elements resolver.");
-        object sceneBacked = readPlotElements.Invoke(null, [chart, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]) ?? throw new InvalidOperationException("Expected scene-backed bar plots.");
-        object xmlBacked = readPlotElements.Invoke(null, [null, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]) ?? throw new InvalidOperationException("Expected XML-backed plot list.");
-
-        IReadOnlyList<XElement> scenePlots = (IReadOnlyList<XElement>)sceneBacked;
-        IReadOnlyList<XElement> xmlPlots = (IReadOnlyList<XElement>)xmlBacked;
+        var scenePlots = (IReadOnlyList<XElement>)readPlotElements.Invoke(null, [chart, PptxSceneChartPlotKind.Bar])!;
         XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         TestAssert.Equal(2, scenePlots.Count);
+        TestAssert.True(ReferenceEquals(chart.Plots[0].Source, scenePlots[0]) &&
+            ReferenceEquals(chart.Plots[1].Source, scenePlots[1]), "Plot sources retain parsed ownership and order.");
         TestAssert.Equal("col", scenePlots[0].Element(chartNamespace + "barDir")?.Attribute("val")?.Value ?? string.Empty);
         TestAssert.Equal("bar", scenePlots[1].Element(chartNamespace + "barDir")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal(0, xmlPlots.Count);
+        var missing = (IReadOnlyList<XElement>)readPlotElements.Invoke(null, [chart, PptxSceneChartPlotKind.Line])!;
+        TestAssert.Equal(0, missing.Count);
     }
 
     public static void PptxChartSecondaryRightValueAxisSelectionUsesSceneSource()

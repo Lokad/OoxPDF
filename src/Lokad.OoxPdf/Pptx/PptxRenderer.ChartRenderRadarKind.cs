@@ -25,7 +25,7 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver fontResolver,
         bool plotVisibleOnly, PptxRenderContext? context = null)
     {
-        XElement? radarChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Radar);
+        XElement? radarChart = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar, 0)?.Source;
         if (radarChart is not null)
         {
             PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar, 0);

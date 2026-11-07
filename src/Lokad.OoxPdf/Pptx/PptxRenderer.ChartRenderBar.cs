@@ -938,7 +938,7 @@ internal sealed partial class PptxRenderer
             // measured rule applies to single-plot stacked charts while multi-plot charts
             // keep the shared estimator.
             IReadOnlyList<PptxSceneChartPlot> stackedBarPlots = ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Bar);
-            IReadOnlyList<XElement> stackedBarCharts = ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
+            IReadOnlyList<XElement> stackedBarCharts = ReadSceneChartPlotElements(sceneChart, PptxSceneChartPlotKind.Bar);
             double requiredReserve;
             if (UseMeasuredStackedValueAxisReserve(Math.Max(stackedBarCharts.Count, stackedBarPlots.Count)))
             {

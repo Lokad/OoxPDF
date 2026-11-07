@@ -398,7 +398,7 @@ internal sealed partial class PptxRenderer
         // Scatter and composed/unsupported layouts keep the existing fallback.
         PptxSceneChartPlotKind categoryPlotKind = sceneChart.Plots.Count == 1 && sceneChart.Plots[0].PlotKind == PptxSceneChartPlotKind.Area
             ? PptxSceneChartPlotKind.Area : PptxSceneChartPlotKind.Line;
-        XElement? categoryPlotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, categoryPlotKind);
+        XElement? categoryPlotElement = ReadSceneChartPlot(sceneChart, categoryPlotKind, 0)?.Source;
         PptxSceneChartPlot? categoryPlot = ReadSceneChartPlot(sceneChart, categoryPlotKind, 0);
         bool canMeasureCategoryPlot = categoryPlotElement is not null && resolvedValueExtents is not null;
         double? categoryLabelOffsetAdjustment = null;
@@ -663,16 +663,16 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<ChartPlotBox> GetCartesianNoTitleRightLegendPlotBoxAsync(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle, double? scatterXTickTargetCount, PptxRenderContext? context = null)
     {
-        XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
+        XElement? plotElement = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, 0)?.Source;
         PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
         if (plotElement is null)
         {
-            plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Area);
+            plotElement = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area, 0)?.Source;
             plotKind = PptxSceneChartPlotKind.Area;
         }
         if (plotElement is null)
         {
-            plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Scatter);
+            plotElement = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter, 0)?.Source;
             plotKind = PptxSceneChartPlotKind.Scatter;
         }
 
