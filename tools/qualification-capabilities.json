@@ -37,7 +37,9 @@
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders",
     "DocxCellInlinePagesKeepCompleteParagraphSourcesBeforePreparation",
-    "DocxCellPageConversionKeepsFormulaPictureAndNavigationContent"
+    "DocxCellPageConversionKeepsFormulaPictureAndNavigationContent",
+    "DocxInlineCompositionMergeSpansRequireCompleteStaticAdmissionAndKeepRowFloors",
+    "DocxInlineCompositionOverlappingMergeSpansPreserveIndependentOwnersAndFloors"
   ],
   "docx-deleted-paragraph-marks": [
     "DocxDeletedParagraphMarksRetainCompleteOrderedSources",

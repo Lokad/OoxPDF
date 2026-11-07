@@ -61,7 +61,7 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxInlineCompositionMergeSpansRequireCompleteStaticAdmissionAndKeepRowFloors()
     {
-        foreach (string variant in new[] { "complete", "large", "minimum", "exact", "small-page", "forced-break",
+        foreach (string variant in new[] { "complete", "large", "minimum", "exact", "small-page", "forced-break", "inline-page",
             "dynamic", "unmeasured", "center", "continuation-source", "header", "note-reference" })
         {
             var source = ReadMutation("CompositionProbes/merged-span-three-rows", OoxPdfDocxMarkupMode.Final, false, false,
@@ -85,8 +85,10 @@ internal static partial class DocxInlineCompositionTests
                     if (variant == "center") owner.Element(w + "tcPr")!.Element(w + "vAlign")!.SetAttributeValue(w + "val", "center");
                     if (variant == "dynamic") owner.Element(w + "p")!.Add(new XElement(w + "fldSimple",
                         new XAttribute(w + "instr", " PAGE "), new XElement(w + "r", new XElement(w + "t", "1"))));
-                    if (variant == "forced-break") owner.Element(w + "p")!.Add(new XElement(w + "r",
+                    if (variant == "inline-page") owner.Element(w + "p")!.Add(new XElement(w + "r",
                         new XElement(w + "br", new XAttribute(w + "type", "page"))));
+                    if (variant == "forced-break") owner.Add(new XElement(w + "p", new XElement(w + "r",
+                        new XElement(w + "br", new XAttribute(w + "type", "page")))));
                     if (variant == "note-reference") owner.Element(w + "p")!.Add(new XElement(w + "r",
                         new XElement(w + "footnoteReference", new XAttribute(w + "id", "1"))));
                     if (variant == "continuation-source") rows[1].Element(w + "tc")!.Element(w + "p")!
@@ -101,9 +103,9 @@ internal static partial class DocxInlineCompositionTests
             var layout = engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), default,
                 mathEquations: variant == "unmeasured" ? null : prepared);
             var rows = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).ToArray();
-            bool admitted = variant is "complete" or "large" or "minimum";
+            bool admitted = variant is "complete" or "large" or "minimum" or "inline-page";
             TestAssert.True(rows.All(row => (row.Table.AdmittedMergeSpanHeights.Count != 0) == admitted),
-                "Only complete static measured spans may borrow row space. Fixed, partial, dynamic and source-bearing continuations retain staging.");
+                variant + ": Only complete static measured spans may borrow row space. Fixed, partial, dynamic and source-bearing continuations retain staging.");
             if (!admitted) continue;
             TestAssert.True(rows.All(row => ReferenceEquals(row.Table, rows[0].Table)),
                 "All rows reuse the complete frame admitted at the original origin.");
