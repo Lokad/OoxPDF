@@ -1210,10 +1210,7 @@ internal sealed partial class DocxLayoutEngine
         // A registered empty endnote rule owns its measured trailing space.
         // Returning the content cursor here also charges it to the next take;
         // rich/unknown separators and footnotes retain their placement fallback.
-        double afterSpacing = HasAuthoredEndnoteSeparatorSpacing(continuationSeparatorLayout.Story) &&
-            HasEmptyNoteSeparator(continuationSeparatorLayout)
-            ? Math.Max(0d, continuationSeparatorLayout.TextLines[0].ParagraphAfterSpacing ?? 0d) : 0d;
-        return markBaselineY - separatorGapPoints - afterSpacing;
+        return markBaselineY - separatorGapPoints - ResolveAuthoredSeparatorAfterSpacing(continuationSeparatorLayout);
     }
 
     private static double ResolveContinuationRuleWidth(DocxLayoutPage page, double printScale)
@@ -1757,9 +1754,12 @@ internal sealed partial class DocxLayoutEngine
         }
         separatorHeight = placementHeightOverride ?? separatorHeight;
         double separatorBottom = separatorTop - separatorHeight;
+        // After-space belongs below the separator line. It advances the content
+        // cursor without moving the rule or its paragraph-mark baseline.
+        double ruleBaseline = separatorBottom + ResolveAuthoredSeparatorAfterSpacing(separatorLayout);
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(separatorLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
-        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: separatorBottom + ruleBottomOffsetPoints - ruleFirstBearingPoints);
+        DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: ruleBaseline + ruleBottomOffsetPoints - ruleFirstBearingPoints);
         if (placementHeightOverride.HasValue)
         {
             placedSeparator = placedSeparator with { Height = separatorHeight };
@@ -1769,7 +1769,7 @@ internal sealed partial class DocxLayoutEngine
         {
             placedSeparator = placedSeparator with { Height = separatorHeight };
         }
-        placedSeparator = ShiftSeparatorStoryToBaseline(placedSeparator, separatorBottom);
+        placedSeparator = ShiftSeparatorStoryToBaseline(placedSeparator, ruleBaseline);
         if (placedSeparator.TextLines.Count == 1 &&
             placedSeparator.TextLines[0].Segments.Count == 1 &&
             string.IsNullOrWhiteSpace(placedSeparator.TextLines[0].Segments[0].Text))

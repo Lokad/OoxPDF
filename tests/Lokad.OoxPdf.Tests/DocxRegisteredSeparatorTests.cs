@@ -22,6 +22,9 @@ internal static class DocxRegisteredSeparatorTests
                 "Registered separator after-space is not replaced or refunded as latent padding.");
             TestAssert.True(Math.Abs(baseline.Top - inherited.Top - 8d) < .001d,
                 "Omitted authored spacing follows the existing source style cascade.");
+            TestAssert.True(Math.Abs(baseline.Rule - before.Rule - 12d) < .001d &&
+                Math.Abs(baseline.Rule - after.Rule) < .001d && Math.Abs(baseline.Rule - inherited.Rule) < .001d,
+                "Before-space moves the line; after-space advances content below a stationary separator rule.");
             TestAssert.Equal(baseline.Page, before.Page);
             TestAssert.Equal(baseline.Page, after.Page);
             TestAssert.True(!baseline.Synthetic, "Settings registration retains the authored separator.");
@@ -30,7 +33,7 @@ internal static class DocxRegisteredSeparatorTests
             TestAssert.True(defaultA.Synthetic && defaultB.Synthetic && defaultA == defaultB,
                 "Unregistered formatting keeps the same synthetic default and note frame.");
 
-            (int Page, double Top, bool Synthetic) Place(int beforePoints, int? afterPoints, bool registered)
+            (int Page, double Top, bool Synthetic, double Rule) Place(int beforePoints, int? afterPoints, bool registered)
             {
                 var source = Read(mode, position, beforePoints, afterPoints, registered);
                 var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -38,8 +41,10 @@ internal static class DocxRegisteredSeparatorTests
                 var placed = layout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
                     .Where(note => note.StoryLayout.Story.Id == "37")
                     .Select(note => (Page: index, Top: note.TopY))).Single();
+                double rule = layout.Pages.SelectMany(page => page.PlacedRelatedStories)
+                    .Single(note => note.StoryLayout.Story.Type == DocxRelatedStoryType.Separator).SeparatorY!.Value;
                 return (placed.Page, placed.Top, source.RelatedStories.Single(story =>
-                    story.Type == DocxRelatedStoryType.Separator).IsSynthetic);
+                    story.Type == DocxRelatedStoryType.Separator).IsSynthetic, rule);
             }
         }
     }

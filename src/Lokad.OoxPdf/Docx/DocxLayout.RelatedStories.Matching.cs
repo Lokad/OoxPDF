@@ -654,6 +654,10 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveLatentSeparatorSpacing(DocxRelatedStory story) =>
         HasAuthoredEndnoteSeparatorSpacing(story) ? 0d : DocxDefaults.DefaultParagraphAfterSpacingPoints;
 
+    private static double ResolveAuthoredSeparatorAfterSpacing(DocxRelatedStoryLayout separator) =>
+        HasAuthoredEndnoteSeparatorSpacing(separator.Story) && HasEmptyNoteSeparator(separator)
+            ? Math.Max(0d, separator.TextLines[0].ParagraphAfterSpacing ?? 0d) : 0d;
+
     private static double ResolveParagraphBoundarySeparatorHeight(DocxRelatedStoryLayout separator,
         DocxLayoutPage page, IDocxTextMeasurer? measurer, IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
         Math.Max(0d, ResolveSizeDrivenSeparatorHeight(separator, page, measurer, contentStories) -
