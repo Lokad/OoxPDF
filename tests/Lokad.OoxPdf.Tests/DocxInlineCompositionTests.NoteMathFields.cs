@@ -60,7 +60,8 @@ internal static partial class DocxInlineCompositionTests
             for (int i = 0; i < a.Length; i++)
                 TestAssert.True(a[i].Text == b[i].Text && Math.Abs(a[i].X - b[i].X) < .000001 &&
                     Math.Abs(a[i].Y - b[i].Y) < .000001 && a[i].Size == b[i].Size,
-                    "A resolved source-equivalent field preserves each formula's placed glyph frame.");
+                    $"A resolved source-equivalent field preserves each formula's placed glyph frame: {kind}/direct={direct}/{instruction}/{mode}, glyph{i}, " +
+                    $"literal '{a[i].Text}'({a[i].X:R},{a[i].Y:R},{a[i].Size:R}) vs field '{b[i].Text}'({b[i].X:R},{b[i].Y:R},{b[i].Size:R}).");
             for (int i = 0; i < counter.Length; i++)
             {
                 TestAssert.Equal(literal[i].Images.Count, counter[i].Images.Count);
