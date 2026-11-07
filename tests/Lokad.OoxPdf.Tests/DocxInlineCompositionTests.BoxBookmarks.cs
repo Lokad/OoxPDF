@@ -27,11 +27,11 @@ internal static partial class DocxInlineCompositionTests
                 {
                     var paragraph = xml.Descendants(w + "p").Single(p => p.Elements(m + "oMath").Any());
                     var box = paragraph.Elements(w + "r").Single(run => run.Descendants(w + "txbxContent").Any());
+                    var text = paragraph.Elements(w + "r").First(run => run.Element(w + "t")?.Value.Length > 0);
                     box.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "910"), new XAttribute(w + "name", "InlineBoxTarget")));
                     if (gap != "none") box.AddBeforeSelf(gap == "empty" ? new XElement(w + "r") :
                         new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish")), new XElement(w + "t", "HiddenProbe")));
                     box.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "910")));
-                    var text = paragraph.Elements(w + "r").First(run => run.Element(w + "t")?.Value.Length > 0);
                     text.ReplaceWith(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "InlineBoxTarget"), new XElement(text)));
                 }, part);
                 var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
@@ -39,7 +39,10 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(string.Concat(control.Select(DocxPageFootnoteNumberingTests.DecodeText)),
                     string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)));
                 TestAssert.Equal(control.Sum(page => page.Images.Count), pages.Sum(page => page.Images.Count));
-                var destination = pages.SelectMany(page => page.Annotations).Single(a => a.Destination is not null).Destination!.Value;
+                var annotations = pages.SelectMany(page => page.Annotations).Where(a => a.Destination is not null).ToArray();
+                TestAssert.True(annotations.Length == 1,
+                    "A visible source link must resolve its box target: " + variant + "/" + mode + "/" + gap);
+                var destination = annotations[0].Destination!.Value;
                 TestAssert.True(destination.PageIndex >= 0 && destination.PageIndex < pages.Length &&
                     destination.Left is not null && destination.Top is > 0d,
                     "A supported inline box retains a concrete internal-link destination: " + variant + "/" + mode + "/" + gap);
