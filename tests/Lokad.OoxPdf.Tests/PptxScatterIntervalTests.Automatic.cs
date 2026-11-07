@@ -82,7 +82,7 @@ internal static partial class PptxScatterIntervalTests
         Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", System.Reflection.BindingFlags.NonPublic)!;
         object source = Activator.CreateInstance(sourceType, [scene.Axes.First(), xAxis])!;
         object frame = Activator.CreateInstance(frameType, [72d, 72d, sample.FrameWidth, 360d])!;
-        double Read() => (double)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty, scene, xml, frame, source);
+        double Read() => (double)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty, scene, frame, source);
         double before = Read();
         xml.Descendants(CurveC + "w").Single().SetAttributeValue("val", ".95");
         xml.Descendants(XName.Get("defRPr", "http://schemas.openxmlformats.org/drawingml/2006/main")).Single().SetAttributeValue("sz", "500");

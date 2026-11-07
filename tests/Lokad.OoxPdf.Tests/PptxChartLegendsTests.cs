@@ -1588,9 +1588,9 @@ internal static class PptxChartLegendsTests
         TestAssert.Equal("bogus", chart.Legend.Position);
 
         System.Reflection.MethodInfo readLegendLayout = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartLegendLayout",
+            "ReadSceneChartLegendLayout",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer legend-layout bridge.");
-        object layout = readLegendLayout.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, chart, XDocument.Parse(chartXml)]) ?? throw new InvalidOperationException("Expected chart legend layout.");
+        object layout = readLegendLayout.Invoke(null, [chart]) ?? throw new InvalidOperationException("Expected chart legend layout.");
         object positionKind = layout.GetType().GetProperty("PositionKind")?.GetValue(layout) ?? throw new InvalidOperationException("Expected legend position kind.");
 
         TestAssert.Equal(PptxSceneChartLegendPosition.Right, (PptxSceneChartLegendPosition)positionKind);
@@ -1623,13 +1623,13 @@ internal static class PptxChartLegendsTests
         XDocument largeLegendChart = XDocument.Parse(string.Format(CultureInfo.InvariantCulture, chartXmlTemplate, "1800"));
 
         System.Reflection.MethodInfo readLegendTextStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartLegendTextStyle",
+            "ReadSceneChartLegendTextStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             binder: null,
-            [typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument)],
+            [typeof(PptxTheme), typeof(PptxSceneChart)],
             modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object smallLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, smallLegendChart]) ?? throw new InvalidOperationException("Expected small legend style.");
-        object largeLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, largeLegendChart]) ?? throw new InvalidOperationException("Expected large legend style.");
+        object smallLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(smallLegendChart.ToString()))]) ?? throw new InvalidOperationException("Expected small legend style.");
+        object largeLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(largeLegendChart.ToString()))]) ?? throw new InvalidOperationException("Expected large legend style.");
 
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
@@ -1670,12 +1670,12 @@ internal static class PptxChartLegendsTests
             """);
 
         System.Reflection.MethodInfo readLegendTextStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartLegendTextStyle",
+            "ReadSceneChartLegendTextStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             binder: null,
-            [typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument)],
+            [typeof(PptxTheme), typeof(PptxSceneChart)],
             modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, chartXml]) ?? throw new InvalidOperationException("Expected legend style.");
+        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(chartXml.ToString()))]) ?? throw new InvalidOperationException("Expected legend style.");
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
@@ -1717,12 +1717,12 @@ internal static class PptxChartLegendsTests
         XDocument largeAxisChart = XDocument.Parse(string.Format(CultureInfo.InvariantCulture, chartXmlTemplate, "1800"));
 
         System.Reflection.MethodInfo readLegendTextStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartLegendTextStyle",
+            "ReadSceneChartLegendTextStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
             binder: null,
-            [typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument)],
+            [typeof(PptxTheme), typeof(PptxSceneChart)],
             modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, smallAxisChart]) ?? throw new InvalidOperationException("Expected legend style.");
+        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, TestAssert.NotNull(PptxTests.BuildSingleChartScene(smallAxisChart.ToString()))]) ?? throw new InvalidOperationException("Expected legend style.");
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
@@ -2016,21 +2016,12 @@ internal static class PptxChartLegendsTests
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         TestAssert.True(!chart.Legend.IsDefined, "Expected absent scene legend to remain distinct from an explicit legend.");
 
-        XDocument mismatchedChartXml = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea/><c:legend><c:legendPos val="b"/></c:legend></c:chart>
-            </c:chartSpace>
-            """);
         System.Reflection.MethodInfo readLegendLayout = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartLegendLayout",
+            "ReadSceneChartLegendLayout",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer legend-layout bridge.");
-        object sceneLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, chart, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected scene chart legend layout.");
-        object xmlOnlyLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected XML-only chart legend layout.");
+        object sceneLayout = readLegendLayout.Invoke(null, [chart]) ?? throw new InvalidOperationException("Expected scene chart legend layout.");
 
-        TestAssert.True((bool)(sceneLayout.GetType().GetProperty("Visible")?.GetValue(sceneLayout) ?? true) == false, "Expected missing scene legend not to be repaired from fallback XML.");
-        TestAssert.True((bool)(xmlOnlyLayout.GetType().GetProperty("Visible")?.GetValue(xmlOnlyLayout) ?? false), "Expected XML-only legend layout to keep reading XML.");
-        TestAssert.Equal(PptxSceneChartLegendPosition.Bottom, (PptxSceneChartLegendPosition)(xmlOnlyLayout.GetType().GetProperty("PositionKind")?.GetValue(xmlOnlyLayout) ?? default(PptxSceneChartLegendPosition)));
+        TestAssert.True((bool)(sceneLayout.GetType().GetProperty("Visible")?.GetValue(sceneLayout) ?? true) == false, "Expected absent scene legend to remain hidden.");
     }
 
     public static void PptxChartLegendLayoutPreservesTextBodyPropertiesAtRendererBoundary()
@@ -2048,27 +2039,15 @@ internal static class PptxChartLegendsTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
 
-        XDocument mismatchedChartXml = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:plotArea/>
-                <c:legend><c:legendPos val="b"/><c:txPr><a:bodyPr rot="1200000"/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr></a:p></c:txPr></c:legend>
-              </c:chart>
-            </c:chartSpace>
-            """);
         System.Reflection.MethodInfo readLegendLayout = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartLegendLayout",
+            "ReadSceneChartLegendLayout",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer legend-layout bridge.");
 
-        object sceneLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, chart, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected scene chart legend layout.");
-        object xmlOnlyLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected XML-only chart legend layout.");
+        object sceneLayout = readLegendLayout.Invoke(null, [chart]) ?? throw new InvalidOperationException("Expected scene chart legend layout.");
         object sceneBody = PptxTests.ChartTextBodyProperties(sceneLayout);
-        object xmlBody = PptxTests.ChartTextBodyProperties(xmlOnlyLayout);
 
         TestAssert.Equal(-90d, PptxTests.ChartTextBodyRotationDegrees(sceneBody) ?? 0d);
         TestAssert.Equal("-5400000", PptxTests.ChartTextBodyRotationValue(sceneBody));
-        TestAssert.Equal(20d, PptxTests.ChartTextBodyRotationDegrees(xmlBody) ?? 0d);
-        TestAssert.Equal("1200000", PptxTests.ChartTextBodyRotationValue(xmlBody));
     }
 
     public static void PptxChartTitlePreservesTextBodyProperties()

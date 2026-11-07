@@ -2032,30 +2032,14 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """) ?? throw new InvalidOperationException("Expected chart scene.");
 
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XDocument mismatchedXml = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:plotArea>
-                <c:valAx>
-                  <c:txPr><a:p><a:pPr><a:defRPr sz="4000" b="1"/></a:pPr></a:p></c:txPr>
-                </c:valAx>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-        XElement mismatchedAxis = mismatchedXml.Descendants(c + "valAx").Single();
-
         System.Reflection.MethodInfo readStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartTextStyle",
+            "ReadSceneChartTextStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart text-style resolver.");
 
-        object sceneStyle = readStyle.Invoke(null, [PptxTheme.Empty, chart, null, mismatchedXml, mismatchedAxis, 10d, null]) ?? throw new InvalidOperationException("Expected scene text style.");
-        object xmlStyle = readStyle.Invoke(null, [PptxTheme.Empty, null, null, mismatchedXml, mismatchedAxis, 10d, null]) ?? throw new InvalidOperationException("Expected XML text style.");
+        object sceneStyle = readStyle.Invoke(null, [PptxTheme.Empty, chart, null, 10d, null]) ?? throw new InvalidOperationException("Expected scene text style.");
 
         TestAssert.Equal(10d, (double)(sceneStyle.GetType().GetProperty("FontSize")?.GetValue(sceneStyle) ?? double.NaN));
-        TestAssert.True((bool)(sceneStyle.GetType().GetProperty("Bold")?.GetValue(sceneStyle) ?? true) == false, "Expected missing scene axis to keep scene defaults, not import fallback XML text properties.");
-        TestAssert.Equal(40d, (double)(xmlStyle.GetType().GetProperty("FontSize")?.GetValue(xmlStyle) ?? double.NaN));
-        TestAssert.True((bool)(xmlStyle.GetType().GetProperty("Bold")?.GetValue(xmlStyle) ?? false), "Expected XML-only compatibility to keep reading axis text properties.");
+        TestAssert.True((bool)(sceneStyle.GetType().GetProperty("Bold")?.GetValue(sceneStyle) ?? true) == false, "Expected missing scene axis to keep scene defaults.");
     }
 
     public static void PptxChartTextStyleCarriesTypefaceSourceThroughRendererStyle()
@@ -2072,12 +2056,11 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """;
         PptxSceneChart chart = PptxTests.BuildSingleChartScene(chartXml) ?? throw new InvalidOperationException("Expected chart scene.");
-        XDocument document = XDocument.Parse(chartXml);
         System.Reflection.MethodInfo readStyle = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartTextStyle",
+            "ReadSceneChartTextStyle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart text-style resolver.");
 
-        object style = readStyle.Invoke(null, [PptxTheme.Empty, chart, null, document, document.Root, 10d, null]) ?? throw new InvalidOperationException("Expected chart text style.");
+        object style = readStyle.Invoke(null, [PptxTheme.Empty, chart, null, 10d, null]) ?? throw new InvalidOperationException("Expected chart text style.");
 
         TestAssert.Equal("Arial", (string?)style.GetType().GetProperty("FontFamily")?.GetValue(style) ?? string.Empty);
         TestAssert.Equal(1.25d, (double)(style.GetType().GetProperty("CharacterSpacing")?.GetValue(style) ?? double.NaN));

@@ -52,15 +52,15 @@ internal sealed partial class PptxRenderer
                 PptxChartMetricRules.AxisNiceTickTargetCount, out var y, out double yUnit, headroomRatio: 0d)) return null;
 
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
-        ChartTextStyle xStyle = ReadSceneOrXmlChartTextStyle(theme, chart, xAxis.SceneAxis, xml, xAxis.XmlAxis,
+        ChartTextStyle xStyle = ReadSceneChartTextStyle(theme, chart, xAxis.SceneAxis,
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
-        ChartTextStyle yStyle = ReadSceneOrXmlChartTextStyle(theme, chart, yAxis.SceneAxis, xml, yAxis.XmlAxis,
+        ChartTextStyle yStyle = ReadSceneChartTextStyle(theme, chart, yAxis.SceneAxis,
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
         bool xLabels = IsSceneOrXmlChartAxisLabelVisible(xAxis.SceneAxis, xAxis.XmlAxis);
         bool yLabels = IsSceneOrXmlChartAxisLabelVisible(yAxis.SceneAxis, yAxis.XmlAxis);
         double? yLine = yLabels ? await measure.TryMeasureNormalLineHeightAsync(yStyle).ConfigureAwait(false) : 0d;
         if (yLine is null) return null;
-        ChartTextStyle legendStyle = ReadSceneOrXmlChartLegendTextStyle(theme, chart.ColorMap, chart, xml);
+        ChartTextStyle legendStyle = ReadSceneChartLegendTextStyle(theme, chart);
         double legendWidth = 0d, legendLine = 0d;
         if (fallback.Legend.Visible && entries.Count != 0)
         {

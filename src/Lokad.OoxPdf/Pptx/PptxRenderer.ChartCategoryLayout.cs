@@ -124,8 +124,7 @@ internal sealed partial class PptxRenderer
             // the band. This is a layout reserve, separate from painted ink.
             if (categoryAxis.SceneAxis!.IsDeleted != true)
             {
-                ChartTextStyle style = layout.CategoryLabels?.Style ?? ReadSceneOrXmlChartTextStyle(theme, chart,
-                    categoryAxis.SceneAxis, xml, categoryAxis.XmlAxis, PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
+                ChartTextStyle style = layout.CategoryLabels?.Style ?? ReadSceneChartTextStyle(theme, chart, categoryAxis.SceneAxis, PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
                 categoryBand = Math.Max(categoryBand, style.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
             }
             bool reversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
@@ -224,7 +223,7 @@ internal sealed partial class PptxRenderer
         {
             if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis)) return (0d, 0d);
             var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
-            ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, valueAxis.SceneAxis, xml, valueAxis.XmlAxis,
+            ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, valueAxis.SceneAxis,
                 PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
             double clearance = (await measure.MeasureLineBoxAsync(style).ConfigureAwait(false)).Height / 2d;
             var captions = await MeasureChartValueAxisCaptionsAsync(measure, style, valueAxis, extents,
@@ -500,7 +499,7 @@ internal sealed partial class PptxRenderer
     {
         if (labels.Count == 0 || !IsSceneOrXmlChartAxisLabelVisible(axis.SceneAxis, axis.XmlAxis))
             return (layout, null);
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, axis.SceneAxis, xml, axis.XmlAxis,
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, axis.SceneAxis,
             PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
         PptxSceneChartTextBodyProperties body = axis.SceneAxis?.TextBodyProperties ?? PptxSceneBuilder.ReadChartTextBodyProperties(axis.XmlAxis);
         // Category captions default to ellipsis in Office. Shape text keeps

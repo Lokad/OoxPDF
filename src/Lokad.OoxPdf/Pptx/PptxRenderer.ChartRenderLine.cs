@@ -392,8 +392,8 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
         PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
-        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
-        ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+        ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
+        ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
         // Line and area callers supply their already resolved source scale.
         // Scatter and composed/unsupported layouts keep the existing fallback.
         PptxSceneChartPlotKind categoryPlotKind = sceneChart.Plots.Count == 1 && sceneChart.Plots[0].PlotKind == PptxSceneChartPlotKind.Area
@@ -428,13 +428,13 @@ internal sealed partial class PptxRenderer
                 !IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis))
                 return null;
             var measure = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
-            ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, category.SceneAxis, chartXml, category.XmlAxis,
+            ChartTextStyle categoryStyle = ReadSceneChartTextStyle(theme, sceneChart, category.SceneAxis,
                 PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
             if (await measure.TryMeasureNormalLineHeightAsync(categoryStyle).ConfigureAwait(false) is null)
                 return null;
             if (IsSceneOrXmlChartAxisLabelVisible(valueAxis, axes[0].XmlAxis))
             {
-                ChartTextStyle numericStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis, chartXml, axes[0].XmlAxis,
+                ChartTextStyle numericStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis,
                     PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
                 if (await measure.TryMeasureNormalLineHeightAsync(numericStyle).ConfigureAwait(false) is null)
                     return null;
@@ -548,7 +548,7 @@ internal sealed partial class PptxRenderer
                     return null;
                 }
 
-                ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis,
+                ChartTextStyle categoryStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis,
                     fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double numericLineHeight = numericLabelsVisible ? await textMeasurer.MeasureNormalLineHeightAsync(tickStyle).ConfigureAwait(false) : 0d;
@@ -622,7 +622,7 @@ internal sealed partial class PptxRenderer
 
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, plot).FirstOrDefault();
                 XElement? valueAxisForScale = valueAxis.XmlAxis;
-                ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                ChartTextStyle valueAxisTextStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 tickStyle = valueAxisTextStyle;
                 // Hidden labels still supply scale/crossing data, without
                 // requesting their font or constructing a label measurement.
@@ -715,7 +715,7 @@ internal sealed partial class PptxRenderer
                 var measured = MeasureScatterChartExtents(series, ReadSceneOrXmlChartScatterOptions(plot, plotElement),
                     ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
                 var (valueExtents, pointOptions) = ReadChartPointValueAxisScale(theme, valueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
-                ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                ChartTextStyle valueAxisTextStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, valueAxisTextStyle, valueAxis, valueExtents,
                     pointOptions.Units, PptxChartMetricRules.AxisNiceTickTargetCount, pointOptions.TickPolicy,
                     defaultNumberFormat: null, reserveEndpoints: true, context: context).ConfigureAwait(false);
@@ -736,7 +736,7 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, context: context);
-                ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                ChartTextStyle valueAxisTextStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 string[] tickLabels = tickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
                     .ToArray();
@@ -781,8 +781,8 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
         PptxSceneChartTextBodyProperties titleTextBodyProperties = sceneChart.Title.TextBodyProperties;
-        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
-        ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+        ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
+        ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
         ChartPlotLayout plotLayout = GetBubbleChartPlotLayout();
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
 
@@ -841,7 +841,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<double> MeasureLastCategoryLabelWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, plot);
-        ChartTextStyle categoryStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+        ChartTextStyle categoryStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, plotElement, workbook, plotVisibleOnly);
         int skip = ResolveSceneCategoryAxisTickLabelSkip(categoryAxis.SceneAxis);
         int last = -1;
@@ -881,7 +881,7 @@ internal sealed partial class PptxRenderer
         var measured = MeasureScatterChartExtents(ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly),
             ReadSceneOrXmlChartScatterOptions(plot, plotElement), ReadSceneOrXmlSeriesLineHidden(plot, plotElement), fontResolver?.CancellationToken ?? default);
         var (xExtents, xOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, scatterXTickTargetCount);
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, chartXml, xValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var captions = await MeasureChartValueAxisCaptionsAsync(measurer, style,
             xValueAxis, xExtents, xOptions.Units, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: true, manualPlotLayoutApplied: false),

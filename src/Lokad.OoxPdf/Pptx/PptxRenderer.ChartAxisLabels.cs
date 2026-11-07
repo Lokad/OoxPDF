@@ -19,14 +19,14 @@ internal sealed partial class PptxRenderer
         return lineHeight * PptxChartMetricRules.CategoryAxisLabelOffsetNormalLineHeightRatio * (offsetScale - 1d);
     }
 
-    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? axisCoordinate, bool categoryLabelsOnTickMarks, bool labelsHighSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? categoryLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null, bool categoryAxisReversed = false)
+    private static async ValueTask RenderChartCategoryLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<ChartIndexedTextPoint?> labels, bool horizontalBars, double? axisCoordinate, bool categoryLabelsOnTickMarks, bool labelsHighSide, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? categoryLabelOffsetAdjustment = null, ChartCategoryLabelLayout? prepared = null, bool categoryAxisReversed = false)
     {
         if (labels.Count == 0)
         {
             return;
         }
 
-        ChartTextStyle style = prepared?.Style ?? ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+        ChartTextStyle style = prepared?.Style ?? ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         double fontSize = style.FontSize;
         RgbColor color = style.Color;
         double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(sceneAxis);
@@ -225,9 +225,9 @@ internal sealed partial class PptxRenderer
             maximum + style.FontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor), sideGap);
     }
 
-    private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null, PptxRenderContext? context = null)
+    private static async ValueTask RenderChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide, int axisSideSlot, bool manualPlotLayoutApplied, bool useTextSizedWidth, string? defaultNumberFormat, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, double? innerStripInkEdge = null, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, ChartAxisPlacement? placement = null, PptxRenderContext? context = null)
     {
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         RgbColor color = style.Color;

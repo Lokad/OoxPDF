@@ -414,7 +414,7 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         PptxSceneChartAxis? sceneAxis,
         XElement? categoryAxis,
         IReadOnlyList<ChartIndexedTextPoint?> labels,
@@ -427,7 +427,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
         ChartPlotBox plotBox = layout.PlotBox;
         int pointCount = Math.Max(labels.Count, layout.PointCount);
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -493,7 +493,7 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         ChartRadarLayout layout,
         XDocument chartXml,
-        PptxSceneChart? sceneChart,
+        PptxSceneChart sceneChart,
         XElement? valueAxis,
         PptxSceneChartAxis? sceneAxis,
         ChartValueExtents extents,
@@ -502,7 +502,7 @@ internal sealed partial class PptxRenderer
         List<PdfFontResource> chartFonts,
         Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxRenderContext? context = null)
     {
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         ChartPlotBox plotBox = layout.PlotBox;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var runs = new List<TextRun>();

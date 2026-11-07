@@ -71,7 +71,7 @@ internal static partial class PptxScatterIntervalTests
         Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", flags)!;
         object frame = Activator.CreateInstance(frameType, [72d, 72d, 500d, 432d])!;
         double? Read(PptxSceneChart chart, XDocument document) => (double?)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty,
-            chart, document, frame, Activator.CreateInstance(axisType, [chart.Axes.First(), document.Descendants(CurveC + "valAx").First()])!);
+            chart, frame, Activator.CreateInstance(axisType, [chart.Axes.First(), document.Descendants(CurveC + "valAx").First()])!);
         double? original = Read(scene, xml);
         TestAssert.True(original is not null, "A resolved inner edge supplies interval geometry.");
         xml.Descendants(CurveC + "wMode").Single().SetAttributeValue("val", "factor");

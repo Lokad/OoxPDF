@@ -404,10 +404,10 @@ internal sealed partial class PptxRenderer
             ValueWidthFactor: 3.0d);
     }
 
-    private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme, PptxColorMap colorMap)
+    private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, PptxSceneChart sceneChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
-        ChartShapeStyle areaStyle = ReadSceneOrXmlChartAreaStyle(sceneChart, chartXml, theme, colorMap);
+        ChartShapeStyle areaStyle = ToChartShapeStyle(sceneChart.ChartAreaStyle);
         RenderChartShapeStyle(graphics, frame.X, frame.Y, frame.Width, frame.Height, areaStyle);
         if (areaStyle.Stroke is null)
         {
@@ -421,29 +421,6 @@ internal sealed partial class PptxRenderer
             graphics.StrokeRectangle(frame.X, frame.Y, frame.Width, frame.Height);
             graphics.RestoreState();
         }
-    }
-
-    private static ChartShapeStyle ReadSceneOrXmlChartAreaStyle(PptxSceneChart? sceneChart, XDocument chartXml, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return sceneChart is null
-            ? ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(chartXml.Root?.Element(ChartNamespace + "spPr"), theme, colorMap))
-            : ToChartShapeStyle(sceneChart.ChartAreaStyle);
-    }
-
-    private static ChartShapeStyle ReadSceneOrXmlChartPlotAreaStyle(PptxSceneChart? sceneChart, XDocument chartXml, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return sceneChart is null
-            ? ReadChartPlotAreaStyle(chartXml, theme, colorMap)
-            : ToChartShapeStyle(sceneChart.PlotAreaStyle);
-    }
-
-    private static ChartShapeStyle ReadChartPlotAreaStyle(XDocument chartXml, PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? shapeProperties = chartXml
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault()
-            ?.Element(ChartNamespace + "spPr");
-        return ToChartShapeStyle(PptxSceneBuilder.ReadChartShapeStyle(shapeProperties, theme, colorMap));
     }
 
     private static bool TryReadSceneOrXmlManualPlotLayout(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)

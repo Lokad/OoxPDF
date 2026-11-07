@@ -434,8 +434,7 @@ internal sealed partial class PptxRenderer
             {
                 // Transfer only the numeric band. Title and legend owners keep
                 // their measured space; plot height and category geometry stay.
-                ChartTextStyle numericStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, numericAxis.SceneAxis,
-                    chartXml, numericAxis.XmlAxis, PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
+                ChartTextStyle numericStyle = ReadSceneChartTextStyle(theme, sceneChart, numericAxis.SceneAxis, PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
                 double transfer = ComputeCartesianLabelStripBottomReserve(numericStyle.FontSize) -
                     PptxChartMetricRules.HorizontalBarPlotTopReserve;
                 defaultPlotBox = defaultPlotBox with { Y = defaultPlotBox.Y - transfer };
@@ -503,7 +502,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                 if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
                 {
-                    ChartTextStyle valueTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                    ChartTextStyle valueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                     topReserve = ComputeDefaultAxisTitleHorizontalBarReserves(valueTickStyle.FontSize, 0d).TopReserve;
                 }
 
@@ -542,7 +541,7 @@ internal sealed partial class PptxRenderer
                     return legacyReserve;
                 }
 
-                ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                ChartTextStyle categoryTickStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 double categoryTitleFontSize = ReadCategoryTitleFontSizeAtPosition(sceneChart, titlePosition);
                 if (categoryTitleFontSize <= 0d)
                 {
@@ -582,7 +581,7 @@ internal sealed partial class PptxRenderer
             ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartValueAxisRenderOptions valueOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, percentStacked);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? valueOptions.Units;
-            ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+            ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxLabelWidth = 0d;
             foreach (double tickValue in GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount,
@@ -648,7 +647,7 @@ internal sealed partial class PptxRenderer
             bool percentBottomStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
             ChartValueExtents bottomValueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percentBottomStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits bottomAxisUnits = resolvedValueScale?.Units ?? ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, bottomValueExtents, percentBottomStacked).Units;
-            ChartTextStyle bottomTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+            ChartTextStyle bottomTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             bool hasBottomValueLabel = false;
             foreach (double bottomTickValue in GetChartAxisTickValuesCore(bottomValueExtents, bottomAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount,
                 ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, bottomValueExtents, percentBottomStacked), context: context))
@@ -686,7 +685,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-            ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+            ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxCategoryWidth = 0d;
             if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
@@ -708,7 +707,7 @@ internal sealed partial class PptxRenderer
                     bool percent = IsPercentStackedChartGrouping(barOptions.Grouping);
                     ChartValueExtents extents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, value.SceneAxis, value.XmlAxis,
                         GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percent, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-                    ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, value.SceneAxis, chartXml, value.XmlAxis,
+                    ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, value.SceneAxis,
                         PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
                     double first = await textMeasurer.MeasureAsync(FormatSceneOrXmlChartAxisLabel(extents.Min, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
                     double last = await textMeasurer.MeasureAsync(FormatSceneOrXmlChartAxisLabel(extents.Max, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
@@ -772,7 +771,7 @@ internal sealed partial class PptxRenderer
 
             ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), false);
-            ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+            ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxLabelWidth = 0d;
             // Bounds still reserve their advance when no source interval lands there.
@@ -855,7 +854,7 @@ internal sealed partial class PptxRenderer
                     return plotBox;
                 }
 
-                ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                ChartTextStyle categoryTickStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 requiredBottomReserve = ComputeCartesianLabelStripBottomReserve(categoryTickStyle.FontSize);
                 double offsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
                 if (measuredFrame && offsetScale != 1d)
@@ -943,7 +942,7 @@ internal sealed partial class PptxRenderer
             double requiredReserve;
             if (UseMeasuredStackedValueAxisReserve(Math.Max(stackedBarCharts.Count, stackedBarPlots.Count)))
             {
-                ChartTextStyle stackedTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                ChartTextStyle stackedTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 var stackedTextMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double stackedMaxLabelWidth = 0d;
                 foreach (double tickValue in GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, percentStacked), context: context)
@@ -1152,7 +1151,7 @@ internal sealed partial class PptxRenderer
             double leftReserve = 0d;
             if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
             {
-                ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
                 int tickLabelSkip = ResolveSceneCategoryAxisTickLabelSkip(categoryAxis.SceneAxis);
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -1329,12 +1328,12 @@ internal sealed partial class PptxRenderer
         // plus 14pt, 58.86 over 12pt plus 14pt. The single-knob forms are dead (the error
         // flips sign across probes), and bottom-minus-cat-baseline scales cleanly at 1.566
         // catFs inside the total without its own usable law, so the plane ships as such.
-        ChartTextStyle legendStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+        ChartTextStyle legendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
         bool horizontalStrip = horizontalBars && usesMeasuredAxisInsets;
         ChartAxisSource tickAxis = horizontalStrip
             ? ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault()
             : ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-        ChartTextStyle tickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickAxis.SceneAxis, chartXml, tickAxis.XmlAxis,
+        ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, tickAxis.SceneAxis,
             fallbackFontSize: horizontalStrip ? PptxChartMetricRules.ValueAxisFallbackFontSize : PptxChartMetricRules.CategoryAxisFallbackFontSize,
             chartStyleRole: horizontalStrip ? "valueAxis" : "categoryAxis");
         double bottomReserve = ComputeNoTitleBottomLegendReserve(legendStyle.FontSize, tickStyle.FontSize);
@@ -1398,14 +1397,14 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartValueAxisStripMeasure(double MaxLabelWidth, double FontSize, double StripWidth, double SideGap);
 
-    private static async ValueTask<double> EstimateVerticalValueAxisLabelStripWidthAsync(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
+    private static async ValueTask<double> EstimateVerticalValueAxisLabelStripWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
     {
         return (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, valueAxis, sceneAxis, extents, units, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false)).StripWidth;
     }
 
-    private static async ValueTask<ChartValueAxisStripMeasure> MeasureVerticalValueAxisLabelStripAsync(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
+    private static async ValueTask<ChartValueAxisStripMeasure> MeasureVerticalValueAxisLabelStripAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
     {
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         bool percentStacked = sceneChart is { Plots.Count: 1 } && IsPercentStackedChartGrouping(sceneChart.Plots[0].GroupingKind);

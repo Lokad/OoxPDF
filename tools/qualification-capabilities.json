@@ -1,4 +1,14 @@
 {
+  "pptx-chart-wide-styles": [
+    "LegendOptionsUseParsedSceneDefaults",
+    "PptxChartAxisTextStyleUsesSceneAuthoritativeMissingAxis",
+    "PptxChartTextStyleCarriesTypefaceSourceThroughRendererStyle",
+    "PptxChartUnknownLegendPositionResolvesThroughExplicitDefault",
+    "PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout",
+    "PptxChartLegendLayoutPreservesTextBodyPropertiesAtRendererBoundary",
+    "PptxChartShapeStylePreservesPictureFillTokens",
+    "PptxChartShapeStylePreservesUnsupportedEffectTokens"
+  ],
   "pptx-chart-global-options": [
     "ChartLevelOptionsKeepParsedSceneDefaults",
     "PptxChartUnknownDisplayBlanksAsUsesSceneAuthoritativeDefault",
@@ -14655,7 +14665,7 @@
     "FullRowFormulaReadsWithoutExpansion",
     "HiddenColumnBudgetBoundaryPasses",
     "HiddenColumnRunBeyondGridIsClamped",
-    "LegendOptionsAgreeBetweenSceneAndXml",
+    "LegendOptionsUseParsedSceneDefaults",
     "LimitExceededEscapesNodeRecovery",
     "LineExplicitPlusSquareWithoutSizeDrawNominalFive",
     "LinePlotLevelSmoothAppliesPackagePlotWide",

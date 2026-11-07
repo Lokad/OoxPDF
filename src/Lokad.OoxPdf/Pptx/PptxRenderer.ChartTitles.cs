@@ -577,7 +577,7 @@ internal sealed partial class PptxRenderer
         double lineHeight = 0d;
         if (IsSceneOrXmlChartAxisLabelVisible(axis, axes[0].XmlAxis))
         {
-            ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, axis, chartXml, axes[0].XmlAxis,
+            ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, axis,
                 fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
             if (await measure.TryMeasureNormalLineHeightAsync(style).ConfigureAwait(false) is not { } measured)
@@ -617,7 +617,7 @@ internal sealed partial class PptxRenderer
         // retains its effective fonts. External/custom styles keep their fallback.
         ChartTextStyle reference = PptxSceneBuilder.HasBuiltInChartStyle(chart)
             ? CreateDefaultChartTextStyle(theme, chart.ColorMap, PptxChartMetricRules.BuiltInAxisFittingReferenceFontSize)
-            : ReadSceneOrXmlChartTextStyle(theme, chart, null, xml, null,
+            : ReadSceneChartTextStyle(theme, chart, null,
                 PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
         if (await measure.TryMeasureNormalLineHeightAsync(reference).ConfigureAwait(false) is not { } lineHeight)

@@ -37,7 +37,7 @@ internal sealed partial class PptxRenderer
         double titleBand = header.Value.Reserve - header.Value.NumericClearance;
         double available = layout.Frame.Height - titleBand - legendBand.Value -
             2d * PptxChartMetricRules.HorizontalBarPlotTopReserve;
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, axis.SceneAxis, xml, axis.XmlAxis,
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, axis.SceneAxis,
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
         style = style with { FontSize = Math.Round(style.FontSize * 20d, MidpointRounding.AwayFromZero) / 20d };
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);

@@ -53,9 +53,9 @@ internal sealed partial class PptxRenderer
                     CrossingValue = ReadSceneOrXmlValueAxisCrossingValue(categoryAxis.SceneAxis, categoryAxis.XmlAxis, valueExtents)
                 };
                 ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, areaPlot);
-                ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
+                ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
                 IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, areaPlot, areaChart, seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook, reverseOrder: IsStackedChartGrouping(areaOptions.Grouping));
-                ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+                ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                 ChartLegendBox? preparedLegendBox = null;
                 if (chartLayout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
                 {
@@ -77,7 +77,7 @@ internal sealed partial class PptxRenderer
                 chartLayout = admitted.Layout;
                 preparedLegendBox ??= admitted.Box;
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
+                RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 RenderAreaChart(
                     graphics,
                     theme,
@@ -115,7 +115,7 @@ internal sealed partial class PptxRenderer
                     ChartSeriesStroke areaCategoryTickStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
                     if (areaCategoryTickStroke.Alpha > 0.001d)
                     {
-                        ChartTextStyle areaCategoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, chartXml, categoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                        ChartTextStyle areaCategoryTickStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                         int areaPointCount = Math.Max(1, MaxDensePointCount(areaSeriesVectors));
                         double areaCategoryAxisY = ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
                         SetChartStroke(graphics, areaCategoryTickStroke);
@@ -129,7 +129,7 @@ internal sealed partial class PptxRenderer
                     ChartSeriesStroke areaValueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
                     if (areaValueTickStroke.Alpha > 0.001d)
                     {
-                        ChartTextStyle areaValueTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                        ChartTextStyle areaValueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                         bool areaValueLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis);
                         IReadOnlyList<double> areaTickValues = GetChartAxisTickValuesCore(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: areaValueLabelsVisible, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied), valueAxisOptions.TickPolicy, context: context);
                         double[] areaValueEdges = new double[areaTickValues.Count];

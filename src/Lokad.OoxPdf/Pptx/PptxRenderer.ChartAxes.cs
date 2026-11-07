@@ -84,16 +84,16 @@ internal sealed partial class PptxRenderer
         return new(lower, upper);
     }
 
-    private static double? ReadScatterSourceIntervalTarget(PptxTheme theme, PptxSceneChart? chart, XDocument xml,
+    private static double? ReadScatterSourceIntervalTarget(PptxTheme theme, PptxSceneChart chart,
         ChartFrameBox frame, ChartAxisSource xAxis)
     {
-        PptxSceneChartManualLayout source = chart?.PlotAreaLayout ?? PptxSceneBuilder.ReadChartPlotAreaManualLayout(xml);
+        PptxSceneChartManualLayout source = chart.PlotAreaLayout;
         // Resolve the same authored inner width used for placement before caption
         // admission. Outer, automatic and unresolved modes retain their fallback.
         if (source.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Inner ||
             !TryBuildManualPlotLayout(source, frame, GetDefaultChartPlotBox(frame), out ChartPlotLayout layout) ||
             !TryResolveCartesianPlotWidth(source, frame, layout.PlotBox, out var plot)) return null;
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, chart, xAxis.SceneAxis, xml, xAxis.XmlAxis,
+        ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, xAxis.SceneAxis,
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
         if (!(style.FontSize > 0d) || !double.IsFinite(style.FontSize)) return null;
         double slots = Math.Floor(plot.Width / (4d * style.FontSize));

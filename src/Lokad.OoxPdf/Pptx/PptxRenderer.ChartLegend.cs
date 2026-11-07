@@ -203,34 +203,8 @@ internal sealed partial class PptxRenderer
         return PptxSceneBuilder.ReadChartText(series.Element(ChartNamespace + "tx"), trimLiteral: true);
     }
 
-    private static ChartLegendLayout ReadChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml)
+    private static ChartLegendLayout ReadSceneChartLegendLayout(PptxSceneChart sceneChart)
     {
-        PptxSceneChartLegend legend = PptxSceneBuilder.ReadChartLegend(chartXml, theme, colorMap);
-        if (!legend.IsDefined || legend.IsDeleted == true)
-        {
-            return ChartLegendLayout.Hidden;
-        }
-
-        string position = string.IsNullOrEmpty(legend.Position) ? "r" : legend.Position;
-        return new ChartLegendLayout(
-            ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)),
-            position,
-            // PowerPoint materializes an omitted overlay flag as true on save.
-            // Only an explicit false reserves plot space for the legend.
-            legend.Overlay ?? true,
-            Visible: true,
-            legend.Layout,
-            legend.TextBodyProperties,
-            ToChartShapeStyle(legend.ShapeStyle));
-    }
-
-    private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
-    {
-        if (sceneChart is null)
-        {
-            return ReadChartLegendLayout(theme, colorMap, chartXml);
-        }
-
         if (!sceneChart.Legend.IsDefined)
         {
             return ChartLegendLayout.Hidden;
@@ -248,14 +222,8 @@ internal sealed partial class PptxRenderer
             : position;
     }
 
-    private static ChartTextStyle ReadSceneOrXmlChartLegendTextStyle(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
+    private static ChartTextStyle ReadSceneChartLegendTextStyle(PptxTheme theme, PptxSceneChart sceneChart)
     {
-        if (sceneChart is null)
-        {
-            XElement? legend = chartXml.Descendants(ChartNamespace + "legend").FirstOrDefault();
-            return ReadChartTextStyle(theme, colorMap, chartXml, legend, fallbackFontSize: PptxChartMetricRules.LegendFallbackFontSize);
-        }
-
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize: PptxChartMetricRules.LegendFallbackFontSize);
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartLegendTextStyleOverride(sceneChart)));
     }

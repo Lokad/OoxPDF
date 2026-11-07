@@ -357,26 +357,8 @@ internal sealed partial class PptxRenderer
             FlipVertical: false, PreventCoalesce: false, Outline: null, StrictClip: false);
     }
 
-    private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)
+    private static ChartTextStyle ReadSceneChartTextStyle(PptxTheme theme, PptxSceneChart sceneChart, PptxSceneChartAxis? sceneAxis, double fallbackFontSize, string? chartStyleRole)
     {
-        return ReadChartTextStyle(theme, PptxColorMap.Default, chartXml, element, fallbackFontSize);
-    }
-
-    private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml, XElement? element, double fallbackFontSize)
-    {
-        ChartTextStyle style = CreateDefaultChartTextStyle(theme, colorMap, fallbackFontSize);
-        style = style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(chartXml.Root, theme, colorMap)));
-        style = style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ReadChartTextStyleOverride(element, theme, colorMap)));
-        return style;
-    }
-
-    private static ChartTextStyle ReadSceneOrXmlChartTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XDocument chartXml, XElement? element, double fallbackFontSize, string? chartStyleRole)
-    {
-        if (sceneChart is null)
-        {
-            return ReadChartTextStyle(theme, chartXml, element, fallbackFontSize);
-        }
-
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize);
         return style.Merge(ToChartTextStyleOverride(PptxSceneBuilder.ResolveChartAxisTextStyleOverride(sceneChart, sceneAxis, chartStyleRole)));
     }

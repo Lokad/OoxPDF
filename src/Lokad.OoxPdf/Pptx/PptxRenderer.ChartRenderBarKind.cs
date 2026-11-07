@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
                 bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme, colorMap);
                 ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, barPlot);
-                ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme, colorMap);
+                ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
                 ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
                 XElement? valueAxis = valueAxisSource.XmlAxis;
                 PptxSceneChartAxis? valueSceneAxis = valueAxisSource.SceneAxis;
@@ -75,7 +75,7 @@ internal sealed partial class PptxRenderer
                         ? axesStyle with { CategoryAxisRightSide = resolved.AxisHighSide }
                         : axesStyle with { CategoryAxisTopSide = resolved.AxisHighSide };
                 }
-                ChartLegendLayout sourceLegend = ReadSceneOrXmlChartLegendLayout(theme, colorMap, sceneChart, chartXml);
+                ChartLegendLayout sourceLegend = ReadSceneChartLegendLayout(sceneChart);
                 ChartAxisTitleReserveSides axisTitles = ReadDefaultAxisTitleReserveSides(sceneChart);
                 ChartAxisPlacement? numericPlacement = horizontalBars &&
                     barOptions.Grouping == PptxSceneChartGrouping.Clustered && resolvedCategory is not null &&
@@ -129,7 +129,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver, resolvedCategory, sourceLegend, numericPlacement, context: context,
                     resolvedValueScale: sharedValueAxis || horizontalBars && CanOwnCartesianChartSourceRange(sceneChart, valueSceneAxis)
                         ? (valueExtents, valueAxisOptions.Units) : null).ConfigureAwait(false));
-                ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, colorMap, sceneChart, chartXml);
+                ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
                 ChartLegendBox? preparedLegendBox = null;
                 double? measuredLegendAllocation = null;
                 ChartLayout unreservedLayout = chartLayout;
@@ -190,7 +190,7 @@ internal sealed partial class PptxRenderer
                         GetValueAxisAutoTickTargetCount(false, true, chartLayout.ManualPlotLayoutApplied), axesStyle.ValueAxisRightSide,
                         categoryAxis, categoryLabels, categoryPlacement.LabelPlotRatio, categoryPlacement.LabelsHighSide,
                         fontResolver, context, preparedLegendBox, percentStacked ? "0%" : null).ConfigureAwait(false);
-                RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme, colorMap);
+                RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 // Gallery style 2 fills unstyled axis-family strokes on single-plot charts
                 // (multi-plot dual-axis charts keep legacy output); explicit styles win by
@@ -344,7 +344,7 @@ internal sealed partial class PptxRenderer
                         ChartShapeStyle.Empty,
                         lineValueExtents,
                         categoryPointsOnTickMarks: false,
-                        ReadSceneOrXmlChartTextStyle(theme, sceneChart, comboCategoryAxis.SceneAxis, chartXml, comboCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, barStyleId, context: context);
+                        ReadSceneChartTextStyle(theme, sceneChart, comboCategoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis").FontSize, barStyleId, context: context);
                     await RenderCategoryPointDataLabelsAsync(
                         theme,
                         colorMap,
@@ -429,7 +429,7 @@ internal sealed partial class PptxRenderer
                         ChartSeriesStroke categoryTickStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
                         if (categoryTickStroke.Alpha > 0.001d)
                         {
-                            ChartTextStyle categoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, chartXml, tickCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                            ChartTextStyle categoryTickStyle = ReadSceneChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                             int tickCategoryCount = Math.Max(1, MaxDensePointCount(barSeriesVectors));
                             double categoryAxisY = ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
                             SetChartStroke(graphics, categoryTickStroke);
@@ -445,7 +445,7 @@ internal sealed partial class PptxRenderer
                         ChartSeriesStroke valueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
                         if (valueTickStroke.Alpha > 0.001d)
                         {
-                            ChartTextStyle valueTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueSceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                            ChartTextStyle valueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueSceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                             IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: valueAxisLabelsVisible, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied), valueAxisOptions.TickPolicy, context: context);
                             double[] tickEdges = new double[tickValues.Count];
                             for (int tickIndex = 0; tickIndex < tickValues.Count; tickIndex++)
@@ -471,7 +471,7 @@ internal sealed partial class PptxRenderer
                         ChartSeriesStroke horizontalValueTickStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
                         if (horizontalValueTickStroke.Alpha > 0.001d)
                         {
-                            ChartTextStyle horizontalValueTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickValueAxis.SceneAxis, chartXml, tickValueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
+                            ChartTextStyle horizontalValueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, tickValueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                             IReadOnlyList<double> horizontalTickValues = GetChartAxisTickValuesCore(valueExtents, valueAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: valueAxisLabelsVisible, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied), valueAxisOptions.TickPolicy, context: context);
                             double[] horizontalTickEdges = new double[horizontalTickValues.Count];
                             for (int horizontalTickIndex = 0; horizontalTickIndex < horizontalTickValues.Count; horizontalTickIndex++)
@@ -492,7 +492,7 @@ internal sealed partial class PptxRenderer
                         ChartSeriesStroke horizontalCategoryTickStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
                         if (horizontalCategoryTickStroke.Alpha > 0.001d)
                         {
-                            ChartTextStyle horizontalCategoryTickStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, chartXml, tickCategoryAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
+                            ChartTextStyle horizontalCategoryTickStyle = ReadSceneChartTextStyle(theme, sceneChart, tickCategoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                             int horizontalCategoryCount = Math.Max(1, MaxDensePointCount(barSeriesVectors));
                             double horizontalSlotHeight = plotBox.Height / horizontalCategoryCount;
                             double[] horizontalCategoryEdges = new double[horizontalCategoryCount + 1];
