@@ -161,6 +161,16 @@ internal sealed partial class OpenTypeFont
         Os2Metrics os2 = ReadOs2(bytes, tables);
         HheaMetrics hhea = ReadHhea(bytes, tables);
         PostMetrics post = ReadPost(bytes, tables);
+        if (storage is not null)
+        {
+            // Character/advance arrays are retained beside the private SFNT.
+            // Admit one source-family window with construction headroom before
+            // expanding either table; the existing font owner refunds it.
+            long mapBytes = tables.TryGetValue("cmap", out TableRecord cmapTable) ? cmapTable.Length : 0;
+            long metricBytes = tables.TryGetValue("hmtx", out TableRecord hmtxTable) ? hmtxTable.Length : 0;
+            OoxMemory.Resize(storage, checked(storage.Bytes + 2 * (mapBytes + metricBytes)));
+            cancellationToken.ThrowIfCancellationRequested();
+        }
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
         IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables, cancellationToken, storage);

@@ -56,7 +56,7 @@ and effect expansion remains unproven. These estimates cover ordinary
 construction overlap; unusually expanding effects/vector inputs remain unproven.
 MemoryBudget also admits
 PDF content staging, private SFNT/
-subset programs, retained kerning-pair arrays and decoded raster planes with PNG IDAT/scanline and baseline
+subset programs, retained character/advance maps and kerning-pair arrays, and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression
 also admits actual output capacity, growth overlap and final copying. Image payloads
 remain funded through emission; font-compression storage refunds after its stream

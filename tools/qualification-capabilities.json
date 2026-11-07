@@ -3012,6 +3012,7 @@
   ],
   "font-program-storage": [
     "MemoryBudgetFont",
+    "MemoryBudgetKerning",
     "FontProgramLoader",
     "SyntheticFontLoadsWithExpectedIdentity",
     "SyntheticZeroAdvanceGlyphIsPreserved",

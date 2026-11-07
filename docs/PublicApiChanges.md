@@ -104,6 +104,8 @@ through emission; temporary intake buffers and transferred resident bytes refund
 after their users finish. Private copied/extracted SFNTs and subset program buffers
 are also admitted before construction, held through emission, and refunded after
 failed preparation. Only the selected collection face is copied and charged.
+Its character/advance maps also request coarse construction capacity from the
+same font owner before expansion and retain that funding through emission.
 PNG/BMP decoded planes are admitted with PNG IDAT/scanline construction overlap;
 temporary storage refunds after decode and planes after transformation/compression
 users finish. PNG palette/transparency slices borrow their source instead of

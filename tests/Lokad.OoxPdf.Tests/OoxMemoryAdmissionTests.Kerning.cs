@@ -11,7 +11,7 @@ internal static partial class OoxMemoryAdmissionTests
         bool reachedMap = false;
         var pool = new TestMemoryBudget { RefuseChange = (before, after) =>
         {
-            if (before != bytes.Length || after <= before) return false;
+            if (before <= bytes.Length || after <= before) return false;
             reachedMap = true;
             return true;
         }};
@@ -19,7 +19,7 @@ internal static partial class OoxMemoryAdmissionTests
         using (var operation = OoxConversionBudget.BeginScope(null, pool))
         {
             var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => FontProgramLoader.Load(face, default));
-            TestAssert.True(reachedMap, "Refuse parsed storage after the private SFNT copy is admitted.");
+            TestAssert.True(reachedMap, "Refuse kerning storage after the private SFNT and character maps are admitted.");
             TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
             TestAssert.Equal(OoxPdfLimitScope.Conversion, failure.Scope);
             TestAssert.Equal(0L, pool.Reserved);
@@ -41,7 +41,7 @@ internal static partial class OoxMemoryAdmissionTests
             using var cancellation = new CancellationTokenSource();
             var pool = new TestMemoryBudget { RefuseChange = (before, after) =>
             {
-                if (before == bytes.Length && after > before) mapAdmitted = true;
+                if (before > bytes.Length && after > before) mapAdmitted = true;
                 if (!mapAdmitted || before != 0 || after == 0) return false;
                 reachedSort = true;
                 if (cancel) cancellation.Cancel();
@@ -81,7 +81,7 @@ internal static partial class OoxMemoryAdmissionTests
                 bool acquired = false, reachedMap = false;
                 var pool = new TestMemoryBudget { RefuseChange = (before, after) =>
                 {
-                    if (!acquired || before != programLength || after <= before) return false;
+                    if (!acquired || before <= programLength || after <= before) return false;
                     reachedMap = true;
                     return true;
                 }};
