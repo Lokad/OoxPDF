@@ -641,17 +641,23 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxRelatedStoryLayout> contentStories, double printScale)
     {
         double height = ResolveSizeDrivenSeparatorHeight(separator, page, measurer, contentStories);
-        // The empty separator carries eight latent points in the legacy story
-        // layout. Nominal document-end flow uses the last body paragraph's actual
-        // after-spacing instead; separator paragraph spacing is ignored by Office.
+        // Synthetic defaults carry a legacy after-space charge. Authored endnote
+        // spacing is already measured and belongs to both admission and placement.
         return CanUseNominalNoteSeparatorFlow(page, separator, printScale, contentStories)
-            ? Math.Max(0d, height - DocxDefaults.DefaultParagraphAfterSpacingPoints) : height;
+            ? Math.Max(0d, height - ResolveLatentSeparatorSpacing(separator.Story)) : height;
     }
+
+    private static bool HasAuthoredEndnoteSeparatorSpacing(DocxRelatedStory story) =>
+        story.Kind == DocxRelatedStoryKind.Endnote && !story.IsSynthetic &&
+        story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator;
+
+    private static double ResolveLatentSeparatorSpacing(DocxRelatedStory story) =>
+        HasAuthoredEndnoteSeparatorSpacing(story) ? 0d : DocxDefaults.DefaultParagraphAfterSpacingPoints;
 
     private static double ResolveParagraphBoundarySeparatorHeight(DocxRelatedStoryLayout separator,
         DocxLayoutPage page, IDocxTextMeasurer? measurer, IReadOnlyList<DocxRelatedStoryLayout> contentStories) =>
         Math.Max(0d, ResolveSizeDrivenSeparatorHeight(separator, page, measurer, contentStories) -
-            DocxDefaults.DefaultParagraphAfterSpacingPoints);
+            ResolveLatentSeparatorSpacing(separator.Story));
 
     private static IEnumerable<int> EnumeratePageSourceBlockIndexes(DocxLayoutPage page)
     {

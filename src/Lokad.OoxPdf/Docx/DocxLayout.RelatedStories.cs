@@ -2519,15 +2519,12 @@ internal sealed partial class DocxLayoutEngine
             // Note-story placement/reserve heights need their own qualification;
             // keep their existing spacing fallback while body contributions improve.
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale, resolveContextualContributions: false);
-            if (story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator)
+            if (story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator &&
+                !HasAuthoredEndnoteSeparatorSpacing(story))
             {
-                // RV06 endnote-spacing probes (Word 16.0, edge-endsepsp/endsepspb):
-                // Office holds separator-story output byte-identical across direct
-                // before/after 0 vs 24pt, so separator stories lay out with
-                // latent-default spacing while the renderer flowed direct values
-                // into the separator height (24pt content error on endnotes).
-                // Substitute latent defaults; docs without direct separator
-                // spacing resolve identically and stay byte-identical.
+                // Unregistered formatting is replaced by a synthetic default in
+                // the reader. Keep its legacy charge and the footnote fallback;
+                // registered endnotes retain their source paragraph spacing.
                 spacingProfile = spacingProfile with
                 {
                     ParagraphBeforeSpacing = 0d,
