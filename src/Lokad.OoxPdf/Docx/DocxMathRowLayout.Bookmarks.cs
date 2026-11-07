@@ -20,7 +20,10 @@ internal static partial class DocxMathRowLayout
                     token.ThrowIfCancellationRequested();
                     if (child < row.Children.Count) pending.Push((row.Children[child], null));
                     while (bookmarkIndex >= 0 && row.Bookmarks[bookmarkIndex].ChildIndex == child)
+                    {
+                        token.ThrowIfCancellationRequested();
                         pending.Push((null, row.Bookmarks[bookmarkIndex--].Source));
+                    }
                 }
             }
             else yield return item;

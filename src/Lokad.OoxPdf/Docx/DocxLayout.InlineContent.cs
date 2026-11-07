@@ -442,6 +442,17 @@ internal sealed partial class DocxLayoutEngine
             }
             int start = 0;
             double previousEnd = 0d;
+            // Associate each source point once. A long formula with many
+            // boundaries must not rescan all of them for every wrapped piece.
+            DocxMathBookmarkPoint[]? bookmarkPoints = null;
+            if (box.BookmarkPoints.Count != 0)
+            {
+                bookmarkPoints = box.BookmarkPoints.ToArray();
+                token.ThrowIfCancellationRequested();
+                Array.Sort(bookmarkPoints, (left, right) => left.X.CompareTo(right.X));
+                token.ThrowIfCancellationRequested();
+            }
+            int bookmarkIndex = 0;
             foreach (int end in box.InlineBreakAfterGlyphs.Append(box.Glyphs.Count))
             {
                 token.ThrowIfCancellationRequested();
@@ -459,11 +470,17 @@ internal sealed partial class DocxLayoutEngine
                     if (font.TryGetGlyphBounds(glyph.OriginalGlyph, out var bounds))
                         inkRight = Math.Max(inkRight, glyph.X + (bounds.XMax + glyph.TextShear * bounds.YMax) * glyph.FontSize / font.UnitsPerEm);
                 }
+                List<DocxMathBookmarkPoint>? partBookmarks = null;
+                while (bookmarkPoints is not null && bookmarkIndex < bookmarkPoints.Length &&
+                    (end == box.Glyphs.Count || bookmarkPoints[bookmarkIndex].X < box.Glyphs[end].X))
+                {
+                    token.ThrowIfCancellationRequested();
+                    var point = bookmarkPoints[bookmarkIndex++];
+                    (partBookmarks ??= []).Add(point with { X = point.X - origin });
+                }
                 var part = prepared with { Box = box with { Width = inkRight,
                     LogicalAdvance = endX - origin, Glyphs = glyphs, InlineBreakAfterGlyphs = [],
-                    BookmarkPoints = box.BookmarkPoints.Where(point => point.X >= origin &&
-                        (end == box.Glyphs.Count || point.X < box.Glyphs[end].X))
-                        .Select(point => point with { X = point.X - origin }).ToArray() } };
+                    BookmarkPoints = partBookmarks is null ? [] : partBookmarks } };
                 measured.Add(new(source, part.Box.AdvanceWidth * scale, prepared.BaselineInset * scale,
                     prepared.LineHeight * scale, [], part)
                     { MathContinuationAdvance = start == 0 ? null : (origin - previousEnd) * scale });

@@ -126,4 +126,33 @@ internal static partial class DocxInlineCompositionTests
             }
         }
     }
+
+    public static void DocxInnerMathBookmarksFollowTheirWrappedFragmentPage()
+    {
+        var document = ReadMutation("CompositionProbes/math-inner-bookmark-outer", OoxPdfDocxMarkupMode.Final,
+            false, false, (xml, w, m) =>
+            {
+                var math = xml.Descendants(m + "oMath").Single();
+                var start = xml.Descendants(w + "bookmarkStart").Single();
+                var end = xml.Descendants(w + "bookmarkEnd").Single();
+                start.Remove(); end.Remove(); math.RemoveNodes();
+                for (int index = 0; index < 70; index++)
+                    math.Add(new XElement(m + "r", new XElement(m + "t", "x+")));
+                math.Add(start, new XElement(m + "r", new XElement(m + "t", "z")), end);
+                var section = xml.Descendants(w + "sectPr").Single();
+                section.Element(w + "pgSz")!.SetAttributeValue(w + "w", "4800");
+                section.Element(w + "pgSz")!.SetAttributeValue(w + "h", "2400");
+                foreach (string side in new[] { "top", "bottom", "left", "right" })
+                    section.Element(w + "pgMar")!.SetAttributeValue(w + side, "480");
+            });
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+            OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+        TestAssert.True(pages.Length > 1 && pages.Length < 10, "The formula must exercise bounded page continuation.");
+        int targetPage = Array.FindIndex(pages, page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+            .Any(show => show.Text.Normalize(System.Text.NormalizationForm.FormKC).Contains('z')));
+        TestAssert.True(targetPage > 0, "The bookmarked final term must occur after the first fragment's page.");
+        var link = pages.SelectMany(page => page.Annotations).Single();
+        TestAssert.Equal(targetPage, link.Destination!.Value.PageIndex);
+    }
 }
