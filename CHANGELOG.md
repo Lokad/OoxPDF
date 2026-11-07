@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- Fonts: an opt-in disposable Windows font resolver funds catalog metadata and
+  its bounded program cache through a host cache budget; existing shared defaults remain.
+
 - DOCX: nonpainting runs no longer redirect bookmarks from inline equations to
   later prose. Bookmarks on ordered inline pictures and boxes target their placed line
   instead of following text, including links from another paragraph.

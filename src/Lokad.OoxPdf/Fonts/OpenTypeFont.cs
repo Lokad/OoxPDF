@@ -313,7 +313,8 @@ internal sealed partial class OpenTypeFont
 
     // fileLength carries the real file size when bytes is a leading span (G02); extent
     // validation then matches whole-file reads exactly. Null keeps historical behavior.
-    internal static FontDiscoveryHeaders ReadDiscoveryHeaders(byte[] bytes, int fontIndex, long? fileLength)
+    internal static FontDiscoveryHeaders ReadDiscoveryHeaders(byte[] bytes, int fontIndex, long? fileLength,
+        Action<long>? admitMetadata = null)
     {
         if (bytes.Length < 12)
         {
@@ -330,7 +331,7 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
-        return ReadDiscoveryHeadersCore(bytes, scalerOffset: 0, directoryOffset: 12, fileLength: fileLength);
+        return ReadDiscoveryHeadersCore(bytes, scalerOffset: 0, directoryOffset: 12, fileLength: fileLength, admitMetadata);
     }
 
     // TrueType collections fan one file out to many faces, and repackaging
@@ -341,7 +342,8 @@ internal sealed partial class OpenTypeFont
     // accept and reject precisely like repackaged ones.
     // fileLength carries the real file size when bytes is a leading span (R13); extent
     // validation then matches whole-file reads exactly. Null keeps historical behavior.
-    internal static FontDiscoveryHeaders ReadCollectionFaceDiscoveryHeaders(byte[] bytes, int fontIndex, long? fileLength)
+    internal static FontDiscoveryHeaders ReadCollectionFaceDiscoveryHeaders(byte[] bytes, int fontIndex, long? fileLength,
+        Action<long>? admitMetadata = null)
     {
         long extentLimit = fileLength ?? bytes.Length;
         if (bytes.Length < 16)
@@ -387,10 +389,11 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("TrueType collection face exceeds file length.");
         }
 
-        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, fileLength: fileLength);
+        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, fileLength: fileLength, admitMetadata);
     }
 
-    private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, int scalerOffset, int directoryOffset, long? fileLength)
+    private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, int scalerOffset, int directoryOffset, long? fileLength,
+        Action<long>? admitMetadata)
     {
         ReadScalerTagAt(bytes, scalerOffset);
         try
@@ -410,6 +413,7 @@ internal sealed partial class OpenTypeFont
         {
             throw new InvalidDataException("Font has zero units-per-em.");
         }
+        admitMetadata?.Invoke(EstimateDiscoveryNameCapacity(bytes, tables));
         IReadOnlyList<string> familyNames = ReadFamilyNames(bytes, tables);
         Os2Metrics os2 = ReadOs2(bytes, tables);
         PostMetrics post = ReadPost(bytes, tables);
@@ -1058,6 +1062,25 @@ internal sealed partial class OpenTypeFont
 
     private static string ReadFamilyName(byte[] bytes, Dictionary<string, TableRecord> tables)
         => ReadFamilyNames(bytes, tables, includeAliases: false)[0];
+
+    // Admit decoded-name expansion before strings are created. Validate the same
+    // family-record windows as the decoder; private canonical parsing is unchanged.
+    private static long EstimateDiscoveryNameCapacity(byte[] bytes, Dictionary<string, TableRecord> tables)
+    {
+        TableRecord name = Required(tables, "name");
+        int count = U16(bytes, name.Offset + 2), strings = U16(bytes, name.Offset + 4);
+        long capacity = 1024L + count * 128L;
+        for (int index = 0; index < count; index++)
+        {
+            int record = name.Offset + 6 + index * 12;
+            if (U16(bytes, record + 6) != 1) continue;
+            int length = U16(bytes, record + 8), offset = U16(bytes, record + 10);
+            _ = bytes.AsSpan(name.Offset + strings + offset, length);
+            long decoded = U16(bytes, record) == 3 ? 2L * ((length + 1) / 2) : 2L * length;
+            capacity = checked(capacity + 2L * decoded);
+        }
+        return capacity;
+    }
 
     private static IReadOnlyList<string> ReadFamilyNames(byte[] bytes, Dictionary<string, TableRecord> tables,
         bool includeAliases = true)

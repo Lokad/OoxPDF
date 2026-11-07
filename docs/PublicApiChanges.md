@@ -18,6 +18,16 @@ Directory enumeration has no asynchronous platform equivalent here. With a
 conversion memory budget, discovery buffer capacity is admitted through parsing;
 refusal ends conversion without publishing a partial catalog or falling back.
 
+`WindowsFontResolver.CreateAsync(cacheBudget, cancellationToken)` creates an
+independent, disposable catalog and bounded program cache. Pass a long-lived host
+budget; decoded aliases, indexes, request memoization and program storage remain
+funded until their owners release them. Construction headroom refunds after
+publication. Keep the resolver alive through conversions and dispose it afterward;
+outstanding program leases remain valid and funded until released. The token
+argument is required, preserving existing `CreateAsync(default)` calls. The caller's
+budget is never disposed. Existing constructors and token-only factory calls keep
+their process-shared catalog; that metadata remains outside conversion admission.
+
 `IFontProgramSource.GetBytesAsync` is replaced by
 `AcquireAsync(IMemoryBudget? operationBudget, CancellationToken ct = default)`,
 returning an `IOoxPdfFontProgramLease`. Custom sources must implement the new

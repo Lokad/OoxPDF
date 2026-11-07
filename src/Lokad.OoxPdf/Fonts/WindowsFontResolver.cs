@@ -1,8 +1,8 @@
 namespace Lokad.OoxPdf.Fonts;
 
 /// <summary>
-/// Resolves installed system fonts with a process-static discovery snapshot per
-/// directory set.
+/// Resolves installed system fonts using a shared snapshot or an explicitly
+/// owned, host-funded catalog.
 /// </summary>
 /// <remarks>
 /// Retention contract: the snapshot retains one lazy <see cref="FileFontProgramSource"/>
@@ -13,12 +13,18 @@ namespace Lokad.OoxPdf.Fonts;
 /// Hosts that rotate font directories or must
 /// release memory call <see cref="InvalidateDiscoveryCaches"/>; existing resolver
 /// instances keep their snapshot.
+/// The cache-budget factory owns an independent catalog; dispose that resolver
+/// after its users finish. Existing program leases retain their own lifetime.
 /// </remarks>
-public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
+public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposable
 {
     private static readonly object CacheLock = new();
     private static readonly Dictionary<string, DiscoveryState> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
-    private readonly DiscoverySnapshot cache;
+    private DiscoverySnapshot? cache;
+    private readonly IMemoryReservation? ownedMetadata;
+    private readonly FontProgramCache? ownedPrograms;
+    private readonly long catalogCapacity;
+    private int requestCapacity;
 
     // per-instance (usually per-conversion) resolution cache. Requests repeat
     // per run; the static snapshot underneath is shared. Capped with clear-all so a
@@ -90,6 +96,49 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
     public static ValueTask<WindowsFontResolver> CreateAsync(CancellationToken cancellationToken = default)
         => CreateAsync(GetDefaultFontDirectories(), cancellationToken);
 
+    /// <summary>Prepares an independently owned catalog and bounded program cache funded by the host.</summary>
+    /// <remarks>
+    /// Keep the resolver alive while using it. Dispose releases catalog retention
+    /// and closes the program cache; outstanding program leases remain valid and funded.
+    /// The budget belongs to the cache lifetime, independently of conversion budgets.
+    /// </remarks>
+    public static ValueTask<WindowsFontResolver> CreateAsync(IMemoryBudget cacheBudget, CancellationToken cancellationToken)
+        => CreateOwnedAsync(GetDefaultFontDirectories(), cacheBudget, cancellationToken);
+
+    private WindowsFontResolver(DiscoverySnapshot snapshot, IMemoryReservation metadata, FontProgramCache programs)
+    {
+        cache = snapshot; ownedMetadata = metadata; ownedPrograms = programs; catalogCapacity = metadata.Bytes;
+    }
+
+    private static async ValueTask<WindowsFontResolver> CreateOwnedAsync(IReadOnlyList<string> directories,
+        IMemoryBudget cacheBudget, CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(cacheBudget);
+        token.ThrowIfCancellationRequested();
+        IMemoryReservation? metadata = null;
+        bool published = false;
+        using var construction = OoxMemory.Reserve(cacheBudget, 0, OoxPdfLimitScope.SharedResource);
+        var programs = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase, cacheBudget);
+        try
+        {
+            metadata = OoxMemory.Reserve(cacheBudget, 0, OoxPdfLimitScope.SharedResource)!;
+            var snapshot = await DiscoverAsync(directories, token, programs, metadata, construction, cacheBudget).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            var result = new WindowsFontResolver(snapshot, metadata, programs);
+            published = true;
+            return result;
+        }
+        catch (OoxPdfLimitExceededException ex) when (ex.Kind == OoxPdfLimitKind.MemoryAdmission && ex.Scope != OoxPdfLimitScope.SharedResource)
+        {
+            throw new OoxPdfLimitExceededException("Host refused shared-memory capacity for font discovery.",
+                OoxPdfLimitKind.MemoryAdmission, OoxPdfLimitScope.SharedResource, ex);
+        }
+        finally
+        {
+            if (!published) { programs.Dispose(); metadata?.Dispose(); }
+        }
+    }
+
     private static async ValueTask<WindowsFontResolver> CreateAsync(IReadOnlyList<string> fontDirectories, CancellationToken cancellationToken)
         => new(await GetOrCreateDiscovery(fontDirectories).GetAsync(cancellationToken).ConfigureAwait(false));
 
@@ -109,12 +158,14 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         }
     }
 
-    private static async ValueTask<DiscoverySnapshot> DiscoverAsync(IReadOnlyList<string> fontDirectories, CancellationToken cancellationToken)
+    private static async ValueTask<DiscoverySnapshot> DiscoverAsync(IReadOnlyList<string> fontDirectories, CancellationToken cancellationToken,
+        FontProgramCache? programs = null, IMemoryReservation? metadata = null,
+        IMemoryReservation? construction = null, IMemoryBudget? readBudget = null)
     {
         var fonts = new List<FontFaceResolution>();
         var aliases = new Dictionary<string, List<FontFaceResolution>>(StringComparer.OrdinalIgnoreCase);
         var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
-        var retention = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase);
+        var retention = programs ?? new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase);
         foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
@@ -130,63 +181,96 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                 cancellationToken.ThrowIfCancellationRequested();
                 // Discovery buffers are invocation-local. The static catalog and
                 // lazy program cache do not inherit this short-lived reservation.
-                using IMemoryReservation? discovery = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0);
+                using IMemoryReservation? discovery = OoxMemory.Reserve(readBudget ?? OoxConversionBudget.Current?.Memory, 0);
                 try
                 {
                     // Read the prefix covering discovery tables. This can include
                     // unrelated tables between them; trailing program data stays on disk.
                     (byte[] bytes, bool complete, long fileLength) = await ReadDiscoveryBytesAsync(path, false, discovery, cancellationToken).ConfigureAwait(false);
-                    if (!sourcesByPath.TryGetValue(path, out FileFontProgramSource? source))
-                    {
-                        source = new FileFontProgramSource(path, retention);
-                        sourcesByPath[path] = source;
-                    }
                     bool isCollection = OpenTypeFont.IsTrueTypeCollectionHeader(bytes);
                     int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
                     for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        OpenTypeFont.FontDiscoveryHeaders headers;
+                        long precedingCapacity = metadata?.Bytes ?? 0;
+                        bool retained = false;
                         try
                         {
-                            // Collections parse each face in place instead of
-                            // repackaging per-face sfnt copies (G02).
-                            headers = isCollection
-                                ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength)
-                                : OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength);
-                        }
-                        catch (Exception spanEx) when (!complete && spanEx is InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
-                        {
-                            // A span read can truncate bytes a malformed font's
-                            // parser would otherwise touch. Re-parse the full file
-                            // so accept/reject matches whole-program reads exactly.
-                            // Malformed files pay one extra bounded read; valid
-                            // fonts never take this path.
-                            (bytes, _, _) = await ReadDiscoveryBytesAsync(path, true, discovery, cancellationToken).ConfigureAwait(false);
-                            complete = true;
-                            headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex);
-                        }
-                        if (!string.IsNullOrWhiteSpace(headers.FamilyName))
-                        {
-                            var face = new FontFaceResolution(
-                                headers.FamilyName,
-                                headers.FamilyName,
-                                new FontStyleKey(
-                                    Bold: headers.WeightClass >= 600,
-                                    Italic: Math.Abs(headers.ItalicAngle) > 0.01d,
-                                    WeightClass: headers.WeightClass,
-                                    FaceIndex: faceIndex,
-                                    HasMathTable: headers.HasMathTable),
-                                source,
-                                IsFallback: false);
-                            fonts.Add(face);
-                            foreach (string family in headers.FamilyNames) {
-                                if (!aliases.TryGetValue(family, out List<FontFaceResolution>? familyFaces)) {
-                                    familyFaces = new();
-                                    aliases.Add(family, familyFaces);
-                                }
-                                familyFaces.Add(face);
+                            AdmitParsingWork();
+                            OpenTypeFont.FontDiscoveryHeaders headers;
+                            try
+                            {
+                                // Collections parse each face in place instead of
+                                // repackaging per-face sfnt copies (G02).
+                                headers = isCollection
+                                    ? OpenTypeFont.ReadCollectionFaceDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength, metadata is null ? null : AdmitMetadata)
+                                    : OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, complete ? null : fileLength, metadata is null ? null : AdmitMetadata);
                             }
+                            catch (Exception spanEx) when (!complete && spanEx is InvalidDataException or ArgumentOutOfRangeException or IndexOutOfRangeException or OverflowException or ArgumentException)
+                            {
+                                // A span read can truncate bytes a malformed font's
+                                // parser would otherwise touch. Re-parse the full file
+                                // so accept/reject matches whole-program reads exactly.
+                                // Malformed files pay one extra bounded read; valid
+                                // fonts never take this path.
+                                (bytes, _, _) = await ReadDiscoveryBytesAsync(path, true, discovery, cancellationToken).ConfigureAwait(false);
+                                complete = true;
+                                AdmitParsingWork();
+                                headers = OpenTypeFont.ReadDiscoveryHeaders(bytes, faceIndex, null, metadata is null ? null : AdmitMetadata);
+                            }
+                            if (!string.IsNullOrWhiteSpace(headers.FamilyName))
+                            {
+                                if (!sourcesByPath.TryGetValue(path, out FileFontProgramSource? source))
+                                {
+                                    source = new FileFontProgramSource(path, retention);
+                                    sourcesByPath[path] = source;
+                                }
+                                var face = new FontFaceResolution(
+                                    headers.FamilyName,
+                                    headers.FamilyName,
+                                    new FontStyleKey(
+                                        Bold: headers.WeightClass >= 600,
+                                        Italic: Math.Abs(headers.ItalicAngle) > 0.01d,
+                                        WeightClass: headers.WeightClass,
+                                        FaceIndex: faceIndex,
+                                        HasMathTable: headers.HasMathTable),
+                                    source,
+                                    IsFallback: false);
+                                fonts.Add(face);
+                                foreach (string family in headers.FamilyNames) {
+                                    if (!aliases.TryGetValue(family, out List<FontFaceResolution>? familyFaces)) {
+                                        familyFaces = new();
+                                        aliases.Add(family, familyFaces);
+                                    }
+                                    familyFaces.Add(face);
+                                }
+                                retained = true;
+                            }
+                        }
+                        finally
+                        {
+                            if (!retained && metadata is not null)
+                                OoxMemory.Resize(metadata, precedingCapacity, OoxPdfLimitScope.SharedResource);
+                        }
+
+                        void AdmitMetadata(long capacity)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            long next = checked(precedingCapacity + capacity + 2L * path.Length +
+                                (precedingCapacity == 0 ? 64L * 1024 : 0));
+                            OoxMemory.Resize(metadata, next, OoxPdfLimitScope.SharedResource);
+                            AdmitParsingWork();
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+
+                        void AdmitParsingWork()
+                        {
+                            if (construction is null) return;
+                            // Validation can materialize maps or a repackaged
+                            // collection face before names are decoded.
+                            OoxMemory.Resize(construction, checked((metadata?.Bytes ?? 0) + 2L * bytes.LongLength + 128L * 1024),
+                                OoxPdfLimitScope.SharedResource);
+                            cancellationToken.ThrowIfCancellationRequested();
                         }
                     }
                 }
@@ -202,6 +286,18 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
             .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var byFamily = aliases.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
+
+        if (metadata is not null)
+        {
+            // One catalog-family estimate, not a managed-object ledger. Source
+            // declarations admitted construction before decoding; publication
+            // refunds duplicate/unused names and the old/new index overlap.
+            long retained = faces.Length == 0 ? 0 : checked(64L * 1024 + faces.Length * 256L +
+                byFamily.Sum(pair => 128L + 2L * pair.Key.Length + 16L * pair.Value.Length) +
+                faces.Sum(face => 2L * face.FamilyName.Length) +
+                sourcesByPath.Keys.Sum(path => 512L + 2L * path.Length));
+            OoxMemory.Resize(metadata, retained, OoxPdfLimitScope.SharedResource);
+        }
 
         return new DiscoverySnapshot(faces, byFamily, faces.Where(f => !f.HasMathTable).ToArray());
     }
@@ -386,6 +482,9 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
         // Hits, publication and capacity eviction share ownership of the dictionary.
         lock (requestCache)
         {
+            ObjectDisposedException.ThrowIf(cache is null, this);
+            // An empty catalog has no useful program/style choice to memoize.
+            if (cache.Faces.Count == 0) return ResolveCore(request);
             if (requestCache.TryGetValue(request, out FontFaceResolution? cached))
             {
                 return RepopulateRequestedFamily(cached, request);
@@ -397,6 +496,19 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
                 requestCache.Clear();
             }
 
+            if (ownedMetadata is not null && requestCache.Count >= requestCapacity)
+            {
+                int capacity = Math.Min(MaxCachedResolutions, Math.Max(256, requestCapacity * 2));
+                long retained = checked(catalogCapacity + capacity * 256L);
+                long prior = ownedMetadata.Bytes;
+                try
+                {
+                    OoxMemory.Resize(ownedMetadata, checked(catalogCapacity + capacity * 512L), OoxPdfLimitScope.SharedResource);
+                    requestCache.EnsureCapacity(capacity);
+                    requestCapacity = capacity;
+                }
+                finally { OoxMemory.Resize(ownedMetadata, requestCapacity == capacity ? retained : prior, OoxPdfLimitScope.SharedResource); }
+            }
             requestCache[request] = resolved;
             return RepopulateRequestedFamily(resolved, request);
         }
@@ -414,7 +526,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     private FontFaceResolution ResolveCore(FontRequest request)
     {
-        DiscoverySnapshot snapshot = cache;
+        DiscoverySnapshot snapshot = cache ?? throw new ObjectDisposedException(nameof(WindowsFontResolver));
         if (snapshot.ByFamily.TryGetValue(request.FamilyName, out FontFaceResolution[]? exact) && exact.Length != 0)
         {
             return SelectBest(exact, request);
@@ -437,7 +549,24 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog
 
     internal IReadOnlyList<FontFaceResolution> GetDiscoveredFonts()
     {
-        return cache.Faces;
+        lock (requestCache)
+        {
+            ObjectDisposedException.ThrowIf(cache is null, this);
+            // Owned-provider results are caller values, not a borrowed cache array.
+            return ownedMetadata is null ? cache.Faces : cache.Faces.ToArray();
+        }
+    }
+
+    /// <summary>Releases this resolver; shared default snapshots retain their independent lifetime.</summary>
+    public void Dispose()
+    {
+        lock (requestCache)
+        {
+            if (cache is null) return;
+            cache = null; requestCache.Clear(); requestCache.TrimExcess();
+        }
+        ownedPrograms?.Dispose();
+        ownedMetadata?.Dispose();
     }
 
     IReadOnlyList<FontFaceResolution> IFontCatalog.GetDiscoveredFonts()

@@ -1,4 +1,32 @@
 {
+  "font-discovery-ownership": [
+    "FontDiscoveryOwnedCatalog",
+    "FontDiscoveryAsync",
+    "FontDiscoveryMemory",
+    "LocalLoadsAndReadsRemainValidDuringConcurrentEviction",
+    "OversizedFontIsBorrowedWithoutExceedingRetention",
+    "FontLeases",
+    "FontCanonical",
+    "FontFamilyAliases",
+    "FontProgramLoader",
+    "FontDiscoveryAsyncShortReadsPreserveSfntAndCollectionMetadata",
+    "FontDiscoveryAsyncConcurrentInitializationPublishesOneMetadataSnapshot",
+    "FontDiscoveryMemoryBuffersStayFundedThroughHeaderParsing",
+    "FontDiscoveryMemoryPublicRefusalAndCancellationPreserveDestinations",
+    "MemoryBudgetFontProgramsFundPrivateCopiesAndSelectedCollectionFaces",
+    "MemoryBudgetFontProgramRefusalIsTerminalAcrossPublicConverters",
+    "MemoryBudgetFontCharacterMaps",
+    "MemoryBudgetKerning",
+    "MemoryAdmissionCoversRenderingStagingAndEmission",
+    "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
+    "MemoryAdmissionSharedCapacityRefusesConcurrentConversionAndRefunds",
+    "SyntheticFontLoadsWithExpectedIdentity",
+    "CollectionFacesKeepDistinctIdentities",
+    "RejectsTruncatedTableDirectory",
+    "RejectsWrappingTableOffsets",
+    "RejectsDuplicateTableTags",
+    "OpenTypeFontLoadObservesCancelledToken"
+  ],
   "docx-math-hyperlinks": [
     "DocxMathHyperlinks"
   ],

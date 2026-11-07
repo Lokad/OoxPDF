@@ -122,7 +122,7 @@ internal static class FontFamilyAliasTests
         TestAssert.Equal("|Later Family", string.Join("|", OpenTypeFont.ReadDiscoveryHeaders(empty, 0).FamilyNames));
     }
 
-    private static byte[] SharedNameProgram()
+    internal static byte[] SharedNameProgram()
     {
         const int aliases = 128, characters = 10_000;
         int storage = 6 + aliases * 12;

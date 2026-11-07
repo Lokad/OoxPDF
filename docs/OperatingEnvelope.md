@@ -77,9 +77,14 @@ are cleared and pending acquisitions finish. Returned catalog values are caller-
 Governed operations without a cache
 budget acquire private programs. Local discovery admits actual file-buffer
 capacity and bounded parsing headroom through each read/parse attempt, including
-collection fallback overlap, then refunds. Its shared catalog metadata remains
-incidental at the measured scale. Unusually expanding inputs and other incidental
-owners remain unproven, so this is partial coverage. Null budget is ungoverned. Use
+collection fallback overlap, then refunds. A measured overlapping-name source
+expands into 2.56 MB of retained alias keys; the default process-shared catalog
+remains outside invocation admission. The opt-in
+`WindowsFontResolver.CreateAsync(cacheBudget, token)` instead owns coarse decoded
+name/index and request-cache grants until disposal, admitting construction overlap
+before decoding. Its bounded program cache uses the same host budget; outstanding
+leases keep their storage funded after resolver disposal. Other significant owners
+remain partial. Null budget is ungoverned. Use
 representative measurements to size incidental-storage and concurrency headroom.
 
 The existing producer now owns one model scope separate from package buffers and
@@ -201,8 +206,8 @@ Default local-font discovery admits its transient header/directory/selected-span
 buffers through file reads and header parsing, including overlap with a full-read
 fallback. Each file refunds before the next; cache hits reuse metadata without
 borrowing that invocation storage. Refusal remains terminal through font recovery.
-The shared catalog's incidental metadata remains outside invocation admission;
-this adds no catalog owner or cache-budget API. The default Windows discovery
+The default shared catalog's metadata remains outside invocation admission;
+use the explicit owned factory above for governed catalog retention. Windows discovery
 paths may yield no fonts on other platforms; use explicit portable/math resources
 for supported native typography and equations.
 

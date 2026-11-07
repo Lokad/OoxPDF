@@ -27,6 +27,14 @@ remains synchronous. With a conversion memory budget, discovery funds actual
 file-buffer capacity and bounded parsing headroom until the attempt finishes.
 Refusal is terminal and never publishes a partial catalog or becomes a missing-font
 fallback. The process-shared catalog metadata remains incidental storage.
+For explicit cache ownership, use
+`using var resolver = await WindowsFontResolver.CreateAsync(cacheBudget, token)`
+and supply it through `OoxPdfOptions.FontResolver`. This independent catalog funds
+decoded names, indexes, request memoization and lazy program storage through the
+host's long-lived cache budget. Dispose after conversions finish; new queries and
+acquisitions then fail, while existing program leases remain valid and funded
+until released. The resolver never disposes the caller's budget. The token is
+required for this overload; pass `CancellationToken.None` when appropriate.
 Selected DOCX and PPTX font programs are acquired asynchronously before
 measurement and painting, including generated bullets and chart labels.
 Preparation shares one conversion-scoped parsed-program cache across slides.
