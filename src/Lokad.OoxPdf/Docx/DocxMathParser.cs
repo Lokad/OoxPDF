@@ -11,9 +11,10 @@ internal static partial class DocxMathParser
         XElement equation,
         Func<XElement, string, DocxTextRun> readRun,
         CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
-        bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null)
+        bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null,
+        Action<XElement>? readCommentBoundary = null)
     {
-        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision, bool IncludeBookmarks)>();
+        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision, bool IncludeAnnotations)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
         pending.Push((equation, false, false, true));
         while (pending.TryPop(out var item))
@@ -21,6 +22,11 @@ internal static partial class DocxMathParser
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = item.Element;
             string name = element.Name.LocalName;
+            if (IsCommentBoundary(element))
+            {
+                if (item.IncludeAnnotations) readCommentBoundary?.Invoke(element);
+                continue;
+            }
             bool revisionSource = !item.InsideRevision && includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
                 name is "ins" or "del";
             XElement[]? revisionChildren = revisionSource ? NonMarkerChildren(element).ToArray() : null;
@@ -41,11 +47,13 @@ internal static partial class DocxMathParser
 
             if (!item.Expanded)
             {
-                pending.Push((element, true, item.InsideRevision, item.IncludeBookmarks && included));
-                foreach (XElement child in ContentChildren(element).Reverse())
+                pending.Push((element, true, item.InsideRevision, item.IncludeAnnotations && included));
+                // Comment ranges need source order, including boundaries in
+                // different nested rows. They are events, not math operands.
+                foreach (XElement child in TraversalChildren(element).Reverse())
                 {
                     pending.Push((child, false, item.InsideRevision || revisionRow,
-                        item.IncludeBookmarks && included));
+                        item.IncludeAnnotations && included));
                 }
                 continue;
             }
@@ -138,7 +146,7 @@ internal static partial class DocxMathParser
                         ContentChildren(element).Select(child => new DocxMathChild(
                             child.Name.LocalName, child.Name.NamespaceName, nodes[child])).ToArray());
             }
-            if (node is DocxMathRow sourceRow && item.IncludeBookmarks)
+            if (node is DocxMathRow sourceRow && item.IncludeAnnotations)
             {
                 List<DocxMathBookmarkBoundary>? bookmarks = null;
                 int childIndex = 0;
@@ -155,7 +163,7 @@ internal static partial class DocxMathParser
                             readBookmark?.Invoke(bookmark);
                         }
                     }
-                    else if (!IsProperty(child) && !IsEditingMarker(child)) childIndex++;
+                    else if (!IsProperty(child) && !IsEditingMarker(child) && !IsCommentBoundary(child)) childIndex++;
                 }
                 if (bookmarks is not null) node = sourceRow with { Bookmarks = bookmarks };
             }
@@ -195,8 +203,14 @@ internal static partial class DocxMathParser
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "bookmarkStart" or "bookmarkEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
+    private static bool IsCommentBoundary(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
+    private static IEnumerable<XElement> TraversalChildren(XElement element) =>
+        element.Elements().Where(child => !IsProperty(child) && !IsEditingMarker(child) && !IsBookmarkMarker(child));
     private static IEnumerable<XElement> NonMarkerChildren(XElement element) =>
-        element.Elements().Where(child => !IsEditingMarker(child) && !IsBookmarkMarker(child));
+        element.Elements().Where(child => !IsEditingMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
         NonMarkerChildren(element).Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)

@@ -1,4 +1,11 @@
 {
+  "docx-math-comment-ranges": [
+    "DocxMathComments",
+    "DocxMathCommentBoundaries",
+    "DocxInlineCompositionComments",
+    "PortableRenderingCommentsPreserveMixedMathematics",
+    "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms"
+  ],
   "docx-math-revision-boundaries": [
     "DocxInlineCompositionControlRevisions",
     "DocxInlineCompositionEmptyScripts",

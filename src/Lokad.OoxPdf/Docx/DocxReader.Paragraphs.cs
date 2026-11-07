@@ -424,7 +424,17 @@ internal sealed partial class DocxReader
                     readBookmark: sourceEquation.RemoveDeletedText ? null : bookmark =>
                         bookmarkAnchors.Add(new DocxBookmarkAnchor(bookmark.Id, bookmark.Name, sourceRunIndex, runs.Count,
                             RelativeRunTextOffset(runs, sourceRunIndex))
-                            { InlineItemIndex = inlineItems!.Count, MathSource = bookmark }));
+                            { InlineItemIndex = inlineItems!.Count, MathSource = bookmark }),
+                    readCommentBoundary: sourceEquation.RemoveDeletedText ? null : boundary =>
+                    {
+                        // Comment geometry already follows ordered inline items.
+                        // A mathematical subrange owns its containing equation's
+                        // occupied frame; exact argument highlighting is approximate.
+                        if (boundary.Name.LocalName == "commentRangeStart")
+                            AddCommentRangeStart(boundary, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
+                        else
+                            AddCommentRangeEnd(boundary, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count + 1);
+                    });
                 if (sourceEquation.RemoveDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
