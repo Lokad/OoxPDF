@@ -1330,20 +1330,20 @@ internal sealed partial class DocxRenderer
                             targetItemIndex = sourceIndex;
                         }
 
-                        if (line.InlineFrame is { } pictureLine && paragraph.InlineContent is { } pictureItems &&
-                            targetItemIndex is int pictureIndex && pictureIndex >= 0 && pictureIndex < pictureItems.Count &&
-                            pictureItems[pictureIndex] is DocxInlinePicture)
+                        if (line.InlineFrame is { } objectLine && paragraph.InlineContent is { } objectItems &&
+                            targetItemIndex is int objectIndex && objectIndex >= 0 && objectIndex < objectItems.Count &&
+                            objectItems[objectIndex] is DocxInlinePicture or DocxInlineBox)
                         {
-                            // Ordered source extents belong to the placed line. A picture
+                            // Ordered source extents belong to the placed line. An object
                             // bookmark must wait for that line rather than bind later prose.
                             foreach (var extent in line.InlineSourceExtents)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                if (extent.ItemIndex != pictureIndex || extent.EndOffset <= extent.StartOffset) continue;
+                                if (extent.ItemIndex != objectIndex || extent.EndOffset <= extent.StartOffset) continue;
                                 destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
                                     line.X + (extent.StartOffset == 0d ? line.FrameOriginOffsetX ?? 0d : extent.StartOffset) +
                                         pageTextEmissionXOffset - viewportContextPoints * textEmissionFontScale,
-                                    line.BaselineY + pictureLine.BaselineInset - pageTextEmissionBaselineOffset, Zoom: null));
+                                    line.BaselineY + objectLine.BaselineInset - pageTextEmissionBaselineOffset, Zoom: null));
                                 break;
                             }
                             continue;

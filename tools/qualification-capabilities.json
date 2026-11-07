@@ -4439,6 +4439,7 @@
     "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
   ],
   "docx-bookmark-ownership": [
+    "DocxInlineBoxBookmarksPreservePlacedLinksAndSiblingContent",
     "DocxInlinePictureBookmarksFollowPaintedFramesAcrossContainers",
     "DocxInlinePictureBookmarksKeepTargetsAcrossNonpaintingRuns",
     "DocxReaderPreservesBookmarkAnchors",
