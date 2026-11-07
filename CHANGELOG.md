@@ -31,7 +31,9 @@
   NUMPAGES in normal notes uses the finalized count for measurement and spacing;
   Endnote PAGE uses its rendered reference page through plain paragraph continuations and section-end notes,
   including empty or ordinary headers, and complete fitting document-end groups;
-  other unqualified counters retain their fallback.
+  complete measured groups bind counters independently of static typography
+  eligibility and must fit above the selected footer. Unfit or unresolved note
+  owners retain their fallback.
   Endnote placement follows the document-wide position when section metadata differs.
   Endnote separators honor source paragraph spacing and continuation after-space;
   absent and unregistered separators share one normalized default.

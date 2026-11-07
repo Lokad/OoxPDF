@@ -110,8 +110,8 @@ internal static partial class DocxInlineCompositionTests
                 .StaticTextLines.Any(line => line.Story?.Kind == DocxStoryKind.Header),
                 "The unsupported static story actually belongs to the note's selected page.");
             var notes = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Where(s => s.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length != 0 && notes.All(s => !s.StoryLayout.HasResolvedCounterInputs && !s.UsesCompleteDocumentEndnoteFlow),
-                "Unfit/unsupported ownership retains its unresolved placement fallback: " + variant + "/section=" + sectionEnd);
+            TestAssert.True(notes.Length != 0 && notes.All(s => s.StoryLayout.HasResolvedCounterInputs == (variant == "static") && !s.UsesCompleteDocumentEndnoteFlow),
+                "Unfit/unsupported note owners retain unresolved input; static typography alone cannot reject counters: " + variant + "/section=" + sectionEnd);
         }
     }
 

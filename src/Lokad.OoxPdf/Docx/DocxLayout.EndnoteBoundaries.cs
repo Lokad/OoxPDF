@@ -3,14 +3,16 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxLayoutEngine
 {
     // Counter inputs belong to the rendered reference, independently of whether
-    // this container ends a section or the document. Plain notes may continue;
-    // mixed notes must prove their complete measured group fits before adoption.
-    private static bool CanUseReferenceBoundEndnoteGroup(DocxDocument document, DocxLayoutPage page,
+    // this container ends a section or the document. Typography corrections do
+    // not own PAGE. Mixed notes still require a complete measured group inside
+    // the available frame, including the actual selected footer edge.
+    private static bool CanUseReferenceBoundEndnoteGroup(DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,
-        bool hasIndependentStaticFrame) =>
+        double frameBottom) =>
         CanUsePlainDocumentEndnoteFlow(page, separator, printScale, stories, token, out _) ||
-        CanUseFittingEndnoteBoundaries(document, page, placed, separator, printScale, stories, token, hasIndependentStaticFrame);
+        printScale == 1d && page.ColumnFrames.Count <= 1 &&
+        HasCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, frameBottom);
 
     // A complete measured block owns paragraph boundaries even when its middle
     // contains supported inline objects or complete nested tables. This admission does
@@ -21,21 +23,9 @@ internal sealed partial class DocxLayoutEngine
         bool hasIndependentStaticFrame)
     {
         token.ThrowIfCancellationRequested();
-        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale, hasIndependentStaticFrame) || stories.Count == 0 ||
-            !HasNumericTrailingBodyAfterSpacing(page) ||
-            placed.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)) return false;
-        double available = ResolveEndnoteStartTop(page, placed, printScale) - page.MarginBottom;
-        double height = separator!.ContentHeight;
-        if (!double.IsFinite(height) || height < 0d || !double.IsFinite(available)) return false;
-        foreach (var story in stories)
-        {
-            token.ThrowIfCancellationRequested();
-            if (!double.IsFinite(story.ContentHeight) || story.ContentHeight <= 0d || story.FloatingDrawings.Count != 0) return false;
-            // Retain the legacy charges in this conservative fit proof. Removing
-            // them for placement cannot turn a complete fitting block into a slice.
-            height += story.ContentHeight + FootnoteSeparatorGapPoints;
-            if (!double.IsFinite(height) || height > available) return false;
-        }
+        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale, hasIndependentStaticFrame) ||
+            !HasNumericTrailingBodyAfterSpacing(page)) return false;
+        if (!HasCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, page.MarginBottom)) return false;
         foreach (var story in stories)
         {
             token.ThrowIfCancellationRequested();
@@ -44,8 +34,33 @@ internal sealed partial class DocxLayoutEngine
                 story.Story.BodyElements[^1] is not DocxParagraphElement last ||
                 !ReferenceEquals(story.TextLines[0].SourceParagraph, first.Paragraph) ||
                 !ReferenceEquals(story.TextLines[^1].SourceParagraph, last.Paragraph)) return false;
-            if (!HasCompleteMeasuredNoteBlocks(story, token)) return false;
         }
+        return true;
+    }
+
+    private static bool HasCompleteFittingEndnoteBlocks(DocxLayoutPage page,
+        IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
+        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token, double frameBottom)
+    {
+        token.ThrowIfCancellationRequested();
+        frameBottom = Math.Max(page.MarginBottom, frameBottom);
+        if (stories.Count == 0 || !double.IsFinite(frameBottom) ||
+            separator?.FloatingDrawings.Count > 0 ||
+            placed.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)) return false;
+        double available = ResolveEndnoteStartTop(page, placed, printScale) - frameBottom;
+        double height = separator?.ContentHeight ?? 0d;
+        if (!double.IsFinite(height) || height < 0d || !double.IsFinite(available)) return false;
+        foreach (var story in stories)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!double.IsFinite(story.ContentHeight) || story.ContentHeight <= 0d || story.FloatingDrawings.Count != 0) return false;
+            // Keep the conservative legacy charges for admission. Placement's
+            // separately qualified paragraph boundaries may remove them later.
+            height += story.ContentHeight + FootnoteSeparatorGapPoints;
+            if (!double.IsFinite(height) || height > available) return false;
+        }
+        foreach (var story in stories)
+            if (!HasCompleteMeasuredNoteBlocks(story, token)) return false;
         return true;
     }
 

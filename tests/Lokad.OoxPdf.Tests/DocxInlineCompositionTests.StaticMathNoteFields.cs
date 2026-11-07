@@ -95,8 +95,8 @@ internal static partial class DocxInlineCompositionTests
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations: math);
             var notes = layout.Pages.SelectMany(page => page.PlacedRelatedStories).Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => !note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                $"A missing, unsupported or intrusive static equation keeps the existing fallback: {position}/{footer}/{standalone}/{variant}.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
+                $"Static-equation typography keeps fallback while note counters use their rendered reference: {position}/{footer}/{standalone}/{variant}.");
         }
     }
 

@@ -94,8 +94,8 @@ internal static partial class DocxInlineCompositionTests
             source = WithNoteMathStaticStory(source, footer, paragraph, intrusive ? 120d : 36d);
             var layout = CreatePageCounterLayout(source);
             var notes = layout.Pages.SelectMany(page => page.PlacedRelatedStories).Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => !note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                $"An intrusive or unsupported static frame retains the existing fallback: {position}/footer={footer}/intrusive={intrusive}.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
+                $"Static typography retains fallback while reference-owned counters resolve: {position}/footer={footer}/intrusive={intrusive}.");
         }
     }
 
@@ -134,8 +134,8 @@ internal static partial class DocxInlineCompositionTests
             };
             var notes = CreatePageCounterLayout(source).Pages.SelectMany(page => page.PlacedRelatedStories)
                 .Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => !note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                $"Selected unsupported/intrusive static pictures retain fallback independently of final document-level collections: {position}/{footer}/{variant}.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
+                $"Selected static-picture typography retains fallback independently of counter ownership: {position}/{footer}/{variant}.");
         }
     }
 
@@ -164,8 +164,8 @@ internal static partial class DocxInlineCompositionTests
             source = WithNoteMathStaticStory(source, footer, paragraph with { FieldReferences = fields });
             var notes = CreatePageCounterLayout(source).Pages.SelectMany(page => page.PlacedRelatedStories)
                 .Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => !note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                "Actual page inputs cannot admit unknown or inconsistent static field owners.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
+                "Unknown or inconsistent static fields keep their typography fallback without owning note counter inputs.");
         }
     }
 

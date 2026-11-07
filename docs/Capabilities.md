@@ -596,8 +596,10 @@ Approximate or restricted:
   Endnote PAGE is measured with its rendered reference page for existing plain
   paragraph flow, including section-end notes and continuation, and complete mixed
   groups at section or document end that
-  pass the source/frame/fit proof. Empty or ordinary headers preserve the binding
-  for admitted plain flow. Complete fitting mixed groups also retain their equations
+  pass the source/frame/fit proof above the actual selected footer. Counter
+  ownership is independent of optional static-story typography corrections;
+  unresolved references and unfit note owners retain their fallback.
+  Complete fitting mixed groups also retain their equations
   and counters alongside ordinary headers/footers measured wholly within their margins,
   including complete simple tables, fully prepared equations, supported inline pictures
   and PAGE/NUMPAGES static fields with actual page inputs;
