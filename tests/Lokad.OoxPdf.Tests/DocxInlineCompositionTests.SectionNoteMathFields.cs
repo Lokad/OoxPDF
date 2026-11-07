@@ -23,7 +23,8 @@ internal static partial class DocxInlineCompositionTests
                     Settings = source.Settings with { EndnoteReferenceSettings =
                         source.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } },
                     BodyElements = shiftReference
-                        ? [new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), .. source.BodyElements]
+                        ? [new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public earlier page", 12d, 14d)),
+                            new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), .. source.BodyElements]
                         : source.BodyElements
                 };
             }
