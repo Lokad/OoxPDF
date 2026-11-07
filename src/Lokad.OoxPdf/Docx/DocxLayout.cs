@@ -389,6 +389,19 @@ internal sealed partial class DocxLayoutEngine
             return layouts;
         }
 
+        DocxRelatedStoryLayout BindRelatedStoryPage(DocxRelatedStoryLayout layout, double bodyWidth, int pageNumber)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (textMeasurer is null || layout.HasResolvedCounterInputs ||
+                (DocxFieldText.GetDependencies(layout.Story.BodyElements, cancellationToken) & DocxCounterDependencies.PageNumber) == 0)
+                return layout;
+            // This candidate is placement-local, never published in the width memo.
+            // Its caller must prove that the complete group stays on this page.
+            return CreateRelatedStoryLayout(layout.Story, layout.StoryIndex, bodyWidth, textMeasurer,
+                defaultTabStopPoints, paragraphSpacingScale, pageNumber, knownPageCount, cancellationToken,
+                unscaledTextMeasurer, customNoteTargets?.GetValueOrDefault(layout.Story), mathEquations);
+        }
+
         IReadOnlyList<DocxRelatedStoryLayout> relatedStoryLayouts = GetRelatedStoryLayouts(page.BodyWidth);
         double currentPageFootnoteReserveHeight = 0d;
         CompleteFootnoteAdmission? completeFootnoteAdmission = textMeasurer is null ? null :
@@ -2264,7 +2277,7 @@ internal sealed partial class DocxLayoutEngine
             double result = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale).UnmapY(bodyY - offset);
             return double.IsFinite(result) ? result : null;
         }
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, BindRelatedStoryPage, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
         OoxConversionBudget.Current?.AdmitDocxLayoutPages(pagesWithRelatedStories.Length);
         cancellationToken.ThrowIfCancellationRequested();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);

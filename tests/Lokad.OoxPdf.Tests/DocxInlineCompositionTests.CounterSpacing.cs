@@ -54,9 +54,9 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(story.TextLines.Count >= 3, "The narrow note actually exercises wrapping.");
                 TestAssert.Contains(count!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), string.Concat(story.TextLines.Select(line => line.Text)));
             }
-            else
+            else if (instruction == "NUMPAGES")
                 TestAssert.True(!layout.Pages.SelectMany(p => p.PlacedRelatedStories).Any(s => s.UsesCompleteDocumentEndnoteFlow),
-                    "An unresolved page/count dependency cannot promote placeholder-sized content into complete flow.");
+                    "An unresolved count cannot promote placeholder-sized content into complete flow.");
         }
     }
 
@@ -82,7 +82,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadNoteCounter(string kind, OoxPdfDocxMarkupMode mode, string? instruction,
-        string value, bool narrow) => ReadMutation("CompositionProbes/mixed-note-" + kind + "-table", mode, false, false,
+        string value, bool narrow, Action<XDocument, XNamespace>? mutate = null) => ReadMutation("CompositionProbes/mixed-note-" + kind + "-table", mode, false, false,
         (xml, w, _) =>
         {
             var note = xml.Root!.Elements(w + kind).Single(n => (string?)n.Attribute(w + "id") == "37");
@@ -96,5 +96,6 @@ internal static partial class DocxInlineCompositionTests
                 paragraph.Add(new XElement(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"),
                     " Public trailing note words before the table.")));
             }
+            mutate?.Invoke(xml, w);
         }, partOverride: "word/" + kind + "s.xml");
 }

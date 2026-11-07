@@ -16611,6 +16611,9 @@
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ],
   "docx-counter-spacing": [
+    "DocxFittingEndnotePageFieldsPreserveLiteralFramesAndWrapping",
+    "DocxFittingEndnotePageMeasurementUsesActualTwoDigitPage",
+    "DocxEndnotePageBindingRetainsUnfitAndUnsupportedOwners",
     "DocxNotePageCountResultsPreserveLiteralFramesAndWrapping",
     "DocxNoteCounterMeasurementUsesBindingsAndRetainsPageFallback",
     "DocxCounterSpacingKeepsUnknownAndInconsistentResultFallbacks",

@@ -14,6 +14,7 @@ internal sealed partial class DocxLayoutEngine
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
+        Func<DocxRelatedStoryLayout, double, int, DocxRelatedStoryLayout> bindRelatedStoryPage,
         CancellationToken cancellationToken,
         double printScale = 1d,
         IDocxTextMeasurer? separatorMeasurer = null, 
@@ -246,6 +247,18 @@ internal sealed partial class DocxLayoutEngine
                 int activePageIndex = documentEndPages.Count - 1;
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
+                if (CanUseUnscaledEndnoteParagraphBoundaries(document, activePage, documentEndSeparatorLayout, printScale) &&
+                    documentEndStories.Any(story => !story.HasResolvedCounterInputs))
+                {
+                    var boundStories = documentEndStories.Select(story =>
+                        bindRelatedStoryPage(story, ResolvePageNoteTextWidth(activePage), activePageIndex + 1)).ToList();
+                    // A counter is measured before admission, not patched after
+                    // wrapping. Only a complete fitting group owns this page;
+                    // continued/unqualified sources keep their unresolved layout.
+                    if (CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
+                        documentEndSeparatorLayout, printScale, boundStories, cancellationToken))
+                        documentEndStories = boundStories;
+                }
                 // Plain source/static semantics qualify the same footer edge used
                 // by body flow. Scaled, dynamic and rich frames keep their fallback;
                 // fitting footer edges equal the margin.
