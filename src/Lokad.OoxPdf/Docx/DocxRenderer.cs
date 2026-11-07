@@ -1315,8 +1315,23 @@ internal sealed partial class DocxRenderer
                             continue;
                         }
 
+                        int? targetItemIndex = bookmark.InlineItemIndex;
+                        if (paragraph.InlineContent is { } inlineItems && targetItemIndex is int sourceIndex && sourceIndex >= 0)
+                        {
+                            // A source boundary can precede retained but unpainted runs.
+                            // Keep the source identity and find its first placed object.
+                            while (sourceIndex < inlineItems.Count && inlineItems[sourceIndex] is
+                                DocxInlineText { Run.EffectiveProperties.Hidden: true } or DocxInlineText { Length: 0 } or
+                                DocxInlineTab { Run.EffectiveProperties.Hidden: true } or DocxInlineBreak { Run.EffectiveProperties.Hidden: true })
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                sourceIndex++;
+                            }
+                            targetItemIndex = sourceIndex;
+                        }
+
                         if (line.InlineFrame is { } pictureLine && paragraph.InlineContent is { } pictureItems &&
-                            bookmark.InlineItemIndex is int pictureIndex && pictureIndex >= 0 && pictureIndex < pictureItems.Count &&
+                            targetItemIndex is int pictureIndex && pictureIndex >= 0 && pictureIndex < pictureItems.Count &&
                             pictureItems[pictureIndex] is DocxInlinePicture)
                         {
                             // Ordered source extents belong to the placed line. A picture
@@ -1335,7 +1350,7 @@ internal sealed partial class DocxRenderer
                         }
 
                         if (paragraph.InlineContent is { } sourceItems &&
-                            bookmark.InlineItemIndex is int itemIndex && itemIndex >= 0 && itemIndex < sourceItems.Count &&
+                            targetItemIndex is int itemIndex && itemIndex >= 0 && itemIndex < sourceItems.Count &&
                             sourceItems[itemIndex] is DocxInlineEquation sourceEquation)
                         {
                             // Legacy body lines paint a separate item. Resolve its final
