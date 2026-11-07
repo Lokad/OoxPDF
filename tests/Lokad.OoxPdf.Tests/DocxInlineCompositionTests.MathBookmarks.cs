@@ -152,7 +152,8 @@ internal static partial class DocxInlineCompositionTests
         int targetPage = Array.FindIndex(pages, page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
             .Any(show => show.Text.Normalize(System.Text.NormalizationForm.FormKC).Contains('z')));
         TestAssert.True(targetPage > 0, "The bookmarked final term must occur after the first fragment's page.");
-        var link = pages.SelectMany(page => page.Annotations).Single();
-        TestAssert.Equal(targetPage, link.Destination!.Value.PageIndex);
+        var links = pages.SelectMany(page => page.Annotations).ToArray();
+        TestAssert.True(links.Length != 0 && links.All(link => link.Destination?.PageIndex == targetPage),
+            "Every wrapped annotation for the logical hyperlink must target its source fragment's page.");
     }
 }
