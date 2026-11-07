@@ -1,4 +1,7 @@
 {
+  "docx-math-hyperlinks": [
+    "DocxMathHyperlinks"
+  ],
   "docx-math-content-controls": [
     "DocxMathContentControls",
     "DocxMathCustomXml"

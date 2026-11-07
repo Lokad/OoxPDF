@@ -84,7 +84,7 @@ internal static partial class DocxMathRowLayout
             RgbColor? color = DocxTextColor.Read(atom.Run.Text.ColorHex);
             glyphs.Add(new(atom.Source.Value, atom.Render.Value, resource, cid.ToString("X4", CultureInfo.InvariantCulture),
                 size, x, 0d, advance, color) { Revision = atom.Run.Text.Revision, OriginalGlyph = glyph,
-                    TextShear = shear });
+                    TextShear = shear, Hyperlink = atom.Run.Hyperlink });
             if (shear != 0d && font.TryGetGlyphBounds(glyph, out var slantedBounds))
                 slantedInkRight = Math.Max(slantedInkRight, x + (slantedBounds.XMax + shear * slantedBounds.YMax) * scale);
             x += advance;

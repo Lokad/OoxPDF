@@ -48,6 +48,8 @@ internal static class DocxInlineContent
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
         paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0 || paragraph.BookmarkAnchors.Count != 0;
 
+    public static bool HasNonMathHyperlinks(DocxParagraph paragraph) => paragraph.Hyperlinks.Any(link => !link.IsMathContent);
+
     public static bool HasValidHyperlinkSourceRanges(DocxParagraph paragraph, CancellationToken token)
     {
         foreach (var link in paragraph.Hyperlinks)
@@ -68,7 +70,7 @@ internal static class DocxInlineContent
         if (paragraph.Hyperlinks.Count == 0 || paragraph.InlineContent is not { } items) return null;
         var linked = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
         int visitedThrough = 0;
-        foreach (var link in paragraph.Hyperlinks.Where(link => link.StartInlineItemIndex is not null && link.EndInlineItemIndex is not null)
+        foreach (var link in paragraph.Hyperlinks.Where(link => !link.IsMathContent && link.StartInlineItemIndex is not null && link.EndInlineItemIndex is not null)
             .OrderBy(link => link.StartInlineItemIndex))
         {
             token.ThrowIfCancellationRequested();

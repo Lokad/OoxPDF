@@ -12,11 +12,11 @@ internal static partial class DocxMathParser
         Func<XElement, string, DocxTextRun> readRun,
         CancellationToken cancellationToken, Func<XElement, bool>? includeRevision = null,
         bool preserveDeletedStructure = false, Action<DocxMathBookmark>? readBookmark = null,
-        Action<XElement>? readCommentBoundary = null)
+        Action<XElement>? readCommentBoundary = null, Func<XElement, DocxHyperlinkSpan>? readHyperlink = null)
     {
-        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision, bool IncludeAnnotations)>();
+        var pending = new Stack<(XElement Element, bool Expanded, bool InsideRevision, bool IncludeAnnotations, DocxHyperlinkSpan? Hyperlink)>();
         var nodes = new Dictionary<XElement, DocxMathNode>();
-        pending.Push((equation, false, false, true));
+        pending.Push((equation, false, false, true, null));
         while (pending.TryPop(out var item))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -42,19 +42,22 @@ internal static partial class DocxMathParser
             bool sourceContainer = IsSourceContainer(element);
             if (!revisionRow && !sourceContainer && (element.Name.Namespace != MathNamespace || !IsContainer(name)))
             {
-                nodes.Add(element, ReadLeaf(element, readRun));
+                nodes.Add(element, ReadLeaf(element, readRun) with { Hyperlink = item.IncludeAnnotations ? item.Hyperlink : null });
                 continue;
             }
 
             if (!item.Expanded)
             {
-                pending.Push((element, true, item.InsideRevision, item.IncludeAnnotations && included));
+                DocxHyperlinkSpan? hyperlink = item.IncludeAnnotations && included ? item.Hyperlink : null;
+                if (item.IncludeAnnotations && included && element.Name == WordprocessingNamespace + "hyperlink")
+                    hyperlink = readHyperlink?.Invoke(element);
+                pending.Push((element, true, item.InsideRevision, item.IncludeAnnotations && included, hyperlink));
                 // Comment ranges need source order, including boundaries in
                 // different nested rows. They are events, not math operands.
                 foreach (XElement child in TraversalChildren(element).Reverse())
                 {
                     pending.Push((child, false, item.InsideRevision || revisionRow,
-                        item.IncludeAnnotations && included));
+                        item.IncludeAnnotations && included, hyperlink));
                 }
                 continue;
             }
@@ -169,6 +172,7 @@ internal static partial class DocxMathParser
                 }
                 if (bookmarks is not null) node = sourceRow with { Bookmarks = bookmarks };
             }
+            node = node with { Hyperlink = item.IncludeAnnotations && included ? item.Hyperlink : null };
             nodes.Add(element, revisionRow ? node : node with { PropertiesXml = ReadProperties(element) });
         }
 
@@ -209,6 +213,7 @@ internal static partial class DocxMathParser
         }
     }
     private static bool IsSourceContainer(XElement? element) =>
+        element?.Name == WordprocessingNamespace + "hyperlink" ||
         element?.Name == WordprocessingNamespace + "customXml" || element?.Name == WordprocessingNamespace + "sdt" ||
         element?.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt";
     // Match paragraph reading: control/custom-XML properties describe metadata;

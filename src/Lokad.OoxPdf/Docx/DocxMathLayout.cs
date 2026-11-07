@@ -339,7 +339,7 @@ internal static partial class DocxMathLayout
         Append(numerator, numeratorShift);
         Append(denominator, -denominatorShift);
         box = new DocxMathBox(width, above, below, glyphs)
-        { BookmarkPoints = bookmarks is null ? [] : bookmarks, Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, ruleColor)],
+        { BookmarkPoints = bookmarks is null ? [] : bookmarks, Rules = stack ? [] : [new DocxMathRulePlacement(0d, axis - thickness / 2d, width, thickness, ruleColor) { Hyperlink = fraction.Hyperlink }],
             EnclosureHeight = above + below,
             Edges = new(DocxMathRowLayout.AtomKind.Inner, DocxMathRowLayout.AtomKind.Inner, false),
             ParentMetrics = useParentMetrics ? new(metricOwner, parentSize) : null };

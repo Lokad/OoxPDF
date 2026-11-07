@@ -169,7 +169,7 @@ internal static class DocxMathParagraphPolicy
     public static DocxEquation? GetStandaloneRow(DocxParagraph paragraph)
     {
         if (!HasSupportedOwner(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ||
-            paragraph.ListLabel is not null || paragraph.Hyperlinks.Count != 0 ||
+            paragraph.ListLabel is not null || DocxInlineContent.HasNonMathHyperlinks(paragraph) ||
             paragraph.CommentRanges.Count != 0 ||
             HasOrdinarySourceText(paragraph) || (paragraph.InlineContent is { } items &&
             items.Any(item => item is DocxInlineTab tab && !tab.Run.EffectiveProperties.Hidden)) ||
@@ -366,7 +366,7 @@ internal static class DocxMathParagraphPolicy
     private static bool DisplayRowsOwnParagraphAlignment(DocxParagraph paragraph,
         IReadOnlySet<DocxEquation> displayRows, CancellationToken token)
     {
-        if (paragraph.Hyperlinks.Count != 0 || paragraph.InlineContent is not { } items) return false;
+        if (DocxInlineContent.HasNonMathHyperlinks(paragraph) || paragraph.InlineContent is not { } items) return false;
         foreach (var item in items)
         {
             token.ThrowIfCancellationRequested();

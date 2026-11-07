@@ -218,6 +218,8 @@ internal sealed record DocxHyperlinkSpan(
     int TextRunCount,
     int TextLength)
 {
+    // The linked mathematical paint owns this range, not the whole inline item.
+    public bool IsMathContent { get; init; }
     public int? StartInlineItemIndex { get; init; }
     public int? EndInlineItemIndex { get; init; }
 }

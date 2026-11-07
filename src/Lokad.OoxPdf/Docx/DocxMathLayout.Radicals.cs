@@ -90,7 +90,7 @@ internal static partial class DocxMathLayout
             foreach (var glyph in degree.Glyphs)
             { token.ThrowIfCancellationRequested(); glyphs.Add(glyph with { X = glyph.X + degreeX, BaselineY = glyph.BaselineY + degreeY }); }
         var rules = new List<DocxMathRulePlacement>(child.Rules.Count + 1)
-            { new(childX, child.AboveBaseline + gap, child.AdvanceWidth, rule, color) };
+            { new(childX, child.AboveBaseline + gap, child.AdvanceWidth, rule, color) { Hyperlink = radical.Hyperlink } };
         foreach (var childRule in child.Rules)
         { token.ThrowIfCancellationRequested(); rules.Add(childRule with { X = childRule.X + childX }); }
         box = new(width, above, below, glyphs)

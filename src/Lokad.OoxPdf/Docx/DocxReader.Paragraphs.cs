@@ -434,7 +434,9 @@ internal sealed partial class DocxReader
                             AddCommentRangeStart(boundary, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
                         else
                             AddCommentRangeEnd(boundary, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count + 1);
-                    });
+                    }, readHyperlink: sourceEquation.RemoveDeletedText ? null : hyperlink =>
+                        AddHyperlinkSpan(hyperlink, sourceRunIndex, 0, runs.Count, 0, 0,
+                            inlineItems!.Count, inlineItems.Count + 1, hyperlinkSpans, relationships, mathContent: true));
                 if (sourceEquation.RemoveDeletedText)
                 {
                     var source = new DocxEquation(content, runs.Count, sourceRunIndex, display, null, null, null);
@@ -1325,7 +1327,7 @@ internal sealed partial class DocxReader
         });
     }
 
-    private static void AddHyperlinkSpan(
+    private static DocxHyperlinkSpan AddHyperlinkSpan(
         XElement hyperlink,
         int sourceRunStartIndex,
         int sourceRunCount,
@@ -1335,11 +1337,11 @@ internal sealed partial class DocxReader
         int inlineStart,
         int inlineEnd,
         List<DocxHyperlinkSpan> hyperlinkSpans,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships, bool mathContent = false)
     {
         string? relationshipId = (string?)hyperlink.Attribute(RelationshipsNamespace + "id");
         relationships.TryGetValue(relationshipId ?? string.Empty, out OoxRelationship? relationship);
-        hyperlinkSpans.Add(new DocxHyperlinkSpan(
+        var span = new DocxHyperlinkSpan(
             relationshipId,
             (string?)hyperlink.Attribute(WordprocessingNamespace + "anchor"),
             (string?)hyperlink.Attribute(WordprocessingNamespace + "tooltip"),
@@ -1351,7 +1353,9 @@ internal sealed partial class DocxReader
             sourceRunCount,
             textRunStartIndex,
             textRunCount,
-            textLength) { StartInlineItemIndex = inlineStart, EndInlineItemIndex = inlineEnd });
+            textLength) { StartInlineItemIndex = inlineStart, EndInlineItemIndex = inlineEnd, IsMathContent = mathContent };
+        hyperlinkSpans.Add(span);
+        return span;
     }
 
     private static void AddHyperlinkContainer(

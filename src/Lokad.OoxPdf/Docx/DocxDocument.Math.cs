@@ -30,6 +30,7 @@ internal sealed record DocxEquation(
 
 internal abstract record DocxMathNode
 {
+    public DocxHyperlinkSpan? Hyperlink { get; init; }
     // Preserve authored math properties until their layout semantics are supported.
     public IReadOnlyList<string> PropertiesXml { get; init; } = [];
 }

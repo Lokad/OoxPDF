@@ -1550,6 +1550,20 @@ internal sealed partial class DocxRenderer
                     previousLineLinks = null;
                 }
 
+                // Mathematical subranges own their measured paint, independently
+                // of the surrounding text slot or an outer paragraph hyperlink.
+                if (line.Math is { } math && !line.IsInlineMath)
+                    EmitMathLinks(math, line.X, line.BaselineY, line.MathScale);
+                else
+                {
+                    if (line.IsInlineMath && line.Math is { } inlineMath)
+                        EmitMathLinks(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale);
+                    foreach (var placement in line.InlineMath)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        EmitMathLinks(placement.Math, line.X + placement.OffsetX, line.BaselineY, line.MathScale);
+                    }
+                }
                 if (line.SourceParagraph is not { } paragraph ||
                     paragraph.Hyperlinks.Count == 0)
                 {
@@ -1704,10 +1718,28 @@ internal sealed partial class DocxRenderer
                 EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedInlineBottom));
             }
 
+            foreach (var equation in page.Items.OfType<DocxEquationLayout>())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                EmitMathLinks(equation.Math, equation.X, equation.BaselineY, equation.Scale);
+            }
             annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber, staticItems, paintedImages, imageCache, markupContext, cancellationToken));
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;
+
+        void EmitMathLinks(DocxPreparedMathParagraph math, double x, double baseline, double scale)
+        {
+            foreach (var (link, rectangle) in ReadMathHyperlinkBounds(math.Box, cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                double pad = BodyHyperlinkRectHorizontalPadPoints * scale;
+                EmitLinkRect(link, x + rectangle.X * scale + textEmissionXOffset - pad,
+                    x + (rectangle.X + rectangle.Width) * scale + textEmissionXOffset + pad,
+                    baseline + (rectangle.Y + rectangle.Height) * scale - textEmissionBaselineOffset,
+                    baseline + rectangle.Y * scale - textEmissionBaselineOffset);
+            }
+        }
 
         Dictionary<DocxInlineImage, DocxInlineImageLayout?> ReadLinkedPictureFrames()
         {
@@ -1738,7 +1770,7 @@ internal sealed partial class DocxRenderer
         }
 
         static DocxHyperlinkSpan? FindInlineLink(DocxParagraph paragraph, int itemIndex) =>
-            paragraph.Hyperlinks.FirstOrDefault(link => link.StartInlineItemIndex is int start &&
+            paragraph.Hyperlinks.FirstOrDefault(link => !link.IsMathContent && link.StartInlineItemIndex is int start &&
                 link.EndInlineItemIndex is int end && itemIndex >= start && itemIndex < end);
 
         void EmitLineLinkRects(
@@ -1753,21 +1785,23 @@ internal sealed partial class DocxRenderer
 
             foreach ((DocxHyperlinkSpan mergedLink, double mergedMinX, double mergedMaxX) in emissions)
             {
-                if (IsExternalHyperlink(mergedLink))
-                {
-                    annotations.Add(PdfLinkAnnotation.ToUri(mergedMinX, bottom, mergedMaxX - mergedMinX, top - bottom, mergedLink.Target ?? string.Empty));
-                }
-                else if (!string.IsNullOrEmpty(mergedLink.Anchor) &&
-                    bookmarkDestinations.TryGetValue(mergedLink.Anchor, out PdfLinkDestination mergedDestination))
-                {
-                    annotations.Add(PdfLinkAnnotation.ToDestination(mergedMinX, bottom, mergedMaxX - mergedMinX, top - bottom, mergedDestination));
-                }
+                EmitLinkRect(mergedLink, mergedMinX, mergedMaxX, top, bottom);
             }
+        }
+
+        void EmitLinkRect(DocxHyperlinkSpan link, double left, double right, double top, double bottom)
+        {
+            if (!(right > left) || !(top > bottom)) return;
+            if (IsExternalHyperlink(link))
+                annotations.Add(PdfLinkAnnotation.ToUri(left, bottom, right - left, top - bottom, link.Target ?? string.Empty));
+            else if (!string.IsNullOrEmpty(link.Anchor) &&
+                bookmarkDestinations.TryGetValue(link.Anchor, out PdfLinkDestination mergedDestination))
+                annotations.Add(PdfLinkAnnotation.ToDestination(left, bottom, right - left, top - bottom, mergedDestination));
         }
 
         bool IsHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
         {
-            return sourceTextRunIndex >= link.SourceRunStartIndex &&
+            return !link.IsMathContent && sourceTextRunIndex >= link.SourceRunStartIndex &&
                 sourceTextRunIndex < link.SourceRunStartIndex + link.SourceRunCount;
         }
 

@@ -11,6 +11,7 @@ internal sealed record DocxMathGlyphPlacement(
     double FontSize, double X, double BaselineY, double Advance, RgbColor? Color)
 {
     public DocxRevisionInfo? Revision { get; init; }
+    public DocxHyperlinkSpan? Hyperlink { get; init; }
     // Structural symbols keep authored ink; revision ink belongs to literal text.
     public IDocxMathControl? ControlOwner { get; init; }
     public ushort OriginalGlyph { get; init; }
@@ -49,7 +50,10 @@ internal sealed record DocxMathMetricOwner(Lokad.OoxPdf.Fonts.OpenTypeFont Font,
     public bool IncludeTypographicFrame { get; init; }
 }
 
-internal sealed record DocxMathRulePlacement(double X, double Y, double Width, double Thickness, RgbColor? Color);
+internal sealed record DocxMathRulePlacement(double X, double Y, double Width, double Thickness, RgbColor? Color)
+{
+    public DocxHyperlinkSpan? Hyperlink { get; init; }
+}
 
 internal static class DocxMathBoxPainter
 {

@@ -23,6 +23,8 @@
   range geometry follows the containing equation frame.
   Rich-text content controls and custom-XML metadata retain supported mathematical content and qualified
   revision frames in body paragraphs, cells, notes and direct static stories.
+  Hyperlinks inside supported equations preserve the formula and clickable
+  source range through wrapping and qualified container placement.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual

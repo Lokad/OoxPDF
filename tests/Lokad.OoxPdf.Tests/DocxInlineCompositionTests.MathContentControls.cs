@@ -94,7 +94,9 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static XElement MathSourceContainer(IEnumerable<XElement> children, XNamespace w, string carrier = "sdt") =>
-        carrier == "customXml"
+        carrier == "hyperlink"
+        ? new(w + "hyperlink", new XAttribute(w + "anchor", "RevisionTarget"), children)
+        : carrier == "customXml"
         ? new(w + "customXml", new XAttribute(w + "uri", "urn:public:math-control"),
             new XAttribute(w + "element", "payload"), new XElement(w + "customXmlPr"), children)
         : new(w + "sdt", new XElement(w + "sdtPr", new XElement(w + "id", new XAttribute(w + "val", "19131")),
