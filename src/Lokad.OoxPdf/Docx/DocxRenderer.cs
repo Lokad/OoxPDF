@@ -359,7 +359,10 @@ internal sealed partial class DocxRenderer
         var first = await PrepareNoteAdjustedLayoutAsync(document, resolver, context, geometry, messages is null ? null : messages.Add, cancellationToken,
             fontCache).ConfigureAwait(false);
         if (first.FontResources.DeferredPageCountEquations.Count != 0 ||
-            (DocxFieldText.GetDependencies(document.BodyElements, cancellationToken) & DocxCounterDependencies.PageCount) != 0)
+            (DocxFieldText.GetDependencies(document.BodyElements, cancellationToken) & DocxCounterDependencies.PageCount) != 0 ||
+            document.RelatedStories.Any(story => story.IsNormalStoryType &&
+                story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+                (DocxFieldText.GetDependencies(story.BodyElements, cancellationToken) & DocxCounterDependencies.PageCount) != 0))
         {
             List<OoxPdfDiagnostic>? retryMessages = diagnostics is null ? null : [];
             // Decimal field glyphs are already in every subset. Reuse only the

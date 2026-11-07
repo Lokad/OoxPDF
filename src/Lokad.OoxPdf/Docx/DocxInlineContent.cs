@@ -104,6 +104,10 @@ internal static class DocxInlineContent
         runs.All(run => run.FieldKind is null || run.FieldKind is { } kind && kind.IsDynamic() &&
             run.Text == DocxFieldText.Placeholder(kind));
 
+    public static bool HasCounterFieldResults(IReadOnlyList<DocxFieldReference> fields,
+        IReadOnlyList<DocxTextRun> runs) =>
+        fields.All(field => field.Kind.IsDynamic()) && HasSourceFieldResults(fields, runs);
+
     // Cached field results already own ordinary resolved runs. Instructions and
     // page/count placeholders still need their separate dynamic layout path.
     public static bool HasMaterializedFieldResults(IReadOnlyList<DocxFieldReference> fields,

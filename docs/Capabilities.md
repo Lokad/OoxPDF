@@ -580,6 +580,9 @@ Approximate or restricted:
   line placement; their navigation targets follow the placed content.
   Hyperlink metadata also preserves qualified paragraph spacing, minimum cell
   slots and complete endnote-block boundaries; the measured run formatting remains.
+  Supported numeric field results share that spacing rule. NUMPAGES in normal
+  notes is measured with the finalized count through the bounded count retry.
+  Placement-dependent PAGE notes retain their existing layout fallback.
   Highlighting and run shading retain these text metrics while painting their
   backgrounds; font-changing and unsupported layout combinations keep fallbacks.
   Automatic text and equation colors adapt to solid paragraph/cell/run shading;

@@ -26,7 +26,12 @@ internal sealed record DocxRelatedStoryLayout(
     IReadOnlyList<DocxInlineImageLayout> InlineImages,
     IReadOnlyList<DocxFloatingDrawingLayout> FloatingDrawings,
     IReadOnlyList<DocxTableRowLayout> TableRows,
-    double ContentHeight);
+    double ContentHeight)
+{
+    // Emission can resolve a counter later; that does not authorize placement
+    // based on a paragraph measured with an unresolved placeholder.
+    public bool HasResolvedCounterInputs { get; init; } = true;
+}
 
 internal sealed record DocxPlacedRelatedStoryLayout(
     DocxRelatedStoryLayout StoryLayout,
@@ -376,7 +381,8 @@ internal sealed partial class DocxLayoutEngine
             {
                 customNoteTargets ??= DocxCustomNoteMarkerOwners.ResolveTargets(document, cancellationToken);
                 layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints,
-                    paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, customNoteTargets, mathEquations);
+                    paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, customNoteTargets, mathEquations,
+                    pageCount: knownPageCount);
                 relatedStoryLayoutsByBodyWidth[key] = layouts;
             }
 

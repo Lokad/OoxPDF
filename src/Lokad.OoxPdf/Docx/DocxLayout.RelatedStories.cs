@@ -2309,7 +2309,8 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         IDocxTextMeasurer? unscaledTextMeasurer = null,
         IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
+        int? pageCount = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (textMeasurer is null || stories.Count == 0)
@@ -2336,7 +2337,7 @@ internal sealed partial class DocxLayoutEngine
                 defaultTabStopPoints,
                 paragraphSpacingScale,
                 pageNumber: null,
-                pageCount: null,
+                pageCount: pageCount,
                 cancellationToken: cancellationToken,
                 unscaledTextMeasurer: unscaledTextMeasurer, customNoteMarker: customNoteTargets?.GetValueOrDefault(stories[index]),
                 mathEquations: mathEquations);
@@ -2619,6 +2620,10 @@ internal sealed partial class DocxLayoutEngine
             cancellationToken,
             pageCount,
             unscaledTextMeasurer);
-        return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), floatingDrawings, tableRows.ToArray(), Math.Abs(cursorY));
+        return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), floatingDrawings, tableRows.ToArray(), Math.Abs(cursorY))
+        {
+            HasResolvedCounterInputs = DocxFieldText.HasInputs(
+                DocxFieldText.GetDependencies(story.BodyElements, cancellationToken), pageNumber, pageCount)
+        };
     }
 }

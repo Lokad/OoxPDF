@@ -506,12 +506,14 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool HasPlainNoteFlowStory(DocxRelatedStoryLayout story) =>
+        story.HasResolvedCounterInputs &&
         story.Story.BodyElements.Count == 1 && story.TextLines.Count != 0 &&
         story.Story.BodyElements[0] is DocxParagraphElement { Paragraph: var paragraph } &&
         story.TextLines.All(line => ReferenceEquals(line.SourceParagraph, paragraph)) &&
         IsPlainNoteFlowParagraph(paragraph) && double.IsFinite(story.ContentHeight);
 
     private static bool HasOwnedInlineNoteFlowStory(DocxRelatedStoryLayout story) =>
+        story.HasResolvedCounterInputs &&
         story.Story.BodyElements.Count == 1 && story.TextLines.Count != 0 &&
         story.TableRows.Count == 0 && story.FloatingDrawings.Count == 0 &&
         story.Story.BodyElements[0] is DocxParagraphElement { Paragraph: var paragraph } &&

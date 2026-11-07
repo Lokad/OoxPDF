@@ -22,6 +22,7 @@ internal static class DocxFieldText
     // caches and finalized-count retries consume the same dependency contract.
     public static DocxCounterDependencies GetDependencies(IReadOnlyList<DocxBodyElement> elements, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
         var dependencies = DocxCounterDependencies.None;
         foreach (var element in elements)
         {

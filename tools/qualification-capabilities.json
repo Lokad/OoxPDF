@@ -16609,5 +16609,12 @@
     "DocxContextualMinimumRejectsUnknownStyleIdentitiesAndRichFlow",
     "DocxNoteCellPictureRangesFollowExistingPaintAndTargets",
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
+  ],
+  "docx-counter-spacing": [
+    "DocxNotePageCountResultsPreserveLiteralFramesAndWrapping",
+    "DocxNoteCounterMeasurementUsesBindingsAndRetainsPageFallback",
+    "DocxCounterSpacingKeepsUnknownAndInconsistentResultFallbacks",
+    "DocxHyperlinksPreserveCompleteEndnoteStoryPlacement",
+    "DocxHyperlinksPreserveContextualBodyAndMinimumCellSpacing"
   ]
 }

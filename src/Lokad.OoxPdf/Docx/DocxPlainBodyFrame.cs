@@ -73,8 +73,7 @@ internal static class DocxPlainBodyFrame
         // PAGE/NUMPAGES already receive page inputs during static measurement.
         // Reuse their source/placeholder contract; arbitrary cached fields do
         // not gain admission merely because their current result is text.
-        paragraph.FieldReferences.All(field => field.Kind.IsDynamic()) &&
-        DocxInlineContent.HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs);
+        DocxInlineContent.HasCounterFieldResults(paragraph.FieldReferences, paragraph.Runs);
 
     internal static bool IsPlainPictureOnlyParagraph(DocxParagraph paragraph) =>
         paragraph.Images.Count != 0 && paragraph.Runs.Count == 0 && IsPlainStaticContent(paragraph);

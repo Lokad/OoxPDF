@@ -49,7 +49,7 @@ internal sealed partial class DocxLayoutEngine
     // whose remaining content is clipped or whose source owner is unsupported.
     private static bool HasCompleteMeasuredNoteBlocks(DocxRelatedStoryLayout story, CancellationToken token)
     {
-        if (story.Story.BodyElements.Count == 0 || story.FloatingDrawings.Count != 0 ||
+        if (!story.HasResolvedCounterInputs || story.Story.BodyElements.Count == 0 || story.FloatingDrawings.Count != 0 ||
             !double.IsFinite(story.ContentHeight) || story.ContentHeight <= 0d) return false;
         var measured = new Dictionary<DocxParagraph, bool>(ReferenceEqualityComparer.Instance);
         var sources = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
