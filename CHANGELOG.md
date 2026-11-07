@@ -19,6 +19,8 @@
   absent and unregistered separators share one normalized default.
   Empty editing boundaries and bookmarks preserve supported revised equations
   and their source-owned internal-link targets.
+  Comment boundaries inside supported equations retain the formula and comment;
+  range geometry follows the containing equation frame.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual

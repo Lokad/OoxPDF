@@ -16,6 +16,9 @@ Links and annotations follow the resulting physical geometry.
 Bookmark boundaries inside supported mathematics retain source positions on
 measured rows and arguments. Their internal-link targets follow the same box
 translations, including fraction/script placement and inline wrapping.
+Comment ranges may start or end inside supported equations without removing
+the formula or its comment body. Their geometry uses the containing inline
+equation's occupied frame; highlighting only part of a formula remains approximate.
 Empty proofing and permission boundaries inside mathematical rows and arguments
 preserve supported formula content. Permission boundaries can retain sub-point
 Office geometry differences. Bookmark/comment navigation and revision ownership
