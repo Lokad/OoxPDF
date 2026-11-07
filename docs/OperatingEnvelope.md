@@ -60,7 +60,7 @@ subset programs, retained character/advance maps and kerning-pair arrays, and de
 JPEG component/RGB construction overlap before allocation. Image/font compression
 also admits actual output capacity, growth overlap and final copying. Image payloads
 remain funded through emission; font-compression storage refunds after its stream
-is written. GPOS class decoding counts before allocating exact glyph arrays.
+is written. GPOS right-class decoding counts before allocating exact glyph arrays.
 One source-shaped kerning construction window covers class maps and retained
 batches, reusing capacity across zero-adjustment subtables and refunding after
 the batches finish. Kerning sort scratch is admitted while retained pair arrays remain

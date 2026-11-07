@@ -187,7 +187,7 @@ parsed-model charge. Estimates are capacity, not exact live bytes or a heap boun
 remaining repeated-placement/vector resource coverage is tracked separately.
 PDF content staging includes encoding/readback scratch and
 spill buffers, plus private SFNT/subset programs and retained kerning-pair arrays.
-Copied programs and pair arrays stay funded through emission. GPOS class-map
+Copied programs and pair arrays stay funded through emission. GPOS right-class map
 construction uses one reusable window until its batches finish; repeated
 zero-adjustment subtables do not accumulate another work charge. Sorting scratch is
 admitted during their construction overlap and refunds after sorting; failed
