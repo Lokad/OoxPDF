@@ -590,6 +590,9 @@ Approximate or restricted:
   slots and complete endnote-block boundaries; the measured run formatting remains.
   Supported numeric field results share that spacing rule. NUMPAGES in normal
   notes is measured with the finalized count through the bounded count retry.
+  Supported note equations coexist with PAGE and NUMPAGES in paragraphs and cells.
+  Fresh footnotes measure counters with their rendered reference page before
+  slicing; unresolved references retain their existing fallback.
   Endnote PAGE is measured with its rendered reference page for existing plain
   paragraph flow, including section-end notes and continuation, and complete document-end groups that
   pass the source/frame/fit proof. Empty or ordinary headers preserve the binding
