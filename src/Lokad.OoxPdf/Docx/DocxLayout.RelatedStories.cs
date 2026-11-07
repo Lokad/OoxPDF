@@ -47,6 +47,18 @@ internal sealed partial class DocxLayoutEngine
         Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
         var outputPages = pages.ToList();
         var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
+        bool HasIndependentEndnoteFrame(DocxLayoutPage page, int pageNumber, int pageCount)
+        {
+            if (DocxPlainBodyFrame.HasNoStaticStories(document)) return true;
+            if (!HasNaturalStaticNoteStories(document, page, separatorMeasurer, printScale, cancellationToken) ||
+                headerKeepOut is null || footerKeepOut is null) return false;
+            // These cached edges use the same selected section-relative story
+            // and coordinates as placement. A complete group needs only this
+            // page's frame; intrusive or unmeasured static stories keep fallback.
+            double headerBottom = headerKeepOut(page, pageNumber, pageCount);
+            double footerTop = footerKeepOut(page, pageNumber, pageCount);
+            return headerBottom >= page.Height - page.MarginTop && footerTop <= page.MarginBottom;
+        }
         // Endnote placement needs its own final frame, not a measurement for
         // every body width visited by a footnote pass with nothing left to place.
         if (!locationsByBlock.Values.Any(locations => locations.Any(location =>
@@ -215,6 +227,8 @@ internal sealed partial class DocxLayoutEngine
 
                 if (sectionEndStories.Count > 0)
                 {
+                    bool independentStaticFrame = HasIndependentEndnoteFrame(outputPages[sectionEndPageIndex],
+                        sectionEndPageIndex + 1, outputPages.Count);
                     if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                         sectionEndStories.Any(story => !story.StoryLayout.HasResolvedCounterInputs))
                     {
@@ -222,12 +236,12 @@ internal sealed partial class DocxLayoutEngine
                             sectionEndStories, outputPages[sectionEndPageIndex]);
                         DocxLayoutPage sectionPage = outputPages[sectionEndPageIndex];
                         if (CanUseReferenceBoundEndnoteGroup(document, sectionPage, sectionPage.PlacedRelatedStories,
-                            endnoteSeparatorLayout, printScale, boundStories, cancellationToken))
+                            endnoteSeparatorLayout, printScale, boundStories, cancellationToken, independentStaticFrame))
                             for (int index = 0; index < sectionEndStories.Count; index++)
                                 sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
                     }
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
-                    PlaceSectionEndEndnoteStories(document, outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, headerKeepOut, bodyBoundaryToNoteDesign);
+                    PlaceSectionEndEndnoteStories(document, outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, independentStaticFrame, headerKeepOut, bodyBoundaryToNoteDesign);
                 }
             }
 
@@ -290,6 +304,7 @@ internal sealed partial class DocxLayoutEngine
                 var documentEndStories = documentEndReferences.Select(story => story.StoryLayout).ToList();
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
+                bool independentStaticFrame = HasIndependentEndnoteFrame(activePage, activePageIndex + 1, documentEndPages.Count);
                 if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                     documentEndStories.Any(story => !story.HasResolvedCounterInputs))
                 {
@@ -299,7 +314,7 @@ internal sealed partial class DocxLayoutEngine
                     // retaining its reference-owned value. Mixed blocks still
                     // need the complete fitting proof before adopting this layout.
                     if (CanUseReferenceBoundEndnoteGroup(document, activePage, activePlacedStories,
-                        documentEndSeparatorLayout, printScale, boundStories, cancellationToken))
+                        documentEndSeparatorLayout, printScale, boundStories, cancellationToken, independentStaticFrame))
                         documentEndStories = boundStories;
                 }
                 // Plain source/static semantics qualify the same footer edge used
@@ -326,7 +341,7 @@ internal sealed partial class DocxLayoutEngine
                 // of earlier tables or print scaling. Complete note-flow and
                 // mixed-footnote admission retain their existing qualification.
                 bool fittingEndnoteBoundaries = CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
-                    documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken);
+                    documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken, independentStaticFrame);
                 bool FollowsBodyParagraph() => fittingEndnoteBoundaries || CanUseTrailingParagraphEndnoteStart(activePage,
                     activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
                 // Only the admitted source-owned note flow shares the body's
@@ -467,7 +482,8 @@ internal sealed partial class DocxLayoutEngine
                         activePlacedStories.Where(s => s.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)
                             .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
                 bool localEndnoteBoundaries = !hasFootnotes &&
-                    CanUseUnscaledEndnoteParagraphBoundaries(document, activePage, documentEndSeparatorLayout, printScale);
+                    CanUseUnscaledEndnoteParagraphBoundaries(document, activePage, documentEndSeparatorLayout, printScale,
+                        DocxPlainBodyFrame.HasNoStaticStories(document));
                 DocxRelatedStoryLayout? previousEndnote = null;
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
@@ -546,6 +562,7 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         double printScale,
         IDocxTextMeasurer? separatorMeasurer, 
+        bool hasIndependentStaticFrame,
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
         Func<DocxLayoutPage, int, double, double?>? bodyBoundaryToNoteDesign = null)
     {
@@ -554,7 +571,7 @@ internal sealed partial class DocxLayoutEngine
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
         var storyLayouts = sectionEndStories.Select(story => story.StoryLayout).ToArray();
         bool completeBoundaries = CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
-            endnoteSeparatorLayout, printScale, storyLayouts, cancellationToken);
+            endnoteSeparatorLayout, printScale, storyLayouts, cancellationToken, hasIndependentStaticFrame);
         bool followsBodyParagraph = completeBoundaries || CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories,
             endnoteSeparatorLayout, printScale, storyLayouts);
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,

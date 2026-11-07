@@ -7,6 +7,8 @@
   the rendered reference page before placement.
   Complete fitting endnote groups share counter admission and paragraph/separator
   geometry at section and document end, preserving equations beside page fields.
+  Ordinary headers and footers wholly inside their margins preserve this mixed-note
+  content and geometry; intrusive or unsupported static stories retain fallback.
 
 - PPTX: point-label text bodies retain their own fallback typography and line-key
   measurement when paragraph default-run properties are absent.

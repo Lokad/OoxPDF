@@ -7,19 +7,21 @@ internal sealed partial class DocxLayoutEngine
     // mixed notes must prove their complete measured group fits before adoption.
     private static bool CanUseReferenceBoundEndnoteGroup(DocxDocument document, DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
-        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token) =>
+        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,
+        bool hasIndependentStaticFrame) =>
         CanUsePlainDocumentEndnoteFlow(page, separator, printScale, stories, token, out _) ||
-        CanUseFittingEndnoteBoundaries(document, page, placed, separator, printScale, stories, token);
+        CanUseFittingEndnoteBoundaries(document, page, placed, separator, printScale, stories, token, hasIndependentStaticFrame);
 
     // A complete measured block owns paragraph boundaries even when its middle
     // contains supported inline objects or complete nested tables. This admission does
     // not change typography or the separately qualified continuation policies.
     private static bool CanUseFittingEndnoteBoundaries(DocxDocument document, DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
-        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token)
+        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,
+        bool hasIndependentStaticFrame)
     {
         token.ThrowIfCancellationRequested();
-        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale) || stories.Count == 0 ||
+        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale, hasIndependentStaticFrame) || stories.Count == 0 ||
             !HasNumericTrailingBodyAfterSpacing(page) ||
             placed.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)) return false;
         double available = ResolveEndnoteStartTop(page, placed, printScale) - page.MarginBottom;
@@ -48,9 +50,9 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool CanUseUnscaledEndnoteParagraphBoundaries(DocxDocument document,
-        DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale) =>
+        DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale, bool hasIndependentStaticFrame) =>
         printScale == 1d && page.ColumnFrames.Count <= 1 &&
-        DocxPlainBodyFrame.HasKnownBodyFrame(document) && DocxPlainBodyFrame.HasNoStaticStories(document) &&
+        DocxPlainBodyFrame.HasKnownBodyFrame(document) && hasIndependentStaticFrame &&
         HasEmptyNoteSeparator(separator);
 
     // Fitting-boundary collapse and complete-block admission use the same source
