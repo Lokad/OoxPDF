@@ -16611,6 +16611,14 @@
     "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks"
   ],
   "docx-note-placement-work": [
+    "DocxDeferredMixedEndnoteConsumesSeparatorDeficitOnce",
+    "DocxDeferredMixedEndnoteUsesResolvedSeparatorFirstLineOrigin",
+    "DocxFittingMixedEndnoteSharesOwnedSeparatorDeficit",
+    "DocxFittingSeparatorPaintKeepsMissingLineBearingFallback",
+    "DocxFittingSeparatorPaintRetainsSourceBearingWithoutMovingNoteFlow",
+    "DocxMixedEndnoteCapacityExcludesLatentSeparatorSpaceWithoutMovingInk",
+    "DocxMixedNoteHeadAdmissionUsesTheSameSeparatorOriginAsPlacement",
+    "DocxMixedNoteHeadClearsCanonicalSeparatorAscentAfterRemovingLatentPadding",
     "DocxRegisteredEndnoteContinuationSpacingOwnsItsPageCapacity",
     "DocxRegisteredEndnoteSeparatorsRetainSourceSpacingAndDefaultFallbacks",
     "DocxLayoutSplitsSingleSectEndEndnoteStoryBeforeFollowingSection",

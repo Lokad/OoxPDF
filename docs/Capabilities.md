@@ -532,7 +532,8 @@ Supported within the following constraints:
   section numbering and authored position metadata remain independent.
   Registered endnote separators retain paragraph spacing. Before-space moves the
   rule and content; after-space advances content below the rule, including empty
-  continuation separators. Unregistered separators retain their synthetic defaults.
+  continuation separators. Absent and unregistered separators share one reader-normalized default.
+  Exact line-height and rich separator layouts retain their existing fallbacks.
 - Simple/complex fields with stored results, including supported nested cached
   fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
   their stored results, including empty results; nested fields own their locks.

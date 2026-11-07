@@ -15,7 +15,8 @@
   including empty or ordinary headers, and complete fitting document-end groups;
   other unqualified counters retain their fallback.
   Endnote placement follows the document-wide position when section metadata differs.
-  Registered endnote separators honor paragraph spacing and continuation after-space.
+  Endnote separators honor source paragraph spacing and continuation after-space;
+  absent and unregistered separators share one normalized default.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual
