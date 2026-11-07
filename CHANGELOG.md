@@ -3,7 +3,8 @@
 ## 0.3.0 — Unreleased
 
 - DOCX: normal note paragraphs and cells prepare supported equations alongside
-  PAGE and NUMPAGES fields, retaining the existing late counter binding.
+  PAGE and NUMPAGES fields. Fresh footnotes measure their full content using
+  the rendered reference page before placement.
 
 - PPTX: point-label text bodies retain their own fallback typography and line-key
   measurement when paragraph default-run properties are absent.

@@ -15,6 +15,7 @@
     "PortableRenderingTotalPageMathRecomputesNormalNotePlacement",
     "DocxNotePageCountResultsPreserveLiteralFramesAndWrapping",
     "DocxNoteCounterMeasurementUsesBindingsAndRetainsPageFallback",
+    "DocxMarkupNoteLinksFieldsFixturePreservesPlacedNoteLinksAndFields",
     "DocxCounterSpacingKeepsUnknownAndInconsistentResultFallbacks",
     "DocxFittingEndnotePageFieldsPreserveLiteralFramesAndWrapping",
     "DocxFittingEndnotePageMeasurementUsesTwoDigitReferencePage",
