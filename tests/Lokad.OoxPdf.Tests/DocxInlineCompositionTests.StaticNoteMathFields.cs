@@ -1,11 +1,16 @@
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Pdf;
+using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
-    public static void DocxNoteMathFieldsIndependentStaticStoriesPreserveMixedFrames()
+    public static void DocxNoteMathFieldsIndependentStaticStoriesPreserveMixedFrames() => CheckIndependentStaticNoteFrames(false);
+
+    public static void DocxNoteMathFieldsStaticCountersPreserveMixedFrames() => CheckIndependentStaticNoteFrames(true);
+
+    private static void CheckIndependentStaticNoteFrames(bool staticCounters)
     {
         foreach (string position in new[] { "docEnd", "sectEnd" })
         foreach (bool direct in new[] { false, true })
@@ -28,7 +33,8 @@ internal static partial class DocxInlineCompositionTests
                             new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null), .. source.BodyElements]
                         : source.BodyElements
                 };
-                return withStatic ? WithNoteMathStaticStory(source, footer, PlainNoteMathStaticParagraph()) : source;
+                return withStatic ? WithNoteMathStaticStory(source, footer,
+                    staticCounters ? ReadNoteMathStaticCounters(mode, complex: footer) : PlainNoteMathStaticParagraph()) : source;
             }
             var renderer = PictureRangeRenderer(mode);
             var baseline = renderer.RenderPagesAsync(Source(null, value, false), null, default).ToBlockingEnumerable().ToArray();
@@ -84,6 +90,48 @@ internal static partial class DocxInlineCompositionTests
                 $"An intrusive or unsupported static frame retains the existing fallback: {position}/footer={footer}/intrusive={intrusive}.");
         }
     }
+
+    public static void DocxNoteMathFieldsStaticCountersRetainUnknownAndInconsistentFallbacks()
+    {
+        foreach (string position in new[] { "docEnd", "sectEnd" })
+        foreach (bool footer in new[] { false, true })
+        foreach (bool unknown in new[] { false, true })
+        {
+            var source = ReadNoteMathField("endnote", OoxPdfDocxMarkupMode.Final, "PAGE", "9", false);
+            source = source with { Settings = source.Settings with { EndnoteReferenceSettings =
+                source.Settings.EndnoteReferenceSettings with { PositionValue = position } } };
+            var paragraph = ReadNoteMathStaticCounters(OoxPdfDocxMarkupMode.Final, complex: footer);
+            var fields = paragraph.FieldReferences.ToArray();
+            fields[0] = unknown ? fields[0] with { Kind = DocxFieldKind.Other }
+                : fields[0] with { Placeholder = "Unowned counter result" };
+            source = WithNoteMathStaticStory(source, footer, paragraph with { FieldReferences = fields });
+            var notes = CreatePageCounterLayout(source).Pages.SelectMany(page => page.PlacedRelatedStories)
+                .Where(note => note.StoryLayout.Story.Id == "37").ToArray();
+            TestAssert.True(notes.Length > 0 && notes.All(note => !note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
+                "Actual page inputs cannot admit unknown or inconsistent static field owners.");
+        }
+    }
+
+    private static DocxParagraph ReadNoteMathStaticCounters(OoxPdfDocxMarkupMode mode, bool complex) =>
+        ReadMutation("CompositionProbes/mixed-note-endnote-table", mode, false, false, (xml, w, _) =>
+        {
+            var paragraph = xml.Descendants(w + "body").Elements(w + "p").First();
+            paragraph.RemoveNodes();
+            paragraph.Add(new XElement(w + "pPr", new XElement(w + "spacing", new XAttribute(w + "after", "0"))));
+            XElement Run(string text) => new(w + "r", new XElement(w + "rPr",
+                new XElement(w + "rFonts", new XAttribute(w + "ascii", "Calibri"), new XAttribute(w + "hAnsi", "Calibri")),
+                new XElement(w + "sz", new XAttribute(w + "val", "24"))),
+                new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
+            void Field(string instruction)
+            {
+                if (!complex) paragraph.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", instruction), Run("9")));
+                else paragraph.Add(new XElement(w + "r", new XElement(w + "fldChar", new XAttribute(w + "fldCharType", "begin"))),
+                    new XElement(w + "r", new XElement(w + "instrText", " " + instruction + " ")),
+                    new XElement(w + "r", new XElement(w + "fldChar", new XAttribute(w + "fldCharType", "separate"))), Run("9"),
+                    new XElement(w + "r", new XElement(w + "fldChar", new XAttribute(w + "fldCharType", "end"))));
+            }
+            paragraph.Add(Run("Public margin story ")); Field("PAGE"); paragraph.Add(Run(" of ")); Field("NUMPAGES");
+        }).Paragraphs.First();
 
     private static DocxParagraph PlainNoteMathStaticParagraph() =>
         DocxTests.CreateDocxLayoutParagraph("Public margin story", 12d, 14d) with { LineSpacingPoints = null };

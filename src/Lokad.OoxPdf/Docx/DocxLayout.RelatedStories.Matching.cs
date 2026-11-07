@@ -382,12 +382,12 @@ internal sealed partial class DocxLayoutEngine
             ? Math.Max(0d, paragraph.EffectiveProperties.SpacingAfterPoints) +
                 DocxInlineLineGeometry.ExtraBelowTextFrame(line) : 0d;
 
-    private static bool IsPlainStaticParagraph(DocxParagraph paragraph) =>
-        paragraph.Alignment == DocxTextAlignment.Left && HasNaturalStaticParagraphContent(paragraph);
+    private static bool IsPlainStaticParagraph(DocxParagraph paragraph, bool hasPageInputs) =>
+        paragraph.Alignment == DocxTextAlignment.Left && HasNaturalStaticParagraphContent(paragraph, hasPageInputs);
 
-    private static bool HasNaturalStaticParagraphContent(DocxParagraph paragraph) =>
-        DocxPlainBodyFrame.HasPlainTextContent(paragraph) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
-        paragraph.InlineReferences.Count == 0 && paragraph.Runs.All(run => run.FieldKind is null);
+    private static bool HasNaturalStaticParagraphContent(DocxParagraph paragraph, bool hasPageInputs) =>
+        DocxPlainBodyFrame.HasPlainTextContent(paragraph, hasPageInputs) && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) &&
+        paragraph.InlineReferences.Count == 0 && (hasPageInputs || paragraph.Runs.All(run => run.FieldKind is null));
 
     private static bool HasPlainStaticNoteStories(DocxDocument document, DocxLayoutPage page,
         [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken) =>
@@ -397,7 +397,8 @@ internal sealed partial class DocxLayoutEngine
     // Static story ownership is independent of body paragraph contents. Notes
     // still require complete numeric flow and an admitted measured page frame.
     private static bool HasNaturalStaticNoteStories(DocxDocument document, DocxLayoutPage page,
-        [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
+        [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken,
+        bool hasPageInputs = false)
     {
         if (printScale != 1d || measurer is not IDocxStaticTextMetricsProvider) return false;
         DocxPageSettings settings = page.PageSettings;
@@ -411,7 +412,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (DocxParagraph paragraph in paragraphs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!IsPlainStaticParagraph(paragraph)) return false;
+            if (!IsPlainStaticParagraph(paragraph, hasPageInputs)) return false;
         }
         var elements = settings.HeaderBodyElementsByType.Values.SelectMany(v => v)
             .Concat(settings.FooterBodyElementsByType.Values.SelectMany(v => v));
@@ -419,7 +420,7 @@ internal sealed partial class DocxLayoutEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (element is not DocxParagraphElement { Revisions.Count: 0, Paragraph: var paragraph } ||
-                !IsPlainStaticParagraph(paragraph)) return false;
+                !IsPlainStaticParagraph(paragraph, hasPageInputs)) return false;
         }
         return true;
     }

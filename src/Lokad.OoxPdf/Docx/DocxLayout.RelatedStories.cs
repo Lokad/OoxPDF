@@ -50,7 +50,7 @@ internal sealed partial class DocxLayoutEngine
         bool HasIndependentEndnoteFrame(DocxLayoutPage page, int pageNumber, int pageCount)
         {
             if (DocxPlainBodyFrame.HasNoStaticStories(document)) return true;
-            if (!HasNaturalStaticNoteStories(document, page, separatorMeasurer, printScale, cancellationToken) ||
+            if (!HasNaturalStaticNoteStories(document, page, separatorMeasurer, printScale, cancellationToken, hasPageInputs: true) ||
                 headerKeepOut is null || footerKeepOut is null) return false;
             // These cached edges use the same selected section-relative story
             // and coordinates as placement. A complete group needs only this

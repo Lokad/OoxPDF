@@ -149,8 +149,9 @@ internal static class DocxPlainBodyFrame
 
     // Navigation ranges do not change the flow frame. Their run formatting is
     // checked below; link and bookmark destinations follow the placed content.
-    internal static bool HasPlainTextContent(DocxParagraph p) =>
-        p.FieldReferences.Count == 0 && HasPlainTextProperties(p);
+    internal static bool HasPlainTextContent(DocxParagraph p, bool hasPageInputs = false) =>
+        (hasPageInputs ? DocxInlineContent.HasCounterFieldResults(p.FieldReferences, p.Runs)
+            : p.FieldReferences.Count == 0) && HasPlainTextProperties(p);
 
     private static bool HasPlainTextProperties(DocxParagraph p, bool allowImages = false) =>
         (allowImages || p.Images.Count == 0) && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
