@@ -1,4 +1,27 @@
 {
+  "font-canonical-names": [
+    "FontCanonical",
+    "FontFamilyAliases",
+    "FontProgramLoader",
+    "FontLeases",
+    "FontDiscoveryAsyncShortReadsPreserveSfntAndCollectionMetadata",
+    "FontDiscoveryAsyncConcurrentInitializationPublishesOneMetadataSnapshot",
+    "FontDiscoveryMemoryBuffersStayFundedThroughHeaderParsing",
+    "FontDiscoveryMemoryPublicRefusalAndCancellationPreserveDestinations",
+    "MemoryBudgetFontProgramsFundPrivateCopiesAndSelectedCollectionFaces",
+    "MemoryBudgetFontProgramRefusalIsTerminalAcrossPublicConverters",
+    "MemoryBudgetFontCharacterMaps",
+    "MemoryBudgetKerning",
+    "MemoryAdmissionCoversRenderingStagingAndEmission",
+    "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
+    "MemoryAdmissionSharedCapacityRefusesConcurrentConversionAndRefunds",
+    "SyntheticFontLoadsWithExpectedIdentity",
+    "CollectionFacesKeepDistinctIdentities",
+    "RejectsTruncatedTableDirectory",
+    "RejectsWrappingTableOffsets",
+    "RejectsDuplicateTableTags",
+    "OpenTypeFontLoadObservesCancelledToken"
+  ],
   "docx-math-comment-ranges": [
     "DocxMathComments",
     "DocxMathCommentBoundaries",

@@ -1057,16 +1057,17 @@ internal sealed partial class OpenTypeFont
     }
 
     private static string ReadFamilyName(byte[] bytes, Dictionary<string, TableRecord> tables)
-        => ReadFamilyNames(bytes, tables)[0];
+        => ReadFamilyNames(bytes, tables, includeAliases: false)[0];
 
-    private static IReadOnlyList<string> ReadFamilyNames(byte[] bytes, Dictionary<string, TableRecord> tables)
+    private static IReadOnlyList<string> ReadFamilyNames(byte[] bytes, Dictionary<string, TableRecord> tables,
+        bool includeAliases = true)
     {
         TableRecord name = Required(tables, "name");
         ushort count = U16(bytes, name.Offset + 2);
         ushort stringOffset = U16(bytes, name.Offset + 4);
         string? fallback = null;
         string? canonical = null;
-        var names = new List<string>();
+        List<string>? names = includeAliases ? new() : null;
 
         for (int i = 0; i < count; i++)
         {
@@ -1081,18 +1082,24 @@ internal sealed partial class OpenTypeFont
             }
 
             int valueOffset = name.Offset + stringOffset + offset;
+            // Both callers validate every family record. A private face only
+            // needs its first canonical/fallback name; discovery owns aliases.
+            ReadOnlySpan<byte> encoded = bytes.AsSpan(valueOffset, length);
+            if (!includeAliases && (canonical is not null || platform != 3 && fallback is not null)) continue;
             string value = platform == 3
-                ? Encoding.BigEndianUnicode.GetString(bytes, valueOffset, length)
-                : Encoding.ASCII.GetString(bytes, valueOffset, length);
+                ? Encoding.BigEndianUnicode.GetString(encoded)
+                : Encoding.ASCII.GetString(encoded);
             value = value.TrimEnd('\0');
             if (platform == 3) { canonical ??= value; }
             else { fallback ??= value; }
-            if (platform == 3 && !string.IsNullOrWhiteSpace(value) && !names.Contains(value, StringComparer.OrdinalIgnoreCase)) { names.Add(value); }
+            if (names is not null && platform == 3 && !string.IsNullOrWhiteSpace(value) &&
+                !names.Contains(value, StringComparer.OrdinalIgnoreCase)) { names.Add(value); }
         }
 
         // Keep the existing canonical name and catalog ordering. Other language
         // records are lookup aliases for that same program/face, not extra faces.
         canonical ??= fallback ?? "Unknown";
+        if (names is null) return [canonical];
         names.RemoveAll(name => string.Equals(name, canonical, StringComparison.OrdinalIgnoreCase));
         names.Insert(0, canonical);
         return names.ToArray();
