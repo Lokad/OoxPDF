@@ -369,11 +369,14 @@ internal static partial class DocxMathLayout
         runs.Any(source => source.Run.Text.Text.Length != 0 && source.Run.NormalText) &&
             (GetFraction(equation) is not null || GetStructuredRow(equation, token)?.Parts.Any(part => part.Structure is DocxMathFraction) == true);
 
-    private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation)
+    private static DocxMathNode? GetSingleSupportedChild(DocxEquation equation) =>
+        GetSingleSupportedChild(equation.Content);
+
+    private static DocxMathNode? GetSingleSupportedChild(DocxMathRow source)
     {
         // Transparent source rows retain annotation boundaries. A standalone
         // control keeps its measured owner through those rows just like literals.
-        DocxMathNode node = equation.Content;
+        DocxMathNode node = source;
         while (node is DocxMathRow row && row.HasSupportedProperties && row.Children.Count == 1)
             node = row.Children[0];
         return node is DocxMathRow ? null : node;

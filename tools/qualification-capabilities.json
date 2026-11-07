@@ -1,5 +1,14 @@
 {
   "docx-math-revision-boundaries": [
+    "PortableRenderingEmptyScripts",
+    "PortableRenderingControlRevisions",
+    "PortableRenderingCompoundRevisions",
+    "PortableRenderingMatrixCellRevisions",
+    "PortableRenderingFractionScriptArguments",
+    "PortableRenderingMixedControlPlacement",
+    "PortableRenderingMixedControlsKeepContentRulesAndNeutralRevisionInk",
+    "PortableRenderingNestedMetricControls",
+    "PortableRenderingGlyphlessFractionArguments",
     "DocxMathRevisionBoundaries",
     "DocxInnerMathBookmarks",
     "DocxMathEditingMarkers",

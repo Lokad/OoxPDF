@@ -9,8 +9,7 @@ internal static partial class DocxMathLayout
         GetScriptArgument(equation.Content);
 
     private static DocxMathScripts? GetScriptArgument(DocxMathRow argument) =>
-        argument.HasSupportedProperties && argument.Children.Count == 1
-            ? GetSupportedScripts(argument.Children[0]) : null;
+        GetSupportedScripts(GetSingleSupportedChild(argument));
 
     private static DocxMathScripts? GetSupportedScripts(DocxMathNode? node) =>
         node is DocxMathScripts { HasUnsupportedProperties: false } scripts &&
