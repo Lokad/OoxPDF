@@ -144,6 +144,7 @@
 - Font programs use explicit immutable leases and optional host-funded bounded
   caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
   font acquisition before synchronous measurement and painting.
+  Private character/advance maps now request shared-memory admission before expansion.
 - Awaits package, staging and PDF output I/O; synchronous calls share that path.
   .NET 10 stages seekable input to keep BCL ZIP reads off caller streams.
 - Adds host-selected temporary storage. Embedded streams no longer create implicit
