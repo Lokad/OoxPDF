@@ -16592,6 +16592,7 @@
   "docx-mixed-picture-ranges": [
     "DocxMixedPictureRangesIncludePaintAcrossContainersAndPresets",
     "DocxNoteCellPictureRangesFollowExistingPaintAndTargets",
+    "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks",
     "DocxMixedPictureRangesKeepDecodeRotationClipAndChildTargetFallbacks",
     "DocxPictureOnlySourceRangesRetainUnlinkedFallback",
     "PortableRenderingInlinePictureLinksFollowVisibleFrames",

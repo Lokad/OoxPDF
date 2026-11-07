@@ -148,6 +148,31 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string variant in new[] { "clip", "merge" })
+        {
+            var renderer = PictureRangeRenderer(mode);
+            var control = renderer.RenderPagesAsync(ReadPictureRange(kind, mode, 18, includePicture: false, variant), null, default)
+                .ToBlockingEnumerable().ToArray();
+            var source = ReadPictureRange(kind, mode, 18, includePicture: true, variant);
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(control.Length, pages.Length);
+            TestAssert.Equal(1, pages.Sum(page => page.Images.Count));
+            for (int index = 0; index < pages.Length; index++)
+            {
+                TestAssert.Equal(control[index].Content, pages[index].Content);
+                TestAssert.True(control[index].Annotations.SequenceEqual(pages[index].Annotations),
+                    "An unresolved or clipped note-cell owner retains its prior link bounds: " + kind + "/" + mode + "/" + variant);
+            }
+            using var canceled = new CancellationTokenSource(); canceled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, canceled.Token)
+                .ToBlockingEnumerable().ToArray());
+        }
+    }
+
     private static DocxRenderer PictureRangeRenderer(OoxPdfDocxMarkupMode mode) =>
         new(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, mode == OoxPdfDocxMarkupMode.Final
             ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -187,6 +212,21 @@ internal static partial class DocxInlineCompositionTests
                     equation.ReplaceWith(link);
                     if (includePicture) { picture.Remove(); link.Add(picture); }
                     link.Add(equation);
+                }
+                if (note && variant == "clip")
+                {
+                    var row = paragraph.Ancestors(w + "tr").Single();
+                    var properties = row.Element(w + "trPr");
+                    if (properties is null) { properties = new XElement(w + "trPr"); row.AddFirst(properties); }
+                    properties.Elements(w + "trHeight").Remove();
+                    properties.Add(new XElement(w + "trHeight", new XAttribute(w + "val", "20"), new XAttribute(w + "hRule", "exact")));
+                }
+                if (note && variant == "merge")
+                {
+                    var cell = paragraph.Ancestors(w + "tc").Single();
+                    var properties = cell.Element(w + "tcPr");
+                    if (properties is null) { properties = new XElement(w + "tcPr"); cell.AddFirst(properties); }
+                    properties.Add(new XElement(w + "vMerge", new XAttribute(w + "val", "restart")));
                 }
                 if (container == "cell") paragraph.ReplaceWith(new XElement(w + "tbl",
                     new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "8640"))),
