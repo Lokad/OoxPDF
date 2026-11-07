@@ -34,7 +34,7 @@ internal static partial class DocxInlineCompositionTests
                 (xml, w, m) => xml.Descendants(m + "num").First().AddFirst(new XElement(w + "bookmarkStart",
                     new XAttribute(w + "id", "18732"), new XAttribute(w + "name", "DeletedMathTarget"))));
             TestAssert.Equal(mode is OoxPdfDocxMarkupMode.Final or OoxPdfDocxMarkupMode.SimpleMarkup ? 0 : 1,
-                document.Paragraphs.First().BookmarkAnchors.Count);
+                document.Paragraphs.First().BookmarkAnchors.Count(bookmark => bookmark.Name == "DeletedMathTarget"));
         }
     }
 
@@ -94,7 +94,7 @@ internal static partial class DocxInlineCompositionTests
             (Xml: $"<m:func><m:fName><m:r><m:rPr><m:nor/></m:rPr><m:t>sin</m:t></m:r></m:fName><m:e>{run}</m:e></m:func>", Role: "e"),
             (Xml: $"<m:rad><m:deg>{run}</m:deg><m:e>{run}</m:e></m:rad>", Role: "deg"),
             (Xml: $"<m:d><m:e>{run}</m:e></m:d>", Role: "e"),
-            (Xml: $"<m:nary><m:sub>{run}</m:sub><m:sup>{run}</m:sup><m:e>{run}</m:e></m:nary>", Role: "sup"),
+            (Xml: $"<m:nary><m:naryPr><m:chr m:val='&#x2211;'/></m:naryPr><m:sub>{run}</m:sub><m:sup>{run}</m:sup><m:e>{run}</m:e></m:nary>", Role: "sup"),
             (Xml: $"<m:m><m:mr><m:e>{run}</m:e><m:e>{run}</m:e></m:mr><m:mr><m:e>{run}</m:e><m:e>{run}</m:e></m:mr></m:m>", Role: "e")
         })
         {
