@@ -1165,6 +1165,9 @@ TestAssert.True(layoutSnapshot.Pages.Sum(page => page.PlacedRelatedStoryCount) =
             RelatedStories = [endnoteStory]
         };
 
+        document = document with { Settings = document.Settings with { EndnoteReferenceSettings =
+            document.Settings.EndnoteReferenceSettings with { PositionValue = "sectEnd" } } };
+
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None));
         int secondSectionPageIndex = snapshot.Pages
             .Select((page, pageIndex) => (page, pageIndex))
