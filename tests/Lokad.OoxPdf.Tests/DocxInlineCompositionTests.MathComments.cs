@@ -51,6 +51,39 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxMathCommentsRetainExistingCellStoryPlacement()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var direct = renderer.RenderPagesAsync(Read(false), null, default).ToBlockingEnumerable().ToArray();
+            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+            var inside = renderer.RenderPagesAsync(Read(true), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "A supported comment/formula combination survives its existing cell owner.");
+            TestAssert.Equal(direct.Length, inside.Length);
+            for (int page = 0; page < direct.Length; page++)
+            {
+                TestAssert.Equal(direct[page].Content, inside[page].Content);
+                TestAssert.Equal(direct[page].Fonts.Count, inside[page].Fonts.Count);
+                TestAssert.Equal(direct[page].Annotations.Count, inside[page].Annotations.Count);
+            }
+
+            DocxDocument Read(bool inner) => ReadMutation("CompositionProbes/math-comment-formula-cell", mode,
+                false, false, (xml, w, m) =>
+                {
+                    if (!inner) return;
+                    var start = xml.Descendants(w + "commentRangeStart").Single();
+                    var end = xml.Descendants(w + "commentRangeEnd").Single();
+                    start.Remove(); end.Remove();
+                    var math = xml.Descendants(m + "oMath").First();
+                    math.AddFirst(start); math.Add(end);
+                });
+        }
+    }
+
     private static DocxDocument ReadMathCommentRange(OoxPdfDocxMarkupMode mode, string scope) =>
         ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
         {
