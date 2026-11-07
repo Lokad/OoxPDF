@@ -1233,14 +1233,7 @@ internal static class FontTests
 
     public static void PdfEmbeddedFontSubsetsWithDifferentCodepointsDoNotShareResourceKey()
     {
-        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
-        string arial = Path.Combine(fontsDirectory, "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c), CancellationToken.None);
 
@@ -1249,14 +1242,7 @@ internal static class FontTests
 
     public static void PdfEmbeddedFontSubsetsWithSameCodepointsShareResourceKey()
     {
-        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
-        string arial = Path.Combine(fontsDirectory, "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "ABCDEF".Select(c => (int)c), CancellationToken.None);
 
@@ -1304,14 +1290,7 @@ internal static class FontTests
 
     public static void PdfEmbeddedFontSubsetNamesAreDistinctAndDeterministic()
     {
-        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
-        string arial = Path.Combine(fontsDirectory, "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
         PdfEmbeddedFont first = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont second = PdfEmbeddedFont.Create(font, "XYZ".Select(c => (int)c), CancellationToken.None);
         PdfEmbeddedFont repeat = PdfEmbeddedFont.Create(font, "ABC".Select(c => (int)c), CancellationToken.None);

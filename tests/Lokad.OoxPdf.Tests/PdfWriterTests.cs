@@ -506,13 +506,7 @@ internal static partial class PdfWriterTests
 
     public static void WritesFontFile2WithDecodedLength()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c), CancellationToken.None);
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
 
@@ -524,13 +518,7 @@ internal static partial class PdfWriterTests
 
     public static void WritesCMapBatchesWithinOneHundredMappings()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
-
-        OpenTypeFont font = OpenTypeFont.Load(File.ReadAllBytes(arial));
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
         int[] codePoints = Enumerable.Range(0x20, 300).ToArray();
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, codePoints, CancellationToken.None);
         var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
