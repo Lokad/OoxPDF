@@ -8,6 +8,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string? header in new string?[] { null, "", "Public header." })
         {
             var renderer = PictureRangeRenderer(mode);
             var literal = renderer.RenderPagesAsync(ReadContinuedCounter(null), null, default).ToBlockingEnumerable().ToArray();
@@ -21,7 +22,7 @@ internal static partial class DocxInlineCompositionTests
                     .Select(g => (g.Text, g.X, g.Y, g.Size)).ToArray();
                 var b = DocxCommentsTests.ReadEmbeddedGlyphTextShows(counter[index], usePageCoordinates: true)
                     .Select(g => (g.Text, g.X, g.Y, g.Size)).ToArray();
-                TestAssert.True(a.SequenceEqual(b), "Reference-owned PAGE preserves literal continuation glyphs and page allocation: " + mode);
+                TestAssert.True(a.SequenceEqual(b), "Reference-owned PAGE preserves literal continuation glyphs and page allocation: " + mode + "/" + header);
                 TestAssert.True(literal[index].Annotations.SequenceEqual(counter[index].Annotations),
                     "Counter binding preserves the existing note destinations and hit areas.");
             }
@@ -34,7 +35,7 @@ internal static partial class DocxInlineCompositionTests
                     foreach (var element in note.Elements().Where(e => !ReferenceEquals(e, first)).ToArray()) element.Remove();
                     first.Descendants(w + "t").First().Value = " Public continued note " +
                         string.Join(" ", Enumerable.Range(0, 900).Select(n => "item" + n.ToString("D3", System.Globalization.CultureInfo.InvariantCulture)));
-                });
+                }) with { HeaderParagraphs = header is null ? [] : [DocxTests.CreateDocxLayoutParagraph(header, 12d, 14d)] };
         }
     }
 

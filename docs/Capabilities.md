@@ -584,7 +584,8 @@ Approximate or restricted:
   notes is measured with the finalized count through the bounded count retry.
   Endnote PAGE is measured with its rendered reference page for existing plain
   paragraph flow, including continuation, and complete document-end groups that
-  pass the source/frame/fit proof. Unrendered references and other unqualified
+  pass the source/frame/fit proof. Empty or ordinary headers preserve the binding
+  for admitted plain flow. Unrendered references and other unqualified
   owners retain their fallback. Mixed/unfit table rows, section-end and other
   unqualified note PAGE values remain approximate; full field parity is not promised.
   Highlighting and run shading retain these text metrics while painting their

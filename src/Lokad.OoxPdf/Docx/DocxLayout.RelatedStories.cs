@@ -248,7 +248,7 @@ internal sealed partial class DocxLayoutEngine
                 var documentEndStories = documentEndReferences.Select(story => story.StoryLayout).ToList();
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
-                if (CanUseUnscaledEndnoteParagraphBoundaries(document, activePage, documentEndSeparatorLayout, printScale) &&
+                if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                     documentEndStories.Any(story => !story.HasResolvedCounterInputs))
                 {
                     // Earlier section-end placement can have inserted pages.
