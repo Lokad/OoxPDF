@@ -11,9 +11,9 @@ internal static partial class DocxInlineCompositionTests
         foreach (bool narrow in new[] { false, true })
         {
             var renderer = PictureRangeRenderer(mode);
-            var literal = renderer.RenderPagesAsync(ReadNoteCounter("endnote", mode, null, "2", narrow), null, default)
+            var literal = renderer.RenderPagesAsync(ReadNoteCounter("endnote", mode, null, "1", narrow), null, default)
                 .ToBlockingEnumerable().ToArray();
-            var counter = renderer.RenderPagesAsync(ReadNoteCounter("endnote", mode, "PAGE", "2", narrow), null, default)
+            var counter = renderer.RenderPagesAsync(ReadNoteCounter("endnote", mode, "PAGE", "7", narrow), null, default)
                 .ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, counter.Length);
             TestAssert.Equal(literal.Length, counter.Length);
@@ -29,24 +29,24 @@ internal static partial class DocxInlineCompositionTests
                 if (first.Images.Count != 0) TestAssert.Equal(ReadPictureRangeFrame(first), ReadPictureRangeFrame(second));
                 TestAssert.True(first.Annotations.SequenceEqual(second.Annotations), "Placement-bound fields preserve note targets and hit areas.");
             }
-            TestAssert.Contains("Count 2", string.Concat(counter.Select(DocxPageFootnoteNumberingTests.DecodeText)));
+            TestAssert.Contains("Count 1", string.Concat(counter.Select(DocxPageFootnoteNumberingTests.DecodeText)));
         }
     }
 
-    public static void DocxFittingEndnotePageMeasurementUsesActualTwoDigitPage()
+    public static void DocxFittingEndnotePageMeasurementUsesTwoDigitReferencePage()
     {
         var source = ReadNoteCounter("endnote", OoxPdfDocxMarkupMode.Final, "PAGE", "1", narrow: true);
-        source = source with { BodyElements = source.BodyElements.Concat(Enumerable.Range(0, 10).SelectMany(_ =>
-            new DocxBodyElement[] { new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null),
-                new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public later page", 12d, 14d)) })).ToArray() };
+        source = source with { BodyElements = Enumerable.Range(0, 11).SelectMany(_ =>
+            new DocxBodyElement[] { new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public earlier page", 12d, 14d)),
+                new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null) }).Concat(source.BodyElements).ToArray() };
         var layout = CreatePageCounterLayout(source);
-        TestAssert.Equal(12, layout.Pages.Count);
+        TestAssert.Equal(13, layout.Pages.Count);
         var sourceLayout = layout.RelatedStories.Single(s => s.Story.Id == "37");
         TestAssert.True(!sourceLayout.HasResolvedCounterInputs, "Placement does not publish a page-bound result into the width-only memo.");
         var placed = layout.Pages.SelectMany(p => p.PlacedRelatedStories).Single(s => s.StoryLayout.Story.Id == "37");
-        TestAssert.True(layout.Pages[11].PlacedRelatedStories.Contains(placed), "The complete note is placed on actual page twelve.");
+        TestAssert.True(layout.Pages[12].PlacedRelatedStories.Contains(placed), "The complete note is on physical page thirteen, after reference page twelve.");
         TestAssert.True(placed.UsesCompleteDocumentEndnoteFlow && placed.StoryLayout.HasResolvedCounterInputs,
-            "Only the complete fitting placement owns its actual page binding.");
+            "Only the complete fitting placement owns its rendered reference binding.");
         TestAssert.True(placed.StoryLayout.TextLines.Count >= 3, "The narrow note exercises measured wrapping.");
         TestAssert.Contains("12", string.Concat(placed.StoryLayout.TextLines.Select(line => line.Text)));
         TestAssert.True(placed.StoryLayout.TextLines.All(line => !line.Text.Contains("{PAGE}", StringComparison.Ordinal)),

@@ -582,11 +582,11 @@ Approximate or restricted:
   slots and complete endnote-block boundaries; the measured run formatting remains.
   Supported numeric field results share that spacing rule. NUMPAGES in normal
   notes is measured with the finalized count through the bounded count retry.
-  PAGE is measured with the actual page for complete document-end groups that
+  Endnote PAGE is measured with its rendered reference page for complete document-end groups that
   pass the existing source/frame/fit proof. Continued and other unqualified
   placement-dependent notes retain their layout fallback.
-  Normal-note PAGE values still differ from Word in retained controls; correcting
-  measured placement does not establish Office field-value parity.
+  Unrendered references retain the unresolved fallback. Continued, section-end and
+  other unqualified note PAGE values remain approximate; full field parity is not promised.
   Highlighting and run shading retain these text metrics while painting their
   backgrounds; font-changing and unsupported layout combinations keep fallbacks.
   Automatic text and equation colors adapt to solid paragraph/cell/run shading;

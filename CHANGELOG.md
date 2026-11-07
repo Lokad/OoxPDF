@@ -11,7 +11,7 @@
   Hyperlink metadata preserves complete endnote placement and qualified minimum
   cell spacing.
   NUMPAGES in normal notes uses the finalized count for measurement and spacing;
-  PAGE uses its actual placement page for complete fitting document-end groups;
+  Endnote PAGE uses its rendered reference page for complete fitting document-end groups;
   continued and other unqualified placement-dependent counters retain their fallback.
 
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures

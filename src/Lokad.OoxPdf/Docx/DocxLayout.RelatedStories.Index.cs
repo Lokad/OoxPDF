@@ -91,7 +91,7 @@ internal sealed partial class DocxLayoutEngine
                 (!requireOffset || (record.SegmentStart <= textOffsetInRun && textOffsetInRun < record.SegmentEnd)));
         }
 
-        public int FindFirstPageWithReference(DocxInlineReferenceLocation location)
+        public int FindFirstPageWithReference(DocxInlineReferenceLocation location, bool requireRendered = false)
         {
             if (sortedBlocksByPage.Length == 0)
             {
@@ -101,7 +101,9 @@ internal sealed partial class DocxLayoutEngine
             int sourceRunIndex = location.Reference.SourceRunIndex;
             if (sourceRunIndex < 0 || !IsRunRenderedAnywhere(location, sourceRunIndex))
             {
-                return 0;
+                // Legacy placement can fall back to the first page. A field
+                // binding needs an observed reference rather than that guess.
+                return requireRendered ? -1 : 0;
             }
 
             int textOffsetInRun = location.Reference.TextOffsetInRun;

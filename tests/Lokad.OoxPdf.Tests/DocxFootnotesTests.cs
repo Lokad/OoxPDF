@@ -6710,20 +6710,25 @@ internal static class DocxFootnotesTests
         TestAssert.True(index.IsReferenceRenderedOnPage(0, location), "Null-tolerance line must match any paragraph of its block.");
         TestAssert.True(!index.IsReferenceRenderedOnPage(1, location), "Identity mismatch and block mismatch must reject page 1.");
         TestAssert.Equal(0, index.FindFirstPageWithReference(location));
+        TestAssert.Equal(0, index.FindFirstPageWithReference(location, requireRendered: true));
 
         var block1 = new DocxLayoutEngine.DocxInlineReferenceLocation(1, source, reference with { TextOffsetInRun = 0 });
         TestAssert.True(!index.IsReferenceRenderedOnPage(0, block1), "Block mismatch must reject page 0.");
         TestAssert.True(index.IsReferenceRenderedOnPage(1, block1), "Null-tolerance line must match block 1 on page 1.");
+        TestAssert.Equal(1, index.FindFirstPageWithReference(block1, requireRendered: true));
 
         var missingBlock = new DocxLayoutEngine.DocxInlineReferenceLocation(9, source, reference);
         TestAssert.True(index.IsReferenceRenderedOnPage(0, missingBlock), "Blocks rendered nowhere stay vacuously true (legacy).");
         TestAssert.True(index.IsReferenceRenderedOnPage(1, missingBlock), "Blocks rendered nowhere stay vacuously true (legacy).");
         TestAssert.Equal(0, index.FindFirstPageWithReference(missingBlock));
+        TestAssert.Equal(-1, index.FindFirstPageWithReference(missingBlock, requireRendered: true));
 
         var unrenderedRun = new DocxLayoutEngine.DocxInlineReferenceLocation(0, source, reference with { SourceRunIndex = 99 });
         TestAssert.True(index.IsReferenceRenderedOnPage(1, unrenderedRun), "Never-rendered runs stay vacuously true (legacy).");
+        TestAssert.Equal(-1, index.FindFirstPageWithReference(unrenderedRun, requireRendered: true));
         var negativeRun = new DocxLayoutEngine.DocxInlineReferenceLocation(0, source, reference with { SourceRunIndex = -1 });
         TestAssert.True(index.IsReferenceRenderedOnPage(1, negativeRun), "Negative runs stay vacuously true (legacy).");
+        TestAssert.Equal(-1, index.FindFirstPageWithReference(negativeRun, requireRendered: true));
 
         int[] page0Blocks = index.SortedBlocks(0);
         TestAssert.Equal(1, page0Blocks.Length);

@@ -396,7 +396,7 @@ internal sealed partial class DocxLayoutEngine
                 (DocxFieldText.GetDependencies(layout.Story.BodyElements, cancellationToken) & DocxCounterDependencies.PageNumber) == 0)
                 return layout;
             // This candidate is placement-local, never published in the width memo.
-            // Its caller must prove that the complete group stays on this page.
+            // Its caller proves the complete group and rendered reference page.
             return CreateRelatedStoryLayout(layout.Story, layout.StoryIndex, bodyWidth, textMeasurer,
                 defaultTabStopPoints, paragraphSpacingScale, pageNumber, knownPageCount, cancellationToken,
                 unscaledTextMeasurer, customNoteTargets?.GetValueOrDefault(layout.Story), mathEquations);

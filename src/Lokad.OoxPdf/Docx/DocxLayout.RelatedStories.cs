@@ -207,7 +207,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            List<DocxRelatedStoryLayout> documentEndStories = [];
+            List<DocxReferencedRelatedStoryLayout> documentEndReferences = [];
             if (documentEndLocations.Count > 0)
             {
                 Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> endnoteStoryByKey = CreateRelatedStoryLookup(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(outputPages[^1])));
@@ -216,7 +216,7 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken.ThrowIfCancellationRequested();
                     if (TryResolveReferencedRelatedStoryLayout(endnoteStoryByKey, location, out DocxRelatedStoryLayout? storyLayout))
                     {
-                        documentEndStories.Add(storyLayout);
+                        documentEndReferences.Add(new DocxReferencedRelatedStoryLayout(location, storyLayout));
                     }
                 }
             }
@@ -236,7 +236,7 @@ internal sealed partial class DocxLayoutEngine
 
             IReadOnlyList<DocxLayoutPage> AddDocumentEndnoteStories()
             {
-                if (documentEndStories.Count == 0)
+                if (documentEndReferences.Count == 0)
                 {
                     return outputPages;
                 }
@@ -245,15 +245,24 @@ internal sealed partial class DocxLayoutEngine
                 DocxLayoutPage activePage = documentEndPages[^1];
                 List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
                 int activePageIndex = documentEndPages.Count - 1;
+                var documentEndStories = documentEndReferences.Select(story => story.StoryLayout).ToList();
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
                 if (CanUseUnscaledEndnoteParagraphBoundaries(document, activePage, documentEndSeparatorLayout, printScale) &&
                     documentEndStories.Any(story => !story.HasResolvedCounterInputs))
                 {
-                    var boundStories = documentEndStories.Select(story =>
-                        bindRelatedStoryPage(story, ResolvePageNoteTextWidth(activePage), activePageIndex + 1)).ToList();
+                    // Earlier section-end placement can have inserted pages.
+                    // Endnote PAGE belongs to its rendered body reference,
+                    // independently of the later page carrying the note itself.
+                    endnoteIndex = RelatedStoryPageIndex.Build(documentEndPages, cancellationToken);
+                    var boundStories = documentEndReferences.Select(story =>
+                    {
+                        int referencePage = endnoteIndex.FindFirstPageWithReference(story.Location, requireRendered: true);
+                        return referencePage < 0 ? story.StoryLayout :
+                            bindRelatedStoryPage(story.StoryLayout, ResolvePageNoteTextWidth(activePage), referencePage + 1);
+                    }).ToList();
                     // A counter is measured before admission, not patched after
-                    // wrapping. Only a complete fitting group owns this page;
+                    // wrapping. Only a complete fitting group owns this binding;
                     // continued/unqualified sources keep their unresolved layout.
                     if (CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
                         documentEndSeparatorLayout, printScale, boundStories, cancellationToken))
