@@ -641,17 +641,18 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxRelatedStoryLayout> contentStories, double printScale)
     {
         double height = ResolveSizeDrivenSeparatorHeight(separator, page, measurer, contentStories);
-        // Endnote spacing is already source/default-normalized by the reader.
-        // Only the legacy footnote flow still carries a refundable latent charge.
+        // Registered endnotes own their measured source spacing. Default
+        // separators retain a legacy charge outside admitted paragraph flow.
         return CanUseNominalNoteSeparatorFlow(page, separator, printScale, contentStories)
             ? Math.Max(0d, height - ResolveLatentSeparatorSpacing(separator.Story)) : height;
     }
 
     private static double ResolveLatentSeparatorSpacing(DocxRelatedStory story) =>
-        story.Kind == DocxRelatedStoryKind.Endnote ? 0d : DocxDefaults.DefaultParagraphAfterSpacingPoints;
+        story.Kind == DocxRelatedStoryKind.Endnote && !story.IsSynthetic
+            ? 0d : DocxDefaults.DefaultParagraphAfterSpacingPoints;
 
     private static double ResolveEndnoteSeparatorAfterSpacing(DocxRelatedStoryLayout separator) =>
-        separator.Story.Kind == DocxRelatedStoryKind.Endnote && HasEmptyNoteSeparator(separator)
+        separator.Story is { Kind: DocxRelatedStoryKind.Endnote, IsSynthetic: false } && HasEmptyNoteSeparator(separator)
             ? Math.Max(0d, separator.TextLines[0].ParagraphAfterSpacing ?? 0d) : 0d;
 
     private static double ResolveParagraphBoundarySeparatorHeight(DocxRelatedStoryLayout separator,

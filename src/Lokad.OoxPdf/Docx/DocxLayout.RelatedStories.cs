@@ -558,15 +558,22 @@ internal sealed partial class DocxLayoutEngine
         int activePageIndex = sectionEndPageIndex;
         DocxLayoutPage activePage = outputPages[activePageIndex];
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
+        bool followsBodyParagraph = CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories, endnoteSeparatorLayout,
+            printScale, sectionEndStories.Select(story => story.StoryLayout).ToArray());
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
-            CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories, endnoteSeparatorLayout,
-                printScale, sectionEndStories.Select(story => story.StoryLayout).ToArray()) ? bodyBoundaryToNoteDesign : null, activePageIndex);
+            followsBodyParagraph ? bodyBoundaryToNoteDesign : null, activePageIndex);
         if (endnoteSeparatorLayout is not null && sectionEndStories.Count > 0)
         {
             // RV06 endnote probes: the separator space sits exactly one body pitch below
             // the body baseline, so no extra gap applies above the separator (the start-top
             // gap is added back); content keeps its gap below the separator.
-            (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, endnoteSeparatorLayout, sectionEndStories[0].Location.SourceBlockIndex, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer);
+            // The admitted paragraph boundary uses the normalized default source
+            // spacing. Unqualified stories retain their legacy separator frame.
+            double? separatorHeight = followsBodyParagraph
+                ? Math.Max(0d, ResolvePlacedStoryHeight(endnoteSeparatorLayout, activePage) -
+                    ResolveLatentSeparatorSpacing(endnoteSeparatorLayout.Story) * printScale) : null;
+            (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, endnoteSeparatorLayout, sectionEndStories[0].Location.SourceBlockIndex, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer,
+                placementHeightOverride: separatorHeight);
             activePlacedStories.Add(placedSeparator);
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             cursorTop = separatorBottom - FootnoteSeparatorGapPoints;
@@ -2525,11 +2532,12 @@ internal sealed partial class DocxLayoutEngine
             // Note-story placement/reserve heights need their own qualification;
             // keep their existing spacing fallback while body contributions improve.
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale, resolveContextualContributions: false);
-            if (story.Kind == DocxRelatedStoryKind.Footnote &&
+            if ((story.Kind == DocxRelatedStoryKind.Footnote || story.IsSynthetic) &&
                 story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator)
             {
-                // Preserve the separately qualified footnote fallback. Endnote
-                // paragraphs already carry authored or reader-normalized spacing.
+                // Keep the legacy frame for default separators until placement
+                // admits source-owned paragraph flow and refunds its latent space.
+                // Registered endnote paragraphs retain their authored spacing.
                 spacingProfile = spacingProfile with
                 {
                     ParagraphBeforeSpacing = 0d,

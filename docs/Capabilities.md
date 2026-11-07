@@ -533,7 +533,9 @@ Supported within the following constraints:
   Registered endnote separators retain paragraph spacing. Before-space moves the
   rule and content; after-space advances content below the rule, including empty
   continuation separators. Absent and unregistered separators share one reader-normalized default.
-  Exact line-height and rich separator layouts retain their existing fallbacks.
+  Exact line-height, rich separators and unqualified note frames retain their
+  existing fallbacks; default spacing normalization is applied through admitted
+  paragraph flow.
 - Simple/complex fields with stored results, including supported nested cached
   fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
   their stored results, including empty results; nested fields own their locks.
