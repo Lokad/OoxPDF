@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- DOCX: nonpainting runs no longer redirect bookmarks from inline equations to
+  later prose.
+
 - DOCX: inline page/column tokens inside table cells preserve equations, pictures
   and links. Preparation and layout consume the same source paragraphs; actual
   paragraph marks and standalone page-break flow retain their separate behavior.

@@ -431,6 +431,9 @@ layout and general OpenType shaping. Static fallback diagnostics are listed belo
 
 ## DOCX
 
+Bookmarks before inline equations retain their destinations across ordinary
+nonpainting runs; intervening pictures and text boxes keep their source boundaries.
+
 Inline page/column tokens inside cells leave supported paragraph content together,
 including equations, pictures and navigation. Actual paragraph boundaries remain
 present. Standalone page-break paragraphs keep their existing cell flow handling;

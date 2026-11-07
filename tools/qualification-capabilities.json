@@ -4443,7 +4443,11 @@
     "DocxBookmarkViewport",
     "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
     "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
-    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations"
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxFirstMathBookmarkKeepsItsBoundaryAcrossNonpaintingRuns",
+    "DocxFirstMathBookmarkDoesNotCrossPrefixPicturesOrBoxes",
+    "DocxNonpaintingRunsKeepPaintAndMathematicalLinkDestinations",
+    "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets"
   ],
   "docx-static-frame": [
     "DocxStaticHeader",
