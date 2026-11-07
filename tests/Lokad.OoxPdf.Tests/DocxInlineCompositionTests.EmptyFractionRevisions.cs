@@ -26,7 +26,8 @@ internal static partial class DocxInlineCompositionTests
             var paragraph = source.Paragraphs.First();
             var equation = paragraph.Equations.Single();
             TestAssert.True(DocxMathLayout.IsEmptyFraction(equation) && DocxMathLayout.TryGetRuns(equation, default, out var runs) && runs.Count == 0 &&
-                ReferenceEquals(DocxMathLayout.GetStandaloneControl(equation, default), equation.Content.Children.Single()) &&
+                DocxMathLayout.GetStandaloneControl(equation, default) is DocxMathFraction control &&
+                DocxMathLayout.GetControlSources(equation, default).Any(source => ReferenceEquals(source, control)) &&
                 DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default) &&
                 DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph),
                 "A glyphless fraction keeps its actual structural owner without inventing revised literal ink.");

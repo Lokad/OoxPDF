@@ -23,7 +23,8 @@ internal static partial class DocxInlineCompositionTests
             var equation = paragraph.Equations.Single();
             bool visible = profile == "combined-literal-del" && mode == OoxPdfDocxMarkupMode.AllMarkup;
             TestAssert.True(DocxMathLayout.IsEmptyScripts(equation, default) != visible &&
-                ReferenceEquals(DocxMathLayout.GetStandaloneControl(equation, default), equation.Content.Children.Single()) &&
+                DocxMathLayout.GetStandaloneControl(equation, default) is DocxMathScripts control &&
+                DocxMathLayout.GetControlSources(equation, default).Any(source => ReferenceEquals(source, control)) &&
                 DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default) &&
                 DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph) != visible &&
                 DocxInlineContent.TryGetEquationRevisionOwners(equation, default, out var owners) &&

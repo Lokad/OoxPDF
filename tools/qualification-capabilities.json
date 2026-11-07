@@ -1,5 +1,8 @@
 {
   "docx-math-revision-boundaries": [
+    "DocxInlineCompositionControlRevisions",
+    "DocxInlineCompositionEmptyScripts",
+    "DocxInlineCompositionEmptyFractionRevisionsKeepActualNeutralOwners",
     "PortableRenderingEmptyScripts",
     "PortableRenderingControlRevisions",
     "PortableRenderingCompoundRevisions",
