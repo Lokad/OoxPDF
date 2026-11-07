@@ -71,7 +71,7 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxNoteMathFieldsStaticEquationFallbackRequiresAvailableFittingFrames()
+    public static void DocxNoteMathFieldsStaticEquationPlacementRequiresAvailableCompleteFrames()
     {
         foreach (string position in new[] { "docEnd", "sectEnd" })
         foreach (bool footer in new[] { false, true })
@@ -95,8 +95,9 @@ internal static partial class DocxInlineCompositionTests
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default, mathEquations: math);
             var notes = layout.Pages.SelectMany(page => page.PlacedRelatedStories).Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                $"Static-equation typography keeps fallback while note counters use their rendered reference: {position}/{footer}/{standalone}/{variant}.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs &&
+                note.UsesCompleteDocumentEndnoteFlow == (variant == "tall" && position == "docEnd")),
+                $"Complete equation frames may intrude; missing/unsupported/out-of-page frames retain fallback: {position}/{footer}/{standalone}/{variant}.");
         }
     }
 

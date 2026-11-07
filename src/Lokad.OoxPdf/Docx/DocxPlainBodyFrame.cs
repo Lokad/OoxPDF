@@ -124,14 +124,16 @@ internal static class DocxPlainBodyFrame
         double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
         image.WidthPoints > 0d && image.HeightPoints > 0d;
 
-    internal static bool IsIndependentMarginImage(DocxInlineImageLayout image, DocxLayoutPage page,
-        DocxStoryKind? containingStory = null) =>
+    internal static bool HasCompleteImageFrame(DocxInlineImageLayout image, DocxLayoutPage page) =>
         IsPlainStaticImage(image.Image) &&
         double.IsFinite(image.X) && double.IsFinite(image.Y) &&
         double.IsFinite(image.Width) && double.IsFinite(image.Height) && image.Width > 0d && image.Height > 0d &&
-        image.X >= 0d && image.X + image.Width <= page.Width && image.Y >= 0d && image.Y + image.Height <= page.Height &&
-        ((containingStory ?? image.Story?.Kind) == DocxStoryKind.Header && image.Y >= page.Height - page.MarginTop ||
-         (containingStory ?? image.Story?.Kind) == DocxStoryKind.Footer && image.Y + image.Height <= page.MarginBottom);
+        image.X >= 0d && image.X + image.Width <= page.Width && image.Y >= 0d && image.Y + image.Height <= page.Height;
+
+    internal static bool IsIndependentMarginImage(DocxInlineImageLayout image, DocxLayoutPage page) =>
+        HasCompleteImageFrame(image, page) &&
+        (image.Story?.Kind == DocxStoryKind.Header && image.Y >= page.Height - page.MarginTop ||
+         image.Story?.Kind == DocxStoryKind.Footer && image.Y + image.Height <= page.MarginBottom);
 
     internal static bool IsEligible(DocxDocument document) =>
         HasPlainBody(document) && (HasNoStaticStories(document) || HasNoSelectableStaticStories(document));

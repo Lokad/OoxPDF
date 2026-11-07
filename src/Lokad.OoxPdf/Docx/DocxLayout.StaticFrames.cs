@@ -2,8 +2,8 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static bool HasIndependentStaticContent(DocxStaticStoryLayoutResult? story,
-        IReadOnlyList<DocxBodyElement> source, DocxLayoutPage page, DocxStoryKind owner, CancellationToken token)
+    private static bool HasCompleteStaticContent(DocxStaticStoryLayoutResult? story,
+        IReadOnlyList<DocxBodyElement> source, DocxLayoutPage page, double bottom, double top, CancellationToken token)
     {
         HashSet<DocxEquation>? remaining = null;
         foreach (var paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(source))
@@ -13,8 +13,11 @@ internal sealed partial class DocxLayoutEngine
             if (!(remaining ??= new(ReferenceEqualityComparer.Instance)).Add(equation)) return false;
         }
         if (story is null) return remaining is null;
-        if (story.InlineTextBoxes.Count != 0 ||
-            story.InlineImages.Any(image => !DocxPlainBodyFrame.IsIndependentMarginImage(image, page))) return false;
+        // Containers supply their existing measured block edges. Margin
+        // independence is a body-metrics policy, not a note-placement boundary.
+        if (!double.IsFinite(bottom) || !double.IsFinite(top) || bottom < 0d || top > page.Height || bottom > top ||
+            story.InlineTextBoxes.Count != 0 ||
+            story.InlineImages.Any(image => !DocxPlainBodyFrame.HasCompleteImageFrame(image, page))) return false;
         foreach (var line in story.TextLines)
             if (!Line(line, null)) return false;
         if (story.TableRows.Count != 0 &&
@@ -26,11 +29,11 @@ internal sealed partial class DocxLayoutEngine
             token.ThrowIfCancellationRequested();
             foreach (var segment in line.Segments)
                 if (segment.Width != 0d && !DocxTableCellClipGeometry.ContainsSegment(clip, segment)) return false;
+            if (!double.IsFinite(line.X) || !double.IsFinite(line.Width) || line.Width < 0d ||
+                line.X < 0d || line.X + line.Width > page.Width) return false;
             if (line.Math is null && line.InlineMath.Count == 0) return true;
-            if (!DocxInlineLineGeometry.TryGetPreparedMathBounds(line, out double bottom, out double top) ||
-                bottom < 0d || top > page.Height || !double.IsFinite(line.X) || !double.IsFinite(line.Width) ||
-                line.X < 0d || line.Width < 0d || line.X + line.Width > page.Width ||
-                !Vertical(bottom, top)) return false;
+            if (!DocxInlineLineGeometry.TryGetPreparedMathBounds(line, out double lineBottom, out double lineTop) ||
+                lineBottom < 0d || lineTop > page.Height) return false;
             if (line.Math is { } standalone && !Consume(standalone,
                 line.X + (line.IsInlineMath ? line.InlineMathOffsetX : 0d), line.MathScale, clip)) return false;
             foreach (var placement in line.InlineMath)
@@ -47,9 +50,6 @@ internal sealed partial class DocxLayoutEngine
                 remaining?.Remove(math.Equation) == true;
         }
 
-        bool Vertical(double bottom, double top) => owner == DocxStoryKind.Header && bottom >= page.Height - page.MarginTop ||
-            owner == DocxStoryKind.Footer && top <= page.MarginBottom;
-
         bool Rows(IReadOnlyList<DocxTableRowLayout> rows, DocxTableCellClipSnapshot? parent)
         {
             foreach (var row in rows)
@@ -60,7 +60,7 @@ internal sealed partial class DocxLayoutEngine
                     !double.IsFinite(row.Table.TableX) || !double.IsFinite(row.Table.ResolvedTableWidth) ||
                     row.Table.ResolvedTableWidth <= 0d || row.Table.TableX < 0d ||
                     row.Table.TableX + row.Table.ResolvedTableWidth > page.Width ||
-                    row.Y < 0d || row.Y + row.Height > page.Height || !Vertical(row.Y, row.Y + row.Height) ||
+                    row.Y < 0d || row.Y + row.Height > page.Height ||
                     !DocxTableCellClipGeometry.ContainsHorizontalRange(parent, row.Table.TableX, row.Table.ResolvedTableWidth) ||
                     !DocxTableCellClipGeometry.ContainsVerticalRange(parent, row.Y, row.Y + row.Height)) return false;
                 foreach (var cell in row.Cells)
@@ -69,7 +69,7 @@ internal sealed partial class DocxLayoutEngine
                     if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell || cell.InlineTextBoxes.Count != 0) return false;
                     var clip = DocxTableCellClipGeometry.Resolve(row, cell, parent);
                     foreach (var image in cell.InlineImages)
-                        if (!DocxPlainBodyFrame.IsIndependentMarginImage(image, page, owner) ||
+                        if (!DocxPlainBodyFrame.HasCompleteImageFrame(image, page) ||
                             !DocxTableCellClipGeometry.ContainsHorizontalRange(clip, image.X, image.Width) ||
                             !DocxTableCellClipGeometry.ContainsVerticalRange(clip, image.Y, image.Y + image.Height)) return false;
                     if (!Rows(cell.NestedRows, clip)) return false;

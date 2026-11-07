@@ -600,10 +600,12 @@ Approximate or restricted:
   ownership is independent of optional static-story typography corrections;
   unresolved references and unfit note owners retain their fallback.
   Complete fitting mixed groups also retain their equations
-  and counters alongside ordinary headers/footers measured wholly within their margins,
+  and counters alongside complete page-contained automatic header/footer frames,
   including complete simple tables, fully prepared equations, supported inline pictures
   and PAGE/NUMPAGES static fields with actual page inputs;
-  intrusive or unsupported static stories keep fallback. Unrendered references and other unqualified
+  with actual selected edges constraining available note space at unit scale.
+  Unsupported, clipped or unmeasured static stories keep placement fallback.
+  Unrendered references and other unqualified
   owners retain their fallback. Mixed/unfit table rows and other
   unqualified note PAGE values remain approximate; full field parity is not promised.
   Complete fitting section-end groups share separator and paragraph-boundary

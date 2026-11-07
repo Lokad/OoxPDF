@@ -20,12 +20,12 @@ internal sealed partial class DocxLayoutEngine
     private static bool CanUseFittingEndnoteBoundaries(DocxDocument document, DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,
-        bool hasIndependentStaticFrame)
+        bool hasCompleteStaticFrame, double frameBottom)
     {
         token.ThrowIfCancellationRequested();
-        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale, hasIndependentStaticFrame) ||
+        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale, hasCompleteStaticFrame) ||
             !HasNumericTrailingBodyAfterSpacing(page)) return false;
-        if (!HasCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, page.MarginBottom)) return false;
+        if (!HasCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, frameBottom)) return false;
         foreach (var story in stories)
         {
             token.ThrowIfCancellationRequested();
@@ -65,9 +65,9 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static bool CanUseUnscaledEndnoteParagraphBoundaries(DocxDocument document,
-        DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale, bool hasIndependentStaticFrame) =>
+        DocxLayoutPage page, DocxRelatedStoryLayout? separator, double printScale, bool hasCompleteStaticFrame) =>
         printScale == 1d && page.ColumnFrames.Count <= 1 &&
-        DocxPlainBodyFrame.HasKnownBodyFrame(document) && hasIndependentStaticFrame &&
+        DocxPlainBodyFrame.HasKnownBodyFrame(document) && hasCompleteStaticFrame &&
         HasEmptyNoteSeparator(separator);
 
     // Fitting-boundary collapse and complete-block admission use the same source

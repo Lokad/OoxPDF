@@ -323,7 +323,7 @@ internal sealed partial class DocxLayoutEngine
         var keepLookaheadYielded = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         var footnotePlacedLinesAtLastYield = new Dictionary<(DocxRelatedStoryKind Kind, string Id), int>();
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int, int), DocxStaticStoryLayoutResult?>();
-        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool IndependentContent)>();
+        var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool CompleteContent)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
         bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
@@ -2246,7 +2246,7 @@ internal sealed partial class DocxLayoutEngine
             double takeScale = paragraphSpacingScale;
             return (keepOutLayout - firstPinBaseline.Value * (1d - takeScale) - firstPinSourceOffset * takeScale) / takeScale;
         }
-        (double Body, double Note, double? Physical, bool IndependentContent) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
+        (double Body, double Note, double? Physical, bool CompleteContent) ResolveFooterBounds(DocxLayoutPage templatePage, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
             OoxConversionBudget.Current?.AdmitDocxLayoutPages(pageNumber);
@@ -2266,7 +2266,8 @@ internal sealed partial class DocxLayoutEngine
                 var footerSource = SelectStaticHeaderFooter(templatePage.PageSettings.FooterBodyElementsByType,
                     templatePage.PageSettings.FooterParagraphsByType, templatePage.PageSettings, pageNumber, templatePage.SectionFirstPageNumber);
                 bounds = (top, noteTop, footer?.PhysicalFooterFrameTop,
-                    HasIndependentStaticContent(footer, footerSource.BodyElements, templatePage, DocxStoryKind.Footer, cancellationToken));
+                    HasCompleteStaticContent(footer, footerSource.BodyElements, templatePage,
+                        ResolveFooterDistance(templatePage), top, cancellationToken));
                 continuationFooterTopByPage[key] = bounds;
             }
             return bounds;
@@ -2275,7 +2276,7 @@ internal sealed partial class DocxLayoutEngine
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Body);
         double ResolveNoteFooterKeepOut(DocxLayoutPage templatePage, int pageNumber, int pageCount) =>
             Math.Max(templatePage.MarginBottom, ResolveFooterBounds(templatePage, pageNumber, pageCount).Note);
-        bool HasIndependentEndnoteFrame(DocxLayoutPage page, int pageNumber, int pageCount)
+        bool HasCompleteEndnoteFrame(DocxLayoutPage page, int pageNumber, int pageCount)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var settings = page.PageSettings;
@@ -2290,13 +2291,12 @@ internal sealed partial class DocxLayoutEngine
                 !DocxPlainBodyFrame.HasPlainStaticSource(footer, footerDrawings, cancellationToken, mathEquations)) return false;
             if (header.Count == 0 && footer.Count == 0) return true;
             if (paragraphSpacingScale != 1d || textMeasurer is not IDocxStaticTextMetricsProvider) return false;
-            // Share selected source and occupied-picture rules with ordinary
-            // body layout. The footer cache retains only this proof bit, not a
-            // second story tree. All placement paths reuse the existing caches.
-            return ResolveHeaderKeepOut(page, pageNumber, pageCount) >= page.Height - page.MarginTop &&
-                ResolveFooterKeepOut(page, pageNumber, pageCount) <= page.MarginBottom &&
-                HasIndependentStaticContent(GetContinuationHeader(page, pageNumber, pageCount), header, page, DocxStoryKind.Header, cancellationToken) &&
-                ResolveFooterBounds(page, pageNumber, pageCount).IndependentContent;
+            // Selected complete source and page-contained occupied frames own
+            // note space. Body metrics keep their independent-margin policy.
+            // Reuse the footer proof bit and existing story caches.
+            return HasCompleteStaticContent(GetContinuationHeader(page, pageNumber, pageCount), header, page,
+                    ResolveHeaderKeepOut(page, pageNumber, pageCount), page.Height - ResolveHeaderDistance(page), cancellationToken) &&
+                ResolveFooterBounds(page, pageNumber, pageCount).CompleteContent;
         }
         double? MapBodyBoundaryToNoteDesign(DocxLayoutPage targetPage, int pageIndex, double bodyY)
         {
@@ -2316,7 +2316,7 @@ internal sealed partial class DocxLayoutEngine
             double result = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale).UnmapY(bodyY - offset);
             return double.IsFinite(result) ? result : null;
         }
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, BindRelatedStoryPage, HasIndependentEndnoteFrame, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, BindRelatedStoryPage, HasCompleteEndnoteFrame, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
         OoxConversionBudget.Current?.AdmitDocxLayoutPages(pagesWithRelatedStories.Length);
         cancellationToken.ThrowIfCancellationRequested();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);

@@ -80,7 +80,7 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxNoteMathFieldsIntrusiveAndUnsupportedStaticFramesRetainFallback()
+    public static void DocxNoteMathFieldsStaticFrameCompletenessSeparatesIntrusionFromUnknownBounds()
     {
         foreach (string position in new[] { "docEnd", "sectEnd" })
         foreach (bool footer in new[] { false, true })
@@ -94,8 +94,9 @@ internal static partial class DocxInlineCompositionTests
             source = WithNoteMathStaticStory(source, footer, paragraph, intrusive ? 120d : 36d);
             var layout = CreatePageCounterLayout(source);
             var notes = layout.Pages.SelectMany(page => page.PlacedRelatedStories).Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                $"Static typography retains fallback while reference-owned counters resolve: {position}/footer={footer}/intrusive={intrusive}.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs &&
+                note.UsesCompleteDocumentEndnoteFlow == (intrusive && position == "docEnd")),
+                $"Complete intrusion has a measured frame; unsupported static flow retains fallback: {position}/footer={footer}/intrusive={intrusive}.");
         }
     }
 
@@ -134,8 +135,9 @@ internal static partial class DocxInlineCompositionTests
             };
             var notes = CreatePageCounterLayout(source).Pages.SelectMany(page => page.PlacedRelatedStories)
                 .Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                $"Selected static-picture typography retains fallback independently of counter ownership: {position}/{footer}/{variant}.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs &&
+                note.UsesCompleteDocumentEndnoteFlow == (variant == "tall" && position == "docEnd")),
+                $"Selected complete pictures may intrude; unsupported image owners retain fallback: {position}/{footer}/{variant}.");
         }
     }
 

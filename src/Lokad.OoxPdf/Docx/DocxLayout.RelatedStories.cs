@@ -15,7 +15,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxLayoutPage> pages,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
         Func<DocxRelatedStoryLayout, double, int, DocxRelatedStoryLayout> bindRelatedStoryPage,
-        Func<DocxLayoutPage, int, int, bool> hasIndependentEndnoteFrame,
+        Func<DocxLayoutPage, int, int, bool> hasCompleteEndnoteFrame,
         CancellationToken cancellationToken,
         double printScale = 1d,
         IDocxTextMeasurer? separatorMeasurer = null, 
@@ -216,7 +216,7 @@ internal sealed partial class DocxLayoutEngine
 
                 if (sectionEndStories.Count > 0)
                 {
-                    bool independentStaticFrame = hasIndependentEndnoteFrame(outputPages[sectionEndPageIndex],
+                    bool completeStaticFrame = hasCompleteEndnoteFrame(outputPages[sectionEndPageIndex],
                         sectionEndPageIndex + 1, outputPages.Count);
                     if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                         sectionEndStories.Any(story => !story.StoryLayout.HasResolvedCounterInputs))
@@ -231,7 +231,7 @@ internal sealed partial class DocxLayoutEngine
                                 sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
                     }
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
-                    PlaceSectionEndEndnoteStories(document, outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, independentStaticFrame, headerKeepOut, bodyBoundaryToNoteDesign);
+                    PlaceSectionEndEndnoteStories(document, outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, completeStaticFrame, headerKeepOut, footerKeepOut, bodyBoundaryToNoteDesign);
                 }
             }
 
@@ -294,7 +294,7 @@ internal sealed partial class DocxLayoutEngine
                 var documentEndStories = documentEndReferences.Select(story => story.StoryLayout).ToList();
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
-                bool independentStaticFrame = hasIndependentEndnoteFrame(activePage, activePageIndex + 1, documentEndPages.Count);
+                bool completeStaticFrame = hasCompleteEndnoteFrame(activePage, activePageIndex + 1, documentEndPages.Count);
                 if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                     documentEndStories.Any(story => !story.HasResolvedCounterInputs))
                 {
@@ -331,7 +331,9 @@ internal sealed partial class DocxLayoutEngine
                 // of earlier tables or print scaling. Complete note-flow and
                 // mixed-footnote admission retain their existing qualification.
                 bool fittingEndnoteBoundaries = CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
-                    documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken, independentStaticFrame);
+                    documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken, completeStaticFrame,
+                    footerKeepOut?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom);
+                if (fittingEndnoteBoundaries) endnoteFrameBottom = footerKeepOut;
                 bool FollowsBodyParagraph() => fittingEndnoteBoundaries || CanUseTrailingParagraphEndnoteStart(activePage,
                     activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
                 // Only the admitted source-owned note flow shares the body's
@@ -552,8 +554,9 @@ internal sealed partial class DocxLayoutEngine
         CancellationToken cancellationToken,
         double printScale,
         IDocxTextMeasurer? separatorMeasurer, 
-        bool hasIndependentStaticFrame,
+        bool hasCompleteStaticFrame,
         Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
+        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
         Func<DocxLayoutPage, int, double, double?>? bodyBoundaryToNoteDesign = null)
     {
         int activePageIndex = sectionEndPageIndex;
@@ -561,7 +564,8 @@ internal sealed partial class DocxLayoutEngine
         List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
         var storyLayouts = sectionEndStories.Select(story => story.StoryLayout).ToArray();
         bool completeBoundaries = CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
-            endnoteSeparatorLayout, printScale, storyLayouts, cancellationToken, hasIndependentStaticFrame);
+            endnoteSeparatorLayout, printScale, storyLayouts, cancellationToken, hasCompleteStaticFrame,
+            footerKeepOut?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom);
         bool followsBodyParagraph = completeBoundaries || CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories,
             endnoteSeparatorLayout, printScale, storyLayouts);
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
@@ -607,7 +611,8 @@ internal sealed partial class DocxLayoutEngine
                 endnoteContinuationLayout,
                 separatorMeasurer,
                 printScale,
-                headerKeepOut, noteDestinationTopOffset: overlap, cancellationToken: cancellationToken);
+                headerKeepOut, noteDestinationTopOffset: overlap, frameBottom: completeBoundaries ? footerKeepOut : null,
+                cancellationToken: cancellationToken);
             if (completeBoundaries) cursorTop += FootnoteSeparatorGapPoints;
             previous = story.StoryLayout;
         }

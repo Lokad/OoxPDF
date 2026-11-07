@@ -9,8 +9,9 @@
   geometry at section and document end, preserving equations beside page fields.
   Ordinary headers and footers, including complete simple tables, prepared equations,
   inline pictures and owned PAGE/NUMPAGES fields, preserve this
-  mixed-note content and geometry when measured wholly inside their margins;
-  intrusive or unsupported static stories retain fallback.
+  mixed-note content and geometry through complete page-contained frames and
+  the actual available note area. Unsupported, clipped or unmeasured static
+  stories retain their placement fallback.
 
 - PPTX: point-label text bodies retain their own fallback typography and line-key
   measurement when paragraph default-run properties are absent.

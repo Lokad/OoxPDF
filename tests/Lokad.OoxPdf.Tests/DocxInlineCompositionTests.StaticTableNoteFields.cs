@@ -90,8 +90,9 @@ internal static partial class DocxInlineCompositionTests
             source = WithNoteMathStaticBlocks(source, footer, [new DocxTableElement(table)]);
             var notes = CreatePageCounterLayout(source).Pages.SelectMany(page => page.PlacedRelatedStories)
                 .Where(note => note.StoryLayout.Story.Id == "37").ToArray();
-            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs && !note.UsesCompleteDocumentEndnoteFlow),
-                $"An unqualified static table retains typography fallback while note counters resolve: {position}/{footer}/{variant}.");
+            TestAssert.True(notes.Length > 0 && notes.All(note => note.StoryLayout.HasResolvedCounterInputs &&
+                note.UsesCompleteDocumentEndnoteFlow == (variant == "intrusive" && position == "docEnd")),
+                $"Complete rows may intrude; exact/clipped/unsupported rows retain fallback: {position}/{footer}/{variant}.");
         }
     }
 

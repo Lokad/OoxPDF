@@ -26,7 +26,7 @@ internal static partial class DocxInlineCompositionTests
                 source = source with { Settings = source.Settings with { EndnoteReferenceSettings =
                     source.Settings.EndnoteReferenceSettings with { PositionValue = position } },
                     BodyElements = [.. earlier, .. source.BodyElements] };
-                return WithNoteMathStaticStory(source, true, PlainNoteMathStaticParagraph(), 120d);
+                return WithNoteMathStaticStory(source, true, PlainNoteMathStaticParagraph() with { LineSpacingPoints = 14d }, 120d);
             }
             var source = Source("PAGE", "9");
             var cached = NoteMathFieldParagraph(source).Runs.Select(run => (run.Text, run.FieldKind)).ToArray();
