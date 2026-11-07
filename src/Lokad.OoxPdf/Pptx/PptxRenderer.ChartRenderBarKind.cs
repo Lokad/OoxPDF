@@ -120,7 +120,7 @@ internal sealed partial class PptxRenderer
                     context.CancellationToken.ThrowIfCancellationRequested();
                     PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, legendLineIndex++);
                     if (CountRenderableSeries(ReadSharedChartSeriesVectors(plot, element, workbook, plotVisibleOnly)) == 0) continue;
-                    var options = ReadSceneOrXmlChartLineOptions(sceneChart, plot, chartXml, element, PptxSceneChartGrouping.Standard);
+                    var options = ReadSceneOrXmlChartLineOptions(sceneChart, plot, element, PptxSceneChartGrouping.Standard);
                     var strokes = ReadSceneOrXmlSeriesStrokes(plot, element, theme, colorMap, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     var markers = ReadSceneOrXmlMarkerStyles(plot, element, theme, colorMap);
                     legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, plot, element,
@@ -310,7 +310,7 @@ internal sealed partial class PptxRenderer
                     XElement? lineValueAxis = lineValueAxisSource.XmlAxis;
                     XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
                     PptxSceneChartAxis? lineValueSceneAxis = lineValueAxisSource.SceneAxis;
-                    ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, chartXml, comboLineChart, PptxSceneChartGrouping.Standard);
+                    ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, comboLineChart, PptxSceneChartGrouping.Standard);
                     ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetSharedLineChartValueExtents(linePlot, comboLineChart, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(lineValueSceneAxis, lineValueAxisForScale, theme, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme, colorMap, ResolveLineKindInheritedStrokeWidth(barStyleId));

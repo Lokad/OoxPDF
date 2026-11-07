@@ -1138,7 +1138,7 @@ internal static class PptxChartAxesTests
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartLineOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart line-option resolver.");
-        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard, false]) ?? throw new InvalidOperationException("Expected resolved line options.");
+        object options = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxSceneChartGrouping.Standard, false]) ?? throw new InvalidOperationException("Expected resolved line options.");
         Type optionsType = options.GetType();
         object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
 
@@ -1184,7 +1184,7 @@ internal static class PptxChartAxesTests
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartAreaOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart area-option resolver.");
-        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved area options.");
+        object options = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved area options.");
         Type optionsType = options.GetType();
 
         TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
@@ -2100,16 +2100,10 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Unknown, chart.Options.DisplayBlanksAsKind);
         TestAssert.Equal("bogus", chart.Options.DisplayBlanksAs);
 
-        XDocument mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:dispBlanksAs val="span"/></c:chart>
-            </c:chartSpace>
-            """);
         System.Reflection.MethodInfo readDisplayBlanksAs = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartDisplayBlanksAs",
+            "ResolveChartDisplayBlanksAs",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected display-blanks resolver.");
-        object displayBlanksAs = readDisplayBlanksAs.Invoke(null, [chart, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved display-blanks value.");
+        object displayBlanksAs = readDisplayBlanksAs.Invoke(null, [chart]) ?? throw new InvalidOperationException("Expected resolved display-blanks value.");
 
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)displayBlanksAs);
     }

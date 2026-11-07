@@ -1,4 +1,12 @@
 {
+  "pptx-chart-global-options": [
+    "ChartLevelOptionsKeepParsedSceneDefaults",
+    "PptxChartUnknownDisplayBlanksAsUsesSceneAuthoritativeDefault",
+    "PptxChartLineOptionsUseSceneAuthoritativeDefaults",
+    "PptxChartAreaOptionsUseSceneAuthoritativeDefaults",
+    "PptxSyntheticLineChartConsumesDisplayBlanksAs",
+    "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints"
+  ],
   "docx-cell-column-content": [
     "DocxCellColumnsKeepCompleteParagraphSourcesBeforePreparation",
     "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
@@ -14607,7 +14615,7 @@
     "CategoryLabelLookupKeepsFirstMatchPrecedence",
     "CategoryLabelLookupsScaleLinearly",
     "CategoryLabelMemoSharesDenseResultsWithinFrame",
-    "ChartLevelOptionsAgreeBetweenSceneAndXml",
+    "ChartLevelOptionsKeepParsedSceneDefaults",
     "ChartTitleSceneRetainsAuthoredFormatting",
     "CollectionFaceIndexesCacheSeparately",
     "ConvertAsyncDocxFontCancellationWaitsForTheAcquisitionBorrow",

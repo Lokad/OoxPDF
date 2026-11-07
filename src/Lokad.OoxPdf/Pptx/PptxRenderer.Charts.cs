@@ -31,7 +31,7 @@ internal sealed partial class PptxRenderer
         HashSet<string> reportedHyperlinkIds)
     {
         ChartColorPalette palette = ResolveChartColorPalette(sceneChart, theme, colorMap, context.CancellationToken);
-        bool plotVisibleOnly = ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, chartXml);
+        bool plotVisibleOnly = sceneChart.Options.PlotVisibleOnly ?? true;
         if ((await TryRenderBarChartKindAsync(
             graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {

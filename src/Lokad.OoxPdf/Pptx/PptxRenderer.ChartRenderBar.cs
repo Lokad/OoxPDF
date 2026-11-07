@@ -1012,7 +1012,7 @@ internal sealed partial class PptxRenderer
                     data = GetSharedBarChartValueExtents(owner, owner.Source, owner.GroupingKind, workbook, plotVisibleOnly);
                 else
                 {
-                    var line = ReadSceneOrXmlChartLineOptions(sceneChart, owner, chartXml, owner.Source, PptxSceneChartGrouping.Standard);
+                    var line = ReadSceneOrXmlChartLineOptions(sceneChart, owner, owner.Source, PptxSceneChartGrouping.Standard);
                     data = GetSharedLineChartValueExtents(owner, owner.Source, line.Stacked, line.PercentStacked, workbook, plotVisibleOnly);
                 }
                 ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis,

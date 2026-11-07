@@ -332,35 +332,10 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // D01: scene-authoritative. Render paths always carry a scene chart below the
-    // frame early-return (a missing chart part returns before any option reads), so
-    // the XML re-parse arm is deleted; the agreement harness pins the unified reading.
-    private static PptxSceneChartDisplayBlanksAs ReadSceneOrXmlChartDisplayBlanksAs(PptxSceneChart? sceneChart, XDocument chartXml)
-    {
-        if (sceneChart is not null)
-        {
-            return ResolveChartDisplayBlanksAs(sceneChart.Options.DisplayBlanksAsKind);
-        }
-
-        return ResolveChartDisplayBlanksAs(PptxSceneBuilder.ReadChartOptions(chartXml).DisplayBlanksAsKind);
-
-        PptxSceneChartDisplayBlanksAs ResolveChartDisplayBlanksAs(PptxSceneChartDisplayBlanksAs value)
-        {
-            return value == PptxSceneChartDisplayBlanksAs.Unknown
-                ? PptxSceneChartDisplayBlanksAs.Gap
-                : value;
-        }
-    }
-
-    private static bool ReadSceneOrXmlChartPlotVisibleOnly(PptxSceneChart? sceneChart, XDocument chartXml)
-    {
-        if (sceneChart is not null)
-        {
-            return sceneChart.Options.PlotVisibleOnly ?? true;
-        }
-
-        return PptxSceneBuilder.ReadChartOptions(chartXml).PlotVisibleOnly ?? true;
-    }
+    private static PptxSceneChartDisplayBlanksAs ResolveChartDisplayBlanksAs(PptxSceneChart chart) =>
+        chart.Options.DisplayBlanksAsKind == PptxSceneChartDisplayBlanksAs.Unknown
+            ? PptxSceneChartDisplayBlanksAs.Gap
+            : chart.Options.DisplayBlanksAsKind;
 
     private static IReadOnlyList<ChartRadarSeries> BuildRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
     {

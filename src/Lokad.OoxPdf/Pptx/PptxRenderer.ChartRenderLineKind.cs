@@ -36,7 +36,7 @@ internal sealed partial class PptxRenderer
             if (CountRenderableSeries(lineSeriesVectors) != 0)
             {
                 double? themeLineWidth = ReadChartLineThemeWidth(theme);
-                ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, chartXml, lineChart, PptxSceneChartGrouping.Standard, defaultSmooth: themeLineWidth is not null);
+                ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, lineChart, PptxSceneChartGrouping.Standard, defaultSmooth: themeLineWidth is not null);
                 IReadOnlyList<PptxSceneChartSeries> sourceSeries = linePlot?.Series ?? ReadXmlChartSeries(lineChart, theme, colorMap);
                 bool varyPointColors = sceneChart.Plots.Count == 1 && lineSeriesVectors.Count == 1 && lineOptions.VaryColors.Value;
                 IReadOnlyList<ChartLineAppearance> seriesAppearance = ReadLineSeriesAppearance(sourceSeries, lineOptions,

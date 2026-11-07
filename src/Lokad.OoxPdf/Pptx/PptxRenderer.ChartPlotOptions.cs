@@ -90,7 +90,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartBooleanOption> SmoothSeries,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
-    private static ChartLinePlotOptions ReadSceneOrXmlChartLineOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, XElement chartElement, PptxSceneChartGrouping defaultGrouping, bool defaultSmooth = false)
+    private static ChartLinePlotOptions ReadSceneOrXmlChartLineOptions(PptxSceneChart sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping, bool defaultSmooth = false)
     {
         PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping);
         return new ChartLinePlotOptions(
@@ -99,7 +99,7 @@ internal sealed partial class PptxRenderer
             IsPercentStackedChartGrouping(grouping),
             ReadSceneOrXmlChartVaryColors(plot, chartElement),
             ReadSceneOrXmlSmoothSeries(plot, chartElement, applyPlotFallback: true, defaultValue: defaultSmooth),
-            ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
+            ResolveChartDisplayBlanksAs(sceneChart));
     }
 
     private readonly record struct ChartAreaPlotOptions(
@@ -108,14 +108,14 @@ internal sealed partial class PptxRenderer
         bool PercentStacked,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
-    private static ChartAreaPlotOptions ReadSceneOrXmlChartAreaOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
+    private static ChartAreaPlotOptions ReadSceneOrXmlChartAreaOptions(PptxSceneChart sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
     {
         PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping);
         return new ChartAreaPlotOptions(
             grouping,
             IsStackedChartGrouping(grouping),
             IsPercentStackedChartGrouping(grouping),
-            ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
+            ResolveChartDisplayBlanksAs(sceneChart));
     }
 
     private readonly record struct ChartScatterPlotOptions(

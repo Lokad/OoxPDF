@@ -275,24 +275,27 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
-    public static void ChartLevelOptionsAgreeBetweenSceneAndXml()
+    public static void ChartLevelOptionsKeepParsedSceneDefaults()
     {
-        string[] blanks = new[] { "<c:dispBlanksAs val=\"span\"/>", "<c:dispBlanksAs val=\"zero\"/>", "<c:dispBlanksAs val=\"bogus\"/>", "" };
-        string[] visible = new[] { "<c:plotVisOnly val=\"0\"/>", "<c:plotVisOnly val=\"1\"/>", "" };
-        foreach (string blank in blanks)
+        (string Xml, PptxSceneChartDisplayBlanksAs Expected)[] blanks =
+        [
+            ("<c:dispBlanksAs val=\"span\"/>", PptxSceneChartDisplayBlanksAs.Span),
+            ("<c:dispBlanksAs val=\"zero\"/>", PptxSceneChartDisplayBlanksAs.Zero),
+            ("<c:dispBlanksAs val=\"gap\"/>", PptxSceneChartDisplayBlanksAs.Gap),
+            ("<c:dispBlanksAs val=\"bogus\"/>", PptxSceneChartDisplayBlanksAs.Gap),
+            ("", PptxSceneChartDisplayBlanksAs.Gap)
+        ];
+        (string Xml, bool? Expected)[] visible = [("<c:plotVisOnly val=\"0\"/>", false),
+            ("<c:plotVisOnly val=\"1\"/>", true), ("", null)];
+        foreach (var blank in blanks)
         {
-            foreach (string vis in visible)
+            foreach (var vis in visible)
             {
-                string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", blank + vis);
+                string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart>", blank.Xml + vis.Xml);
                 PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
-
-                XDocument xmlDoc = XDocument.Parse(xml);
-                object? xmlBlanks = Invoke("ReadSceneOrXmlChartDisplayBlanksAs", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
-                object? sceneBlanks = Invoke("ReadSceneOrXmlChartDisplayBlanksAs", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
-                TestAssert.True(Equals(xmlBlanks, sceneBlanks), "DisplayBlanksAs must agree for: " + blank + vis);
-                object? xmlVisible = Invoke("ReadSceneOrXmlChartPlotVisibleOnly", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { null, xmlDoc });
-                object? sceneVisible = Invoke("ReadSceneOrXmlChartPlotVisibleOnly", new[] { typeof(PptxSceneChart), typeof(XDocument) }, new object?[] { sceneChart, xmlDoc });
-                TestAssert.True(Equals(xmlVisible, sceneVisible), "PlotVisibleOnly must agree for: " + blank + vis);
+                object? effective = Invoke("ResolveChartDisplayBlanksAs", new[] { typeof(PptxSceneChart) }, new object?[] { sceneChart });
+                TestAssert.Equal(blank.Expected, (PptxSceneChartDisplayBlanksAs)TestAssert.NotNull(effective));
+                TestAssert.Equal(vis.Expected, sceneChart.Options.PlotVisibleOnly);
             }
         }
     }
