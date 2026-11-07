@@ -299,9 +299,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadChartTextStyleOverride(label, theme, colorMap),
                 ReadChartTextBodyProperties(label),
                 ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap),
-                label.Element(ChartNamespace + "spPr") is not null ||
-                label.Element(ChartNamespace + "txPr") is not null ||
-                label.Element(ChartNamespace + "tx") is not null));
+                ReadChartPointTextScope(label)));
         }
 
         return overrides;

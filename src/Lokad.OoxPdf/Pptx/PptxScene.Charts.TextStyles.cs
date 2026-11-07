@@ -76,13 +76,27 @@ internal sealed partial class PptxSceneBuilder
             next.Strike ?? style.Strike);
     }
 
-    internal static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
-    {
-        XElement? defaultRunProperties = parent?
+    private static XElement? ReadChartParagraphDefaultRunProperties(XElement? parent) => parent?
             .Element(ChartNamespace + "txPr")?
             .Elements(DrawingNamespace + "p")
             .Select(paragraph => paragraph.Element(DrawingNamespace + "pPr")?.Element(DrawingNamespace + "defRPr"))
             .FirstOrDefault(element => element is not null);
+
+    private static PptxSceneChartPointTextScope ReadChartPointTextScope(XElement label)
+    {
+        XElement? body = label.Element(ChartNamespace + "txPr");
+        // An actual paragraph without default-run properties owns the text
+        // body's implicit typography. List/end-paragraph properties do not
+        // replace that source. Empty defRPr instead retains chart defaults.
+        if (body?.Elements(DrawingNamespace + "p").Any() == true && ReadChartParagraphDefaultRunProperties(label) is null)
+            return PptxSceneChartPointTextScope.ImplicitTextBody;
+        return body is not null || label.Element(ChartNamespace + "spPr") is not null || label.Element(ChartNamespace + "tx") is not null
+            ? PptxSceneChartPointTextScope.Chart : PptxSceneChartPointTextScope.Container;
+    }
+
+    internal static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
+    {
+        XElement? defaultRunProperties = ReadChartParagraphDefaultRunProperties(parent);
         if (defaultRunProperties is null)
         {
             return default;

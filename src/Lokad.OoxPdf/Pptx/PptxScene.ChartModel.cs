@@ -678,6 +678,8 @@ internal sealed record PptxSceneChartDataLabels
     }
 }
 
+internal enum PptxSceneChartPointTextScope { Container, Chart, ImplicitTextBody }
+
 internal sealed record PptxSceneChartDataLabelOverride(
     int Index,
     string IndexValue,
@@ -709,7 +711,7 @@ internal sealed record PptxSceneChartDataLabelOverride(
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartTextBodyProperties TextBodyProperties,
     PptxSceneChartShapeStyle ShapeStyle,
-    bool HasLocalFormatting);
+    PptxSceneChartPointTextScope TextScope);
 
 internal readonly record struct PptxSceneChartTextBodyProperties(
     double? RotationDegrees,

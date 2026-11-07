@@ -1,4 +1,7 @@
 {
+  "pptx-point-text-bodies": [
+    "PptxPointTextBody"
+  ],
   "font-discovery-ownership": [
     "FontDiscoveryOwnedCatalog",
     "FontDiscoveryAsync",

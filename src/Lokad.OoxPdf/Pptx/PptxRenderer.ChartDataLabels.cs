@@ -170,6 +170,7 @@ internal sealed partial class PptxRenderer
             NumberFormatInfo = dataLabel.NumberFormatInfo.IsDefined ? dataLabel.NumberFormatInfo : options.NumberFormatInfo,
             Layout = dataLabel.Layout.HasLayout ? dataLabel.Layout : options.Layout,
             TextStyle = dataLabel.TextStyle,
+            TextScope = dataLabel.TextScope,
             TextBodyProperties = IsChartTextBodyPropertiesEmpty(dataLabel.TextBodyProperties) ? options.TextBodyProperties : dataLabel.TextBodyProperties,
             ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
             FlagOptions = flags,
@@ -508,6 +509,14 @@ internal sealed partial class PptxRenderer
         var result = new Dictionary<int, ChartDataLabelOverride>(overrides.Count);
         foreach (PptxSceneChartDataLabelOverride dataLabel in overrides)
         {
+            PptxSceneChartTextStyleOverride sourceDefaults = dataLabel.TextScope switch
+            {
+                PptxSceneChartPointTextScope.ImplicitTextBody => new(
+                    PptxFontFallbackRules.DefaultLatinTypeface, null, null, PptxRunTextAttributeReaders.ReadFontSize(null, null),
+                    0d, new RgbColor(0, 0, 0), 1d, false, false, false, false),
+                PptxSceneChartPointTextScope.Chart => defaults,
+                _ => containerStyle
+            };
             result[dataLabel.Index] = new ChartDataLabelOverride(
                 dataLabel.IsDeleted,
                 dataLabel.ShowValue,
@@ -526,14 +535,12 @@ internal sealed partial class PptxRenderer
                 dataLabel.NumberFormat,
                 ToChartNumberFormat(dataLabel.NumberFormatInfo),
                 dataLabel.Layout,
-                // Local shape/text formatting starts a point-owned scope, even
-                // for an empty spPr. Geometry and component declarations alone
-                // retain container formatting. Keep raw nullable fields intact.
-                ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(
-                    dataLabel.HasLocalFormatting ? defaults : containerStyle, dataLabel.TextStyle)),
+                // Source scope is shared by typography and key measurement;
+                // raw nullable formatting remains an independent declaration.
+                ToChartTextStyleOverride(PptxSceneBuilder.MergeChartTextStyleOverride(sourceDefaults, dataLabel.TextStyle)),
                 dataLabel.TextBodyProperties,
                 ToChartShapeStyle(dataLabel.ShapeStyle),
-                ToChartDataLabelOverrideFlagOptions(dataLabel));
+                ToChartDataLabelOverrideFlagOptions(dataLabel)) { TextScope = dataLabel.TextScope };
         }
 
         return result;

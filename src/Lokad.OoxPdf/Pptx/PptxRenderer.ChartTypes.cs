@@ -594,6 +594,8 @@ internal sealed partial class PptxRenderer
     {
         public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, NumberFormatInfo: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, TextBodyProperties: default, ShapeStyle: ChartShapeStyle.Empty, FlagOptions: EmptyChartDataLabelFlagOptions, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
+        public PptxSceneChartPointTextScope TextScope { get; init; }
+
         public bool HasVisibleText => (IsDeleted != true &&
             (ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
              !string.IsNullOrWhiteSpace(CustomText))) ||
@@ -616,6 +618,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartDataLabelOverride(bool? IsDeleted, bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions)
     {
+        public PptxSceneChartPointTextScope TextScope { get; init; }
+
         // A defined point owns defaults; container admission is resolved once
         // before materializing these rendering options. Raw source stays nullable.
         public bool HasVisibleText => IsDeleted != true &&

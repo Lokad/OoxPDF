@@ -144,7 +144,12 @@ internal sealed partial class PptxRenderer
                     double markerLimit = measured ? Math.Round(PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit / keyScale,
                         MidpointRounding.AwayFromZero) : PptxChartMarkerMetricRules.DataLabelMarkerSizeLimit;
                     labelMarker = labelMarker with { Size = PptxChartMarkerMetricRules.QuantizeMarkerExtent(Math.Min(labelMarker.Size, markerLimit)) };
-                    double strokeKeyLength = lineBox.Height * PptxChartMetricRules.CategoryPointLabelStrokeKeyLengthFactor;
+                    // Implicit text bodies have visible fallback glyphs but no
+                    // paragraph default-run metrics for their line key. Keep
+                    // that key owner distinct from the measured glyph frame.
+                    double keyLineHeight = measured && effectiveOptions.TextScope == PptxSceneChartPointTextScope.ImplicitTextBody
+                        ? 0d : lineBox.Height;
+                    double strokeKeyLength = keyLineHeight * PptxChartMetricRules.CategoryPointLabelStrokeKeyLengthFactor;
                     if (measured) strokeKeyLength *= keyScale;
                     double strokeKeyInset = fontSize * PptxChartMetricRules.CategoryPointLabelKeyInsetFactor;
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
@@ -252,7 +257,7 @@ internal sealed partial class PptxRenderer
                         {
                             X = labelBox.X + (areaOptions is null ? strokeKeyInset : 0d),
                             Y = edgeSize ? labelBox.Y + lineBox.Ascent - lineBox.Height / 2d - labelBox.Height / 2d
-                                : textBox.Y + textBox.Height - (lineBox.Height + verticalPadding * 2d) / 2d - labelBox.Height / 2d
+                                : textBox.Y + textBox.Height - (keyLineHeight + verticalPadding * 2d) / 2d - labelBox.Height / 2d
                         };
                         if (areaOptions is not null)
                         {

@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- PPTX: point-label text bodies retain their own fallback typography and line-key
+  measurement when paragraph default-run properties are absent.
+
 - Fonts: an opt-in disposable Windows font resolver funds catalog metadata and
   its bounded program cache through a host cache budget; existing shared defaults remain.
 
