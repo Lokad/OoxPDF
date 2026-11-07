@@ -262,9 +262,12 @@ internal sealed partial class DocxLayoutEngine
                             bindRelatedStoryPage(story.StoryLayout, ResolvePageNoteTextWidth(activePage), referencePage + 1);
                     }).ToList();
                     // A counter is measured before admission, not patched after
-                    // wrapping. Only a complete fitting group owns this binding;
-                    // continued/unqualified sources keep their unresolved layout.
-                    if (CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
+                    // wrapping. Existing plain paragraph flow can continue while
+                    // retaining its reference-owned value. Mixed blocks still
+                    // need the complete fitting proof before adopting this layout.
+                    if (CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
+                        boundStories, cancellationToken, out _) ||
+                        CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
                         documentEndSeparatorLayout, printScale, boundStories, cancellationToken))
                         documentEndStories = boundStories;
                 }

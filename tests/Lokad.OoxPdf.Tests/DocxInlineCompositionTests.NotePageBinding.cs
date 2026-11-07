@@ -5,6 +5,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = PictureRangeRenderer(mode);
+            var literal = renderer.RenderPagesAsync(ReadContinuedCounter(null), null, default).ToBlockingEnumerable().ToArray();
+            var counter = renderer.RenderPagesAsync(ReadContinuedCounter("PAGE"), null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.True(literal.Length >= 3, "The note actually continues across pages.");
+            TestAssert.Equal(literal.Length, counter.Length);
+            TestAssert.Contains("Count 1", DocxPageFootnoteNumberingTests.DecodeText(counter[^1]));
+            for (int index = 0; index < literal.Length; index++)
+            {
+                var a = DocxCommentsTests.ReadEmbeddedGlyphTextShows(literal[index], usePageCoordinates: true)
+                    .Select(g => (g.Text, g.X, g.Y, g.Size)).ToArray();
+                var b = DocxCommentsTests.ReadEmbeddedGlyphTextShows(counter[index], usePageCoordinates: true)
+                    .Select(g => (g.Text, g.X, g.Y, g.Size)).ToArray();
+                TestAssert.True(a.SequenceEqual(b), "Reference-owned PAGE preserves literal continuation glyphs and page allocation: " + mode);
+                TestAssert.True(literal[index].Annotations.SequenceEqual(counter[index].Annotations),
+                    "Counter binding preserves the existing note destinations and hit areas.");
+            }
+
+            DocxDocument ReadContinuedCounter(string? instruction) => ReadNoteCounter("endnote", mode,
+                instruction, instruction is null ? "1" : "7", false, (xml, w) =>
+                {
+                    var note = xml.Root!.Elements(w + "endnote").Single(n => (string?)n.Attribute(w + "id") == "37");
+                    var first = note.Elements(w + "p").First();
+                    foreach (var element in note.Elements().Where(e => !ReferenceEquals(e, first)).ToArray()) element.Remove();
+                    first.Descendants(w + "t").First().Value = " Public continued note " +
+                        string.Join(" ", Enumerable.Range(0, 900).Select(n => "item" + n.ToString("D3", System.Globalization.CultureInfo.InvariantCulture)));
+                });
+        }
+    }
+
     public static void DocxFittingEndnotePageFieldsPreserveLiteralFramesAndWrapping()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
