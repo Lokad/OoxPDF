@@ -36,22 +36,28 @@ internal static partial class DocxInlineCompositionTests
         {
             try
             {
-            var renderer = PictureRangeRenderer(mode);
-            var control = renderer.RenderPagesAsync(ReadPictureRange(container, mode, height, includePicture: false), null, default)
-                .ToBlockingEnumerable().Single();
-            var page = renderer.RenderPagesAsync(ReadPictureRange(container, mode, height, includePicture: true), null, default)
-                .ToBlockingEnumerable().Single();
-            TestAssert.Equal(control.Content, page.Content);
-            TestAssert.Equal(control.Images.Count, page.Images.Count);
-            var link = page.Annotations.Single();
-            TestAssert.Equal(control.Annotations.Single().Destination, link.Destination);
-            var frame = ReadPictureRangeFrame(page);
-            TestAssert.True(link.X <= frame.X && link.X + link.Width >= frame.X + frame.Width &&
-                link.Y <= frame.Y + .001d && link.Y + link.Height >= frame.Y + frame.Height - .001d,
-                "The existing mixed link covers its actually painted picture: " + container + "/" + mode + "/" + height);
-            TestAssert.True(link.X < control.Annotations.Single().X - 20d,
-                "Extending the source range makes its preceding picture clickable.");
-            TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(control), DocxPageFootnoteNumberingTests.DecodeText(page));
+                var renderer = PictureRangeRenderer(mode);
+                var control = renderer.RenderPagesAsync(ReadPictureRange(container, mode, height, includePicture: false), null, default)
+                    .ToBlockingEnumerable().Single();
+                var page = renderer.RenderPagesAsync(ReadPictureRange(container, mode, height, includePicture: true), null, default)
+                    .ToBlockingEnumerable().Single();
+                TestAssert.Equal(control.Content, page.Content);
+                TestAssert.Equal(control.Images.Count, page.Images.Count);
+                TestAssert.Equal(control.Annotations.Count, page.Annotations.Count);
+                var frame = ReadPictureRangeFrame(page);
+                var covered = page.Annotations.Select((link, index) => (Link: link, Index: index)).Where(pair =>
+                    pair.Link.X <= frame.X && pair.Link.X + pair.Link.Width >= frame.X + frame.Width &&
+                    pair.Link.Y <= frame.Y + .001d && pair.Link.Y + pair.Link.Height >= frame.Y + frame.Height - .001d).ToArray();
+                TestAssert.True(covered.Length == 1, "One existing link covers its actually painted picture.");
+                var (link, index) = covered.Single();
+                TestAssert.Equal(control.Annotations[index].Destination, link.Destination);
+                TestAssert.True(link.X < control.Annotations[index].X - 20d,
+                    "Extending the source range makes its preceding picture clickable.");
+                // A formula may wrap into further cell lines. Those link rectangles
+                // remain independently placed and must not absorb this picture.
+                for (int other = 0; other < page.Annotations.Count; other++)
+                    if (other != index) TestAssert.Equal(control.Annotations[other], page.Annotations[other]);
+                TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(control), DocxPageFootnoteNumberingTests.DecodeText(page));
             }
             catch (Exception exception)
             {
