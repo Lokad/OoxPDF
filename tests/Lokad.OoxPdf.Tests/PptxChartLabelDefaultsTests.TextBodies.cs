@@ -82,6 +82,34 @@ internal static partial class PptxChartLabelDefaultsTests
         PdfContentValidator.ValidatePage(authoredPage, 0, default);
     }
 
+    public static void PptxPointTextBodyFilledKeyKeepsIndependentParagraphMetrics()
+    {
+        PdfPage Render(bool key)
+        {
+            var xml = KeyPlacementSource("outEnd", 12, key);
+            xml.Descendants(C + "lineChart").Single().Name = C + "barChart";
+            var point = new XElement(C + "dLbl", new XElement(C + "idx", new XAttribute("val", 2)),
+                new XElement(C + "showLegendKey", new XAttribute("val", key ? 1 : 0)));
+            point.Add(XElement.Parse("<c:holder xmlns:c=\"" + C + "\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">" +
+                TextBodySource("", false) + "</c:holder>").Elements());
+            xml.Descendants(C + "dLbls").Single().AddFirst(point);
+            return RenderChartPage(xml);
+        }
+        var plain = Render(false); var keyed = Render(true);
+        var a = LineParagraphShows(plain); var b = LineParagraphShows(keyed);
+        TestAssert.Equal("Actual, W3, 3", string.Concat(a.Select(s => s.Text)));
+        TestAssert.Equal(string.Concat(a.Select(s => s.Text)), string.Concat(b.Select(s => s.Text)));
+        TestAssert.Equal(a.Length, b.Length);
+        for (int index = 0; index < a.Length; index++)
+        {
+            TestAssert.True(Math.Abs(a[index].Size - 18d) < .002 && Math.Abs(b[index].Size - 18d) < .002,
+                "An empty paragraph key slot does not shrink its visible glyphs.");
+            TestAssert.True(Math.Abs(b[index].X - a[index].X - 1.45d) < .002 && Math.Abs(b[index].Y - a[index].Y) < .002,
+                "Only the existing bar-unit inset remains; unowned font-sized swatch capacity cannot shift the paragraph.");
+        }
+        PdfContentValidator.ValidatePage(keyed, 0, default);
+    }
+
     private static string TextBodySource(string paragraph, bool list) => "<c:txPr><a:bodyPr/>" +
         (list ? "<a:lstStyle><a:lvl1pPr><a:defRPr sz=\"1400\"><a:latin typeface=\"List Face\"/></a:defRPr></a:lvl1pPr></a:lstStyle>" : "") +
         "<a:p>" + paragraph + "</a:p></c:txPr>";

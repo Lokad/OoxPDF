@@ -50,7 +50,9 @@ internal sealed partial class PptxRenderer
             layout = default;
             sized = false;
         }
-        double swatch = style.FontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
+        bool implicitKey = options.TextScope == PptxSceneChartPointTextScope.ImplicitTextBody;
+        double keyFontSize = implicitKey ? 0d : style.FontSize;
+        double swatch = keyFontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
         double keyReserve = keyFill is not null ? 2d * (swatch + PptxChartMetricRules.BarLegendKeyUnitCenterOffset) : 0d;
         // An absent height has no paint area. An explicit zero width hides both
         // text and key; an absent width can instead leave a key-only reference.
@@ -122,7 +124,9 @@ internal sealed partial class PptxRenderer
         double keyBaseline = sized ? y + height - verticalPadding - lineAdvance + metrics.Descent : baseline;
         if (keyFill is { } fill)
             RenderFillDataLabelLegendKey(graphics, new ChartLayoutBox(
-                ComputeBarLegendKeySwatchX(textX, style.FontSize), ComputeBarLegendKeySwatchY(keyBaseline, style.FontSize), swatch, swatch), style.FontSize, fill);
+                ComputeBarLegendKeySwatchX(textX, keyFontSize),
+                implicitKey ? keyBaseline + metrics.Ascent : ComputeBarLegendKeySwatchY(keyBaseline, keyFontSize),
+                swatch, swatch), keyFontSize, fill);
         for (int index = 0; index < lines.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
