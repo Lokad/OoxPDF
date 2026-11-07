@@ -431,8 +431,8 @@ layout and general OpenType shaping. Static fallback diagnostics are listed belo
 
 ## DOCX
 
-Bookmarks before inline equations retain their destinations across ordinary
-nonpainting runs; intervening pictures and text boxes keep their source boundaries.
+Bookmarks before inline equations retain their destinations across empty or
+hidden runs; intervening visible text, pictures and text boxes keep their boundaries.
 
 Inline page/column tokens inside cells leave supported paragraph content together,
 including equations, pictures and navigation. Actual paragraph boundaries remain

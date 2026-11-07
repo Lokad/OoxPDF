@@ -355,16 +355,22 @@ internal sealed partial class DocxReader
             if (inlineItems is null)
             {
                 inlineItems = DocxInlineContent.FromPrefix(runs, images, cancellationToken, inlineTextBoxes);
-                // At the current text boundary, nonpainting runs may advance the
+                // At the painted text boundary, nonpainting runs may advance the
                 // raw source counter. Capture the ordered boundary without jumping
                 // past an intervening picture or box. Source anchors are ordered,
                 // so the prefix cursor advances only once.
+                int textBoundary = runs.Count;
+                while (textBoundary > 0 && (runs[textBoundary - 1].EffectiveProperties.Hidden || runs[textBoundary - 1].Text.Length == 0))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    textBoundary--;
+                }
                 int boundary = 0;
                 for (int index = 0; index < bookmarkAnchors.Count; index++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var anchor = bookmarkAnchors[index];
-                    if (anchor.SourceRunIndex > sourceRunIndex || anchor.TextRunIndex != runs.Count) continue;
+                    if (anchor.SourceRunIndex > sourceRunIndex || anchor.TextRunIndex < textBoundary || anchor.TextRunIndex > runs.Count) continue;
                     if (anchor.SourceRunIndex == sourceRunIndex)
                     {
                         bookmarkAnchors[index] = anchor with { InlineItemIndex = inlineItems.Count };
