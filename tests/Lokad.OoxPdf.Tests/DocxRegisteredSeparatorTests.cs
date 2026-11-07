@@ -32,10 +32,18 @@ internal static class DocxRegisteredSeparatorTests
             var defaultB = Place(12, 24, false);
             TestAssert.True(defaultA.Synthetic && defaultB.Synthetic && defaultA == defaultB,
                 "Unregistered formatting keeps the same synthetic default and note frame.");
+            var missing = Place(0, 0, false, absent: true);
+            var inheritedDefault = Place(0, 0, false, inheritedBefore: true);
+            foreach (var normalized in new[] { defaultA, missing, inheritedDefault })
+                TestAssert.True(normalized.Synthetic && normalized.Page == baseline.Page &&
+                    Math.Abs(normalized.Top - baseline.Top) < .001d && Math.Abs(normalized.Rule - baseline.Rule) < .001d,
+                    "Absent/unregistered endnote separators normalize once to the same zero-spacing source frame.");
 
-            (int Page, double Top, bool Synthetic, double Rule) Place(int beforePoints, int? afterPoints, bool registered)
+            (int Page, double Top, bool Synthetic, double Rule) Place(int beforePoints, int? afterPoints, bool registered,
+                bool absent = false, bool inheritedBefore = false)
             {
-                var source = Read(mode, position, beforePoints, afterPoints, registered);
+                var source = Read(mode, position, beforePoints, afterPoints, registered,
+                    absent: absent, inheritedBefore: inheritedBefore);
                 var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                     .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
                 var placed = layout.Pages.SelectMany((page, index) => page.PlacedRelatedStories
@@ -77,7 +85,8 @@ internal static class DocxRegisteredSeparatorTests
     }
 
     private static DocxDocument Read(OoxPdfDocxMarkupMode mode, string position,
-        int before, int? after, bool registered, int? continuationAfter = null, int words = 3)
+        int before, int? after, bool registered, int? continuationAfter = null, int words = 3,
+        bool absent = false, bool inheritedBefore = false)
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
             "CompositionProbes", "mixed-note-endnote-table.docx"));
@@ -116,6 +125,15 @@ internal static class DocxRegisteredSeparatorTests
         if (after.HasValue) spacing.Add(new XAttribute(w + "after", after.Value * 20));
         separator.ReplaceNodes(new XElement(w + "p", new XElement(w + "pPr", spacing),
             new XElement(w + "r", new XElement(w + "separator"))));
+        if (absent) separator.Remove();
+        if (inheritedBefore)
+        {
+            var styles = Load("word/styles.xml");
+            styles.Root!.Element(w + "docDefaults")!.Add(new XElement(w + "pPrDefault", new XElement(w + "pPr",
+                new XElement(w + "spacing", new XAttribute(w + "before", "240"), new XAttribute(w + "after", "160"),
+                    new XAttribute(w + "line", "278"), new XAttribute(w + "lineRule", "auto")))));
+            Save("word/styles.xml", styles);
+        }
         if (continuationAfter.HasValue)
         {
             var continuation = notes.Root.Elements(w + "endnote")

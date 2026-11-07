@@ -347,13 +347,7 @@ internal sealed partial class DocxReader
                 // typed special story. Unregistered formatting is not visible.
                 string type = (string)storyElement.Attribute(WordprocessingNamespace + "type")!;
                 effectiveStory = new XElement(storyElement.Name, storyElement.Attributes(),
-                    new XElement(WordprocessingNamespace + "p",
-                        new XElement(WordprocessingNamespace + "pPr",
-                            new XElement(WordprocessingNamespace + "spacing",
-                                new XAttribute(WordprocessingNamespace + "after", "0"),
-                                new XAttribute(WordprocessingNamespace + "line", "240"),
-                                new XAttribute(WordprocessingNamespace + "lineRule", "auto"))),
-                        new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + type))));
+                    CreateDefaultNoteSeparatorParagraph(type));
             }
             DocxRelatedStory story = ReadRelatedStory(kind, part.Name, effectiveStory, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
             if (usesDefaultSeparator) story = story with { IsSynthetic = true };
@@ -373,8 +367,8 @@ internal sealed partial class DocxReader
         // edge-endsepheight-absent): Word normalizes separator-less endnote parts with
         // a default separator (absent renders identically to mark: same rule, same
         // placement), while the renderer skips placement entirely. Synthesize the missing
-        // separator through the normal story parser from an empty paragraph, so cascade
-        // sizing matches author-written empty separators exactly. Footnote parts keep
+        // separator through the same default paragraph as unregistered stories.
+        // Footnote parts keep
         // legacy absent behavior (validated corpus). Id 0 is Word's separator convention
         // and separator matching requires a non-null Id.
         if (kind == DocxRelatedStoryKind.Endnote &&
@@ -385,7 +379,7 @@ internal sealed partial class DocxReader
                 WordprocessingNamespace + storyElementName,
                 new XAttribute(WordprocessingNamespace + "type", "separator"),
                 new XAttribute(WordprocessingNamespace + "id", "0"),
-                new XElement(WordprocessingNamespace + "p"));
+                CreateDefaultNoteSeparatorParagraph("separator"));
             DocxRelatedStory defaultSeparator = ReadRelatedStory(kind, part.Name, syntheticSeparator, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
             defaultSeparator = defaultSeparator with { IsSynthetic = true };
             if (defaultSeparator.BodyElements.Count > 0)
@@ -396,6 +390,16 @@ internal sealed partial class DocxReader
 
         return stories;
     }
+
+    private static XElement CreateDefaultNoteSeparatorParagraph(string type) =>
+        new(WordprocessingNamespace + "p",
+            new XElement(WordprocessingNamespace + "pPr",
+                new XElement(WordprocessingNamespace + "spacing",
+                    new XAttribute(WordprocessingNamespace + "before", "0"),
+                    new XAttribute(WordprocessingNamespace + "after", "0"),
+                    new XAttribute(WordprocessingNamespace + "line", "240"),
+                    new XAttribute(WordprocessingNamespace + "lineRule", "auto"))),
+            new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + type)));
 
     private sealed class AutomaticNoteStoryMarker
     {

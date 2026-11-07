@@ -1210,7 +1210,7 @@ internal sealed partial class DocxLayoutEngine
         // A registered empty endnote rule owns its measured trailing space.
         // Returning the content cursor here also charges it to the next take;
         // rich/unknown separators and footnotes retain their placement fallback.
-        return markBaselineY - separatorGapPoints - ResolveAuthoredSeparatorAfterSpacing(continuationSeparatorLayout);
+        return markBaselineY - separatorGapPoints - ResolveEndnoteSeparatorAfterSpacing(continuationSeparatorLayout);
     }
 
     private static double ResolveContinuationRuleWidth(DocxLayoutPage page, double printScale)
@@ -1756,7 +1756,7 @@ internal sealed partial class DocxLayoutEngine
         double separatorBottom = separatorTop - separatorHeight;
         // After-space belongs below the separator line. It advances the content
         // cursor without moving the rule or its paragraph-mark baseline.
-        double ruleBaseline = separatorBottom + ResolveAuthoredSeparatorAfterSpacing(separatorLayout);
+        double ruleBaseline = separatorBottom + ResolveEndnoteSeparatorAfterSpacing(separatorLayout);
         (DocxTextRun? markRun, double markFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
         (double ruleBottomOffsetPoints, double ruleThicknessPoints) = ResolveSeparatorRuleGeometry(separatorLayout.Story.Kind, markRun, markFontSizePoints, separatorMeasurer);
         DocxPlacedRelatedStoryLayout placedSeparator = PlaceRelatedStoryAtTop(page, pageIndex, separatorLayout, sourceBlockIndex, separatorTop, separatorY: ruleBaseline + ruleBottomOffsetPoints - ruleFirstBearingPoints);
@@ -2525,12 +2525,11 @@ internal sealed partial class DocxLayoutEngine
             // Note-story placement/reserve heights need their own qualification;
             // keep their existing spacing fallback while body contributions improve.
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale, resolveContextualContributions: false);
-            if (story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator &&
-                !HasAuthoredEndnoteSeparatorSpacing(story))
+            if (story.Kind == DocxRelatedStoryKind.Footnote &&
+                story.Type is DocxRelatedStoryType.Separator or DocxRelatedStoryType.ContinuationSeparator)
             {
-                // Unregistered formatting is replaced by a synthetic default in
-                // the reader. Keep its legacy charge and the footnote fallback;
-                // registered endnotes retain their source paragraph spacing.
+                // Preserve the separately qualified footnote fallback. Endnote
+                // paragraphs already carry authored or reader-normalized spacing.
                 spacingProfile = spacingProfile with
                 {
                     ParagraphBeforeSpacing = 0d,
