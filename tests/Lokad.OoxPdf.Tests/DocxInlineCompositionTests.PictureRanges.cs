@@ -113,6 +113,41 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxNoteCellPictureRangesFollowExistingPaintAndTargets()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (int height in new[] { 6, 18, 36 })
+        {
+            var renderer = PictureRangeRenderer(mode);
+            var control = renderer.RenderPagesAsync(ReadPictureRange(kind, mode, height, includePicture: false), null, default)
+                .ToBlockingEnumerable().ToArray();
+            var pages = renderer.RenderPagesAsync(ReadPictureRange(kind, mode, height, includePicture: true), null, default)
+                .ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(control.Length, pages.Length);
+            for (int index = 0; index < pages.Length; index++)
+            {
+                var page = pages[index];
+                TestAssert.Equal(control[index].Content, page.Content);
+                TestAssert.Equal(control[index].Annotations.Count, page.Annotations.Count);
+                if (page.Images.Count == 0)
+                {
+                    TestAssert.True(control[index].Annotations.SequenceEqual(page.Annotations), "Other note pages keep their navigation.");
+                    continue;
+                }
+                var frame = ReadPictureRangeFrame(page);
+                var covered = page.Annotations.Select((link, number) => (Link: link, Number: number)).Where(pair =>
+                    pair.Link.X <= frame.X && pair.Link.X + pair.Link.Width >= frame.X + frame.Width &&
+                    pair.Link.Y <= frame.Y + .001d && pair.Link.Y + pair.Link.Height >= frame.Y + frame.Height - .001d).ToArray();
+                TestAssert.True(covered.Length == 1, "The complete note cell's source link covers its painted picture: " + kind + "/" + mode + "/" + height);
+                var (link, number) = covered.Single();
+                TestAssert.Equal(control[index].Annotations[number].Destination, link.Destination);
+                for (int other = 0; other < page.Annotations.Count; other++)
+                    if (other != number) TestAssert.Equal(control[index].Annotations[other], page.Annotations[other]);
+            }
+        }
+    }
+
     private static DocxRenderer PictureRangeRenderer(OoxPdfDocxMarkupMode mode) =>
         new(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, mode == OoxPdfDocxMarkupMode.Final
             ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -129,7 +164,8 @@ internal static partial class DocxInlineCompositionTests
     private static DocxDocument ReadPictureRange(string container, OoxPdfDocxMarkupMode mode, int height,
         bool includePicture, string variant = "ordinary")
     {
-        var source = ReadMutation("CompositionProbes/" + (container == "cell" ? "body" : container), mode, false, false,
+        bool note = container is "footnote" or "endnote";
+        var source = ReadMutation("CompositionProbes/" + (note ? "mixed-note-" + container + "-table" : container == "cell" ? "body" : container), mode, false, false,
             (xml, w, m) =>
             {
                 XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -157,7 +193,7 @@ internal static partial class DocxInlineCompositionTests
                     new XElement(w + "tr", variant == "clip" ? new XElement(w + "trPr", new XElement(w + "trHeight",
                         new XAttribute(w + "val", "20"), new XAttribute(w + "hRule", "exact"))) : null,
                         new XElement(w + "tc", new XElement(paragraph)))));
-            }, partOverride: container == "header" ? "word/header1.xml" : container == "footer" ? "word/footer1.xml" : null);
+            }, partOverride: note ? "word/" + container + "s.xml" : container == "header" ? "word/header1.xml" : container == "footer" ? "word/footer1.xml" : null);
         if (variant is not ("decode" or "child-uri")) return source;
         var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(source.BodyElements).Single(p => p.Images.Count != 0);
         var image = variant == "decode" ? paragraph.Images.Single() with { Bytes = [0, 1, 2, 3] }

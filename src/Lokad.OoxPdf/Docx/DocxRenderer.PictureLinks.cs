@@ -60,6 +60,9 @@ internal sealed partial class DocxRenderer
                     if (select(image.Image))
                         yield return (PlaceInlineImageForPaint(mapped ? map.PrecompensateNoteImage(image, pageNumber) : image, context), clip);
                 }
+                // Painting keeps note tables in their placed legacy frame.
+                foreach (var row in story.TableRows)
+                    foreach (var image in CellImages(row, clip)) yield return image;
             }
         }
 
