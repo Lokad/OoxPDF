@@ -233,6 +233,20 @@
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
   ],
+  "pptx-chart-plot-selection": [
+    "PptxChartPlotElementSelectionUsesSceneSource",
+    "PptxChartPlotElementsSelectionUsesSceneSources",
+    "PptxSyntheticBarChartsRenderNativeCharts",
+    "PptxSyntheticLineAndPieChartsRenderNativeCharts",
+    "PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts",
+    "PptxSyntheticBubbleChartRendersBubbleSizeDataLabels",
+    "PptxSyntheticAreaChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticRadarChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticPieChartManualPlotBoxUsesPolarPath",
+    "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
+    "PptxSyntheticLineChartPreservesSeriesStylesAfterBlankSeries",
+    "PortableRenderingPptxPreservesCompositeChartAndText"
+  ],
   "pptx-chart-axis-selection": [
     "PptxChartAxisSelectionKeepsDeclaredOrderAndMissingSources",
     "PptxChartSceneAxesUseSceneOwnedXmlEvidence",

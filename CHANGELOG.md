@@ -38,7 +38,7 @@
   Custom markers sharing a run with other references preserve supported equations,
   links and page counters.
 
-- PPTX: chart axis selection uses the resolved scene, removing duplicate XML-only
+- PPTX: chart plot and axis selection use the resolved scene, removing duplicate XML-only
   selection paths while preserving source order and missing-axis fallbacks.
   Numeric declarations, crossings and explicit-scale admission also use scene
   properties; the live combination-chart XML fallback remains.
