@@ -555,8 +555,9 @@ Approximate or restricted:
   references in source order. Links can span the resulting pages; bookmarks target
   the first placed source content. This content-preservation coverage does not
   establish Office pagination or visual parity for arbitrary combinations.
-  Bookmarks on ordered inline pictures and boxes use the placed object's horizontal
-  boundary and occupied line top; legacy picture-only paragraphs keep their
+  Bookmarks on ordered inline pictures and boxes use the occupied line top.
+  Mid-line objects supply their horizontal extent; line-start objects retain the
+  containing frame's viewport origin. Legacy picture-only paragraphs keep their
   existing navigation fallback.
   Prepared display rows reuse math boxes and source frames. Mathematical layout
   emits DOCX_APPROXIMATED_EQUATION; omitted unsupported math is diagnosed separately.
