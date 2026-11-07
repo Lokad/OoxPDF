@@ -48,6 +48,7 @@ internal static partial class DocxMathTests
         }
         var orphan = new XElement(MathNamespace + "oMath", new XElement(WordprocessingNamespace + "sdtContent",
             new XElement(MathNamespace + "r", new XElement(MathNamespace + "t", "Orphan"))));
-        TestAssert.True(!DocxMathLayout.TryGetRuns(new(Parse(orphan), 0, 0, false, null, null, null), default, out _));
+        TestAssert.True(!DocxMathLayout.TryGetRuns(new(Parse(orphan), 0, 0, false, null, null, null), default, out _),
+            "sdtContent needs its actual content-control parent.");
     }
 }
