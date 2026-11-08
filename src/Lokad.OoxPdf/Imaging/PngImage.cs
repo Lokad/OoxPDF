@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace Lokad.OoxPdf.Imaging;
 
 internal sealed class PngImage
@@ -41,9 +39,9 @@ internal sealed class PngImage
         int interlace = 0;
         ReadOnlyMemory<byte>? palette = null;
         ReadOnlyMemory<byte>? transparency = null;
-        var idatRanges = new List<(int Offset, int Length)>();
+        long compressedTotal = 0L;
         int offset = Signature.Length;
-        while (offset + 8 <= bytes.Length)
+        while (offset <= bytes.Length - 8)
         {
             cancellationToken.ThrowIfCancellationRequested();
             int length = ReadInt32(bytes, offset);
@@ -52,12 +50,12 @@ internal sealed class PngImage
                 throw new InvalidDataException("PNG chunk extends beyond the end of the data.");
             }
 
-            string type = Encoding.ASCII.GetString(bytes, offset + 4, 4);
+            ReadOnlySpan<byte> type = bytes.AsSpan(offset + 4, 4);
             offset += 8;
             ReadOnlySpan<byte> data = bytes.AsSpan(offset, length);
             offset += length + 4;
 
-            if (type == "IHDR")
+            if (type.SequenceEqual("IHDR"u8))
             {
                 if (data.Length != 13)
                 {
@@ -79,19 +77,19 @@ internal sealed class PngImage
 
                 ImagePixelBudget.Check(width, height, "PNG");
             }
-            else if (type == "PLTE")
+            else if (type.SequenceEqual("PLTE"u8))
             {
                 palette = bytes.AsMemory(offset - 4 - length, length);
             }
-            else if (type == "tRNS")
+            else if (type.SequenceEqual("tRNS"u8))
             {
                 transparency = bytes.AsMemory(offset - 4 - length, length);
             }
-            else if (type == "IDAT")
+            else if (type.SequenceEqual("IDAT"u8))
             {
-                idatRanges.Add((offset - 4 - length, length));
+                compressedTotal = checked(compressedTotal + length);
             }
-            else if (type == "IEND")
+            else if (type.SequenceEqual("IEND"u8))
             {
                 break;
             }
@@ -112,11 +110,6 @@ internal sealed class PngImage
             throw new InvalidDataException("PNG transparency metadata is invalid.");
         }
 
-        long compressedTotal = 0L;
-        foreach ((int Offset, int Length) range in idatRanges)
-        {
-            compressedTotal = checked(compressedTotal + range.Length);
-        }
         long planeBytes = (long)width * height *
             (colorType is 3 or 4 or 6 || colorType is 0 or 2 && transparency is not null ? 4 : 3);
         int maximumStride = checked((width * GetBitsPerPixel(bitDepth, colorType) + 7) / 8);
@@ -132,10 +125,18 @@ internal sealed class PngImage
                 // Keep exact-sized IDAT staging and streaming scanline decode.
                 byte[] compressed = new byte[checked((int)compressedTotal)];
                 int compressedFill = 0;
-                foreach ((int Offset, int Length) range in idatRanges)
+                // The header pass validated this prefix through IEND. Copy its
+                // data chunks without retaining one range/string per chunk.
+                for (int chunkOffset = Signature.Length; chunkOffset < offset;)
                 {
-                    bytes.AsSpan(range.Offset, range.Length).CopyTo(compressed.AsSpan(compressedFill));
-                    compressedFill += range.Length;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int length = ReadInt32(bytes, chunkOffset);
+                    if (bytes.AsSpan(chunkOffset + 4, 4).SequenceEqual("IDAT"u8))
+                    {
+                        bytes.AsSpan(chunkOffset + 8, length).CopyTo(compressed.AsSpan(compressedFill));
+                        compressedFill += length;
+                    }
+                    chunkOffset += length + 12;
                 }
                 using var input = new MemoryStream(compressed, 0, compressed.Length, writable: false);
                 using var zlib = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);

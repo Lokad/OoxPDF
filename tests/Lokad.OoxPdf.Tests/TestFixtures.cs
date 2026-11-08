@@ -300,7 +300,7 @@ internal static class TestFixtures
         return size <= start ? 0 : (size - start + step - 1) / step;
     }
 
-    private static void WritePngChunk(Stream stream, string type, ReadOnlySpan<byte> data)
+    internal static void WritePngChunk(Stream stream, string type, ReadOnlySpan<byte> data)
     {
         Span<byte> header = stackalloc byte[8];
         WriteInt32(header[..4], data.Length);
