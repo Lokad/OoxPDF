@@ -405,8 +405,8 @@ internal sealed partial class DocxRenderer
             .Concat(box.InlineImages)
             .Concat(box.TableRows)
             .OrderByDescending(ResolveLayoutItemTop)
-            .Select(item => item is DocxTextLineLayout { StaticStoryUsesPhysicalY: true } line
-                ? AdjustStaticTextLine(line, markupContext) : item)
+            .Select(item => item.StaticStoryUsesPhysicalY
+                ? AdjustStaticLayoutItem(item, markupContext) : item)
             .ToArray();
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)

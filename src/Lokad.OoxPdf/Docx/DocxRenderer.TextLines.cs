@@ -324,12 +324,11 @@ internal sealed partial class DocxRenderer
 
     private static IEnumerable<DocxLayoutItem> EnumerateStaticLayoutItems(DocxLayoutPage page, DocxMarkupContext markupContext)
     {
-        return page.StaticTextLines.Select(line => AdjustStaticTextLine(line, markupContext))
-            .Cast<DocxLayoutItem>()
+        return page.StaticTextLines.Cast<DocxLayoutItem>()
             .Concat(page.StaticInlineImages)
             .Concat(page.StaticInlineTextBoxes)
-            .Concat(page.StaticTableRows.Select(row => row.StaticStoryUsesPhysicalY
-                ? TranslateTableRow(row, 0d, markupContext.WordCompatibleTextYOffset) : row))
+            .Concat(page.StaticTableRows)
+            .Select(item => AdjustStaticLayoutItem(item, markupContext))
             .OrderByDescending(item => item switch
             {
                 DocxTextLineLayout textLine => textLine.BaselineY,
@@ -338,6 +337,16 @@ internal sealed partial class DocxRenderer
                 _ => 0d
             });
     }
+
+    // Physical static frames already own their Y. Precompensate the existing
+    // text/table painters once, regardless of which container supplies the item.
+    private static DocxLayoutItem AdjustStaticLayoutItem(DocxLayoutItem item, DocxMarkupContext markupContext) => item switch
+    {
+        DocxTextLineLayout line => AdjustStaticTextLine(line, markupContext),
+        DocxTableRowLayout { StaticStoryUsesPhysicalY: true } row =>
+            TranslateTableRow(row, 0d, markupContext.WordCompatibleTextYOffset),
+        _ => item
+    };
 
     private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, DocxMarkupContext? markupContext = null)
     {
@@ -364,9 +373,9 @@ internal sealed partial class DocxRenderer
             foreach (var box in page.StaticInlineTextBoxes)
             {
                 var owner = box.Story ?? DocxStoryId.Body();
-                foreach (var line in box.TextLines) yield return (line, owner);
+                foreach (var line in box.TextLines) yield return (AdjustStaticTextLine(line, markupContext), owner);
                 foreach (var row in box.TableRows)
-                    foreach (var line in EnumerateTableRowTextLines(row)) yield return (line, owner);
+                    foreach (var line in EnumerateTableRowTextLines(row)) yield return (AdjustStaticTextLine(line, markupContext), owner);
             }
         foreach (DocxTableRowLayout row in page.StaticTableRows)
             foreach (DocxTextLineLayout line in EnumerateTableRowTextLines(row))

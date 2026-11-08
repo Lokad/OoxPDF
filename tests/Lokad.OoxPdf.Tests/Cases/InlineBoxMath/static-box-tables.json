@@ -1,0 +1,66 @@
+[
+  {
+    "Id": "static-box-table-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-header.docx",
+    "Sha256": "03017F132EE45D994D3862B8876CA97287B6FF9BA98094398DA751E37AD3E257",
+    "HeldOut": false,
+    "Variant": "header",
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "static-box-table-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-footer.docx",
+    "Sha256": "84CAA9E8CC97DFF6D1A12A68895B89A512B2938B65E225B6D1E0D10B00477400",
+    "HeldOut": true,
+    "Variant": "footer",
+    "MathPart": "word/static-inline-ordinary-footer-box.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "static-box-table-nested-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-nested-header.docx",
+    "Sha256": "7DADD32A8125AE1DCFEE105B6B60612B957231F1C5FB2F491453A332B2534AC4",
+    "HeldOut": true,
+    "Variant": "nested-header",
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ]
+  },
+  {
+    "Id": "static-box-table-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-body.docx",
+    "Sha256": "6DA01F9AE600EB4970BCB42719BDAA380ADB7AE16CA4887A56549E192A46AF34",
+    "HeldOut": true,
+    "Variant": "body",
+    "MathPart": "word/document.xml",
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ]
+  }
+]

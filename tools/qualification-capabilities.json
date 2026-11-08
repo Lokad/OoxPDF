@@ -1,4 +1,21 @@
 {
+  "docx-static-box-table-placement": [
+    "DocxStaticBoxTables",
+    "DocxOrdinaryStaticInline",
+    "PortableRenderingOrdinaryStaticInlineRetainsSourceContent",
+    "DocxStaticTable",
+    "PortableRenderingStaticTableOriginsRetainSourceContent",
+    "DocxInlineBoxBookmarksPreservePlacedLinksAndSiblingContent",
+    "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations",
+    "DocxInlineBoxMathKeepsIndependentContentAcrossContainers",
+    "DocxInlineBoxMathPreparation",
+    "PortableRenderingInlineBoxMathKeepsSourceContentAndResources",
+    "DocxInlineBoxPageCountersKeepIndependentWordMathAndFieldOrigins",
+    "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
+    "DocxStaticStoryInlineImagesShareTheTextBaseline",
+    "DocxStaticStoryDeclaredFramesClipInlineImages",
+    "DocxDefaultStaticDistances"
+  ],
   "docx-paragraph-mark-captions": [
     "DocxParagraphMarkFormatting",
     "DocxParagraphPropertyMath",
