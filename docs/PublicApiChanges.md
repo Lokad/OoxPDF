@@ -127,6 +127,8 @@ are also admitted before construction, held through emission, and refunded after
 failed preparation. Only the selected collection face is copied and charged.
 Its character/advance maps also request coarse construction capacity from the
 same font owner before expansion and retain that funding through emission.
+That owner now also funds retained table-directory tags/records before parsing;
+collection validation scratch refunds before the selected SFNT is constructed.
 Kerning coverage and sparse callbacks now request their existing builder's
 construction capacity before bulk expansion/retention. Metadata-heavy fonts can
 therefore refuse earlier under a supplied budget; no new limit or option is added.

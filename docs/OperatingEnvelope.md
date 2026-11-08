@@ -56,11 +56,15 @@ and effect expansion remains unproven. These estimates cover ordinary
 construction overlap; unusually expanding effects/vector inputs remain unproven.
 MemoryBudget also admits
 PDF content staging, private SFNT/
-subset programs, retained character/advance maps and kerning-pair arrays, and decoded raster planes with PNG IDAT/scanline and baseline
+subset programs, retained font directories, character/advance maps and kerning-pair arrays, and decoded raster planes with PNG IDAT/scanline and baseline
 JPEG component/RGB construction overlap before allocation. Image/font compression
 also admits actual output capacity, growth overlap and final copying. Image payloads
 remain funded through emission; font-compression storage refunds after its stream
 is written. GPOS right-class decoding counts before allocating exact glyph arrays.
+Font directories are pre-sized from their validated table count. Collection
+discovery reuses its validated directory; extraction refunds directory scratch
+before constructing the selected SFNT. Retained tags/records share the existing
+private-font grant. These are coarse admission estimates, not heap ceilings.
 One source-shaped kerning construction window covers exact coverage arrays,
 class maps and retained sparse/class callbacks. Sparse callbacks retain only the
 needed glyph, not an entire coverage array; empty pair sets create no callbacks.
