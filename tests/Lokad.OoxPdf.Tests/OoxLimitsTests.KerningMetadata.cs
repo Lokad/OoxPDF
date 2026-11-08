@@ -5,6 +5,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class OoxLimitsTests
 {
+    public static void ClassKerningUnusableRightClassesSkipLeftRowConstruction()
+    {
+        byte[] small = BuildLeftClassFont(128, rightClass: false), dense = BuildLeftClassFont(30000, rightClass: false);
+        OpenTypeFont.LoadShared(small, 0, default); OpenTypeFont.LoadShared(dense, 0, default);
+        long Measure(byte[] bytes)
+        {
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            var font = OpenTypeFont.LoadShared(bytes, 0, default);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestAssert.Equal((short)0, font.GetKerning(0, 0));
+            TestAssert.Equal((short)0, font.GetKerning(29999, 0));
+            GC.KeepAlive(font);
+            return allocated;
+        }
+        long sparse = Measure(small), expanded = Measure(dense);
+        TestAssert.True(expanded - sparse < 512 * 1024,
+            $"No eligible right class means no reached-left row cache, even with many source rows: {sparse} -> {expanded}.");
+    }
+
+    public static void ClassKerningReachedLeftRowsKeepNonzeroAndAliasSemantics()
+    {
+        foreach (int aliases in new[] { 1, 2 })
+        {
+            byte[] bytes = BuildLeftClassFont(15000, nonzero: true, aliases: aliases);
+            var font = OpenTypeFont.LoadShared(bytes, 0, default);
+            TestAssert.Equal((short)-50, font.GetKerning(0, 0));
+            TestAssert.Equal((short)-50, font.GetKerning(14999, 0));
+            TestAssert.Equal((short)0, font.GetKerning(15000, 0));
+            TestAssert.Equal((short)0, font.GetKerning(0, 1));
+            TestAssert.True(font.Bytes.Span.SequenceEqual(bytes), "Source aliases and admission preserve the same original program.");
+        }
+    }
+
     public static void ClassKerningRightClassesAvoidGrowableListsAndKeepSparseOutput()
     {
         byte[] small = BuildRightClassFont(2), dense = BuildRightClassFont(16384);
@@ -81,6 +114,35 @@ internal static partial class OoxLimitsTests
             var table = TestFontBuilder.GetTableRange(source, name);
             return source.AsSpan(table.Offset, table.Length).ToArray();
         }
+    }
+
+    internal static byte[] BuildLeftClassFont(int classes, bool rightClass = true, bool nonzero = false,
+        int aliases = 1, int? coveredGlyphs = null)
+    {
+        byte[] font = BuildRightClassFont(2);
+        byte[] seed = BuildClassKernGpos(1, 1, rangeCoverage: false);
+        int list = U(seed, 8), lookup = list + U(seed, list + 2), subtable = lookup + 6 + 2 * aliases;
+        int columns = rightClass ? 2 : 1;
+        int coverage = 16 + classes * columns * 2, right = coverage + 10, left = right + 8;
+        int covered = coveredGlyphs ?? classes;
+        if (covered < 1 || covered > classes) throw new ArgumentOutOfRangeException(nameof(coveredGlyphs));
+        byte[] gpos = new byte[subtable + left + 6 + classes * 2];
+        seed.AsSpan(0, lookup + 6).CopyTo(gpos);
+        W(gpos, lookup + 4, aliases);
+        for (int i = 0; i < aliases; i++) W(gpos, lookup + 6 + 2 * i, subtable - lookup);
+        W(gpos, subtable, 2); W(gpos, subtable + 2, coverage); W(gpos, subtable + 4, 4);
+        W(gpos, subtable + 8, left); W(gpos, subtable + 10, right);
+        W(gpos, subtable + 12, classes); W(gpos, subtable + 14, columns);
+        if (nonzero)
+            for (int i = 0; i < classes; i++)
+                BinaryPrimitives.WriteInt16BigEndian(gpos.AsSpan(subtable + 16 + 2 * (i * columns + 1)), -50);
+        W(gpos, subtable + coverage, 2); W(gpos, subtable + coverage + 2, 1);
+        W(gpos, subtable + coverage + 6, covered - 1);
+        W(gpos, subtable + right, 1); W(gpos, subtable + right + 4, 1);
+        W(gpos, subtable + right + 6, rightClass ? 1 : 0);
+        W(gpos, subtable + left, 1); W(gpos, subtable + left + 4, classes);
+        for (int i = 0; i < classes; i++) W(gpos, subtable + left + 6 + i * 2, i);
+        return TestFontBuilder.ReplaceTable(font, "GPOS", gpos);
     }
 
     private static ushort U(byte[] b, int i) => BinaryPrimitives.ReadUInt16BigEndian(b.AsSpan(i, 2));

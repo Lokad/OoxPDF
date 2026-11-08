@@ -4,6 +4,72 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class OoxMemoryAdmissionTests
 {
+    public static void MemoryBudgetKerningLeftRowsAdmitsReachedConstructionAndReusesAliases()
+    {
+        long Peak(int aliases, int covered)
+        {
+            byte[] bytes = OoxLimitsTests.BuildLeftClassFont(15000, aliases: aliases, coveredGlyphs: covered);
+            var pool = new TestMemoryBudget();
+            using (var scope = OoxConversionBudget.BeginScope(null, pool))
+            {
+                var font = OpenTypeFont.LoadShared(bytes, 0, default);
+                TestAssert.Equal((short)0, font.GetKerning(0, 0));
+                TestAssert.Equal((short)0, font.GetKerning(14999, 0));
+                if (covered == 15000)
+                    TestAssert.True(pool.Peak > pool.Reserved + 1024 * 1024,
+                        "Reached zero-adjustment rows need construction capacity before their cache is built.");
+                TestAssert.True(font.Bytes.Span.SequenceEqual(bytes), "Admission preserves the source program.");
+                GC.KeepAlive(font);
+            }
+            TestAssert.Equal(0L, pool.Reserved);
+            TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
+            TestAssert.Equal(0, pool.CallerDisposals);
+            return pool.Peak;
+        }
+        long one = Peak(1, 15000), repeated = Peak(2, 15000), sparse = Peak(1, 2);
+        TestAssert.True(Math.Abs(repeated - one) < 4096,
+            "Repeated source aliases reuse the construction window instead of accumulating a work charge.");
+        TestAssert.True(sparse + 1024 * 1024 < one,
+            "Declared but unreached classes must not consume the reached-row allowance.");
+    }
+
+    public static void MemoryBudgetKerningLeftRowsRefusesBeforeConstructionAndRefundsCancellation()
+    {
+        byte[] sparse = OoxLimitsTests.BuildLeftClassFont(15000, coveredGlyphs: 2);
+        byte[] dense = OoxLimitsTests.BuildLeftClassFont(15000, nonzero: true);
+        var pool = new TestMemoryBudget(1536 * 1024);
+        using (var scope = OoxConversionBudget.BeginScope(null, pool))
+            TestAssert.Equal((short)0, OpenTypeFont.LoadShared(sparse, 0, default).GetKerning(0, 0));
+        TestAssert.Equal(0L, pool.Reserved);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        using (var scope = OoxConversionBudget.BeginScope(null, pool))
+        {
+            var failure = TestAssert.Throws<OoxPdfLimitExceededException>(() => OpenTypeFont.LoadShared(dense, 0, default));
+            TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, failure.Kind);
+        }
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        TestAssert.True(allocated < 2 * 1024 * 1024,
+            $"Refusal must precede the multi-megabyte reached-row cache, rather than follow it: {allocated}.");
+        TestAssert.Equal(0L, pool.Reserved);
+        using var cancellation = new CancellationTokenSource();
+        var cancelPool = new TestMemoryBudget { RefuseChange = (_, after) =>
+        {
+            if (after > 2 * 1024 * 1024) cancellation.Cancel();
+            return false;
+        }};
+        byte[] larger = OoxLimitsTests.BuildLeftClassFont(16000);
+        using (var scope = OoxConversionBudget.BeginScope(null, cancelPool))
+        {
+            var failure = TestAssert.Throws<OperationCanceledException>(() => OpenTypeFont.LoadShared(larger, 0, cancellation.Token));
+            TestAssert.Equal(cancellation.Token, failure.CancellationToken);
+        }
+        TestAssert.Equal(0L, cancelPool.Reserved);
+        TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
+        TestAssert.Equal(cancelPool.ScopesCreated, cancelPool.ScopesDisposed);
+        TestAssert.Equal(0, pool.CallerDisposals);
+        TestAssert.Equal(0, cancelPool.CallerDisposals);
+    }
+
     public static void MemoryBudgetKerningMetadataFundsConstructionAndRefundsBeforeUse()
     {
         byte[] bytes = OoxLimitsTests.BuildRightClassFont(16384, nonzero: true);

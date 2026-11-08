@@ -376,7 +376,36 @@ internal sealed partial class OpenTypeFont
             }
 
             Dictionary<ushort, ushort[]> rightGlyphsByClass = ReadClassGlyphs(bytes, classDef2, tableEnd, pairs);
+            int rightGlyphs = 0;
+            bool hasEligibleRightClass = false;
+            foreach (var right in rightGlyphsByClass)
+            {
+                pairs.CheckCancellation();
+                rightGlyphs += right.Value.Length;
+                hasEligibleRightClass |= right.Key != 0 && right.Key < class2Count;
+            }
+            // No row can contribute a pair without an eligible right class.
+            // Do not construct left-row caches for this no-op source.
+            if (!hasEligibleRightClass) return;
             var leftClasses = new ushort[coverageGlyphs.Length];
+            Span<ulong> reached = stackalloc ulong[1024];
+            reached.Clear();
+            int reachedClasses = 0;
+            for (int index = 0; index < coverageGlyphs.Length; index++)
+            {
+                pairs.CheckCancellation();
+                ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, coverageGlyphs[index], pairs);
+                leftClasses[index] = leftClass;
+                if (leftClass >= class1Count) continue;
+                ulong bit = 1UL << (leftClass & 63);
+                ref ulong word = ref reached[leftClass >> 6];
+                if ((word & bit) == 0) { word |= bit; reachedClasses++; }
+            }
+            // Reached zero-adjustment rows also occupy the memoized cache.
+            // Admit the complete class family before constructing those rows;
+            // declared but unreached classes consume no row-cache allowance.
+            pairs.AdmitClassStorage(rightGlyphs + coverageGlyphs.Length,
+                rightGlyphsByClass.Count + reachedClasses);
             var rowBatches = new Dictionary<ushort, (List<(ushort[] Glyphs, short Advance)> Adjustments, long PairCount)>();
             int leftLimit = coverageGlyphs.Length;
             long contributions = CountClassPairs();
@@ -399,8 +428,7 @@ internal sealed partial class OpenTypeFont
                 for (int index = 0; index < coverageGlyphs.Length; index++)
                 {
                     pairs.CheckCancellation();
-                    ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, coverageGlyphs[index], pairs);
-                    leftClasses[index] = leftClass;
+                    ushort leftClass = leftClasses[index];
                     if (leftClass >= class1Count) continue;
                     if (!rowBatches.TryGetValue(leftClass, out var row))
                     {
