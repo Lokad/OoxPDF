@@ -65,6 +65,14 @@ display behavior in qualified body/cell paragraphs without altering its source
 flag. Wider or unfit mixed objects retain diagnosed fallback. Painted math rows
 are atomic; arbitrary row fragmentation remains unqualified.
 
+Automatic paragraph spacing includes resolved style/default values. Prepared
+display equations use their nominal metric owner for ordinary expansion while
+child glyphs retain their own sizes and ink bounds. Mixed inline rows add ordinary
+expansion after their occupied math/picture frame, once per completed line.
+Supported picture-only paragraphs share that frame across body, cells and static
+stories. Minimum, exact and compressed spacing retain their qualified contracts;
+these rules do not establish full-page Office fidelity.
+
 Body-table placement reuses prepared boxes, cell measurements and clips. Resolved
 automatic, minimum and exact row heights have independent Office controls. A zero
 exact height uses natural height; small exact rows keep their clips. Supported

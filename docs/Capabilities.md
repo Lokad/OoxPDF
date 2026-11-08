@@ -499,7 +499,11 @@ Supported within the following constraints:
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
   including supported crop/flips/rotation and source frames. Picture-only body
-  paragraphs use occupied height and collapsed spacing. Inline pictures follow
+  paragraphs use occupied height and collapsed spacing. Qualified automatic
+  picture-only paragraphs share their measured row frame across body, cells and
+  static stories. Expanded ordinary spacing follows the occupied math/picture
+  row once; prepared display equations retain their own spacing owner.
+  Inline pictures follow
   effective run hiding, including inherited styles and explicit false overrides;
   drawing-level `docPr hidden` alone retains Word's print behavior. Floating pictures/textboxes
   have bounded positioning, clipping, z-order and first-pass wrap exclusions;
