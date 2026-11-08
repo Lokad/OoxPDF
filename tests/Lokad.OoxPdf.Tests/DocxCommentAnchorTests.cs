@@ -38,12 +38,13 @@ internal static class DocxCommentAnchorTests
             CommentRanges = [before.CommentRanges[0], after.CommentRanges[0] with { Id = "1" }]
         };
         var source = Document(paragraph);
-        TestAssert.True(Scale(source) < 1d);
+        TestAssert.True(Scale(source) < 1d, "The surviving source anchor owns the shared printed lane.");
         var renderer = Renderer();
         TestAssert.Equal(1, renderer.InspectMarkupBalloons(source).Count);
         string text = string.Concat(renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable()
             .Select(DocxPageFootnoteNumberingTests.DecodeText));
-        TestAssert.True(!text.Contains("Public comment", StringComparison.Ordinal));
+        TestAssert.True(!text.Contains("Public comment", StringComparison.Ordinal),
+            "A surviving neighbor cannot make the empty source anchor paint a balloon.");
         TestAssert.Contains("Second comment", text);
         TestAssert.Equal(2, paragraph.CommentRanges.Count);
         TestAssert.Equal(2, Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(source).Count);
