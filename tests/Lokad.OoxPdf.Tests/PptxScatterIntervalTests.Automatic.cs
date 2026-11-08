@@ -59,7 +59,8 @@ internal static partial class PptxScatterIntervalTests
         foreach (string fallback in new[] { "outer", "unknown-width", "NaN", "log", "scaling" })
         {
             XDocument xml = XDocument.Parse(AutoChart(sample));
-                XElement layout = xml.Descendants(CurveC + "manualLayout").Single();
+            XElement xAxis = xml.Descendants(CurveC + "valAx").First();
+            XElement layout = xml.Descendants(CurveC + "manualLayout").Single();
             if (fallback == "outer") layout.Element(CurveC + "layoutTarget")!.SetAttributeValue("val", "outer");
             if (fallback == "unknown-width") layout.Element(CurveC + "wMode")!.SetAttributeValue("val", "unknown");
             if (fallback == "NaN") layout.Element(CurveC + "w")!.SetAttributeValue("val", "NaN");
@@ -104,6 +105,7 @@ internal static partial class PptxScatterIntervalTests
         var data = new RangeCase(sample.Id, "X", sample.X, [1d, 2d, 79d, 4d, 5d, 6d, 7d, 8d], sample.Minimum, sample.Maximum,
             1d, null, false, sample.ExpectedMinimum, sample.ExpectedMaximum);
         XDocument xml = XDocument.Parse(RangeChart(data));
+        XElement xAxis = xml.Descendants(CurveC + "valAx").First();
         XElement yAxis = xml.Descendants(CurveC + "valAx").Last();
         yAxis.Element(CurveC + "scaling")!.Element(CurveC + "min")!.SetAttributeValue("val", "7");
         if (majorUnit is null) xAxis.Element(CurveC + "majorUnit")!.Remove();

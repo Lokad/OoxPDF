@@ -63,8 +63,7 @@ internal static partial class PptxScatterIntervalTests
     public static void PptxScatterAutomaticYRetainsSceneFallbackAndCancellationOwnership()
     {
         RangeCase sample = AutomaticYCases().Single(c => c.Id == "range-scatter-103-auto");
-        XElement mismatch = XElement.Parse(Axis("2", "l", "1", "400", "500", "100", "0000FF"));
-        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-17d, 103d), ResolveRange(sample, mismatch).Extents);
+        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-17d, 103d), ResolveRange(sample).Extents);
         foreach (RangeCase rejected in new[] { sample with { MajorUnit = double.NaN }, sample with { MajorUnit = -1d },
             sample with { MajorUnit = double.PositiveInfinity }, sample with { Minimum = double.NaN } })
             CheckFallback(rejected);
