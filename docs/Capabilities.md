@@ -142,7 +142,8 @@ Approximate or restricted:
   wrapping. Automatic outer captions share height with the plot and may truncate
   within their footer. Authored plot geometry remains fixed. Automatic vertical
   value labels retain endpoints and omit overlapping ink; fixed intervals remain
-  unchanged. Vertical numeric strips measure the same automatic interval policy
+  unchanged. A measured automatic column scale also retains its allocated captions
+  through later authored inner-plot placement. Vertical numeric strips measure the same automatic interval policy
   used to emit their labels. Resolved Cartesian spans below one retain proportional
   coordinates
   and tick intervals. Negative-only data shares positive-axis bound rounding and
