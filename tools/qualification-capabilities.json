@@ -1,4 +1,17 @@
 {
+  "docx-paragraph-mark-formatting": [
+    "DocxParagraphMarkFormatting",
+    "DocxParagraphPropertyMath",
+    "DocxInlineCompositionNumberingMarksRequireActualSourceOwners",
+    "DocxInlineCompositionNumberingMarkOwnersKeepVisibleContent",
+    "DocxInlineCompositionMarkFormattingBalloons",
+    "DocxInlineCompositionNumberedMathPreservesFourStoryContent",
+    "DocxInlineCompositionRunFormatting",
+    "DocxDeletedParagraphMark",
+    "DocxInlineCompositionEquationRevisionsRequireActualSourceOwners",
+    "DocxInlineCompositionControlRevisionsRetainActualOwnersAndRoleFallbacks",
+    "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation"
+  ],
   "docx-static-default-distances": [
     "DocxDefaultStaticDistances",
     "DocxParagraphPropertyMath",

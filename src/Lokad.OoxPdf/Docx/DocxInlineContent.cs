@@ -257,7 +257,8 @@ internal static class DocxInlineContent
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
-            paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
+            paragraph.ListLabel is not null || paragraph.ParagraphMarkRun?.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange }]
+                ? paragraph.ParagraphMarkRun : null, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
             paragraph.ConsumedParagraphMarks, paragraph.PropertyRevision);
 
     // Reference identity and measured source position establish actual owners.
@@ -303,7 +304,7 @@ internal static class DocxInlineContent
     }
 
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
-        IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null,
+        IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? paragraphMark = null, IReadOnlyList<DocxInlineImage>? images = null,
         IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null, IReadOnlyList<DocxEquation>? equations = null,
         IReadOnlyList<DocxTextRun>? consumedParagraphMarks = null, DocxRevisionInfo? paragraphPropertyRevision = null)
     {
@@ -372,16 +373,21 @@ internal static class DocxInlineContent
         if (equationOwners is not null)
             foreach (var owner in equationOwners)
             { token.ThrowIfCancellationRequested(); remaining.Remove(owner); }
-        // A parsed paragraph mark owns an inserted numbering prefix even when
-        // none of its visible text runs is revised. Keep other mark kinds and
-        // unrelated/value-equal metadata on their existing fallback paths.
-        if (numberingMark is { SourceRunIndex: -1 } && string.IsNullOrWhiteSpace(numberingMark.Text))
-            foreach (var revision in numberingMark.Revisions)
+        // A resolved mark owns its unique run-formatting snapshot independently
+        // of visible inline text. Insertion still requires a numbering owner
+        // supplied above; other mark kinds and duplicate histories retain fallback.
+        if (paragraphMark is { SourceRunIndex: -1 } && string.IsNullOrWhiteSpace(paragraphMark.Text))
+        {
+            if (paragraphMark.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange,
+                SourceElement: "rPrChange", PropertyChangeFamily: DocxRevisionPropertyFamily.Run } formatting])
+                remaining.Remove(formatting);
+            foreach (var revision in paragraphMark.Revisions)
             {
                 token.ThrowIfCancellationRequested();
                 if (revision.Kind == DocxRevisionKind.Insertion && revision.SourceElement == "ins")
                     remaining.Remove(revision);
             }
+        }
         // Only a join's actual deleted marks can discharge this metadata.
         // Unconsumed, misplaced and value-equal revisions keep their fallback.
         if (consumedParagraphMarks is not null)

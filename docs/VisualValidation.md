@@ -66,6 +66,12 @@ page counts and numerical gates do not establish agreement with the visible
 application. Controlled view calibration, repeatability and divergence probes
 must precede adopting an image reference as authoritative.
 
+Word 16 paired Review probes retain body and equation ink in page-EMF images,
+but omit comment/formatting balloons present in the secondary PDF despite verified
+view settings. The page API also reports an expanded Review width. These captures
+cannot adjudicate balloon placement or custom-page PDF print origins without
+application-view calibration.
+
 The repository vendors the exact rasterizer binary (`tools/vendor/pdfium/win-x64/bin/pdfium.dll`, PDFium 150.0.7834.0 per `VERSION`); checkouts must use it as-is. Do not replace it from `releases/latest`: a different build silently changes raster output, and `tools/RasterizePdf.ps1` verifies the binary against the pinned SHA256 in `tools/vendor/pdfium/win-x64/pdfium.sha256` before every run. To upgrade, fetch the versioned release matching `VERSION`, replace the DLL, and update the pin file in the same commit.
 
 ## Running A Case
