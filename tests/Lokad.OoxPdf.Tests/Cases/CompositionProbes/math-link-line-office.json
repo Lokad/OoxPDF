@@ -1,0 +1,125 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "Office": "Word16 Final; bootstrap only, not calibrated application view",
+  "TolerancePoints": 1,
+  "Rows": [
+    {
+      "Id": "root-header-partial",
+      "Input": "math-link-line-root-header-partial.docx",
+      "InputSha256": "EB5208BA3706F7492E0B3FA5C934E4BCCCB21CE25614754D2F7154BF9707D7FE",
+      "Target": "https://example.org/math",
+      "ReferencePdfSha256": "16A52DFAF15D5C8F1FD84C22ED38A01465184756126BFC4372067098ADCEB0AD",
+      "ExportLogSha256": "A01D81C7AC60E58B5607C30D0A4AD16E01243E8A945D1D5EBE3840DE939A4275",
+      "Pages": 2,
+      "Links": [
+        {
+          "Page": 1,
+          "Rect": [
+            271.739990234375,
+            55.42999267578125,
+            321.29998779296875,
+            74.32000732421875
+          ]
+        },
+        {
+          "Page": 2,
+          "Rect": [
+            271.739990234375,
+            55.42999267578125,
+            321.29998779296875,
+            74.32000732421875
+          ]
+        }
+      ]
+    },
+    {
+      "Id": "root-header-after0",
+      "Input": "math-link-line-root-header-after0.docx",
+      "InputSha256": "B983B9129416B30372D9D32E7865CAA57D1A4E24F7468803613B5AEC0A1DD19E",
+      "Target": "https://example.org/math",
+      "ReferencePdfSha256": "B6FE8CFE67753F2C065F91361C85F025174603894E12D6B52F83FB7D73B75F34",
+      "ExportLogSha256": "09C7F84B237408C537BC77624DC21DD80D63FA43A4D9A9D3486FE9CF3EB013B6",
+      "Pages": 2,
+      "Links": [
+        {
+          "Page": 1,
+          "Rect": [
+            281.0400085449219,
+            55.42999267578125,
+            330.6099853515625,
+            68.32000732421875
+          ]
+        },
+        {
+          "Page": 2,
+          "Rect": [
+            281.0400085449219,
+            55.42999267578125,
+            330.6099853515625,
+            68.32000732421875
+          ]
+        }
+      ]
+    },
+    {
+      "Id": "root-body-literal",
+      "Input": "math-link-line-root-body-literal.docx",
+      "InputSha256": "DF13A75405EB3B599C1BCB0A05FFFA3375C38E57BB40898B7EF36DC3F349822E",
+      "Target": "https://example.org/math-frame",
+      "ReferencePdfSha256": "7C68C7912DD82D8EF910A5DF26BD23E1FA04D8E4CC01C031DE33B3EB0B0AEAB1",
+      "ExportLogSha256": "E4E8F7FCF8C3F4EE6B7FA32D25C3D2D89FF7083FC107544B9C0E4E85EBF3711C",
+      "Pages": 1,
+      "Links": [
+        {
+          "Page": 1,
+          "Rect": [
+            69.75,
+            74.32000732421875,
+            122.70999908447266,
+            100.77001953125
+          ]
+        }
+      ]
+    },
+    {
+      "Id": "root-footer-fraction",
+      "Input": "math-link-line-root-footer-fraction.docx",
+      "InputSha256": "16502235FEAE1FB110E55AF5A9638D6DF199E1AA040D27B9920B68FB8185656E",
+      "Target": "https://example.org/math-frame",
+      "ReferencePdfSha256": "513922DA3AD4203A3E0C4BC958C976BECE74400DE9EDFCBFC9B81D94BBDCA6CF",
+      "ExportLogSha256": "862B8AF914114BDB7BE967B5FCC226CB67D87D1250CCE91C6A528ADA73FBED99",
+      "Pages": 1,
+      "Links": [
+        {
+          "Page": 1,
+          "Rect": [
+            69.75,
+            724.9290161132812,
+            89.64099884033203,
+            756.0
+          ]
+        }
+      ]
+    },
+    {
+      "Id": "root-body-standalone",
+      "Input": "math-link-line-root-body-standalone.docx",
+      "InputSha256": "BB825400CD8B118395CC11F44B1AC86A0E40638452154086DAC4B5D936B97786",
+      "Target": "https://example.org/math-frame",
+      "ReferencePdfSha256": "CE2E78764C9F537AE577B81646E253F60856FF169981F8AB0AC7C480A5F62DE2",
+      "ExportLogSha256": "A992DC763AB1326E36344A6687A70C602719C6D50BCC8F9C04503FE8201C710D",
+      "Pages": 1,
+      "Links": [
+        {
+          "Page": 1,
+          "Rect": [
+            279.3599853515625,
+            74.32000732421875,
+            332.32000732421875,
+            93.219970703125
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -218,8 +218,11 @@ internal sealed record DocxHyperlinkSpan(
     int TextRunCount,
     int TextLength)
 {
-    // The linked mathematical paint owns this range, not the whole inline item.
+    // Mathematical source ranges stay distinct from prose-run ranges.
     public bool IsMathContent { get; init; }
+    // Root-row selections share the paragraph slot. Links inside mathematical
+    // arguments retain their local measured bounds.
+    public bool IsMathRootContent { get; init; }
     public int? StartInlineItemIndex { get; init; }
     public int? EndInlineItemIndex { get; init; }
 }

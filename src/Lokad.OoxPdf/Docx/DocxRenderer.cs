@@ -1557,35 +1557,29 @@ internal sealed partial class DocxRenderer
                     previousLineLinks = null;
                 }
 
-                // Mathematical subranges own their measured paint, independently
-                // of the surrounding text slot or an outer paragraph hyperlink.
-                if (line.Math is { } math && !line.IsInlineMath)
-                    EmitMathLinks(math, line.X, line.BaselineY, line.MathScale);
-                else
+                if (line.SourceParagraph is not { } paragraph || paragraph.Hyperlinks.Count == 0)
                 {
-                    if (line.IsInlineMath && line.Math is { } inlineMath)
-                        EmitMathLinks(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale);
-                    foreach (var placement in line.InlineMath)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        EmitMathLinks(placement.Math, line.X + placement.OffsetX, line.BaselineY, line.MathScale);
-                    }
-                }
-                if (line.SourceParagraph is not { } paragraph ||
-                    paragraph.Hyperlinks.Count == 0)
-                {
+                    EmitLineMathLinks(line);
                     continue;
                 }
-
-                IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
-                // RV06: Office emits one padded link rectangle per hyperlink per line and
-                // tiles them top-anchored down to the next page line top.
                 bool usesBodyLineBox = line.BodyLineBoxBaselineInsetPoints is not null && line.BodyLineBoxHeightPoints is not null;
                 double lineLinkPad = usesBodyLineBox
                     ? BodyHyperlinkRectHorizontalPadPoints * textEmissionFontScale
                     : HyperlinkRectHorizontalPadEm * line.FontSize;
                 var mergedLinkRects = new List<(DocxHyperlinkSpan Link, double MinX, double MaxX, double Top, double BaseBl, double BaseFs)>();
                 double paintedInlineBottom = double.PositiveInfinity;
+                double mathLineBottom = 0d, mathLineTop = 0d;
+                Action<DocxHyperlinkSpan, double, double, double>? rootMathLink =
+                    DocxInlineLineGeometry.TryGetOccupiedBounds(line, out mathLineBottom, out mathLineTop)
+                        ? AddRootMathFragment : null;
+
+                // Root-row links share the placed line and its source target.
+                // Nested argument links keep their independently measured paint.
+                EmitLineMathLinks(line, rootMathLink);
+
+                IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
+                // RV06: Office emits one padded link rectangle per hyperlink per line and
+                // tiles them top-anchored down to the next page line top.
                 foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(line, fontResources, pageNumber, pageCount, textEmissionFontScale, textEmissionBaselineOffset, textEmissionXOffset, useWordCompatibleTextProfile, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1654,6 +1648,18 @@ internal sealed partial class DocxRenderer
                     mergedLinkRects[index] = (link, Math.Min(merged.MinX, placed.X), Math.Max(merged.MaxX, placed.X + placed.Width),
                         Math.Max(merged.Top, placed.Y + placed.Height), merged.BaseBl, merged.BaseFs);
                     paintedInlineBottom = Math.Min(paintedInlineBottom, placed.Y);
+                }
+
+                void AddRootMathFragment(DocxHyperlinkSpan link, double left, double right, double scale)
+                {
+                    // Keep the math path's qualified horizontal pad when the
+                    // shared line merger applies its own pad at publication.
+                    double padAdjustment = BodyHyperlinkRectHorizontalPadPoints * scale - lineLinkPad;
+                    AddLinkFragment(link, left - padAdjustment, right + padAdjustment,
+                        mathLineTop - textEmissionBaselineOffset, line.BaselineY - textEmissionBaselineOffset,
+                        line.FontSize * textEmissionFontScale);
+                    paintedInlineBottom = Math.Min(paintedInlineBottom,
+                        mathLineBottom - textEmissionBaselineOffset - (line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d));
                 }
 
                 void AddLinkFragment(DocxHyperlinkSpan link, double fragmentMinX, double fragmentMaxX,
@@ -1728,21 +1734,51 @@ internal sealed partial class DocxRenderer
             foreach (var equation in page.Items.OfType<DocxEquationLayout>())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                EmitMathLinks(equation.Math, equation.X, equation.BaselineY, equation.Scale);
+                Action<DocxHyperlinkSpan, double, double, double>? rootMathLink = null;
+                if (DocxInlineLineGeometry.TryGetPreparedMathBounds(equation.Math, equation.BaselineY, equation.Scale,
+                    out double bottom, out double top))
+                    rootMathLink = (link, left, right, scale) => EmitLinkRect(link,
+                        left - BodyHyperlinkRectHorizontalPadPoints * scale, right + BodyHyperlinkRectHorizontalPadPoints * scale,
+                        top - textEmissionBaselineOffset,
+                        bottom - textEmissionBaselineOffset - equation.SourceParagraph.SpacingAfterPoints * scale);
+                EmitMathLinks(equation.Math, equation.X, equation.BaselineY, equation.Scale, rootMathLink);
             }
             annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber, staticItems, paintedImages, imageCache, markupContext, cancellationToken));
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;
 
-        void EmitMathLinks(DocxPreparedMathParagraph math, double x, double baseline, double scale)
+        void EmitLineMathLinks(DocxTextLineLayout line, Action<DocxHyperlinkSpan, double, double, double>? rootMathLink = null)
+        {
+            if (line.Math is { } math && !line.IsInlineMath)
+                EmitMathLinks(math, line.X, line.BaselineY, line.MathScale, rootMathLink);
+            else
+            {
+                if (line.IsInlineMath && line.Math is { } inlineMath)
+                    EmitMathLinks(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale, rootMathLink);
+                foreach (var placement in line.InlineMath)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    EmitMathLinks(placement.Math, line.X + placement.OffsetX, line.BaselineY, line.MathScale, rootMathLink);
+                }
+            }
+        }
+
+        void EmitMathLinks(DocxPreparedMathParagraph math, double x, double baseline, double scale,
+            Action<DocxHyperlinkSpan, double, double, double>? rootMathLink = null)
         {
             foreach (var (link, rectangle) in ReadMathHyperlinkBounds(math.Box, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                double left = x + rectangle.X * scale + textEmissionXOffset;
+                double right = x + (rectangle.X + rectangle.Width) * scale + textEmissionXOffset;
+                if (link.IsMathRootContent && rootMathLink is not null)
+                {
+                    rootMathLink(link, left, right, scale);
+                    continue;
+                }
                 double pad = BodyHyperlinkRectHorizontalPadPoints * scale;
-                EmitLinkRect(link, x + rectangle.X * scale + textEmissionXOffset - pad,
-                    x + (rectangle.X + rectangle.Width) * scale + textEmissionXOffset + pad,
+                EmitLinkRect(link, left - pad, right + pad,
                     baseline + (rectangle.Y + rectangle.Height) * scale - textEmissionBaselineOffset,
                     baseline + rectangle.Y * scale - textEmissionBaselineOffset);
             }

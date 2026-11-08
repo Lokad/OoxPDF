@@ -1,4 +1,6 @@
 using System.Xml.Linq;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Pdf;
 
@@ -6,6 +8,96 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxMathHyperlinksKeepRootAndArgumentSourceOwners()
+    {
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (bool argument in new[] { false, true })
+        foreach (bool metadata in new[] { false, true })
+        {
+            var document = ReadMutation("docx-omml-isolated-inline-body-fraction-left", mode, true, false,
+                (xml, w, m) =>
+                {
+                    var math = xml.Descendants(m + "oMath").First();
+                    var owner = argument ? math.Descendants(m + "num").First() : math;
+                    var children = owner.Elements().Where(child => !child.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal)).ToArray();
+                    foreach (var child in children) child.Remove();
+                    var link = new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), children);
+                    owner.Add(metadata ? new XElement(w + "customXml", link) : link);
+                });
+            var link = DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements)
+                .SelectMany(paragraph => paragraph.Hyperlinks).Single(item => item.IsMathContent);
+            TestAssert.Equal(!argument, link.IsMathRootContent);
+        }
+    }
+
+    public static void DocxMathHyperlinksMergeRootFragmentsOnTheirPlacedLine()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string container in new[] { "body", "cell", "header", "footer" })
+        foreach (bool partial in new[] { false, true })
+        {
+            var renderer = MathContentControlRenderer(mode);
+            var before = renderer.RenderPagesAsync(Read(false), null, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(Read(true), null, default).ToBlockingEnumerable().ToArray();
+            AssertMathLinkPaint(before, after);
+            var links = after.SelectMany(page => page.Annotations).ToList();
+            foreach (var existing in before.SelectMany(page => page.Annotations))
+                TestAssert.True(links.Remove(existing), "Adding a root link preserves existing navigation.");
+            TestAssert.Equal(1, links.Count);
+            TestAssert.True(links[0].Destination is not null, "One source target owns adjacent root fragments on the same line.");
+
+            DocxDocument Read(bool linked) => ReadMutation("CompositionProbes/" + (container == "cell" ? "body" : container),
+                mode, true, false, (xml, w, m) =>
+                {
+                    var math = xml.Descendants(m + "oMath").First();
+                    math.RemoveNodes();
+                    var run = new XElement(m + "r", new XElement(m + "t", "u+v=w"));
+                    math.Add(linked ? new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), run) : run);
+                    if (partial) math.Add(new XElement(m + "r", new XElement(m + "t", "+z")));
+                    if (container == "cell")
+                    {
+                        var paragraph = math.Parent!;
+                        paragraph.ReplaceWith(new XElement(w + "tbl",
+                            new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "8640"))),
+                            new XElement(w + "tr", new XElement(w + "tc", new XElement(paragraph)))));
+                    }
+                }, partOverride: container == "header" ? "word/header1.xml" : container == "footer" ? "word/footer1.xml" : null);
+        }
+    }
+
+    public static void DocxMathHyperlinksMatchIndependentRootLineRectangles()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent root-line rectangles use installed Windows font metrics.");
+        string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
+        using var gold = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "math-link-line-office.json")));
+        double tolerance = gold.RootElement.GetProperty("TolerancePoints").GetDouble();
+        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            string input = Path.Combine(directory, row.GetProperty("Input").GetString()!);
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
+            var pages = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
+            string target = row.GetProperty("Target").GetString()!;
+            var links = pages.SelectMany((page, index) => page.Annotations.Where(link => link.Uri == target)
+                .Select(link => (Page: index + 1, Link: link))).OrderBy(item => item.Page).ThenBy(item => item.Link.X).ToArray();
+            var expected = row.GetProperty("Links").EnumerateArray().ToArray();
+            TestAssert.Equal(expected.Length, links.Length);
+            for (int i = 0; i < links.Length; i++)
+            {
+                TestAssert.Equal(expected[i].GetProperty("Page").GetInt32(), links[i].Page);
+                var rectangle = expected[i].GetProperty("Rect");
+                var link = links[i].Link;
+                double height = pages[links[i].Page - 1].Height;
+                TestAssert.True(Math.Abs(link.X - rectangle[0].GetDouble()) < tolerance &&
+                    Math.Abs(height - link.Y - link.Height - rectangle[1].GetDouble()) < tolerance &&
+                    Math.Abs(link.X + link.Width - rectangle[2].GetDouble()) < tolerance &&
+                    Math.Abs(height - link.Y - rectangle[3].GetDouble()) < tolerance,
+                    row.GetProperty("Id").GetString() + ": all four edges retain the independent one-point Word gate.");
+            }
+        }
+    }
+
     public static void DocxMathHyperlinksPreservePaintAndOwnedTargetsAcrossContainersAndViews()
     {
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())

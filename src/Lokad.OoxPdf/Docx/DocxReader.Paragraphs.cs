@@ -1353,7 +1353,13 @@ internal sealed partial class DocxReader
             sourceRunCount,
             textRunStartIndex,
             textRunCount,
-            textLength) { StartInlineItemIndex = inlineStart, EndInlineItemIndex = inlineEnd, IsMathContent = mathContent };
+            textLength)
+        {
+            StartInlineItemIndex = inlineStart, EndInlineItemIndex = inlineEnd, IsMathContent = mathContent,
+            IsMathRootContent = mathContent && hyperlink.Ancestors()
+                .TakeWhile(ancestor => ancestor.Name != MathNamespace + "oMath")
+                .All(ancestor => ancestor.Name.Namespace != MathNamespace)
+        };
         hyperlinkSpans.Add(span);
         return span;
     }
