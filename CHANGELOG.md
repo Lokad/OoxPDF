@@ -12,7 +12,8 @@
   coverage remains partial. See [caller migration](docs/PublicApiChanges.md).
 - DOCX composition: supported equations, pictures and navigation retain source
   order through table cells, notes, headers/footers, editing boundaries, metadata
-  wrappers and deleted paragraph marks. Bookmarks and links follow placed content;
+  wrappers and deleted paragraph marks. Bookmarks and links follow placed content
+  and final-line paragraph spacing;
   supported inline page/column breaks preserve neighboring content.
 - DOCX layout: improves table sizing, merged-cell placement, conditional styles
   and padding, page-local body origins, paragraph backgrounds and longer comment

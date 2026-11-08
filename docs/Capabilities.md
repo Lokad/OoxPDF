@@ -581,9 +581,11 @@ Approximate or restricted:
   existing navigation fallback.
   On a line with an active text/equation hyperlink, an adjacent picture in the
   same source range extends its clickable bounds using the painted frame.
+  Ordered final lines retain the resolved paragraph after-gap; mixed body, cell,
+  header and footer controls match all four Word-PDF rectangle edges within 1 pt.
   Drawing URI targets stay separate. Image-only ranges, rotated/clipped pictures
-  and unresolved placement owners retain their fallbacks; vertical click bounds
-  remain approximate.
+  and unresolved placement owners retain their fallbacks. Other vertical click
+  bounds remain approximate; application-view calibration is still open.
   Prepared display rows reuse math boxes and source frames. Mathematical layout
   emits DOCX_APPROXIMATED_EQUATION; omitted unsupported math is diagnosed separately.
 - Bounded literal/fraction/script/root/delimiter/n-ary/function/matrix/cases forms,

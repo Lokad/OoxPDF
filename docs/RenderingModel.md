@@ -67,7 +67,9 @@ mapped static stories and bottom-anchored notes retain their own frames.
 Supported mixed DOCX content uses ordered source items for text, tabs, breaks,
 pictures and equations. Measurement produces inline fragments without page
 coordinates; body, cell and related-story containers own wrapping, admission and
-placement. Painting and annotation bounds consume those placed frames. An authored
+placement. Ordered final lines retain their container's resolved paragraph
+after-spacing so annotations include the same gap as layout. Painting and
+annotation bounds consume those placed frames. An authored
 body page break preserves source ownership on both sides, including linked
 formulas and the note associated with a reference. Unsupported combinations keep
 their explicit fallbacks; this is not unrestricted Word reflow.
