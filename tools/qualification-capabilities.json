@@ -17155,5 +17155,32 @@
     "DocxCounterSpacingKeepsUnknownAndInconsistentResultFallbacks",
     "DocxHyperlinksPreserveCompleteEndnoteStoryPlacement",
     "DocxHyperlinksPreserveContextualBodyAndMinimumCellSpacing"
+  ],
+  "font-gpos-selection": [
+    "ClassKerning",
+    "CoverageExpansionBeyondCapThrows",
+    "SyntheticGposPairAdjustmentIsRead",
+    "SyntheticUnlinkedKernFeatureIsIgnored",
+    "SyntheticExtensionKernLookupIsRead",
+    "SyntheticRejectedScriptKernIsIgnored",
+    "SyntheticNonKernFeatureIsIgnored",
+    "SyntheticKerningAdjustsMeasuredAdvance",
+    "OpenTypeFontLoadObservesCancelledToken",
+    "FontProgramLoaderPropagatesParseCancellation",
+    "MemoryBudgetKerning",
+    "MemoryBudgetFontCharacterMaps",
+    "MemoryAdmissionCoversRenderingStagingAndEmission",
+    "MemoryAdmissionSharedCapacityRefusesConcurrentConversionAndRefunds",
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance",
+    "GposSelectionPreservesDeclaredFeatureSemantics",
+    "GposLookupSelectionStorageStaysWithinIndexDomain",
+    "GposMetadataSelectionObservesCancellation",
+    "OpenTypeParserReadsGpos",
+    "OpenTypeParserIgnoresInactiveGpos",
+    "OpenTypeParserIgnoresNonLatinScriptGpos",
+    "SyntheticFontLoadsWithExpectedIdentity",
+    "MemoryBudgetFontProgramsFundPrivateCopiesAndSelectedCollectionFaces",
+    "MemoryBudgetFontProgramRefusalIsTerminalAcrossPublicConverters"
   ]
 }

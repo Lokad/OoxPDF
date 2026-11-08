@@ -68,17 +68,17 @@ internal sealed partial class OpenTypeFont
             return;
         }
 
-        HashSet<ushort> kernLookupIndices = ReadGposKernLookupIndices(bytes, gpos.Offset, tableEnd);
-        if (kernLookupIndices.Count == 0)
+        ushort lookupCount = U16(bytes, lookupList);
+        bool[]? kernLookups = ReadGposKernLookupSelection(bytes, gpos.Offset, tableEnd, lookupCount, pairs);
+        if (kernLookups is null)
         {
             return;
         }
 
-        ushort lookupCount = U16(bytes, lookupList);
         for (int i = 0; i < lookupCount && lookupList + 2 + i * 2 + 2 <= tableEnd; i++)
         {
             pairs.CheckCancellation();
-            if (!kernLookupIndices.Contains((ushort)i))
+            if (!kernLookups[i])
             {
                 continue;
             }
@@ -180,19 +180,22 @@ internal sealed partial class OpenTypeFont
         }
     }
 
-    private static HashSet<ushort> ReadGposKernLookupIndices(byte[] bytes, int gposOffset, int tableEnd)
+    private static bool[]? ReadGposKernLookupSelection(byte[] bytes, int gposOffset, int tableEnd,
+        int lookupCount, KerningPairBuilder pairs)
     {
-        var lookupIndices = new HashSet<ushort>();
+        pairs.CheckCancellation();
+        bool[]? lookupIndices = null;
         int featureList = gposOffset + U16(bytes, gposOffset + 6);
         if (featureList + 2 > tableEnd)
         {
             return lookupIndices;
         }
 
-        HashSet<int>? scriptFeatures = ReadGposKernScriptFeatureIndices(bytes, gposOffset, tableEnd);
         ushort featureCount = U16(bytes, featureList);
+        bool[]? scriptFeatures = ReadGposKernScriptFeatures(bytes, gposOffset, tableEnd, featureCount, pairs);
         for (int i = 0; i < featureCount && featureList + 2 + i * 6 + 6 <= tableEnd; i++)
         {
+            pairs.CheckCancellation();
             int record = featureList + 2 + i * 6;
             string tag = Encoding.ASCII.GetString(bytes, record, 4);
             if (!tag.Equals("kern", StringComparison.Ordinal))
@@ -200,7 +203,7 @@ internal sealed partial class OpenTypeFont
                 continue;
             }
 
-            if (scriptFeatures is not null && !scriptFeatures.Contains(i))
+            if (scriptFeatures is not null && !scriptFeatures[i])
             {
                 continue;
             }
@@ -214,15 +217,23 @@ internal sealed partial class OpenTypeFont
             ushort lookupIndexCount = U16(bytes, feature + 2);
             for (int j = 0; j < lookupIndexCount && feature + 4 + j * 2 + 2 <= tableEnd; j++)
             {
-                lookupIndices.Add(U16(bytes, feature + 4 + j * 2));
+                if ((j & 1023) == 0) pairs.CheckCancellation();
+                ushort index = U16(bytes, feature + 4 + j * 2);
+                if (index >= lookupCount) continue;
+                // The source domains are uint16. Direct masks bound temporary
+                // selection storage without growing sets or a new admission layer.
+                lookupIndices ??= new bool[lookupCount];
+                lookupIndices[index] = true;
             }
         }
 
         return lookupIndices;
     }
 
-    private static HashSet<int>? ReadGposKernScriptFeatureIndices(byte[] bytes, int gposOffset, int tableEnd)
+    private static bool[]? ReadGposKernScriptFeatures(byte[] bytes, int gposOffset, int tableEnd,
+        int featureCount, KerningPairBuilder pairs)
     {
+        pairs.CheckCancellation();
         int scriptList = gposOffset + U16(bytes, gposOffset + 4);
         if (scriptList + 2 > tableEnd)
         {
@@ -230,9 +241,10 @@ internal sealed partial class OpenTypeFont
         }
 
         ushort scriptCount = U16(bytes, scriptList);
-        var accepted = new HashSet<int>();
+        bool[]? accepted = null;
         for (int i = 0; i < scriptCount && scriptList + 2 + i * 6 + 6 <= tableEnd; i++)
         {
+            pairs.CheckCancellation();
             int record = scriptList + 2 + i * 6;
             string tag = Encoding.ASCII.GetString(bytes, record, 4).Trim();
             if (!KernScriptTags.Contains(tag))
@@ -249,31 +261,39 @@ internal sealed partial class OpenTypeFont
             int defaultLangSys = U16(bytes, script);
             if (defaultLangSys != 0)
             {
-                CollectScriptFeatureIndices(bytes, script + defaultLangSys, tableEnd, accepted);
+                CollectScriptFeatures(bytes, script + defaultLangSys, tableEnd, featureCount, ref accepted, pairs);
             }
 
             ushort langSysCount = U16(bytes, script + 2);
             for (int j = 0; j < langSysCount && script + 4 + j * 6 + 6 <= tableEnd; j++)
             {
+                pairs.CheckCancellation();
                 int langRecord = script + 4 + j * 6;
-                CollectScriptFeatureIndices(bytes, script + U16(bytes, langRecord + 4), tableEnd, accepted);
+                CollectScriptFeatures(bytes, script + U16(bytes, langRecord + 4), tableEnd, featureCount, ref accepted, pairs);
             }
         }
 
-        return accepted.Count > 0 ? accepted : null;
+        return accepted;
     }
 
-    private static void CollectScriptFeatureIndices(byte[] bytes, int langSys, int tableEnd, HashSet<int> accepted)
+    private static void CollectScriptFeatures(byte[] bytes, int langSys, int tableEnd,
+        int featureCount, ref bool[]? accepted, KerningPairBuilder pairs)
     {
+        pairs.CheckCancellation();
         if (langSys + 6 > tableEnd)
         {
             return;
         }
 
-        ushort featureCount = U16(bytes, langSys + 4);
-        for (int i = 0; i < featureCount && langSys + 6 + i * 2 + 2 <= tableEnd; i++)
+        ushort count = U16(bytes, langSys + 4);
+        for (int i = 0; i < count && langSys + 6 + i * 2 + 2 <= tableEnd; i++)
         {
-            accepted.Add(U16(bytes, langSys + 6 + i * 2));
+            if ((i & 1023) == 0) pairs.CheckCancellation();
+            // Allocate for the first declaration even when its index is invalid:
+            // an explicit nonmatching language system must not fall back to all.
+            accepted ??= new bool[featureCount];
+            ushort index = U16(bytes, langSys + 6 + i * 2);
+            if (index < featureCount) accepted[index] = true;
         }
     }
 

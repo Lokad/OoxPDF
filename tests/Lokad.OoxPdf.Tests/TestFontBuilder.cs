@@ -2,11 +2,12 @@ using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
 
-// Builds a minimal but structurally valid TrueType font in memory so core
+// Builds a small TrueType test font with the fields used by our parser so core
 // font-format, subset, CMap, and width checks run identically on every host
 // (Q01): no Windows/Office fonts required. Glyph 0 is .notdef; codepoints
 // U+0020..U+009F map to glyphs 1..128; U+0301 maps to zero-advance glyph 129;
-// U+1F600 maps to glyph 130 through a format 12 subtable.
+// U+1F600 maps to glyph 130 through a format 12 subtable. Some table headers
+// are abbreviated; use pinned portable faces for conformance/independent readers.
 internal static class TestFontBuilder
 {
     public const int GlyphCount = 131;
