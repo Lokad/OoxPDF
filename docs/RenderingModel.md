@@ -81,6 +81,11 @@ Word-compatible body origins belong to each printed page. Painting, inspection,
 bookmark/link geometry and following-note boundaries use that page's origin;
 mapped static stories and bottom-anchored notes retain their own frames.
 
+Run and paragraph-mark formatting descriptions use the same property resolver.
+The mark and aggregate metadata share one resolved revision object. Caption
+recognition is separate from placement: mark captions retain their existing
+paragraph anchor while the shared footer-frame correction remains unqualified.
+
 Supported mixed DOCX content uses ordered source items for text, tabs, breaks,
 pictures and equations. Measurement produces inline fragments without page
 coordinates; body, cell and related-story containers own wrapping, admission and

@@ -573,7 +573,9 @@ Approximate or restricted:
   Resolved paragraph-formatting history and a unique owned paragraph-mark format
   change retain neighboring equations and source navigation, with or without a list
   label. Duplicate or unowned property changes keep their existing fallback;
-  formatting balloons and complete-page fidelity remain approximate.
+  bold/italic descriptions share run and paragraph-mark resolution. Other changes
+  retain generic summaries; balloon placement and complete-page fidelity remain
+  approximate.
   Adjacent display containers combine using the later container's justification;
   subsequent display rows share the first effective display row's owner.
   `centerGroup` and the omitted default center one maximum-width group across
