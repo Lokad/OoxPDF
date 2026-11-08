@@ -525,26 +525,32 @@ internal sealed partial class OpenTypeFont
             int pairSet = subtable + U16(bytes, subtable + 10 + i * 2);
             if (pairSet + 2 > tableEnd) continue;
             ushort pairValueCount = U16(bytes, pairSet);
-            int pairValue = pairSet + 2;
-            int stride = 2 + valueRecordSize;
+            int firstValue = pairSet + 2;
+            int recordStride = 2 + valueRecordSize;
             int nonzero = 0;
-            for (int j = 0, candidate = pairValue; j < pairValueCount && candidate + stride <= tableEnd; j++, candidate += stride)
+            for (int j = 0, candidate = firstValue; j < pairValueCount && candidate + recordStride <= tableEnd; j++, candidate += recordStride)
             {
                 if ((j & 1023) == 0) pairs.CheckCancellation();
                 if (ReadXAdvance(bytes, candidate + 2, valueFormat1) != 0) nonzero++;
             }
-            if (nonzero == 0) continue;
-            ushort leftGlyph = coverageGlyphs[i];
-            int candidates = Math.Min(pairValueCount, Math.Max(0, (tableEnd - pairValue) / stride));
-            pairs.Register(nonzero, writer =>
+            if (nonzero != 0)
             {
-                for (int j = 0, cursor = pairValue; j < candidates; j++, cursor += stride)
+                // Keep the captured locals in this nonempty scope: declaring
+                // them before the test also allocates a closure for empty sets.
+                int pairValue = firstValue;
+                int stride = recordStride;
+                ushort leftGlyph = coverageGlyphs[i];
+                int candidates = Math.Min(pairValueCount, Math.Max(0, (tableEnd - pairValue) / stride));
+                pairs.Register(nonzero, writer =>
                 {
-                    if ((j & 1023) == 0) pairs.CheckCancellation();
-                    short advance = ReadXAdvance(bytes, cursor + 2, valueFormat1);
-                    if (advance != 0) writer.Add(((uint)leftGlyph << 16) | U16(bytes, cursor), advance);
-                }
-            });
+                    for (int j = 0, cursor = pairValue; j < candidates; j++, cursor += stride)
+                    {
+                        if ((j & 1023) == 0) pairs.CheckCancellation();
+                        short advance = ReadXAdvance(bytes, cursor + 2, valueFormat1);
+                        if (advance != 0) writer.Add(((uint)leftGlyph << 16) | U16(bytes, cursor), advance);
+                    }
+                });
+            }
         }
     }
 
