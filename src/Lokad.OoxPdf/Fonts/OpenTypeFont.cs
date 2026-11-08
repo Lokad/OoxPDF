@@ -140,7 +140,12 @@ internal sealed partial class OpenTypeFont
         string scalerTag = ReadScalerTag(bytes);
         try
         {
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, U16(bytes, 4));
+        ushort tableCount = U16(bytes, 4);
+        long directoryCapacity = EstimateTableDirectoryCapacity(bytes, 12, tableCount);
+        if (storage is not null)
+            OoxMemory.Resize(storage, checked(storage.Bytes + directoryCapacity));
+        cancellationToken.ThrowIfCancellationRequested();
+        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, 12, tableCount);
         cancellationToken.ThrowIfCancellationRequested();
         RequireMinimumLength(tables, "head", 54);
         RequireMinimumLength(tables, "hhea", 36);
@@ -333,7 +338,9 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
-        return ReadDiscoveryHeadersCore(bytes, scalerOffset: 0, directoryOffset: 12, fileLength: fileLength, admitMetadata);
+        ReadScalerTagAt(bytes, 0);
+        var tables = ReadTableDirectory(bytes, 12, U16(bytes, 4), fileLength);
+        return ReadDiscoveryHeadersCore(bytes, tables, admitMetadata);
     }
 
     // TrueType collections fan one file out to many faces, and repackaging
@@ -377,6 +384,7 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("TrueType collection table directory is invalid.");
         }
 
+        ReadScalerTagAt(bytes, (int)fontOffset);
         Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, (int)fontOffset + 12, faceTableCount, extentLimit);
         long outputLength = directoryLength;
         for (int i = 0; i < faceTableCount; i++)
@@ -391,16 +399,14 @@ internal sealed partial class OpenTypeFont
             throw new InvalidDataException("TrueType collection face exceeds file length.");
         }
 
-        return ReadDiscoveryHeadersCore(bytes, scalerOffset: (int)fontOffset, directoryOffset: (int)fontOffset + 12, fileLength: fileLength, admitMetadata);
+        return ReadDiscoveryHeadersCore(bytes, tables, admitMetadata);
     }
 
-    private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, int scalerOffset, int directoryOffset, long? fileLength,
+    private static FontDiscoveryHeaders ReadDiscoveryHeadersCore(byte[] bytes, Dictionary<string, TableRecord> tables,
         Action<long>? admitMetadata)
     {
-        ReadScalerTagAt(bytes, scalerOffset);
         try
         {
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(bytes, directoryOffset, U16(bytes, scalerOffset + 4), fileLength);
         RequireMinimumLength(tables, "head", 54);
         RequireMinimumLength(tables, "hhea", 36);
         RequireMinimumLength(tables, "maxp", 6);
@@ -469,22 +475,20 @@ internal sealed partial class OpenTypeFont
                 throw new InvalidDataException("TrueType collection table directory is invalid.");
             }
 
-            // Validate and dedupe through the shared directory reader, then keep
-            // directory order for the byte-exact rebuild below.
-            Dictionary<string, TableRecord> faceTables = ReadTableDirectory(bytes, (int)fontOffset + 12, collectionTableCount);
-            var records = new TableRecord[collectionTableCount];
-            for (int i = 0; i < collectionTableCount; i++)
+            // The existing font owner retains the repackaged SFNT. Directory
+            // validation is separate scratch, released before output construction.
+            long directoryCapacity = EstimateTableDirectoryCapacity(bytes, (int)fontOffset + 12, collectionTableCount);
+            using (var directory = OoxMemory.Reserve(storage is null ? null : OoxConversionBudget.Current?.Memory, directoryCapacity))
             {
-                int recordOffset = (int)fontOffset + 12 + i * 16;
-                string tag = Encoding.ASCII.GetString(bytes.Slice(recordOffset, 4));
-                records[i] = faceTables[tag];
+                cancellationToken.ThrowIfCancellationRequested();
+                _ = ReadTableDirectory(bytes, (int)fontOffset + 12, collectionTableCount);
             }
 
             long outputLength = directoryLength;
-            foreach (TableRecord record in records)
+            for (int i = 0; i < collectionTableCount; i++)
             {
                 outputLength = (outputLength + 3L) & ~3L;
-                outputLength = checked(outputLength + record.Length);
+                outputLength = checked(outputLength + U32(bytes, (int)fontOffset + 12 + i * 16 + 12));
             }
 
             // Extraction only repackages source bytes plus alignment padding, so a
@@ -501,14 +505,16 @@ internal sealed partial class OpenTypeFont
             bytes.Slice((int)fontOffset, directoryLength).CopyTo(output);
 
             int writeOffset = directoryLength;
-            for (int i = 0; i < records.Length; i++)
+            for (int i = 0; i < collectionTableCount; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                TableRecord record = records[i];
+                int sourceRecord = (int)fontOffset + 12 + i * 16;
+                int sourceOffset = (int)U32(bytes, sourceRecord + 8);
+                int sourceLength = (int)U32(bytes, sourceRecord + 12);
                 writeOffset = Align4(writeOffset);
-                bytes.Slice(record.Offset, record.Length).CopyTo(output.AsSpan(writeOffset));
+                bytes.Slice(sourceOffset, sourceLength).CopyTo(output.AsSpan(writeOffset));
                 W32(output, 12 + i * 16 + 8, (uint)writeOffset);
-                writeOffset += record.Length;
+                writeOffset += sourceLength;
             }
             return output;
         }
@@ -952,13 +958,10 @@ internal sealed partial class OpenTypeFont
     // slice throws and callers fall back to a full read.
     private static Dictionary<string, TableRecord> ReadTableDirectory(ReadOnlySpan<byte> bytes, int directoryOffset, ushort tableCount, long? extentLimit = null)
     {
-        if ((long)directoryOffset + (long)tableCount * 16L > bytes.Length)
-        {
-            throw new InvalidDataException("Font table directory exceeds file length.");
-        }
+        _ = EstimateTableDirectoryCapacity(bytes, directoryOffset, tableCount);
 
         long limit = extentLimit ?? bytes.Length;
-        var tables = new Dictionary<string, TableRecord>(StringComparer.Ordinal);
+        var tables = new Dictionary<string, TableRecord>(tableCount, StringComparer.Ordinal);
         for (int i = 0; i < tableCount; i++)
         {
             int record = directoryOffset + i * 16;
@@ -977,6 +980,15 @@ internal sealed partial class OpenTypeFont
         }
 
         return tables;
+    }
+
+    private static long EstimateTableDirectoryCapacity(ReadOnlySpan<byte> bytes, int directoryOffset, ushort tableCount)
+    {
+        if ((long)directoryOffset + (long)tableCount * 16L > bytes.Length)
+            throw new InvalidDataException("Font table directory exceeds file length.");
+        // One source-shaped family includes tag strings, dictionary capacity
+        // and construction headroom; it is not an exact managed-heap count.
+        return 128L + 128L * tableCount;
     }
 
     private static void RequireMinimumLength(Dictionary<string, TableRecord> tables, string tag, int minimum)
