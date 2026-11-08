@@ -70,6 +70,8 @@ internal static class PptxAutomaticScaleTests
             TestAssert.Equal(4, automatic.Bars.Length);
             var equivalent = Read(Render(height, declaration: $"<c:min val=\"0\"/><c:max val=\"{expectedMaximum.ToString(CultureInfo.InvariantCulture)}\"/>",
                 major: expectedMaximum == 5d ? "5" : "0.5", plotLayout: layout));
+            TestAssert.True(automatic.Values.SequenceEqual(equivalent.Values),
+                "Later authored inner placement retains every allocated numeric caption, as equivalent declared intervals do.");
             TestAssert.Equal(4, equivalent.Bars.Length);
             TestAssert.True(automatic.Bars.Zip(equivalent.Bars).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
                 "Automatic scale and equivalent declared bounds share the admitted rectangle, including frame clamping.");

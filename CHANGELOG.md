@@ -25,6 +25,7 @@
   regimes; point/series overrides and negative inversion remain distinct.
   Improves composed scales, authored plot frames, numeric formatting, caption
   wrapping, titles, legends, reversal and supported scatter/bubble geometry.
+  Allocated numeric captions survive later authored inner-plot placement.
 - PPTX content: preserves cells following horizontal merges and text/link geometry
   with standard-font fallback. Preset arcs handle extreme numeric guides without
   stalling conversion.
