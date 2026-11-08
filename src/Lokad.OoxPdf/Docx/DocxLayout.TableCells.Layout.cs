@@ -125,8 +125,9 @@ internal sealed partial class DocxLayoutEngine
         bool previousParagraphHasTextLines = false;
         double previousTextFontSize = 0d;
         double previousTextLineHeight = 0d;
-        foreach (DocxBodyElement bodyElement in bodyElements)
+        for (int elementIndex = 0; elementIndex < bodyElements.Count; elementIndex++)
         {
+            DocxBodyElement bodyElement = bodyElements[elementIndex];
             if (bodyElement is DocxTableElement tableElement)
             {
                 contentHeight += pendingSpacingAfter;
@@ -168,6 +169,9 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DocxTableCellContent.IsTerminalNestedTableMark(bodyElements, elementIndex, cancellationToken))
+                continue;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             contentHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -504,6 +508,9 @@ internal sealed partial class DocxLayoutEngine
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
             context.CancellationToken.ThrowIfCancellationRequested();
+            bool terminalMark = DocxTableCellContent.IsTerminalNestedTableMark(bodyElements, elementIndex, context.CancellationToken);
+            double paragraphCursorY = cursorY;
+            int paragraphLineStart = lines.Count;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, context.ParagraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -798,6 +805,17 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
             previousParagraph = paragraph;
             paragraphIndex++;
+            if (terminalMark)
+            {
+                // Keep the source line and its nominal navigation geometry, but
+                // give this nonpainting cell-end carrier no occupied frame.
+                cursorY = paragraphCursorY;
+                pendingSpacingAfter = 0d;
+                for (int i = paragraphLineStart; i < lines.Count; i++)
+                    lines[i] = lines[i] with { OccupiedLineBox = new(0d, 0d),
+                        AppliedBeforeSpacing = 0d, PendingAfterSpacing = 0d,
+                        ParagraphBeforeSpacing = 0d, ParagraphAfterSpacing = 0d };
+            }
         }
 
         cursorY -= pendingSpacingAfter;
@@ -960,6 +978,8 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            if (DocxTableCellContent.IsTerminalNestedTableMark(bodyElements, elementIndex, cancellationToken))
+                continue;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
@@ -1134,8 +1154,9 @@ internal sealed partial class DocxLayoutEngine
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
         int nestedTableIndex = 0;
-        foreach (DocxBodyElement bodyElement in bodyElements)
+        for (int elementIndex = 0; elementIndex < bodyElements.Count; elementIndex++)
         {
+            DocxBodyElement bodyElement = bodyElements[elementIndex];
             cancellationToken.ThrowIfCancellationRequested();
             if (bodyElement is DocxTableElement tableElement)
             {
@@ -1218,6 +1239,8 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            if (DocxTableCellContent.IsTerminalNestedTableMark(bodyElements, elementIndex, cancellationToken))
+                continue;
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             cursorY -= spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;

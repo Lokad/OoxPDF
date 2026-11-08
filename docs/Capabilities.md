@@ -470,8 +470,10 @@ Supported within the following constraints:
   incomplete. Deleted/unnumbered marks keep their existing fallbacks.
 - Fixed-grid tables with fills, common collapsed border styles/conflicts,
   nil/none suppression, repeated headers, split rows and cell content. Actual page
-  occupancy controls following-prose admission. Conditional bands, columns, rows
-  and corners share one style cascade; direct formatting remains above styles.
+  occupancy controls following-prose admission. An empty terminal paragraph after
+  a nested table keeps its source anchors without adding occupied height;
+  ordinary text and references keep their frames. Conditional bands, columns,
+  rows and corners share one style cascade; direct formatting remains above styles.
   Table-look bitmasks apply when no explicit flags are present; an explicit
   declaration enables omitted flags, including band suppression. Absent/empty
   declarations keep Word's default look; inspection retains raw source tokens.

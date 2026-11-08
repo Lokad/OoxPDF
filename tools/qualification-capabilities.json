@@ -1,4 +1,25 @@
 {
+  "docx-nested-cell-end": [
+      "DocxNestedCellEnd",
+      "DocxRepeatedTableHeader",
+      "DocxInlineCompositionNestedCellNeighborsKeepDirectPreparationOwnersAndFrames",
+      "DocxInlineCompositionNestedCellNeighborsRetainUnqualifiedAncestorAndChildFallbacks",
+      "DocxInlineCompositionNestedBorderPitchScalesRowsAndSourceFlowAcrossCompetingCells",
+      "DocxInlineCompositionNestedNavigationKeepsOriginalSourceAndCellOwner",
+      "DocxInlineCompositionNestedMathKeepsPreparedOwnersThroughEveryMeasuredFrame",
+      "DocxInlineCompositionNestedMathKeepsContainingRowsAtomicAtPageBoundaries",
+      "DocxTableLayoutStageLaysOutNestedTableCellBodies",
+      "DocxTableLayoutStagePreservesMixedCellBodyOrderAroundNestedTables",
+      "DocxTableLayoutStagePlacesNestedTableBelowBreakSpillRow",
+      "DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak",
+      "DocxTableLayoutStagePartitionsNestedTablesAcrossCompetingCellPageBreaks",
+      "DocxTableLayoutStageSplitsNestedTableRowsAcrossCompetingCellPageBreak",
+      "DocxTableLayoutStageAppliesCellVerticalAlignment",
+      "DocxLockedFields",
+      "DocxNoteMathFieldsStaticTablesPreserveCompleteMixedContent",
+      "DocxNoteMathFieldsStaticTablesRetainExactClippedAndUnsupportedFallbacks",
+      "StagedPageMemory"
+  ],
   "docx-repeated-header-fields": [
       "DocxRepeatedTableHeader",
       "DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak",
