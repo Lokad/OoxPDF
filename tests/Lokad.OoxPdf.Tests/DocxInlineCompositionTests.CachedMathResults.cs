@@ -159,7 +159,7 @@ internal static partial class DocxInlineCompositionTests
             {
                 var equation = xml.Descendants(m + "oMath").First();
                 equation.ReplaceWith(CachedMathField(w, new XElement(equation), complex));
-            }, partOverride: container is "header" or "footer" ? "word/" + container + "1.xml" : null);
+            }, partOverride: container is "header" or "footer" ? "word/math-fields-" + container + ".xml" : null);
 
     private static DocxParagraph CachedMathParagraph(DocxDocument document) =>
         DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements).Concat(document.EquationParts.SelectMany(part =>
