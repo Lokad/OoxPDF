@@ -86,8 +86,10 @@ internal static partial class DocxInlineCompositionTests
                     includeResult: unknownStory, storyType: unknownStory ? "unregistered" : null);
                 var source = NoteMathFieldParagraph(unsupported);
                 TestAssert.Equal(2, source.Equations.Count);
-                TestAssert.True(!DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(unsupported, default)
-                    .Any(item => ReferenceEquals(item.Paragraph, source)), "Unknown instructions without a result and unregistered note owners keep their staged fallback.");
+                TestAssert.Equal(!unknownStory, DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(unsupported, default)
+                    .Any(item => ReferenceEquals(item.Paragraph, source)));
+                // A complete simple field can own an empty stored result;
+                // unregistered note owners still retain their staged fallback.
             }
         }
     }
