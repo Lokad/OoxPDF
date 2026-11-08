@@ -240,6 +240,11 @@ internal static class PptxChartPlotOptionsAgreementTests
         bool Visible(PptxSceneChartAxis? axis) => (bool)TestAssert.NotNull(Invoke("IsSceneChartAxisLabelVisible",
             [typeof(PptxSceneChartAxis)], [axis]));
         TestAssert.Equal(true, Visible(null));
+        bool ExplicitValue(PptxSceneChartAxis? axis) => (bool)TestAssert.NotNull(Invoke("IsSceneVisibleValueAxis",
+            [typeof(PptxSceneChartAxis)], [axis]));
+        TestAssert.Equal(false, ExplicitValue(null));
+        TestAssert.Equal(true, ExplicitValue(LoadAxis("")));
+        TestAssert.Equal(false, ExplicitValue(LoadAxis("<c:delete val=\"1\"/>")));
         foreach (var test in new[]
         {
             (Xml: "", Expected: true),

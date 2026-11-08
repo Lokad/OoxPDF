@@ -416,7 +416,6 @@ internal sealed partial class PptxRenderer
         XDocument chartXml,
         PptxSceneChart sceneChart,
         PptxSceneChartAxis? sceneAxis,
-        XElement? categoryAxis,
         IReadOnlyList<ChartIndexedTextPoint?> labels,
         PresentationFontResolver? fontResolver,
         List<PdfFontResource> chartFonts,
@@ -494,7 +493,6 @@ internal sealed partial class PptxRenderer
         ChartRadarLayout layout,
         XDocument chartXml,
         PptxSceneChart sceneChart,
-        XElement? valueAxis,
         PptxSceneChartAxis? sceneAxis,
         ChartValueExtents extents,
         ChartAxisUnits axisUnits,
@@ -509,7 +507,7 @@ internal sealed partial class PptxRenderer
         foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, context: context))
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
-            string label = FormatSceneChartAxisLabel(tickValue, sceneAxis, valueAxis, null);
+            string label = FormatSceneChartAxisLabel(tickValue, sceneAxis, sceneChart.Options.Date1904 == true, null);
             await textMeasurer.PrepareAsync(label, style).ConfigureAwait(false);
             ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, label, style, textMeasurer, ratio);
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));

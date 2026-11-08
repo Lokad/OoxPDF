@@ -43,7 +43,6 @@ internal sealed partial class PptxRenderer
                 ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, barPlot);
                 ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
                 ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-                XElement? valueAxis = valueAxisSource.XmlAxis;
                 PptxSceneChartAxis? valueSceneAxis = valueAxisSource.SceneAxis;
                 bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
                 bool sharedValueAxis = barPlot is not null && HasSharedCartesianChartValueAxis(sceneChart, valueSceneAxis);
@@ -179,7 +178,7 @@ internal sealed partial class PptxRenderer
                 }
                 var categoryLabels = ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly);
                 var categoryPlacement = resolvedCategory is { } placed ? (placed.LabelPlotRatio, placed.LabelsHighSide) :
-                    ResolveChartAxisLabelPlacement(categoryAxis.SceneAxis, categoryAxis.XmlAxis,
+                    ResolveChartAxisLabelPlacement(categoryAxis.SceneAxis,
                         GetChartValuePlotRatio(valueExtents, valueAxisOptions.CrossingValue ?? 0d, valueAxisOptions.Reversed), valueAxisOptions.Reversed);
                 if (!horizontalBars)
                     chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
@@ -208,8 +207,7 @@ internal sealed partial class PptxRenderer
                 }
                 bool valueAxisLabelsVisible = IsSceneChartAxisLabelVisible(valueSceneAxis);
                 RenderBarChart(graphics, theme, colorMap, barPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barStyleId, resolvedCategory, context: context);
-                XElement? secondaryValueAxis = null;
-                PptxSceneChartAxis? secondaryValueSceneAxis = null;
+                        PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
                 bool secondaryAxisReversed = false;
@@ -230,7 +228,6 @@ internal sealed partial class PptxRenderer
                         extraBarOptions.Grouping == PptxSceneChartGrouping.Clustered &&
                         ReadSceneValueAxisReversed(extraCategoryAxis.SceneAxis) };
                     ChartAxisSource extraValueAxisSource = ReadChartValueAxesForPlot(sceneChart, extraBarPlot).FirstOrDefault();
-                    XElement? extraValueAxis = extraValueAxisSource.XmlAxis;
                     PptxSceneChartAxis? extraValueSceneAxis = extraValueAxisSource.SceneAxis;
                     bool extraPercentStacked = IsPercentStackedChartGrouping(extraBarOptions.Grouping);
                     ChartValueExtents extraValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, GetSharedBarChartValueExtents(extraBarPlot, extraBarOptions.Grouping, workbook, plotVisibleOnly), extraPercentStacked, ResolveBarValueAxisHeadroom(extraHorizontalBars, extraPercentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
@@ -238,11 +235,10 @@ internal sealed partial class PptxRenderer
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneSeriesFills(extraBarPlot);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneSeriesPointFills(extraBarPlot);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneSeriesPointStrokes(extraBarPlot);
-                    if (!extraHorizontalBars && secondaryValueAxis is null &&
+                    if (!extraHorizontalBars && secondaryValueSceneAxis is null &&
                         !IsSameChartAxis(valueAxisSource, extraValueAxisSource) &&
-                        IsSceneOrXmlVisibleValueAxis(extraValueSceneAxis, extraValueAxis))
+                        IsSceneVisibleValueAxis(extraValueSceneAxis))
                     {
-                        secondaryValueAxis = extraValueAxis;
                         secondaryValueSceneAxis = extraValueSceneAxis;
                         secondaryValueExtents = extraValueExtents;
                         secondaryAxisUnits = extraValueAxisOptions.Units;
@@ -299,18 +295,16 @@ internal sealed partial class PptxRenderer
                     }
 
                     ChartAxisSource lineValueAxisSource = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
-                    XElement? lineValueAxis = lineValueAxisSource.XmlAxis;
-                    XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
+                    XElement? lineValueAxisForScale = lineValueSceneAxis ?? valueSceneAxis;
                     PptxSceneChartAxis? lineValueSceneAxis = lineValueAxisSource.SceneAxis;
                     ChartLinePlotOptions lineOptions = ReadSceneChartLineOptions(sceneChart, linePlot, PptxSceneChartGrouping.Standard);
                     ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneChartValueAxisRenderOptions(lineValueSceneAxis, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneSeriesStrokes(linePlot, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneMarkerStyles(linePlot);
-                    if (secondaryValueAxis is null && !IsSameChartAxis(valueAxisSource, lineValueAxisSource) &&
-                        IsSceneOrXmlVisibleValueAxis(lineValueSceneAxis, lineValueAxis))
+                    if (secondaryValueSceneAxis is null && !IsSameChartAxis(valueAxisSource, lineValueAxisSource) &&
+                        IsSceneVisibleValueAxis(lineValueSceneAxis))
                     {
-                        secondaryValueAxis = lineValueAxis;
                         secondaryValueSceneAxis = lineValueSceneAxis;
                         secondaryValueExtents = lineValueExtents;
                         secondaryAxisUnits = lineValueAxisOptions.Units;
@@ -363,13 +357,13 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelCoordinate = horizontalBars
                         ? resolvedCategory is { } horizontalPlacement ? plotBox.X + plotBox.Width * horizontalPlacement.LabelPlotRatio : null
                         : plotBox.Y + plotBox.Height * categoryPlacement.LabelPlotRatio;
-                    await RenderChartCategoryLabelsAsync(theme, graphics, chartLayout.Frame, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneCategoryAxisLabelsOnTickMarks(valueSceneAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: barOptions.CategoryAxisReversed).ConfigureAwait(false);
+                    await RenderChartCategoryLabelsAsync(theme, graphics, chartLayout.Frame, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryLabels, horizontalBars, categoryLabelCoordinate, categoryLabelsOnTickMarks: ResolveSceneCategoryAxisLabelsOnTickMarks(valueSceneAxis), labelsHighSide: (!horizontalBars || resolvedCategory is not null) && categoryPlacement.LabelsHighSide, fontResolver: fontResolver, chartFonts: fonts, categoryLabelOffsetAdjustment: chartLayout.CategoryLabelOffsetAdjustment, prepared: chartLayout.CategoryLabels, categoryAxisReversed: barOptions.CategoryAxisReversed).ConfigureAwait(false);
                 }
 
                 if (axesStyle.ValueAxisVisible)
                 {
                     bool sameSideSecondaryValueAxis = !horizontalBars &&
-                        secondaryValueAxis is not null &&
+                        secondaryValueSceneAxis is not null &&
                         IsSceneChartAxisLabelVisible(secondaryValueSceneAxis) &&
                         GetValueAxisSideSlot(sceneChart,
                             valueSceneAxis,
@@ -378,12 +372,12 @@ internal sealed partial class PptxRenderer
                             defaultSecondaryRightSide: axesStyle.SecondaryValueAxisRightSide) > 0;
                     if (valueAxisLabelsVisible)
                     {
-                        await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars, rightSide: axesStyle.ValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied, useTextSizedWidth: sameSideSecondaryValueAxis, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: valueAxisOptions.TickPolicy, placement: numericPlacement, context: context).ConfigureAwait(false);
+                        await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, valueSceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars, rightSide: axesStyle.ValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied, useTextSizedWidth: sameSideSecondaryValueAxis, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: valueAxisOptions.TickPolicy, placement: numericPlacement, context: context).ConfigureAwait(false);
                     }
 
                     if (!horizontalBars)
                     {
-                        if (secondaryValueAxis is not null && IsSceneChartAxisLabelVisible(secondaryValueSceneAxis))
+                        if (secondaryValueSceneAxis is not null && IsSceneChartAxisLabelVisible(secondaryValueSceneAxis))
                         {
                             bool secondaryValueAxisRightSide = axesStyle.SecondaryValueAxisRightSide;
                             int sideSlot = GetValueAxisSideSlot(sceneChart, valueSceneAxis, secondaryValueSceneAxis, defaultPrimaryRightSide: axesStyle.ValueAxisRightSide, defaultSecondaryRightSide: secondaryValueAxisRightSide);
@@ -391,20 +385,20 @@ internal sealed partial class PptxRenderer
                             bool secondaryLabelsRightSide = ResolveSceneValueAxisLabelsRightSide(sceneChart, secondaryValueSceneAxis, secondaryValueAxisRightSide);
                             if (!secondaryLabelsRightSide && sideSlot == 1 && valueAxisLabelsVisible)
                             {
-                                ChartValueAxisStripMeasure primaryStrip = (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, valueAxis, valueSceneAxis, valueExtents, valueAxisOptions.Units, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver, context: context).ConfigureAwait(false));
+                                ChartValueAxisStripMeasure primaryStrip = (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, valueSceneAxis, valueExtents, valueAxisOptions.Units, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver, context: context).ConfigureAwait(false));
                                 secondaryInkAnchor = plotBox.X - primaryStrip.SideGap - primaryStrip.MaxLabelWidth;
                             }
-                            await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: secondaryValueAxisRightSide, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0, manualPlotLayoutApplied: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, innerStripInkEdge: secondaryInkAnchor, context: context).ConfigureAwait(false);
+                            await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: secondaryValueAxisRightSide, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0, manualPlotLayoutApplied: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, innerStripInkEdge: secondaryInkAnchor, context: context).ConfigureAwait(false);
                         }
                         else
                         {
-                            await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueSceneAxis, primaryXmlAxis: valueAxis, context: context).ConfigureAwait(false);
+                            await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueSceneAxis, context: context).ConfigureAwait(false);
                         }
                     }
                 }
-                else if (!horizontalBars && secondaryValueAxis is not null && IsSceneChartAxisLabelVisible(secondaryValueSceneAxis))
+                else if (!horizontalBars && secondaryValueSceneAxis is not null && IsSceneChartAxisLabelVisible(secondaryValueSceneAxis))
                 {
-                    await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: axesStyle.SecondaryValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, context: context).ConfigureAwait(false);
+                    await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: axesStyle.SecondaryValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, context: context).ConfigureAwait(false);
                 }
                 // Major tick marks for vertical bars (Office honors out/in/cross at category
                 // slot boundaries and value gridlines; horizontal bars keep legacy output

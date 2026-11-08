@@ -59,8 +59,7 @@ internal static partial class PptxScatterIntervalTests
         foreach (string fallback in new[] { "outer", "unknown-width", "NaN", "log", "scaling" })
         {
             XDocument xml = XDocument.Parse(AutoChart(sample));
-            XElement xAxis = xml.Descendants(CurveC + "valAx").First();
-            XElement layout = xml.Descendants(CurveC + "manualLayout").Single();
+                XElement layout = xml.Descendants(CurveC + "manualLayout").Single();
             if (fallback == "outer") layout.Element(CurveC + "layoutTarget")!.SetAttributeValue("val", "outer");
             if (fallback == "unknown-width") layout.Element(CurveC + "wMode")!.SetAttributeValue("val", "unknown");
             if (fallback == "NaN") layout.Element(CurveC + "w")!.SetAttributeValue("val", "NaN");
@@ -77,10 +76,9 @@ internal static partial class PptxScatterIntervalTests
         AutoCase sample = AutoCases().Single(c => c.Id == "auto-x-width-360-font-20");
         XDocument xml = XDocument.Parse(AutoChart(sample));
         PptxSceneChart scene = PptxTests.BuildSingleChartScene(xml.ToString())!;
-        XElement xAxis = xml.Descendants(CurveC + "valAx").First();
         Type sourceType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", System.Reflection.BindingFlags.NonPublic)!;
         Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", System.Reflection.BindingFlags.NonPublic)!;
-        object source = Activator.CreateInstance(sourceType, [scene.Axes.First(), xAxis])!;
+        object source = Activator.CreateInstance(sourceType, [scene.Axes.First(), scene.Options.Date1904 == true])!;
         object frame = Activator.CreateInstance(frameType, [72d, 72d, sample.FrameWidth, 360d])!;
         double Read() => (double)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty, scene, frame, source);
         double before = Read();
@@ -106,7 +104,6 @@ internal static partial class PptxScatterIntervalTests
         var data = new RangeCase(sample.Id, "X", sample.X, [1d, 2d, 79d, 4d, 5d, 6d, 7d, 8d], sample.Minimum, sample.Maximum,
             1d, null, false, sample.ExpectedMinimum, sample.ExpectedMaximum);
         XDocument xml = XDocument.Parse(RangeChart(data));
-        XElement xAxis = xml.Descendants(CurveC + "valAx").First();
         XElement yAxis = xml.Descendants(CurveC + "valAx").Last();
         yAxis.Element(CurveC + "scaling")!.Element(CurveC + "min")!.SetAttributeValue("val", "7");
         if (majorUnit is null) xAxis.Element(CurveC + "majorUnit")!.Remove();

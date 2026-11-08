@@ -483,7 +483,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartLegendEntryFrame(double X, double Y, double Width, double? MarkerY = null);
 
-    private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, XElement? XmlAxis);
+    private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, bool Date1904);
 
     private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, PptxSceneChartManualLayoutTarget? ManualLayoutTargetKind)
     {

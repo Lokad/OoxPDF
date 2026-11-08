@@ -1589,16 +1589,13 @@ internal static class PptxChartRenderingTests
 
         object source = readCategoryAxis.Invoke(null, [chart, plot]) ?? throw new InvalidOperationException("Expected category-axis source.");
         PptxSceneChartAxis sceneAxis = (PptxSceneChartAxis?)source.GetType().GetProperty("SceneAxis")?.GetValue(source) ?? throw new InvalidOperationException("Expected scene date axis source.");
-        XElement xmlAxis = (XElement?)source.GetType().GetProperty("XmlAxis")?.GetValue(source) ?? throw new InvalidOperationException("Expected XML date axis source.");
         object rebuiltSource = readCategoryAxis.Invoke(null, [PptxTests.BuildSingleChartScene(chart.ChartXml!.ToString())!, null]) ?? throw new InvalidOperationException("Expected Rebuilt-scene category-axis source.");
-        XElement rebuiltAxis = (XElement?)rebuiltSource.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltSource) ?? throw new InvalidOperationException("Expected Rebuilt-scene date axis source.");
+        PptxSceneChartAxis rebuiltAxis = (PptxSceneChartAxis)TestAssert.NotNull(rebuiltSource.GetType().GetProperty("SceneAxis")!.GetValue(rebuiltSource));
 
         TestAssert.Equal(PptxSceneChartAxisKind.Date, sceneAxis.AxisKind);
         TestAssert.Equal("dateAx", sceneAxis.Kind);
         TestAssert.Equal("10", sceneAxis.Id);
-        TestAssert.Equal("dateAx", xmlAxis.Name.LocalName);
-        TestAssert.Equal("10", xmlAxis.Element(c + "axId")?.Attribute("val")?.Value ?? string.Empty);
-        TestAssert.Equal("dateAx", rebuiltAxis.Name.LocalName);
+        TestAssert.Equal(PptxSceneChartAxisKind.Date, rebuiltAxis.AxisKind);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()

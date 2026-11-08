@@ -70,13 +70,13 @@ internal static partial class PptxScatterIntervalTests
         Type axisType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", flags)!;
         Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", flags)!;
         object frame = Activator.CreateInstance(frameType, [72d, 72d, 500d, 432d])!;
-        double? Read(PptxSceneChart chart, XDocument document) => (double?)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty,
-            chart, frame, Activator.CreateInstance(axisType, [chart.Axes.First(), document.Descendants(CurveC + "valAx").First()])!);
-        double? original = Read(scene, xml);
+        double? Read(PptxSceneChart chart) => (double?)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty,
+            chart, frame, Activator.CreateInstance(axisType, [chart.Axes.First(), chart.Options.Date1904 == true])!);
+        double? original = Read(scene);
         TestAssert.True(original is not null, "A resolved inner edge supplies interval geometry.");
         xml.Descendants(CurveC + "wMode").Single().SetAttributeValue("val", "factor");
         xml.Descendants(CurveC + "w").Single().SetAttributeValue("val", ".99");
-        TestAssert.Equal(original, Read(scene, xml));
+        TestAssert.Equal(original, Read(scene));
         foreach (string fallback in new[] { "outer", "unknown-width", "missing-position", "degenerate", "Infinity" })
         {
             XDocument source = EdgeChart(.10d, .82d);
@@ -85,7 +85,7 @@ internal static partial class PptxScatterIntervalTests
             if (fallback == "missing-position") source.Descendants(CurveC + "x").Single().Remove();
             if (fallback == "degenerate") source.Descendants(CurveC + "w").Single().SetAttributeValue("val", ".3");
             if (fallback == "Infinity") source.Descendants(CurveC + "w").Single().SetAttributeValue("val", "Infinity");
-            TestAssert.True(Read(PptxTests.BuildSingleChartScene(source.ToString())!, source) is null,
+            TestAssert.True(Read(PptxTests.BuildSingleChartScene(source.ToString())!) is null,
                 "Unresolved declarations keep their scale fallback: " + fallback);
         }
     }

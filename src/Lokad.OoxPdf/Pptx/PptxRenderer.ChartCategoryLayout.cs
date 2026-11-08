@@ -440,7 +440,7 @@ internal sealed partial class PptxRenderer
         // Office admits reversed upper numeric next-to captions to the low band;
         // the stroke keeps its numeric coordinate and explicit low/high still win.
         if (explicitCrossing is not null && reversed && ratio == 0d) ratio = 1d;
-        var labels = ResolveChartAxisLabelPlacement(axis, null, ratio, reversed, maximum);
+        var labels = ResolveChartAxisLabelPlacement(axis, ratio, reversed, maximum);
         bool axisTop = explicitCrossing is not null
             ? horizontal
                 ? ResolveSceneCategoryAxisTopSide(axis, defaultTopSide: false)
@@ -470,11 +470,10 @@ internal sealed partial class PptxRenderer
     }
 
     private static (double LabelPlotRatio, bool LabelsHighSide) ResolveChartAxisLabelPlacement(
-        PptxSceneChartAxis? axis, XElement? xml, double crossingRatio, bool reversed, bool maximumCrossing = false)
+        PptxSceneChartAxis? axis, double crossingRatio, bool reversed, bool maximumCrossing = false)
     {
-        PptxSceneChartTickLabelPosition position = ResolveChartTickLabelPosition(axis is not null
-            ? axis.TickLabelPositionKind
-            : PptxSceneBuilder.ParseChartTickLabelPosition(PptxSceneBuilder.ReadChartElementValue(xml, "tickLblPos")));
+        PptxSceneChartTickLabelPosition position = ResolveChartTickLabelPosition(
+            axis?.TickLabelPositionKind ?? PptxSceneChartTickLabelPosition.Unknown);
         // Low/high refer to value direction, so reversing the scale swaps both
         // the physical edge and the label side. An authored maximum crossing
         // selects the high side for next-to captions; a numeric crossesAt at
@@ -501,7 +500,7 @@ internal sealed partial class PptxRenderer
             return (layout, null);
         ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, axis.SceneAxis,
             PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
-        PptxSceneChartTextBodyProperties body = axis.SceneAxis?.TextBodyProperties ?? PptxSceneBuilder.ReadChartTextBodyProperties(axis.XmlAxis);
+        PptxSceneChartTextBodyProperties body = axis.SceneAxis?.TextBodyProperties ?? new(null, string.Empty, string.Empty, string.Empty);
         // Category captions default to ellipsis in Office. Shape text keeps
         // its separate overflow policy; explicit caption overrides still win.
         string overflowMode = string.IsNullOrEmpty(body.VerticalOverflowValue) ? "ellipsis" : body.VerticalOverflowValue;
@@ -510,7 +509,7 @@ internal sealed partial class PptxRenderer
         bool automaticAngle = body.RotationValue == "-60000000" ||
             string.IsNullOrEmpty(body.RotationValue) && string.IsNullOrEmpty(body.OrientationValue);
         double angle = body.RotationDegrees is >= -90d and <= 90d ? body.RotationDegrees.Value : 0d;
-        string skipSpelling = axis.SceneAxis?.TickLabelSkipValue ?? PptxSceneBuilder.ReadChartElementIntWithValue(axis.XmlAxis, "tickLblSkip").RawValue;
+        string skipSpelling = axis.SceneAxis?.TickLabelSkipValue ?? string.Empty;
         bool automaticSkip = string.IsNullOrEmpty(skipSpelling);
         int skip = ResolveSceneCategoryAxisTickLabelSkip(axis.SceneAxis);
         var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);

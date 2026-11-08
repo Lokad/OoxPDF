@@ -11,15 +11,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IEnumerable<XElement> ReadChartCategoryAxes(XDocument chartXml)
-    {
-        return chartXml
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault()?
-            .Elements()
-            .Where(element => element.Name == ChartNamespace + "catAx" || element.Name == ChartNamespace + "dateAx") ??
-            [];
-    }
 
     private static ChartValueExtents ReadSceneBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, ChartValueExtents dataExtents, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
     {
@@ -471,21 +462,9 @@ internal sealed partial class PptxRenderer
         return !string.IsNullOrWhiteSpace(firstId) && string.Equals(firstId, secondId, StringComparison.Ordinal);
     }
 
-    private static bool IsSceneOrXmlVisibleValueAxis(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    private static bool IsSceneVisibleValueAxis(PptxSceneChartAxis? sceneAxis)
     {
-        if (sceneAxis is not null)
-        {
-            return sceneAxis.AxisKind == PptxSceneChartAxisKind.Value &&
-                sceneAxis.IsDeleted != true;
-        }
-
-        return axis is not null &&
-            !PptxSceneBuilder.IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
-    }
-
-    private static string? ReadChartAxisId(XElement? axis)
-    {
-        return PptxSceneBuilder.ReadOptionalChartValueAttribute(axis?.Element(ChartNamespace + "axId"));
+        return sceneAxis is { AxisKind: PptxSceneChartAxisKind.Value, IsDeleted: not true };
     }
 
     private static double? ReadSceneValueAxisCrossingValue(PptxSceneChartAxis? sceneAxis, ChartValueExtents extents)

@@ -2110,8 +2110,8 @@ internal static class PptxChartLegendsTests
 
         TestAssert.Equal(0, sceneValueAxes.Count);
         TestAssert.Equal(1, rebuiltValueAxes.Count);
-        TestAssert.True(sceneCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(sceneCategoryAxis) is null, "Expected missing scene category axes not to be repaired from fallback XML.");
-        TestAssert.True(rebuiltCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(rebuiltCategoryAxis) is not null, "Expected Rebuilt-scene category-axis lookup to keep reading XML.");
+        TestAssert.True(sceneCategoryAxis.GetType().GetProperty("SceneAxis")?.GetValue(sceneCategoryAxis) is null, "Expected missing scene category axes not to be repaired from fallback XML.");
+        TestAssert.True(rebuiltCategoryAxis.GetType().GetProperty("SceneAxis")?.GetValue(rebuiltCategoryAxis) is not null, "Rebuilt-scene category-axis lookup retains its parsed owner.");
     }
     public static void PptxScatterStrokeLegendEntriesHideSuppressedLinesButKeepMarkers()
     {

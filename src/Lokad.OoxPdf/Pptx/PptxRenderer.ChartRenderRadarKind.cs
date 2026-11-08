@@ -51,12 +51,12 @@ internal sealed partial class PptxRenderer
                 RenderRadarChart(graphics, theme, colorMap, chartPalette, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits, radarStyleId, context: context);
                 if (IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
                 {
-                    await RenderRadarCategoryLabelsAsync(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSharedCategoryLabels(radarPlot, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts).ConfigureAwait(false);
+                    await RenderRadarCategoryLabelsAsync(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, ReadSharedCategoryLabels(radarPlot, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts).ConfigureAwait(false);
                 }
 
                 if (IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
                 {
-                    await RenderRadarValueAxisLabelsAsync(theme, graphics, radarLayout, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, fontResolver, chartFonts: fonts, context: context).ConfigureAwait(false);
+                    await RenderRadarValueAxisLabelsAsync(theme, graphics, radarLayout, chartXml, sceneChart, valueAxis.SceneAxis, valueExtents, axisUnits, fontResolver, chartFonts: fonts, context: context).ConfigureAwait(false);
                 }
 
                 return true;

@@ -325,13 +325,13 @@ internal sealed partial class PptxRenderer
                 continue;
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, owner)
                 .FirstOrDefault();
-            if (!IsSceneOrXmlVisibleValueAxis(valueAxis.SceneAxis, valueAxis.XmlAxis) ||
+            if (!IsSceneVisibleValueAxis(valueAxis.SceneAxis) ||
                 !IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
             {
                 continue;
             }
 
-            string axisId = valueAxis.SceneAxis?.Id ?? ReadChartAxisId(valueAxis.XmlAxis) ?? string.Empty;
+            string axisId = valueAxis.SceneAxis?.Id ?? string.Empty;
             if (visibleValueAxisIds.Add(axisId))
             {
                 visibleValueAxes.Add((valueAxis, owner));
@@ -587,7 +587,7 @@ internal sealed partial class PptxRenderer
             foreach (double tickValue in GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount,
                 ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, percentStacked), context: context).Append(valueExtents.Min).Append(valueExtents.Max))
             {
-                string label = FormatSceneChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, percentStacked ? "0%" : null);
+                string label = FormatSceneChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.Date1904, percentStacked ? "0%" : null);
                 if (!string.IsNullOrWhiteSpace(label))
                 {
                     maxLabelWidth = Math.Max(maxLabelWidth, (await textMeasurer.MeasureAsync(label, tickStyle).ConfigureAwait(false)));
@@ -603,7 +603,7 @@ internal sealed partial class PptxRenderer
             if (usesMeasuredAxisInsets)
             {
                 double endpoint = valueOptions.Reversed ? valueExtents.Max : valueExtents.Min;
-                string label = FormatSceneChartAxisLabel(endpoint, valueAxis.SceneAxis, valueAxis.XmlAxis, percentStacked ? "0%" : null);
+                string label = FormatSceneChartAxisLabel(endpoint, valueAxis.SceneAxis, valueAxis.Date1904, percentStacked ? "0%" : null);
                 double endpointWidth = string.IsNullOrWhiteSpace(label) ? 0d : await textMeasurer.MeasureAsync(label, tickStyle).ConfigureAwait(false);
                 leftReserve = Math.Max(leftReserve, endpointWidth / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
             }
@@ -652,7 +652,7 @@ internal sealed partial class PptxRenderer
             foreach (double bottomTickValue in GetChartAxisTickValuesCore(bottomValueExtents, bottomAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount,
                 ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, bottomValueExtents, percentBottomStacked), context: context))
             {
-                string bottomLabel = FormatSceneChartAxisLabel(bottomTickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, percentBottomStacked ? "0%" : null);
+                string bottomLabel = FormatSceneChartAxisLabel(bottomTickValue, valueAxis.SceneAxis, valueAxis.Date1904, percentBottomStacked ? "0%" : null);
                 if (!string.IsNullOrWhiteSpace(bottomLabel))
                 {
                     hasBottomValueLabel = true;
@@ -709,8 +709,8 @@ internal sealed partial class PptxRenderer
                         GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percent, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, value.SceneAxis,
                         PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
-                    double first = await textMeasurer.MeasureAsync(FormatSceneChartAxisLabel(extents.Min, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
-                    double last = await textMeasurer.MeasureAsync(FormatSceneChartAxisLabel(extents.Max, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
+                    double first = await textMeasurer.MeasureAsync(FormatSceneChartAxisLabel(extents.Min, value.SceneAxis, value.Date1904, percent ? "0%" : null), style).ConfigureAwait(false);
+                    double last = await textMeasurer.MeasureAsync(FormatSceneChartAxisLabel(extents.Max, value.SceneAxis, value.Date1904, percent ? "0%" : null), style).ConfigureAwait(false);
                     if (ReadSceneValueAxisReversed(value.SceneAxis)) (first, last) = (last, first);
                     endpointLeft = Math.Max(endpointLeft, first / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
                     endpointRight = Math.Max(endpointRight, last / 2d + PptxChartMetricRules.HorizontalBarValueAxisRightPadding);
@@ -778,7 +778,7 @@ internal sealed partial class PptxRenderer
             foreach (double tickValue in GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents), context: context)
                 .Concat(new[] { valueExtents.Min, valueExtents.Max }))
             {
-                string label = FormatSceneChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null);
+                string label = FormatSceneChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.Date1904, defaultNumberFormat: null);
                 if (!string.IsNullOrWhiteSpace(label))
                 {
                     maxLabelWidth = Math.Max(maxLabelWidth, (await textMeasurer.MeasureAsync(label, tickStyle).ConfigureAwait(false)));
@@ -946,7 +946,7 @@ internal sealed partial class PptxRenderer
                 foreach (double tickValue in GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, percentStacked), context: context)
                     .Concat(new[] { valueExtents.Min, valueExtents.Max }))
                 {
-                    string stackedLabel = FormatSceneChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat);
+                    string stackedLabel = FormatSceneChartAxisLabel(tickValue, valueAxis.SceneAxis, valueAxis.Date1904, defaultNumberFormat);
                     if (!string.IsNullOrWhiteSpace(stackedLabel))
                     {
                         stackedMaxLabelWidth = Math.Max(stackedMaxLabelWidth, (await stackedTextMeasurer.MeasureAsync(stackedLabel, stackedTickStyle).ConfigureAwait(false)));
@@ -962,7 +962,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                requiredReserve = (await EstimateVerticalValueAxisLabelStripWidthAsync(theme, sceneChart, chartXml, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false));
+                requiredReserve = (await EstimateVerticalValueAxisLabelStripWidthAsync(theme, sceneChart, chartXml, valueAxis.SceneAxis, valueExtents, axisUnits, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false));
             }
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
@@ -1020,7 +1020,6 @@ internal sealed partial class PptxRenderer
                     theme,
                     sceneChart,
                     chartXml,
-                    valueAxis.XmlAxis,
                     valueAxis.SceneAxis,
                     extents,
                     units,
@@ -1392,18 +1391,18 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartValueAxisStripMeasure(double MaxLabelWidth, double FontSize, double StripWidth, double SideGap);
 
-    private static async ValueTask<double> EstimateVerticalValueAxisLabelStripWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
+    private static async ValueTask<double> EstimateVerticalValueAxisLabelStripWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
     {
-        return (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, valueAxis, sceneAxis, extents, units, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false)).StripWidth;
+        return (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, sceneAxis, extents, units, defaultNumberFormat, fontResolver, context: context).ConfigureAwait(false)).StripWidth;
     }
 
-    private static async ValueTask<ChartValueAxisStripMeasure> MeasureVerticalValueAxisLabelStripAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
+    private static async ValueTask<ChartValueAxisStripMeasure> MeasureVerticalValueAxisLabelStripAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat, PresentationFontResolver? fontResolver, PptxRenderContext? context = null)
     {
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, sceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         bool percentStacked = sceneChart is { Plots.Count: 1 } && IsPercentStackedChartGrouping(sceneChart.Plots[0].GroupingKind);
-        var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, style, new(sceneAxis, valueAxis),
+        var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, style, new(sceneAxis, sceneChart.Options.Date1904 == true),
             extents, units, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount,
             ReadCartesianChartAxisTickPolicy(sceneChart, sceneAxis, extents, percentStacked),
             defaultNumberFormat, reserveEndpoints: true, context).ConfigureAwait(false);

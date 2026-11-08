@@ -50,8 +50,7 @@ internal static partial class PptxScatterIntervalTests
     public static void PptxScatterFixedUnitFallbacksKeepSceneAuthorityAndCancellation()
     {
         RangeCase sample = RangeCases().Single(c => c.Id == "range-fine-positive103");
-        XElement mismatch = XElement.Parse(Axis("2", "l", "1", "400", "500", "100", "0000FF"));
-        var (owned, _) = ResolveRange(sample, mismatch);
+        var (owned, _) = ResolveRange(sample);
         TestAssert.Equal(new PptxRenderer.ChartValueExtents(-10d, 103d), owned);
         foreach (bool logarithmic in new[] { false, true })
         {
@@ -81,7 +80,7 @@ internal static partial class PptxScatterIntervalTests
     }
 
     private static (PptxRenderer.ChartValueExtents Extents, object Options) ResolveRange(RangeCase sample,
-        XElement? mismatchedXml = null, bool logarithmic = false, CancellationToken cancellationToken = default, bool bubble = false, bool includeScaling = true)
+        bool logarithmic = false, CancellationToken cancellationToken = default, bool bubble = false, bool includeScaling = true)
     {
         // Exercise the live scene parser; missing-source controls change XML
         // before parsing. Divergent XML below remains provenance only.
@@ -100,7 +99,7 @@ internal static partial class PptxScatterIntervalTests
         object occupied = measured.GetType().GetField("Item" + (coordinate + 2))!.GetValue(measured)!;
         var axis = chart.Axes.Single(a => a.PositionKind == (side == "b" ? PptxSceneChartAxisPosition.Bottom : PptxSceneChartAxisPosition.Left));
         Type sourceType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", BindingFlags.NonPublic)!;
-        object source = Activator.CreateInstance(sourceType, [axis, mismatchedXml ?? element])!;
+        object source = Activator.CreateInstance(sourceType, [axis, chart.Options.Date1904 == true])!;
         object scale = CurveInvoke("ReadChartPointValueAxisScale", source, data, occupied, bubble, coordinate == 1, null);
         return ((PptxRenderer.ChartValueExtents)scale.GetType().GetField("Item1")!.GetValue(scale)!, scale.GetType().GetField("Item2")!.GetValue(scale)!);
     }

@@ -18,8 +18,9 @@ a second XML document cannot supply a missing axis.
 Chart data, names, labels, paints, markers and pie/doughnut slice offsets consume
 their parsed plots and series. Cached/workbook values retain source indices and
 per-point overrides. Numeric bounds, units, orientation, crossing, gridlines and number formats use
-the selected parsed axis; source XML remains available for date systems and
-properties not yet represented in the scene. Missing axes keep their explicit
+the selected parsed axis. Axis measurement and painting carry the parsed
+chart-root date system; source XML remains available for properties not yet
+represented in the scene. Missing axes keep their explicit
 defaults rather than acquiring declarations from another XML source.
 Reciprocal category-axis IDs own crossing and reversed label sides; absent axes
 retain automatic label defaults.

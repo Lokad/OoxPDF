@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Pptx;
+using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -180,22 +181,49 @@ internal static class PptxChartNumberFormatsTests
 
     public static void PptxChartAxisDate1904ResolvesFromChartSpace()
     {
-        System.Xml.Linq.XDocument chart = System.Xml.Linq.XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:date1904 val="1"/>
-              <c:chart><c:plotArea>
-                <c:valAx><c:axId val="20"/><c:numFmt formatCode="m/d/yy" sourceLinked="0"/><c:axPos val="l"/></c:valAx>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-        System.Xml.Linq.XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        System.Xml.Linq.XElement axis = chart.Descendants(c + "valAx").Single();
-        System.Reflection.MethodInfo format = typeof(PptxRenderer).GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(m => m.Name == "FormatSceneChartAxisLabel" && m.GetParameters().Length == 4);
+        var format = typeof(PptxRenderer).GetMethod("FormatSceneChartAxisLabel",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        foreach (var sample in new[] { (Xml: "", Expected: false), (Xml: "<c:date1904/>", Expected: true),
+            (Xml: "<c:date1904 val=\"0\"/>", Expected: false), (Xml: "<c:date1904 val=\"1\"/>", Expected: true),
+            (Xml: "<c:date1904 val=\"bogus\"/>", Expected: false) })
+        {
+            string xml = $"<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\">{sample.Xml}<c:chart><c:plotArea><c:valAx><c:axId val=\"20\"/><c:numFmt formatCode=\"m/d/yy\" sourceLinked=\"0\"/></c:valAx></c:plotArea></c:chart></c:chartSpace>";
+            PptxSceneChart chart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
+            PptxSceneChartAxis axis = chart.Axes.Single();
+            bool date1904 = chart.Options.Date1904 == true;
+            TestAssert.Equal(sample.Expected, date1904);
+            TestAssert.Equal(sample.Expected ? "3/1/04" : "3/1/00", (string?)format.Invoke(null, [60d, axis, date1904, null]));
+            TestAssert.Equal("3/1/00", (string?)format.Invoke(null, [60d, null, date1904, "m/d/yy"]));
+            if (sample.Expected) TestAssert.Equal("1/1/04", (string?)format.Invoke(null, [0d, axis, date1904, null]));
+            PptxSceneChart general = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml.Replace("m/d/yy", "General", StringComparison.Ordinal)));
+            TestAssert.Equal("3/1/00", (string?)format.Invoke(null, [60d, general.Axes.Single(), date1904, "m/d/yy"]));
+        }
+    }
 
-        PptxSceneChartAxis sceneAxis = PptxTests.BuildSingleChartScene(chart.ToString())!.Axes.Single();
-        TestAssert.Equal("1/1/04", format.Invoke(null, [0d, sceneAxis, axis, null]) as string ?? throw new System.InvalidOperationException("Expected formatted axis label."));
+    public static void PptxChartAxisDatesRenderFromParsedDateContext()
+    {
+        foreach (bool date1904 in new[] { false, true })
+        {
+            string xml = $$"""
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:date1904 val="{{(date1904 ? 1 : 0)}}"/>
+                  <c:chart><c:plotArea><c:barChart><c:barDir val="col"/><c:ser><c:idx val="0"/>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                  </c:ser><c:axId val="10"/><c:axId val="20"/></c:barChart>
+                  <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/><c:scaling><c:min val="0"/><c:max val="60"/></c:scaling>
+                    <c:majorUnit val="60"/><c:numFmt formatCode="m/d/yy" sourceLinked="0"/></c:valAx>
+                  </c:plotArea></c:chart></c:chartSpace>
+                """;
+            using var stream = PptxTests.CreateSingleChartPackageStream(xml);
+            using var package = OoxPackage.Open(stream, default);
+            var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
+            var labels = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal));
+            TestAssert.True(labels.Any(show => show.Text == (date1904 ? "3/1/04" : "3/1/00")),
+                "Measured and painted axis dates use the owning chart's parsed date system.");
+        }
     }
 
     public static void PptxChartNumberConditionalSectionsSelectFirstMatch()

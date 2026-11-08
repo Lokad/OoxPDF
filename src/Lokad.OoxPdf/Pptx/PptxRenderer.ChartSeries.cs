@@ -239,14 +239,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartAxisSource ReadChartAxisSource(PptxSceneChart chart, PptxSceneChartAxis? axis)
     {
-        if (axis is null) return default;
-        // Keep original scene-owned XML as provenance for properties not yet
-        // represented in the scene. XML does not select or manufacture axes.
-        IEnumerable<XElement> evidence = chart.ChartXml is not { } xml ? [] :
-            axis.AxisKind == PptxSceneChartAxisKind.Value
-                ? xml.Descendants(ChartNamespace + "valAx") : ReadChartCategoryAxes(xml);
-        return new(axis, evidence.FirstOrDefault(element =>
-            string.Equals(ReadChartAxisId(element), axis.Id, StringComparison.Ordinal)));
+        return axis is null ? default : new(axis, chart.Options.Date1904 == true);
     }
 
     private static PptxSceneChartGrouping ReadSceneChartGrouping(PptxSceneChartPlot plot, PptxSceneChartGrouping defaultGrouping) =>

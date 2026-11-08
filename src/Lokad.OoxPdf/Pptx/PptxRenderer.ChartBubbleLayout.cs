@@ -100,8 +100,8 @@ internal sealed partial class PptxRenderer
             double firstWidth = 0d, lastWidth = 0d, sideSlot = 0d;
             if (xLabels)
             {
-                firstWidth = await measure.MeasureAsync(FormatSceneChartAxisLabel(x.Min, xAxis.SceneAxis, xAxis.XmlAxis, null), xStyle).ConfigureAwait(false);
-                lastWidth = await measure.MeasureAsync(FormatSceneChartAxisLabel(x.Max, xAxis.SceneAxis, xAxis.XmlAxis, null), xStyle).ConfigureAwait(false);
+                firstWidth = await measure.MeasureAsync(FormatSceneChartAxisLabel(x.Min, xAxis.SceneAxis, xAxis.Date1904, null), xStyle).ConfigureAwait(false);
+                lastWidth = await measure.MeasureAsync(FormatSceneChartAxisLabel(x.Max, xAxis.SceneAxis, xAxis.Date1904, null), xStyle).ConfigureAwait(false);
                 if (xOptions.Reversed) (firstWidth, lastWidth) = (lastWidth, firstWidth);
             }
             if (yLabels)

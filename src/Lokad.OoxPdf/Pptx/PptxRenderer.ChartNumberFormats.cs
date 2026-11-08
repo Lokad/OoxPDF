@@ -21,12 +21,12 @@ internal sealed partial class PptxRenderer
             : value.ToString("G10", CultureInfo.InvariantCulture);
     }
 
-    private static string FormatSceneChartAxisLabel(double value, PptxSceneChartAxis? sceneAxis, XElement? axis, string? defaultNumberFormat)
+    private static string FormatSceneChartAxisLabel(double value, PptxSceneChartAxis? sceneAxis, bool date1904, string? defaultNumberFormat)
     {
         ChartNumberFormat numberFormat = sceneAxis is null ? default : ToChartNumberFormat(sceneAxis.NumberFormatInfo);
         if (IsRenderableChartNumberFormat(numberFormat))
         {
-            return FormatChartNumber(value, numberFormat.FormatCode, ResolveAxisDate1904(axis));
+            return FormatChartNumber(value, numberFormat.FormatCode, date1904);
         }
 
         return !string.IsNullOrWhiteSpace(defaultNumberFormat)
@@ -367,13 +367,6 @@ internal sealed partial class PptxRenderer
         text = sign + (showWhole || whole != 0 ? whole.ToString(numberCulture) + " " : string.Empty)
             + bestNum.ToString(numberCulture) + "/" + bestDen.ToString(numberCulture);
         return true;
-    }
-
-    // Chart-space date system for axis labels, resolved from the axis XML
-    // ancestry so no render signature changes (S04). Defaults to 1900.
-    private static bool ResolveAxisDate1904(XElement? axis)
-    {
-        return ResolveChartSpaceDate1904(axis);
     }
 
     private static bool ResolveChartSpaceDate1904(XElement? element)
