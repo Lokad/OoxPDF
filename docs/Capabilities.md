@@ -472,7 +472,10 @@ Supported within the following constraints:
   nil/none suppression, repeated headers, split rows and cell content. Actual page
   occupancy controls following-prose admission. An empty terminal paragraph after
   a nested table keeps its source anchors without adding occupied height;
-  ordinary text and references keep their frames. Conditional bands, columns,
+  ordinary text and references keep their frames. Scaled Review tables share
+  printed body capacity for authored and nested rows. Oversized kept rows retain
+  atomic overflow; arbitrary rich-row fragmentation remains approximate.
+  Conditional bands, columns,
   rows and corners share one style cascade; direct formatting remains above styles.
   Table-look bitmasks apply when no explicit flags are present; an explicit
   declaration enables omitted flags, including band suppression. Absent/empty
