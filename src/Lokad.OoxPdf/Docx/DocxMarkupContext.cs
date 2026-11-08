@@ -48,8 +48,9 @@ internal sealed record DocxMarkupContext(
     // Plain headers retain their established emission origin when body text
     // selects its own first-baseline anchor on a scaled review page.
     public double WordCompatibleStaticTextYAdjustmentPoints { get; init; }
-    public bool IsCommentMarkupVisible(DocxParagraph paragraph) =>
-        WordCompatibleMainStoryCommentParagraphs?.Contains(paragraph) ?? true;
+    public bool IsCommentMarkupVisible(DocxParagraph paragraph, DocxInlineReference? reference = null) =>
+        WordCompatibleMainStoryCommentParagraphs is not { } owners ||
+        owners.Contains(paragraph) && (reference is null || !DocxInlineContent.IsKnownEmptyCommentAnchor(paragraph, reference));
     public DocxMarkupContext ApplyDocumentSettings(DocxDocumentSettings settings)
     {
         DocxRevisionViewSettings revisionView = settings.RevisionViewSettings;

@@ -48,6 +48,20 @@ internal static class DocxInlineContent
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
         paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0 || paragraph.BookmarkAnchors.Count != 0;
 
+    public static bool IsKnownEmptyCommentAnchor(DocxParagraph paragraph, DocxInlineReference reference)
+    {
+        // Word retains point comments in its model, but a complete endpoint
+        // before any paragraph content prints no balloon. Use ordered source
+        // positions: pictures/math also advance them, while empty runs do not.
+        // Field codes, note markers and incomplete/legacy owners have no complete
+        // source position here and retain the established fallback.
+        if (paragraph.InlineContent is null || paragraph.FieldReferences.Count != 0 ||
+            paragraph.InlineReferences.Any(item => item.Kind != DocxRelatedStoryKind.Comment)) return false;
+        var range = paragraph.CommentRanges.FirstOrDefault(item =>
+            string.Equals(item.Id, reference.Id, StringComparison.Ordinal));
+        return range?.StartInlineItemIndex == 0 && range.EndInlineItemIndex == 0;
+    }
+
     public static bool HasNonMathHyperlinks(DocxParagraph paragraph) => paragraph.Hyperlinks.Any(link => !link.IsMathContent);
 
     public static bool HasValidHyperlinkSourceRanges(DocxParagraph paragraph, CancellationToken token)

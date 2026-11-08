@@ -660,7 +660,8 @@ internal sealed partial class DocxRenderer
             return paragraph.InlineReferences.Any(reference =>
                 reference.Kind == DocxRelatedStoryKind.Comment &&
                 reference.Id is not null &&
-                commentPartIds.Contains(reference.Id));
+                commentPartIds.Contains(reference.Id) &&
+                !DocxInlineContent.IsKnownEmptyCommentAnchor(paragraph, reference));
         }
 
         bool TableHasCommentReference(DocxTable table)

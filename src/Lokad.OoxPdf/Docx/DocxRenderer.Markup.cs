@@ -672,6 +672,7 @@ internal sealed partial class DocxRenderer
                 {
                     foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
                     {
+                        if (!markupContext.IsCommentMarkupVisible(paragraph, reference)) continue;
                         if (!renderedComments.TryGetValue(paragraph, out HashSet<string>? comments))
                         {
                             comments = new HashSet<string>(StringComparer.Ordinal);

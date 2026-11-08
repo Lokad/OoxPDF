@@ -23,6 +23,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxRepeatedTableHeaderTests)),
         .. FromType("rendering-portable", typeof(DocxNestedCellEndTests)),
         .. FromType("rendering-portable", typeof(DocxReviewTableFrameTests)),
+        .. FromType("rendering-portable", typeof(DocxCommentAnchorTests)),
         new("rendering-portable", PptxColumnIntervalTests.PptxCategoryOffsetsShareMeasuredUnitsAcrossPreparedContainers),
         new("rendering-portable", PptxColumnIntervalTests.PptxShortRotatedCaptionsKeepFiniteSpacingAndAuthoredSkips),
         new("rendering-portable", PptxColumnIntervalTests.PptxSkippedCategoryPaintKeepsLogicalReferenceEnds),

@@ -254,6 +254,7 @@ internal sealed partial class DocxRenderer
     {
         foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
         {
+            if (!markupContext.IsCommentMarkupVisible(paragraph, reference)) continue;
             DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
                 string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
             if (range is not null &&
