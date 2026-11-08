@@ -17,7 +17,7 @@ internal static class DocxTableCellClipGeometry
                 foreach (var cell in row.Cells)
                 {
                     token.ThrowIfCancellationRequested();
-                    expected += cell.TextLines.Count;
+                    expected += cell.TextLines.Count(line => !DocxInlineLineGeometry.IsNonPaintingSourceCarrier(line));
                     if (!Count(cell.NestedRows)) return false;
                 }
             }
@@ -84,6 +84,7 @@ internal static class DocxTableCellClipGeometry
             foreach (var line in cell.TextLines)
             {
                 token.ThrowIfCancellationRequested();
+                if (DocxInlineLineGeometry.IsNonPaintingSourceCarrier(line)) continue;
                 if (DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top) &&
                     ContainsVerticalRange(clip, bottom, top))
                     yield return (line, clip);

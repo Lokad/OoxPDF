@@ -24,6 +24,8 @@ internal static class DocxNestedCellEndTests
             TestAssert.Equal(0d, carrier.PendingAfterSpacing);
             TestAssert.True(carrier.Segments.Count > 0 && placed.Cells[0].NestedRows.Count == 1,
                 "Keep nominal navigation geometry and the real child table.");
+            TestAssert.True(DocxTableCellClipGeometry.HasCompleteMeasuredRows([placed], default),
+                "A retained nonpainting source owner cannot make a complete cell frame appear clipped or unknown.");
         }
     }
 
