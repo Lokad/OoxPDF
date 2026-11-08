@@ -1664,6 +1664,7 @@ internal static class PptxChartAxesTests
               <c:chart><c:plotArea><c:valAx><c:scaling><c:orientation val="maxMin"/></c:scaling></c:valAx></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "valAx").Single();
+        alternateSource.AddFirst(new XElement(c + "axId", new XAttribute("val", "20")));
         PptxSceneChartAxis alternateAxis = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!.Axes.Single();
         System.Reflection.MethodInfo readAxisReversed = typeof(PptxRenderer).GetMethod(
             "ReadSceneValueAxisReversed",
@@ -1700,6 +1701,7 @@ internal static class PptxChartAxesTests
               <c:chart><c:plotArea><c:valAx><c:crosses val="max"/></c:valAx></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "valAx").Single();
+        alternateSource.AddFirst(new XElement(c + "axId", new XAttribute("val", "20")));
         PptxSceneChartAxis alternateAxis = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!.Axes.Single();
         Type extentsType = typeof(PptxRenderer).GetNestedType(
             "ChartValueExtents",
@@ -1741,6 +1743,7 @@ internal static class PptxChartAxesTests
               <c:chart><c:plotArea><c:valAx><c:crossesAt val="2"/></c:valAx></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "valAx").Single();
+        alternateSource.AddFirst(new XElement(c + "axId", new XAttribute("val", "20")));
         PptxSceneChartAxis alternateAxis = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!.Axes.Single();
         Type extentsType = typeof(PptxRenderer).GetNestedType(
             "ChartValueExtents",
