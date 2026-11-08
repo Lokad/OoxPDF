@@ -60,6 +60,9 @@ Unsupported features are detected as early as practical and emitted through `Oox
 
 ## Layout Layer
 
+DOCX layout resolves omitted header/footer distances to a half inch, independently
+of body margins. Declared distances and raw source inspection metadata remain intact.
+
 PPTX layout is mostly absolute: shapes, images, text boxes, groups, and tables already carry Office coordinates in EMUs. The renderer converts EMUs to PDF points, composes group transforms, resolves theme colors/fonts, and writes drawing operations to the target page.
 
 Measured chart category layouts carry the gap used by admission and painting.

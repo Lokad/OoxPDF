@@ -519,7 +519,9 @@ Supported within the following constraints:
   after the reference in the same XML run. Each retains its own link alongside
   other note references and supported inline mathematics. Note layout remains approximate.
 - Default headers/footers, simple page fields, supported notes and source-owned
-  links/bookmarks. Static-story placement shares physical frames with painting
+  links/bookmarks. Omitted header/footer distances use Word's half-inch default,
+  independently of body margins; explicit distances retain their values.
+  Static-story placement shares physical frames with painting
   and annotations. Without printed balloons, unit-scale Review pages preserve
   the Final text, equation and picture origins on note-only continuation pages.
   Complete unscaled endnote rows that fit a fresh note frame move intact to
