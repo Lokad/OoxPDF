@@ -110,6 +110,5 @@ internal static class DocxFieldInstructionTests
     }
 
     private static XElement Run(string text) => new(W + "r", new XElement(W + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text));
-    private static readonly OoxPdfDocxMarkupMode[] Modes = [OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Simple,
-        OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup];
+    private static readonly OoxPdfDocxMarkupMode[] Modes = Enum.GetValues<OoxPdfDocxMarkupMode>();
 }
