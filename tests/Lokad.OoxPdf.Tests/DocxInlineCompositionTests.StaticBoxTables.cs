@@ -17,7 +17,7 @@ internal static partial class DocxInlineCompositionTests
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
         foreach (var row in cases.RootElement.EnumerateArray())
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
-            CheckStaticBoxTablePaint(RenderStaticBoxTable(row, mode, resolver));
+            CheckStaticBoxTablePaint(RenderStaticBoxTable(row, mode, resolver), row.GetProperty("Id").GetString() + "/" + mode);
     }
 
     public static void DocxStaticBoxTablesKeepIndependentWordVerticalOrigins()
@@ -36,7 +36,7 @@ internal static partial class DocxInlineCompositionTests
             var mode = gold.GetProperty("Mode").GetString() == "final-preserve"
                 ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
             var page = RenderStaticBoxTable(row, mode, null);
-            CheckStaticBoxTablePaint(page);
+            CheckStaticBoxTablePaint(page, row.GetProperty("Id").GetString() + "/" + mode);
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true).ToArray();
             foreach (var anchor in gold.GetProperty("WordTextOrigins").EnumerateArray())
             {
@@ -63,15 +63,15 @@ internal static partial class DocxInlineCompositionTests
         foreach (var row in cases.RootElement.EnumerateArray())
         {
             var document = ReadStaticBoxTableSource(row, OoxPdfDocxMarkupMode.Final);
-            var expected = DocxBlockTraversal.EnumerateSourceParagraphs(document)
+            var expected = new HashSet<DocxEquation>(DocxBlockTraversal.EnumerateSourceParagraphs(document)
                 .SelectMany(paragraph => paragraph.InlineTextBoxes)
                 .SelectMany(box => DocxBlockTraversal.EnumerateBodyParagraphs(box.BodyElements))
-                .SelectMany(paragraph => paragraph.Equations).ToArray();
+                .SelectMany(paragraph => paragraph.Equations), ReferenceEqualityComparer.Instance);
             var actual = DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, default)
                 .SelectMany(paragraph => DocxMathParagraphPolicy.GetPreparationEquations(paragraph)).ToArray();
-            TestAssert.Equal(1, expected.Length);
+            TestAssert.Equal(1, expected.Count);
             TestAssert.Equal(1, actual.Length);
-            TestAssert.True(ReferenceEquals(expected[0], actual[0]), "Table preparation retains its actual boxed equation owner.");
+            TestAssert.True(ReferenceEquals(expected.Single(), actual[0]), "Table preparation retains its actual boxed equation owner.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
                     OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
@@ -87,7 +87,7 @@ internal static partial class DocxInlineCompositionTests
             .RenderPagesAsync(ReadStaticBoxTableSource(row, mode), null, default).ToBlockingEnumerable().Single();
     }
 
-    private static void CheckStaticBoxTablePaint(PdfPage page)
+    private static void CheckStaticBoxTablePaint(PdfPage page, string context)
     {
         var outlines = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re\s+S")
             .Select(match => Enumerable.Range(1, 4).Select(i => double.Parse(match.Groups[i].Value, CultureInfo.InvariantCulture)).ToArray())
@@ -111,7 +111,8 @@ internal static partial class DocxInlineCompositionTests
             "The source link follows the painted table rather than the body emission origin.");
         var destination = page.Annotations.Single(annotation => annotation.IsDestination).Destination!.Value;
         TestAssert.True(destination.PageIndex == 0 && destination.Left is double x && destination.Top is double y && Inside(x, y),
-            "The table bookmark retains a destination inside the painted box.");
+            "The table bookmark retains a destination inside the painted box: " + context +
+            "; destination=" + destination + "; box=" + string.Join(",", box));
     }
 
     private static DocxDocument ReadStaticBoxTableSource(JsonElement row, OoxPdfDocxMarkupMode mode)
