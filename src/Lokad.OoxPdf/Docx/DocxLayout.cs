@@ -489,8 +489,8 @@ internal sealed partial class DocxLayoutEngine
             if (!UsesPrintedBodyFrame()) return bottom + requiredAfter;
             // Paragraph advances already occupy printed points below the source
             // top. Static stories cannot enlarge paragraph capacity.
-            // Table fragments retain their separately qualified capacity until
-            // their baseline/membership rules share the same measured frame.
+            // Tables use this same body capacity. Their fragment-baseline
+            // projection is a separate measurement decision.
             double printedBottom = page.Height - page.MarginTop -
                 (page.Height - page.MarginTop - page.MarginBottom) * paragraphSpacingScale;
             // Notes retain their source-space reserve. Footer displacement
@@ -1347,9 +1347,11 @@ internal sealed partial class DocxLayoutEngine
                 int itemCountBeforeTable = currentItems.Count;
                 int currentTableIndex = tableIndex++;
                 bool tableActiveFrameHasContent = false;
-                bool usesPrintedTableFrame = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
+                bool projectsReviewTableFragments = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
                     CanUsePrintedReviewTextTableFrame(bodyTable);
-                double CurrentTableFrameBottom() => usesPrintedTableFrame ? CurrentParagraphFrameBottom() : CurrentFrameBottom();
+                // Row content/keep policies can change fragmentation, but cannot
+                // grant additional space beyond the containing printed body.
+                double CurrentTableFrameBottom() => CurrentParagraphFrameBottom();
                 // A continuation starts after FinishPage restores the pending-note
                 // reserve. Its capacity cannot reuse this registering block's
                 // temporarily uncharged first-page frame.
@@ -1357,16 +1359,14 @@ internal sealed partial class DocxLayoutEngine
                 // or incomplete stories retain the conservative remainder policy.
                 double continuationNoteReserve = TryCompleteFootnoteReserve(inFlightNotes.Values, out double completeTableReserve)
                     ? completeTableReserve : FootnoteRemainderTotal();
-                double continuationBottom = usesPrintedTableFrame
-                    ? ParagraphFrameBottom(continuationNoteReserve) : FrameBottom(continuationNoteReserve);
+                double continuationBottom = ParagraphFrameBottom(continuationNoteReserve);
                 double continuationTableHeight = Math.Max(1d, page.Height - page.MarginTop - continuationBottom);
                 var noteAdmission = page.ColumnFrames.Count == 1 &&
                     page.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom"
                     ? DocxTableNoteAdmission.TryCreate(elementIndex, bodyTable, inFlightNotes.Values,
                         locationsByBlock.GetValueOrDefault(elementIndex), cancellationToken) : null;
-                double NoteFrameBottom(double reserve) => usesPrintedTableFrame
-                    ? ParagraphFrameBottom(reserve) : FrameBottom(reserve);
-                double reviewFragmentScale = usesPrintedTableFrame ? paragraphSpacingScale : 1d;
+                double NoteFrameBottom(double reserve) => ParagraphFrameBottom(reserve);
+                double reviewFragmentScale = projectsReviewTableFragments ? paragraphSpacingScale : 1d;
                 void MarkTableBoundaryContent()
                 {
                     tableActiveFrameHasContent = true;

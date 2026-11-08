@@ -1,4 +1,22 @@
 {
+  "docx-review-table-frame": [
+    "DocxReviewAuthoredRowsStayInsideTheirPrintedPages",
+    "DocxReviewNestedHeaderAndContinuationSharePrintedCapacity",
+    "DocxReviewTablePagination",
+    "DocxReviewTableSplitProjectionPreservesContinuationPitch",
+    "DocxReviewTableWidowBoundaryChecksEveryCell",
+    "DocxReviewTablePrintedCapacityPreservesWordPagesAndStaticStoryCombinations",
+    "DocxReviewTableCellsUsePrintedInsetsAndRetainLinePitch",
+    "DocxNestedCellEnd",
+    "DocxRepeatedTableHeader",
+    "DocxNoteMathFieldsStaticTablesPreserveCompleteMixedContent",
+    "DocxNoteMathFieldsStaticTablesRetainExactClippedAndUnsupportedFallbacks",
+    "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
+    "DocxTableLayoutStageSplitsNestedTableRowsAcrossCompetingCellPageBreak",
+    "DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak",
+    "DocxLockedFields",
+    "StagedPageMemory"
+  ],
   "docx-nested-cell-end": [
       "DocxNestedCellEnd",
       "DocxRepeatedTableHeader",
