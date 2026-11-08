@@ -126,7 +126,7 @@ internal static partial class OoxMemoryAdmissionTests
         using var cancellation = new CancellationTokenSource();
         var cancelPool = new TestMemoryBudget { RefuseChange = (before, after) =>
         {
-            if (before == 0 && after > 2 * 1024 * 1024) cancellation.Cancel();
+            if (before <= 2 * 1024 * 1024 && after > 2 * 1024 * 1024) cancellation.Cancel();
             return false;
         }};
         using (var conversion = OoxConversionBudget.BeginScope(null, cancelPool))
