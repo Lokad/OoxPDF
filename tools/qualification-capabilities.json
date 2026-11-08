@@ -4482,6 +4482,8 @@
     "PptxLinksToHiddenSlidesAreDiagnosed"
   ],
   "pptx-axis-date-context": [
+    "PptxScatterAutomaticIntervalGeometryRemainsSceneOwned",
+    "PptxScatterEdgeWidthKeepsSceneAuthorityAndFallbacks",
     "PptxChartSceneAxesKeepParsedSourcesAndDateContext",
     "PptxChartAxisDate1904ResolvesFromChartSpace",
     "PptxChartAxisDatesRenderFromParsedDateContext",
