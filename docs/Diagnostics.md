@@ -67,7 +67,7 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_IMAGE_TRANSFORM`: picture rotation has unusable or unresolved source/line dimensions; unrotated paint is retained, including supported crop/flips.
 - `DOCX_UNSUPPORTED_IMAGE_CROP`: the picture source rectangle is malformed, non-finite or empty; the uncropped image is retained.
 - `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default final output when markup printing was not requested.
-- `DOCX_UNSUPPORTED_COMPLEX_FIELD`: a complex field was malformed in a way that prevents cached-result or placeholder rendering, nested inside another field instruction, or had no supported dynamic placeholder and no cached result to render.
+- `DOCX_UNSUPPORTED_COMPLEX_FIELD`: unsupported field nesting, malformed markup, or an incomplete result with neither a usable cache nor a dynamic placeholder. A complete stored result may be empty.
 - `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
 - `DOCX_APPROXIMATED_EQUATION`: native Office Math was painted with approximate layout; one warning per affected part. This is distinct from omitted unsupported equations.
 - `DOCX_UNSUPPORTED_EXTERNAL_IMAGE`: an externally referenced image was detected and ignored because only packaged parts render; one warning per document, with the owning body/related-story part. Selected headers and footers use their own image relationships.
