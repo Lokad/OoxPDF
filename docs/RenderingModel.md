@@ -15,9 +15,12 @@ from that scene, preserving declared ID order and explicit absence. The selected
 axis retains its scene-owned XML evidence for properties still read from markup;
 a second XML document cannot supply a missing axis.
 
-Series and point paints, line appearance, marker definitions and pie/doughnut
-slice offsets consume their parsed series. Cached and workbook sources retain
-their point-count and per-point override rules.
+Chart data, names, labels, paints, markers and pie/doughnut slice offsets consume
+their parsed plots and series. Cached/workbook values retain source indices and
+per-point overrides. Numeric units, orientation, crossing and number formats use
+the selected parsed axis; source XML remains available for date systems and
+properties not yet represented in the scene. Missing axes keep their explicit
+defaults rather than acquiring declarations from another XML source.
 
 ## Package Layer
 

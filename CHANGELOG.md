@@ -2,264 +2,40 @@
 
 ## 0.3.0 — Unreleased
 
-- DOCX: normal note paragraphs and cells prepare supported equations alongside
-  PAGE and NUMPAGES fields. Fresh footnotes measure their full content using
-  the rendered reference page before placement.
-  Complete fitting endnote groups share counter admission and paragraph/separator
-  geometry at section and document end, preserving equations beside page fields.
-  Ordinary headers and footers, including complete simple tables, prepared equations,
-  inline pictures and owned PAGE/NUMPAGES fields, preserve this
-  mixed-note content and geometry through complete page-contained frames and
-  the actual available note area. Unsupported, clipped or unmeasured static
-  stories retain their placement fallback.
+- Targets .NET 10 and .NET 11; the shipped library remains safe managed code
+  without runtime dependencies.
+- Hosting: asynchronous package, font, staging and output I/O; immutable font
+  leases and host-funded bounded caches; explicit temporary-storage selection
+  for embedded conversions. Custom font resolvers define the complete font
+  universe. An opt-in disposable Windows resolver supports owned discovery and
+  caching. Memory admission covers additional font, layout and chart construction;
+  coverage remains partial. See [caller migration](docs/PublicApiChanges.md).
+- DOCX composition: supported equations, pictures and navigation retain source
+  order through table cells, notes, headers/footers, editing boundaries, metadata
+  wrappers and deleted paragraph marks. Bookmarks and links follow placed content;
+  supported inline page/column breaks preserve neighboring content.
+- DOCX layout: improves table sizing, merged-cell placement, conditional styles
+  and padding, page-local body origins, paragraph backgrounds and longer comment
+  balloons. Note numbering preserves distinct references within shared runs;
+  qualified PAGE/NUMPAGES and endnote placement use their actual owners.
+  Diagnostics identify omitted story drawings and clipped automatic note rows.
+- PPTX charts: shares parsed source ownership across data, labels, axes, paint,
+  markers and legends. Theme palettes and tint/shade order replace fitted color
+  regimes; point/series overrides and negative inversion remain distinct.
+  Improves composed scales, authored plot frames, numeric formatting, caption
+  wrapping, titles, legends, reversal and supported scatter/bubble geometry.
+- PPTX content: preserves cells following horizontal merges and text/link geometry
+  with standard-font fallback. Preset arcs handle extreme numeric guides without
+  stalling conversion.
+- Fonts: bounds GPOS selection storage, improves parsing cancellation, and admits
+  character-map and kerning construction through existing memory ownership.
 
-- PPTX: point-label text bodies retain their own fallback typography and line-key
-  measurement when paragraph default-run properties are absent.
-
-- Fonts: an opt-in disposable Windows font resolver funds catalog metadata and
-  its bounded program cache through a host cache budget; existing shared defaults remain.
-  GPOS right-class decoding avoids per-class growable lists and admits its reusable
-  construction capacity through the conversion memory budget.
-
-- DOCX: nonpainting runs no longer redirect bookmarks from inline equations to
-  later prose. Bookmarks on ordered inline pictures and boxes target their placed line
-  instead of following text, including links from another paragraph.
-  Mixed picture/equation hyperlinks cover their decoded, unclipped picture frames;
-  complete note cells share this coverage. Child drawing targets and unsupported
-  placement fallbacks remain separate.
-  Hyperlink metadata preserves complete endnote placement and qualified minimum
-  cell spacing.
-  NUMPAGES in normal notes uses the finalized count for measurement and spacing;
-  Endnote PAGE uses its rendered reference page through plain paragraph continuations and section-end notes,
-  including empty or ordinary headers, and complete fitting document-end groups;
-  complete measured groups bind counters independently of static typography
-  eligibility and must fit above the selected footer. Unfit or unresolved note
-  owners retain their fallback.
-  Endnote placement follows the document-wide position when section metadata differs.
-  Endnote separators honor source paragraph spacing and continuation after-space;
-  absent and unregistered separators share one normalized default.
-  Empty editing boundaries and bookmarks preserve supported revised equations
-  and their source-owned internal-link targets.
-  Comment boundaries inside supported equations retain the formula and comment;
-  range geometry follows the containing equation frame.
-  Rich-text content controls and custom-XML metadata retain supported mathematical content and qualified
-  revision frames in body paragraphs, cells, notes and direct static stories.
-  Hyperlinks inside supported equations preserve the formula and clickable
-  source range through wrapping and qualified container placement.
-
-- DOCX: inline page/column tokens inside table cells preserve equations, pictures
-  and links. Preparation and layout consume the same source paragraphs; actual
-  paragraph marks and standalone page-break flow retain their separate behavior.
-
-- DOCX: Final/Simple joins across deleted paragraph marks retain supported
-  equations, pictures and navigation together with their ordered source.
-
-- DOCX: warn when an automatic note-table row loses complete text lines below
-  its page frame; existing rendering and intentional exact-height clipping remain.
-
-- DOCX: long literal equations admit preparation headroom with their source model;
-  host refusal remains clean and rendering is unchanged.
-
-- DOCX: page-restarted footnotes retain distinct generated markers when several
-  references share an XML run; authored text and note destinations stay separate.
-  Complete notes follow their measured fragments across pages when equal-format
-  runs are merged. Kerning adjustments retain each generated marker owner.
-  Custom markers sharing a run with other references preserve supported equations,
-  links and page counters.
-
-- PPTX: chart plot and axis selection use the resolved scene, removing duplicate XML-only
-  selection paths while preserving source order and missing-axis fallbacks.
-  Plot scalars, smoothing and line visibility use the same parsed plot owner.
-  Numeric declarations, crossings and explicit-scale admission also use scene
-  properties; the live combination-chart XML fallback remains.
-
-- PPTX: preset arcs share bounded angle handling for strokes and arrow outlines.
-  Invalid numeric guides use defaults; extreme values no longer stall conversion.
-
-- PPTX: clustered horizontal plots sharing an axis now use one source range,
-  interval lattice and category crossing for bars, grids and labels. Authored
-  zero maxima retain lower headroom across supported Cartesian plots.
-  Automatic horizontal numeric captions reserve space on their source-selected
-  side, independently of the axis stroke, including category reversal.
-  Clustered horizontal category reversal mirrors bar rows, series offsets,
-  captions and data-label/key/link geometry while preserving source identities.
-  Vertical numeric-axis labels keep their measured width so formatted values
-  survive in narrow plots. Their side gap follows the selected font's normal
-  line box and is shared by allocation, painting and composed strip spacing.
-- PPTX: deleted plot/series label sets hide their default labels while preserving
-  defined child requests. Series label settings no longer leak into an absent
-  plot container or unrelated series.
-- PPTX: composed bar charts measure every series legend entry before layout,
-  preserving names from later plots. Automatic bottom filled-key legends share
-  natural row admission and aligned wrapped columns.
-
-- PPTX: factor positions and edge-sized heights resolve together for authored
-  inner Cartesian plots, keeping columns, curves, axes and labels on the same
-  rectangle. Width and height share the existing source-coordinate calculation.
-  Ordinary inner column, line and area plots also admit numeric side captions
-  and visible-axis endcaps within the chart frame, including independent axis
-  fonts and sides. Rotated/wrapped categories and secondary axes
-  retain their existing approximation.
-  Ordinary outer column, line and area plots center the authored caption area
-  before allocating measured axis bands. Data, plot fill and linked labels share
-  the inner rectangle. Numeric admission also precedes category angle/skip fitting;
-  rotated single-line captions allocate logical spans against the authored area,
-  including source pitch and category reversal. Painting retains its measured
-  anchors. Numeric bands, typography and empty-caption spacing remain approximate.
-
-- PPTX: plain automatic outside-end column labels wrap measured text and admit
-  the whole label/key frame within the chart, retaining value suffixes at its
-  edges. Manual, rich-text, no-wrap, stacked and other label placements retain
-  their existing behavior.
-
-- PPTX: overridden chart-style fonts no longer change rotated category-caption
-  fitting in built-in charts. Their axis sizes inherit from chart/local text,
-  preserving Office's fallback when external role sizes are present. Automatic
-  numeric-scale limitations remain.
-
-- PPTX: automatic line/area plots with horizontal, unwrapped categories admit
-  caption and numeric-label space beside right legends without moving the legend.
-  Area plots share the font-line-box side-legend allocation used by bubble plots.
-  Their legend keys and row spacing also follow measured font line metrics;
-  text baselines and key-gap residuals remain approximate.
-  Authored, composed, rotated and wrapped layouts retain their existing paths.
-
-- PPTX: explicit numeric-axis low/high labels follow paired category direction,
-  so reversed charts measure and paint their labels on the same source side.
-
-- PPTX line/area charts place a single tick-centered category at its source
-  endpoint, including reversal; captions and line markers share that origin. Horizontal marker admission preserves
-  full edge markers while retaining numeric-axis clipping.
-
-- Host memory admission covers workbook-derived chart range construction, reusing
-  the existing page reservation across sequential chart frames.
-- PPTX: scatter connections follow series visibility and smoothing defaults.
-  Authored major intervals and inferred Y intervals measure curve bounds.
-  Automatic X intervals use authored inner plot width and axis font size.
-  Inner plots with factor positions resolve right-edge widths before placement
-  and interval selection, preserving equivalent layout declarations. They admit measured
-  numeric captions inside the chart frame, shifting or shrinking the plot while
-  keeping captions centered on ticks. Layout, captions, ticks and legend
-  measurement share the scale. Other automatic X layouts retain their fallback.
-- PPTX: area-sized bubbles with authored horizontal bounds and intervals share
-  measured circle, axis, label and legend geometry. Source bubble scaling,
-  including zero, and subunit size normalization work in this scope. Automatic
-  horizontal scales and manual/composed layouts retain their approximation.
-- PPTX: chart number formats preserve required leading integer zeros, including
-  sections, literal masking, grouping and scaling.
-- PPTX: horizontal value-axis labels, ticks and grids start intervals at the
-  authored minimum and omit unaligned upper endpoints. Paired category axes
-  share crossings across caption admission, ticks and painting; clustered bars
-  and their labels use that origin, including origin-relative inverted paint.
-- PPTX: automatic centered horizontal labels size their text/key frames from
-  content and font metrics, then follow the actual grouped or stacked bar.
-
-- PPTX: missing legend-overlay flags follow PowerPoint's overlay default;
-  explicit non-overlay legends retain their plot-space reservation. Bottom line
-  and column legends wrap long series names using shared measured rows, including
-  when empty layout metadata is present.
-
-- PPTX: automatic chart titles share measured frame placement and caption-sized
-  painting across chart kinds. Manual title rectangles retain authored bounds;
-  horizontal title/legend bands preserve axis spacing. Ordinary column and line
-  plot headers compose measured captions and numeric labels across frame sizes,
-  preserving overlay neutrality and minimum clearance. Line plots also share
-  measured frame placement across titles/legends and preserve primary/secondary
-  label ownership. Column footers share category-strip measurement and numeric
-  end clearance, including when category labels are hidden. Custom offsets no longer
-  displace column category labels below their automatic chart frame. Line data-label
-  keys retain the chart's inherited palette colors. Crowded automatic legends
-  truncate overflowing rows while preserving space for the plot.
-
-- Font programs use explicit immutable leases and optional host-funded bounded
-  caches; eviction/shutdown preserve active readers. DOCX/PPTX await selected
-  font acquisition before synchronous measurement and painting.
-  Private character/advance maps now request shared-memory admission before expansion.
-- Awaits package, staging and PDF output I/O; synchronous calls share that path.
-  .NET 10 stages seekable input to keep BCL ZIP reads off caller streams.
-- Adds host-selected temporary storage. Embedded streams no longer create implicit
-  temp files beyond their resident window; file/CLI convenience keeps file backing.
-- DOCX: sizes unconstrained automatic tables from content and cell insets,
-  preserving fixed/preferred widths. Arithmetic roundoff no longer creates
-  spurious text line breaks at an exactly fitting boundary.
-- DOCX: fixes authored spacing after explicit page breaks in unscaled default
-  and markup layouts.
-- DOCX: paints direct and inherited paragraph backgrounds across wrapped flow,
-  cells, static stories, equations and pictures, preserving authored foregrounds.
-  Qualified single-line minimum slots shade the natural line without painting
-  over the following paragraph.
-- DOCX: reports omitted external images, malformed floating drawings and unsupported
-  VML in selected headers/footers using the owning story's relationships.
-- Multi-targets .NET 10 and .NET 11. Development uses the pinned .NET 11 RC SDK;
-  qualification records framework-specific library and tool identities.
-- PPTX: measures horizontal legend rows and reserves their selected side,
-  preserving wrapped names and composing legend space with chart titles.
-- PPTX: gives horizontal chart labels their own axis strips, anchors untitled
-  frames consistently, and keeps overlay legends from consuming plot space.
-- PPTX: resolves built-in single-accent palettes from the theme, sharing
-  shade/tint colors across series, varying points and legend keys.
-- PPTX: automatic bar theme colors follow declared series indices across plots,
-  including sparse indices and empty siblings. Legend and data-label keys share
-  those colors while preserving category-point styling and negative inversion.
-- PPTX: restores category legends for individually formatted single-series points
-  when varying colors is off, and preserves explicit point no-fill.
-- PPTX: measures automatic column-chart horizontal reserves from axis labels,
-  keeping titles and horizontal legends from shrinking the plot.
-  Automatic scales share measured font/title/legend capacity, including authored
-  inner data placement; outer-frame and boundary cases remain approximate.
-- PPTX: sizes clustered bars from the actual interseries gaps, preserving single-
-  series widths when overlap changes.
-- PPTX: corrects authored tint/shade colors and transform order in shapes, charts
-  and legend keys using the shared color resolver.
-- PPTX: honors series and point negative-bar inversion flags across clustered and
-  stacked bar/column charts, including label swatches and explicit point fills.
-- Replaces fitted bar-color regimes with shared cycle shading, including
-  horizontal charts and theme changes.
-- Restores category legends for varying-color bar charts and reserves space for
-  wrapped legend rows; crowded frames report clipped entries.
-- PPTX: preserves cells following horizontal table merges, sharing source grid
-  positions across styles, row-height measurement, text and link placement.
-- DOCX: preserves plain comment paragraph breaks beyond five paragraphs, using
-  shared measured rows for balloon height and painting, including supported
-  terminal font pairs and resolved font aliases.
-- DOCX: retains differently justified adjacent equations and shares display-row
-  placement across body, cells and footers. Spaces, hidden source text, links and
-  pictures keep inline math; hidden text remains unpainted.
-- PPTX: avoids a false secondary numeric-label strip when combined bar/line or
-  column plots share the primary value axis.
-- PPTX: shares source ranges and declared intervals across ordinary column/line
-  combinations, keeping their data on the same numeric scale.
-- PPTX: combined plots sharing one supported axis pair reuse the measured column
-  frame across reversal and crossing, correcting displaced plots. Font and
-  clustering differences and strict image failures remain documented.
-- DOCX: minimum-line placement uses measured local slots across fonts, styles
-  and neighboring tables/wrapped text; links and background paint retain geometry.
-- DOCX: continuation pages use their own body print origins, keeping text,
-  bookmarks, links and following endnotes independent of page-one font sizes.
-  In mixed paragraph/table notes, oversized rows defer from occupied frames
-  before bounded clipping, preserving more content and following notes' page order.
-- DOCX: resolves table bands, edge styles and corner styles in one precedence
-  order for both explicit conditional flags and positional styling, including
-  merged edges and single-row/column tables. Unset or zero band sizes suppress
-  band formatting, including zero overrides of an inherited positive size.
-- DOCX: applies bitmask-only table-look declarations and explicit-flag precedence;
-  omitted flags in an explicit declaration no longer acquire unrelated defaults.
-- DOCX: continues note lists in document reference order; unused notes and
-  reordered notes XML no longer change visible list labels.
-- DOCX: places resolved custom-style padding inside the table grid, preserving
-  explicit indentation and the existing TableNormal anchor. Table/cell formatting
-  inherits earlier parents; empty and text-only styles retain forward references.
-- DOCX: recognizes intrinsic Normal Table styles by name and custom-style metadata,
-  applying their built-in padding without authored paint or inheritance. Custom
-  styles, descendant formatting and direct overrides keep their own properties.
-- PPTX: retains readable advances and run/chart hyperlinks when standard PDF
-  fonts replace unavailable fonts, including cell text and transformed links.
-- Preserves authored chart titles when automatic-title deletion is enabled;
-  automatic bar layouts reserve a measured title line inside the frame, and
-  inferred titles resolve built-in defaults and authored text sizes before layout.
-- Reads common Strict DOCX content and measure forms, including composed tables,
-  images, equations and related stories. Strict dialect warnings remain; this
-  does not add general Strict OOXML or Strict PPTX support.
+General note-row fragmentation remains unsupported. Automatic chart scales,
+dense/manual layouts and other unqualified combinations remain approximate.
+[Capabilities](docs/Capabilities.md) and
+[qualification results](docs/PreviewQualification.md) distinguish supported content,
+approximations and unresolved visual failures. Office-PDF comparisons do not establish
+calibrated application-view parity.
 
 ## 0.2.0 — 2026-10-29
 
