@@ -637,16 +637,6 @@ internal sealed partial class PptxSceneBuilder
             : (null, value);
     }
 
-    internal static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
-    {
-        return ReadChartGridlineLine(gridlines, theme, PptxColorMap.Default);
-    }
-
-    internal static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return ReadChartGridlineLine(gridlines, theme, colorMap, default);
-    }
-
     private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap, PptxSceneLineStyle inheritedLine)
     {
         return ReadChartLineWithInheritedProperties(gridlines?.Element(ChartNamespace + "spPr"), theme, colorMap, inheritedLine);
@@ -718,7 +708,7 @@ internal sealed partial class PptxSceneBuilder
             : (null, value);
     }
 
-    internal static bool IsChartGridlineVisible(XElement? gridlines)
+    private static bool IsChartGridlineVisible(XElement? gridlines)
     {
         XElement? line = gridlines?
             .Element(ChartNamespace + "spPr")

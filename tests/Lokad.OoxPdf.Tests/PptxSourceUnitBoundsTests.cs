@@ -72,26 +72,25 @@ internal static partial class PptxSourceUnitBoundsTests
         string xml = Chart(new([4, 4], 2, null, 0, 6), "bar", false, false);
         var scene = PptxTests.BuildSingleChartScene(xml)!;
         var axis = scene.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value);
-        XElement mismatch = XElement.Parse("<c:valAx xmlns:c='" + c + "'><c:scaling><c:max val='100'/></c:scaling><c:majorUnit val='20'/></c:valAx>");
         var data = new PptxRenderer.ChartValueExtents(0, 4);
         object Invoke(string method, params object?[] args) => typeof(PptxRenderer)
             .GetMethod(method, BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, args)!;
         TestAssert.Equal(new PptxRenderer.ChartValueExtents(0, 6),
-            (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", scene, axis, mismatch, data, false, true, .96d));
+            (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", scene, axis, data, false, true, .96d));
 
         XElement shared = XElement.Parse(xml);
         shared.Descendants(c + "plotArea").Single().Add(new XElement(shared.Descendants(c + "barChart").Single()));
         var sharedModel = PptxTests.BuildSingleChartScene(shared.ToString())!;
         TestAssert.Equal(new PptxRenderer.ChartValueExtents(0, 6),
             (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", sharedModel,
-                sharedModel.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value), mismatch, data, false, true, .96d));
+                sharedModel.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value), data, false, true, .96d));
 
         XElement horizontal = XElement.Parse(xml);
         MakeHorizontal(horizontal.Descendants(c + "plotArea").Single());
         var horizontalModel = PptxTests.BuildSingleChartScene(horizontal.ToString())!;
         TestAssert.Equal(new PptxRenderer.ChartValueExtents(0, 6),
             (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", horizontalModel,
-                horizontalModel.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value), mismatch, data, false, true, .96d));
+                horizontalModel.Axes.Single(a => a.AxisKind == PptxSceneChartAxisKind.Value), data, false, true, .96d));
 
         foreach (string fallback in new[] { "log", "secondary", "stacked-composition", "unpaired-composition", "horizontal-stacked", "percent" })
         {
@@ -114,8 +113,8 @@ internal static partial class PptxSourceUnitBoundsTests
             }
             var model = PptxTests.BuildSingleChartScene(source.ToString())!;
             var modelAxis = model.Axes.First(a => a.AxisKind == PptxSceneChartAxisKind.Value);
-            var expected = (PptxRenderer.ChartValueExtents)Invoke("ReadPercentStackedAwareValueAxisExtents", modelAxis, valueAxis, data, fallback == "percent", true, .96d);
-            var actual = (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", model, modelAxis, valueAxis, data, fallback == "percent", true, .96d);
+            var expected = (PptxRenderer.ChartValueExtents)Invoke("ReadPercentStackedAwareValueAxisExtents", modelAxis, data, fallback == "percent", true, .96d);
+            var actual = (PptxRenderer.ChartValueExtents)Invoke("ReadCartesianChartValueAxisExtents", model, modelAxis, data, fallback == "percent", true, .96d);
             TestAssert.True(expected == actual, "Unqualified " + fallback + " scale retains its existing owner.");
         }
         foreach (bool reversed in new[] { false, true })

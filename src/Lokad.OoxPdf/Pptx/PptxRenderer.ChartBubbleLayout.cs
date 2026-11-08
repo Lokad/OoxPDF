@@ -89,9 +89,9 @@ internal sealed partial class PptxRenderer
         for (int pass = 0; pass < 16; pass++)
         {
             token.ThrowIfCancellationRequested();
-            var xOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(xAxis.SceneAxis, xAxis.XmlAxis, theme, x,
+            var xOptions = ReadSceneChartBubbleValueAxisOptions(xAxis.SceneAxis, x,
                 PptxChartMetricRules.AxisNiceTickTargetCount);
-            var yOptions = ReadSceneOrXmlChartBubbleValueAxisOptions(yAxis.SceneAxis, yAxis.XmlAxis, theme, y,
+            var yOptions = ReadSceneChartBubbleValueAxisOptions(yAxis.SceneAxis, y,
                 PptxChartMetricRules.AxisNiceTickTargetCount);
             xOptions = xOptions with { Units = xOptions.Units with { MajorUnit = xUnit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
             yOptions = yOptions with { Units = yOptions.Units with { MajorUnit = yUnit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };

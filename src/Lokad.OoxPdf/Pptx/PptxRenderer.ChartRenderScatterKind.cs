@@ -47,8 +47,8 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = (await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver, resolvedValueExtents: null, xTickTargetCount, context: context).ConfigureAwait(false));
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 var measured = MeasureScatterChartExtents(scatterSeries, scatterOptions, seriesLineHidden, context.CancellationToken);
-                var (xExtents, xAxisOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, xTickTargetCount);
-                var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale(theme, yValueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
+                var (xExtents, xAxisOptions) = ReadChartPointValueAxisScale( xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, xTickTargetCount);
+                var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale( yValueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
                 ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xValueAxis.SceneAxis, yExtents, yAxisOptions.Reversed) ?? new(yExtents.Min, 0d, false, false);
                 ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yValueAxis.SceneAxis, xExtents, xAxisOptions.Reversed, horizontal: false) ?? new(xExtents.Min, 0d, false, false);
                 chartLayout = await AdmitScatterSourcePlotAsync(theme, sceneChart, chartXml, chartLayout,
@@ -234,8 +234,8 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
                 ChartAxisSource yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : xValueAxis;
                 var measured = MeasureScatterChartExtents(bubbleSeries, null, null, context.CancellationToken);
-                var (xExtents, xAxisOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: true, horizontal: true);
-                var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale(theme, yValueAxis, measured.DataY, measured.PathY, bubble: true, horizontal: false);
+                var (xExtents, xAxisOptions) = ReadChartPointValueAxisScale( xValueAxis, measured.DataX, measured.PathX, bubble: true, horizontal: true);
+                var (yExtents, yAxisOptions) = ReadChartPointValueAxisScale( yValueAxis, measured.DataY, measured.PathY, bubble: true, horizontal: false);
                 IReadOnlyList<ChartLegendEntry> legendEntries = BuildFillLegendEntries(theme, colorMap, chartPalette, bubblePlot, bubbleChart,
                     seriesFills, seriesStrokes, paletteOffset: 0, workbook: workbook);
                 ChartBubbleSizing? bubbleSizing = null;

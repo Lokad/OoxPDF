@@ -578,8 +578,8 @@ internal sealed partial class PptxRenderer
             }
 
             bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
-            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-            ChartValueAxisRenderOptions valueOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, percentStacked);
+            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartValueAxisRenderOptions valueOptions = ReadSceneChartValueAxisRenderOptions(valueAxis.SceneAxis, valueExtents, percentStacked);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? valueOptions.Units;
             ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -645,8 +645,8 @@ internal sealed partial class PptxRenderer
             }
 
             bool percentBottomStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
-            ChartValueExtents bottomValueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percentBottomStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-            ChartAxisUnits bottomAxisUnits = resolvedValueScale?.Units ?? ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, bottomValueExtents, percentBottomStacked).Units;
+            ChartValueExtents bottomValueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percentBottomStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartAxisUnits bottomAxisUnits = resolvedValueScale?.Units ?? ReadSceneChartValueAxisRenderOptions(valueAxis.SceneAxis, bottomValueExtents, percentBottomStacked).Units;
             ChartTextStyle bottomTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             bool hasBottomValueLabel = false;
             foreach (double bottomTickValue in GetChartAxisTickValuesCore(bottomValueExtents, bottomAxisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount,
@@ -705,7 +705,7 @@ internal sealed partial class PptxRenderer
                 if (IsSceneOrXmlChartAxisLabelVisible(value.SceneAxis, value.XmlAxis))
                 {
                     bool percent = IsPercentStackedChartGrouping(barOptions.Grouping);
-                    ChartValueExtents extents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, value.SceneAxis, value.XmlAxis,
+                    ChartValueExtents extents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, value.SceneAxis,
                         GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percent, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, value.SceneAxis,
                         PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
@@ -769,7 +769,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? ResolvePercentStackedAxisUnits(ReadSceneChartValueAxisUnits(valueAxis.SceneAxis), false);
             ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -926,7 +926,6 @@ internal sealed partial class PptxRenderer
             ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(
                 sceneChart,
                 valueAxis.SceneAxis,
-                valueAxis.XmlAxis,
                 GetSharedBarChartValueExtents(barPlot, grouping, workbook, plotVisibleOnly),
                 percentStacked, ResolveBarValueAxisHeadroom(barOptions.BarDirection == PptxSceneChartBarDirection.Bar, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? ResolvePercentStackedAxisUnits(ReadSceneChartValueAxisUnits(valueAxis.SceneAxis), percentStacked);
@@ -1013,8 +1012,7 @@ internal sealed partial class PptxRenderer
                     var line = ReadSceneChartLineOptions(sceneChart, owner, PptxSceneChartGrouping.Standard);
                     data = GetSharedLineChartValueExtents(owner, line.Stacked, line.PercentStacked, workbook, plotVisibleOnly);
                 }
-                ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis,
-                    valueAxis.XmlAxis, data, percentStacked, useNearMaximumHeadroom: !percentStacked,
+                ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, data, percentStacked, useNearMaximumHeadroom: !percentStacked,
                     nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits units = ResolvePercentStackedAxisUnits(
                     ReadSceneChartValueAxisUnits(valueAxis.SceneAxis), percentStacked);
@@ -1075,7 +1073,6 @@ internal sealed partial class PptxRenderer
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
             ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(
                 valueAxis.SceneAxis,
-                valueAxis.XmlAxis,
                 GetSharedBarChartValueExtents(barPlot, grouping, workbook, plotVisibleOnly),
                 IsPercentStackedChartGrouping(grouping), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisSource category = ReadChartCategoryAxisForPlot(sceneChart, barPlot);

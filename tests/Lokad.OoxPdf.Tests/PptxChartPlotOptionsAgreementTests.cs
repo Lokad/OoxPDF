@@ -6,8 +6,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-// Parsed plot/numeric-axis scalars use explicit expectations. Remaining gridline
-// routes are compared with XML while their source ownership is audited separately.
+// Parsed plot/axis options use explicit source-backed expectations.
 internal static class PptxChartPlotOptionsAgreementTests
 {
     private static readonly XNamespace C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
@@ -172,7 +171,7 @@ internal static class PptxChartPlotOptionsAgreementTests
         ];
         foreach (var test in cases)
         {
-            var (axis, _) = LoadAxis(test.Xml);
+            var axis = LoadAxis(test.Xml);
             object units = TestAssert.NotNull(Invoke("ReadSceneChartValueAxisUnits", [typeof(PptxSceneChartAxis)], [axis]));
             TestAssert.Equal(test.Major, (double?)units.GetType().GetProperty("MajorUnit")!.GetValue(units));
             TestAssert.Equal(test.Minor, (double?)units.GetType().GetProperty("MinorUnit")!.GetValue(units));
@@ -195,68 +194,53 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
-    public static void AxisGridlineOptionsAgreeBetweenSceneAndXml()
+    public static void ParsedAxisGridlineOptionsKeepVisibilityAndStroke()
     {
-        string[] scalings = new[] { "", "<c:scaling><c:orientation val=\"minMax\"/></c:scaling>", "<c:scaling><c:orientation val=\"maxMin\"/></c:scaling>", "<c:scaling><c:orientation val=\"bogus\"/></c:scaling>" };
-        string[] gridlines = new[] { "", "<c:majorGridlines/>", "<c:minorGridlines/>", "<c:majorGridlines/><c:minorGridlines/>" };
-        string[] units = new[] { "", "<c:majorUnit val=\"10\"/>", "<c:minorUnit val=\"5\"/>", "<c:majorUnit val=\"bogus\"/>" };
-        string[] formats = new[] { "", "<c:numFmt formatCode=\"0.0\" sourceLinked=\"1\"/>", "<c:numFmt formatCode=\"General\" sourceLinked=\"0\"/>" };
-        foreach (string axisInner in AllAxisForms(scalings, gridlines, units, formats))
+        (string Xml, bool Major, bool Minor, bool MajorElement)[] cases =
+        [
+            ("", false, false, false),
+            ("<c:majorGridlines/>", true, false, true),
+            ("<c:minorGridlines/>", false, true, false),
+            ("<c:majorGridlines/><c:minorGridlines/>", true, true, true),
+            ("<c:majorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:majorGridlines>", false, false, true),
+            ("<c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines>", false, false, false),
+            ("<c:scaling><c:orientation val=\"bogus\"/></c:scaling>", false, false, false),
+            ("<c:majorUnit val=\"bogus\"/><c:numFmt formatCode=\"0.0\"/>", false, false, false)
+        ];
+        var extents = new PptxRenderer.ChartValueExtents(-5d, 5d);
+        object Options(PptxSceneChartAxis? axis) => TestAssert.NotNull(Invoke("ReadSceneChartValueAxisRenderOptions",
+            [typeof(PptxSceneChartAxis), typeof(PptxRenderer.ChartValueExtents), typeof(bool)], [axis, extents, false]));
+        object? Property(object value, string name) => value.GetType().GetProperty(name)!.GetValue(value);
+        foreach (var test in cases)
         {
-            (object? axis, XElement element) = LoadAxis(axisInner);
-            AssertAxisReaderAgrees("ReadSceneOrXmlMajorGridlines", axis, element, axisInner);
-            AssertAxisReaderAgrees("ReadSceneOrXmlMinorGridlines", axis, element, axisInner);
+            object options = Options(LoadAxis(test.Xml));
+            TestAssert.Equal(test.Major, (bool)Property(options, "MajorGridlines")!);
+            TestAssert.Equal(test.Minor, (bool)Property(options, "MinorGridlines")!);
+            TestAssert.Equal(test.MajorElement, (bool)Property(options, "HasMajorGridlineElement")!);
         }
+        foreach (string kind in new[] { "major", "minor" })
+        {
+            object options = Options(LoadAxis($"<c:{kind}Gridlines><c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill></a:ln></c:spPr></c:{kind}Gridlines>"));
+            object style = TestAssert.NotNull(Property(options, "GridlineStyle"));
+            object stroke = TestAssert.NotNull(Property(style, kind == "major" ? "Major" : "Minor"));
+            TestAssert.Equal(new RgbColor(255, 0, 0), (RgbColor)Property(stroke, "Color")!);
+            TestAssert.Equal(2d, (double)Property(stroke, "Width")!);
+        }
+        object missing = Options(null);
+        TestAssert.Equal(false, (bool)Property(missing, "MajorGridlines")!);
+        TestAssert.Equal(false, (bool)Property(missing, "MinorGridlines")!);
+        TestAssert.Equal(false, (bool)Property(missing, "HasMajorGridlineElement")!);
+        object emptyStyle = TestAssert.NotNull(Property(missing, "GridlineStyle"));
+        TestAssert.Equal(null, Property(emptyStyle, "Major"));
+        TestAssert.Equal(null, Property(emptyStyle, "Minor"));
     }
 
-    private static IEnumerable<string> AllAxisForms(string[] scalings, string[] gridlines, string[] units, string[] formats)
-    {
-        foreach (string scaling in scalings)
-        {
-            yield return scaling;
-        }
-
-        foreach (string gridline in gridlines)
-        {
-            if (gridline.Length != 0)
-            {
-                yield return gridline;
-            }
-        }
-
-        foreach (string unit in units)
-        {
-            if (unit.Length != 0)
-            {
-                yield return unit;
-            }
-        }
-
-        foreach (string format in formats)
-        {
-            if (format.Length != 0)
-            {
-                yield return format;
-            }
-        }
-
-    }
-
-    private static void AssertAxisReaderAgrees(string name, object? axis, XElement element, string axisInner)
-    {
-        object? xml = Invoke(name, new[] { typeof(PptxSceneChartAxis), typeof(XElement) }, new object?[] { null, element });
-        object? scene = Invoke(name, new[] { typeof(PptxSceneChartAxis), typeof(XElement) }, new object?[] { axis, element });
-        TestAssert.True(Equals(xml, scene), name + " must agree for axis XML: " + axisInner);
-    }
-
-    private static (object? Axis, XElement Element) LoadAxis(string axisInner)
+    private static PptxSceneChartAxis LoadAxis(string axisInner)
     {
         string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart><c:valAx><c:axId val=\"10\"/>" + axisInner + "</c:valAx>", "");
         PptxSceneChart sceneChart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(xml));
-
         TestAssert.Equal(1, sceneChart.Axes.Count);
-        XElement element = XDocument.Parse(xml).Descendants(C + "valAx").First();
-        return (sceneChart.Axes[0], element);
+        return sceneChart.Axes[0];
     }
 
     public static void ChartTitleSceneRetainsAuthoredFormatting()

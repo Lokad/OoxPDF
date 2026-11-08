@@ -701,7 +701,7 @@ internal sealed partial class PptxRenderer
                 explicitValueAxisScale = HasExplicitChartValueAxisScale(valueAxis.SceneAxis);
                 var measured = MeasureScatterChartExtents(series, ReadSceneChartScatterOptions(plot),
                     ReadSceneSeriesLineHidden(plot), fontResolver?.CancellationToken ?? default);
-                var (valueExtents, pointOptions) = ReadChartPointValueAxisScale(theme, valueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
+                var (valueExtents, pointOptions) = ReadChartPointValueAxisScale( valueAxis, measured.DataY, measured.PathY, bubble: false, horizontal: false);
                 ChartTextStyle valueAxisTextStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 var captions = await MeasureChartValueAxisCaptionsAsync(textMeasurer, valueAxisTextStyle, valueAxis, valueExtents,
                     pointOptions.Units, PptxChartMetricRules.AxisNiceTickTargetCount, pointOptions.TickPolicy,
@@ -720,7 +720,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, plot).FirstOrDefault();
                 XElement? valueAxisForScale = valueAxis.XmlAxis;
                 explicitValueAxisScale = HasExplicitChartValueAxisScale(valueAxis.SceneAxis);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, GetSharedLineChartValueExtents(plot, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneChartValueAxisUnits(valueAxis.SceneAxis), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, context: context);
                 ChartTextStyle valueAxisTextStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
@@ -857,7 +857,7 @@ internal sealed partial class PptxRenderer
 
         var measured = MeasureScatterChartExtents(ReadSceneScatterSeries(plot, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly),
             ReadSceneChartScatterOptions(plot), ReadSceneSeriesLineHidden(plot), fontResolver?.CancellationToken ?? default);
-        var (xExtents, xOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, scatterXTickTargetCount);
+        var (xExtents, xOptions) = ReadChartPointValueAxisScale( xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, scatterXTickTargetCount);
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         var captions = await MeasureChartValueAxisCaptionsAsync(measurer, style,

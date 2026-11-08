@@ -366,8 +366,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(rightSceneAxis, rightValueAxis, fallback, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-        ChartValueAxisRenderOptions axisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(rightSceneAxis, rightValueAxis, theme, extents, percentStacked: false);
+        ChartValueExtents extents = ReadSceneChartValueAxisExtents(rightSceneAxis, fallback, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+        ChartValueAxisRenderOptions axisOptions = ReadSceneChartValueAxisRenderOptions(rightSceneAxis, extents, percentStacked: false);
         await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, rightSceneAxis, extents, axisOptions.Units, axisOptions.Reversed, horizontalBars: false, rightSide: true, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: chartFonts, diagnosticSink: diagnosticSink, context: context).ConfigureAwait(false);
     }
 }

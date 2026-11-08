@@ -58,17 +58,19 @@ internal static partial class PptxScatterIntervalTests
     {
         const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
         Type extentsType = typeof(PptxRenderer).GetNestedType("ChartValueExtents", BindingFlags.NonPublic)!;
-        var reader = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlChartBubbleValueAxisOptions", flags)!;
+        var reader = typeof(PptxRenderer).GetMethod("ReadSceneChartBubbleValueAxisOptions", flags)!;
         XElement xml = XElement.Parse(Axis("1", "b", "2", "7", "103", "25", "00FF00"));
-        string Policy(PptxSceneChartAxis? scene, XElement? source, double min = 7d)
+        string Policy(PptxSceneChartAxis? scene, double min = 7d)
         {
-            object options = reader.Invoke(null, [scene, source, PptxTheme.Empty,
+            object options = reader.Invoke(null, [scene,
                 Activator.CreateInstance(extentsType, [min, 103d]), 8d])!;
             return options.GetType().GetProperty("TickPolicy")!.GetValue(options)!.ToString()!;
         }
-        TestAssert.Equal("SourceMinimumIntervals", Policy(null, xml));
-        TestAssert.Equal("ZeroAlignedWithEndpoints", Policy(null, null));
-        TestAssert.Equal("ZeroAlignedWithEndpoints", Policy(null, xml, 0d));
+        PptxSceneChartAxis parsed = PptxTests.BuildSingleChartScene(
+            $"<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart><c:plotArea>{xml}</c:plotArea></c:chart></c:chartSpace>")!.Axes.Single();
+        TestAssert.Equal("SourceMinimumIntervals", Policy(parsed));
+        TestAssert.Equal("ZeroAlignedWithEndpoints", Policy(null));
+        TestAssert.Equal("ZeroAlignedWithEndpoints", Policy(parsed, 0d));
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         foreach (string minimum in new[] { "", "NaN", "7" })
         foreach (bool log in new[] { false, true })
@@ -81,8 +83,7 @@ internal static partial class PptxScatterIntervalTests
             string chart = $"<c:chartSpace xmlns:c=\"{c}\"><c:chart><c:plotArea>{source}</c:plotArea></c:chart></c:chartSpace>";
             PptxSceneChartAxis scene = PptxTests.BuildSingleChartScene(chart)!.Axes.Single();
             string expected = minimum == "7" && !log ? "SourceMinimumIntervals" : "ZeroAlignedWithEndpoints";
-            TestAssert.Equal(expected, Policy(null, source));
-            TestAssert.Equal(expected, Policy(scene, xml));
+            TestAssert.Equal(expected, Policy(scene));
         }
     }
 
@@ -119,10 +120,10 @@ internal static partial class PptxScatterIntervalTests
 
     public static void PptxPointAxisFallbackOwnsLegacyZeroAndUnitBounds()
     {
-        var reader = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlBubbleChartValueAxisExtents", BindingFlags.NonPublic|BindingFlags.Static)!;
+        var reader = typeof(PptxRenderer).GetMethod("ReadSceneBubbleChartValueAxisExtents", BindingFlags.NonPublic|BindingFlags.Static)!;
         foreach (var test in new[] { (90d, 99d, 0d, 99d), (.01d, .08d, 0d, 1d), (-8d, -1d, -8d, 1d), (-3d, 2d, -3d, 2d) })
         {
-            var actual = (PptxRenderer.ChartValueExtents)reader.Invoke(null, [null, null, new PptxRenderer.ChartValueExtents(test.Item1,test.Item2), 5d, true])!;
+            var actual = (PptxRenderer.ChartValueExtents)reader.Invoke(null, [null, new PptxRenderer.ChartValueExtents(test.Item1,test.Item2), 5d, true])!;
             TestAssert.Equal(new PptxRenderer.ChartValueExtents(test.Item3,test.Item4), actual);
         }
     }

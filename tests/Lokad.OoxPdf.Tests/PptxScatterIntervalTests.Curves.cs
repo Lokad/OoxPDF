@@ -59,9 +59,8 @@ internal static partial class PptxScatterIntervalTests
             string xml = RangeChart(source, logarithmic);
             var chart = PptxTests.BuildSingleChartScene(xml)!;
             var axis = chart.Axes.Single(a => a.PositionKind == PptxSceneChartAxisPosition.Left);
-            XElement element = XDocument.Parse(xml).Descendants(CurveC + "valAx").Single(a => (string?)a.Element(CurveC + "axPos")?.Attribute("val") == "l");
             var (actual, _) = ResolveRange(source, logarithmic: logarithmic);
-            var legacy = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneOrXmlBubbleChartValueAxisExtents", axis, element,
+            var legacy = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneBubbleChartValueAxisExtents", axis,
                 new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
             TestAssert.Equal(legacy, actual);
         }
@@ -102,7 +101,7 @@ internal static partial class PptxScatterIntervalTests
         var axis = chart.Axes.Single(a => a.PositionKind == (side == "b" ? PptxSceneChartAxisPosition.Bottom : PptxSceneChartAxisPosition.Left));
         Type sourceType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", BindingFlags.NonPublic)!;
         object source = Activator.CreateInstance(sourceType, [axis, mismatchedXml ?? element])!;
-        object scale = CurveInvoke("ReadChartPointValueAxisScale", PptxTheme.Empty, source, data, occupied, bubble, coordinate == 1, null);
+        object scale = CurveInvoke("ReadChartPointValueAxisScale", source, data, occupied, bubble, coordinate == 1, null);
         return ((PptxRenderer.ChartValueExtents)scale.GetType().GetField("Item1")!.GetValue(scale)!, scale.GetType().GetField("Item2")!.GetValue(scale)!);
     }
 

@@ -71,9 +71,7 @@ internal static partial class PptxScatterIntervalTests
         CheckFallback(sample, logarithmic: true);
         CheckFallback(sample, bubble: true);
 
-        XElement missingScaling = XDocument.Parse(RangeChart(sample)).Descendants(CurveC + "valAx").Last();
-        missingScaling.Element(CurveC + "scaling")!.Remove();
-        var legacy = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneOrXmlBubbleChartValueAxisExtents", null, missingScaling,
+        var legacy = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneBubbleChartValueAxisExtents", null,
             new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
         TestAssert.Equal(legacy, ResolveRange(sample, includeScaling: false).Extents);
         using var cancellation = new CancellationTokenSource();
@@ -85,8 +83,7 @@ internal static partial class PptxScatterIntervalTests
             string xml = RangeChart(source, logarithmic);
             var scene = PptxTests.BuildSingleChartScene(xml)!;
             var axis = scene.Axes.Single(a => a.PositionKind == PptxSceneChartAxisPosition.Left);
-            XElement element = XDocument.Parse(xml).Descendants(CurveC + "valAx").Last();
-            var expected = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneOrXmlBubbleChartValueAxisExtents", axis, element,
+            var expected = (PptxRenderer.ChartValueExtents)CurveInvoke("ReadSceneBubbleChartValueAxisExtents", axis,
                 new PptxRenderer.ChartValueExtents(1d, 79d), 5d, true);
             TestAssert.Equal(expected, ResolveRange(source, logarithmic: logarithmic, bubble: bubble).Extents);
         }

@@ -48,7 +48,7 @@ internal sealed partial class PptxRenderer
             1d, PptxChartMetricRules.AxisNiceTickTargetCount);
         double range = Math.Max(Math.Abs(data.Min), Math.Abs(data.Max));
         double unit = ChooseChartAxisMajorUnit(range, target);
-        ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(axis.SceneAxis, axis.XmlAxis, data,
+        ChartValueExtents extents = ReadSceneChartValueAxisExtents(axis.SceneAxis, data,
             useNearMaximumHeadroom: true, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio,
             boundsTickTargetCount: target);
         return (extents, new ChartAxisUnits(unit, axis.SceneAxis?.MinorUnit));

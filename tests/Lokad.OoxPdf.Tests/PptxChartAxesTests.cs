@@ -283,13 +283,11 @@ internal static class PptxChartAxesTests
         }
     }
 
-    public static void PptxChartRangeConsolidationKeepsSceneAuthorityAndXmlFallback()
+    public static void PptxChartRangesKeepParsedBoundsAndMissingAxisFallback()
     {
-        var resolve = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlChartValueAxisExtents",
+        var resolve = typeof(PptxRenderer).GetMethod("ReadSceneChartValueAxisExtents",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
         var fallback = new PptxRenderer.ChartValueExtents(-4d, 0d);
-        XElement Xml(string scaling) => XElement.Parse($"<c:valAx xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\">{scaling}</c:valAx>");
-        XElement contradictory = Xml("<c:scaling><c:min val=\"-100\"/><c:max val=\"100\"/></c:scaling>");
         foreach (var sample in new[]
         {
             (Scaling: "<c:scaling/>", Minimum: -4.5d, Maximum: 0d),
@@ -303,13 +301,11 @@ internal static class PptxChartAxesTests
                   <c:lineChart><c:axId val="2"/></c:lineChart><c:valAx><c:axId val="2"/>{{sample.Scaling}}</c:valAx>
                 </c:plotArea></c:chart></c:chartSpace>
                 """)!;
-            var sceneResult = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [chart.Axes.Single(), contradictory, fallback, true, .96d, 9d, false])!;
-            var xmlResult = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [null, Xml(sample.Scaling), fallback, true, .96d, 9d, false])!;
+            var sceneResult = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [chart.Axes.Single(), fallback, true, .96d, 9d, false])!;
             TestAssert.Equal(new PptxRenderer.ChartValueExtents(sample.Minimum, sample.Maximum), sceneResult);
-            TestAssert.Equal(sceneResult, xmlResult);
         }
-        var explicitXml = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [null, contradictory, fallback, true, .96d, 9d, false])!;
-        TestAssert.Equal(new PptxRenderer.ChartValueExtents(-100d, 100d), explicitXml);
+        var missing = (PptxRenderer.ChartValueExtents)resolve.Invoke(null, [null, fallback, true, .96d, 9d, false])!;
+        TestAssert.Equal(fallback, missing);
     }
 
     public static void PptxAuthoredAxisGeometrySurvivesChangesOfUnits()
@@ -1891,31 +1887,19 @@ internal static class PptxChartAxesTests
             """) ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
 
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:plotArea><c:valAx>
-                <c:scaling><c:orientation val="maxMin"/></c:scaling>
-                <c:crosses val="max"/>
-                <c:majorUnit val="0.25"/>
-                <c:majorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
-              </c:valAx></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "valAx").Single();
         Type extentsType = typeof(PptxRenderer).GetNestedType(
             "ChartValueExtents",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents type.");
         object extents = Activator.CreateInstance(extentsType, [-5d, 5d]) ?? throw new InvalidOperationException("Expected chart value extents.");
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartValueAxisRenderOptions",
+            "ReadSceneChartValueAxisRenderOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart value-axis option resolver.");
-        object options = readOptions.Invoke(null, [valueAxis, mismatchedXmlFallback, PptxTheme.Empty, extents, true]) ?? throw new InvalidOperationException("Expected value-axis render options.");
+        object options = readOptions.Invoke(null, [valueAxis, extents, true]) ?? throw new InvalidOperationException("Expected value-axis render options.");
         Type optionsType = options.GetType();
 
         object units = optionsType.GetProperty("Units")?.GetValue(options) ?? throw new InvalidOperationException("Expected axis units.");
         TestAssert.Equal(0.1d, (double)(units.GetType().GetProperty("MajorUnit")?.GetValue(units) ?? double.NaN));
-        TestAssert.True((bool)(optionsType.GetProperty("Reversed")?.GetValue(options) ?? true) == false, "Expected unknown scene orientation to use the default minMax, not fallback XML maxMin.");
+        TestAssert.True((bool)(optionsType.GetProperty("Reversed")?.GetValue(options) ?? true) == false, "Unknown scene orientation uses the default minMax.");
         TestAssert.Equal(0d, (double)(optionsType.GetProperty("CrossingValue")?.GetValue(options) ?? double.NaN));
         TestAssert.True((bool)(optionsType.GetProperty("MajorGridlines")?.GetValue(options) ?? true) == false, "Expected missing scene gridlines to stay missing, not import fallback XML gridlines.");
     }

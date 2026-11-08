@@ -21,26 +21,24 @@ internal sealed partial class PptxRenderer
             [];
     }
 
-    private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents dataExtents, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
+    private static ChartValueExtents ReadSceneBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, ChartValueExtents dataExtents, double boundsTickTargetCount = PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, bool preferUnitOneOverTwo = true)
     {
         // Measurement keeps the actual extrema. The existing point-chart
         // range fallback owns zero inclusion and its minimum unit-sized span.
         ChartValueExtents fallback = new(Math.Min(0d, dataExtents.Min), Math.Max(1d, dataExtents.Max));
-        return ReadSceneOrXmlChartValueAxisExtents(axis, valueAxis, fallback, useNearMaximumHeadroom: true,
+        return ReadSceneChartValueAxisExtents(axis, fallback, useNearMaximumHeadroom: true,
             nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio,
             boundsTickTargetCount: boundsTickTargetCount, preferUnitOneOverTwo: preferUnitOneOverTwo);
     }
 
-    private static (ChartValueExtents Extents, ChartValueAxisRenderOptions Options) ReadChartPointValueAxisScale(
-        PptxTheme theme, ChartAxisSource source, ChartValueExtents data, ChartValueExtents occupied, bool bubble, bool horizontal,
+    private static (ChartValueExtents Extents, ChartValueAxisRenderOptions Options) ReadChartPointValueAxisScale(ChartAxisSource source, ChartValueExtents data, ChartValueExtents occupied, bool bubble, bool horizontal,
         double? automaticTickTargetCount = null)
     {
         bool scatterX = !bubble && horizontal;
         double target = scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisNiceTickTargetCount;
-        ChartValueExtents extents = ReadSceneOrXmlBubbleChartValueAxisExtents(source.SceneAxis, source.XmlAxis, data,
+        ChartValueExtents extents = ReadSceneBubbleChartValueAxisExtents(source.SceneAxis, data,
             scatterX ? PptxChartMetricRules.ScatterXAxisNiceTickTargetCount : PptxChartMetricRules.BubbleAxisBoundsTickTargetCount, !scatterX);
         PptxSceneChartAxis? axis = source.SceneAxis;
-        XElement? xml = source.XmlAxis;
         ChartAxisDeclaration? declaration = ReadChartAxisDeclaration(source.SceneAxis);
         double? automaticTarget = !bubble && !horizontal
             ? PptxChartMetricRules.AxisNiceTickTargetCount : automaticTickTargetCount;
@@ -55,7 +53,7 @@ internal sealed partial class PptxRenderer
             (automaticUnit || declared.MajorUnit is not null) &&
             TryResolvePointAxisRange(occupied, declared.Minimum, declared.Maximum, declared.MajorUnit, automaticTarget ?? target, out owned, out unit);
         if (resolvedIntervals) extents = owned;
-        ChartValueAxisRenderOptions options = ReadSceneOrXmlChartBubbleValueAxisOptions(axis, xml, theme, extents, target);
+        ChartValueAxisRenderOptions options = ReadSceneChartBubbleValueAxisOptions(axis, extents, target);
         if (resolvedIntervals) options = options with { Units = options.Units with { MajorUnit = unit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
         return (extents, options);
     }
@@ -142,21 +140,11 @@ internal sealed partial class PptxRenderer
         return double.IsFinite(paddedLower) && double.IsFinite(paddedUpper) && paddedUpper > paddedLower;
     }
 
-    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio, double boundsTickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount, bool preferUnitOneOverTwo = false)
+    private static ChartValueExtents ReadSceneChartValueAxisExtents(PptxSceneChartAxis? axis, ChartValueExtents fallback, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio, double boundsTickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount, bool preferUnitOneOverTwo = false)
     {
-        double? minimum, maximum;
-        if (axis is null)
-        {
-            if (valueAxis?.Element(ChartNamespace + "scaling") is null) return fallback;
-            minimum = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "min").Value;
-            maximum = PptxSceneBuilder.ReadChartAxisScalingValueWithValue(valueAxis, "max").Value;
-        }
-        else
-        {
-            if (!axis.HasScaling) return fallback;
-            minimum = axis.Minimum;
-            maximum = axis.Maximum;
-        }
+        if (axis is not { HasScaling: true }) return fallback;
+        double? minimum = axis.Minimum;
+        double? maximum = axis.Maximum;
 
         // Negative-only data uses the same outer rounding as positive data.
         // Reflect authored bounds too, so a partial bound keeps its owner.
@@ -170,34 +158,19 @@ internal sealed partial class PptxRenderer
         return fallback;
     }
 
-    private static ChartValueExtents ReadPercentStackedAwareValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
+    private static ChartValueExtents ReadPercentStackedAwareValueAxisExtents(PptxSceneChartAxis? axis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
     {
-        ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(axis, valueAxis, fallback, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+        ChartValueExtents extents = ReadSceneChartValueAxisExtents(axis, fallback, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         if (!percentStacked)
         {
             return extents;
         }
 
-        double min = HasSceneOrXmlAxisScalingValue(axis, valueAxis, ChartAxisScalingBound.Minimum) ? extents.Min : 0d;
-        double max = HasSceneOrXmlAxisScalingValue(axis, valueAxis, ChartAxisScalingBound.Maximum) ? extents.Max : 1d;
+        double min = axis?.Minimum is not null ? extents.Min : 0d;
+        double max = axis?.Maximum is not null ? extents.Max : 1d;
         return max > min
             ? new ChartValueExtents(min, max)
             : extents;
-    }
-
-    private static bool HasSceneOrXmlAxisScalingValue(PptxSceneChartAxis? axis, XElement? valueAxis, ChartAxisScalingBound bound)
-    {
-        if (axis is not null)
-        {
-            return bound == ChartAxisScalingBound.Minimum
-                ? axis.Minimum is not null
-                : axis.Maximum is not null;
-        }
-
-        string elementName = bound == ChartAxisScalingBound.Minimum ? "min" : "max";
-        return valueAxis?
-            .Element(ChartNamespace + "scaling")
-            ?.Element(ChartNamespace + elementName) is not null;
     }
 
     private static ChartAxisUnits ReadSceneChartValueAxisUnits(PptxSceneChartAxis? axis)
@@ -237,10 +210,9 @@ internal sealed partial class PptxRenderer
     private static bool UsesAuthoredChartMinimumIntervals(double? minimum, bool logarithmic, ChartValueExtents extents) =>
         !logarithmic && minimum is { } value && double.IsFinite(value) && value == extents.Min;
 
-    private static ChartValueExtents ReadCartesianChartValueAxisExtents(PptxSceneChart? chart, PptxSceneChartAxis? axis,
-        XElement? valueAxis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
+    private static ChartValueExtents ReadCartesianChartValueAxisExtents(PptxSceneChart? chart, PptxSceneChartAxis? axis, ChartValueExtents fallback, bool percentStacked, bool useNearMaximumHeadroom, double nearMaximumHeadroomRatio)
     {
-        ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(axis, valueAxis, fallback, percentStacked,
+        ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(axis, fallback, percentStacked,
             useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return !percentStacked && TryResolveCartesianChartSourceRange(chart, axis, fallback, extents, out ChartValueExtents owned)
             ? owned : extents;
@@ -547,16 +519,6 @@ internal sealed partial class PptxRenderer
         return sceneAxis?.OrientationKind == PptxSceneChartAxisOrientation.MaximumMinimum;
     }
 
-    private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
-    {
-        return sceneAxis?.HasMajorGridlines ?? HasMajorGridlines();
-
-        bool HasMajorGridlines()
-        {
-            return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "majorGridlines"));
-        }
-    }
-
     // Gallery style 2 axis-family default (S05): single-plot bar/column charts carrying
     // the built-in gallery style render unstyled axis-family strokes gray-0.537 at width
     // 1.0 (three cached Office refs); style-part charts keep their role-driven output and
@@ -573,27 +535,17 @@ internal sealed partial class PptxRenderer
         return new ChartSeriesStroke(new RgbColor(137, 137, 137), 1d, 1d);
     }
 
-    private static bool ReadSceneOrXmlMinorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
-    {
-        return sceneAxis?.HasMinorGridlines ?? HasMinorGridlines();
-
-        bool HasMinorGridlines()
-        {
-            return PptxSceneBuilder.IsChartGridlineVisible(axis?.Element(ChartNamespace + "minorGridlines"));
-        }
-    }
-
-    private static ChartGridlineStyle ReadSceneOrXmlChartGridlineStyle(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
+    private static ChartGridlineStyle ReadSceneChartGridlineStyle(PptxSceneChartAxis? sceneAxis)
     {
         return new ChartGridlineStyle(
-            ReadSceneOrXmlChartGridlineStroke(sceneAxis, sceneAxis?.MajorGridlineLine ?? default, sceneAxis?.MajorGridlineStyleLine ?? default, xmlAxis?.Element(ChartNamespace + "majorGridlines"), theme),
-            ReadSceneOrXmlChartGridlineStroke(sceneAxis, sceneAxis?.MinorGridlineLine ?? default, sceneAxis?.MinorGridlineStyleLine ?? default, xmlAxis?.Element(ChartNamespace + "minorGridlines"), theme));
+            ToChartSeriesStroke(sceneAxis?.MajorGridlineLine ?? default, null) ??
+                ToChartSeriesStroke(sceneAxis?.MajorGridlineStyleLine ?? default, null),
+            ToChartSeriesStroke(sceneAxis?.MinorGridlineLine ?? default, null) ??
+                ToChartSeriesStroke(sceneAxis?.MinorGridlineStyleLine ?? default, null));
     }
 
-    private static ChartValueAxisRenderOptions ReadSceneOrXmlChartValueAxisRenderOptions(
+    private static ChartValueAxisRenderOptions ReadSceneChartValueAxisRenderOptions(
         PptxSceneChartAxis? sceneAxis,
-        XElement? xmlAxis,
-        PptxTheme theme,
         ChartValueExtents extents,
         bool percentStacked)
     {
@@ -601,49 +553,30 @@ internal sealed partial class PptxRenderer
             ResolvePercentStackedAxisUnits(ReadSceneChartValueAxisUnits(sceneAxis), percentStacked),
             ReadSceneValueAxisReversed(sceneAxis),
             ReadSceneValueAxisCrossingValue(sceneAxis, extents),
-            ReadSceneOrXmlMajorGridlines(sceneAxis, xmlAxis),
-            ReadSceneOrXmlMinorGridlines(sceneAxis, xmlAxis),
-            ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme),
-            sceneAxis?.HasMajorGridlineElement ?? xmlAxis?.Element(ChartNamespace + "majorGridlines") is not null);
+            sceneAxis?.HasMajorGridlines ?? false,
+            sceneAxis?.HasMinorGridlines ?? false,
+            ReadSceneChartGridlineStyle(sceneAxis),
+            sceneAxis?.HasMajorGridlineElement ?? false);
     }
 
-    private static ChartValueAxisRenderOptions ReadSceneOrXmlChartBubbleValueAxisOptions(
+    private static ChartValueAxisRenderOptions ReadSceneChartBubbleValueAxisOptions(
         PptxSceneChartAxis? sceneAxis,
-        XElement? xmlAxis,
-        PptxTheme theme,
         ChartValueExtents extents,
         double tickTargetCount = PptxChartMetricRules.BubbleAxisNiceTickTargetCount)
     {
-        double? minimum = sceneAxis is null
-            ? (xmlAxis is null ? null : PptxSceneBuilder.ReadChartAxisScalingValueWithValue(xmlAxis, "min").Value)
-            : sceneAxis.Minimum;
+        double? minimum = sceneAxis?.Minimum;
         // An authored minimum is the interval origin, independently of how the
         // other bound and unit were resolved. Rejected bounds keep the fallback.
-        bool logarithmic = sceneAxis?.HasLogarithmicScale ?? xmlAxis?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "logBase") is not null;
+        bool logarithmic = sceneAxis?.HasLogarithmicScale ?? false;
         ChartAxisTickPolicy tickPolicy = UsesAuthoredChartMinimumIntervals(minimum, logarithmic, extents)
             ? ChartAxisTickPolicy.SourceMinimumIntervals
             : ChartAxisTickPolicy.ZeroAlignedWithEndpoints;
-        ChartValueAxisRenderOptions options = ReadSceneOrXmlChartValueAxisRenderOptions(sceneAxis, xmlAxis, theme, extents, percentStacked: false);
+        ChartValueAxisRenderOptions options = ReadSceneChartValueAxisRenderOptions(sceneAxis, extents, percentStacked: false);
         return options with
         {
             Units = ResolveBubbleAxisUnits(options.Units, extents, tickTargetCount),
             TickPolicy = tickPolicy
         };
-    }
-
-    private static ChartSeriesStroke? ReadSceneOrXmlChartGridlineStroke(PptxSceneChartAxis? sceneAxis, PptxSceneLineStyle sceneLine, PptxSceneLineStyle sceneStyleLine, XElement? gridlines, PptxTheme theme)
-    {
-        if (sceneAxis is not null)
-        {
-            return ToChartSeriesStroke(sceneLine, null) ?? ToChartSeriesStroke(sceneStyleLine, null);
-        }
-
-        return ReadChartGridlineStroke(gridlines, theme);
-    }
-
-    private static ChartSeriesStroke? ReadChartGridlineStroke(XElement? gridlines, PptxTheme theme)
-    {
-        return ToChartSeriesStroke(PptxSceneBuilder.ReadChartGridlineLine(gridlines, theme), null);
     }
 
     private static ChartAxesStyle ReadSceneChartAxesStyle(PptxSceneChart sceneChart, PptxSceneChartPlot? plot)

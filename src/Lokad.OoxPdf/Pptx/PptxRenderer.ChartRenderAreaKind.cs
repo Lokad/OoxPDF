@@ -42,10 +42,10 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, areaPlot);
                 bool categoryAxisReversed = ReadSceneValueAxisReversed(categoryAxis.SceneAxis);
                 bool categoryPointsOnTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
-                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetAreaChartValueExtents(areaSeriesVectors, areaOptions.Stacked, areaOptions.PercentStacked), areaOptions.PercentStacked, useNearMaximumHeadroom: areaOptions.Stacked && !areaOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
+                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, GetAreaChartValueExtents(areaSeriesVectors, areaOptions.Stacked, areaOptions.PercentStacked), areaOptions.PercentStacked, useNearMaximumHeadroom: areaOptions.Stacked && !areaOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
                 ChartLayout chartLayout = await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver,
                     resolvedValueExtents: valueAxis.SceneAxis is { HasLogarithmicScale: true } ? null : valueExtents, context: context).ConfigureAwait(false);
-                ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, areaOptions.PercentStacked) with
+                ChartValueAxisRenderOptions valueAxisOptions = ReadSceneChartValueAxisRenderOptions(valueAxis.SceneAxis, valueExtents, areaOptions.PercentStacked) with
                 {
                     TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, areaOptions.PercentStacked),
                     // The category axis owns its numeric crossing independently

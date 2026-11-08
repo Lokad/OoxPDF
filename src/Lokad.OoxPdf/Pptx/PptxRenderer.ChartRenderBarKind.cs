@@ -50,8 +50,8 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents dataExtents = GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly);
                 if (sharedValueAxis) dataExtents = GetSharedCartesianChartValueExtents(sceneChart, barPlot!, dataExtents,
                     workbook, plotVisibleOnly, context.CancellationToken);
-                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueSceneAxis, valueAxis, dataExtents, percentStacked, ResolveBarValueAxisHeadroom(horizontalBars, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-                ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme, valueExtents, percentStacked);
+                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueSceneAxis, dataExtents, percentStacked, ResolveBarValueAxisHeadroom(horizontalBars, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                ChartValueAxisRenderOptions valueAxisOptions = ReadSceneChartValueAxisRenderOptions(valueSceneAxis, valueExtents, percentStacked);
                 valueAxisOptions = valueAxisOptions with { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueSceneAxis, valueExtents, percentStacked) };
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
                 bool ownsColumnCategories = barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
@@ -156,7 +156,7 @@ internal sealed partial class PptxRenderer
                     (scale.Extents != valueExtents || scale.Units != valueAxisOptions.Units))
                 {
                     valueExtents = scale.Extents;
-                    valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueSceneAxis, valueAxis, theme,
+                    valueAxisOptions = ReadSceneChartValueAxisRenderOptions(valueSceneAxis,
                         valueExtents, percentStacked) with { Units = scale.Units };
                     resolvedCategory = ReadChartAxisPlacement(categoryAxis.SceneAxis, valueExtents, valueAxisOptions.Reversed);
                     if (resolvedCategory is { } scaledCategory)
@@ -233,8 +233,8 @@ internal sealed partial class PptxRenderer
                     XElement? extraValueAxis = extraValueAxisSource.XmlAxis;
                     PptxSceneChartAxis? extraValueSceneAxis = extraValueAxisSource.SceneAxis;
                     bool extraPercentStacked = IsPercentStackedChartGrouping(extraBarOptions.Grouping);
-                    ChartValueExtents extraValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetSharedBarChartValueExtents(extraBarPlot, extraBarOptions.Grouping, workbook, plotVisibleOnly), extraPercentStacked, ResolveBarValueAxisHeadroom(extraHorizontalBars, extraPercentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-                    ChartValueAxisRenderOptions extraValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(extraValueSceneAxis, extraValueAxis, theme, extraValueExtents, extraPercentStacked);
+                    ChartValueExtents extraValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, GetSharedBarChartValueExtents(extraBarPlot, extraBarOptions.Grouping, workbook, plotVisibleOnly), extraPercentStacked, ResolveBarValueAxisHeadroom(extraHorizontalBars, extraPercentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                    ChartValueAxisRenderOptions extraValueAxisOptions = ReadSceneChartValueAxisRenderOptions(extraValueSceneAxis, extraValueExtents, extraPercentStacked);
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneSeriesFills(extraBarPlot);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneSeriesPointFills(extraBarPlot);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneSeriesPointStrokes(extraBarPlot);
@@ -303,8 +303,8 @@ internal sealed partial class PptxRenderer
                     XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
                     PptxSceneChartAxis? lineValueSceneAxis = lineValueAxisSource.SceneAxis;
                     ChartLinePlotOptions lineOptions = ReadSceneChartLineOptions(sceneChart, linePlot, PptxSceneChartGrouping.Standard);
-                    ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
-                    ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(lineValueSceneAxis, lineValueAxisForScale, theme, lineValueExtents, lineOptions.PercentStacked);
+                    ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                    ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneChartValueAxisRenderOptions(lineValueSceneAxis, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneSeriesStrokes(linePlot, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneMarkerStyles(linePlot);
                     if (secondaryValueAxis is null && !IsSameChartAxis(valueAxisSource, lineValueAxisSource) &&
