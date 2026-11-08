@@ -136,7 +136,7 @@ internal static partial class DocxInlineCompositionTests
         {
             var change = xml.Descendants(w + "rPrChange").Single();
             if (baseline) change.Remove();
-            else if (noOp) change.Descendants(w + "b").Single().SetAttributeValue(w + "val", "1");
+            else if (noOp) change.Descendants(w + "b").Single().SetAttributeValue(w + "val", null);
             else if (duplicate) change.AddAfterSelf(new XElement(change));
         }, partOverride: container == "header" ? "word/header1.xml" : container == "footer" ? "word/footer1.xml" : null);
 }
