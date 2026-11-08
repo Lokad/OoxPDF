@@ -14,7 +14,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxStaticBoxTablesKeepPaintAndNavigationInsideTheirContainer()
     {
         using var cases = ReadStaticBoxTableCases();
-        var resolver = new PortableRenderingTests.PinnedResolver();
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
         foreach (var row in cases.RootElement.EnumerateArray())
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
             CheckStaticBoxTablePaint(RenderStaticBoxTable(row, mode, resolver), row.GetProperty("Id").GetString() + "/" + mode);
@@ -110,8 +110,12 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(Inside(link.X, link.Y) && Inside(link.X + link.Width, link.Y + link.Height),
             "The source link follows the painted table rather than the body emission origin.");
         var destination = page.Annotations.Single(annotation => annotation.IsDestination).Destination!.Value;
-        TestAssert.True(destination.PageIndex == 0 && destination.Left is double x && destination.Top is double y && Inside(x, y),
-            "The table bookmark retains a destination inside the painted box: " + context +
+        var target = shows.Single(show => show.Text.Trim() == "BOX TABLE NORTH");
+        // A viewport can include ascender/context space above the box. Its top
+        // must reveal the painted target, rather than hide it below the viewport.
+        TestAssert.True(destination.PageIndex == 0 && destination.Left is double x &&
+            x >= box[0] && x <= box[0] + box[2] && destination.Top is double y && y >= target.Y && y <= page.Height,
+            "The table bookmark viewport must reveal the painted target: " + context +
             "; destination=" + destination + "; box=" + string.Join(",", box));
     }
 
