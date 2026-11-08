@@ -893,7 +893,7 @@ internal sealed partial class PptxRenderer
             double admittedTop = cartesianHeader is { } header ? frame.Y + frame.Height - header.Reserve : plotTop;
             if (measuredOffsetAdjustment is not null && admittedTop - newY < 1d) return plotBox;
             categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
-            categoryFittingClearance = measuredFrame ? await MeasureCategoryFittingClearanceAsync(theme, sceneChart, chartXml, fontResolver, cartesianHeader!.Value.NumericClearance).ConfigureAwait(false) : null;
+            categoryFittingClearance = measuredFrame ? await MeasureCategoryFittingClearanceAsync(theme, sceneChart, fontResolver, cartesianHeader!.Value.NumericClearance).ConfigureAwait(false) : null;
             return new ChartPlotBox(plotBox.X, newY, plotBox.Width, Math.Max(1d, plotTop - newY));
         }
 
