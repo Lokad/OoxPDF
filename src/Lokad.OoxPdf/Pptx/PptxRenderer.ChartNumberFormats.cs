@@ -11,14 +11,8 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static string FormatChartAxisLabel(double value, XElement? axis)
+    private static string FormatGeneralChartNumber(double value)
     {
-        ChartNumberFormat numberFormat = axis is null ? default : ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(axis));
-        if (IsRenderableChartNumberFormat(numberFormat))
-        {
-            return FormatChartNumber(value, numberFormat.FormatCode, ResolveAxisDate1904(axis));
-        }
-
         // Unrenderable codes fall back to General semantics: up to 10 significant digits
         // (Office renders 6.438276615812609 as 6.438276616), not two-decimal rounding.
         double rounded = Math.Round(value);
@@ -27,9 +21,9 @@ internal sealed partial class PptxRenderer
             : value.ToString("G10", CultureInfo.InvariantCulture);
     }
 
-    private static string FormatSceneOrXmlChartAxisLabel(double value, PptxSceneChartAxis? sceneAxis, XElement? axis, string? defaultNumberFormat)
+    private static string FormatSceneChartAxisLabel(double value, PptxSceneChartAxis? sceneAxis, XElement? axis, string? defaultNumberFormat)
     {
-        ChartNumberFormat numberFormat = ReadSceneOrXmlChartAxisNumberFormat(sceneAxis, axis);
+        ChartNumberFormat numberFormat = sceneAxis is null ? default : ToChartNumberFormat(sceneAxis.NumberFormatInfo);
         if (IsRenderableChartNumberFormat(numberFormat))
         {
             return FormatChartNumber(value, numberFormat.FormatCode, ResolveAxisDate1904(axis));
@@ -37,17 +31,7 @@ internal sealed partial class PptxRenderer
 
         return !string.IsNullOrWhiteSpace(defaultNumberFormat)
             ? FormatChartNumber(value, defaultNumberFormat)
-            : FormatChartAxisLabel(value, null);
-    }
-
-    private static ChartNumberFormat ReadSceneOrXmlChartAxisNumberFormat(PptxSceneChartAxis? sceneAxis, XElement? axis)
-    {
-        if (sceneAxis is not null)
-        {
-            return ToChartNumberFormat(sceneAxis.NumberFormatInfo);
-        }
-
-        return axis is null ? default : ToChartNumberFormat(PptxSceneBuilder.ReadChartNumberFormat(axis));
+            : FormatGeneralChartNumber(value);
     }
 
     private static bool IsRenderableChartNumberFormat(ChartNumberFormat numberFormat)

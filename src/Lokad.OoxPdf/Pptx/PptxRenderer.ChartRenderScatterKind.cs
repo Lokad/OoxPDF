@@ -113,8 +113,8 @@ internal sealed partial class PptxRenderer
                 PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount, xOptions.TickPolicy, null, reserveEndpoints: false, context: context).ConfigureAwait(false);
             if (captions.Values.Count > 0)
             {
-                firstWidth = measurer.Measure(FormatSceneOrXmlChartAxisLabel(captions.Values[0], xAxis.SceneAxis, xAxis.XmlAxis, null), style);
-                lastWidth = measurer.Measure(FormatSceneOrXmlChartAxisLabel(captions.Values[^1], xAxis.SceneAxis, xAxis.XmlAxis, null), style);
+                firstWidth = measurer.Measure(FormatSceneChartAxisLabel(captions.Values[0], xAxis.SceneAxis, xAxis.XmlAxis, null), style);
+                lastWidth = measurer.Measure(FormatSceneChartAxisLabel(captions.Values[^1], xAxis.SceneAxis, xAxis.XmlAxis, null), style);
                 if (xOptions.Reversed) (firstWidth, lastWidth) = (lastWidth, firstWidth);
             }
         }

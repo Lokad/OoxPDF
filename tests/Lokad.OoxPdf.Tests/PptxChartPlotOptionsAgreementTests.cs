@@ -6,8 +6,8 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-// Plot scalars and explosions use explicit expectations. Remaining series/axis fallback
-// arms are compared with XML while source ownership is audited independently.
+// Parsed plot/numeric-axis scalars use explicit expectations. Remaining gridline
+// routes are compared with XML while their source ownership is audited separately.
 internal static class PptxChartPlotOptionsAgreementTests
 {
     private static readonly XNamespace C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
@@ -157,7 +157,45 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
-    public static void AxisOptionsAgreeBetweenSceneAndXml()
+    public static void ParsedAxisNumericOptionsKeepUnitsAndOrientation()
+    {
+        (string Xml, double? Major, double? Minor, bool Reversed)[] cases =
+        [
+            ("", null, null, false),
+            ("<c:majorUnit val=\"10\"/>", 10, null, false),
+            ("<c:minorUnit val=\"5\"/>", null, 5, false),
+            ("<c:majorUnit val=\"bogus\"/><c:minorUnit val=\"0\"/>", null, null, false),
+            ("<c:majorUnit val=\"-2\"/>", null, null, false),
+            ("<c:scaling><c:orientation val=\"maxMin\"/></c:scaling>", null, null, true),
+            ("<c:scaling><c:orientation val=\"minMax\"/></c:scaling>", null, null, false),
+            ("<c:scaling><c:orientation val=\"bogus\"/></c:scaling>", null, null, false)
+        ];
+        foreach (var test in cases)
+        {
+            var (axis, _) = LoadAxis(test.Xml);
+            object units = TestAssert.NotNull(Invoke("ReadSceneChartValueAxisUnits", [typeof(PptxSceneChartAxis)], [axis]));
+            TestAssert.Equal(test.Major, (double?)units.GetType().GetProperty("MajorUnit")!.GetValue(units));
+            TestAssert.Equal(test.Minor, (double?)units.GetType().GetProperty("MinorUnit")!.GetValue(units));
+            TestAssert.Equal(test.Reversed, (bool)TestAssert.NotNull(Invoke("ReadSceneValueAxisReversed", [typeof(PptxSceneChartAxis)], [axis])));
+        }
+    }
+
+    public static void MissingAxisNumericOptionsRetainAutomaticFallbacks()
+    {
+        object units = TestAssert.NotNull(Invoke("ReadSceneChartValueAxisUnits", [typeof(PptxSceneChartAxis)], [null]));
+        TestAssert.Equal(null, units.GetType().GetProperty("MajorUnit")!.GetValue(units));
+        TestAssert.Equal(null, units.GetType().GetProperty("MinorUnit")!.GetValue(units));
+        TestAssert.Equal(false, (bool)TestAssert.NotNull(Invoke("ReadSceneValueAxisReversed", [typeof(PptxSceneChartAxis)], [null])));
+        Type extentsType = TestAssert.NotNull(typeof(PptxRenderer).GetNestedType("ChartValueExtents", BindingFlags.NonPublic));
+        foreach (var test in new[] { (-5d, 5d, 0d), (2d, 5d, 2d), (-5d, -2d, -2d), (0d, 5d, 0d), (-5d, 0d, 0d), (0d, 0d, 0d) })
+        {
+            object extents = TestAssert.NotNull(Activator.CreateInstance(extentsType, [test.Item1, test.Item2]));
+            TestAssert.Equal(test.Item3, (double)TestAssert.NotNull(Invoke("ReadSceneValueAxisCrossingValue",
+                [typeof(PptxSceneChartAxis), extentsType], [null, extents])));
+        }
+    }
+
+    public static void AxisGridlineOptionsAgreeBetweenSceneAndXml()
     {
         string[] scalings = new[] { "", "<c:scaling><c:orientation val=\"minMax\"/></c:scaling>", "<c:scaling><c:orientation val=\"maxMin\"/></c:scaling>", "<c:scaling><c:orientation val=\"bogus\"/></c:scaling>" };
         string[] gridlines = new[] { "", "<c:majorGridlines/>", "<c:minorGridlines/>", "<c:majorGridlines/><c:minorGridlines/>" };
@@ -166,11 +204,8 @@ internal static class PptxChartPlotOptionsAgreementTests
         foreach (string axisInner in AllAxisForms(scalings, gridlines, units, formats))
         {
             (object? axis, XElement element) = LoadAxis(axisInner);
-            AssertAxisReaderAgrees("ReadSceneOrXmlValueAxisReversed", axis, element, axisInner);
             AssertAxisReaderAgrees("ReadSceneOrXmlMajorGridlines", axis, element, axisInner);
             AssertAxisReaderAgrees("ReadSceneOrXmlMinorGridlines", axis, element, axisInner);
-            AssertAxisReaderAgrees("ReadSceneOrXmlChartValueAxisUnits", axis, element, axisInner);
-            AssertAxisReaderAgrees("ReadSceneOrXmlChartAxisNumberFormat", axis, element, axisInner);
         }
     }
 

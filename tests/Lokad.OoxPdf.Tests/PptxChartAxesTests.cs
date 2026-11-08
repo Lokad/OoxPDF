@@ -1658,18 +1658,20 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("bogus", valueAxis.Orientation);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
+        XElement alternateSource = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:valAx><c:scaling><c:orientation val="maxMin"/></c:scaling></c:valAx></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "valAx").Single();
+        PptxSceneChartAxis alternateAxis = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!.Axes.Single();
         System.Reflection.MethodInfo readAxisReversed = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlValueAxisReversed",
+            "ReadSceneValueAxisReversed",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis orientation resolver.");
-        object reversed = readAxisReversed.Invoke(null, [valueAxis, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved axis orientation.");
+        object reversed = readAxisReversed.Invoke(null, [valueAxis]) ?? throw new InvalidOperationException("Expected resolved axis orientation.");
 
-        TestAssert.True(!(bool)reversed, "Unknown scene-owned value-axis orientation should resolve to the Office default minMax, not fall back to mismatched XML.");
+        TestAssert.Equal(true, (bool)readAxisReversed.Invoke(null, [alternateAxis])!);
+        TestAssert.True(!(bool)reversed, "Unknown orientation retains the established minMax default.");
     }
 
     public static void PptxChartUnknownAxisCrossesUsesSceneAuthoritativeDefault()
@@ -1692,22 +1694,24 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("bogus", valueAxis.Crosses);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
+        XElement alternateSource = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:valAx><c:crosses val="max"/></c:valAx></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "valAx").Single();
+        PptxSceneChartAxis alternateAxis = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!.Axes.Single();
         Type extentsType = typeof(PptxRenderer).GetNestedType(
             "ChartValueExtents",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents type.");
         object extents = Activator.CreateInstance(extentsType, [-5d, 5d]) ?? throw new InvalidOperationException("Expected chart value extents.");
         System.Reflection.MethodInfo readCrossingValue = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlValueAxisCrossingValue",
+            "ReadSceneValueAxisCrossingValue",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis crossing resolver.");
-        object crossingValue = readCrossingValue.Invoke(null, [valueAxis, mismatchedXmlFallback, extents]) ?? throw new InvalidOperationException("Expected resolved axis crossing.");
+        object crossingValue = readCrossingValue.Invoke(null, [valueAxis, extents]) ?? throw new InvalidOperationException("Expected resolved axis crossing.");
 
         TestAssert.Equal(0d, (double)crossingValue);
+        TestAssert.Equal(5d, (double)readCrossingValue.Invoke(null, [alternateAxis, extents])!);
     }
 
     public static void PptxChartInvalidAxisCrossesAtUsesSceneAuthoritativeCrosses()
@@ -1731,24 +1735,25 @@ internal static class PptxChartAxesTests
         TestAssert.Equal("futureCross", valueAxis.CrossesAtValue);
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
+        XElement alternateSource = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:valAx><c:crossesAt val="2"/></c:valAx></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "valAx").Single();
+        PptxSceneChartAxis alternateAxis = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!.Axes.Single();
         Type extentsType = typeof(PptxRenderer).GetNestedType(
             "ChartValueExtents",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents type.");
         object extents = Activator.CreateInstance(extentsType, [-5d, 5d]) ?? throw new InvalidOperationException("Expected chart value extents.");
         System.Reflection.MethodInfo readCrossingValue = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlValueAxisCrossingValue",
+            "ReadSceneValueAxisCrossingValue",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis crossing resolver.");
-        object sceneCrossingValue = readCrossingValue.Invoke(null, [valueAxis, mismatchedXmlFallback, extents]) ?? throw new InvalidOperationException("Expected resolved scene axis crossing.");
-        object xmlOnlyCrossingValue = readCrossingValue.Invoke(null, [null, mismatchedXmlFallback, extents]) ?? throw new InvalidOperationException("Expected resolved XML-only axis crossing.");
+        object sceneCrossingValue = readCrossingValue.Invoke(null, [valueAxis, extents]) ?? throw new InvalidOperationException("Expected resolved scene axis crossing.");
+        object alternateCrossingValue = readCrossingValue.Invoke(null, [alternateAxis, extents]) ?? throw new InvalidOperationException("Expected resolved alternate parsed axis crossing.");
 
         TestAssert.Equal(5d, (double)sceneCrossingValue);
-        TestAssert.Equal(2d, (double)xmlOnlyCrossingValue);
+        TestAssert.Equal(2d, (double)alternateCrossingValue);
     }
 
     public static void PptxChartUnknownAxisCrossBetweenUsesSceneAuthoritativeDefault()
@@ -1931,7 +1936,7 @@ internal static class PptxChartAxesTests
         TestAssert.True(valueAxis.NumberFormatInfo.IsDefined == false, "Expected scene value axis to carry an authoritative missing number format.");
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
+        XElement alternateSource = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea>
@@ -1939,15 +1944,18 @@ internal static class PptxChartAxesTests
               </c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "valAx").Single();
+        PptxSceneChartAxis alternateAxis = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!.Axes.Single();
         System.Reflection.MethodInfo formatAxisLabel = typeof(PptxRenderer).GetMethod(
-            "FormatSceneOrXmlChartAxisLabel",
+            "FormatSceneChartAxisLabel",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart axis label formatter.");
 
-        string sceneLabel = (string?)formatAxisLabel.Invoke(null, [1.25d, valueAxis, mismatchedXmlFallback, null]) ?? string.Empty;
-        string xmlOnlyLabel = (string?)formatAxisLabel.Invoke(null, [1.25d, null, mismatchedXmlFallback, null]) ?? string.Empty;
+        string sceneLabel = (string?)formatAxisLabel.Invoke(null, [1.25d, valueAxis, alternateSource, null]) ?? string.Empty;
+        string alternateLabel = (string?)formatAxisLabel.Invoke(null, [1.25d, alternateAxis, alternateSource, null]) ?? string.Empty;
 
         TestAssert.Equal("1.25", sceneLabel);
-        TestAssert.Equal("125%", xmlOnlyLabel);
+        TestAssert.Equal("125%", alternateLabel);
+        TestAssert.Equal("1.25", (string?)formatAxisLabel.Invoke(null, [1.25d, null, null, null]));
+        TestAssert.Equal("125%", (string?)formatAxisLabel.Invoke(null, [1.25d, null, null, "0%"]));
     }
 
     public static void PptxChartAxisTextStyleUsesSceneAuthoritativeMissingAxis()

@@ -182,7 +182,7 @@ internal sealed partial class PptxRenderer
             return !string.IsNullOrWhiteSpace(formatCode) &&
                 !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase)
                 ? FormatChartNumber(value, formatCode)
-                : FormatChartAxisLabel(value, null);
+                : FormatGeneralChartNumber(value);
         }
 
         double? ResolveBubbleSizeValue()

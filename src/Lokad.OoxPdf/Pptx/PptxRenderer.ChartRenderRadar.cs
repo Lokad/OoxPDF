@@ -509,7 +509,7 @@ internal sealed partial class PptxRenderer
         foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount, context: context))
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
-            string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis, null);
+            string label = FormatSceneChartAxisLabel(tickValue, sceneAxis, valueAxis, null);
             await textMeasurer.PrepareAsync(label, style).ConfigureAwait(false);
             ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, label, style, textMeasurer, ratio);
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment, kerningEnabled: false));

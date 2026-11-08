@@ -127,7 +127,7 @@ internal sealed partial class PptxRenderer
                 ChartTextStyle style = layout.CategoryLabels?.Style ?? ReadSceneChartTextStyle(theme, chart, categoryAxis.SceneAxis, PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
                 categoryBand = Math.Max(categoryBand, style.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);
             }
-            bool reversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+            bool reversed = ReadSceneValueAxisReversed(categoryAxis.SceneAxis);
             bool rotatedCaptions = layout.CategoryLabels is { RotationDegrees: not 0d };
             var referenceBands = rotatedCaptions ? ChartRotatedCategoryReferenceBands(layout.CategoryLabels!,
                 labels.Count, onTickMarks, reversed, source.Width, PptxChartMetricRules.ChartContentFrameInset,
@@ -177,7 +177,7 @@ internal sealed partial class PptxRenderer
             double left = Math.Max(numericLeft, before.Left), right = Math.Max(numericRight, before.Right);
             double outerWidth = source.Width + left + right;
             var after = ChartRotatedCategoryReferenceBands(innerCaptions, labels.Count, onTickMarks,
-                ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis), outerWidth,
+                ReadSceneValueAxisReversed(categoryAxis.SceneAxis), outerWidth,
                 PptxChartMetricRules.ChartContentFrameInset, resolver.CancellationToken);
             // Both stages use the same reference rule. The first owns expansion;
             // full restored fragments then allocate the data interval inside it.
@@ -424,7 +424,7 @@ internal sealed partial class PptxRenderer
     private static ChartAxisPlacement? ReadChartAxisPlacement(PptxSceneChartAxis? axis, ChartValueExtents extents, bool reversed, bool horizontal = true)
     {
         if (axis is null) return null;
-        if (ReadSceneOrXmlValueAxisCrossingValue(axis, null, extents) is not { } crossing || !double.IsFinite(crossing))
+        if (ReadSceneValueAxisCrossingValue(axis, extents) is not { } crossing || !double.IsFinite(crossing))
             return null;
         double? explicitCrossing = axis.CrossesAt;
         PptxSceneChartAxisCrosses crosses = axis.CrossesKind;
@@ -751,7 +751,7 @@ internal sealed partial class PptxRenderer
         if (innerRotated && admitInnerCaptions)
         {
             var horizontal = ChartRotatedCategoryReferenceBands(layout.CategoryLabels, labels.Count, onTickMarks,
-                ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), layout.PlotBox.Width,
+                ReadSceneValueAxisReversed(axis.SceneAxis), layout.PlotBox.Width,
                 PptxChartMetricRules.ChartContentFrameInset, resolver.CancellationToken);
             (double NumericStart, double NumericLength, double OuterStart, double OuterLength)? vertical = null;
             double? finalCapacity = null;
@@ -795,7 +795,7 @@ internal sealed partial class PptxRenderer
             }
         }
         return (AdmitAutomaticCategoryReferenceBands(layout, labels.Count, onTickMarks,
-            ReadSceneOrXmlValueAxisReversed(axis.SceneAxis, axis.XmlAxis), resolver.CancellationToken), sourceReferences);
+            ReadSceneValueAxisReversed(axis.SceneAxis), resolver.CancellationToken), sourceReferences);
 
         async ValueTask<ChartCategoryTextLine> FitAsync(string text, double cap, bool hangingMarker = false)
         {

@@ -60,7 +60,7 @@ internal sealed partial class PptxRenderer
                 {
                     CategoryAxisReversed = (horizontalBars || ownsColumnCategories) &&
                         barOptions.Grouping == PptxSceneChartGrouping.Clustered &&
-                        ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis),
+                        ReadSceneValueAxisReversed(categoryAxis.SceneAxis),
                     CategoryPointsOnTickMarks = !horizontalBars && ownsColumnCategories &&
                         ResolveSceneCategoryAxisLabelsOnTickMarks(valueSceneAxis)
                 };
@@ -228,7 +228,7 @@ internal sealed partial class PptxRenderer
                     ChartAxisSource extraCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, extraBarPlot);
                     extraBarOptions = extraBarOptions with { CategoryAxisReversed = extraHorizontalBars &&
                         extraBarOptions.Grouping == PptxSceneChartGrouping.Clustered &&
-                        ReadSceneOrXmlValueAxisReversed(extraCategoryAxis.SceneAxis, extraCategoryAxis.XmlAxis) };
+                        ReadSceneValueAxisReversed(extraCategoryAxis.SceneAxis) };
                     ChartAxisSource extraValueAxisSource = ReadChartValueAxesForPlot(sceneChart, extraBarPlot).FirstOrDefault();
                     XElement? extraValueAxis = extraValueAxisSource.XmlAxis;
                     PptxSceneChartAxis? extraValueSceneAxis = extraValueAxisSource.SceneAxis;

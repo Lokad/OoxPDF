@@ -572,7 +572,7 @@ internal sealed partial class PptxRenderer
         if (categoryPlacement is null && IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis) &&
             (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } categoryAxis ||
              categoryAxis.TickLabelPositionKind == PptxSceneChartTickLabelPosition.High ||
-             ReadSceneOrXmlValueAxisReversed(axis, axes[0].XmlAxis) && categoryAxis.TickLabelPositionKind != PptxSceneChartTickLabelPosition.Low))
+             ReadSceneValueAxisReversed(axis) && categoryAxis.TickLabelPositionKind != PptxSceneChartTickLabelPosition.Low))
             return null;
         double lineHeight = 0d;
         if (IsSceneOrXmlChartAxisLabelVisible(axis, axes[0].XmlAxis))

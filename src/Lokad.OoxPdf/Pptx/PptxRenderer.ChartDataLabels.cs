@@ -689,7 +689,7 @@ internal sealed partial class PptxRenderer
             ? FormatChartNumber(value, legacyNumberFormat, date1904)
             : IsRenderableChartFormatCode(sourceFormatCode)
                 ? FormatChartNumber(value, sourceFormatCode!, date1904)
-            : FormatChartAxisLabel(value, null);
+            : FormatGeneralChartNumber(value);
     }
 
     private static string? ResolveSourceLinkedChartNumberFormatCode(ChartNumberFormat numberFormat, ChartIndexedNumberPoint? sourcePoint)

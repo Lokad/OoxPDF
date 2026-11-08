@@ -200,22 +200,10 @@ internal sealed partial class PptxRenderer
             ?.Element(ChartNamespace + elementName) is not null;
     }
 
-    private static ChartAxisUnits ReadChartValueAxisUnits(XElement? valueAxis)
-    {
-        if (valueAxis is null)
-        {
-            return ChartAxisUnits.Empty;
-        }
-
-        return new ChartAxisUnits(
-            PptxSceneBuilder.ReadChartAxisUnitValueWithValue(valueAxis, "majorUnit").Value,
-            PptxSceneBuilder.ReadChartAxisUnitValueWithValue(valueAxis, "minorUnit").Value);
-    }
-
-    private static ChartAxisUnits ReadSceneOrXmlChartValueAxisUnits(PptxSceneChartAxis? axis, XElement? valueAxis)
+    private static ChartAxisUnits ReadSceneChartValueAxisUnits(PptxSceneChartAxis? axis)
     {
         return axis is null
-            ? ReadChartValueAxisUnits(valueAxis)
+            ? ChartAxisUnits.Empty
             : new ChartAxisUnits(axis.MajorUnit, axis.MinorUnit);
     }
 
@@ -528,21 +516,14 @@ internal sealed partial class PptxRenderer
         return PptxSceneBuilder.ReadOptionalChartValueAttribute(axis?.Element(ChartNamespace + "axId"));
     }
 
-    private static double? ReadSceneOrXmlValueAxisCrossingValue(PptxSceneChartAxis? sceneAxis, XElement? valueAxis, ChartValueExtents extents)
+    private static double? ReadSceneValueAxisCrossingValue(PptxSceneChartAxis? sceneAxis, ChartValueExtents extents)
     {
-        double? crossesAt = sceneAxis is not null
-            ? sceneAxis.CrossesAt
-            : valueAxis is null
-                ? null
-                : PptxSceneBuilder.ReadChartElementDoubleWithValue(valueAxis, "crossesAt").Value;
-        if (crossesAt is { } explicitCrossing)
+        if (sceneAxis?.CrossesAt is { } explicitCrossing)
         {
             return explicitCrossing;
         }
 
-        PptxSceneChartAxisCrosses crosses = sceneAxis is not null
-            ? ResolveChartAxisCrosses(sceneAxis.CrossesKind)
-            : ResolveChartAxisCrosses(PptxSceneBuilder.ParseChartAxisCrosses(PptxSceneBuilder.ReadChartElementValue(valueAxis, "crosses")));
+        PptxSceneChartAxisCrosses crosses = sceneAxis?.CrossesKind ?? PptxSceneChartAxisCrosses.AutoZero;
         if (crosses == PptxSceneChartAxisCrosses.Maximum)
         {
             return extents.Max;
@@ -559,29 +540,11 @@ internal sealed partial class PptxRenderer
         }
 
         return extents.Min > 0d ? extents.Min : extents.Max;
-
-        PptxSceneChartAxisCrosses ResolveChartAxisCrosses(PptxSceneChartAxisCrosses crosses)
-        {
-            return crosses == PptxSceneChartAxisCrosses.Unknown
-                ? PptxSceneChartAxisCrosses.AutoZero
-                : crosses;
-        }
     }
 
-    private static bool ReadSceneOrXmlValueAxisReversed(PptxSceneChartAxis? sceneAxis, XElement? valueAxis)
+    private static bool ReadSceneValueAxisReversed(PptxSceneChartAxis? sceneAxis)
     {
-        if (sceneAxis is not null)
-        {
-            return ResolveChartAxisReversed(sceneAxis.OrientationKind);
-        }
-
-        return ResolveChartAxisReversed(PptxSceneBuilder.ParseChartAxisOrientation(
-            PptxSceneBuilder.ReadChartElementValue(valueAxis?.Element(ChartNamespace + "scaling"), "orientation")));
-
-        bool ResolveChartAxisReversed(PptxSceneChartAxisOrientation orientation)
-        {
-            return orientation == PptxSceneChartAxisOrientation.MaximumMinimum;
-        }
+        return sceneAxis?.OrientationKind == PptxSceneChartAxisOrientation.MaximumMinimum;
     }
 
     private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
@@ -635,9 +598,9 @@ internal sealed partial class PptxRenderer
         bool percentStacked)
     {
         return new ChartValueAxisRenderOptions(
-            ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(sceneAxis, xmlAxis), percentStacked),
-            ReadSceneOrXmlValueAxisReversed(sceneAxis, xmlAxis),
-            ReadSceneOrXmlValueAxisCrossingValue(sceneAxis, xmlAxis, extents),
+            ResolvePercentStackedAxisUnits(ReadSceneChartValueAxisUnits(sceneAxis), percentStacked),
+            ReadSceneValueAxisReversed(sceneAxis),
+            ReadSceneValueAxisCrossingValue(sceneAxis, extents),
             ReadSceneOrXmlMajorGridlines(sceneAxis, xmlAxis),
             ReadSceneOrXmlMinorGridlines(sceneAxis, xmlAxis),
             ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme),
@@ -736,7 +699,7 @@ internal sealed partial class PptxRenderer
         string raw = sceneAxis?.Crosses ?? PptxSceneBuilder.ReadChartElementValue(axis, "crosses");
         PptxSceneChartAxisCrosses crosses = string.IsNullOrEmpty(raw) ? PptxSceneChartAxisCrosses.AutoZero :
             sceneAxis?.CrossesKind ?? PptxSceneBuilder.ParseChartAxisCrosses(raw);
-        bool reversed = ReadSceneOrXmlValueAxisReversed(category.SceneAxis, category.XmlAxis);
+        bool reversed = ReadSceneValueAxisReversed(category.SceneAxis);
         return crosses switch
         {
             PptxSceneChartAxisCrosses.Maximum => !reversed,
@@ -826,7 +789,7 @@ internal sealed partial class PptxRenderer
         // Explicit label sides follow the paired ordinal direction. Missing,
         // date/numeric and unpaired axes retain their existing physical fallback.
         ChartAxisSource category = ReadSceneOrXmlPairedCategoryAxis(chart, sceneAxis, axis);
-        bool reversed = ReadSceneOrXmlValueAxisReversed(category.SceneAxis, category.XmlAxis);
+        bool reversed = ReadSceneValueAxisReversed(category.SceneAxis);
         return (position == PptxSceneChartTickLabelPosition.High) != reversed;
     }
 

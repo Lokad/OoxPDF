@@ -212,7 +212,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<double> values = GetChartAxisTickValuesCore(extents, units.MajorUnit, includeEndpoints: true, target, policy, context: context);
         IEnumerable<double> measured = reserveEndpoints ? values.Append(extents.Min).Append(extents.Max) : values;
         double maximum = 0d, normalHeight = 0d;
-        foreach (string label in measured.Select(value => FormatSceneOrXmlChartAxisLabel(value, source.SceneAxis, source.XmlAxis, defaultNumberFormat)).DefaultIfEmpty("0"))
+        foreach (string label in measured.Select(value => FormatSceneChartAxisLabel(value, source.SceneAxis, source.XmlAxis, defaultNumberFormat)).DefaultIfEmpty("0"))
         {
             maximum = Math.Max(maximum, await measurer.MeasureAsync(label, style).ConfigureAwait(false));
             var line = await measurer.MeasureTextLineBoxAsync(label, style, horizontalHeader: false).ConfigureAwait(false);
@@ -241,7 +241,7 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>(tickValues.Count);
         foreach (double value in tickValues)
         {
-            string label = FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat);
+            string label = FormatSceneChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat);
             double offset = GetChartValuePlotRatio(extents, value, valueAxisReversed);
             double x;
             double y;

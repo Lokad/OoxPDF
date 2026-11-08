@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(areaPlot, ChartSeriesInheritedStrokeWidth);
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, areaPlot).FirstOrDefault();
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, areaPlot);
-                bool categoryAxisReversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                bool categoryAxisReversed = ReadSceneValueAxisReversed(categoryAxis.SceneAxis);
                 bool categoryPointsOnTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
                 ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetAreaChartValueExtents(areaSeriesVectors, areaOptions.Stacked, areaOptions.PercentStacked), areaOptions.PercentStacked, useNearMaximumHeadroom: areaOptions.Stacked && !areaOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
                 ChartLayout chartLayout = await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver,
@@ -50,7 +50,7 @@ internal sealed partial class PptxRenderer
                     TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, areaOptions.PercentStacked),
                     // The category axis owns its numeric crossing independently
                     // of whether the surrounding frame can be measured.
-                    CrossingValue = ReadSceneOrXmlValueAxisCrossingValue(categoryAxis.SceneAxis, categoryAxis.XmlAxis, valueExtents)
+                    CrossingValue = ReadSceneValueAxisCrossingValue(categoryAxis.SceneAxis, valueExtents)
                 };
                 ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, areaPlot);
                 ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);

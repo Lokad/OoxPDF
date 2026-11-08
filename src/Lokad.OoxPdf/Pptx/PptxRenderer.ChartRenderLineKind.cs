@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
                     valueAxisOptions = valueAxisOptions with { CrossingValue = categoryPlacement.CrossingValue };
                 }
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, linePlot);
-                bool categoryAxisReversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+                bool categoryAxisReversed = ReadSceneValueAxisReversed(categoryAxis.SceneAxis);
                 var categoryLabels = ReadSharedCategoryLabels(linePlot, workbook, plotVisibleOnly);
                 chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
                     valueAxis, valueExtents, valueAxisOptions, GetValueAxisAutoTickTargetCount(false, true, false), axesStyle.ValueAxisRightSide,
