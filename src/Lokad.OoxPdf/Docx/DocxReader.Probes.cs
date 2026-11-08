@@ -744,7 +744,8 @@ internal sealed partial class DocxReader
         return IsVisibleInlineContainer(element) ||
             element?.Name == WordprocessingNamespace + "del" ||
             element?.Name == WordprocessingNamespace + "moveFrom" ||
-            element?.Name == WordprocessingNamespace + "sdtContent";
+            element?.Name == WordprocessingNamespace + "sdtContent" ||
+            element is not null && IsInlineMetadataContainer(element);
     }
 
 
@@ -767,6 +768,13 @@ internal sealed partial class DocxReader
                     }
                 }
 
+                continue;
+            }
+
+            if (IsFieldResultContent(child))
+            {
+                // Equations live beside runs. The same result stack owns both.
+                ProcessComplexFieldRunChild(child, fields);
                 continue;
             }
 
@@ -854,7 +862,7 @@ internal sealed partial class DocxReader
             return false;
         }
 
-        if (ReadRunTextChild(child).Length != 0)
+        if (IsFieldResultContent(child))
         {
             for (int fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
             {

@@ -1,4 +1,14 @@
 {
+  "docx-cached-math-results": [
+    "DocxCachedMathResults",
+    "DocxInlineCompositionCachedFields",
+    "DocxInlineMetadataWrappersKeepRevisionFieldAndLinkOwners",
+    "DocxDeletedMathMetadata",
+    "DocxInlineCompositionEquationRevisions",
+    "DocxInlineCompositionMathRunRevisions",
+    "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks",
+    "PortableRenderingRepeatedInlineMathPreservesBaselineAndAdvance"
+  ],
   "font-directory-ownership": [
     "MemoryBudgetFontDirectory",
     "FontDirectoryDiscoveryKeepsMetadataAndMalformedRejection",

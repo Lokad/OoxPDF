@@ -1,0 +1,210 @@
+{
+  "Source": "Owned Word16 PDF exports with explicit Final/Review settings; stored locks preserved. Application view remains uncalibrated.",
+  "Scope": "Current content preservation and existing1pt math-origin gate; no complete-image parity claim.",
+  "Rows": [
+    {
+      "Input": "cached-math-result-baseline.docx",
+      "InputSha256": "A8A624A235B4C6CD47F7EE56488361068D8EBD2594E420B9155DF7CA4B78779A",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "110E781EB5995AE980C90B5640838A6703B6816BE2B3FD58465A41CEE90DB4CE",
+      "ExportLogSha256": "F56AF0A4E20E8027F1C302D74564AB03E2C942FB31E1069906E452907E5C9972",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 698.5,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 685.42,
+          "Page": 1
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 698.5,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 685.42,
+          "Page": 1
+        }
+      ]
+    },
+    {
+      "Input": "cached-math-result-baseline.docx",
+      "InputSha256": "A8A624A235B4C6CD47F7EE56488361068D8EBD2594E420B9155DF7CA4B78779A",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "637047D210CCEFDC1D4728334CC1973CBADB67BFA60971D20F4CB1B7AD2BDE38",
+      "ExportLogSha256": "F114137DFE78653DEC3F108595E1616DCEEB578B40C2A4637C2CF9EB0AE58F0C",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 625.68,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 615.77,
+          "Page": 1
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 625.68,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 615.77,
+          "Page": 1
+        }
+      ]
+    },
+    {
+      "Input": "cached-math-result-simple.docx",
+      "InputSha256": "2C783254F1AC466E6D1CF025B241226ABB7E98A81D1C9BB769A3FEE3C0D64322",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "EFA3F0E14B2E7734357A4694C2873A0751C5C49B568E4E2EED6765B7D688ED3B",
+      "ExportLogSha256": "BC37E25C7C594A50F6A63AEF61F5D8A536F00B7DEA72FD13223C9C9E2E3E2B87",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 698.5,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 685.42,
+          "Page": 1
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 698.5,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 685.42,
+          "Page": 1
+        }
+      ]
+    },
+    {
+      "Input": "cached-math-result-simple.docx",
+      "InputSha256": "2C783254F1AC466E6D1CF025B241226ABB7E98A81D1C9BB769A3FEE3C0D64322",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "97A4E084D7D9C3835F6C5858664F2AF01EEE2E95E072A76EDD3E711436B97ADB",
+      "ExportLogSha256": "E3D18F978545C2CF0E2CD788C116AA56EC7A12B43CF06EFF02AF7F9A93326647",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 625.68,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 615.77,
+          "Page": 1
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 625.68,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 615.77,
+          "Page": 1
+        }
+      ]
+    },
+    {
+      "Input": "cached-math-result-complex.docx",
+      "InputSha256": "17B4276E08A7A94D4D2FC32D6CE586608661ED8B027FFEA3015BFBC46B30CE84",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "51EE5ABB91F537A453C29A197665F064F97352A8A369C29A8A23D63783D8A9C1",
+      "ExportLogSha256": "2BCC807139E2BAC542602AEA06C690975D3E7ECB4A094BC175D9C1B8125B8E15",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 698.5,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 685.42,
+          "Page": 1
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 698.5,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 685.42,
+          "Page": 1
+        }
+      ]
+    },
+    {
+      "Input": "cached-math-result-complex.docx",
+      "InputSha256": "17B4276E08A7A94D4D2FC32D6CE586608661ED8B027FFEA3015BFBC46B30CE84",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "F348ECD652C253475CCE9CAE5CD7D43A9A1864F4F3DAC13330E80B2DFB3921DC",
+      "ExportLogSha256": "9CA3C89FED34482109B3E5C35CC55700EE7E6071A5AA1EE76006514E9B52FBB5",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 625.68,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 615.77,
+          "Page": 1
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 625.68,
+          "Page": 1
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 615.77,
+          "Page": 1
+        }
+      ]
+    }
+  ]
+}

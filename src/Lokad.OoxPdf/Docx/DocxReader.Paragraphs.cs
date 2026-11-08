@@ -456,6 +456,13 @@ internal sealed partial class DocxReader
                     HasRunRevisions = hasMathRunRevisions
                 });
                 inlineItems!.Add(new DocxInlineEquation(equations[^1]));
+                foreach (var field in complexFieldStack)
+                {
+                    if (!field.InResult) continue;
+                    field.HasCachedResult = true;
+                    // A computed counter keeps its existing replacement owner.
+                    if (!field.PlaceholderEmitted) field.RendersCachedResult = true;
+                }
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)
@@ -498,7 +505,7 @@ internal sealed partial class DocxReader
             int fieldTextRunIndex = runs.Count;
             int fieldImageIndex = images.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
-            bool hasCachedResult = FieldHasCachedResultText(field);
+            bool hasCachedResult = FieldHasCachedResultContent(field);
             if (placeholder is not null)
             {
                 XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
