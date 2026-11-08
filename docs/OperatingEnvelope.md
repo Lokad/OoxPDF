@@ -61,8 +61,10 @@ JPEG component/RGB construction overlap before allocation. Image/font compressio
 also admits actual output capacity, growth overlap and final copying. Image payloads
 remain funded through emission; font-compression storage refunds after its stream
 is written. GPOS right-class decoding counts before allocating exact glyph arrays.
-One source-shaped kerning construction window covers class maps and retained
-batches, reusing capacity across zero-adjustment subtables and refunding after
+One source-shaped kerning construction window covers exact coverage arrays,
+class maps and retained sparse/class callbacks. Sparse callbacks retain only the
+needed glyph, not an entire coverage array; empty pair sets create no callbacks.
+The window reuses capacity across zero-adjustment subtables and refunds after
 the batches finish. Kerning sort scratch is admitted while retained pair arrays remain
 funded, then refunds after sorting; failed parsing refunds program and pair storage
 together. Storage refunds after
