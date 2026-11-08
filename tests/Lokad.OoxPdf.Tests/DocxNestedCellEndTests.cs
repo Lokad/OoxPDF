@@ -102,11 +102,12 @@ internal static class DocxNestedCellEndTests
             var child = new DocxTable("fixed", [80d], [new([Cell(childParagraph)], null)]);
             var table = Outer([new DocxTableElement(child), new DocxParagraphElement(mark)]);
             var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-            var layout = Engine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new Measurer(), default);
+            var measurer = new Measurer(naturalMetrics: true);
+            var layout = Engine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, measurer, default);
             var items = layout.Pages[0].Items.ToList();
             double cursor = items.OfType<DocxTableRowLayout>().Single().Y;
             double? anchor = DocxLayoutEngine.ApplyReviewTableBaselineGeometry(items, 0, null,
-                new Measurer(), .75d, ref cursor, default);
+                measurer, .75d, ref cursor, default);
             TestAssert.True(anchor is not null, "The control must exercise the real Review baseline projection.");
             var placed = items.OfType<DocxTableRowLayout>().Single();
             var carrier = placed.Cells[0].TextLines.Single();
@@ -146,11 +147,11 @@ internal static class DocxNestedCellEndTests
     private static DocxLayoutEngine Engine(OoxPdfDocxMarkupGeometryMode mode) => new(mode, wordCompatiblePrintScale: 1d);
     private static DocxLayout Layout(DocxTable table, OoxPdfDocxMarkupGeometryMode mode) =>
         Engine(mode).Create(DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]), new Measurer(), default);
-    private sealed class Measurer : IDocxTextMeasurer, IDocxStaticTextMetricsProvider
+    private sealed class Measurer(bool naturalMetrics = false) : IDocxTextMeasurer, IDocxStaticTextMetricsProvider
     {
         public double MeasureText(DocxTextRun? run, string text, double size) => text.Length * 5d;
-        public double MeasureWindowsAscender(DocxTextRun? run, double size) => 8d;
-        public double MeasureWindowsDescender(DocxTextRun? run, double size) => 2d;
+        public double MeasureWindowsAscender(DocxTextRun? run, double size) => naturalMetrics ? size : 8d;
+        public double MeasureWindowsDescender(DocxTextRun? run, double size) => naturalMetrics ? size / 4d : 2d;
     }
     private static DocxParagraph Paragraph(string text, double size = 12d) => DocxTests.CreateDocxLayoutParagraph(text, size, 20d);
     private static DocxTableCell Cell(DocxParagraph paragraph) => new(paragraph.Runs[0].Text, [paragraph], null, null, null, null, [],

@@ -253,7 +253,7 @@ internal sealed partial class DocxLayoutEngine
             var mapped = MapRow(row, insets,
                 -originCorrection + previousBorderAdvanceCorrection, borderAdvanceCorrection);
             if (hasNestedRows && DocxTableCellClipGeometry.EnumerateCellLines(mapped, null, cancellationToken).LongCount() !=
-                CountLines(row)) return null;
+                CountPaintedLines(row)) return null;
             replacements[rowIndex] = mapped;
             previousBorderAdvanceCorrection += row.Height - mapped.Height;
         }
@@ -262,14 +262,14 @@ internal sealed partial class DocxLayoutEngine
         cursorY += previousBorderAdvanceCorrection;
         return precedingBodyBaselineInset ?? firstCellInset;
 
-        long CountLines(DocxTableRowLayout row)
+        long CountPaintedLines(DocxTableRowLayout row)
         {
             long count = 0;
             foreach (var cell in row.Cells)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                count += cell.TextLines.Count;
-                foreach (var child in cell.NestedRows) count += CountLines(child);
+                count += cell.TextLines.Count(line => !DocxInlineLineGeometry.IsNonPaintingSourceCarrier(line));
+                foreach (var child in cell.NestedRows) count += CountPaintedLines(child);
             }
             return count;
         }
