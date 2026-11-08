@@ -39,7 +39,9 @@
     "DocxCommentEndpoint",
     "DocxCommentUnknownEndpointsRetainTheirEstablishedFallback",
     "DocxCommentEndpoints",
-    "DocxEndnoteFinalSection"
+    "DocxImplicitFinalSectionParagraphUsesOrdinaryFlow",
+    "DocxMissingFinalParagraphDefaultsRetainTheBoundedFrame",
+    "DocxImplicitFinalParagraphRetainsStaticAndScaledFallbacks"
   ],
   "docx-field-instruction-boundaries": [
     "DocxFieldInstruction",
