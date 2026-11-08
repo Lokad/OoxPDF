@@ -35,6 +35,9 @@ The mixed-balloon matrix checks measurement/painting and unsupported fallbacks;
 the reader test owns paragraph-mark retention. Select their union once through
 `docx-plain-balloon-paragraphs`. The exhaustive mixed-body matrix remains a broader
 milestone check; it is distinct from the compact paragraph-boundary matrix.
+Mixed run wrapping and paragraph flow live in `DocxCommentsTests.MixedRuns.cs`
+and `DocxCommentsTests.MixedParagraphs.cs`; their shared fixtures and assertions
+remain in `DocxCommentsTests.cs`.
 
 Endnote tests share the `DocxFootnotesTests` class and its existing fixtures:
 `Endnotes.Kerning.cs` owns threshold and source-marker behavior,
@@ -42,6 +45,11 @@ Endnote tests share the `DocxFootnotesTests` class and its existing fixtures:
 `Endnotes.Flow.cs` owns admission, continuations and destinations. Shared fixture
 construction and assertions remain in `DocxFootnotesTests.cs`. File organization
 does not change test names, capability selections or font preconditions.
+
+`PptxChartsTests.LegendGeometry.cs` groups the existing legend frame, packing and
+key-alignment controls. Shared chart construction remains in `PptxChartsTests.cs`,
+alongside the legendless axis cases. These controls retain their independent
+Office values and geometry tolerances.
 
 `pptx-fallback-hyperlinks` checks embedded and standard-font paths together:
 chart titles/axes/labels, shape/cell runs, internal destinations, boundaries,
