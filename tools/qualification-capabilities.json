@@ -1,6 +1,6 @@
 {
   "docx-cell-source-frame": [
-    "DocxInlineCompositionReviewNestedPlacementKeepsWholeTreeFallbacks",
+    "DocxInlineCompositionReviewNestedPlacement",
     "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
     "DocxNestedCellEnd",
     "DocxRepeatedTableHeader",
