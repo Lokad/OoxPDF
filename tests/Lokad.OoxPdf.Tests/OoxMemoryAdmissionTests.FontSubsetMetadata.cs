@@ -14,7 +14,8 @@ internal static partial class OoxMemoryAdmissionTests
             if (glyph != 0) wanted.TryAdd(glyph, cp);
         }
         TestAssert.True(wanted.Count > 1000, "Exercise a broad source-supported glyph set.");
-        TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out var baseline, out _));
+        TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out var baseline, out _),
+            "The pinned face produces the ungoverned control subset.");
         var expected = TestAssert.NotNull(baseline);
         long before = 0, beforeAdmission = -1;
         var pool = new TestMemoryBudget
@@ -29,14 +30,16 @@ internal static partial class OoxMemoryAdmissionTests
         using (var conversion = OoxConversionBudget.BeginScope(null, pool))
         {
             before = GC.GetAllocatedBytesForCurrentThread();
-            TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out var result, out _));
+            TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out var result, out _),
+                "Admitted preparation retains the source-supported glyph set.");
             var subset = TestAssert.NotNull(result);
             TestAssert.True(beforeAdmission >= 0 && beforeAdmission < 64 * 1024,
                 "Substantial glyph metadata must not be built before the first host grant.");
             TestAssert.True(pool.Reserved >= subset.Bytes.Length + 4L * subset.CidByOriginalGlyph.Count,
                 "Retained admission must include the CID map's keys/values beside the program.");
             TestAssert.True(subset.Bytes.AsSpan().SequenceEqual(expected.Bytes), "Admission preserves every subset byte.");
-            TestAssert.True(subset.CidByOriginalGlyph.OrderBy(p => p.Key).SequenceEqual(expected.CidByOriginalGlyph.OrderBy(p => p.Key)));
+            TestAssert.True(subset.CidByOriginalGlyph.OrderBy(p => p.Key).SequenceEqual(expected.CidByOriginalGlyph.OrderBy(p => p.Key)),
+                "Admission preserves every source-to-CID association.");
         }
         TestAssert.Equal(0L, pool.Reserved);
         TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
@@ -83,7 +86,8 @@ internal static partial class OoxMemoryAdmissionTests
             TestAssert.Equal(0L, pool.Reserved);
         }
         TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
-        TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out _, out _));
+        TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out _, out _),
+            "Cancellation leaves the original font usable for another subset.");
     }
 
     public static void MemoryBudgetFontSubsetNoUsableGlyphsRetainsUnchargedFallback()
@@ -93,7 +97,8 @@ internal static partial class OoxMemoryAdmissionTests
         using (var conversion = OoxConversionBudget.BeginScope(null, pool))
         {
             foreach (var wanted in new[] { new Dictionary<ushort, int>(), new Dictionary<ushort, int> { [0] = 65, [ushort.MaxValue] = 66 } })
-                TestAssert.True(!OpenTypeFontSubsetter.TryCreate(font, wanted, default, out _, out _));
+                TestAssert.True(!OpenTypeFontSubsetter.TryCreate(font, wanted, default, out _, out _),
+                    "Empty or unusable glyph requests keep the no-subset fallback.");
             TestAssert.Equal(0L, pool.Reserved);
             TestAssert.Equal(0L, pool.Peak);
         }
