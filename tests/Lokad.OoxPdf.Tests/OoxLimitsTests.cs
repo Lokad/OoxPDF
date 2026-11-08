@@ -1270,11 +1270,10 @@ internal static partial class OoxLimitsTests
         int scriptOffset = ReserveU16();
         int script = output.Count;
         PatchU16(scriptOffset, script - scriptList);
-        WriteU16(4);
-        WriteU16(0);
-        WriteU16(0);
-        WriteU16(0);
-        WriteU16(0xFFFF);
+        WriteU16(4); // Default LangSys follows the four-byte Script header.
+        WriteU16(0); // No language-specific records.
+        WriteU16(0); // LangSys lookupOrder.
+        WriteU16(0xFFFF); // No required feature.
         WriteU16(1);
         WriteU16(0);
 
