@@ -36,6 +36,13 @@ the reader test owns paragraph-mark retention. Select their union once through
 `docx-plain-balloon-paragraphs`. The exhaustive mixed-body matrix remains a broader
 milestone check; it is distinct from the compact paragraph-boundary matrix.
 
+Endnote tests share the `DocxFootnotesTests` class and its existing fixtures:
+`Endnotes.Kerning.cs` owns threshold and source-marker behavior,
+`Endnotes.Separators.cs` owns separator metrics and spacing, and
+`Endnotes.Flow.cs` owns admission, continuations and destinations. Shared fixture
+construction and assertions remain in `DocxFootnotesTests.cs`. File organization
+does not change test names, capability selections or font preconditions.
+
 `pptx-fallback-hyperlinks` checks embedded and standard-font paths together:
 chart titles/axes/labels, shape/cell runs, internal destinations, boundaries,
 rotation, clipping and diagnostics. `MissingTestFontResolver` supplies neither a
