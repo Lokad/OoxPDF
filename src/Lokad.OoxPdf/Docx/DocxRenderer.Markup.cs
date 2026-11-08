@@ -774,10 +774,11 @@ internal sealed partial class DocxRenderer
                         BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
                         WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody))
                     {
-                        // Independent Word footer probes place formatting balloons
-                        // above the complete occupied story, even for a change in a
-                        // later paragraph. Preserve the source connector separately.
+                        // Keep the qualified source-run geometry independent of
+                        // caption support. Mark-owned formatting retains its paragraph
+                        // anchor until the shared footer-frame correction is qualified.
                         WordCompatiblePlacementTopY = wordFormatting is not null &&
+                            paragraph.ParagraphMarkRun?.Revisions.Any(IsFormattingRevision) != true &&
                             UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
                             line.Story?.Kind == DocxStoryKind.Footer && line.StaticStoryUsesPhysicalY &&
                             page.StaticFooterFrameTop is { } top

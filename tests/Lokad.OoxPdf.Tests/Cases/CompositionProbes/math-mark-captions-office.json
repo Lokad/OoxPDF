@@ -1,0 +1,145 @@
+{
+  "Scope": "SevenindependentWordReviewcaptiontexts/horizontalorigins;existing1ptgate. AbsoluteY/rectanglefailuresremainreportedseparately;thisdoesnotcalibrateapplicationview.",
+  "Rows": [
+    {
+      "Input": "math-mark-property-body.docx",
+      "InputSha256": "0BDC072C2858927C46815302A9A989960609C56D55762008CDAC1BB61A7A6194",
+      "Container": "body",
+      "ChangedPart": "word/document.xml",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.9700012207031,
+      "TitleY": 632.8800048828125,
+      "BodyX": 474.3800048828125,
+      "BodyY": 632.8800048828125,
+      "Frame": [
+        433.510009765625,
+        150.02001953125,
+        608.0900268554688,
+        162.30999755859375
+      ],
+      "ReferencePdfSha256": "821C38F23717A972146839B2FDE7F4490012C90EC38EBF97EDE1E88C0CDAC4CD",
+      "ExportLogSha256": "0677F1EFBDDF33D69D5830F6CCE2973DE0C7EACA2AAD6E16681EC3821DC1E2BE"
+    },
+    {
+      "Input": "math-mark-property-cell.docx",
+      "InputSha256": "066430735782C55B743880E269C448C20C6DB189E1196B60C6AE2416A19D505A",
+      "Container": "cell",
+      "ChangedPart": "word/document.xml",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.9700012207031,
+      "TitleY": 632.8800048828125,
+      "BodyX": 474.3800048828125,
+      "BodyY": 632.8800048828125,
+      "Frame": [
+        433.510009765625,
+        150.02001953125,
+        608.0900268554688,
+        162.30999755859375
+      ],
+      "ReferencePdfSha256": "66C42BEC072C7A6A85E763AC731811FC8EC2E58840083EE3962F500FD442FB1B",
+      "ExportLogSha256": "197D88E6DBA5B2E5FE3BFEF30D760DFB90C9040B189E19D1996878E455415BD3"
+    },
+    {
+      "Input": "math-mark-property-header.docx",
+      "InputSha256": "F351929F7421874E012C3EF80ACBEAF1C9F9F7DB1C30F22A52748488302ECEF3",
+      "Container": "header",
+      "ChangedPart": "word/header1.xml",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.9700012207031,
+      "TitleY": 660.1900024414062,
+      "BodyX": 474.3800048828125,
+      "BodyY": 660.1900024414062,
+      "Frame": [
+        433.510009765625,
+        122.71002197265625,
+        608.0900268554688,
+        135.0
+      ],
+      "ReferencePdfSha256": "6540CF465D4606062503D732AE0107763A0CFA8008F5E2CB20780BE8D6D41594",
+      "ExportLogSha256": "26178C93178EDD6431A2890920359455D2C072B3605287A2A779BCDFACC98E0D"
+    },
+    {
+      "Input": "math-mark-property-footer.docx",
+      "InputSha256": "EFE15230C11D9C7700E7EB8CB79947C4763A2D2F20DCED015CB6DFFE9FF37F6F",
+      "Container": "footer",
+      "ChangedPart": "word/footer1.xml",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.9700012207031,
+      "TitleY": 184.989990234375,
+      "BodyX": 474.3800048828125,
+      "BodyY": 184.989990234375,
+      "Frame": [
+        433.510009765625,
+        597.8900146484375,
+        608.0900268554688,
+        610.27001953125
+      ],
+      "ReferencePdfSha256": "7587CB8FECB20B56CFADA45B1D10F165AE678C7DFD8D39E4877F1C906C273E8C",
+      "ExportLogSha256": "4570559F0B84CC7360FD36B08FC793FEDBFDDC7E28FD2897EDBC78146D76E29C"
+    },
+    {
+      "Input": "math-mark-property-plain.docx",
+      "InputSha256": "0F22989254FD602983B66A69C90D24C2D13151A1D85611A30E843B983408B375",
+      "Container": "plain",
+      "ChangedPart": "word/document.xml",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.9700012207031,
+      "TitleY": 632.8800048828125,
+      "BodyX": 474.3800048828125,
+      "BodyY": 632.8800048828125,
+      "Frame": [
+        433.510009765625,
+        150.02001953125,
+        608.0900268554688,
+        162.30999755859375
+      ],
+      "ReferencePdfSha256": "3D80B21C86064456B32C9F77E71DDF7A6A15B1D2268515580F87AD90DE110E05",
+      "ExportLogSha256": "2C051247E6742A99A47C38297E9F21823E2AF3134AC5C65B983B4D8E668EA857"
+    },
+    {
+      "Input": "math-mark-property-later-footer.docx",
+      "InputSha256": "ECB7415FCEA6D33A40BD6D3B0BD6787106824F549CD5EE8BE4BADD041776F658",
+      "Container": "footer",
+      "ChangedPart": "word/footer1.xml",
+      "Title": "Formatted:",
+      "Body": "Font: Bold",
+      "TitleX": 436.9700012207031,
+      "TitleY": 184.989990234375,
+      "BodyX": 474.3800048828125,
+      "BodyY": 184.989990234375,
+      "Frame": [
+        433.510009765625,
+        597.8900146484375,
+        608.0900268554688,
+        610.27001953125
+      ],
+      "ReferencePdfSha256": "F164C65B89AE6A5ADD051BA6049247B14BCB27F2D44E01211DD8C2B1B3CD96FF",
+      "ExportLogSha256": "EEA2A8E47D750462108B77D150CC60BDE7DC9A8E425A04FE009A83C9E2BC34D0"
+    },
+    {
+      "Input": "math-mark-property-italic-plain.docx",
+      "InputSha256": "D0C391B1A84A0BBE320C94B304E6CE612D84A2732C3CDBC6EF9C6E0A73DDB150",
+      "Container": "plain",
+      "ChangedPart": "word/document.xml",
+      "Title": "Formatted:",
+      "Body": "Font: Italic",
+      "TitleX": 436.9700012207031,
+      "TitleY": 632.8800048828125,
+      "BodyX": 474.3800048828125,
+      "BodyY": 632.8800048828125,
+      "Frame": [
+        433.510009765625,
+        150.02001953125,
+        608.0900268554688,
+        162.30999755859375
+      ],
+      "ReferencePdfSha256": "396B040F17DA08E96C3ABE4EB7A5572495AA196C2A9331E4AB3A9E4302154754",
+      "ExportLogSha256": "BBADA2297E34A2F19F1995EFE60E3A2E723BCF2720064422084A68FA78BD0165"
+    }
+  ]
+}

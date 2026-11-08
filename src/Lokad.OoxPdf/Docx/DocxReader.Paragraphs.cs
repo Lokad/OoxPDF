@@ -62,7 +62,12 @@ internal sealed partial class DocxReader
         IReadOnlyList<DocxRevisionInfo> propertyRevisions = ReadPropertyChangeRevisions(paragraphProperties);
         AddRevisions(paragraphRevisions, propertyRevisions);
         XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
-        IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadPropertyChangeRevisions(paragraphMarkRunProperties);
+        // Resolve the mark once, then publish the same typed revision objects
+        // through its actual source owner and aggregate inspection metadata.
+        DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
+            paragraphMarkRunProperties, paragraphStyleId, characterStyleId: null, styles, tableCellStyle?.Run);
+        IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadRunPropertyChangeRevisions(
+            paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run, paragraphMarkRun);
         DocxRevisionInfo? numberingMarkInsertion = inheritedRevision is null &&
             paragraphMarkRevisions is [{ Kind: DocxRevisionKind.Insertion, SourceElement: "ins" } insertion]
             ? insertion : null;
@@ -191,12 +196,6 @@ internal sealed partial class DocxReader
         // Pilcrow (paragraph-mark) size through the style cascade, excluding direct run
         // formatting. Row-end and break-spill spaces resolve at pilcrow size in Word
         // (spill probes 2026-09-28), so every paragraph carries it even when runs exist.
-        DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
-            paragraphMarkRunProperties,
-            paragraphStyleId,
-            characterStyleId: null,
-            styles,
-            tableCellStyle?.Run);
         if (runs.Count == 0 && images.Count == 0 && inlineTextBoxes.Count == 0)
         {
             DocxRunStyleResolution paragraphMarkStyleResolution = CreateRunStyleResolution(

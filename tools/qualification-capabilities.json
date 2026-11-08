@@ -1,4 +1,19 @@
 {
+  "docx-paragraph-mark-captions": [
+    "DocxParagraphMarkFormatting",
+    "DocxParagraphPropertyMath",
+    "DocxInlineCompositionNumberingMarksRequireActualSourceOwners",
+    "DocxInlineCompositionNumberingMarkOwnersKeepVisibleContent",
+    "DocxInlineCompositionMarkFormattingBalloons",
+    "DocxInlineCompositionNumberedMathPreservesFourStoryContent",
+    "DocxInlineCompositionRunFormatting",
+    "DocxDeletedParagraphMark",
+    "DocxInlineCompositionEquationRevisionsRequireActualSourceOwners",
+    "DocxInlineCompositionControlRevisionsRetainActualOwnersAndRoleFallbacks",
+    "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
+    "DocxParagraphMarkCaptions",
+    "DocxInlineCompositionFormattingBalloonDescriptions"
+  ],
   "docx-paragraph-mark-formatting": [
     "DocxParagraphMarkFormatting",
     "DocxParagraphPropertyMath",
