@@ -71,7 +71,14 @@ internal static partial class DocxInlineCompositionTests
                     .All(f => f.HasCachedResult && f.RendersCachedResult && !f.UsesPlaceholder), "Nested stored results retain their independent locks.");
             var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode))
                 .RenderPagesAsync(nested, null, default).ToBlockingEnumerable().ToArray();
-            TestAssert.True(pages.SelectMany(p => p.Annotations).Any(a => a.Destination is not null), "The picture's enclosing link retains its bookmark destination.");
+            var baseline = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode))
+                .RenderPagesAsync(ReadPictureResult("body", vml, complex, mode, baseline: true, nested: true), null, default)
+                .ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(baseline.Length, pages.Length);
+            for (int index = 0; index < pages.Length; index++)
+                TestAssert.True(baseline[index].Annotations.SequenceEqual(pages[index].Annotations),
+                    "Picture-only source links retain the independently scoped navigation fallback.");
+            TestAssert.True(paragraph.Hyperlinks.Any(link => link.Anchor == "PublicCalculation"), "The source link remains inspectable.");
             var computed = PictureResultParagraph(ReadPictureResult("body", vml, complex, mode, computed: true));
             TestAssert.True(computed.FieldReferences.Any(f => f.Kind == DocxFieldKind.Page && f.UsesPlaceholder && !f.RendersCachedResult),
                 "Computed counters retain replacement ownership.");
@@ -134,10 +141,14 @@ internal static partial class DocxInlineCompositionTests
                         new XAttribute("style", "width:" + Size("cx") + ";height:" + Size("cy")),
                         new XElement(v + "imagedata", new XAttribute(r + "id", drawing.Descendants(a + "blip").Single().Attribute(r + "embed")!.Value)))));
                 }
-                if (baseline) return;
-                var content = CachedMathField(w, new XElement(run), complex, computed ? "PAGE" : "REF StoredPicture", locked: !computed);
-                if (nested) content = CachedMathField(w,
-                    new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), content), !complex, "NUMPAGES");
+                if (baseline && !nested) return;
+                var content = baseline ? [new XElement(run)]
+                    : CachedMathField(w, new XElement(run), complex, computed ? "PAGE" : "REF StoredPicture", locked: !computed);
+                if (nested)
+                {
+                    var link = new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PublicCalculation"), content);
+                    content = baseline ? [link] : CachedMathField(w, link, !complex, "NUMPAGES");
+                }
                 run.ReplaceWith(content);
             }, partOverride: story is "header" or "footer" ? "word/" + story + "1.xml" : null);
 
