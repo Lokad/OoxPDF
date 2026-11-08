@@ -101,7 +101,7 @@ internal static partial class DocxInlineCompositionTests
             var emptyField = emptyParagraph.FieldReferences.Single(f => f.Instruction!.Trim() == "REF StoredMath");
             TestAssert.True(!emptyField.HasCachedResult && !emptyField.RendersCachedResult,
                 "An absent result does not become materialized content.");
-            TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(emptyParagraph).Count);
+            TestAssert.Equal(2, DocxMathParagraphPolicy.GetPreparationEquations(emptyParagraph).Count);
             var computed = ReadMutation("CompositionProbes/math-fields-simple-body", OoxPdfDocxMarkupMode.Final, false, false, (xml, w, m) =>
             {
                 var equation = xml.Descendants(m + "oMath").First();

@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
@@ -3019,7 +3020,8 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static DocxDocument ReadMutation(string fixture, OoxPdfDocxMarkupMode mode, bool bookmark, bool split,
-        Action<XDocument, XNamespace, XNamespace>? change = null, string? partOverride = null)
+        Action<XDocument, XNamespace, XNamespace>? change = null, string? partOverride = null,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".docx");
@@ -3062,7 +3064,8 @@ internal static partial class DocxInlineCompositionTests
                 entry.Delete();
                 using (var output = zip.CreateEntry(part).Open()) document.Save(output);
             }
-            return DocxTests.ReadDocx(path, mode);
+            using var stream = File.OpenRead(path);
+            return new DocxReader().Read(OoxPackage.Open(stream, default), diagnosticSink, default, markupMode: mode);
         }
         finally { File.Delete(path); }
     }

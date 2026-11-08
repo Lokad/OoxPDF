@@ -114,7 +114,7 @@ internal static class DocxInlineContent
 
     public static bool HasSourceFieldResults(IReadOnlyList<DocxFieldReference> fields,
         IReadOnlyList<DocxTextRun> runs) => fields.All(field =>
-            field.HasCachedResult && field.RendersCachedResult && !field.UsesPlaceholder ||
+            HasStoredFieldResult(field) ||
             field.Kind.IsDynamic() && field.UsesPlaceholder && !field.RendersCachedResult &&
                 field.Placeholder == DocxFieldText.Placeholder(field.Kind)) &&
         runs.All(run => run.FieldKind is null || run.FieldKind is { } kind && kind.IsDynamic() &&
@@ -124,11 +124,17 @@ internal static class DocxInlineContent
         IReadOnlyList<DocxTextRun> runs) =>
         fields.All(field => field.Kind.IsDynamic()) && HasSourceFieldResults(fields, runs);
 
-    // Cached field results already own ordinary resolved runs. Instructions and
-    // page/count placeholders still need their separate dynamic layout path.
+    // A complete stored result may be empty. Its source flags remain empty;
+    // instructions without a result boundary retain their separate fallback.
+    private static bool HasStoredFieldResult(DocxFieldReference field) => !field.UsesPlaceholder &&
+        (field.HasCachedResult && field.RendersCachedResult ||
+            !field.HasCachedResult && !field.RendersCachedResult &&
+            (field.SourceKind == DocxFieldSourceKind.Simple || field.HasSeparate));
+
+    // Stored results already own their resolved content. Computed page/count
+    // placeholders still need their separate dynamic layout path.
     public static bool HasMaterializedFieldResults(IReadOnlyList<DocxFieldReference> fields,
-        IReadOnlyList<DocxTextRun> runs) => fields.All(field =>
-            field.HasCachedResult && field.RendersCachedResult && !field.UsesPlaceholder) &&
+        IReadOnlyList<DocxTextRun> runs) => fields.All(HasStoredFieldResult) &&
         runs.All(run => run.FieldKind is null);
 
     public static bool HasSupportedReferences(IReadOnlyList<DocxInlineReference> references,

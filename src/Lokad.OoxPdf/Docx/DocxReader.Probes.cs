@@ -838,8 +838,10 @@ internal sealed partial class DocxReader
                     return true;
                 }
 
-                (StringBuilder instruction, bool hasSeparate, _, bool hasCachedResult) = fields[^1];
-                if (ResolveFieldPlaceholder(instruction.ToString()) is null && (!hasSeparate || !hasCachedResult))
+                (StringBuilder instruction, bool hasSeparate, _, _) = fields[^1];
+                // A closed result may be intentionally empty. An instruction
+                // without a result boundary is still unsupported.
+                if (ResolveFieldPlaceholder(instruction.ToString()) is null && !hasSeparate)
                 {
                     return true;
                 }

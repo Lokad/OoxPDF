@@ -1,4 +1,12 @@
 {
+  "docx-empty-field-results": [
+    "DocxEmptyStoredResults",
+    "DocxCachedMathResults",
+    "DocxCachedPictureResults",
+    "DocxInlineCompositionCachedFields",
+    "DocxLockedFields",
+    "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks"
+  ],
   "docx-cached-picture-results": [
     "DocxCachedPictureResults",
     "DocxCachedMathResults",

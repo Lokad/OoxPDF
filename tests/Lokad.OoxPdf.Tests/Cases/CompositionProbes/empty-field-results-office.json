@@ -1,0 +1,125 @@
+{
+  "Scope": "Owned Word16 PDF bootstrap; existing1pt mathematical origins. Source flags stay empty. Application view uncalibrated; no full-image parity claim.",
+  "Rows": [
+    {
+      "Input": "empty-field-simple-empty.docx",
+      "InputSha256": "11204D8D58A9673BA30097CC5AA095D99F9ABA7877D1EB3EF17FA0B62A7DEE95",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "BC53CB84E89C8B1098C0F237809CAFABAB34D2E98DE43310135DFEE5B88F2B9E",
+      "ExportLogSha256": "7893D44CFB4EE9051DB37209F16FB0B780E01631C4F2E95A6148B25F55A0F9E0",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 685.42
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 685.42
+        }
+      ]
+    },
+    {
+      "Input": "empty-field-simple-empty.docx",
+      "InputSha256": "11204D8D58A9673BA30097CC5AA095D99F9ABA7877D1EB3EF17FA0B62A7DEE95",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "696698D94ECD35CC42C2CE0D531664E81809BB0A5C30073280BE17D17271EE68",
+      "ExportLogSha256": "0BBC8B828C667177F0C0359700C83B9C75428B7D1A210518933EAE0E6EF51D21",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 615.77
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 615.77
+        }
+      ]
+    },
+    {
+      "Input": "empty-field-complex-empty.docx",
+      "InputSha256": "11B32C041862A51A76D8ED774EBDB20FC9B88696BDC69E04FE95A89466883CC5",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "354966C836EA5055F482C679AAC819C4744B120945D1587705C04BCE9815CF43",
+      "ExportLogSha256": "5B77497A469E728DCA6263622A26137F751E0410F708301933518745ED22DD9A",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 685.42
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 685.42
+        }
+      ]
+    },
+    {
+      "Input": "empty-field-complex-empty.docx",
+      "InputSha256": "11B32C041862A51A76D8ED774EBDB20FC9B88696BDC69E04FE95A89466883CC5",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "4FAE1AC566BBDB5EE0E14A7225D13D3F131525640EBF9C9E4D333D77208C8E06",
+      "ExportLogSha256": "FED5E6EECDD1BA18E5B69469D0077F0978917AB15D654822412728B0980CFCF3",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 615.77
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 615.77
+        }
+      ]
+    }
+  ]
+}
