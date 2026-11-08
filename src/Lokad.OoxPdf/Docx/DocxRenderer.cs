@@ -1658,8 +1658,6 @@ internal sealed partial class DocxRenderer
                     AddLinkFragment(link, left - padAdjustment, right + padAdjustment,
                         mathLineTop - textEmissionBaselineOffset, line.BaselineY - textEmissionBaselineOffset,
                         line.FontSize * textEmissionFontScale);
-                    paintedInlineBottom = Math.Min(paintedInlineBottom,
-                        mathLineBottom - textEmissionBaselineOffset - (line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d));
                 }
 
                 void AddLinkFragment(DocxHyperlinkSpan link, double fragmentMinX, double fragmentMaxX,
@@ -1694,6 +1692,16 @@ internal sealed partial class DocxRenderer
                         mergedLinkRects.Add((link, fragmentMinX, fragmentMaxX, fragmentTop, fragmentBl, fragmentFs));
                     }
                 }
+                // Root math selections merge horizontally by source identity,
+                // but their occupied frame must not change another link's
+                // independently placed text-slot or argument rectangle.
+                foreach (var root in mergedLinkRects)
+                    if (root.Link.IsMathRootContent)
+                        EmitLinkRect(root.Link, root.MinX - lineLinkPad, root.MaxX + lineLinkPad,
+                            mathLineTop - textEmissionBaselineOffset,
+                            mathLineBottom - textEmissionBaselineOffset - (line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d));
+                mergedLinkRects.RemoveAll(static item => item.Link.IsMathRootContent);
+
                 if (mergedLinkRects.Count > 0)
                 {
                     double heldTop = double.NegativeInfinity;
