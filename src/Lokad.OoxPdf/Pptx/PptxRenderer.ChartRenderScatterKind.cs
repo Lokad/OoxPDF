@@ -39,7 +39,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(scatterPlot);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(scatterPlot, null);
                 IReadOnlyList<bool> seriesLineHidden = ReadSceneSeriesLineHidden(scatterPlot);
-                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme, colorMap);
+                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneMarkerStyles(scatterPlot);
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, scatterPlot);
                 ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
                 ChartAxisSource yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : xValueAxis;

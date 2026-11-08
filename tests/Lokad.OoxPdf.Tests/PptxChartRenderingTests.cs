@@ -109,19 +109,10 @@ internal static class PptxChartRenderingTests
         PptxSceneChartPlot plot = chart.Plots[0];
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:plotArea><c:lineChart>
-                <c:marker val="0"/>
-                <c:ser><c:marker><c:symbol val="none"/><c:size val="4"/><c:spPr><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill></a:ln></c:spPr></c:marker></c:ser>
-              </c:lineChart></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "lineChart").Single();
         System.Reflection.MethodInfo readStyles = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlMarkerStyles",
+            "ReadSceneMarkerStyles",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected marker-style resolver.");
-        object[] sceneStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene marker styles.")).Cast<object>().ToArray();
+        object[] sceneStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [plot])) ?? throw new InvalidOperationException("Expected scene marker styles.")).Cast<object>().ToArray();
         TestAssert.Equal(2, sceneStyles.Length);
         TestAssert.Equal("diamond", PptxTests.ChartMarkerStyleSymbol(sceneStyles[0]));
         TestAssert.True(!PptxTests.ChartMarkerStyleIsDefined(sceneStyles[0]), "Expected auto line marker to remain distinct from explicit series marker XML.");
@@ -134,7 +125,7 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal(new RgbColor(68, 85, 102), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartMarkerStyleStroke(sceneStyles[1])));
         TestAssert.Equal(3d, PptxTests.ChartSeriesStrokeWidth(PptxTests.ChartMarkerStyleStroke(sceneStyles[1])));
 
-        XElement xmlOnly = XDocument.Parse("""
+        XElement alternatePlotXml = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:lineChart>
@@ -144,16 +135,18 @@ internal static class PptxChartRenderingTests
               </c:lineChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "lineChart").Single();
-        object[] xmlStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [null, xmlOnly, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML marker styles.")).Cast<object>().ToArray();
-        TestAssert.Equal(2, xmlStyles.Length);
-        TestAssert.Equal("diamond", PptxTests.ChartMarkerStyleSymbol(xmlStyles[0]));
-        TestAssert.True(!PptxTests.ChartMarkerStyleIsDefined(xmlStyles[0]), "Expected XML-only auto marker to remain distinct from explicit series marker XML.");
-        TestAssert.Equal("square", PptxTests.ChartMarkerStyleSymbol(xmlStyles[1]));
-        TestAssert.True(PptxTests.ChartMarkerStyleIsDefined(xmlStyles[1]), "Expected XML-only explicit marker to preserve definition state.");
-        TestAssert.Equal("8", PptxTests.ChartMarkerStyleSizeValue(xmlStyles[1]) ?? string.Empty);
-        TestAssert.Equal(new RgbColor(171, 205, 239), PptxTests.ChartSeriesFillColor(PptxTests.ChartMarkerStyleFill(xmlStyles[1])));
-        TestAssert.Equal(new RgbColor(254, 220, 186), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartMarkerStyleStroke(xmlStyles[1])));
-        TestAssert.Equal(1d, PptxTests.ChartSeriesStrokeWidth(PptxTests.ChartMarkerStyleStroke(xmlStyles[1])));
+        PptxSceneChartPlot alternatePlot = (PptxTests.BuildSingleChartScene(alternatePlotXml.Document!.ToString())
+            ?? throw new InvalidOperationException("Expected alternate marker scene.")).Plots[0];
+        object[] alternateStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [alternatePlot])) ?? throw new InvalidOperationException("Expected alternate scene marker styles.")).Cast<object>().ToArray();
+        TestAssert.Equal(2, alternateStyles.Length);
+        TestAssert.Equal("diamond", PptxTests.ChartMarkerStyleSymbol(alternateStyles[0]));
+        TestAssert.True(!PptxTests.ChartMarkerStyleIsDefined(alternateStyles[0]), "Expected alternate scene auto marker to remain distinct from explicit series marker XML.");
+        TestAssert.Equal("square", PptxTests.ChartMarkerStyleSymbol(alternateStyles[1]));
+        TestAssert.True(PptxTests.ChartMarkerStyleIsDefined(alternateStyles[1]), "Expected alternate scene explicit marker to preserve definition state.");
+        TestAssert.Equal("8", PptxTests.ChartMarkerStyleSizeValue(alternateStyles[1]) ?? string.Empty);
+        TestAssert.Equal(new RgbColor(171, 205, 239), PptxTests.ChartSeriesFillColor(PptxTests.ChartMarkerStyleFill(alternateStyles[1])));
+        TestAssert.Equal(new RgbColor(254, 220, 186), PptxTests.ChartSeriesStrokeColor(PptxTests.ChartMarkerStyleStroke(alternateStyles[1])));
+        TestAssert.Equal(1d, PptxTests.ChartSeriesStrokeWidth(PptxTests.ChartMarkerStyleStroke(alternateStyles[1])));
     }
 
     public static void PptxSyntheticLineAndPieChartsRenderNativeCharts()
@@ -3716,11 +3709,6 @@ internal static class PptxChartRenderingTests
             """;
         PptxSceneChartPlot plot = PptxTests.BuildSingleChartScene(chartXml)?.Plots.Single()
             ?? throw new InvalidOperationException("Expected one chart plot.");
-        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "doughnutChart").Single();
-        Type workbookType = typeof(PptxRenderer).GetNestedType(
-            "ChartWorkbookData",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -3733,10 +3721,10 @@ internal static class PptxChartRenderingTests
         };
         object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         System.Reflection.MethodInfo readExplosions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartPointExplosions",
+            "ReadSceneChartPointExplosions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected point-explosion helper.");
 
-        var explosions = (IReadOnlyDictionary<int, double>)(readExplosions.Invoke(null, [plot, chartElement, workbook])
+        var explosions = (IReadOnlyDictionary<int, double>)(readExplosions.Invoke(null, [plot, workbook])
             ?? throw new InvalidOperationException("Expected point explosions."));
 
         TestAssert.Equal(3, explosions.Count);
@@ -3758,13 +3746,13 @@ internal static class PptxChartRenderingTests
               </c:doughnutChart></c:plotArea></c:chart>
             </c:chartSpace>
             """;
-        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "doughnutChart").Single();
+        PptxSceneChartPlot plot = PptxTests.BuildSingleChartScene(chartXml)?.Plots.Single()
+            ?? throw new InvalidOperationException("Expected one chart plot.");
         System.Reflection.MethodInfo readExplosions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartPointExplosions",
+            "ReadSceneChartPointExplosions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected point-explosion helper.");
 
-        var explosions = (IReadOnlyDictionary<int, double>)(readExplosions.Invoke(null, [null, chartElement, null])
+        var explosions = (IReadOnlyDictionary<int, double>)(readExplosions.Invoke(null, [plot, null])
             ?? throw new InvalidOperationException("Expected point explosions."));
 
         TestAssert.Equal(1, explosions.Count);

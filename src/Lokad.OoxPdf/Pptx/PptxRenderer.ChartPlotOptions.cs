@@ -113,26 +113,13 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<int, double> PointExplosions,
         double FirstSliceAngle);
 
-    private static IReadOnlyList<PptxSceneChartSeries> ReadXmlChartSeries(XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        PptxSceneChartPlotKind plotKind = chartElement.Name == ChartNamespace + "ser"
-            ? PptxSceneChartPlotKind.Unknown
-            : PptxSceneBuilder.ParseChartPlotKind(chartElement.Name.LocalName);
-        bool markersEnabled = chartElement.Name != ChartNamespace + "ser" &&
-            PptxSceneBuilder.IsOoxmlBooleanElementEnabled(chartElement.Element(ChartNamespace + "marker"));
-        XElement plotElement = chartElement.Name == ChartNamespace + "ser"
-            ? new XElement(ChartNamespace + "unknownChart", chartElement)
-            : chartElement;
-        return PptxSceneBuilder.ReadChartSeries(plotElement, theme, colorMap, plotKind, markersEnabled);
-    }
-
     private static ChartPolarPointOptions ReadSceneChartPolarPointOptions(PptxSceneChartPlot plot, ChartWorkbookData? workbook)
     {
         var first = plot.Series.FirstOrDefault();
         return new ChartPolarPointOptions(
             first is null ? new Dictionary<int, ChartSeriesFill>() : ReadSceneChartPointFills(first),
             first is null ? new Dictionary<int, ChartSeriesStroke>() : ReadSceneChartPointStrokes(first),
-            ReadSceneOrXmlChartPointExplosions(plot, plot.Source, workbook),
+            ReadSceneChartPointExplosions(plot, workbook),
             plot.FirstSliceAngle is { } angle ? NormalizeAngleDegrees(angle) : 0d);
     }
 

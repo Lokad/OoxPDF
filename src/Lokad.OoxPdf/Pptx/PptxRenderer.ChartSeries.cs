@@ -766,11 +766,8 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<ChartSeriesStroke?> ReadSceneSeriesStrokes(PptxSceneChartPlot plot, double? inheritedWidth) =>
         plot.Series.Select(series => ToChartSeriesStroke(series.Line, inheritedWidth)).ToArray();
 
-    private static IReadOnlyList<ChartMarkerStyle> ReadSceneOrXmlMarkerStyles(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return (plot?.Series ?? ReadXmlChartSeries(chartElement, theme, colorMap))
-            .Select(series => ToChartMarkerStyle(series.Marker)).ToArray();
-    }
+    private static IReadOnlyList<ChartMarkerStyle> ReadSceneMarkerStyles(PptxSceneChartPlot plot) =>
+        plot.Series.Select(series => ToChartMarkerStyle(series.Marker)).ToArray();
 
     private static ChartMarkerStyle ToChartMarkerStyle(PptxSceneChartMarker marker) => new(
         marker.SymbolKind, marker.Symbol, marker.SizeValue, marker.Size,
@@ -810,59 +807,50 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> ReadSceneSeriesPointStrokes(PptxSceneChartPlot plot) =>
         plot.Series.Select(ReadSceneChartPointStrokes).ToArray();
 
-    private static IReadOnlyDictionary<int, double> ReadSceneOrXmlChartPointExplosions(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook)
+    private static IReadOnlyDictionary<int, double> ReadSceneChartPointExplosions(PptxSceneChartPlot plot, ChartWorkbookData? workbook)
     {
-        IReadOnlyDictionary<int, double> ReadSceneChartPointExplosions(PptxSceneChartSeries series, ChartWorkbookData? workbook)
+        var explosions = new Dictionary<int, double>();
+        if (plot.Series.FirstOrDefault() is not { } series) return explosions;
+        if (series.Explosion is { } seriesExplosion)
         {
-            var explosions = new Dictionary<int, double>();
-            if (series.Explosion is { } seriesExplosion)
+            double fraction = Math.Clamp(seriesExplosion / 100d, 0d, 1d);
+            int ResolveSceneChartSeriesPointCount()
             {
-                double fraction = Math.Clamp(seriesExplosion / 100d, 0d, 1d);
-                int ResolveSceneChartSeriesPointCount()
-                {
-                    ChartIndexedNumberVector values = BuildChartIndexedNumberVector(
-                        series.Values,
-                        series.ValuePoints,
-                        series.ValuePointCount,
-                        series.ValueFormatCode,
-                        series.DataSources.Values,
-                        workbook,
-                        plotVisibleOnly: true);
-                    ChartIndexedTextVector categories = BuildChartIndexedTextVector(
-                        series.Categories,
-                        series.CategoryPoints,
-                        series.CategoryPointCount,
-                        series.CategoryLevels,
-                        series.DataSources.Categories,
-                        workbook,
-                        plotVisibleOnly: true);
-                    return Math.Max(values.PointCount ?? 0, categories.PointCount ?? 0);
-                }
-    
-                int pointCount = ResolveSceneChartSeriesPointCount();
-                for (int index = 0; index < pointCount; index++)
-                {
-                    explosions[index] = fraction;
-                }
+                ChartIndexedNumberVector values = BuildChartIndexedNumberVector(
+                    series.Values,
+                    series.ValuePoints,
+                    series.ValuePointCount,
+                    series.ValueFormatCode,
+                    series.DataSources.Values,
+                    workbook,
+                    plotVisibleOnly: true);
+                ChartIndexedTextVector categories = BuildChartIndexedTextVector(
+                    series.Categories,
+                    series.CategoryPoints,
+                    series.CategoryPointCount,
+                    series.CategoryLevels,
+                    series.DataSources.Categories,
+                    workbook,
+                    plotVisibleOnly: true);
+                return Math.Max(values.PointCount ?? 0, categories.PointCount ?? 0);
             }
-    
-            foreach (PptxSceneChartPointStyle point in series.PointStyles)
+
+            int pointCount = ResolveSceneChartSeriesPointCount();
+            for (int index = 0; index < pointCount; index++)
             {
-                if (point.Explosion is { } explosion)
-                {
-                    explosions[point.Index] = Math.Clamp(explosion / 100d, 0d, 1d);
-                }
+                explosions[index] = fraction;
             }
-    
-            return explosions;
         }
 
-        if (plot is not null)
+        foreach (PptxSceneChartPointStyle point in series.PointStyles)
         {
-            return plot.Series.Count > 0 ? ReadSceneChartPointExplosions(plot.Series[0], workbook) : new Dictionary<int, double>();
+            if (point.Explosion is { } explosion)
+            {
+                explosions[point.Index] = Math.Clamp(explosion / 100d, 0d, 1d);
+            }
         }
 
-        return ReadChartPointExplosions(chartElement);
+        return explosions;
     }
 
     private static IReadOnlyDictionary<int, ChartSeriesFill> ReadSceneChartPointFills(PptxSceneChartSeries series)
@@ -920,52 +908,6 @@ internal sealed partial class PptxRenderer
             ToChartSeriesStroke(style.Line, null),
             style.Glow,
             style.OuterShadow);
-    }
-
-    private static IReadOnlyDictionary<int, double> ReadChartPointExplosions(XElement chartElement)
-    {
-        var explosions = new Dictionary<int, double>();
-        XElement? series = chartElement.Element(ChartNamespace + "ser");
-        if (series is null)
-        {
-            return explosions;
-        }
-
-        (double? seriesExplosion, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(series, "explosion");
-        if (seriesExplosion is { } seriesExplosionValue)
-        {
-            double fraction = Math.Clamp(seriesExplosionValue / 100d, 0d, 1d);
-            int pointCount = PptxSceneBuilder
-                .ReadChartNumberPoints(
-                    series
-                        .Elements(ChartNamespace + "val")
-                        .Descendants(ChartNamespace + "pt"),
-                    requireNonNegativeIndex: true)
-                .Select(point => point.HasParsedIndex ? point.Index : -1)
-                .Where(index => index >= 0)
-                .DefaultIfEmpty(-1)
-                .Max() + 1;
-            for (int index = 0; index < pointCount; index++)
-            {
-                explosions[index] = fraction;
-            }
-        }
-
-        foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
-        {
-            if (!PptxSceneBuilder.TryReadChartNonNegativeIndex(point, out int index, out _))
-            {
-                continue;
-            }
-
-            (double? explosion, _) = PptxSceneBuilder.ReadChartElementDoubleWithValue(point, "explosion");
-            if (explosion is { } explosionValue)
-            {
-                explosions[index] = Math.Clamp(explosionValue / 100d, 0d, 1d);
-            }
-        }
-
-        return explosions;
     }
 
     private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)

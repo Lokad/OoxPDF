@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-// Plot scalars use explicit source expectations. Remaining series/axis fallback
+// Plot scalars and explosions use explicit expectations. Remaining series/axis fallback
 // arms are compared with XML while source ownership is audited independently.
 internal static class PptxChartPlotOptionsAgreementTests
 {
@@ -131,25 +131,29 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
-    public static void SeriesExplosionsAgreeBetweenSceneAndXml()
+    public static void SeriesExplosionsRespectParsedValuesAndPointOverrides()
     {
-        string[] explosions = new[]
-        {
-            "",
-            "<c:explosion val=\"25\"/>",
-            "<c:explosion val=\"150\"/>",
-            "<c:explosion val=\"bogus\"/>",
-            "<c:dPt><c:idx val=\"0\"/><c:explosion val=\"50\"/></c:dPt>",
-            "<c:dPt><c:idx val=\"bogus\"/><c:explosion val=\"50\"/></c:dPt>",
-        };
+        (string Xml, double? Expected)[] cases =
+        [
+            ("", null),
+            ("<c:explosion val=\"25\"/>", 0.25d),
+            ("<c:explosion val=\"150\"/>", 1d),
+            ("<c:explosion val=\"-25\"/>", 0d),
+            ("<c:explosion val=\"bogus\"/>", null),
+            ("<c:dPt><c:idx val=\"0\"/><c:explosion val=\"50\"/></c:dPt>", 0.5d),
+            ("<c:dPt><c:idx val=\"bogus\"/><c:explosion val=\"50\"/></c:dPt>", null),
+            ("<c:explosion val=\"25\"/><c:dPt><c:idx val=\"0\"/><c:explosion val=\"50\"/></c:dPt>", 0.5d),
+            ("<c:explosion val=\"150\"/><c:dPt><c:idx val=\"0\"/><c:explosion val=\"-50\"/></c:dPt>", 0d)
+        ];
         Type workbookType = TestAssert.NotNull(typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData"));
-        
-        foreach (string explosion in explosions)
+
+        foreach (var test in cases)
         {
-            (object? plot, XElement element) = LoadPlot("pieChart", "", explosion);
-            object? xml = Invoke("ReadSceneOrXmlChartPointExplosions", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { null, element, null });
-            object? scene = Invoke("ReadSceneOrXmlChartPointExplosions", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { plot, element, null });
-            TestAssert.True(DictionariesEqual(xml, scene), "Explosions must agree for ser XML: " + explosion);
+            var (plot, _) = LoadPlot("pieChart", "", test.Xml);
+            var actual = (IReadOnlyDictionary<int, double>)TestAssert.NotNull(Invoke("ReadSceneChartPointExplosions",
+                [typeof(PptxSceneChartPlot), workbookType], [plot, null]));
+            TestAssert.Equal(test.Expected.HasValue ? 1 : 0, actual.Count);
+            if (test.Expected is { } expected) TestAssert.Equal(expected, actual[0]);
         }
     }
 
@@ -412,29 +416,6 @@ internal static class PptxChartPlotOptionsAgreementTests
             var xmlList = xmlItems.Cast<object?>().ToList();
             var sceneList = sceneItems.Cast<object?>().ToList();
             return xmlList.Count == sceneList.Count && xmlList.SequenceEqual(sceneList);
-        }
-
-        return Equals(xml, scene);
-    }
-
-    private static bool DictionariesEqual(object? xml, object? scene)
-    {
-        if (xml is System.Collections.IDictionary xmlMap && scene is System.Collections.IDictionary sceneMap)
-        {
-            if (xmlMap.Count != sceneMap.Count)
-            {
-                return false;
-            }
-
-            foreach (object? key in xmlMap.Keys)
-            {
-                if (!sceneMap.Contains(key) || !Equals(xmlMap[key], sceneMap[key]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         return Equals(xml, scene);

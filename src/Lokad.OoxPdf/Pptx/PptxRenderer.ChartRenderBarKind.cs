@@ -119,7 +119,7 @@ internal sealed partial class PptxRenderer
                     if (CountRenderableSeries(ReadSharedChartSeriesVectors(plot, element, workbook, plotVisibleOnly)) == 0) continue;
                     var options = ReadSceneChartLineOptions(sceneChart, plot, PptxSceneChartGrouping.Standard);
                     var strokes = ReadSceneSeriesStrokes(plot, ResolveLineKindInheritedStrokeWidth(barStyleId));
-                    var markers = ReadSceneOrXmlMarkerStyles(plot, element, theme, colorMap);
+                    var markers = ReadSceneMarkerStyles(plot);
                     legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, plot, element,
                         strokes, markers, reverseOrder: options.Stacked, workbook: workbook, chartStyleId: barStyleId));
                 }
@@ -306,7 +306,7 @@ internal sealed partial class PptxRenderer
                     ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetSharedLineChartValueExtents(linePlot, comboLineChart, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(lineValueSceneAxis, lineValueAxisForScale, theme, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneSeriesStrokes(linePlot, ResolveLineKindInheritedStrokeWidth(barStyleId));
-                    IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneOrXmlMarkerStyles(linePlot, comboLineChart, theme, colorMap);
+                    IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneMarkerStyles(linePlot);
                     if (secondaryValueAxis is null && !IsSameChartAxis(valueAxisSource, lineValueAxisSource) &&
                         IsSceneOrXmlVisibleValueAxis(lineValueSceneAxis, lineValueAxis))
                     {
@@ -321,7 +321,7 @@ internal sealed partial class PptxRenderer
                     // Keep the independently qualified composed-chart defaults while
                     // sharing the painter's resolved appearance contract.
                     IReadOnlyList<ChartLineAppearance> lineAppearance = ReadLineSeriesAppearance(
-                        linePlot?.Series ?? ReadXmlChartSeries(comboLineChart, theme, colorMap), lineOptions,
+                        linePlot.Series, lineOptions,
                         theme, colorMap, chartPalette, barStyleId, themeWidth: null,
                         pointColors: false, context.CancellationToken);
                     RenderLineChart(

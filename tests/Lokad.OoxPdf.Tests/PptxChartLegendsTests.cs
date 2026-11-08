@@ -2138,10 +2138,12 @@ internal static class PptxChartLegendsTests
             </c:chartSpace>
             """).Descendants(chartNamespace + "scatterChart").Single();
 
+        PptxSceneChartPlot markerPlot = (PptxTests.BuildSingleChartScene(scatterChart.Document!.ToString())
+            ?? throw new InvalidOperationException("Expected scatter marker scene.")).Plots[0];
         System.Reflection.MethodInfo readMarkerStyles = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlMarkerStyles",
+            "ReadSceneMarkerStyles",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer marker-style bridge.");
-        var markerStyles = (System.Collections.IList)(readMarkerStyles.Invoke(null, [null, scatterChart, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected scatter marker styles."));
+        var markerStyles = (System.Collections.IList)(readMarkerStyles.Invoke(null, [markerPlot]) ?? throw new InvalidOperationException("Expected scatter marker styles."));
         TestAssert.Equal(2, markerStyles.Count);
 
         System.Reflection.MethodInfo buildEntries = typeof(PptxRenderer).GetMethod(
