@@ -12,8 +12,9 @@ internal sealed partial class DocxReader
 {
     // A lock preserves the stored result, including an empty result, while the
     // opcode remains available for source inspection. Nested fields own their locks.
-    private static string? ResolveFieldPlaceholder(string? instruction, bool isLocked = false)
-        => isLocked ? null : DocxFieldText.Placeholder(ResolveFieldKind(instruction));
+    private static string? ResolveFieldPlaceholder(string? instruction, bool isLocked = false,
+        bool requireOpcodeTerminator = false)
+        => isLocked ? null : DocxFieldText.Placeholder(ResolveFieldKind(instruction, requireOpcodeTerminator));
 
     private static bool UsesDefaultDynamicFieldFormatting(string? instruction, DocxFieldKind kind) => kind switch
     {
@@ -22,7 +23,7 @@ internal sealed partial class DocxReader
         _ => false
     };
 
-    private static DocxFieldKind ResolveFieldKind(string? instruction)
+    private static DocxFieldKind ResolveFieldKind(string? instruction, bool requireOpcodeTerminator = false)
     {
             string? ReadFieldOpcode(string? instruction)
             {
@@ -38,7 +39,8 @@ internal sealed partial class DocxReader
                     length++;
                 }
 
-                return length == 0 ? null : trimmed[..length].ToString().ToUpperInvariant();
+                return length == 0 || requireOpcodeTerminator && length == trimmed.Length
+                    ? null : trimmed[..length].ToString().ToUpperInvariant();
             }
 
         string? opcode = ReadFieldOpcode(instruction);

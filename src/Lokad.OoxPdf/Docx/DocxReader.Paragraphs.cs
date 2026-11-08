@@ -851,6 +851,7 @@ internal sealed partial class DocxReader
                 DocxComplexFieldState? field = CurrentComplexField();
                 if (field is not null)
                 {
+                    EmitPendingFieldPlaceholder(field);
                     field.HasSeparate = true;
                     field.InResult = true;
                     field.EnsureTextSpan(runs.Count, runs.Sum(run => run.Text.Length));
@@ -867,6 +868,7 @@ internal sealed partial class DocxReader
                     return;
                 }
 
+                EmitPendingFieldPlaceholder(field);
                 complexFieldStack.RemoveAt(complexFieldStack.Count - 1);
                 // A completed page field no longer owns following authored
                 // spaces or numbers. Nested page results keep their own cache.
@@ -877,9 +879,11 @@ internal sealed partial class DocxReader
 
         void FinalizeOpenComplexFields()
         {
+            int firstRun = runs.Count;
             for (int fieldIndex = complexFieldStack.Count - 1; fieldIndex >= 0; fieldIndex--)
             {
                 DocxComplexFieldState field = complexFieldStack[fieldIndex];
+                EmitPendingFieldPlaceholder(field);
                 string instruction = field.Instruction.ToString();
                 string? placeholder = ResolveFieldPlaceholder(instruction, field.IsLocked);
                 if (placeholder is null && (!field.HasSeparate || !field.HasCachedResult))
@@ -891,6 +895,7 @@ internal sealed partial class DocxReader
             }
 
             complexFieldStack.Clear();
+            PublishInlineRunItems(firstRun, images.Count);
         }
 
         void AddComplexFieldReference(DocxComplexFieldState field, string? instruction, string? placeholder)
@@ -976,24 +981,33 @@ internal sealed partial class DocxReader
             field.Instruction.Append(instructionText);
             field.InstructionRunCount++;
             string? fieldPlaceholder = ResolveFieldPlaceholder(field.Instruction.ToString(), field.IsLocked);
-            if (fieldPlaceholder is not null && !field.PlaceholderEmitted)
+            if (!field.PlaceholderEmitted)
             {
-                field.EnsureTextSpan(runs.Count, runs.Sum(run => run.Text.Length));
-                int runsBefore = runs.Count;
-                AddResolvedTextRuns(
-                    runs,
-                    resolvedRun.AllCaps == true ? fieldPlaceholder.ToUpperInvariant() : fieldPlaceholder,
-                    resolvedRun,
-                    runStyleResolution,
-                    currentSourceRunIndex,
-                    sourceTextOffsetInRun: 0,
-                    revision,
-                    revisions,
-                    ResolveFieldKind(field.Instruction.ToString()));
-                field.ResultRunCount += runs.Count - runsBefore;
-                field.PlaceholderEmitted = true;
-                currentPageInstructionSeen = true;
+                // A run boundary does not finish the opcode: PAGE + REF is
+                // PAGEREF. Keep the original formatting/source owner pending
+                // until a delimiter or a field boundary confirms the name.
+                if (fieldPlaceholder is null) field.PendingPlaceholder = null;
+                else
+                {
+                    field.PendingPlaceholder ??= CreateResolvedTextRun(fieldPlaceholder, resolvedRun,
+                        runStyleResolution, false, currentSourceRunIndex, 0, revision, revisions,
+                        ResolveFieldKind(field.Instruction.ToString()));
+                    if (ResolveFieldPlaceholder(field.Instruction.ToString(), field.IsLocked,
+                        requireOpcodeTerminator: true) is not null)
+                        EmitPendingFieldPlaceholder(field);
+                }
             }
+        }
+
+        void EmitPendingFieldPlaceholder(DocxComplexFieldState field)
+        {
+            if (field.PendingPlaceholder is not { } pending) return;
+            field.EnsureTextSpan(runs.Count, runs.Sum(run => run.Text.Length));
+            runs.Add(pending);
+            field.PendingPlaceholder = null;
+            field.ResultRunCount++;
+            field.PlaceholderEmitted = true;
+            pageInstructionSeen = true;
         }
 
         void AddComplexFieldText(

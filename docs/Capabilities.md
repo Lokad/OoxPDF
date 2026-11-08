@@ -607,6 +607,9 @@ Approximate or restricted:
   slots and complete endnote-block boundaries; the measured run formatting remains.
   Supported numeric field results share that spacing rule. NUMPAGES in normal
   notes is measured with the finalized count through the bounded count retry.
+  Splitting a complex field instruction across unchanged-format runs preserves
+  its complete opcode and cached result, including PAGEREF. This does not add
+  evaluation of cached-only field kinds.
   Supported note equations coexist with PAGE and NUMPAGES in paragraphs and cells.
   Fresh footnotes measure counters with their rendered reference page before
   slicing; unresolved references retain their existing fallback.

@@ -69,6 +69,7 @@ internal sealed partial class DocxReader
         public bool HasCachedResult { get; set; }
         public bool RendersCachedResult { get; set; }
         public bool PlaceholderEmitted { get; set; }
+        public DocxTextRun? PendingPlaceholder { get; set; }
         public int InstructionRunCount { get; set; }
         public int ResultRunCount { get; set; }
 
