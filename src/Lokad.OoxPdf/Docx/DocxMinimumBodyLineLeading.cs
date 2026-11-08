@@ -30,20 +30,19 @@ internal static class DocxMinimumBodyLineLeading
                     string.IsNullOrWhiteSpace(line.Text) ||
                     line.SourceParagraph is not { } paragraph || counts[paragraph] != 1 ||
                     !DocxPlainBodyFrame.IsPlainParagraph(paragraph) ||
-                    !HasSupportedLineSource(paragraph) ||
+                    !HasSupportedLineSource(paragraph, out bool marked, cancellationToken) ||
                     line.LineHeight is not > 0d || !double.IsFinite(line.LineHeight.Value) ||
                     line.LineHeight > page.Height - page.MarginTop - page.MarginBottom ||
                     line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
                     line.FirstLineInsetPoints is not > 0d || !double.IsFinite(line.FirstLineInsetPoints.Value)) continue;
                 // Compact marked slots retain their separately qualified link policy.
-                if (paragraph.InlineReferences.Count != 0 && line.LineHeight < 16d) continue;
+                if (marked && line.LineHeight < 16d) continue;
 
                 // The measured natural line owns its bottom bearing. A larger
                 // minimum slot grows above that baseline, independently of other
                 // paragraphs, font size, surrounding tables or run paint.
                 double excess = Math.Max(0d, line.LineHeight.Value - line.SingleLineHeight.Value);
                 if (excess == 0d) continue;
-                bool marked = paragraph.InlineReferences.Count != 0;
                 replacements.Add(line, line with {
                     BaselineY = line.BaselineY - excess,
                     FirstLineInsetPoints = line.FirstLineInsetPoints + excess,
@@ -68,12 +67,22 @@ internal static class DocxMinimumBodyLineLeading
         return true;
     }
 
-    private static bool HasSupportedLineSource(DocxParagraph paragraph)
+    private static bool HasSupportedLineSource(DocxParagraph paragraph, out bool marked, CancellationToken token)
     {
-        if (!IsQualifiedExpansionSpacing(paragraph, allowContextual: true) || paragraph.InlineReferences.Count > 1 ||
+        marked = false;
+        if (!IsQualifiedExpansionSpacing(paragraph, allowContextual: true) ||
             paragraph.Spacing.ContextualSpacing == true && !(paragraph.StyleId is not null
                 ? paragraph.StyleResolution.StyleFound : !string.IsNullOrWhiteSpace(paragraph.ContextualSpacingDefaultStyleId))) return false;
-        var reference = paragraph.InlineReferences.FirstOrDefault();
+        DocxInlineReference? reference = null;
+        foreach (var candidate in paragraph.InlineReferences)
+        {
+            token.ThrowIfCancellationRequested();
+            // Comment references carry source annotations, not generated
+            // inline marker glyphs or the note marker's reserved line box.
+            if (candidate.Kind == DocxRelatedStoryKind.Comment) continue;
+            if (reference is not null) return false;
+            reference = candidate;
+        }
         bool foundMarker = false;
         foreach (var run in paragraph.Runs)
         {
@@ -85,6 +94,7 @@ internal static class DocxMinimumBodyLineLeading
             }
             else if (run.VerticalAlignment != DocxRunVerticalAlignment.Baseline) return false;
         }
+        marked = reference is not null;
         return reference is null || foundMarker;
     }
 

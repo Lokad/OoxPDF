@@ -1,0 +1,65 @@
+{
+  "ReferenceKind": "OfficePdf, explicit Final/preserved view; no calibrated application-view claim",
+  "OfficeVersion": "16.0",
+  "OriginalInputSha256": "D45496ECC878755D5BBC84706D63283935BCD98F9038EF84EB1C27B5F7FD7694",
+  "Mutation": "First paragraph gains an empty or whole-paragraph comment range/reference plus a public comment story. Arial12 cases change body-run fonts and size; no visible text or paragraph spacing changes.",
+  "OriginThreshold": 1,
+  "SizeThreshold": 0.1,
+  "Rows": [
+    {
+      "Id": "baseline",
+      "Annotated": false,
+      "Empty": false,
+      "Arial12": false,
+      "X": 72.02400207519531,
+      "Y": 93.02001953125,
+      "Size": 11.039999961853027,
+      "ReferenceSha256": "7214447720B5BAB482A53F8D08AB097AEB94E33A175292508536BC2F469F9BBF",
+      "ReferenceInputSha256": "D45496ECC878755D5BBC84706D63283935BCD98F9038EF84EB1C27B5F7FD7694"
+    },
+    {
+      "Id": "anchored-empty",
+      "Annotated": true,
+      "Empty": true,
+      "Arial12": false,
+      "X": 72.02400207519531,
+      "Y": 93.02001953125,
+      "Size": 11.039999961853027,
+      "ReferenceSha256": "5AC0BB49E47729FB2713812F29D92759366FB2EF8E3CC3B08AA01F509C9ED51C",
+      "ReferenceInputSha256": "169E625A4F57DF71485A7217AD08793D06A14DEC1A38FA83EA89E8150B268089"
+    },
+    {
+      "Id": "anchored-range",
+      "Annotated": true,
+      "Empty": false,
+      "Arial12": false,
+      "X": 72.02400207519531,
+      "Y": 93.02001953125,
+      "Size": 11.039999961853027,
+      "ReferenceSha256": "5C57CB09FAAA1062D1ED2EC9F89E0887CF2357A18FAB0FED37F5BB8FA993B93B",
+      "ReferenceInputSha256": "E251F2B5492622E9C569215D661B4C860CEEB1D10B8C76E92E4A767109252000"
+    },
+    {
+      "Id": "arial12-baseline",
+      "Annotated": false,
+      "Empty": false,
+      "Arial12": true,
+      "X": 72.02400207519531,
+      "Y": 93.5,
+      "Size": 12.0,
+      "ReferenceSha256": "287523CE7D9890D3CB4D36228FFAD1D86F364FCDA1BC24B0B0881FF8CD6736B6",
+      "ReferenceInputSha256": "8F235DAC707F2FC8FF8E2E8E922E3B636D989E5E643D824894386A08AAD6D639"
+    },
+    {
+      "Id": "arial12-anchored-range",
+      "Annotated": true,
+      "Empty": false,
+      "Arial12": true,
+      "X": 72.02400207519531,
+      "Y": 93.5,
+      "Size": 12.0,
+      "ReferenceSha256": "0A7B888826D0E0937C1DF4D2EF3ADEE69091EC1FE9C21C912F55468D45082474",
+      "ReferenceInputSha256": "51DFF764F4B94D5437932FDD2789DAF843649FFAFFBD9B99FD2FAD5801B2B97C"
+    }
+  ]
+}

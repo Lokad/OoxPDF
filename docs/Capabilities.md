@@ -603,6 +603,9 @@ Approximate or restricted:
   qualified behavior; they are not promises for every combination.
   Bookmarks and unchanged-format hyperlinks preserve qualified plain-body minimum
   line placement; their navigation targets follow the placed content.
+  Comment ranges and nonpainting comment references preserve the same text-frame
+  classification. Actual note markers retain their own minimum-slot rules;
+  printed Review balloons still own their scale and placement.
   Hyperlink metadata also preserves qualified paragraph spacing, minimum cell
   slots and complete endnote-block boundaries; the measured run formatting remains.
   Supported numeric field results share that spacing rule. NUMPAGES in normal

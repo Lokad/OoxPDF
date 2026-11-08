@@ -20,6 +20,7 @@
   balloons. Note numbering preserves distinct references within shared runs;
   qualified PAGE/NUMPAGES and endnote placement use their actual owners.
   Split field instructions retain complete opcodes and cached results.
+  Comment annotations preserve supported minimum-line placement.
   Diagnostics identify omitted story drawings and clipped automatic note rows.
 - PPTX charts: shares parsed source ownership across data, labels, axes, paint,
   markers and legends. Theme palettes and tint/shade order replace fitted color

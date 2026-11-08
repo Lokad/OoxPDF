@@ -190,14 +190,14 @@ internal static class DocxPlainBodyFrame
     internal static bool IsPlainParagraph(DocxParagraph p) =>
         p.Alignment == DocxTextAlignment.Left && HasPlainTextContent(p);
 
-    // Navigation ranges do not change the flow frame. Their run formatting is
-    // checked below; link and bookmark destinations follow the placed content.
+    // Navigation and comment ranges do not change the text frame. Their run
+    // formatting is checked below; annotation painting owns its actual geometry.
     internal static bool HasPlainTextContent(DocxParagraph p) =>
         p.FieldReferences.Count == 0 && HasPlainTextProperties(p);
 
     private static bool HasPlainTextProperties(DocxParagraph p, bool allowImages = false) =>
         (allowImages || p.Images.Count == 0) && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
-        p.CommentRanges.Count == 0 && DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
+        DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
         p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
         p.ListLabel is null &&
         p.Runs.All(r => r.Revision is null && r.Revisions.Count == 0 &&
