@@ -83,10 +83,15 @@ internal static partial class DocxInlineCompositionTests
                     Math.Abs(actual.Y - expected.GetProperty("Y").GetDouble()) < 1d,
                     "Missing header/footer distances retain the existing one-point Word origin gate.");
             }
-            var body = shows.First(show => show.Text.StartsWith("North", StringComparison.Ordinal));
+            // Identify the body line by its visible source text, independently
+            // of PDF operation grouping or matching field fragments in the header.
+            var bodyLine = shows.GroupBy(show => Math.Round(show.Y, 3)).Single(line =>
+                string.Concat(string.Concat(line.OrderBy(show => show.X).Select(show => show.Text))
+                    .Normalize(NormalizationForm.FormKC).Where(c => !char.IsWhiteSpace(c))) == "NorthSouth");
+            double bodyX = bodyLine.Min(show => show.X), bodyY = bodyLine.First().Y;
             var expectedBody = row.GetProperty("BodyOrigin");
-            TestAssert.True(Math.Abs(body.X - expectedBody.GetProperty("X").GetDouble()) < 1d &&
-                Math.Abs(body.Y - expectedBody.GetProperty("Y").GetDouble()) < 1d,
+            TestAssert.True(Math.Abs(bodyX - expectedBody.GetProperty("X").GetDouble()) < 1d &&
+                Math.Abs(bodyY - expectedBody.GetProperty("Y").GetDouble()) < 1d,
                 "The same source default also preserves Word's body admission beside the static story.");
         }
     }

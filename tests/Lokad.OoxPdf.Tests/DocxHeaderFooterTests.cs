@@ -1901,6 +1901,7 @@ internal static class DocxHeaderFooterTests
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 12d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
+            HeaderDistancePoints = 18d, // This control measures hhea metrics, independently of source-default distance.
             HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["default"] = [header]
