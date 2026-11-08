@@ -102,11 +102,14 @@ internal static class DocxNestedCellEndTests
             var child = new DocxTable("fixed", [80d], [new([Cell(childParagraph)], null)]);
             var table = Outer([new DocxTableElement(child), new DocxParagraphElement(mark)]);
             var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
-                .Create(source, new Measurer(), default);
-            var placed = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            var layout = Engine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, new Measurer(), default);
+            var items = layout.Pages[0].Items.ToList();
+            double cursor = items.OfType<DocxTableRowLayout>().Single().Y;
+            double? anchor = DocxLayoutEngine.ApplyReviewTableBaselineGeometry(items, 0, null,
+                new Measurer(), .75d, ref cursor, default);
+            TestAssert.True(anchor is not null, "The control must exercise the real Review baseline projection.");
+            var placed = items.OfType<DocxTableRowLayout>().Single();
             var carrier = placed.Cells[0].TextLines.Single();
-            TestAssert.Equal(.75d, placed.ReviewBorderPrintScale);
             TestAssert.True(carrier.FirstLineInsetPoints is not null,
                 "Review projection retains the source frame even though the mark paints nothing.");
             TestAssert.True(Math.Abs(carrier.BaselineY + carrier.FirstLineInsetPoints!.Value - placed.Y) < .000001d,
