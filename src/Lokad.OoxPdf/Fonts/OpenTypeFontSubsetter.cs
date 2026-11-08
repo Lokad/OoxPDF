@@ -87,8 +87,6 @@ internal static class OpenTypeFontSubsetter
             cancellationToken.ThrowIfCancellationRequested();
             if (glyph != 0 && glyph < originalGlyphCount) seedGlyphCount++;
         }
-        if (seedGlyphCount == 0) return null;
-
         int glyphCapacity = seedGlyphCount + 1; // Includes the required .notdef glyph.
         ushort[] originalGlyphs;
         Dictionary<ushort, ushort> cidByOriginalGlyph;
@@ -96,8 +94,10 @@ internal static class OpenTypeFontSubsetter
         byte[] subsetHhea = [];
         // The existing owner admits the glyph-set/worklist/CID family before
         // construction, then keeps the resulting CID map beside the SFNT bytes.
+        // With no seeds, the bounded one-entry .notdef probe may need no
+        // subset. Its compound components still use the original closure path.
         IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
-            GlyphConstructionCapacity(glyphCapacity));
+            seedGlyphCount == 0 ? 0 : GlyphConstructionCapacity(glyphCapacity));
         try
         {
             cancellationToken.ThrowIfCancellationRequested();

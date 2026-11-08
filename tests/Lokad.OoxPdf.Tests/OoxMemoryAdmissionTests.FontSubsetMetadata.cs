@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Tests;
@@ -102,5 +103,37 @@ internal static partial class OoxMemoryAdmissionTests
             TestAssert.Equal(0L, pool.Reserved);
             TestAssert.Equal(0L, pool.Peak);
         }
+    }
+
+    public static void MemoryBudgetFontSubsetEmptyMappingKeepsCompoundNotdefClosure()
+    {
+        byte[] bytes = TestFontBuilder.CreateTestFont();
+        int glyphs = OpenTypeFont.Load(bytes).GlyphCount;
+        byte[] glyf = new byte[16 + (glyphs - 1) * 10];
+        BinaryPrimitives.WriteInt16BigEndian(glyf.AsSpan(0, 2), -1);
+        BinaryPrimitives.WriteUInt16BigEndian(glyf.AsSpan(10, 2), 2); // Byte-sized XY arguments.
+        BinaryPrimitives.WriteUInt16BigEndian(glyf.AsSpan(12, 2), 1); // .notdef references glyph1.
+        byte[] loca = new byte[(glyphs + 1) * 4];
+        for (int i = 1; i <= glyphs; i++)
+            BinaryPrimitives.WriteUInt32BigEndian(loca.AsSpan(i * 4, 4), (uint)(16 + (i - 1) * 10));
+        bytes = TestFontBuilder.ReplaceTable(TestFontBuilder.ReplaceTable(bytes, "glyf", glyf), "loca", loca);
+        OpenTypeFont font = OpenTypeFont.Load(bytes);
+        var wanted = new Dictionary<ushort, int>();
+        TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out var baseline, out _),
+            "A compound .notdef retains its existing component closure without mapped characters.");
+        var expected = TestAssert.NotNull(baseline);
+        TestAssert.Equal(2, expected.CidByOriginalGlyph.Count);
+        TestAssert.Equal((ushort)0, expected.CidByOriginalGlyph[0]);
+        TestAssert.Equal((ushort)1, expected.CidByOriginalGlyph[1]);
+        var pool = new TestMemoryBudget();
+        using (var conversion = OoxConversionBudget.BeginScope(null, pool))
+        {
+            TestAssert.True(OpenTypeFontSubsetter.TryCreate(font, wanted, default, out var result, out _),
+                "Governed preparation preserves compound .notdef behavior.");
+            var subset = TestAssert.NotNull(result);
+            TestAssert.True(subset.Bytes.AsSpan().SequenceEqual(expected.Bytes), "The compound control keeps every subset byte.");
+            TestAssert.True(pool.Reserved > subset.Bytes.Length, "Its retained component mapping remains funded.");
+        }
+        TestAssert.Equal(0L, pool.Reserved);
     }
 }
