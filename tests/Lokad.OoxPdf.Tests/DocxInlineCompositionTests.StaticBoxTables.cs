@@ -14,7 +14,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxStaticBoxTablesKeepPaintAndNavigationInsideTheirContainer()
     {
         using var cases = ReadStaticBoxTableCases();
-        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        var resolver = new PortableRenderingTests.PinnedResolver();
         foreach (var row in cases.RootElement.EnumerateArray())
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
             CheckStaticBoxTablePaint(RenderStaticBoxTable(row, mode, resolver), row.GetProperty("Id").GetString() + "/" + mode);
