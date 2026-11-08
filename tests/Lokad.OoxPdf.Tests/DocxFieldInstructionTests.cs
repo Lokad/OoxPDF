@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text;
 using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -65,7 +66,8 @@ internal static class DocxFieldInstructionTests
             TestAssert.Equal(2, pages.Length);
             string text = string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true))
                 .Select(show => show.Text));
-            TestAssert.Contains("Reference2endx", string.Concat(text.Where(character => !char.IsWhiteSpace(character))));
+            TestAssert.Contains("Reference2endx", string.Concat(text.Normalize(NormalizationForm.FormKC)
+                .Where(character => !char.IsWhiteSpace(character))));
             TestAssert.True(pages[0].Annotations.Any(annotation => annotation.Destination?.PageIndex == 1),
                 "The cached cross-reference retains its internal link.");
         }
