@@ -13,11 +13,11 @@ inline pictures share measurement and placement in body paragraphs, simple table
 cells and direct headers/footers. Numbering owns the first authored row; formulas
 beside prose use inline sizing while a later math-only row owns display sizing.
 Links and annotations follow the resulting physical geometry.
-Hyperlinks inside supported mathematics retain their resolved targets on the
-linked glyphs and rules, including wrapped fragments and qualified revisions.
-Argument links keep their own paint bounds; surrounding paragraph links retain
-their existing line geometry. Office rectangle and clipping differences remain
-approximate.
+Hyperlinks at an equation's root merge their fragments once per placed line and
+use its occupied frame and resolved after-gap. Links inside mathematical arguments
+retain local glyph/rule bounds. Targets survive wrapping and qualified revisions;
+surrounding paragraph links keep their own geometry. Other Office rectangle and
+clipping differences remain approximate.
 Bookmark boundaries inside supported mathematics retain source positions on
 measured rows and arguments. Their internal-link targets follow the same box
 translations, including fraction/script placement and inline wrapping.

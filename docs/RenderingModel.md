@@ -69,7 +69,9 @@ pictures and equations. Measurement produces inline fragments without page
 coordinates; body, cell and related-story containers own wrapping, admission and
 placement. Ordered final lines retain their container's resolved paragraph
 after-spacing so annotations include the same gap as layout. Painting and
-annotation bounds consume those placed frames. An authored
+annotation bounds consume those placed frames. The reader distinguishes root-row
+math links from argument links: root fragments merge per placed line, while
+argument selections retain local paint bounds. An authored
 body page break preserves source ownership on both sides, including linked
 formulas and the note associated with a reference. Unsupported combinations keep
 their explicit fallbacks; this is not unrestricted Word reflow.

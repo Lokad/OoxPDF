@@ -583,6 +583,8 @@ Approximate or restricted:
   same source range extends its clickable bounds using the painted frame.
   Ordered final lines retain the resolved paragraph after-gap; mixed body, cell,
   header and footer controls match all four Word-PDF rectangle edges within 1 pt.
+  Root-row math links merge fragments per placed line and share its occupied
+  frame; links inside mathematical arguments retain local measured bounds.
   Drawing URI targets stay separate. Image-only ranges, rotated/clipped pictures
   and unresolved placement owners retain their fallbacks. Other vertical click
   bounds remain approximate; application-view calibration is still open.
