@@ -113,12 +113,16 @@ Sparse cached chart ranges now contribute to the existing page construction gran
 A budget may refuse ranges whose slot storage was previously underestimated; this
 remains a terminal `MemoryAdmission` failure with no partial publication.
 
-Producer admission covers package intake and coarse parsed XML/cache capacity, extracted parts and copy buffers,
+Producer admission covers package intake, directory construction, retained part names
+and index capacity, coarse parsed XML/cache capacity, extracted parts and copy buffers,
 including nested chart workbooks, plus staged PDF content and its fixed encoding/
 readback buffers. Providers own their private backing/buffer admission; the built-in
 file provider adds no duplicate managed file buffer. Package bytes and resident staged content remain funded
 through emission; temporary intake buffers and transferred resident bytes refund
-after their users finish. Private copied/extracted SFNTs and subset program buffers
+after their users finish. Directory construction headroom refunds after the ZIP
+reader closes; selected names remain funded through package disposal. Budgets can
+now refuse metadata-heavy packages earlier, without adding an input limit or option.
+Private copied/extracted SFNTs and subset program buffers
 are also admitted before construction, held through emission, and refunded after
 failed preparation. Only the selected collection face is copied and charged.
 Its character/advance maps also request coarse construction capacity from the

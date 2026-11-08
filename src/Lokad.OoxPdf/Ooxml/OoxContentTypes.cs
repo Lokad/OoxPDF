@@ -50,15 +50,15 @@ internal sealed class OoxContentTypes
         return new OoxContentTypes(defaults, overrides);
     }
 
-    public string? GetContentType(string partName)
+    // The package reader validates and canonicalizes each name before lookup.
+    public string? GetContentType(string normalizedPartName)
     {
-        string normalized = OoxPath.NormalizePartName(partName);
-        if (overrides.TryGetValue(normalized, out string? contentType))
+        if (overrides.TryGetValue(normalizedPartName, out string? contentType))
         {
             return contentType;
         }
 
-        string extension = Path.GetExtension(normalized).TrimStart('.');
+        string extension = Path.GetExtension(normalizedPartName).TrimStart('.');
         return defaults.TryGetValue(extension, out contentType) ? contentType : null;
     }
 

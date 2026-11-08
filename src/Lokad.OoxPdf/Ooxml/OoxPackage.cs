@@ -24,6 +24,8 @@ internal sealed class OoxPackage : IDisposable
     private const int XmlRetainedFactor = 32;
     private const int XmlConstructionFactor = 64;
     private const int XmlReaderHeadroom = 64 * 1024;
+    private const int DirectoryConstructionFactor = 8;
+    private const int PartMetadataHeadroom = 256;
 
     // Conversion-local parse caches for LoadXml/relationship consumers. Callers
     // read the shared DOMs or work on detached copies. One conversion owns the
@@ -91,6 +93,7 @@ internal sealed class OoxPackage : IDisposable
             var compressed = OoxMemory.Reserve(memory, 0);
             var retained = OoxMemory.Reserve(memory, 0);
             var parsedXml = OoxMemory.Reserve(memory, 0);
+            var directoryStorage = OoxMemory.Reserve(memory, 0);
             cancellationToken.ThrowIfCancellationRequested();
             byte[] scratch = new byte[ScratchBytes];
             if (!stream.CanSeek)
@@ -132,7 +135,13 @@ internal sealed class OoxPackage : IDisposable
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            await PreflightCentralDirectoryAsync(archiveStream, scratch, cancellationToken).ConfigureAwait(false);
+            var directory = await PreflightCentralDirectoryAsync(archiveStream, scratch, cancellationToken).ConfigureAwait(false);
+            // ZIP entry objects, decoded names and normalization overlap. One
+            // package-owned window covers that family before materialization;
+            // its construction headroom refunds after archive disposal below.
+            OoxMemory.Resize(directoryStorage, checked(directory.DirectorySize * DirectoryConstructionFactor +
+                directory.EntryCount * PartMetadataHeadroom));
+            cancellationToken.ThrowIfCancellationRequested();
 #if NET10_0
             // .NET 10 lazily reads ZipArchive.Entries synchronously, even after
             // CreateAsync. Keep those reads on owned memory; external input is
@@ -146,6 +155,7 @@ internal sealed class OoxPackage : IDisposable
 #endif
             OoxContentTypes contentTypes;
             Dictionary<string, OoxPart> parts;
+            long retainedNameBytes = 0;
             ZipArchive archive = await ZipArchive.CreateAsync(archiveStream, ZipArchiveMode.Read,
                 leaveOpen: true, entryNameEncoding: null, cancellationToken).ConfigureAwait(false);
             await using (archive.ConfigureAwait(false))
@@ -275,8 +285,13 @@ internal sealed class OoxPackage : IDisposable
                     }
 
                     parts.Add(partName, new OoxPart(partName, contentType, partBytes));
+                    retainedNameBytes = checked(retainedNameBytes + 2L * partName.Length);
                 }
             }
+            // Selected part names and the index survive the ZIP reader. Keep
+            // their coarse capacity with the existing package scope, including
+            // when their payloads are empty; input bytes remain caller-owned.
+            OoxMemory.Resize(directoryStorage, checked(retainedNameBytes + parts.Count * (long)PartMetadataHeadroom));
             // Archive/entry disposal has completed. Refund intake buffers before
             // transferring the package's retained-byte scope to the result.
             stagedBytes?.Dispose();
@@ -304,12 +319,16 @@ internal sealed class OoxPackage : IDisposable
     // restored. Limit failures always propagate; only metadata-query failures fall
     // through (OoxPdfLimitExceededException derives from IOException, so every catch
     // below rethrows it explicitly).
-    private static async ValueTask PreflightCentralDirectoryAsync(Stream archiveStream, byte[] scratch, CancellationToken cancellationToken)
+    private static async ValueTask<(long EntryCount, long DirectorySize)> PreflightCentralDirectoryAsync(Stream archiveStream, byte[] scratch, CancellationToken cancellationToken)
     {
+        // Unavailable directory metadata keeps the old ZIP-reader fallback.
+        // Its admission estimate uses the bounded input extent instead of
+        // pretending that the reader constructs no metadata in that case.
+        (long EntryCount, long DirectorySize) fallback = (MaxEntryCount, MaxCentralDirectoryBytes);
         cancellationToken.ThrowIfCancellationRequested();
         if (!archiveStream.CanSeek)
         {
-            return;
+            return fallback;
         }
 
         long length;
@@ -324,13 +343,17 @@ internal sealed class OoxPackage : IDisposable
                 throw;
             }
 
-            return;
+            return fallback;
         }
+
+        long possibleDirectory = Math.Clamp(length, 0L, MaxCentralDirectoryBytes);
+        // A central-directory entry has at least 46 bytes before its name.
+        fallback = (Math.Min(MaxEntryCount, possibleDirectory / 46), possibleDirectory);
 
         const int EndOfCentralDirectorySize = 22;
         if (length < EndOfCentralDirectorySize)
         {
-            return;
+            return fallback;
         }
 
         long savedPosition;
@@ -345,7 +368,7 @@ internal sealed class OoxPackage : IDisposable
                 throw;
             }
 
-            return;
+            return fallback;
         }
 
         try
@@ -357,17 +380,17 @@ internal sealed class OoxPackage : IDisposable
             int scanLength = checked((int)scanSize);
             if (scratch.Length < scanLength)
             {
-                return;
+                return fallback;
             }
 
-            if (!TrySeekCentralDirectory(archiveStream, scanStart)) return;
+            if (!TrySeekCentralDirectory(archiveStream, scanStart)) return fallback;
             int read = 0;
             while (read < scanLength)
             {
                 int chunk = await archiveStream.ReadAsync(scratch.AsMemory(read, scanLength - read), cancellationToken).ConfigureAwait(false);
                 if (chunk == 0)
                 {
-                    return;
+                    return fallback;
                 }
 
                 read += chunk;
@@ -391,7 +414,7 @@ internal sealed class OoxPackage : IDisposable
 
             if (recordOffset < 0)
             {
-                return;
+                return fallback;
             }
 
             int recordBase = checked((int)(recordOffset - scanStart));
@@ -399,7 +422,7 @@ internal sealed class OoxPackage : IDisposable
             int directoryDisk = scratch[recordBase + 6] | (scratch[recordBase + 7] << 8);
             if (diskNumber != 0 || directoryDisk != 0)
             {
-                return;
+                return fallback;
             }
 
             long entryCount = (long)(scratch[recordBase + 10] | (scratch[recordBase + 11] << 8));
@@ -408,7 +431,7 @@ internal sealed class OoxPackage : IDisposable
             if (entryCount == 0xFFFF || directorySize == 0xFFFFFFFF)
             {
                 var counts = await ReadZip64CountsAsync(archiveStream, recordOffset, scratch, cancellationToken).ConfigureAwait(false);
-                if (counts is not { } zip64) return;
+                if (counts is not { } zip64) return fallback;
                 entryCount = zip64.EntryCount;
                 directorySize = zip64.DirectorySize;
             }
@@ -422,6 +445,8 @@ internal sealed class OoxPackage : IDisposable
             {
                 throw new OoxPdfLimitExceededException("OOXML package central directory exceeds the maximum supported size.");
             }
+
+            return (entryCount, directorySize);
         }
         finally
         {

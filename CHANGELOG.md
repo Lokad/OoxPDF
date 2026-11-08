@@ -8,7 +8,7 @@
   leases and host-funded bounded caches; explicit temporary-storage selection
   for embedded conversions. Custom font resolvers define the complete font
   universe. An opt-in disposable Windows resolver supports owned discovery and
-  caching. Memory admission covers additional font, layout and chart construction;
+  caching. Memory admission covers additional package metadata, font, layout and chart construction;
   coverage remains partial. See [caller migration](docs/PublicApiChanges.md).
 - DOCX composition: supported equations, pictures and navigation retain source
   order through table cells, notes, headers/footers, editing boundaries, metadata
