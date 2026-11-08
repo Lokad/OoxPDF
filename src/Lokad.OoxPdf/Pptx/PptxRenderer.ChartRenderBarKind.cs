@@ -150,7 +150,7 @@ internal sealed partial class PptxRenderer
                 if (sceneChart.PlotAreaLayout.HasGeometryValues)
                     scaleLegendBand = !chartLayout.ManualPlotLayoutApplied ? null :
                         !chartLayout.Legend.Visible || chartLayout.Legend.Overlay ? 0d : measuredLegendAllocation;
-                if (await MeasureAutomaticColumnScaleAsync(theme, sceneChart, chartXml, valueAxisSource, categoryAxis,
+                if (await MeasureAutomaticColumnScaleAsync(theme, sceneChart, valueAxisSource, categoryAxis,
                     dataExtents, chartLayout, scaleLegendBand, fontResolver).ConfigureAwait(false) is { } scale &&
                     (scale.Extents != valueExtents || scale.Units != valueAxisOptions.Units))
                 {

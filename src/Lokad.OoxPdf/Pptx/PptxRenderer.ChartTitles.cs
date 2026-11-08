@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -549,7 +548,7 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<(double Reserve, ChartAxisSource ValueAxis, double NumericClearance)?> TryMeasureCartesianHeaderAsync(
         PptxTheme theme, PptxSceneChart chart, ChartLegendLayout legend,
-        PptxSceneChartPlot? plot, XElement plotElement, XDocument chartXml, PresentationFontResolver? resolver,
+        PptxSceneChartPlot? plot, PresentationFontResolver? resolver,
         ChartAxisPlacement? categoryPlacement = null, bool automaticScaleAllocation = false)
     {
         // Authored frames and furniture above/beside the plot keep their existing
@@ -609,7 +608,7 @@ internal sealed partial class PptxRenderer
             PptxChartMetricRules.AutomaticCartesianFramePadding + lineHeight / 2d);
 
     private static async ValueTask<double?> MeasureCategoryFittingClearanceAsync(PptxTheme theme,
-        PptxSceneChart chart, XDocument xml, PresentationFontResolver? resolver, double numericClearance)
+        PptxSceneChart chart, PresentationFontResolver? resolver, double numericClearance)
     {
         // Built-in charts retain a default fitting reference when overridden
         // role/global fonts change. Those unused sizes must not alter the frame.

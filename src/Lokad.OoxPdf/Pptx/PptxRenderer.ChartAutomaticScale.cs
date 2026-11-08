@@ -1,4 +1,3 @@
-using System.Xml.Linq;
 using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -20,7 +19,7 @@ internal sealed partial class PptxRenderer
         !chart.Legend.Layout.HasGeometryValues;
 
     private static async ValueTask<(ChartValueExtents Extents, ChartAxisUnits Units)?> MeasureAutomaticColumnScaleAsync(
-        PptxTheme theme, PptxSceneChart chart, XDocument xml, ChartAxisSource axis, ChartAxisSource category,
+        PptxTheme theme, PptxSceneChart chart, ChartAxisSource axis, ChartAxisSource category,
         ChartValueExtents data, ChartLayout layout, double? legendBand, PresentationFontResolver resolver)
     {
         if (!CanMeasureAutomaticColumnScale(chart, axis.SceneAxis) || legendBand is null ||
@@ -29,8 +28,8 @@ internal sealed partial class PptxRenderer
             Math.Max(Math.Abs(data.Min), Math.Abs(data.Max)) <= PptxChartMetricRules.AxisValueEpsilon)
             return null;
         var plot = chart.Plots[0];
-        var header = await TryMeasureCartesianHeaderAsync(theme, chart, layout.Legend, plot, plot.Source,
-            xml, resolver, automaticScaleAllocation: true).ConfigureAwait(false);
+        var header = await TryMeasureCartesianHeaderAsync(theme, chart, layout.Legend, plot,
+            resolver, automaticScaleAllocation: true).ConfigureAwait(false);
         if (header is null) return null;
         // The automatic outer allocation precedes caption fitting and authored
         // placement. Reuse the admitted legend band; do not pack its rows again.

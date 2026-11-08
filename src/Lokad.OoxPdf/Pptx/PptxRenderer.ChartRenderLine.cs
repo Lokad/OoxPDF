@@ -461,7 +461,7 @@ internal sealed partial class PptxRenderer
             else if (canMeasureCategoryPlot &&
                 categoryPlotElement is { } lineElement &&
                 await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend,
-                    categoryPlot, lineElement, chartXml, fontResolver,
+                    categoryPlot, fontResolver,
                     categoryPlacement: categoryAxisPlacement).ConfigureAwait(false) is { } header)
             {
                 if (await TryGetMeasuredCategoryPlotBoxAsync((header.Reserve, header.NumericClearance)).ConfigureAwait(false) is { } composedPlotBox)
@@ -581,7 +581,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
-                categoryFittingClearance = await MeasureCategoryFittingClearanceAsync(theme, sceneChart, chartXml, fontResolver, clearance.NumericClearance).ConfigureAwait(false);
+                categoryFittingClearance = await MeasureCategoryFittingClearanceAsync(theme, sceneChart, fontResolver, clearance.NumericClearance).ConfigureAwait(false);
                 return new ChartPlotBox(frame.X + leftReserve, frame.Y + bottomReserve, width, height);
             }
 

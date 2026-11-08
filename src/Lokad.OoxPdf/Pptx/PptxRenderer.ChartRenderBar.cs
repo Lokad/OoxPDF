@@ -375,7 +375,7 @@ internal sealed partial class PptxRenderer
         }
 
         (double Reserve, ChartAxisSource ValueAxis, double NumericClearance)? cartesianHeader = horizontalBars ? null :
-            await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, barChart, chartXml, fontResolver, categoryPlacement).ConfigureAwait(false);
+            await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend, barPlot, fontResolver, categoryPlacement).ConfigureAwait(false);
         defaultPlotBox = (await AdjustBarChartPlotBoxForStackedValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = (await AdjustBarChartPlotBoxForSingleValueAxisLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         // The combined reserve is final: a single-axis preset may shrink its own
@@ -879,7 +879,7 @@ internal sealed partial class PptxRenderer
                 if (height < 1d) return plotBox;
                 categoryTopReserve = reserves.Top;
                 categoryLabelOffsetAdjustment = measuredOffsetAdjustment;
-                categoryFittingClearance = await MeasureCategoryFittingClearanceAsync(theme, sceneChart, chartXml, fontResolver, headerMetrics.NumericClearance).ConfigureAwait(false);
+                categoryFittingClearance = await MeasureCategoryFittingClearanceAsync(theme, sceneChart, fontResolver, headerMetrics.NumericClearance).ConfigureAwait(false);
                 return new(plotBox.X, frame.Y + reserves.Bottom, plotBox.Width, height);
             }
             double presetBottomReserve = plotBox.Y - frame.Y;
