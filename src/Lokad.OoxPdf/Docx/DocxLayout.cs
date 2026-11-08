@@ -1660,6 +1660,7 @@ internal sealed partial class DocxLayoutEngine
                                 line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d,
                                 index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
+                            ParagraphAfterSpacing = line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d,
                             SingleLineHeight = lineHeightProfile.SingleLineHeight,
                             EffectiveLineSpacingFactor = lineHeightProfile.EffectiveLineSpacingFactor,
                             LineHeightSource = lineHeightProfile.Source,

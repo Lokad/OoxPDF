@@ -22,7 +22,7 @@
     229.66000366210938,
     105.4000244140625
   ],
-  "Gate": "Existing one-point horizontal/top comparison. Bottom remains about six points short; no full-rectangle or visible-view calibration claim.",
+  "Gate": "All four native rectangle edges use the existing one-point geometry threshold. The original six-point bottom deficit is retained in historical evidence; visible-view calibration remains open.",
   "Reference": "Word 16 Final OfficePdf",
   "Input": "mixed-picture-equation-link-cell.docx"
 }

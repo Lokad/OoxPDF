@@ -387,7 +387,8 @@ internal sealed partial class DocxLayoutEngine
                                 line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
                                 index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
                                 index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
-                            AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d });
+                            AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
+                            ParagraphAfterSpacing = index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d });
                         images.AddRange(placed.Images);
                         boxes.AddRange(placed.TextBoxes);
                         cursorY -= line.OccupiedHeight;

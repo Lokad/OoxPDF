@@ -4952,6 +4952,23 @@
     "DocxComposedInlineFrameReportRetainsIndependentWordPagesAndContent",
     "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
   ],
+  "docx-inline-link-spacing": [
+    "DocxMixedPictureRange",
+    "DocxPictureOnlySourceRangesRetainUnlinkedFallback",
+    "DocxNoteCellPictureRanges",
+    "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
+    "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets",
+    "DocxInlineCompositionBrokenLiteralsSurviveCellAndStaticPlacement",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners",
+    "PortableRenderingNormalNotesPreserveInlineImagesAndMath",
+    "DocxInlineCompositionGroupedHyperlinksFollowPrintedReviewRows",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "docx-inline-picture-links": [
     "DocxInlinePictureLinks",
     "PortableRenderingInlinePictureLinksFollowVisibleFrames",

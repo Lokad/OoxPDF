@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
-    public static void DocxMixedPictureRangeKeepsIndependentWordHorizontalBounds()
+    public static void DocxMixedPictureRangeKeepsIndependentWordBounds()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("The independent Word control uses installed Windows fonts.");
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes"));
@@ -24,8 +24,33 @@ internal static partial class DocxInlineCompositionTests
         var rect = gold.RootElement.GetProperty("WordRect");
         TestAssert.True(Math.Abs(link.X - rect[0].GetDouble()) < 1d &&
             Math.Abs(link.X + link.Width - rect[2].GetDouble()) < 1d &&
-            Math.Abs(page.Height - link.Y - link.Height - rect[1].GetDouble()) < 1d,
-            "The mixed link retains the independent one-point horizontal/top gate; the recorded bottom residual remains open.");
+            Math.Abs(page.Height - link.Y - link.Height - rect[1].GetDouble()) < 1d &&
+            Math.Abs(page.Height - link.Y - rect[3].GetDouble()) < 1d,
+            "All four mixed-link edges match the independent one-point Word rectangle.");
+    }
+
+    public static void DocxMixedPictureRangesRetainAuthoredAfterSpacingAcrossContainers()
+    {
+        foreach (string container in new[] { "body", "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (int height in new[] { 6, 18, 36 })
+        {
+            var renderer = PictureRangeRenderer(mode);
+            var control = renderer.RenderPagesAsync(ReadPictureRange(container, mode, height,
+                includePicture: true, afterSpacing: 0), null, default).ToBlockingEnumerable().Single();
+            var page = renderer.RenderPagesAsync(ReadPictureRange(container, mode, height,
+                includePicture: true, afterSpacing: 9), null, default).ToBlockingEnumerable().Single();
+            var controlImage = ReadPictureRangeFrame(control);
+            var image = ReadPictureRangeFrame(page);
+            double controlBottom = control.Annotations.Where(link => link.Destination is not null).Min(link => link.Y);
+            double bottom = page.Annotations.Where(link => link.Destination is not null).Min(link => link.Y);
+            // Compare against painted placement: a footer can move as its complete
+            // story grows. The last link still owns the authored paragraph gap.
+            TestAssert.True(Math.Abs((controlBottom - controlImage.Y) - (bottom - image.Y) - 9d) < .01d,
+                container + "/" + mode + "/" + height + ": the last link retains its nine-point after-gap.");
+            TestAssert.Equal(control.Annotations.Count, page.Annotations.Count);
+            TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(control), DocxPageFootnoteNumberingTests.DecodeText(page));
+        }
     }
 
     public static void DocxMixedPictureRangesIncludePaintAcrossContainersAndPresets()
@@ -187,7 +212,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadPictureRange(string container, OoxPdfDocxMarkupMode mode, int height,
-        bool includePicture, string variant = "ordinary")
+        bool includePicture, string variant = "ordinary", int? afterSpacing = null)
     {
         bool note = container is "footnote" or "endnote";
         var source = ReadMutation("CompositionProbes/" + (note ? "mixed-note-" + container + "-table" : container == "cell" ? "body" : container), mode, false, false,
@@ -195,6 +220,14 @@ internal static partial class DocxInlineCompositionTests
             {
                 XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
                 var paragraph = xml.Descendants(w + "p").Single(p => p.Elements(m + "oMath").Any());
+                if (afterSpacing is int after)
+                {
+                    var properties = paragraph.Element(w + "pPr");
+                    if (properties is null) { properties = new XElement(w + "pPr"); paragraph.AddFirst(properties); }
+                    var spacing = properties.Element(w + "spacing");
+                    if (spacing is null) { spacing = new XElement(w + "spacing"); properties.Add(spacing); }
+                    spacing.SetAttributeValue(w + "after", (after * 20).ToString(CultureInfo.InvariantCulture));
+                }
                 string target = paragraph.Elements(w + "bookmarkStart").First().Attribute(w + "name")!.Value;
                 var picture = paragraph.Elements(w + "r").Single(run => run.Descendants(w + "drawing").Any());
                 foreach (var extent in picture.Descendants().Where(e => e.Name.LocalName is "extent" or "ext" && e.Attribute("cy") is not null))
