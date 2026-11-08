@@ -493,7 +493,11 @@ internal static class DocxMarkupTests
             })
             {
                 DocxLayoutSnapshot protectedLayout = renderer.InspectLayout(WithRules(rules));
-                TestAssert.Equal(2, protectedLayout.Pages.Count);
+                TestAssert.True(protectedLayout.Pages.Count == 2,
+                    $"Protected row pagination: words={wordCount}, rules={rules}, pages={protectedLayout.Pages.Count}; " +
+                    string.Join("; ", protectedLayout.Pages.Select((page, index) =>
+                        $"page{index}: " + string.Join(", ", page.TableRows.Select(row =>
+                            $"row Y={row.Y} H={row.Height} lines={row.TextLineCount} fragments={row.FragmentCount}")))));
                 var protectedRows = protectedLayout.Pages.SelectMany(page => page.TableRows).ToArray();
                 if (rules.WidowControl == true)
                     TestAssert.True(protectedRows.Length == 2 && protectedRows.All(row => row.TextLineCount >= 2),
