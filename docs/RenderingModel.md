@@ -15,6 +15,10 @@ from that scene, preserving declared ID order and explicit absence. The selected
 axis retains its scene-owned XML evidence for properties still read from markup;
 a second XML document cannot supply a missing axis.
 
+Series and point paints, line appearance, marker definitions and pie/doughnut
+slice offsets consume their parsed series. Cached and workbook sources retain
+their point-count and per-point override rules.
+
 ## Package Layer
 
 The OOXML layer reads ZIP entries by normalized package part name. It rejects path traversal and applies entry-count and uncompressed-size limits before higher-level parsers touch XML or binary media.
