@@ -61,7 +61,7 @@ internal static class DocxFieldInstructionTests
                 "Cached field results retain ordered inline source and hyperlink ownership.");
             var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
-            var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, geometry)
+            var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, geometry)
                 .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             string text = string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true))
