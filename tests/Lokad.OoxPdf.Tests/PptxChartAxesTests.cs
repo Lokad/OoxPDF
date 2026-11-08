@@ -2224,7 +2224,7 @@ internal static class PptxChartAxesTests
         PptxSceneChartPlot plot = chart.Plots[0];
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
+        XElement alternatePlotXml = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:barChart>
@@ -2237,24 +2237,26 @@ internal static class PptxChartAxesTests
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
+        PptxSceneChartPlot alternatePlot = (PptxTests.BuildSingleChartScene(alternatePlotXml.Document!.ToString())
+            ?? throw new InvalidOperationException("Expected alternate chart scene.")).Plots[0];
         System.Reflection.MethodInfo readFills = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlSeriesFills",
+            "ReadSceneSeriesFills",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series fill resolver.");
         System.Reflection.MethodInfo readStrokes = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlSeriesStrokes",
+            "ReadSceneSeriesStrokes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series stroke resolver.");
 
-        object sceneFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene fills.")).Cast<object>().Single();
-        object sceneStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null])) ?? throw new InvalidOperationException("Expected scene strokes.")).Cast<object>().Single();
-        object xmlFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML fills.")).Cast<object>().Single();
-        object xmlStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null])) ?? throw new InvalidOperationException("Expected XML strokes.")).Cast<object>().Single();
+        object sceneFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [plot])) ?? throw new InvalidOperationException("Expected scene fills.")).Cast<object>().Single();
+        object sceneStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [plot, null])) ?? throw new InvalidOperationException("Expected scene strokes.")).Cast<object>().Single();
+        object alternateFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [alternatePlot])) ?? throw new InvalidOperationException("Expected alternate scene fills.")).Cast<object>().Single();
+        object alternateStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [alternatePlot, null])) ?? throw new InvalidOperationException("Expected alternate scene strokes.")).Cast<object>().Single();
 
         TestAssert.Equal(new RgbColor(17, 34, 51), PptxTests.ChartSeriesFillColor(sceneFill));
         TestAssert.Equal(new RgbColor(68, 85, 102), PptxTests.ChartSeriesStrokeColor(sceneStroke));
         TestAssert.Equal(2d, PptxTests.ChartSeriesStrokeWidth(sceneStroke));
-        TestAssert.Equal(new RgbColor(171, 205, 239), PptxTests.ChartSeriesFillColor(xmlFill));
-        TestAssert.Equal(new RgbColor(254, 220, 186), PptxTests.ChartSeriesStrokeColor(xmlStroke));
-        TestAssert.Equal(1d, PptxTests.ChartSeriesStrokeWidth(xmlStroke));
+        TestAssert.Equal(new RgbColor(171, 205, 239), PptxTests.ChartSeriesFillColor(alternateFill));
+        TestAssert.Equal(new RgbColor(254, 220, 186), PptxTests.ChartSeriesStrokeColor(alternateStroke));
+        TestAssert.Equal(1d, PptxTests.ChartSeriesStrokeWidth(alternateStroke));
     }
 
     public static void PptxChartSeriesPointStylesUseSceneSource()
@@ -2280,7 +2282,7 @@ internal static class PptxChartAxesTests
         PptxSceneChartPlot plot = chart.Plots[0];
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
+        XElement alternatePlotXml = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:barChart>
@@ -2296,28 +2298,30 @@ internal static class PptxChartAxesTests
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
+        PptxSceneChartPlot alternatePlot = (PptxTests.BuildSingleChartScene(alternatePlotXml.Document!.ToString())
+            ?? throw new InvalidOperationException("Expected alternate chart scene.")).Plots[0];
         System.Reflection.MethodInfo readPointFills = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlSeriesPointFills",
+            "ReadSceneSeriesPointFills",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series point fill resolver.");
         System.Reflection.MethodInfo readPointStrokes = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlSeriesPointStrokes",
+            "ReadSceneSeriesPointStrokes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series point stroke resolver.");
 
-        object scenePointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene point fills.")).Cast<object>().Single();
-        object scenePointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene point strokes.")).Cast<object>().Single();
-        object xmlPointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML point fills.")).Cast<object>().Single();
-        object xmlPointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML point strokes.")).Cast<object>().Single();
+        object scenePointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [plot])) ?? throw new InvalidOperationException("Expected scene point fills.")).Cast<object>().Single();
+        object scenePointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [plot])) ?? throw new InvalidOperationException("Expected scene point strokes.")).Cast<object>().Single();
+        object alternatePointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [alternatePlot])) ?? throw new InvalidOperationException("Expected alternate scene point fills.")).Cast<object>().Single();
+        object alternatePointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [alternatePlot])) ?? throw new InvalidOperationException("Expected alternate scene point strokes.")).Cast<object>().Single();
 
         object sceneFill = PptxTests.ChartDictionaryValue(scenePointFills, 1);
         object sceneStroke = PptxTests.ChartDictionaryValue(scenePointStrokes, 1);
-        object xmlFill = PptxTests.ChartDictionaryValue(xmlPointFills, 0);
-        object xmlStroke = PptxTests.ChartDictionaryValue(xmlPointStrokes, 0);
+        object alternateFill = PptxTests.ChartDictionaryValue(alternatePointFills, 0);
+        object alternateStroke = PptxTests.ChartDictionaryValue(alternatePointStrokes, 0);
 
         TestAssert.Equal(new RgbColor(18, 52, 86), PptxTests.ChartSeriesFillColor(sceneFill));
         TestAssert.Equal(new RgbColor(101, 67, 33), PptxTests.ChartSeriesStrokeColor(sceneStroke));
         TestAssert.Equal(3d, PptxTests.ChartSeriesStrokeWidth(sceneStroke));
-        TestAssert.Equal(new RgbColor(160, 176, 192), PptxTests.ChartSeriesFillColor(xmlFill));
-        TestAssert.Equal(new RgbColor(12, 11, 10), PptxTests.ChartSeriesStrokeColor(xmlStroke));
-        TestAssert.Equal(1d, PptxTests.ChartSeriesStrokeWidth(xmlStroke));
+        TestAssert.Equal(new RgbColor(160, 176, 192), PptxTests.ChartSeriesFillColor(alternateFill));
+        TestAssert.Equal(new RgbColor(12, 11, 10), PptxTests.ChartSeriesStrokeColor(alternateStroke));
+        TestAssert.Equal(1d, PptxTests.ChartSeriesStrokeWidth(alternateStroke));
     }
 }

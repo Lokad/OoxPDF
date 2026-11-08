@@ -760,33 +760,11 @@ internal sealed partial class PptxRenderer
         return (int)inferred;
     }
 
-    private static IReadOnlyList<ChartSeriesFill?> ReadSceneOrXmlSeriesFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        if (plot is not null)
-        {
-            return plot.Series
-                .Select(series => ToChartSeriesFill(series.Fill, series.PatternFill))
-                .ToArray();
-        }
+    private static IReadOnlyList<ChartSeriesFill?> ReadSceneSeriesFills(PptxSceneChartPlot plot) =>
+        plot.Series.Select(series => ToChartSeriesFill(series.Fill, series.PatternFill)).ToArray();
 
-        return ReadXmlChartSeries(chartElement, theme, colorMap)
-            .Select(series => ToChartSeriesFill(series.Fill, series.PatternFill))
-            .ToArray();
-    }
-
-    private static IReadOnlyList<ChartSeriesStroke?> ReadSceneOrXmlSeriesStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap, double? inheritedWidth)
-    {
-        if (plot is not null)
-        {
-            return plot.Series
-                .Select(series => ToChartSeriesStroke(series.Line, inheritedWidth))
-                .ToArray();
-        }
-
-        return ReadXmlChartSeries(chartElement, theme, colorMap)
-            .Select(series => ToChartSeriesStroke(series.Line, inheritedWidth))
-            .ToArray();
-    }
+    private static IReadOnlyList<ChartSeriesStroke?> ReadSceneSeriesStrokes(PptxSceneChartPlot plot, double? inheritedWidth) =>
+        plot.Series.Select(series => ToChartSeriesStroke(series.Line, inheritedWidth)).ToArray();
 
     private static IReadOnlyList<ChartMarkerStyle> ReadSceneOrXmlMarkerStyles(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
     {
@@ -826,19 +804,11 @@ internal sealed partial class PptxRenderer
         return new ChartBooleanOption(plotSmooth ?? defaultValue, plotSmooth is not null ? plotSmoothValue : seriesSmoothValue, false);
     }
 
-    private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return plot is not null
-            ? plot.Series.Select(ReadSceneChartPointFills).ToArray()
-            : ReadXmlChartSeries(chartElement, theme, colorMap).Select(ReadSceneChartPointFills).ToArray();
-    }
+    private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneSeriesPointFills(PptxSceneChartPlot plot) =>
+        plot.Series.Select(ReadSceneChartPointFills).ToArray();
 
-    private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> ReadSceneOrXmlSeriesPointStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return plot is not null
-            ? plot.Series.Select(ReadSceneChartPointStrokes).ToArray()
-            : ReadXmlChartSeries(chartElement, theme, colorMap).Select(ReadSceneChartPointStrokes).ToArray();
-    }
+    private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> ReadSceneSeriesPointStrokes(PptxSceneChartPlot plot) =>
+        plot.Series.Select(ReadSceneChartPointStrokes).ToArray();
 
     private static IReadOnlyDictionary<int, double> ReadSceneOrXmlChartPointExplosions(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook)
     {

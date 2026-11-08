@@ -36,8 +36,8 @@ internal sealed partial class PptxRenderer
             if (scatterSeries.Count != 0)
             {
                 ChartScatterPlotOptions scatterOptions = ReadSceneChartScatterOptions(scatterPlot);
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(scatterPlot, scatterChart, theme, colorMap);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme, colorMap, null);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(scatterPlot);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(scatterPlot, null);
                 IReadOnlyList<bool> seriesLineHidden = ReadSceneSeriesLineHidden(scatterPlot);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme, colorMap);
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, scatterPlot);
@@ -225,8 +225,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ScatterSeries> bubbleSeries = ReadSceneOrXmlScatterSeries(bubblePlot, bubbleChart, readBubbleSize: true, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
             if (bubbleSeries.Count != 0)
             {
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(bubblePlot, bubbleChart, theme, colorMap);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(bubblePlot, bubbleChart, theme, colorMap, null);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(bubblePlot);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(bubblePlot, null);
                 ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;

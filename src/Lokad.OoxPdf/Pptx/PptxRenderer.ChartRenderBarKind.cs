@@ -39,7 +39,7 @@ internal sealed partial class PptxRenderer
                 ChartBarPlotOptions barOptions = ReadSceneChartBarOptions(barPlot, PptxSceneChartGrouping.Clustered);
                 ChartColorPalette barPalette = WithSourceSeries(chartPalette, barPlot);
                 bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme, colorMap);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(barPlot);
                 ChartAxesStyle axesStyle = ReadSceneChartAxesStyle(sceneChart, barPlot);
                 ChartShapeStyle plotAreaStyle = ToChartShapeStyle(sceneChart.PlotAreaStyle);
                 ChartAxisSource valueAxisSource = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
@@ -88,9 +88,9 @@ internal sealed partial class PptxRenderer
                     : null;
                 if (numericPlacement is { } numeric)
                     axesStyle = axesStyle with { ValueAxisBottomSide = !numeric.AxisHighSide };
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(barPlot, barChart, theme, colorMap, ChartFilledSeriesInheritedStrokeWidth);
-                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme, colorMap);
-                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme, colorMap);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(barPlot, ChartFilledSeriesInheritedStrokeWidth);
+                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneSeriesPointFills(barPlot);
+                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneSeriesPointStrokes(barPlot);
                 bool categoryLegend = barSeriesVectors.Count == 1 && sceneChart.Plots.Sum(plot => plot.Series.Count) == 1 &&
                     (barOptions.VaryColors.Value || barPlot?.Series.FirstOrDefault()?.PointStyles.Any(point => point.HasShapeProperties) == true);
                 var legendEntries = new List<ChartLegendEntry>(categoryLegend
@@ -106,8 +106,8 @@ internal sealed partial class PptxRenderer
                     XElement element = plot.Source;
                     int count = CountRenderableSeries(ReadSharedChartSeriesVectors(plot, element, workbook, plotVisibleOnly));
                     if (count == 0) continue;
-                    var fills = ReadSceneOrXmlSeriesFills(plot, element, theme, colorMap);
-                    var strokes = ReadSceneOrXmlSeriesStrokes(plot, element, theme, colorMap, ChartFilledSeriesInheritedStrokeWidth);
+                    var fills = ReadSceneSeriesFills(plot);
+                    var strokes = ReadSceneSeriesStrokes(plot, ChartFilledSeriesInheritedStrokeWidth);
                     legendEntries.AddRange(BuildFillLegendEntries(theme, colorMap, WithSourceSeries(chartPalette, plot),
                         plot, element, fills, strokes, legendSeriesOffset, workbook));
                     legendSeriesOffset += count;
@@ -118,7 +118,7 @@ internal sealed partial class PptxRenderer
                     XElement element = plot.Source;
                     if (CountRenderableSeries(ReadSharedChartSeriesVectors(plot, element, workbook, plotVisibleOnly)) == 0) continue;
                     var options = ReadSceneChartLineOptions(sceneChart, plot, PptxSceneChartGrouping.Standard);
-                    var strokes = ReadSceneOrXmlSeriesStrokes(plot, element, theme, colorMap, ResolveLineKindInheritedStrokeWidth(barStyleId));
+                    var strokes = ReadSceneSeriesStrokes(plot, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     var markers = ReadSceneOrXmlMarkerStyles(plot, element, theme, colorMap);
                     legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, plot, element,
                         strokes, markers, reverseOrder: options.Stacked, workbook: workbook, chartStyleId: barStyleId));
@@ -235,9 +235,9 @@ internal sealed partial class PptxRenderer
                     bool extraPercentStacked = IsPercentStackedChartGrouping(extraBarOptions.Grouping);
                     ChartValueExtents extraValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetSharedBarChartValueExtents(extraBarPlot, extraBarChart, extraBarOptions.Grouping, workbook, plotVisibleOnly), extraPercentStacked, ResolveBarValueAxisHeadroom(extraHorizontalBars, extraPercentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions extraValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(extraValueSceneAxis, extraValueAxis, theme, extraValueExtents, extraPercentStacked);
-                    IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme, colorMap);
-                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneOrXmlSeriesPointFills(extraBarPlot, extraBarChart, theme, colorMap);
-                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneOrXmlSeriesPointStrokes(extraBarPlot, extraBarChart, theme, colorMap);
+                    IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneSeriesFills(extraBarPlot);
+                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneSeriesPointFills(extraBarPlot);
+                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneSeriesPointStrokes(extraBarPlot);
                     if (!extraHorizontalBars && secondaryValueAxis is null &&
                         !IsSameChartAxis(valueAxisSource, extraValueAxisSource) &&
                         IsSceneOrXmlVisibleValueAxis(extraValueSceneAxis, extraValueAxis))
@@ -305,7 +305,7 @@ internal sealed partial class PptxRenderer
                     ChartLinePlotOptions lineOptions = ReadSceneChartLineOptions(sceneChart, linePlot, PptxSceneChartGrouping.Standard);
                     ChartValueExtents lineValueExtents = sharedValueAxis ? valueExtents : ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetSharedLineChartValueExtents(linePlot, comboLineChart, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(lineValueSceneAxis, lineValueAxisForScale, theme, lineValueExtents, lineOptions.PercentStacked);
-                    IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme, colorMap, ResolveLineKindInheritedStrokeWidth(barStyleId));
+                    IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneSeriesStrokes(linePlot, ResolveLineKindInheritedStrokeWidth(barStyleId));
                     IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneOrXmlMarkerStyles(linePlot, comboLineChart, theme, colorMap);
                     if (secondaryValueAxis is null && !IsSameChartAxis(valueAxisSource, lineValueAxisSource) &&
                         IsSceneOrXmlVisibleValueAxis(lineValueSceneAxis, lineValueAxis))

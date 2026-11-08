@@ -36,8 +36,8 @@ internal sealed partial class PptxRenderer
             if (CountRenderableSeries(areaSeriesVectors) != 0)
             {
                 ChartAreaPlotOptions areaOptions = ReadSceneChartAreaOptions(sceneChart, areaPlot, PptxSceneChartGrouping.Standard);
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme, colorMap);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme, colorMap, ChartSeriesInheritedStrokeWidth);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(areaPlot);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(areaPlot, ChartSeriesInheritedStrokeWidth);
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, areaPlot).FirstOrDefault();
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, areaPlot);
                 bool categoryAxisReversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);

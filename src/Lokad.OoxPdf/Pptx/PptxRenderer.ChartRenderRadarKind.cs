@@ -33,8 +33,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ChartRadarSeries> radarSeries = BuildRadarSeries(radarSeriesVectors);
             if (radarSeries.Count != 0)
             {
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme, colorMap);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(radarPlot, radarChart, theme, colorMap, null);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(radarPlot);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(radarPlot, null);
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, radarPlot).FirstOrDefault();
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, radarPlot);
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetRadarChartValueExtents(radarSeries), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
