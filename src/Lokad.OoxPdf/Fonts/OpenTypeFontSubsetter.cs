@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using TableRecord = Lokad.OoxPdf.Fonts.OpenTypeFont.TableRecord;
 
 namespace Lokad.OoxPdf.Fonts;
 
@@ -50,16 +51,15 @@ internal static class OpenTypeFontSubsetter
         // The caller holds the immutable source throughout this synchronous
         // build. Read its memory directly, without depending on an array backing.
         ReadOnlyMemory<byte> source = font.Bytes;
-        Dictionary<string, TableRecord> tables = ReadTableDirectory(source.Span);
-        if (!tables.TryGetValue("glyf", out TableRecord glyf) ||
-            !tables.TryGetValue("loca", out TableRecord loca) ||
-            !tables.TryGetValue("head", out TableRecord head) ||
-            !tables.TryGetValue("hhea", out TableRecord hhea) ||
-            !tables.TryGetValue("hmtx", out TableRecord hmtx) ||
-            !tables.TryGetValue("maxp", out TableRecord maxp) ||
-            !tables.TryGetValue("name", out TableRecord name) ||
-            !tables.TryGetValue("OS/2", out TableRecord os2) ||
-            !tables.TryGetValue("post", out TableRecord post))
+        if (!font.TryGetTable("glyf", out TableRecord glyf) ||
+            !font.TryGetTable("loca", out TableRecord loca) ||
+            !font.TryGetTable("head", out TableRecord head) ||
+            !font.TryGetTable("hhea", out TableRecord hhea) ||
+            !font.TryGetTable("hmtx", out TableRecord hmtx) ||
+            !font.TryGetTable("maxp", out TableRecord maxp) ||
+            !font.TryGetTable("name", out TableRecord name) ||
+            !font.TryGetTable("OS/2", out TableRecord os2) ||
+            !font.TryGetTable("post", out TableRecord post))
         {
             throw new InvalidDataException("Font subsetting requires TrueType outline tables.");
         }
@@ -98,7 +98,7 @@ internal static class OpenTypeFontSubsetter
         string[] optionalTags = ["cvt ", "fpgm", "prep", "gasp"];
         long copiedBytes = (long)os2.Length + head.Length + hhea.Length + maxp.Length + name.Length;
         foreach (string tag in optionalTags)
-            if (tables.TryGetValue(tag, out TableRecord optional)) copiedBytes += optional.Length;
+            if (font.TryGetTable(tag, out TableRecord optional)) copiedBytes += optional.Length;
         // One coarse construction reservation covers outline/metric/table buffers,
         // both cmap formats and their assembly, and old/new SFNT overlap. Metadata
         // and source/cache storage remain separate; this is not heap accounting.
@@ -138,7 +138,7 @@ internal static class OpenTypeFontSubsetter
             foreach (string optionalTag in optionalTags)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (tables.TryGetValue(optionalTag, out TableRecord optional))
+                if (font.TryGetTable(optionalTag, out TableRecord optional))
                 {
                     outputTables.Add(new TableData(optionalTag, CopyTable(source.Span, optional)));
                 }
@@ -408,38 +408,6 @@ internal static class OpenTypeFontSubsetter
                 return format12Output;
             }
         }
-    }
-
-    private static Dictionary<string, TableRecord> ReadTableDirectory(ReadOnlySpan<byte> bytes)
-    {
-        if (bytes.Length < 12)
-        {
-            throw new InvalidDataException("Font file is too small.");
-        }
-
-        ushort tableCount = OpenTypeFont.U16(bytes, 4);
-        if (12 + tableCount * 16 > bytes.Length)
-        {
-            throw new InvalidDataException("Font table directory exceeds file length.");
-        }
-
-        var tables = new Dictionary<string, TableRecord>(StringComparer.Ordinal);
-        int recordOffset = 12;
-        for (int i = 0; i < tableCount; i++)
-        {
-            string tag = Encoding.ASCII.GetString(bytes.Slice(recordOffset, 4));
-            uint tableOffset = OpenTypeFont.U32(bytes, recordOffset + 8);
-            uint tableLength = OpenTypeFont.U32(bytes, recordOffset + 12);
-            if (tableOffset > int.MaxValue || tableLength > int.MaxValue || tableOffset + tableLength > bytes.Length)
-            {
-                throw new InvalidDataException("Font table exceeds file length.");
-            }
-
-            tables[tag] = new TableRecord((int)tableOffset, (int)tableLength);
-            recordOffset += 16;
-        }
-
-        return tables;
     }
 
     private static bool TryReadHorizontalMetric(
@@ -729,8 +697,6 @@ internal static class OpenTypeFontSubsetter
 
         return sum;
     }
-
-    private readonly record struct TableRecord(int Offset, int Length);
 
     private readonly record struct TableData(string Tag, byte[] Data);
 

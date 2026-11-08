@@ -68,6 +68,8 @@ internal sealed partial class OpenTypeFont
 
     public IReadOnlyCollection<string> TableTags => tables.Keys;
 
+    internal bool TryGetTable(string tag, out TableRecord table) => tables.TryGetValue(tag, out table);
+
     public static OpenTypeFont Load(byte[] bytes)
     {
         return Load(bytes, 0);
@@ -1204,7 +1206,7 @@ internal sealed partial class OpenTypeFont
         return pairs.Build();
     }
 
-    private readonly record struct TableRecord(int Offset, int Length);
+    internal readonly record struct TableRecord(int Offset, int Length);
 
 
     internal readonly record struct HheaMetrics(
