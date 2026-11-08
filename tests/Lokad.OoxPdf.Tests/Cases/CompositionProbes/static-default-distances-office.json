@@ -1,0 +1,269 @@
+{
+  "Scope": "Word16 paired missing/explicit36pt header/footer controls atlow/high body margins,Final/Review. Existing1pt math/body-origin gate. Uncalibrated PDF bootstrap;caption/image residuals separate.",
+  "Rows": [
+    {
+      "Input": "static-default-header36.docx",
+      "InputSha256": "5600E6DBF436630F11A1389FE9486C3B45B39FD10A488B2E12FBD79048B65C46",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "3A8173D03CA3980734B252BF941592FEAEF89C28C796E452855714DE89F0F305",
+      "ReferenceIdentitySha256": "5BCE293CE6EE2E841E8BCEEC42CBE3DF5BE03F9C386E1F83955FCBB21BF06CBC",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.05999755859375,
+          "Y": 748.3200073242188
+        },
+        {
+          "Text": "t",
+          "X": 133.33999633789062,
+          "Y": 735.239990234375
+        },
+        {
+          "Text": "r",
+          "X": 226.97000122070312,
+          "Y": 748.3200073242188
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 735.239990234375
+        }
+      ],
+      "BodyOrigin": {
+        "X": 72.02400207519531,
+        "Y": 723.8400268554688
+      }
+    },
+    {
+      "Input": "static-default-header36.docx",
+      "InputSha256": "5600E6DBF436630F11A1389FE9486C3B45B39FD10A488B2E12FBD79048B65C46",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "B45E425CB8E0066D971705813D1C3BAD7F75D1D5FD40D7C061DEF3989B27169A",
+      "ReferenceIdentitySha256": "936F06022232786CB75B079A712C1429873C1AB81CB4E516F49D83090C56A150",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66000366210938,
+          "Y": 663.4600219726562
+        },
+        {
+          "Text": "t",
+          "X": 101.11000061035156,
+          "Y": 653.5399780273438
+        },
+        {
+          "Text": "r",
+          "X": 172.10000610351562,
+          "Y": 663.4600219726562
+        },
+        {
+          "Text": "t",
+          "X": 171.5800018310547,
+          "Y": 653.5399780273438
+        }
+      ],
+      "BodyOrigin": {
+        "X": 54.599998474121094,
+        "Y": 644.8800048828125
+      }
+    },
+    {
+      "Input": "static-default-header108.docx",
+      "InputSha256": "5D171E63AD57B626722B296D47D91C3EF0AF5C49BD3D471783B04A3AFECCCEF0",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "15713164C8BDC9F8E81A60F3135BF4B9F2F8492BA03B22F376A26EB20B79113C",
+      "ReferenceIdentitySha256": "3AB60F23A49D1CA30553F40D7D838EF2C976D6933C9F27C88B3450A7DAE4278E",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.05999755859375,
+          "Y": 748.3200073242188
+        },
+        {
+          "Text": "t",
+          "X": 133.33999633789062,
+          "Y": 735.239990234375
+        },
+        {
+          "Text": "r",
+          "X": 226.97000122070312,
+          "Y": 748.3200073242188
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 735.239990234375
+        }
+      ],
+      "BodyOrigin": {
+        "X": 72.02400207519531,
+        "Y": 672.7000122070312
+      }
+    },
+    {
+      "Input": "static-default-header108.docx",
+      "InputSha256": "5D171E63AD57B626722B296D47D91C3EF0AF5C49BD3D471783B04A3AFECCCEF0",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "2BC76C0AFBFBF63807BD87A4D157F617A41E698034FB842EC4B9ACE06C052895",
+      "ReferenceIdentitySha256": "C56FBEC41EBFDB9D817105A85C3EDF987B2C5E04F30236491D423D922AC52DBF",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66000366210938,
+          "Y": 663.4600219726562
+        },
+        {
+          "Text": "t",
+          "X": 101.11000061035156,
+          "Y": 653.5399780273438
+        },
+        {
+          "Text": "r",
+          "X": 172.10000610351562,
+          "Y": 663.4600219726562
+        },
+        {
+          "Text": "t",
+          "X": 171.5800018310547,
+          "Y": 653.5399780273438
+        }
+      ],
+      "BodyOrigin": {
+        "X": 54.599998474121094,
+        "Y": 606.1199951171875
+      }
+    },
+    {
+      "Input": "static-default-footer36.docx",
+      "InputSha256": "C268B44E0F9245DDFF8D539ACEA88CC788D653E5D5E153EA4CA2673160952686",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "7BF64268EBDDEEC1E8327189BB98CB821A9BA476D4C4C685F5853EC6C578AF36",
+      "ReferenceIdentitySha256": "0BC373CFC11E6D9089C840B524A48C4A2909FE383BEA54DF572025979F85B945",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.05999755859375,
+          "Y": 49.10400390625
+        },
+        {
+          "Text": "t",
+          "X": 133.33999633789062,
+          "Y": 36.0
+        },
+        {
+          "Text": "r",
+          "X": 226.97000122070312,
+          "Y": 49.10400390625
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 36.0
+        }
+      ],
+      "BodyOrigin": {
+        "X": 72.02400207519531,
+        "Y": 708.7000122070312
+      }
+    },
+    {
+      "Input": "static-default-footer36.docx",
+      "InputSha256": "C268B44E0F9245DDFF8D539ACEA88CC788D653E5D5E153EA4CA2673160952686",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "296ABDCEDF51EDEEEAAA33D508B9D76459BFA28EAAD0FF2A11541AF2294B7962",
+      "ReferenceIdentitySha256": "0434FA09C0A0B30EF03BDD81B551E3E2A6984821B0328394B4C7113267F6BA92",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66000366210938,
+          "Y": 133.219970703125
+        },
+        {
+          "Text": "t",
+          "X": 101.11000061035156,
+          "Y": 123.28997802734375
+        },
+        {
+          "Text": "r",
+          "X": 172.10000610351562,
+          "Y": 133.219970703125
+        },
+        {
+          "Text": "t",
+          "X": 171.5800018310547,
+          "Y": 123.28997802734375
+        }
+      ],
+      "BodyOrigin": {
+        "X": 54.599998474121094,
+        "Y": 633.4299926757812
+      }
+    },
+    {
+      "Input": "static-default-footer108.docx",
+      "InputSha256": "4237A128EA115C711069429249B6BC5B878D074525A77F13F5C212E890CE9480",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "FB266C452CB65F0996DB9069AF50B2F3AE3D3527CE4229B4ED4C58BA4A7DB0EC",
+      "ReferenceIdentitySha256": "1FE6233EC49C85B564C438BDB1EB1267EFAD7ABB60D643B9D9E8D5EDA18A48A8",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.05999755859375,
+          "Y": 49.10400390625
+        },
+        {
+          "Text": "t",
+          "X": 133.33999633789062,
+          "Y": 36.0
+        },
+        {
+          "Text": "r",
+          "X": 226.97000122070312,
+          "Y": 49.10400390625
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 36.0
+        }
+      ],
+      "BodyOrigin": {
+        "X": 72.02400207519531,
+        "Y": 708.7000122070312
+      }
+    },
+    {
+      "Input": "static-default-footer108.docx",
+      "InputSha256": "4237A128EA115C711069429249B6BC5B878D074525A77F13F5C212E890CE9480",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "09D8650F03D24A474E1CB6D65599D7917E0E5A5FBA9C57552FA52E450241256B",
+      "ReferenceIdentitySha256": "F9E0A34D7A0BEE014182AC5F2670C906ACF509594D194CC206AB1F53F392280C",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66000366210938,
+          "Y": 133.219970703125
+        },
+        {
+          "Text": "t",
+          "X": 101.11000061035156,
+          "Y": 123.28997802734375
+        },
+        {
+          "Text": "r",
+          "X": 172.10000610351562,
+          "Y": 133.219970703125
+        },
+        {
+          "Text": "t",
+          "X": 171.5800018310547,
+          "Y": 123.28997802734375
+        }
+      ],
+      "BodyOrigin": {
+        "X": 54.599998474121094,
+        "Y": 633.4299926757812
+      }
+    }
+  ]
+}

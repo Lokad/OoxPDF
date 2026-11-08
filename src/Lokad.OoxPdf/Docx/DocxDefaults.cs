@@ -4,6 +4,10 @@ internal static class DocxDefaults
 {
     public const double FontSizePoints = 11d;
 
+    // Word 16 uses a half-inch distance when the page-margin token omits it,
+    // independently of the body margins (paired low/high-margin controls).
+    internal const double HeaderFooterDistancePoints = 36d;
+
     // Word gives style-less paragraphs 8pt after-spacing (Normal default; edge
     // cellbreak probes: style-less 12pt rows pitch 25pt = 17pt line + 8pt after).
     // In-cell explicit breaks behave as empty paragraphs with these defaults.

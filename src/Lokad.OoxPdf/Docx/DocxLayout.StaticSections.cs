@@ -50,12 +50,12 @@ internal sealed partial class DocxLayoutEngine
 
     private static double ResolveHeaderDistance(DocxLayoutPage page)
     {
-        return page.PageSettings.HeaderDistancePoints ?? Math.Max(18d, page.MarginTop / 2d);
+        return page.PageSettings.HeaderDistancePoints ?? DocxDefaults.HeaderFooterDistancePoints;
     }
 
     private static double ResolveFooterDistance(DocxLayoutPage page)
     {
-        return page.PageSettings.FooterDistancePoints ?? Math.Max(18d, page.MarginBottom / 2d);
+        return page.PageSettings.FooterDistancePoints ?? DocxDefaults.HeaderFooterDistancePoints;
     }
 
     private static IReadOnlyDictionary<int, DocxEffectiveSectionSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxEffectiveSectionSettings finalSectionSettings)
