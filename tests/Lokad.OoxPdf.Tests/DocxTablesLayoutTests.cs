@@ -923,11 +923,8 @@ internal static class DocxTablesLayoutTests
 
     public static void DocxTableLayoutStageLaysOutNestedTableCellBodies()
     {
-        (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
-        if (font is null)
-        {
-            TestAssert.Skip("Environmental precondition not met: (font is null)");
-        }
+        byte[] fontBytes = TestFontBuilder.CreateTestFont();
+        OpenTypeFont font = OpenTypeFont.Load(fontBytes);
 
         DocxParagraph nestedParagraph = DocxTests.CreateDocxLayoutParagraph("Nested", 10d, 10d);
         var nestedCell = new DocxTableCell("Nested", [nestedParagraph], null, null, null, null, [], DocxTableCellMargins.Empty);
@@ -938,7 +935,7 @@ internal static class DocxTablesLayoutTests
         };
         var outerTable = new DocxTable(null, [80d], [new DocxTableRow([outerCell], null)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable, nestedTable]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "Nested".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Nested".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(document, embedded, CancellationToken.None);
         DocxTableRowLayout outerRow = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
@@ -946,7 +943,8 @@ internal static class DocxTablesLayoutTests
         DocxTableRowLayout nestedRow = outerCellLayout.NestedRows.Single();
         DocxTextLineLayout nestedLine = nestedRow.Cells.Single().TextLines.Single();
         DocxLayoutSnapshot snapshot = DocxLayoutSnapshot.FromLayout(layout);
-        var renderer = new DocxRenderer(new DocxTests.SingleResolutionFontResolver(font.Value.Resolution), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var renderer = new DocxRenderer(new DocxTests.SingleResolutionFontResolver(new FontFaceResolution(
+            "TestFont", font.FamilyName, new FontStyleKey(), new MemoryFontProgramSource("test:nested-cell-layout", fontBytes), IsFallback: false)), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         DocxTextEmissionLineSnapshot[] emissionLines = renderer.InspectTextEmission(document).Lines
             .Where(line => !line.IsStaticStory)
             .ToArray();
@@ -960,11 +958,7 @@ internal static class DocxTablesLayoutTests
 
     public static void DocxTableLayoutStagePreservesMixedCellBodyOrderAroundNestedTables()
     {
-        (FontFaceResolution Resolution, OpenTypeFont Font)? font = DocxTests.FindUsableInstalledFont();
-        if (font is null)
-        {
-            TestAssert.Skip("Environmental precondition not met: (font is null)");
-        }
+        OpenTypeFont font = TestFontBuilder.LoadTestFont();
 
         DocxParagraph before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d);
         DocxParagraph nestedParagraph = DocxTests.CreateDocxLayoutParagraph("Nested", 10d, 10d);
@@ -977,7 +971,7 @@ internal static class DocxTablesLayoutTests
         };
         var outerTable = new DocxTable(null, [90d], [new DocxTableRow([outerCell], null)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(outerTable)], [outerTable, nestedTable]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font.Value.Font, "BeforeNestedAfter".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "BeforeNestedAfter".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTableCellLayout outerCellLayout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, embedded, CancellationToken.None)
@@ -2082,11 +2076,6 @@ internal static class DocxTablesLayoutTests
 
     public static void DocxTableLayoutStageAppliesCellVerticalAlignment()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            TestAssert.Skip("Environmental precondition not met: (!File.Exists(arial))");
-        }
 
         var paragraph = new DocxParagraph(
             [new DocxTextRun("V", 11d, null, false, false, false, null, null)],
@@ -2106,7 +2095,7 @@ internal static class DocxTablesLayoutTests
         var bottomCell = new DocxTableCell("V", [paragraph], null, null, null, "bottom", [], DocxTableCellMargins.Empty);
         var table = new DocxTable(null, [40d, 40d, 40d], [new DocxTableRow([topCell, centerCell, bottomCell], 60d)]);
         DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(OpenTypeFont.Load(File.ReadAllBytes(arial)), "V".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(TestFontBuilder.LoadTestFont(), "V".EnumerateRunes().Select(rune => rune.Value), CancellationToken.None);
 
         DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, embedded, CancellationToken.None)
