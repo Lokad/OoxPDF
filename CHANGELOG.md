@@ -15,7 +15,8 @@
   wrappers and deleted paragraph marks. Bookmarks and links follow placed content
   and final-line paragraph spacing;
   supported inline page/column breaks preserve neighboring content.
-  Stored field results and resolved formatting history preserve neighboring equations.
+  Stored field results and resolved formatting history, including paragraph marks,
+  preserve neighboring equations.
 - DOCX layout: improves table sizing, merged-cell placement, conditional styles
   and padding, page-local body origins, paragraph backgrounds and longer comment
   balloons. Note numbering preserves distinct references within shared runs;

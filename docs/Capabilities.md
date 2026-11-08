@@ -570,8 +570,9 @@ Approximate or restricted:
 - Supported native equations share ordered inline measurement with text/pictures.
   Fitting multiple formulas, bookmarks and unchanged-format run splitting preserve
   content in qualified body paragraphs, simple cells and direct headers/footers.
-  Resolved paragraph-formatting history retains neighboring equations and source
-  navigation. Duplicate or unowned property changes keep their existing fallback;
+  Resolved paragraph-formatting history and a unique owned paragraph-mark format
+  change retain neighboring equations and source navigation, with or without a list
+  label. Duplicate or unowned property changes keep their existing fallback;
   formatting balloons and complete-page fidelity remain approximate.
   Adjacent display containers combine using the later container's justification;
   subsequent display rows share the first effective display row's owner.
