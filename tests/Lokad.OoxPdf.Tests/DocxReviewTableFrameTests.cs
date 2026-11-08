@@ -62,7 +62,7 @@ internal static class DocxReviewTableFrameTests
     {
         var anchor = Paragraph("Anchor") with
         {
-            InlineReferences = [new(DocxRelatedStoryKind.Comment, "1", null,
+            InlineReferences = [new(DocxRelatedStoryKind.Comment, "1", null, DisplayText: null,
                 SourceRunIndex: 0, RunChildIndex: 0, TextOffsetInRun: 0)],
             CommentRanges = [new("1", 0, 0, 1, 6, 1, 0)]
         };
