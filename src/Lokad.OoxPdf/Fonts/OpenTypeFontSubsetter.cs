@@ -92,6 +92,7 @@ internal static class OpenTypeFontSubsetter
         int glyphCapacity = seedGlyphCount + 1; // Includes the required .notdef glyph.
         ushort[] originalGlyphs;
         Dictionary<ushort, ushort> cidByOriginalGlyph;
+        int glyfLength;
         byte[] subsetHhea = [];
         // The existing owner admits the glyph-set/worklist/CID family before
         // construction, then keeps the resulting CID map beside the SFNT bytes.
@@ -110,7 +111,7 @@ internal static class OpenTypeFontSubsetter
                 cidByOriginalGlyph[originalGlyphs[i]] = (ushort)i;
             }
 
-            int glyfLength = MeasureGlyfLength();
+            glyfLength = MeasureGlyfLength();
             string[] optionalTags = ["cvt ", "fpgm", "prep", "gasp"];
             long copiedBytes = (long)os2.Length + head.Length + hhea.Length + maxp.Length + name.Length;
             foreach (string tag in optionalTags)
