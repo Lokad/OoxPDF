@@ -543,7 +543,7 @@ Supported within the following constraints:
 - Simple/complex fields with stored results, including supported nested cached
   fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
   their stored results, including empty results; nested fields own their locks.
-  Repeating table headers retain PAGE from the original admitted source row;
+  Complete repeating table-header rows retain PAGE from the original admitted source row;
   ordinary body cells and page headers/footers keep their own page inputs.
   This does not evaluate general Word
   fields, live cross-document data or arbitrary aligned/wrapping field layouts.
