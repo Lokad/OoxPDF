@@ -459,7 +459,6 @@ internal sealed partial class PptxRenderer
                 defaultPlotBox = measuredPlotBox;
             }
             else if (canMeasureCategoryPlot &&
-                categoryPlotElement is { } lineElement &&
                 await TryMeasureCartesianHeaderAsync(theme, sceneChart, legend,
                     categoryPlot, fontResolver,
                     categoryPlacement: categoryAxisPlacement).ConfigureAwait(false) is { } header)
