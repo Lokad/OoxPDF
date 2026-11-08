@@ -21,6 +21,8 @@ per-point overrides. Numeric bounds, units, orientation, crossing, gridlines and
 the selected parsed axis; source XML remains available for date systems and
 properties not yet represented in the scene. Missing axes keep their explicit
 defaults rather than acquiring declarations from another XML source.
+Reciprocal category-axis IDs own crossing and reversed label sides; absent axes
+retain automatic label defaults.
 
 ## Package Layer
 

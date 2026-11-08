@@ -569,13 +569,13 @@ internal sealed partial class PptxRenderer
         // category band. Unsupported composed axes retain their fallback.
         if (chart.Plots.Count != 1 && !HasSharedCartesianChartValueAxis(chart, axis)) return null;
         ChartAxisSource category = ReadChartCategoryAxisForPlot(chart, plot);
-        if (categoryPlacement is null && IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis) &&
+        if (categoryPlacement is null && IsSceneChartAxisLabelVisible(category.SceneAxis) &&
             (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } categoryAxis ||
              categoryAxis.TickLabelPositionKind == PptxSceneChartTickLabelPosition.High ||
              ReadSceneValueAxisReversed(axis) && categoryAxis.TickLabelPositionKind != PptxSceneChartTickLabelPosition.Low))
             return null;
         double lineHeight = 0d;
-        if (IsSceneOrXmlChartAxisLabelVisible(axis, axes[0].XmlAxis))
+        if (IsSceneChartAxisLabelVisible(axis))
         {
             ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, axis,
                 fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");

@@ -56,8 +56,8 @@ internal sealed partial class PptxRenderer
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
         ChartTextStyle yStyle = ReadSceneChartTextStyle(theme, chart, yAxis.SceneAxis,
             PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
-        bool xLabels = IsSceneOrXmlChartAxisLabelVisible(xAxis.SceneAxis, xAxis.XmlAxis);
-        bool yLabels = IsSceneOrXmlChartAxisLabelVisible(yAxis.SceneAxis, yAxis.XmlAxis);
+        bool xLabels = IsSceneChartAxisLabelVisible(xAxis.SceneAxis);
+        bool yLabels = IsSceneChartAxisLabelVisible(yAxis.SceneAxis);
         double? yLine = yLabels ? await measure.TryMeasureNormalLineHeightAsync(yStyle).ConfigureAwait(false) : 0d;
         if (yLine is null) return null;
         ChartTextStyle legendStyle = ReadSceneChartLegendTextStyle(theme, chart);

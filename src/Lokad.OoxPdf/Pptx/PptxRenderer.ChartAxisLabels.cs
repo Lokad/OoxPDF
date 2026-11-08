@@ -261,7 +261,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                bool labelsRightSide = placement?.LabelsHighSide ?? ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, sceneAxis, valueAxis, rightSide);
+                bool labelsRightSide = placement?.LabelsHighSide ?? ResolveSceneValueAxisLabelsRightSide(sceneChart, sceneAxis, rightSide);
                 double axisX = placement is { } resolved ? plotBox.X + plotBox.Width * resolved.LabelPlotRatio
                     : labelsRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                 width = useTextSizedWidth ? valueAxisLabelWidth : Math.Max(valueAxisLabelWidth,
@@ -361,7 +361,7 @@ internal sealed partial class PptxRenderer
         XElement? rightValueAxis = rightValueAxisSource.XmlAxis;
         PptxSceneChartAxis? rightSceneAxis = rightValueAxisSource.SceneAxis;
         if (rightValueAxis is null && rightSceneAxis is null ||
-            !IsSceneOrXmlChartAxisLabelVisible(rightSceneAxis, rightValueAxis))
+            !IsSceneChartAxisLabelVisible(rightSceneAxis))
         {
             return;
         }

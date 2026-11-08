@@ -266,7 +266,7 @@ internal sealed partial class PptxRenderer
     {
         if (chart is null || chart.Plots.Count < 2 || axis is not { HasScaling: true, HasLogarithmicScale: false } ||
             chart.Axes.Count(candidate => candidate.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
-            ReadSceneOrXmlPairedCategoryAxis(chart, axis, null).SceneAxis is not { } category) return false;
+            ReadScenePairedCategoryAxis(chart, axis) is not { } category) return false;
         PptxSceneChartBarDirection? direction = null;
         bool hasLines = false;
         foreach (var plot in chart.Plots)
@@ -457,17 +457,17 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static int GetValueAxisSideSlot(PptxSceneChart? sceneChart, PptxSceneChartAxis? primarySceneAxis, XElement? primaryAxis, PptxSceneChartAxis? secondarySceneAxis, XElement secondaryAxis, bool defaultPrimaryRightSide, bool defaultSecondaryRightSide)
+    private static int GetValueAxisSideSlot(PptxSceneChart? sceneChart, PptxSceneChartAxis? primarySceneAxis, PptxSceneChartAxis? secondarySceneAxis, bool defaultPrimaryRightSide, bool defaultSecondaryRightSide)
     {
-        bool primaryRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, primarySceneAxis, primaryAxis, defaultPrimaryRightSide);
-        bool secondaryRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, secondarySceneAxis, secondaryAxis, defaultSecondaryRightSide);
+        bool primaryRight = ResolveSceneValueAxisLabelsRightSide(sceneChart, primarySceneAxis, defaultPrimaryRightSide);
+        bool secondaryRight = ResolveSceneValueAxisLabelsRightSide(sceneChart, secondarySceneAxis, defaultSecondaryRightSide);
         return primaryRight == secondaryRight ? 1 : 0;
     }
 
     private static bool IsSameChartAxis(ChartAxisSource first, ChartAxisSource second)
     {
-        string? firstId = first.SceneAxis?.Id ?? ReadChartAxisId(first.XmlAxis);
-        string? secondId = second.SceneAxis?.Id ?? ReadChartAxisId(second.XmlAxis);
+        string? firstId = first.SceneAxis?.Id;
+        string? secondId = second.SceneAxis?.Id;
         return !string.IsNullOrWhiteSpace(firstId) && string.Equals(firstId, secondId, StringComparison.Ordinal);
     }
 
@@ -589,8 +589,8 @@ internal sealed partial class PptxRenderer
             ToChartSeriesStroke(valueAxis?.Line ?? default, null),
             ToChartSeriesStroke(secondaryValueAxis?.Line ?? default, null),
             ToChartSeriesStroke(categoryAxis?.Line ?? default, null),
-            ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis, null, defaultRightSide: false),
-            ResolveSceneOrXmlValueAxisRightSide(sceneChart, secondaryValueAxis, null, defaultRightSide: true),
+            ResolveSceneValueAxisRightSide(sceneChart, valueAxis, defaultRightSide: false),
+            ResolveSceneValueAxisRightSide(sceneChart, secondaryValueAxis, defaultRightSide: true),
             ResolveSceneValueAxisBottomSide(valueAxis, defaultBottomSide: true),
             ResolveSceneCategoryAxisRightSide(categoryAxis, defaultRightSide: false),
             valueAxis?.IsDeleted != true,
@@ -612,11 +612,9 @@ internal sealed partial class PptxRenderer
             : position;
     }
 
-    private static bool ResolveSceneOrXmlValueAxisRightSide(PptxSceneChart? chart, PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
+    private static bool ResolveSceneValueAxisRightSide(PptxSceneChart? chart, PptxSceneChartAxis? sceneAxis, bool defaultRightSide)
     {
-        PptxSceneChartAxisPosition position = sceneAxis?.PositionKind ??
-            PptxSceneBuilder.ParseChartAxisPosition(PptxSceneBuilder.ReadChartElementValue(axis, "axPos"));
-        bool declaredSide = position switch
+        bool declaredSide = sceneAxis?.PositionKind switch
         {
             PptxSceneChartAxisPosition.Right => true,
             PptxSceneChartAxisPosition.Left => false,
@@ -624,15 +622,12 @@ internal sealed partial class PptxRenderer
         };
         // A paired ordinal axis can resolve a crossing to a physical edge.
         // Unpaired, date/numeric and interior crossings retain their declared fallback.
-        ChartAxisSource category = ReadSceneOrXmlPairedCategoryAxis(chart, sceneAxis, axis);
-        if (category.SceneAxis is null && category.XmlAxis is null) return declaredSide;
-        double? crossing = sceneAxis is not null ? sceneAxis.CrossesAt :
-            PptxSceneBuilder.ReadChartElementDoubleWithValue(axis, "crossesAt").Value;
-        if (crossing is not null) return declaredSide;
-        string raw = sceneAxis?.Crosses ?? PptxSceneBuilder.ReadChartElementValue(axis, "crosses");
-        PptxSceneChartAxisCrosses crosses = string.IsNullOrEmpty(raw) ? PptxSceneChartAxisCrosses.AutoZero :
-            sceneAxis?.CrossesKind ?? PptxSceneBuilder.ParseChartAxisCrosses(raw);
-        bool reversed = ReadSceneValueAxisReversed(category.SceneAxis);
+        PptxSceneChartAxis? category = ReadScenePairedCategoryAxis(chart, sceneAxis);
+        if (category is null || sceneAxis?.CrossesAt is not null) return declaredSide;
+        PptxSceneChartAxisCrosses crosses = string.IsNullOrEmpty(sceneAxis?.Crosses)
+            ? PptxSceneChartAxisCrosses.AutoZero
+            : sceneAxis?.CrossesKind ?? PptxSceneChartAxisCrosses.Unknown;
+        bool reversed = ReadSceneValueAxisReversed(category);
         return crosses switch
         {
             PptxSceneChartAxisCrosses.Maximum => !reversed,
@@ -641,18 +636,13 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static ChartAxisSource ReadSceneOrXmlPairedCategoryAxis(PptxSceneChart? chart, PptxSceneChartAxis? sceneAxis, XElement? axis)
+    private static PptxSceneChartAxis? ReadScenePairedCategoryAxis(PptxSceneChart? chart, PptxSceneChartAxis? sceneAxis)
     {
-        string? id = sceneAxis?.Id ?? ReadChartAxisId(axis);
-        string? crossId = sceneAxis?.CrossAxisId ?? PptxSceneBuilder.ReadChartElementValue(axis, "crossAx");
-        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(crossId)) return default;
-        if (sceneAxis is not null)
-            return new(chart?.Axes.FirstOrDefault(candidate => candidate.AxisKind == PptxSceneChartAxisKind.Category &&
-                candidate.Id == crossId && candidate.CrossAxisId == id), null);
-        // An authoritative scene must not acquire missing axes from fallback XML.
-        if (chart is not null) return default;
-        return new(null, axis?.Parent?.Elements(ChartNamespace + "catAx").FirstOrDefault(candidate =>
-            ReadChartAxisId(candidate) == crossId && PptxSceneBuilder.ReadChartElementValue(candidate, "crossAx") == id));
+        string? id = sceneAxis?.Id;
+        string? crossId = sceneAxis?.CrossAxisId;
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(crossId)) return null;
+        return chart?.Axes.FirstOrDefault(candidate => candidate.AxisKind == PptxSceneChartAxisKind.Category &&
+            candidate.Id == crossId && candidate.CrossAxisId == id);
     }
 
     private static bool ResolveSceneValueAxisBottomSide(PptxSceneChartAxis? sceneAxis, bool defaultBottomSide)
@@ -685,44 +675,22 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static bool IsChartAxisDeleted(XElement? axis)
+    private static bool IsSceneChartAxisLabelVisible(PptxSceneChartAxis? sceneAxis)
     {
-        XElement? delete = axis?.Element(ChartNamespace + "delete");
-        return PptxSceneBuilder.IsOoxmlBooleanElementEnabled(delete);
+        return sceneAxis?.IsDeleted != true &&
+            ResolveChartTickLabelPosition(sceneAxis?.TickLabelPositionKind ?? PptxSceneChartTickLabelPosition.Unknown) !=
+                PptxSceneChartTickLabelPosition.None;
     }
 
-    private static bool IsSceneOrXmlChartAxisLabelVisible(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    private static bool ResolveSceneValueAxisLabelsRightSide(PptxSceneChart? chart, PptxSceneChartAxis? sceneAxis, bool defaultRightSide)
     {
-        if (sceneAxis is null)
-        {
-            return IsChartAxisLabelVisible();
-        }
-
-        return sceneAxis.IsDeleted != true &&
-            ResolveChartTickLabelPosition(sceneAxis.TickLabelPositionKind) != PptxSceneChartTickLabelPosition.None;
-
-        bool IsChartAxisLabelVisible()
-        {
-            if (IsChartAxisDeleted(axis))
-            {
-                return false;
-            }
-
-            string tickLabelPosition = PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos");
-            return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) != PptxSceneChartTickLabelPosition.None;
-        }
-    }
-
-    private static bool ResolveSceneOrXmlValueAxisLabelsRightSide(PptxSceneChart? chart, PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
-    {
-        PptxSceneChartTickLabelPosition position = ResolveChartTickLabelPosition(sceneAxis?.TickLabelPositionKind ??
-            PptxSceneBuilder.ParseChartTickLabelPosition(PptxSceneBuilder.ReadChartElementValue(axis, "tickLblPos")));
+        PptxSceneChartTickLabelPosition position = ResolveChartTickLabelPosition(
+            sceneAxis?.TickLabelPositionKind ?? PptxSceneChartTickLabelPosition.Unknown);
         if (position is not (PptxSceneChartTickLabelPosition.Low or PptxSceneChartTickLabelPosition.High))
             return defaultRightSide;
         // Explicit label sides follow the paired ordinal direction. Missing,
         // date/numeric and unpaired axes retain their existing physical fallback.
-        ChartAxisSource category = ReadSceneOrXmlPairedCategoryAxis(chart, sceneAxis, axis);
-        bool reversed = ReadSceneValueAxisReversed(category.SceneAxis);
+        bool reversed = ReadSceneValueAxisReversed(ReadScenePairedCategoryAxis(chart, sceneAxis));
         return (position == PptxSceneChartTickLabelPosition.High) != reversed;
     }
 

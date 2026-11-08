@@ -326,7 +326,7 @@ internal sealed partial class PptxRenderer
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, owner)
                 .FirstOrDefault();
             if (!IsSceneOrXmlVisibleValueAxis(valueAxis.SceneAxis, valueAxis.XmlAxis) ||
-                !IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+                !IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
             {
                 continue;
             }
@@ -390,7 +390,7 @@ internal sealed partial class PptxRenderer
         if (cartesianHeader is null)
             defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
         ChartAxisSource rightReserveCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-        bool rightReserveLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis, rightReserveCategoryAxis.XmlAxis);
+        bool rightReserveLabelsVisible = IsSceneChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis);
         defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
         if (cartesianHeader is { } measuredHeader)
         {
@@ -430,7 +430,7 @@ internal sealed partial class PptxRenderer
         if (numericPlacement is { LabelsHighSide: true })
         {
             ChartAxisSource numericAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-            if (IsSceneOrXmlChartAxisLabelVisible(numericAxis.SceneAxis, numericAxis.XmlAxis))
+            if (IsSceneChartAxisLabelVisible(numericAxis.SceneAxis))
             {
                 // Transfer only the numeric band. Title and legend owners keep
                 // their measured space; plot height and category geometry stay.
@@ -500,7 +500,7 @@ internal sealed partial class PptxRenderer
                 double topReserve = legacyBandReserve;
                 double bottomReserve = legacyBandReserve;
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-                if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+                if (IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
                 {
                     ChartTextStyle valueTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                     topReserve = ComputeDefaultAxisTitleHorizontalBarReserves(valueTickStyle.FontSize, 0d).TopReserve;
@@ -536,7 +536,7 @@ internal sealed partial class PptxRenderer
             double ResolveDefaultAxisTitleVerticalSideReserve(double legacyReserve, PptxSceneChartAxisPosition titlePosition)
             {
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-                if (!IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+                if (!IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
                 {
                     return legacyReserve;
                 }
@@ -566,7 +566,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            if (!IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
             {
                 return plotBox;
             }
@@ -632,7 +632,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            if (!IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
             {
                 double bottom = frame.Y + PptxChartMetricRules.HorizontalBarPlotTopReserve;
                 return measuredFrame ? new ChartPlotBox(plotBox.X, bottom, plotBox.Width, Math.Max(1d, automaticTop - bottom)) : plotBox;
@@ -688,7 +688,7 @@ internal sealed partial class PptxRenderer
             ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxCategoryWidth = 0d;
-            if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+            if (IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
             foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly))
             {
                 string? labelText = label?.Text;
@@ -702,7 +702,7 @@ internal sealed partial class PptxRenderer
             {
                 double endpointLeft = PptxChartMetricRules.ColumnPlotRightReserve, endpointRight = endpointLeft;
                 ChartAxisSource value = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-                if (IsSceneOrXmlChartAxisLabelVisible(value.SceneAxis, value.XmlAxis))
+                if (IsSceneChartAxisLabelVisible(value.SceneAxis))
                 {
                     bool percent = IsPercentStackedChartGrouping(barOptions.Grouping);
                     ChartValueExtents extents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, value.SceneAxis,
@@ -758,7 +758,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            if (!IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
             {
                 return plotBox;
             }
@@ -793,8 +793,8 @@ internal sealed partial class PptxRenderer
             double requiredReserve = ComputeCartesianAxisLabelSideReserve(maxLabelWidth, tickStyle.FontSize);
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
-            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis,
-                ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+            bool labelsRight = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis,
+                ResolveSceneValueAxisRightSide(sceneChart, valueAxis.SceneAxis, defaultRightSide: false));
             if (labelsRight)
             {
                 rightReserve = Math.Max(rightReserve, requiredReserve);
@@ -828,7 +828,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-            bool labelsVisible = IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
+            bool labelsVisible = IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis);
             // Reserve and painting share the category offset measurement, under
             // the existing frame/source-furniture eligibility.
             bool measuredFrame = cartesianHeader is not null;
@@ -912,7 +912,7 @@ internal sealed partial class PptxRenderer
             }
 
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            if (!IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
             {
                 return plotBox;
             }
@@ -966,8 +966,8 @@ internal sealed partial class PptxRenderer
             }
             double leftReserve = plotBox.X - frame.X;
             double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
-            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis,
-                ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+            bool labelsRight = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis,
+                ResolveSceneValueAxisRightSide(sceneChart, valueAxis.SceneAxis, defaultRightSide: false));
             if (labelsRight)
             {
                 rightReserve = Math.Max(rightReserve, requiredReserve);
@@ -1027,10 +1027,9 @@ internal sealed partial class PptxRenderer
                     defaultNumberFormat: percentStacked ? "0%" : null,
                     fontResolver: fontResolver, context: context).ConfigureAwait(false));
                 double stripWidth = strip.StripWidth;
-                bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart,
+                bool labelsRight = ResolveSceneValueAxisLabelsRightSide(sceneChart,
                     valueAxis.SceneAxis,
-                    valueAxis.XmlAxis,
-                    ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+                    ResolveSceneValueAxisRightSide(sceneChart, valueAxis.SceneAxis, defaultRightSide: false));
                 if (labelsRight)
                 {
                     rightStripWidth = Math.Max(rightStripWidth, stripWidth);
@@ -1145,7 +1144,7 @@ internal sealed partial class PptxRenderer
         {
             ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             double leftReserve = 0d;
-            if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+            if (IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
             {
                 ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
                 double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
@@ -1180,7 +1179,7 @@ internal sealed partial class PptxRenderer
         {
             double leftReserve = 0d;
             ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
-            if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+            if (IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
             {
                 double labelOffsetScale = ResolveSceneCategoryAxisLabelOffsetScale(categoryAxis.SceneAxis);
                 double outsideFactor =
@@ -1194,7 +1193,7 @@ internal sealed partial class PptxRenderer
                 : 0d;
             double topReserve = 0d;
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, barPlot).FirstOrDefault();
-            if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            if (IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
             {
                 double labelHeight = PptxChartMetricRules.ValueAxisFallbackFontSize * PptxChartMetricRules.AxisLabelHeightFactor;
                 topReserve = labelHeight * (
@@ -1333,7 +1332,7 @@ internal sealed partial class PptxRenderer
             fallbackFontSize: horizontalStrip ? PptxChartMetricRules.ValueAxisFallbackFontSize : PptxChartMetricRules.CategoryAxisFallbackFontSize,
             chartStyleRole: horizontalStrip ? "valueAxis" : "categoryAxis");
         double bottomReserve = ComputeNoTitleBottomLegendReserve(legendStyle.FontSize, tickStyle.FontSize);
-        if (horizontalStrip && !IsSceneOrXmlChartAxisLabelVisible(tickAxis.SceneAxis, tickAxis.XmlAxis))
+        if (horizontalStrip && !IsSceneChartAxisLabelVisible(tickAxis.SceneAxis))
         {
             bottomReserve -= ComputeCartesianLabelStripBottomReserve(tickStyle.FontSize) - PptxChartMetricRules.HorizontalBarPlotTopReserve;
         }

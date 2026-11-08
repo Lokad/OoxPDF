@@ -425,14 +425,14 @@ internal sealed partial class PptxRenderer
                 return null;
             ChartAxisSource category = ReadChartCategoryAxisForPlot(sceneChart, plot);
             if (category.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } ||
-                !IsSceneOrXmlChartAxisLabelVisible(category.SceneAxis, category.XmlAxis))
+                !IsSceneChartAxisLabelVisible(category.SceneAxis))
                 return null;
             var measure = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             ChartTextStyle categoryStyle = ReadSceneChartTextStyle(theme, sceneChart, category.SceneAxis,
                 PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
             if (await measure.TryMeasureNormalLineHeightAsync(categoryStyle).ConfigureAwait(false) is null)
                 return null;
-            if (IsSceneOrXmlChartAxisLabelVisible(valueAxis, axes[0].XmlAxis))
+            if (IsSceneChartAxisLabelVisible(valueAxis))
             {
                 ChartTextStyle numericStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis,
                     PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
@@ -476,15 +476,15 @@ internal sealed partial class PptxRenderer
                     // of captions, bottom legends and the unresolved footer metric.
                     double? numericReserve = PptxChartMetricRules.ColumnPlotRightReserve;
                     ChartAxisSource valueAxis = header.ValueAxis;
-                    if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+                    if (IsSceneChartAxisLabelVisible(valueAxis.SceneAxis))
                     {
                         var (labelWidth, tickStyle) = await MeasureCategoryPlotValueLabelWidthAsync().ConfigureAwait(false);
                         numericReserve = labelWidth > 0d ? ComputeCartesianAxisLabelSideReserve(labelWidth, tickStyle.FontSize) : null;
                     }
                     if (numericReserve is { } reserve)
                     {
-                        bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis,
-                            ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+                        bool labelsRight = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueAxis.SceneAxis,
+                            ResolveSceneValueAxisRightSide(sceneChart, valueAxis.SceneAxis, defaultRightSide: false));
                         double left = labelsRight ? PptxChartMetricRules.ColumnPlotRightReserve : reserve;
                         double right = labelsRight ? reserve : PptxChartMetricRules.ColumnPlotRightReserve;
                         double width = frame.Width - left - right;
@@ -524,12 +524,12 @@ internal sealed partial class PptxRenderer
 
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, plot);
                 if (categoryAxis.SceneAxis is not { PositionKind: PptxSceneChartAxisPosition.Bottom } ||
-                    !IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+                    !IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
                 {
                     return null;
                 }
 
-                bool numericLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueAxis, valueAxes[0].XmlAxis);
+                bool numericLabelsVisible = IsSceneChartAxisLabelVisible(valueAxis);
                 var (maxLabelWidth, tickStyle) = await MeasureCategoryPlotValueLabelWidthAsync().ConfigureAwait(false);
                 if (numericLabelsVisible && maxLabelWidth <= 0d)
                 {
@@ -538,8 +538,8 @@ internal sealed partial class PptxRenderer
 
                 double sideReserve = numericLabelsVisible ? ComputeCartesianAxisLabelSideReserve(maxLabelWidth, tickStyle.FontSize) :
                     PptxChartMetricRules.ColumnPlotRightReserve;
-                bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueAxis, valueAxes[0].XmlAxis,
-                    ResolveSceneOrXmlValueAxisRightSide(sceneChart, valueAxis, valueAxes[0].XmlAxis, defaultRightSide: false));
+                bool labelsRight = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueAxis,
+                    ResolveSceneValueAxisRightSide(sceneChart, valueAxis, defaultRightSide: false));
                 double leftReserve = labelsRight ? PptxChartMetricRules.ColumnPlotRightReserve : sideReserve;
                 double rightReserve = labelsRight ? sideReserve : PptxChartMetricRules.ColumnPlotRightReserve;
                 double width = frame.Width - leftReserve - rightReserve;
@@ -625,7 +625,7 @@ internal sealed partial class PptxRenderer
                 tickStyle = valueAxisTextStyle;
                 // Hidden labels still supply scale/crossing data, without
                 // requesting their font or constructing a label measurement.
-                if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxisForScale)) return (0d, tickStyle);
+                if (!IsSceneChartAxisLabelVisible(valueAxis.SceneAxis)) return (0d, tickStyle);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneChartValueAxisUnits(valueAxis.SceneAxis), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValuesCore(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, percentStacked), context: context);
                 string[] tickLabels = tickValues
@@ -845,7 +845,7 @@ internal sealed partial class PptxRenderer
     {
         IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, plot);
         ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
-        if (!IsSceneOrXmlChartAxisLabelVisible(xValueAxis.SceneAxis, xValueAxis.XmlAxis))
+        if (!IsSceneChartAxisLabelVisible(xValueAxis.SceneAxis))
         {
             return 0d;
         }

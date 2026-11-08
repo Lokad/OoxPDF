@@ -2471,6 +2471,8 @@
     "PptxNegativeOnlyAxesKeepOfficeRangeAndAuthoredBounds"
   ],
   "pptx-axis-crossing-side": [
+    "ParsedAxisVisibilityKeepsAbsentDeletedAndUnknownDefaults",
+    "ParsedAxisPairsKeepCrossingAndLabelSideOwners",
     "PptxNumericCrossingOwnsPairedCategorySide",
     "PptxNumericCrossingRetainsUnpairedAndInteriorFallbacks",
     "PptxNumericCrossingMovesTheMeasuredStripWithItsLabels",

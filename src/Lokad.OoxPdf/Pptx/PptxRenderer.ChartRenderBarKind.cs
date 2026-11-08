@@ -206,7 +206,7 @@ internal sealed partial class PptxRenderer
                         GridlineStyle = valueAxisOptions.GridlineStyle with { Major = valueAxisOptions.GridlineStyle.Major ?? galleryAxisDefault },
                     };
                 }
-                bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
+                bool valueAxisLabelsVisible = IsSceneChartAxisLabelVisible(valueSceneAxis);
                 RenderBarChart(graphics, theme, colorMap, barPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barStyleId, resolvedCategory, context: context);
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
@@ -358,7 +358,7 @@ internal sealed partial class PptxRenderer
                         ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
                 }
 
-                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
+                if (axesStyle.CategoryAxisVisible && IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
                 {
                     double? categoryLabelCoordinate = horizontalBars
                         ? resolvedCategory is { } horizontalPlacement ? plotBox.X + plotBox.Width * horizontalPlacement.LabelPlotRatio : null
@@ -370,12 +370,10 @@ internal sealed partial class PptxRenderer
                 {
                     bool sameSideSecondaryValueAxis = !horizontalBars &&
                         secondaryValueAxis is not null &&
-                        IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis) &&
+                        IsSceneChartAxisLabelVisible(secondaryValueSceneAxis) &&
                         GetValueAxisSideSlot(sceneChart,
                             valueSceneAxis,
-                            valueAxis,
                             secondaryValueSceneAxis,
-                            secondaryValueAxis,
                             defaultPrimaryRightSide: axesStyle.ValueAxisRightSide,
                             defaultSecondaryRightSide: axesStyle.SecondaryValueAxisRightSide) > 0;
                     if (valueAxisLabelsVisible)
@@ -385,12 +383,12 @@ internal sealed partial class PptxRenderer
 
                     if (!horizontalBars)
                     {
-                        if (secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
+                        if (secondaryValueAxis is not null && IsSceneChartAxisLabelVisible(secondaryValueSceneAxis))
                         {
                             bool secondaryValueAxisRightSide = axesStyle.SecondaryValueAxisRightSide;
-                            int sideSlot = GetValueAxisSideSlot(sceneChart, valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: axesStyle.ValueAxisRightSide, defaultSecondaryRightSide: secondaryValueAxisRightSide);
+                            int sideSlot = GetValueAxisSideSlot(sceneChart, valueSceneAxis, secondaryValueSceneAxis, defaultPrimaryRightSide: axesStyle.ValueAxisRightSide, defaultSecondaryRightSide: secondaryValueAxisRightSide);
                             double? secondaryInkAnchor = null;
-                            bool secondaryLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, secondaryValueSceneAxis, secondaryValueAxis, secondaryValueAxisRightSide);
+                            bool secondaryLabelsRightSide = ResolveSceneValueAxisLabelsRightSide(sceneChart, secondaryValueSceneAxis, secondaryValueAxisRightSide);
                             if (!secondaryLabelsRightSide && sideSlot == 1 && valueAxisLabelsVisible)
                             {
                                 ChartValueAxisStripMeasure primaryStrip = (await MeasureVerticalValueAxisLabelStripAsync(theme, sceneChart, chartXml, valueAxis, valueSceneAxis, valueExtents, valueAxisOptions.Units, defaultNumberFormat: percentStacked ? "0%" : null, fontResolver: fontResolver, context: context).ConfigureAwait(false));
@@ -404,7 +402,7 @@ internal sealed partial class PptxRenderer
                         }
                     }
                 }
-                else if (!horizontalBars && secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
+                else if (!horizontalBars && secondaryValueAxis is not null && IsSceneChartAxisLabelVisible(secondaryValueSceneAxis))
                 {
                     await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: axesStyle.SecondaryValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: null, fontResolver: fontResolver, chartFonts: fonts, context: context).ConfigureAwait(false);
                 }
@@ -444,7 +442,7 @@ internal sealed partial class PptxRenderer
                                 tickEdges[tickIndex] = ChartValueToPlotCoordinate(valueExtents, tickValues[tickIndex], plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
                             }
 
-                            bool valueLabelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneChart, valueSceneAxis, valueAxis, axesStyle.ValueAxisRightSide);
+                            bool valueLabelsRightSide = ResolveSceneValueAxisLabelsRightSide(sceneChart, valueSceneAxis, axesStyle.ValueAxisRightSide);
                             double valueAxisX = axesStyle.ValueAxisRightSide ? plotBox.X + plotBox.Width : plotBox.X;
                             SetChartStroke(graphics, valueTickStroke);
                             StrokeMajorTickSegments(graphics, tickEdges, valueAxisX, verticalSegments: false, outwardIsLowSide: !valueLabelsRightSide, valueTickMark, valueTickStyle.FontSize * PptxChartMetricRules.ChartAxisMajorTickLengthFactor);

@@ -100,7 +100,7 @@ internal sealed partial class PptxRenderer
             return layout;
         var measurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         double firstWidth = 0d, lastWidth = 0d, sideWidth = 0d, xLine = 0d, yLine = 0d;
-        if (IsSceneOrXmlChartAxisLabelVisible(xAxis.SceneAxis, xAxis.XmlAxis))
+        if (IsSceneChartAxisLabelVisible(xAxis.SceneAxis))
         {
             ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, xAxis.SceneAxis,
                 PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
@@ -118,7 +118,7 @@ internal sealed partial class PptxRenderer
                 if (xOptions.Reversed) (firstWidth, lastWidth) = (lastWidth, firstWidth);
             }
         }
-        if (IsSceneOrXmlChartAxisLabelVisible(yAxis.SceneAxis, yAxis.XmlAxis))
+        if (IsSceneChartAxisLabelVisible(yAxis.SceneAxis))
         {
             ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, yAxis.SceneAxis,
                 PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
@@ -167,7 +167,7 @@ internal sealed partial class PptxRenderer
                     if (xTickStroke.Alpha > 0.001d)
                     {
                         ChartTextStyle xTickStyle = ReadSceneChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-                        IReadOnlyList<double> xTickValues = GetChartAxisTickValuesCore(xExtents, xAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: IsSceneOrXmlChartAxisLabelVisible(xValueAxis.SceneAxis, xValueAxis.XmlAxis), manualPlotLayoutApplied: false), xAxisOptions.TickPolicy, context: context);
+                        IReadOnlyList<double> xTickValues = GetChartAxisTickValuesCore(xExtents, xAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: true, valueAxisLabelsVisible: IsSceneChartAxisLabelVisible(xValueAxis.SceneAxis), manualPlotLayoutApplied: false), xAxisOptions.TickPolicy, context: context);
                         double[] xTickEdges = new double[xTickValues.Count];
                         for (int xTickIndex = 0; xTickIndex < xTickValues.Count; xTickIndex++)
                         {
@@ -187,7 +187,7 @@ internal sealed partial class PptxRenderer
                     if (yTickStroke.Alpha > 0.001d)
                     {
                         ChartTextStyle yTickStyle = ReadSceneChartTextStyle(theme, sceneChart, yValueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
-                        IReadOnlyList<double> yTickValues = GetChartAxisTickValuesCore(yExtents, yAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: IsSceneOrXmlChartAxisLabelVisible(yValueAxis.SceneAxis, yValueAxis.XmlAxis), manualPlotLayoutApplied: false), yAxisOptions.TickPolicy, context: context);
+                        IReadOnlyList<double> yTickValues = GetChartAxisTickValuesCore(yExtents, yAxisOptions.Units.MajorUnit, includeEndpoints: true, GetValueAxisAutoTickTargetCount(horizontalBars: false, valueAxisLabelsVisible: IsSceneChartAxisLabelVisible(yValueAxis.SceneAxis), manualPlotLayoutApplied: false), yAxisOptions.TickPolicy, context: context);
                         double[] yTickEdges = new double[yTickValues.Count];
                         for (int yTickIndex = 0; yTickIndex < yTickValues.Count; yTickIndex++)
                         {

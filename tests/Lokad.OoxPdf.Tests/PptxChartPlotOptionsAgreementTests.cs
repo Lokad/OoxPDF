@@ -235,6 +235,61 @@ internal static class PptxChartPlotOptionsAgreementTests
         TestAssert.Equal(null, Property(emptyStyle, "Minor"));
     }
 
+    public static void ParsedAxisVisibilityKeepsAbsentDeletedAndUnknownDefaults()
+    {
+        bool Visible(PptxSceneChartAxis? axis) => (bool)TestAssert.NotNull(Invoke("IsSceneChartAxisLabelVisible",
+            [typeof(PptxSceneChartAxis)], [axis]));
+        TestAssert.Equal(true, Visible(null));
+        foreach (var test in new[]
+        {
+            (Xml: "", Expected: true),
+            (Xml: "<c:delete val=\"1\"/>", Expected: false),
+            (Xml: "<c:delete val=\"0\"/>", Expected: true),
+            (Xml: "<c:tickLblPos val=\"none\"/>", Expected: false),
+            (Xml: "<c:tickLblPos val=\"bogus\"/>", Expected: true),
+            (Xml: "<c:delete val=\"1\"/><c:tickLblPos val=\"high\"/>", Expected: false)
+        })
+            TestAssert.Equal(test.Expected, Visible(LoadAxis(test.Xml)));
+    }
+
+    public static void ParsedAxisPairsKeepCrossingAndLabelSideOwners()
+    {
+        (string Kind, string Orientation, string Cross, bool Reciprocal, string Label,
+            string CrossAt, bool ExpectedSide, bool ExpectedLabelSide)[] cases =
+        [
+            ("catAx", "maxMin", "max", true, "low", "", false, true),
+            ("catAx", "minMax", "max", true, "high", "", true, true),
+            ("catAx", "maxMin", "min", true, "high", "", true, false),
+            ("catAx", "maxMin", "max", false, "low", "", true, false),
+            ("dateAx", "maxMin", "max", true, "low", "", true, false),
+            ("catAx", "maxMin", "", true, "high", "<c:crossesAt val=\"2\"/>", true, false),
+            ("catAx", "minMax", "bogus", true, "nextTo", "", true, true),
+            ("catAx", "minMax", "", true, "nextTo", "", false, true)
+        ];
+        bool Resolve(string method, PptxSceneChart? chart, PptxSceneChartAxis? axis, bool fallback) =>
+            (bool)TestAssert.NotNull(Invoke(method,
+                [typeof(PptxSceneChart), typeof(PptxSceneChartAxis), typeof(bool)], [chart, axis, fallback]));
+        foreach (var test in cases)
+        {
+            string cross = test.Cross.Length == 0 ? "" : $"<c:crosses val=\"{test.Cross}\"/>";
+            PptxSceneChart chart = TestAssert.NotNull(PptxTests.BuildSingleChartScene(ChartSpace($$"""
+                <c:barChart><c:axId val="10"/><c:axId val="20"/></c:barChart>
+                <c:{{test.Kind}}><c:axId val="10"/><c:crossAx val="{{(test.Reciprocal ? "20" : "99")}}"/>
+                  <c:scaling><c:orientation val="{{test.Orientation}}"/></c:scaling></c:{{test.Kind}}>
+                <c:valAx><c:axId val="20"/><c:crossAx val="10"/><c:axPos val="r"/>
+                  {{cross}}{{test.CrossAt}}<c:tickLblPos val="{{test.Label}}"/></c:valAx>
+                """, "")));
+            PptxSceneChartAxis axis = chart.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+            TestAssert.Equal(test.ExpectedSide, Resolve("ResolveSceneValueAxisRightSide", chart, axis, true));
+            TestAssert.Equal(test.ExpectedLabelSide, Resolve("ResolveSceneValueAxisLabelsRightSide", chart, axis, true));
+        }
+        foreach (bool fallback in new[] { false, true })
+        {
+            TestAssert.Equal(fallback, Resolve("ResolveSceneValueAxisRightSide", null, null, fallback));
+            TestAssert.Equal(fallback, Resolve("ResolveSceneValueAxisLabelsRightSide", null, null, fallback));
+        }
+    }
+
     private static PptxSceneChartAxis LoadAxis(string axisInner)
     {
         string xml = ChartSpace("<c:barChart><c:ser><c:cat><c:strLit><c:pt idx=\"0\"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx=\"0\"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser><c:axId val=\"10\"/><c:axId val=\"20\"/></c:barChart><c:valAx><c:axId val=\"10\"/>" + axisInner + "</c:valAx>", "");

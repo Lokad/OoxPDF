@@ -1808,19 +1808,12 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(PptxSceneChartTickLabelPosition.Unknown, categoryAxis.TickLabelPositionKind);
         TestAssert.Equal("bogus", categoryAxis.TickLabelPosition);
 
-        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea><c:catAx><c:tickLblPos val="none"/></c:catAx></c:plotArea></c:chart>
-            </c:chartSpace>
-            """).Descendants(c + "catAx").Single();
         System.Reflection.MethodInfo labelVisible = typeof(PptxRenderer).GetMethod(
-            "IsSceneOrXmlChartAxisLabelVisible",
+            "IsSceneChartAxisLabelVisible",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected axis label visibility resolver.");
-        object visible = labelVisible.Invoke(null, [categoryAxis, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved axis label visibility.");
+        object visible = labelVisible.Invoke(null, [categoryAxis]) ?? throw new InvalidOperationException("Expected resolved axis label visibility.");
 
-        TestAssert.True((bool)visible, "Unknown scene-owned tickLblPos should resolve to the Office default nextTo/visible, not fall back to mismatched XML.");
+        TestAssert.True((bool)visible, "Unknown scene-owned tickLblPos resolves to the default nextTo/visible.");
     }
 
     public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()

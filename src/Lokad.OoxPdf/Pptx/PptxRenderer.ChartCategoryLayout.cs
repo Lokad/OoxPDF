@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
         ChartLayout original = layout;
         ChartPlotBox source = layout.PlotBox;
         double numericClearance = 0d, numericBand = 0d;
-        bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(chart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide);
+        bool labelsRight = ResolveSceneValueAxisLabelsRightSide(chart, valueAxis.SceneAxis, defaultRightSide);
         bool onTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
         // Outer captions fit the area remaining after numeric admission. Inner
         // and automatic layouts retain their established preparation order.
@@ -60,7 +60,7 @@ internal sealed partial class PptxRenderer
         // Numeric endcaps activate shared inner placement. Source-fit references
         // establish its outer rectangle before complete captions are admitted.
         bool admitInnerCaptions = innerTarget && EndcapsOverflow(numericClearance);
-        bool categoryVisible = categoryAxis.SceneAxis is { } axis ? axis.IsDeleted != true : !IsChartAxisDeleted(categoryAxis.XmlAxis);
+        bool categoryVisible = categoryAxis.SceneAxis?.IsDeleted != true;
         (double Left, double Right,
             (double NumericStart, double NumericLength, double OuterStart, double OuterLength)? Vertical)? sourceReferences = null;
         if (categoryVisible)
@@ -221,7 +221,7 @@ internal sealed partial class PptxRenderer
 
         async ValueTask<(double Clearance, double Band)> MeasureNumericFrameAsync()
         {
-            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis)) return (0d, 0d);
+            if (!IsSceneChartAxisLabelVisible(valueAxis.SceneAxis)) return (0d, 0d);
             var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
             ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, valueAxis.SceneAxis,
                 PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
@@ -244,7 +244,7 @@ internal sealed partial class PptxRenderer
             layout.Legend.Layout.HasGeometryValues || chart.Plots.Count != 1 ||
             chart.Axes.Count(axis => axis.AxisKind == PptxSceneChartAxisKind.Value) != 1 ||
             valueAxis.SceneAxis is not { HasLogarithmicScale: false } ||
-            ReadSceneOrXmlPairedCategoryAxis(chart, valueAxis.SceneAxis, valueAxis.XmlAxis).SceneAxis is null ||
+            ReadScenePairedCategoryAxis(chart, valueAxis.SceneAxis) is null ||
             layout.CategoryLabels is not { RotationDegrees: 0d } captions ||
             captions.Labels.Values.Any(parts => parts.Length != 1) || labels.Count == 0 || entries.Count == 0)
             return (layout, null);
@@ -271,10 +271,10 @@ internal sealed partial class PptxRenderer
             legend = PrepareAreaSideLegend(legend, layout.Frame, entries.Count, legendStyle, frame.LineHeight);
         }
         double available = outerRight - outerLeft;
-        double numericBand = IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis)
+        double numericBand = IsSceneChartAxisLabelVisible(valueAxis.SceneAxis)
             ? Math.Max(0d, layout.PlotBox.X - outerLeft) : 0d;
-        bool numericRight = ResolveSceneOrXmlValueAxisLabelsRightSide(chart, valueAxis.SceneAxis, valueAxis.XmlAxis,
-            ResolveSceneOrXmlValueAxisRightSide(chart, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
+        bool numericRight = ResolveSceneValueAxisLabelsRightSide(chart, valueAxis.SceneAxis,
+            ResolveSceneValueAxisRightSide(chart, valueAxis.SceneAxis, defaultRightSide: false));
         double numericLeft = numericRight ? 0d : numericBand;
         double numericRightBand = numericRight ? numericBand : 0d;
         if (available - numericLeft - numericRightBand < 1d) return (layout, null);
@@ -497,7 +497,7 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver resolver, ChartLegendBox? legendBox = null, double? availableCaptionHeight = null,
         bool admitInnerCaptions = false, double numericClearance = 0d, bool valueAxisReversed = false)
     {
-        if (labels.Count == 0 || !IsSceneOrXmlChartAxisLabelVisible(axis.SceneAxis, axis.XmlAxis))
+        if (labels.Count == 0 || !IsSceneChartAxisLabelVisible(axis.SceneAxis))
             return (layout, null);
         ChartTextStyle style = ReadSceneChartTextStyle(theme, chart, axis.SceneAxis,
             PptxChartMetricRules.CategoryAxisFallbackFontSize, "categoryAxis");
