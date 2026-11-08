@@ -103,11 +103,13 @@ internal sealed partial class DocxReader
         return new DocxVmlTextBoxContent(string.Join("\n", paragraphs), revisions);
     }
 
-    // Math is an inline result item, rather than an ordinary w:r text child.
+    // Math and pictures are result items, rather than ordinary w:r text children.
     // Both field forms and the diagnostic scan use this source-content rule.
     private static bool IsFieldResultContent(XElement element) =>
         element.Name == MathNamespace + "oMath" || element.Name == MathNamespace + "oMathPara" ||
-        ReadRunTextChild(element).Length != 0;
+        ReadRunTextChild(element).Length != 0 ||
+        (element.Name == WordprocessingNamespace + "drawing" || element.Name == WordprocessingNamespace + "pict") &&
+            element.Descendants().Any(content => content.Name == DrawingNamespace + "blip" || content.Name == VmlNamespace + "imagedata");
 
     private static bool FieldHasCachedResultContent(XElement field) => field.Descendants().Any(IsFieldResultContent);
 }

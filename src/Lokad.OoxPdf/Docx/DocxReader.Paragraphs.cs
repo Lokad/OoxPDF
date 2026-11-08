@@ -456,13 +456,7 @@ internal sealed partial class DocxReader
                     HasRunRevisions = hasMathRunRevisions
                 });
                 inlineItems!.Add(new DocxInlineEquation(equations[^1]));
-                foreach (var field in complexFieldStack)
-                {
-                    if (!field.InResult) continue;
-                    field.HasCachedResult = true;
-                    // A computed counter keeps its existing replacement owner.
-                    if (!field.PlaceholderEmitted) field.RendersCachedResult = true;
-                }
+                RecordComplexFieldResult();
             }
 
             DocxTextRun ReadMathRun(XElement run, string text)
@@ -743,6 +737,7 @@ internal sealed partial class DocxReader
                 if (resolvedRun.Hidden == true) return;
                 var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken);
                 if (parsed.Count == 0) return;
+                RecordComplexFieldResult();
                 if (revision?.Kind != DocxRevisionKind.Insertion) { images.AddRange(parsed); return; }
                 var style = runs.Count > firstRun ? runs[firstRun] : CreateResolvedTextRun(string.Empty,
                     resolvedRun, runStyleResolution, false, currentSourceRunIndex, 0, revision, effectiveRevisions);
@@ -1067,6 +1062,17 @@ internal sealed partial class DocxReader
             {
                 field.RendersCachedResult = true;
                 field.ResultRunCount += addedRuns;
+            }
+        }
+
+        void RecordComplexFieldResult()
+        {
+            foreach (var field in complexFieldStack)
+            {
+                if (!field.InResult) continue;
+                field.HasCachedResult = true;
+                // Computed counters keep their existing replacement owner.
+                if (!field.PlaceholderEmitted) field.RendersCachedResult = true;
             }
         }
 

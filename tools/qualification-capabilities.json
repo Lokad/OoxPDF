@@ -1,4 +1,12 @@
 {
+  "docx-cached-picture-results": [
+    "DocxCachedPictureResults",
+    "DocxCachedMathResults",
+    "DocxSyntheticVmlInlinePngRendersImageXObject",
+    "DocxInlineCompositionPictureFirstTablesUseTheirOwnedTextAnchor",
+    "DocxInlineCompositionDisplayImageRowsRetainIndependentOfficeFractionFrames",
+    "DocxMissingPicturePreservesDanglingAndVmlFrames"
+  ],
   "docx-cached-math-results": [
     "DocxCachedMathResults",
     "DocxInlineCompositionCachedFields",

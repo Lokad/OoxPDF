@@ -1,0 +1,437 @@
+{
+  "Scope": "Owned Word16 PDF bootstrap; existing1pt X/.2pt Y fraction origins. Picture edges recorded separately; uncalibrated application view.",
+  "Rows": [
+    {
+      "Input": "cached-picture-result-baseline.docx",
+      "InputSha256": "A1F8B179D18AEC5E55FF155F8F7D1BAC3D3ED42D1B2600A908F1A45577914FB9",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "82F25524B2744FAE8C04C1B8B5B672A0839AAE4686D6C00AAD38570F8D605A4A",
+      "ExportLogSha256": "B51C799579D8C1CE2A7E52B08DCFF9907A87C3BD185F6B93EBC23D491A51DCA2",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 109.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 108.5,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 127.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 126.5,
+          "Y": 695.5
+        }
+      ],
+      "ImageBounds": [
+        72.5,
+        72.5,
+        108.5,
+        90.5
+      ]
+    },
+    {
+      "Input": "cached-picture-result-baseline.docx",
+      "InputSha256": "A1F8B179D18AEC5E55FF155F8F7D1BAC3D3ED42D1B2600A908F1A45577914FB9",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "34D5DFC59430C878AA004977064B5C62AC7C0E9DE7B06CD774C599A3F162B05F",
+      "ExportLogSha256": "FF64442239209083C47DFD35BCE7CA19B2B0FDAF5D3A5B50AD5612D4868AE255",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 82.824,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 82.272,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 96.48,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 95.928,
+          "Y": 623.4
+        }
+      ],
+      "ImageBounds": [
+        55.02000045776367,
+        150.42001342773438,
+        82.33999633789062,
+        164.08001708984375
+      ]
+    },
+    {
+      "Input": "cached-picture-result-simple-picture.docx",
+      "InputSha256": "5397C0580873DE6C4A16EF238D899C5DA1D28F69B0AAC22EC140C290625F8C46",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "5FA4D4FB6297C8A8D82AE43A4F9AF50E975447D0A22213892318F6909EC82612",
+      "ExportLogSha256": "EE1CB8D9360E31A4E70450255D85AF6D38C5173CF367069CF12E8B6A4CC2301E",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 109.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 108.5,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 127.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 126.5,
+          "Y": 695.5
+        }
+      ],
+      "ImageBounds": [
+        72.5,
+        72.5,
+        108.5,
+        90.5
+      ]
+    },
+    {
+      "Input": "cached-picture-result-simple-picture.docx",
+      "InputSha256": "5397C0580873DE6C4A16EF238D899C5DA1D28F69B0AAC22EC140C290625F8C46",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "9B419679A2D6315017661F024561BC9076F9CE931C4649B659349433DDE5022A",
+      "ExportLogSha256": "FF40E0F1EE1F597EE65283037F1D4A4FE95EB5F06C9490E579903F9736742538",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 82.824,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 82.272,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 96.48,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 95.928,
+          "Y": 623.4
+        }
+      ],
+      "ImageBounds": [
+        55.02000045776367,
+        150.42001342773438,
+        82.33999633789062,
+        164.08001708984375
+      ]
+    },
+    {
+      "Input": "cached-picture-result-complex-picture.docx",
+      "InputSha256": "704011672FA445A117FA44B8BC50CE074F59EA8552638FD442229864C6F4669F",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "EEE8CC61367BAE98516A519CFE5957589E52BD1D391E7F67DAD566CAB550DA8D",
+      "ExportLogSha256": "313C6ADCA7ACEE33F19B7B667E3A345D341A1FD02E64C9349BB61186E9B14303",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 109.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 108.5,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 127.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 126.5,
+          "Y": 695.5
+        }
+      ],
+      "ImageBounds": [
+        72.5,
+        72.5,
+        108.5,
+        90.5
+      ]
+    },
+    {
+      "Input": "cached-picture-result-complex-picture.docx",
+      "InputSha256": "704011672FA445A117FA44B8BC50CE074F59EA8552638FD442229864C6F4669F",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "9C3A30EAC59E42D620FEF19A14CFFDC3E73853986A193F3ACFC4DCA5D46CD404",
+      "ExportLogSha256": "71335E98ED9CED48DC12A1D8EE36BEDAA5F15859B5DBC63105FEDEDE0C1E9533",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 82.824,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 82.272,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 96.48,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 95.928,
+          "Y": 623.4
+        }
+      ],
+      "ImageBounds": [
+        55.02000045776367,
+        150.42001342773438,
+        82.33999633789062,
+        164.08001708984375
+      ]
+    },
+    {
+      "Input": "cached-picture-result-vml-baseline.docx",
+      "InputSha256": "881D18A17481FB011220694C406DFF248CC3E77D29695632E08537D2855AE698",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "9596DD02BDDD2BD147144B1E4B7593AF5988CB9279CA91C69A522D3A655C6FBA",
+      "ExportLogSha256": "F1ADA96660F22681ED0E2DC085E8C4362B8D234B434A6AA1D4C02C2C00D4E657",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 109.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 108.5,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 127.34,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 126.62,
+          "Y": 695.5
+        }
+      ],
+      "ImageBounds": [
+        72.5,
+        72.5,
+        108.5,
+        90.5
+      ]
+    },
+    {
+      "Input": "cached-picture-result-vml-baseline.docx",
+      "InputSha256": "881D18A17481FB011220694C406DFF248CC3E77D29695632E08537D2855AE698",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "A947DD129EC278BBF6AB08E730A71A38288DB5C29406F38C356DBE02EC3968C4",
+      "ExportLogSha256": "DE0700D3A74DC1B2CEE56F338FFFAC5A2CC3F8171E5A21B2D63087E584271CDA",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 82.824,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 82.272,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 96.576,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 96.024,
+          "Y": 623.4
+        }
+      ],
+      "ImageBounds": [
+        54.97700119018555,
+        150.3810272216797,
+        82.2760009765625,
+        164.030029296875
+      ]
+    },
+    {
+      "Input": "cached-picture-result-simple-vml-picture.docx",
+      "InputSha256": "6683C37E516E211456B205A7A7B179F876F2C681A988160BC9478565F8CFE50E",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "77C8A0A60477BD6814DB9987BE24EB48C76CCCAF7D2AE9BC4506275C6C22CCF6",
+      "ExportLogSha256": "0189A1716FC5AB55782396E5E453C9204311FF25F2AEF67FBFB4905C154C1D2E",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 109.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 108.5,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 127.34,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 126.62,
+          "Y": 695.5
+        }
+      ],
+      "ImageBounds": [
+        72.5,
+        72.5,
+        108.5,
+        90.5
+      ]
+    },
+    {
+      "Input": "cached-picture-result-simple-vml-picture.docx",
+      "InputSha256": "6683C37E516E211456B205A7A7B179F876F2C681A988160BC9478565F8CFE50E",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "93D2EA74B946BB4900197B71F3E6677D31263A2F870D767B5C3F0340D906B653",
+      "ExportLogSha256": "1956B9E8D787E5A2B78141AFC7B39997B374FB12A30BBE301DDF2152470B2BCF",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 82.824,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 82.272,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 96.576,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 96.024,
+          "Y": 623.4
+        }
+      ],
+      "ImageBounds": [
+        54.97700119018555,
+        150.3810272216797,
+        82.2760009765625,
+        164.030029296875
+      ]
+    },
+    {
+      "Input": "cached-picture-result-complex-vml-picture.docx",
+      "InputSha256": "234E8435FDE79A228863975792E49F0E8AA51273BA4CA3E3521008F2C4396A0A",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "A1F4A1340B98442F02610A3E38F13D53C24C99C2245529A2562A1215409087AC",
+      "ExportLogSha256": "6A38788AA4546354117C646D81CF2B58A86A12379454DA6F8A4AD38D0772B291",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 109.22,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 108.5,
+          "Y": 695.5
+        },
+        {
+          "Text": "rate",
+          "X": 127.34,
+          "Y": 708.58
+        },
+        {
+          "Text": "time",
+          "X": 126.62,
+          "Y": 695.5
+        }
+      ],
+      "ImageBounds": [
+        72.5,
+        72.5,
+        108.5,
+        90.5
+      ]
+    },
+    {
+      "Input": "cached-picture-result-complex-vml-picture.docx",
+      "InputSha256": "234E8435FDE79A228863975792E49F0E8AA51273BA4CA3E3521008F2C4396A0A",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "99D7F16A123F8FC3357BD2D152C2F44CA68D1BDF21874C0F0ACC0FC31DA42D94",
+      "ExportLogSha256": "6F315F1C65830198A03D8E069EF4D099E0E24C7C25C0D3902BFAF2C4C17A9AEA",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "rate",
+          "X": 82.824,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 82.272,
+          "Y": 623.4
+        },
+        {
+          "Text": "rate",
+          "X": 96.576,
+          "Y": 633.34
+        },
+        {
+          "Text": "time",
+          "X": 96.024,
+          "Y": 623.4
+        }
+      ],
+      "ImageBounds": [
+        54.97700119018555,
+        150.3810272216797,
+        82.2760009765625,
+        164.030029296875
+      ]
+    }
+  ]
+}
