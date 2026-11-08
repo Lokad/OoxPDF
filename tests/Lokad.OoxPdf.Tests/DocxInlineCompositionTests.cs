@@ -3064,8 +3064,8 @@ internal static partial class DocxInlineCompositionTests
                 entry.Delete();
                 using (var output = zip.CreateEntry(part).Open()) document.Save(output);
             }
-            using var stream = File.OpenRead(path);
-            return new DocxReader().Read(OoxPackage.Open(stream, default), diagnosticSink, default, markupMode: mode);
+            using var packageStream = File.OpenRead(path);
+            return new DocxReader().Read(OoxPackage.Open(packageStream, default), diagnosticSink, default, markupMode: mode);
         }
         finally { File.Delete(path); }
     }
