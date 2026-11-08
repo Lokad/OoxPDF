@@ -1393,6 +1393,10 @@ internal sealed partial class DocxLayoutEngine
                     ? () => HasCurrentColumnContent() || tableActiveFrameHasContent
                     : HasPageContent;
                 DocxTableLayoutFrame? admittedCompleteTableFrame = null;
+                // A repeated table header paints the same source row again.
+                // Its fields retain the page where that row was first admitted;
+                // physical page indices still belong to the current placement.
+                var headerSourcePages = new int[bodyTable.Rows.TakeWhile(row => row.IsHeader).Count()];
                 DocxTableLayoutFrame ResolveCurrentTableFrame()
                 {
                     if (admittedCompleteTableFrame is not null) return admittedCompleteTableFrame;
@@ -1413,7 +1417,8 @@ internal sealed partial class DocxLayoutEngine
                         adjustAlignedMinimumMargins: true,
                         alignedMinimumAvailableHeight: cursorY - CurrentTableFrameBottom(),
                         allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
-                        mathEquations: mathEquations);
+                        mathEquations: mathEquations,
+                        headerSourcePages: headerSourcePages);
                     // An admitted complete table fits at its original
                     // origin. Later rows must not recheck its full height against
                     // the remaining space after preceding rows have advanced.
@@ -1424,7 +1429,7 @@ internal sealed partial class DocxLayoutEngine
                     return frame;
                 }
 
-                LayoutTable(bodyTable, CurrentTableFrameBottom(), continuationTableHeight, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, new DocxTableCellTextLinesMemo(),
+                LayoutTable(bodyTable, CurrentTableFrameBottom(), continuationTableHeight, textMeasurer, defaultTabStopPoints, () => pages.Count + 1, ref currentItems, ref cursorY, ResolveCurrentTableFrame, advanceTableBoundary, hasTableBoundaryContent, MarkTableBoundaryContent, cancellationToken, paragraphSpacingScale, headerSourcePages, new DocxTableCellTextLinesMemo(),
                     reviewFragmentScale: reviewFragmentScale,
                     resolveNoteFragments: noteAdmission is null ? null : (row, fragments) => noteAdmission.TryPlan(row, fragments,
                         NoteFrameBottom, cursorY, page.Height - page.MarginTop, cancellationToken));

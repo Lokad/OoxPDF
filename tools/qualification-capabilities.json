@@ -1,4 +1,20 @@
 {
+  "docx-repeated-header-fields": [
+      "DocxRepeatedTableHeader",
+      "DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak",
+      "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
+      "DocxTableLayoutStageCarriesVerticalMergeOwnerAfterRepeatedHeader",
+      "DocxTableCellPageFieldsEvaluatePerFragmentPage",
+      "DocxLayoutStageResolvesStaticHeaderTablePageFieldsPerPage",
+      "DocxLayoutStageResolvesStaticHeaderTableNumPagesFieldFromPageCount",
+      "DocxLayoutStagePlacesStaticHeaderTableRows",
+      "DocxReaderTablePreservesHeaderRowToken",
+      "DocxLockedFields",
+      "DocxNoteMathFields",
+      "DocxInlineCompositionSourceCursorRebindsUnplacedPageCounters",
+      "DocxInlineCompositionSourceCursorKeepsSplitCounterValue",
+      "StagedPageMemory"
+  ],
   "docx-inline-automatic-slots": [
       "DocxInlineCompositionAutomaticSpacing",
       "DocxInlineCompositionMinimumLine",

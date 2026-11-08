@@ -1156,7 +1156,6 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale: paragraphSpacingScale,
                     mathEquations: mathEquations,
                     cancellationToken: cancellationToken);
-                int nestedPageNumber = pageNumber ?? pageIndex + 1;
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -1171,7 +1170,7 @@ internal sealed partial class DocxLayoutEngine
                         frame.Scale,
                         textMeasurer,
                         defaultTabStopPoints,
-                        () => nestedPageNumber,
+                        () => pageIndex + 1,
                         cursorY,
                         rowHeight,
                         cursorY,
@@ -1181,7 +1180,8 @@ internal sealed partial class DocxLayoutEngine
                         Story: null,
                         pageCount: pageCount,
                         paragraphSpacingScale: paragraphSpacingScale,
-                        cellMemo: cellMemo));
+                        cellMemo: cellMemo,
+                        fieldPageNumber: pageNumber));
                     cursorY -= rowHeight;
                 }
 
