@@ -47,6 +47,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - Its `-ReferenceKind OfficeImage` pilot captures direct Office images alongside a secondary PDF. Comparisons use the same explicit kind and separate reports; captures remain uncalibrated until checked against the application view.
 - `tools/NewParentRegressionRuntime.ps1`: prepare parent regressions with independent owned public-input copies; reject unowned or linked output directories.
 - `tools/RunDocxAffectedTests.ps1`: run a capability or selectors as one exact method set on a frozen assembly; declare understood skips with `-ExpectedSkip`, use `-AllDocx` at broader milestones.
+- Its `-FastGroup` option adds fast groups to a capability union once per method; capability skips stay strict, and group-only environment skips remain reported.
 - `tools/JoinQualificationTestReports.ps1`: join reviewed harness repairs from a manifest after checking unchanged production source, runtime assets, public inputs and complete exact-test coverage; retain failed attempts.
 - `tools/JoinCompositionPortfolio.ps1`: join measured outcomes from one runtime using a manifest; copy independent PDFs/inspection summaries and reuse source comparisons instead of copying raster/diff trees.
 - `tools/SummarizeDocxTableCellGeometry.ps1`: supplement raw graphics gates with source-backed table-cell clip mapping and unresolved counts.

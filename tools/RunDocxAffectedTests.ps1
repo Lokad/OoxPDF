@@ -1,4 +1,4 @@
-# Qualify capability-specific tests once per method for one frozen test assembly.
+# Qualify capabilities and optional fast groups once per method on a frozen assembly.
 [CmdletBinding(DefaultParameterSetName = 'Affected')]
 param(
     [Parameter(Mandatory = $true)] [string] $RunnerPath,
@@ -9,6 +9,8 @@ param(
     [ValidateNotNullOrEmpty()] [string[]] $Capability,
     [Parameter(ParameterSetName = 'Capabilities')]
     [string] $SelectionManifest = (Join-Path $PSScriptRoot 'qualification-capabilities.json'),
+    [Parameter(ParameterSetName = 'Capabilities')]
+    [ValidateNotNullOrEmpty()] [string[]] $FastGroup = @(),
     [Parameter(Mandatory = $true, ParameterSetName = 'Milestone')] [switch] $AllDocx,
     [string[]] $ExpectedSkip = @(),
     [switch] $ListOnly
@@ -56,7 +58,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Test catalogue failed' }
 Assert-FrozenAssembly
 $catalog = @(foreach ($line in Get-Content -LiteralPath $catalogPath) {
     if ($line -match '^(FAST|SLOW) ([^ ]+) ([^ ]+)$') {
-        [pscustomobject]@{ Group = $Matches[2]; Name = $Matches[3] }
+        [pscustomobject]@{ Slow = $Matches[1] -eq 'SLOW'; Group = $Matches[2]; Name = $Matches[3] }
     }
 })
 if (!$catalog.Count -or @($catalog.Name | Sort-Object -Unique).Count -ne $catalog.Count) {
@@ -86,6 +88,17 @@ foreach ($filter in $filters) {
     }
     if (!$found) { throw ('Empty capability selector: ' + $filter) }
 }
+# Capabilities retain their strict skip contract. Added fast groups preserve
+# ordinary --group/--skip-slow behavior; their environment skips stay reported.
+$skipValidated = $selected
+if ($FastGroup.Count) {
+    $skipValidated = [Collections.Generic.HashSet[string]]::new($selected, [StringComparer]::Ordinal)
+    foreach ($group in $FastGroup) {
+        $members = @($catalog | Where-Object { !$_.Slow -and $_.Group -ceq $group })
+        if (!$members.Count) { throw ('Unknown or empty fast group: ' + $group) }
+        foreach ($test in $members) { $null = $selected.Add($test.Name) }
+    }
+}
 $selectionPath = Join-Path $output 'selected-methods.json'
 if (@($ExpectedSkip | Where-Object { !$selected.Contains($_) }).Count) { throw 'Expected skips must name selected exact methods' }
 ConvertTo-Json -InputObject @($selected | Sort-Object) | Set-Content -LiteralPath $selectionPath -Encoding utf8
@@ -105,6 +118,10 @@ $inventory = [ordered]@{
 if ($Capability) {
     $inventory.Capabilities = $Capability
     $inventory.SelectionManifestSha256 = (Get-FileHash -LiteralPath $SelectionManifest).Hash
+}
+if ($FastGroup.Count) {
+    $inventory.FastGroups = @($FastGroup | Sort-Object -Unique -CaseSensitive)
+    $inventory.SkipValidationMethods = @($skipValidated | Sort-Object)
 }
 if ($ListOnly) { $inventory | ConvertTo-Json -Depth 5; return }
 $sources = [Collections.Generic.List[object]]::new()
@@ -133,7 +150,14 @@ $inventory.CompletedUtc = [DateTime]::UtcNow.ToString('o')
 $inventory.UniqueExecutedMethods = $rows.Count
 $inventory.SourceReports = @($sources)
 $inventory.RunnerExitCode = $exitCode
-$inventory.UnexpectedSkips = @($rows | Where-Object { $_.outcome -eq 'skipped' -and $_.name -cnotin $ExpectedSkip } | ForEach-Object name)
+$inventory.UnexpectedSkips = @($rows | Where-Object {
+    $_.outcome -eq 'skipped' -and $skipValidated.Contains($_.name) -and $_.name -cnotin $ExpectedSkip
+} | ForEach-Object name)
+if ($FastGroup.Count) {
+    $inventory.GroupOnlySkips = @($rows | Where-Object {
+        $_.outcome -eq 'skipped' -and !$skipValidated.Contains($_.name)
+    } | ForEach-Object name)
+}
 $inventory.GatePassed = $exitCode -eq 0 -and $report.failed -eq 0 -and !$inventory.UnexpectedSkips.Count
 $reportPath = Join-Path $output 'affected-tests.json'
 [ordered]@{
@@ -143,4 +167,4 @@ $reportPath = Join-Path $output 'affected-tests.json'
 $inventory.AffectedReportSha256 = (Get-FileHash -LiteralPath $reportPath).Hash
 $inventory | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'evidence.json') -Encoding utf8
 if (!$inventory.GatePassed) { throw 'Capability qualification failed or had unexpected skips; see retained affected-tests.json and selection log' }
-Write-Output "$($rows.Count) unique capability checks: $($report.passed) pass / $($report.skipped) expected skip in 1 runner invocation."
+Write-Output "$($rows.Count) unique qualification checks: $($report.passed) pass / $($report.skipped) skip in 1 runner invocation."
