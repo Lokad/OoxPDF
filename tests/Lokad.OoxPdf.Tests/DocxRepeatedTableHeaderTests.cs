@@ -38,7 +38,7 @@ internal static class DocxRepeatedTableHeaderTests
         foreach (var mode in Modes)
         {
             var table = Table(1);
-            var before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 170d);
+            var before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 175d);
             var source = Document(table, 0) with
             { BodyElements = [new DocxParagraphElement(before), new DocxTableElement(table)] };
             var layout = Layout(source, mode);
