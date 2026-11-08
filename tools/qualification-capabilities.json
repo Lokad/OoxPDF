@@ -1,4 +1,20 @@
 {
+  "docx-printed-paragraph-shading": [
+    "DocxParagraphShading",
+    "DocxPrintedMinimum",
+    "DocxMinimumComments",
+    "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
+    "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
+    "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
+    "DocxExactContinuationPrintOriginKeepsItsAuthoredSlot",
+    "DocxWordCompatibleExactKeepChainUsesPrintedPageBoundary",
+    "DocxWordCompatibleExactBody",
+    "DocxContinuationPagePaintIgnoresOtherPageFontSizes",
+    "DocxPagePrintOriginsKeepInspectionLinksAndNoteTargetsTogether",
+    "DocxMinimumBodyLineLeadingKeepsCapacityAndParagraphTop",
+    "DocxMinimumBodyLineLeadingKeepsRuleMarkerAndSlotGuards",
+    "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent"
+  ],
   "docx-minimum-comments": [
     "DocxPrintedMinimum",
     "DocxWordCompatibleExactBody",

@@ -7,7 +7,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxParagraphShadingTests
+internal static partial class DocxParagraphShadingTests
 {
     private static string Cases => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", "ParagraphShading"));

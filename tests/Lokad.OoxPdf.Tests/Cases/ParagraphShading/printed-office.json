@@ -1,0 +1,385 @@
+{
+  "ReferenceKind": "Word16 explicit Review PDF; application-view calibration unavailable.",
+  "GeometryTolerancePoints": 1,
+  "Palette": [
+    "D8E4F0",
+    "F0D8E4",
+    "E4F0D8"
+  ],
+  "Rows": [
+    {
+      "Id": "automatic-first",
+      "Input": "ParagraphShading/printed-automatic-first.docx",
+      "InputSha256": "874B8C00FB974DA645D970EF81FBB0CCA85DF554BE8C51C9FD15768709B8B203",
+      "ReferenceSha256": "22F88FF280BEE4F910CCCF002BE8A3225C71682259F37F35DD3E110C9AC84B1E",
+      "ExportLogSha256": "6EE2A1E66012F78116D7CCB619CD54E623EDC886FB834C19E68EE7220E378C9E",
+      "Pages": 1,
+      "Frames": [
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 631.780029296875,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 611.4000244140625,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 591.0999755859375,
+          "Width": 357.1400032043457,
+          "Height": 10.10400390625
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 570.719970703125,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        }
+      ]
+    },
+    {
+      "Id": "tahoma-minimum26",
+      "Input": "ParagraphShading/printed-tahoma-minimum26.docx",
+      "InputSha256": "872058B07ECF314668A0BB002BDA4A0DD6AF957B0959BBD5CC0F23F104FD3771",
+      "ReferenceSha256": "DD3B9F3B51B16350457AFBA4BC39A7978329734871C497548A52DF76A0CE18E1",
+      "ExportLogSha256": "02ADCFF73271BF8A48C96BE683658838343F0E6FD0EBFAF39E5321873151F57C",
+      "Pages": 1,
+      "Frames": [
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 620.760009765625,
+          "Width": 357.1400032043457,
+          "Height": 9.1199951171875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 591.8400268554688,
+          "Width": 357.1400032043457,
+          "Height": 9.1920166015625
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 562.969970703125,
+          "Width": 357.1400032043457,
+          "Height": 9.1920166015625
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 544.6799926757812,
+          "Width": 357.1400032043457,
+          "Height": 9.1920166015625
+        }
+      ]
+    },
+    {
+      "Id": "wrapped-minimum28",
+      "Input": "ParagraphShading/printed-wrapped-minimum28.docx",
+      "InputSha256": "D71494A7F0C2C2F9525C1F36F5CE7845ABF37B9151F31E7B53DED5596FFA60AE",
+      "ReferenceSha256": "185DFD151A403D9F5B48E649578D75BFE1A82F1BA927F7D86472494473EEF9B0",
+      "ExportLogSha256": "FA3E5C36DF51ECCF080FC0685EC611566514136921BD7E9CB52AC30585594C1B",
+      "Pages": 1,
+      "Frames": [
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 620.760009765625,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 599.469970703125,
+          "Width": 357.1400032043457,
+          "Height": 21.28802490234375
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 578.280029296875,
+          "Width": 357.1400032043457,
+          "Height": 21.1920166015625
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 557.0599975585938,
+          "Width": 357.1400032043457,
+          "Height": 21.21600341796875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 525.5800170898438,
+          "Width": 357.1400032043457,
+          "Height": 10.27197265625
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 504.3599853515625,
+          "Width": 357.1400032043457,
+          "Height": 21.21600341796875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 483.1700134277344,
+          "Width": 357.1400032043457,
+          "Height": 21.191986083984375
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 461.8599853515625,
+          "Width": 357.1400032043457,
+          "Height": 21.31201171875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 430.4599914550781,
+          "Width": 357.1400032043457,
+          "Height": 10.295989990234375
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 409.25,
+          "Width": 357.1400032043457,
+          "Height": 21.21600341796875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 388.05999755859375,
+          "Width": 357.1400032043457,
+          "Height": 21.191986083984375
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 366.739990234375,
+          "Width": 357.1400032043457,
+          "Height": 21.31201171875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 346.3699951171875,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 336.260009765625,
+          "Width": 357.1400032043457,
+          "Height": 10.10400390625
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 326.05999755859375,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 315.8900146484375,
+          "Width": 357.1400032043457,
+          "Height": 10.175994873046875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 305.69000244140625,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        }
+      ]
+    },
+    {
+      "Id": "joined-kept-spacing",
+      "Input": "ParagraphShading/printed-joined-kept-spacing.docx",
+      "InputSha256": "5AA1487B2BD5E06AB85A89469D3477B35D8D7C1DFBCC966D6704D5347135DB34",
+      "ReferenceSha256": "03911691C3ECB33DB1148E5DA80EC01B3A2EEF869FC9F48A4F7FF82058D466BC",
+      "ExportLogSha256": "862CBF58948722AB61C8045562AE6C3318EE5A8A38422F8D70C6A2507E6EBA58",
+      "Pages": 2,
+      "Frames": [
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 243.70001220703125,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 233.52001953125,
+          "Width": 357.1400032043457,
+          "Height": 10.17596435546875
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 212.29998779296875,
+          "Width": 357.1400032043457,
+          "Height": 21.21600341796875
+        }
+      ]
+    },
+    {
+      "Id": "joined-colors-suppressed",
+      "Input": "ParagraphShading/printed-joined-colors-suppressed.docx",
+      "InputSha256": "3F4EB9CF6A0E9F47F1B361B5164850560AD9F06CEA6178F564844AB4EC36B92F",
+      "ReferenceSha256": "3D0C2C001CFFEAF4E48B4741F40C4FC9ED234C2C094073F08BC1913AAF4B9C8F",
+      "ExportLogSha256": "B6374CDAF4E145FB84041BF2005EE4C1ECCFCA455B630E0081AA01BEE9AB122C",
+      "Pages": 2,
+      "Frames": [
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 243.70001220703125,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "F0D8E4",
+          "X": 53.52000045776367,
+          "Y": 233.52001953125,
+          "Width": 357.1400032043457,
+          "Height": 10.17596435546875
+        },
+        {
+          "Page": 0,
+          "Color": "E4F0D8",
+          "X": 53.52000045776367,
+          "Y": 212.29998779296875,
+          "Width": 357.1400032043457,
+          "Height": 21.21600341796875
+        }
+      ]
+    },
+    {
+      "Id": "joined-colors-explicit",
+      "Input": "ParagraphShading/printed-joined-colors-explicit.docx",
+      "InputSha256": "0FE928DCA730A64E8B623C7F71732CE9B6B9D131C28606D1DBF068F54E5B611E",
+      "ReferenceSha256": "49B0A2E40EBEB0F3C39EED8DAA0A193FF244AF5A51E9325DB2FA87A6235BE3E1",
+      "ExportLogSha256": "7A3E4937D5A9AD78203FDD9893022A983DC155C2D9642AD93055E9EFD19307C0",
+      "Pages": 2,
+      "Frames": [
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 239.1600341796875,
+          "Width": 357.1400032043457,
+          "Height": 11.63995361328125
+        },
+        {
+          "Page": 0,
+          "Color": "F0D8E4",
+          "X": 53.52000045776367,
+          "Y": 222.8599853515625,
+          "Width": 357.1400032043457,
+          "Height": 16.2960205078125
+        },
+        {
+          "Page": 0,
+          "Color": "E4F0D8",
+          "X": 53.52000045776367,
+          "Y": 197.1099853515625,
+          "Width": 357.1400032043457,
+          "Height": 25.75201416015625
+        }
+      ]
+    },
+    {
+      "Id": "retained-minimum28",
+      "Input": "ScaledMinimum/minimum28-shading.docx",
+      "InputSha256": "AED27B6C182BBC68CDA76468CAA30CFE30C5040D40FCA1BC4D1C9145A5020B01",
+      "ReferenceSha256": "C080C8E5D83154458C6638849BBD15FCADCDCA1F49125D6F364C8C1FA4A27FF1",
+      "ExportLogSha256": "0B85C0ABFB8536B78CACDA6E56AE10543194C2E086AE05783C9904510E8F89B2",
+      "Pages": 1,
+      "Frames": [
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 620.760009765625,
+          "Width": 357.1400032043457,
+          "Height": 10.20001220703125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 589.27001953125,
+          "Width": 357.1400032043457,
+          "Height": 10.2960205078125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 557.8800048828125,
+          "Width": 357.1400032043457,
+          "Height": 10.2960205078125
+        },
+        {
+          "Page": 0,
+          "Color": "D8E4F0",
+          "X": 53.52000045776367,
+          "Y": 537.5,
+          "Width": 357.1400032043457,
+          "Height": 10.176025390625
+        }
+      ]
+    }
+  ]
+}

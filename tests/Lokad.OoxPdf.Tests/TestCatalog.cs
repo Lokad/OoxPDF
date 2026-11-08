@@ -35,7 +35,8 @@ internal static class TestCatalog
         new("rendering-portable", PptxColumnIntervalTests.PptxOuterCategoryFittingSharesDefaultEllipsisAndOccupiedFrames),
         new("rendering-portable", PptxColumnIntervalTests.PptxAutomaticCategoryReferencesKeepSourceEndpoints),
         .. FromType("rendering-portable", typeof(DocxAutomaticColorTests)),
-        .. FromType("rendering-portable", typeof(DocxParagraphShadingTests)),
+        .. FromType(name => name == nameof(DocxParagraphShadingTests.DocxParagraphShadingPrintedFramesMatchIndependentWord)
+            ? "docx-text" : "rendering-portable", typeof(DocxParagraphShadingTests)),
         .. FromType("docx-page", typeof(DocxRevisionBarTests)),
         .. FromType("docx-page", typeof(DocxExplicitPageStartSpacingTests)),
         .. FromType("docx-page", typeof(DocxSpacedWrappedFootnoteTests)),

@@ -1865,7 +1865,10 @@ internal sealed partial class DocxLayoutEngine
                         emissionSegments = ShiftSegmentsPastMidLineImages(lineShape.Segments, line.Spans, paragraph, firstLine, lineX, imageShifts);
                     }
 
-                    currentItems.Add(new DocxTextLineLayout(
+                    bool usesPrintedNaturalPaint = UsesPrintedBodyFrame() &&
+                        (scalesMinimumBodyAdvance || lineHeightProfile.Source == DocxLineHeightSource.BodySingleLineAuto &&
+                            DocxPlainBodyFrame.IsPlainParagraph(paragraph));
+                    var placedLine = new DocxTextLineLayout(
                         lineShape.Text,
                         firstRun,
                         paragraphFontSize,
@@ -1902,7 +1905,8 @@ internal sealed partial class DocxLayoutEngine
                     {
                         FrameOriginOffsetX = x - lineShape.X,
                         ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(document.BodyElements, elementIndex), x, width, lineShape.X,
-                            baselineOffset - sourceMinimumLeading + extraAbove,
+                            (usesPrintedNaturalPaint ? (rawBaselineOffset - sourceMinimumLeading) * paragraphSpacingScale
+                                : baselineOffset - sourceMinimumLeading) + extraAbove,
                             lineHeight - sourceMinimumLeading * paragraphSpacingScale + extraAbove + extraBelow, paragraphSpacingScale,
                             lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
                             firstLine ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
@@ -1924,7 +1928,10 @@ internal sealed partial class DocxLayoutEngine
                             DocxLineHeightSource.AtLeastLineSpacing when scalesMinimumBodyAdvance => lineHeight,
                             _ => null
                         }
-                    });
+                    };
+                    if (usesPrintedNaturalPaint)
+                        placedLine = JoinPrintedParagraphShading(currentItems, placedLine, spacingProfile);
+                    currentItems.Add(placedLine);
                     if (lineImages is not null)
                     {
                         currentItems.AddRange(lineImages);
