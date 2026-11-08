@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
-using System.Xml;
 using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
@@ -104,7 +103,7 @@ internal static partial class OoxMemoryAdmissionTests
                 if (mode is "cancel" or "later-cancel") TestAssert.Throws<OperationCanceledException>(Open);
                 else if (mode == "observer") TestAssert.Equal("directory observer", TestAssert.Throws<InvalidOperationException>(Open).Message);
                 else if (mode == "missing-types") TestAssert.Throws<InvalidDataException>(Open);
-                else TestAssert.Throws<XmlException>(Open);
+                else TestAssert.Throws<InvalidDataException>(Open);
                 TestAssert.True(directoryRequested, "The failing operation must exercise funded directory ownership.");
                 TestAssert.Equal(0L, pool.Reserved);
             }
