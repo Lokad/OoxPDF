@@ -1,5 +1,7 @@
 {
   "docx-minimum-comments": [
+    "DocxPrintedMinimum",
+    "DocxWordCompatibleExactBody",
     "DocxMinimumComments",
     "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
     "DocxRevisionNeutralityRetainsUnownedAndVisibleFallbacks",

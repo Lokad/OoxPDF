@@ -20,6 +20,8 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxFieldInstructionTests)),
         .. FromType(name => name == nameof(DocxMinimumCommentTests.DocxMinimumCommentsMatchIndependentWordFinalOrigins)
             ? "docx-text" : "rendering-portable", typeof(DocxMinimumCommentTests)),
+        .. FromType(name => name == nameof(DocxPrintedMinimumTests.DocxPrintedMinimumMatchesIndependentWordParagraphOrigins)
+            ? "docx-text" : "rendering-portable", typeof(DocxPrintedMinimumTests)),
         .. FromType("rendering-portable", typeof(DocxEndnoteParagraphBoundaryTests)),
         .. FromType("rendering-portable", typeof(DocxEndnoteFinalSectionTests)),
         .. FromType("rendering-portable", typeof(DocxRegisteredSeparatorTests)),

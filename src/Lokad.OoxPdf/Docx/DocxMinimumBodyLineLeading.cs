@@ -4,6 +4,13 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxMinimumBodyLineLeading
 {
+    internal static bool HasSupportedPrintedSource(DocxParagraph paragraph, CancellationToken cancellationToken) =>
+        paragraph.LineSpacingPoints is > 0d &&
+        string.Equals(paragraph.Spacing.LineRuleValue, "atLeast", StringComparison.OrdinalIgnoreCase) &&
+        DocxPlainBodyFrame.IsPlainParagraph(paragraph) &&
+        HasSupportedLineSource(paragraph, out bool marked, cancellationToken) &&
+        (!marked || paragraph.LineSpacingPoints >= 16d);
+
     internal static bool TryCreateLayout(DocxDocument document, DocxLayout source, out DocxLayout adjusted, CancellationToken cancellationToken = default)
     {
         adjusted = source;

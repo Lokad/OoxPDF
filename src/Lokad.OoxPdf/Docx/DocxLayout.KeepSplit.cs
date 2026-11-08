@@ -21,7 +21,7 @@ internal sealed partial class DocxLayoutEngine
         return ResolveLineHeightProfile(paragraph, fontSize, textMeasurer).LineHeight;
     }
 
-    private static DocxLineHeightProfile ResolveLineHeightProfile(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer, bool selectMaxAcrossRuns = false)
+    private static DocxLineHeightProfile ResolveLineHeightProfile(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer, bool selectMaxAcrossRuns = false, double minimumScale = 1d)
     {
         DocxEffectiveParagraphProperties effective = paragraph.EffectiveProperties;
         if (effective.LineSpacingPoints is { } exactLineHeight && IsExactLineSpacing(effective))
@@ -61,7 +61,7 @@ internal sealed partial class DocxLayoutEngine
         {
             double naturalLineHeight = Math.Max(singleLineHeight, listLabelSingleLineHeight ?? 0d);
             return new DocxLineHeightProfile(
-                Math.Max(minimumLineHeight, naturalLineHeight),
+                Math.Max(minimumLineHeight * minimumScale, naturalLineHeight),
                 singleLineHeight,
                 listLabelSingleLineHeight,
                 bodyWindowsLineHeight,
@@ -452,7 +452,8 @@ internal sealed partial class DocxLayoutEngine
         double availableHeight,
         bool allowAutomaticMinimumGridPlacement,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null,
+        bool scaleMinimumBodyAdvances = false)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -510,7 +511,8 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints: defaultTabStopPoints, pageNumber: pageNumber, pageCount: pageCount))
                     return measured.Sum(line => line.OccupiedHeight);
             }
-            double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber, paragraphSpacingScale, scaleExactBodyAdvances);
+            double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber,
+                paragraphSpacingScale, scaleExactBodyAdvances, scaleMinimumBodyAdvances, cancellationToken);
             if (!TryGetSinglePreparedMath(value, mathEquations, out DocxPreparedMathParagraph? math)) { return regular; }
             if (DocxMathParagraphPolicy.GetStandaloneRow(value) is not null)
                 return FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale) ? math.LineHeight * paragraphSpacingScale : regular;
@@ -601,11 +603,14 @@ internal sealed partial class DocxLayoutEngine
         return false;
     }
 
-    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double fixedScale, bool scaleExactBodyAdvances)
+    private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double fixedScale, bool scaleExactBodyAdvances,
+        bool scaleMinimumBodyAdvances = false, CancellationToken cancellationToken = default)
     {
         double height = 0d;
         double fontSize = GetParagraphFontSize(paragraph);
-        DocxLineHeightProfile profile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+        double minimumScale = scaleMinimumBodyAdvances && DocxMinimumBodyLineLeading.HasSupportedPrintedSource(paragraph, cancellationToken)
+            ? fixedScale : 1d;
+        DocxLineHeightProfile profile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer, minimumScale: minimumScale);
         double lineHeight = scaleExactBodyAdvances && ShouldScaleExactBodyAdvance(paragraph, profile, fontSize)
             ? profile.LineHeight * fixedScale : profile.LineHeight;
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, null);

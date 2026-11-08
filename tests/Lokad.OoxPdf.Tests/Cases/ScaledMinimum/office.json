@@ -1,0 +1,917 @@
+{
+  "ReferenceKind": "Word16 explicit Review PDF; application-view calibration remains unavailable.",
+  "OriginTolerancePoints": 1,
+  "SizeTolerancePoints": 0.1,
+  "Rows": [
+    {
+      "Id": "minimum28-before0",
+      "Input": "minimum28-before0.docx",
+      "InputSha256": "41246AAEAB6DB555EE3533848BD08E1BC35981CCA76B600E422887FBB9665471",
+      "ReferenceSha256": "3B90FDDC0C1802F507337554AE799EA39E7EA69E9E51B71605DC02858F3F7AEE",
+      "ExportLogSha256": "A554EC527BEF8F618564255A6F926D2372A9A9B4A9176EB5AE33ACF5D091C36F",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 623.0399780273438,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 612.8599853515625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 591.6500244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 581.4500122070312,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 560.260009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 549.9600219726562,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 539.760009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 518.469970703125,
+          "Size": 8.35200023651123
+        }
+      ]
+    },
+    {
+      "Id": "noninitial-minimum28",
+      "Input": "noninitial-minimum28.docx",
+      "InputSha256": "FBFE69B9A95B9F68240A6D4ECA34BC76BD906FB9F7BDA1266D95CF95785EE360",
+      "ReferenceSha256": "961BF5B7F6220E85BC14259F31D20F6154000E44C5BDA25047C585C9B19D9269",
+      "ExportLogSha256": "F1F0C03F9D8042B8AC4110302F391DF28626DD13F8B71D8269CF57627ED736E6",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 631.0599975585938,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 620.8599853515625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 599.6599731445312,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 589.4600219726562,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 568.25,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 557.97998046875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 547.8699951171875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 526.5800170898438,
+          "Size": 8.35200023651123
+        }
+      ]
+    },
+    {
+      "Id": "tahoma10-minimum26",
+      "Input": "tahoma10-minimum26.docx",
+      "InputSha256": "9EC86EDC02ED36F68DF961846A6CF560996DCF893755135E7A27AA4946A19130",
+      "ReferenceSha256": "4B8B1AFBEF7D5DDB56FD98B1C98547E70DEB3A46A1BD46CC3F778D2CDECB535E",
+      "ExportLogSha256": "BF415A566EB2680C00E0F58DF50E1A22F4A0B162F96F0FEF5D59443BF1D8D3A4",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 622.3200073242188,
+          "Size": 7.535999774932861
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 613.1300048828125,
+          "Size": 7.535999774932861
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 593.3800048828125,
+          "Size": 7.535999774932861
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 584.280029296875,
+          "Size": 7.535999774932861
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 564.530029296875,
+          "Size": 7.535999774932861
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 555.4299926757812,
+          "Size": 7.535999774932861
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 546.239990234375,
+          "Size": 7.535999774932861
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 526.489990234375,
+          "Size": 7.535999774932861
+        }
+      ]
+    },
+    {
+      "Id": "minimum28-page-admission",
+      "Input": "minimum28-page-admission.docx",
+      "InputSha256": "8BFB113FE321E122DE52B78721BBF5A34DB32660D725315997D9D5864523FDFD",
+      "ReferenceSha256": "AAEBE57F75F8F9D8EEE81943AB359F2C101154B91CACE29EC32CAE56A51A5C4A",
+      "ExportLogSha256": "967E2A648D80BA1AB7ED9E481C423EAF3502B5148BAA546140B65219DFD8199C",
+      "Pages": 2,
+      "Anchors": [
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row1]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 623.0399780273438,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row2]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 612.8599853515625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row3]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 591.6500244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row4]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 581.4500122070312,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row5]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 560.260009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row6]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 549.9600219726562,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row7]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 539.760009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row8]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 518.5700073242188,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row9]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 497.3500061035156,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row10]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 487.17999267578125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row11]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 465.9599914550781,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row12]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 455.760009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row13]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 434.57000732421875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row14]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 424.2699890136719,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row15]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 414.07000732421875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row16]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 392.8800048828125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row17]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 371.6600036621094,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row18]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 361.4599914550781,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row19]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 340.2699890136719,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row20]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 330.07000732421875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row21]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 308.8800048828125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row22]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 298.5799865722656,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row23]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 288.4800109863281,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row24]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 267.2900390625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row25]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 245.97998046875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row26]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 235.780029296875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row27]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 214.58001708984375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row28]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 204.3800048828125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row29]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 183.19000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row30]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 172.989990234375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row31]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 162.78997802734375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row32]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 623.0399780273438,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row33]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 601.8499755859375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row34]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 591.5499877929688,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row35]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 570.3599853515625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row36]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 560.1599731445312,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row37]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 538.9400024414062,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row38]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 528.77001953125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row39]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 518.5700073242188,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row40]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 497.260009765625,
+          "Size": 8.35200023651123
+        }
+      ]
+    },
+    {
+      "Id": "minimum28-wrapped",
+      "Input": "minimum28-wrapped.docx",
+      "InputSha256": "2F95C68ED31A7027FAD88B8BFC547CEE3D33BED74C0997D18DC30F551E6460E3",
+      "ReferenceSha256": "C4AF3ABAE20FA3596EB22511AA9F89E7DDC70DA7D14D4801CDB5D247BF708F55",
+      "ExportLogSha256": "448F3D25F7E616A22B66A7CB2B2DAA46262235897C2708CAABB0B792E43335C2",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 623.0399780273438,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 549.1400146484375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 527.9299926757812,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 454.0299987792969,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 432.8399963378906,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 358.8500061035156,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.Publicwrappedcontinuationcontrolsuseordinaryproseandsourceminimumspacing.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 348.6499938964844,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 286.6600036621094,
+          "Size": 8.35200023651123
+        }
+      ]
+    },
+    {
+      "Id": "minimum28-shading",
+      "Input": "minimum28-shading.docx",
+      "InputSha256": "AED27B6C182BBC68CDA76468CAA30CFE30C5040D40FCA1BC4D1C9145A5020B01",
+      "ReferenceSha256": "C080C8E5D83154458C6638849BBD15FCADCDCA1F49125D6F364C8C1FA4A27FF1",
+      "ExportLogSha256": "0B85C0ABFB8536B78CACDA6E56AE10543194C2E086AE05783C9904510E8F89B2",
+      "Pages": 1,
+      "Anchors": [
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 623.0399780273438,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 612.8599853515625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 591.6500244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 581.4500122070312,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 560.260009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 549.9600219726562,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 539.760009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 518.469970703125,
+          "Size": 8.35200023651123
+        }
+      ]
+    },
+    {
+      "Id": "minimum28-kept",
+      "Input": "minimum28-kept.docx",
+      "InputSha256": "D690A45F4D94747D9542711120418C70BF490E6793899922BCF2DD917D735FFE",
+      "ReferenceSha256": "31A650187A0694CE592CE0179A7B52B609BDBA99DD76151B32D8C50E053B6A55",
+      "ExportLogSha256": "8A3EF1CDCAC82E5C0B1CDE5A7629B1BD9F7C7A875AA77A082484C3C45F719F34",
+      "Pages": 2,
+      "Anchors": [
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row1]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 623.0399780273438,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row2]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 612.8599853515625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row3]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 591.6500244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row4]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 581.4500122070312,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row5]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 560.260009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row6]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 549.9600219726562,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row7]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 539.760009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row8]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 518.5700073242188,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row9]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 497.3500061035156,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row10]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 487.17999267578125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row11]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 465.9599914550781,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row12]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 455.760009765625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row13]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 434.57000732421875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row14]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 424.2699890136719,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row15]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 414.07000732421875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row16]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 392.8800048828125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row17]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 371.6600036621094,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row18]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 361.4599914550781,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row19]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 340.2699890136719,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row20]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 330.07000732421875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row21]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 308.8800048828125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row22]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 298.5799865722656,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row23]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 288.4800109863281,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row24]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 267.2900390625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row25]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 245.97998046875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row26]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 235.780029296875,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row27]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 214.58001708984375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row28]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 204.3800048828125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row29]",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 183.19000244140625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row30]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 172.989990234375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row31]andafternote.AVToWA.AB.",
+          "Page": 0,
+          "X": 54.599998474121094,
+          "Y": 162.78997802734375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row32]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 623.0399780273438,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumTop.AVToWA.AB.[row33]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 601.8499755859375,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "AlphapublicbodybeforenoteAB.[row34]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 591.5499877929688,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterAlpha.AVToWA.AB.[row35]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 570.3599853515625,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "BravopublicbodybeforenoteAB.[row36]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 560.1599731445312,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterBravo.AVToWA.AB.[row37]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 538.9400024414062,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "CharliepublicbodybeforenoteAB.[row38]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 528.77001953125,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "DeltapublicbodybeforenoteAB.[row39]andafternote.AVToWA.AB.",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 518.5700073242188,
+          "Size": 8.35200023651123
+        },
+        {
+          "Text": "PublicminimumAfterDelta.AVToWA.AB.[row40]",
+          "Page": 1,
+          "X": 54.599998474121094,
+          "Y": 497.260009765625,
+          "Size": 8.35200023651123
+        }
+      ]
+    }
+  ]
+}
