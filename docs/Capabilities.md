@@ -550,6 +550,7 @@ Supported within the following constraints:
 - Simple/complex fields with stored results, including supported nested cached
   fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
   their stored results, including empty results; nested fields own their locks.
+  Complete empty stored results also preserve neighboring supported equations.
   Supported picture-only and equation-only stored results retain their content
   and neighboring equations in body, cell and default header/footer paragraphs. They share the
   existing inline layout; stored fields are not evaluated.

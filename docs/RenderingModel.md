@@ -47,6 +47,9 @@ source-content rule. The diagnostic scan follows the reader's transparent
 metadata containers. Parsed pictures and equations share result notification through nested
 fields; computed counters keep their replacement owner. Layout consumes the
 materialized inline sequence without a field-specific geometry correction.
+Complete stored results may be empty: their source flags remain empty, while
+neighboring supported inline content remains eligible. Computed placeholders and
+instructions missing a result boundary retain their existing paths.
 
 Unsupported features are detected as early as practical and emitted through `OoxPdfOptions.DiagnosticSink`.
 
