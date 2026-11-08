@@ -1,4 +1,19 @@
 {
+  "docx-paragraph-property-math": [
+    "DocxParagraphPropertyMath",
+    "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
+    "DocxInlineCompositionEquationRevisionsRequireActualSourceOwners",
+    "DocxInlineCompositionMathRunRevisionsRequireActualOwners",
+    "DocxInlineCompositionControlRevisionsRetainActualOwnersAndRoleFallbacks",
+    "DocxInlineCompositionRunFormatting",
+    "DocxInlineCompositionFormattingBalloonDescriptions",
+    "DocxDeletedParagraphMark",
+    "DocxCachedMathResults",
+    "DocxInlineCompositionCachedFields",
+    "DocxReaderDropsSemanticallyVoidRunPropertyChange",
+    "DocxReaderKeepsEffectiveRunPropertyChange",
+    "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons"
+  ],
   "docx-empty-field-results": [
     "DocxEmptyStoredResults",
     "DocxCachedMathResults",

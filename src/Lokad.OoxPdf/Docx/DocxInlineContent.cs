@@ -258,7 +258,7 @@ internal static class DocxInlineContent
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
             paragraph.ListLabel is null ? null : paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
-            paragraph.ConsumedParagraphMarks);
+            paragraph.ConsumedParagraphMarks, paragraph.PropertyRevision);
 
     // Reference identity and measured source position establish actual owners.
     // The hint avoids rediscovering unchanged math; it cannot invent ownership.
@@ -305,7 +305,7 @@ internal static class DocxInlineContent
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
         IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? numberingMark = null, IReadOnlyList<DocxInlineImage>? images = null,
         IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null, IReadOnlyList<DocxEquation>? equations = null,
-        IReadOnlyList<DocxTextRun>? consumedParagraphMarks = null)
+        IReadOnlyList<DocxTextRun>? consumedParagraphMarks = null, DocxRevisionInfo? paragraphPropertyRevision = null)
     {
         List<DocxRevisionInfo>? equationOwners = null;
         if (equations is not null)
@@ -319,6 +319,15 @@ internal static class DocxInlineContent
         foreach (var revision in revisions)
         {
             token.ThrowIfCancellationRequested();
+            // Paragraph properties are resolved by the reader, independently of
+            // inline content. Only their actual unique source owner qualifies.
+            if (revision.Kind == DocxRevisionKind.ParagraphPropertiesChange)
+            {
+                if (!ReferenceEquals(revision, paragraphPropertyRevision) ||
+                    revision.SourceElement != "pPrChange" || revision.PropertyChangeFamily != DocxRevisionPropertyFamily.Paragraph)
+                    return false;
+                continue;
+            }
             if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange)) return false;
             remaining.Add(revision);
         }

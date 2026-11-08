@@ -1,0 +1,305 @@
+{
+  "Scope": "Owned Word16 PDF bootstrap; existing one-point math-origin gate. Current paragraph properties remain unchanged;only stored history differs. Application view uncalibrated;strict images reported separately.",
+  "Rows": [
+    {
+      "Input": "paragraph-property-math-body.docx",
+      "InputSha256": "D3908F28314C764407A51576D726BDFFFCEFBBB39E3C455B4C3705C06B71D177",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "B7CBE6537ACC017F5DF83207F34B78B3FC3D9041777ABCA865E4EFB4AE69683A",
+      "ExportLogSha256": "A3BCB6841E43C01D3DEA3E86C746C5A72D1D2A30D019D33063D07096FEDF47EA",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 685.42
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 685.42
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-body.docx",
+      "InputSha256": "D3908F28314C764407A51576D726BDFFFCEFBBB39E3C455B4C3705C06B71D177",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "AFA1CBCE753E3A15592D2A76AF848A1335B9A8D3BE1FE01AF91AA2F5A288F053",
+      "ExportLogSha256": "9701E8501A46912BC8005B7769F164C8A7739830710872D56EC9D02AE9C679B0",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 615.77
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 615.77
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-neighbor.docx",
+      "InputSha256": "E6F24915416E9E8CC4E029A31637C76286A15097B60DB6CD9F7574EE9E65C038",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "CCD27F0C9CBA6CB1F335FE8E295B8449FD0CEA866988F248343D7120BA7A5EB0",
+      "ExportLogSha256": "EE8670BF2DA1D2EB3372C2FE22FB6623511FCE1F799D99133297F21F5D0A08CA",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 685.42
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 698.5
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 685.42
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-neighbor.docx",
+      "InputSha256": "E6F24915416E9E8CC4E029A31637C76286A15097B60DB6CD9F7574EE9E65C038",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "0893E992324D502730E5C8236CD035F62B7ACF398EA1036FB6257CBB4ECB2054",
+      "ExportLogSha256": "AB90453283B6BDB1EBCF1C39AC224E54BC41D23FCB6EB053B28670F1B674D7A0",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 615.77
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 625.68
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 615.77
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-cell.docx",
+      "InputSha256": "DBE182AA01B93ECB99A1D18B60A812C3A10C019F3574F2FCFF8A4732A535F2D1",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "6E276443EA21A5AE11FAC81001C858B1FCE00D9D1182EF0B20EE5AE6CDC8B8D8",
+      "ExportLogSha256": "4350D041A5E07F5972ADCFA082B4006BD0253BC13463227ECA919CC32004D5D4",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 368.59,
+          "Y": 698.02
+        },
+        {
+          "Text": "t",
+          "X": 367.87,
+          "Y": 684.94
+        },
+        {
+          "Text": "r",
+          "X": 461.5,
+          "Y": 698.02
+        },
+        {
+          "Text": "t",
+          "X": 460.78,
+          "Y": 684.94
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-cell.docx",
+      "InputSha256": "DBE182AA01B93ECB99A1D18B60A812C3A10C019F3574F2FCFF8A4732A535F2D1",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "6F92A5A5EB7AB06536ECF2CD191A43DDB31DAC6E7E1ED3A421765306EC08C9D7",
+      "ExportLogSha256": "41A8517810C0B10634C07C083FFD48A693DB5DAB2E1224C76A1F38587304CEDE",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 279.5,
+          "Y": 625.32
+        },
+        {
+          "Text": "t",
+          "X": 278.98,
+          "Y": 615.41
+        },
+        {
+          "Text": "r",
+          "X": 349.97,
+          "Y": 625.32
+        },
+        {
+          "Text": "t",
+          "X": 349.42,
+          "Y": 615.41
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-header.docx",
+      "InputSha256": "C50D5089FE5139DA861B20DD7102A7427598C9A64829A5618667D4F5B97F1022",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "EE12DA0912268D94AD71023C3E03E8191340230324C090E6BC18E85173B02B97",
+      "ExportLogSha256": "03F48471F51CD2CF05B49E07411E1FF5B976DC209B3EB736C24191C6421168B6",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 748.32
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 735.24
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 748.32
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 735.24
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-header.docx",
+      "InputSha256": "C50D5089FE5139DA861B20DD7102A7427598C9A64829A5618667D4F5B97F1022",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "D5C0E3D57FF383130D08FB5C46C69BB9CB9CF6C023380B5D1DCCC27F812CC320",
+      "ExportLogSha256": "EA3A1BB4BE2830E3F9D92F0920FB614E4BD3B103DE21CFD984D8CD3CA179663D",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 663.46
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 653.54
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 663.46
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 653.54
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-footer.docx",
+      "InputSha256": "B25A7D9B05B3FA52517246C500DA8630571CE4115C159FC802AC25B553DCCFFF",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "2CF848283BAB32550DA8488D44F0310AB21318B7F30F576BF3A6BF654918CC8C",
+      "ExportLogSha256": "B269B1C5379A2582B00BF2D1BB39C421DC7CC90CD4E3A4A73124F753F0E93941",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 134.06,
+          "Y": 49.104
+        },
+        {
+          "Text": "t",
+          "X": 133.34,
+          "Y": 36
+        },
+        {
+          "Text": "r",
+          "X": 226.97,
+          "Y": 49.104
+        },
+        {
+          "Text": "t",
+          "X": 226.25,
+          "Y": 36
+        }
+      ]
+    },
+    {
+      "Input": "paragraph-property-math-footer.docx",
+      "InputSha256": "B25A7D9B05B3FA52517246C500DA8630571CE4115C159FC802AC25B553DCCFFF",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "637DD80BD79A555A9212ADD8B2C70CBB7F01BA4870EF1002EE726605900F8EA8",
+      "ExportLogSha256": "065EC5A96728529741FDF6209163FE3E8ECF33575ECCBB4C73D438F073D98261",
+      "WordVersion": "16.0",
+      "MathOrigins": [
+        {
+          "Text": "r",
+          "X": 101.66,
+          "Y": 133.22
+        },
+        {
+          "Text": "t",
+          "X": 101.11,
+          "Y": 123.29
+        },
+        {
+          "Text": "r",
+          "X": 172.1,
+          "Y": 133.22
+        },
+        {
+          "Text": "t",
+          "X": 171.58,
+          "Y": 123.29
+        }
+      ]
+    }
+  ]
+}

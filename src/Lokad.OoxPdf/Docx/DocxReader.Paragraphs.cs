@@ -59,7 +59,8 @@ internal sealed partial class DocxReader
         var paragraphRevisions = new List<DocxRevisionInfo>();
         var deletedText = new StringBuilder();
         AddRevision(paragraphRevisions, inheritedRevision);
-        AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(paragraphProperties));
+        IReadOnlyList<DocxRevisionInfo> propertyRevisions = ReadPropertyChangeRevisions(paragraphProperties);
+        AddRevisions(paragraphRevisions, propertyRevisions);
         XElement? paragraphMarkRunProperties = paragraphProperties?.Element(WordprocessingNamespace + "rPr");
         IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadPropertyChangeRevisions(paragraphMarkRunProperties);
         DocxRevisionInfo? numberingMarkInsertion = inheritedRevision is null &&
@@ -337,6 +338,8 @@ internal sealed partial class DocxReader
             Hyperlinks = hyperlinkSpans,
             BookmarkAnchors = bookmarkAnchors,
             Revisions = paragraphRevisions,
+            PropertyRevision = propertyRevisions is [{ Kind: DocxRevisionKind.ParagraphPropertiesChange } propertyRevision]
+                ? propertyRevision : null,
             NonRenderingRunOwners = nonRenderingRunOwners is null ? [] : nonRenderingRunOwners,
             HasDeletedParagraphMark = hasDeletedParagraphMark,
             DeletedText = deletedText.ToString(),

@@ -55,6 +55,9 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxHyperlinkSpan> Hyperlinks { get; init; } = [];
     public IReadOnlyList<DocxBookmarkAnchor> BookmarkAnchors { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+    // The unique parsed pPr change owns already-resolved paragraph properties.
+    // Keep it distinct from inherited, run, mark and range revision metadata.
+    public DocxRevisionInfo? PropertyRevision { get; init; }
     // Actual nonpainting source runs (empty text or cell-transparent column
     // tokens) own review metadata without contributing text/font/layout metrics.
     public IReadOnlyList<DocxNonRenderingRunOwner> NonRenderingRunOwners { get; init; } = [];
