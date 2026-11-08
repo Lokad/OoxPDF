@@ -16,7 +16,19 @@
       "DocxInlineCompositionSourceCursorRebindsUnplacedPageCounters",
       "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
       "DocxInlineCompositionSourceCursorKeepsSplitCounterValue",
-      "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters"
+      "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
+      "DocxParagraphShadingSurvivesPictureOnlyCellPlacement",
+      "DocxPictureOnlySourceRangesRetainUnlinkedFallback",
+      "PortableRenderingStaticPictureOnlyFramesRetainBodyAndResources",
+      "DocxStaticStoryInlineImagesShareTheTextBaseline",
+      "DocxStaticStoryDeclaredFramesClipInlineImages",
+      "DocxFooterInlineImageReservesItsVisibleHeight",
+      "DocxInlineImageClipTravelsWithScaledStoryPlacement",
+      "DocxTableLayoutStageKeepsInlineImagesInSplitRowFragments",
+      "DocxTableLayoutStageUsesCellBodyElementsForInlineImages",
+      "DocxInlineImageCarriesSourceRunAffinity",
+      "DocxTallInlineImageShiftsLineDownKeepingAdvance",
+      "DocxTableCellInlineImageEmitsBetweenSurroundingText"
   ],
   "docx-math-automatic-slots": [
       "MathFontFraction",

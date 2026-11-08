@@ -42,7 +42,7 @@ internal static partial class DocxInlineCompositionTests
                         40d + (kind == "display" ? (factor - 1d) * 14.4d : 0d)) { UsesDisplayStyle = kind == "display" };
                 }
                 TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations, new TrackingMeasurer(),
-                    12d, 9d * scale, 14.4d * factor * scale, scale, default, out var atoms, allowStaticFallback: true),
+                    12d, 9d * scale, 14.4d * factor * scale, scale, default, out var atoms, allowStaticFallback: kind == "text"),
                     $"Supported {kind} source content shares one ordered measurement path at scale {scale}.");
                 TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(TestAssert.NotNull(atoms), 600d, 600d,
                     default, out var lines), "The complete row fits without changing its content.");

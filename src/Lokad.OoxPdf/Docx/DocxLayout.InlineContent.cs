@@ -260,8 +260,12 @@ internal sealed partial class DocxLayoutEngine
         }
         else
         {
-            if ((!allowStaticFallback || paragraph.Images.Count != 0 && !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph)) &&
-                paragraph.InlineTextBoxes.Count == 0 ||
+            // A complete automatic picture-only paragraph owns the same frame
+            // in every container. Ordinary static text and inline boxes retain
+            // their existing source eligibility; mixed unprepared pictures do not.
+            if (paragraph.InlineTextBoxes.Count == 0 &&
+                !(allowStaticFallback && paragraph.Images.Count == 0) &&
+                !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
                 paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
