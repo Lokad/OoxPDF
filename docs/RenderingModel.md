@@ -12,8 +12,9 @@ The production library does not shell out to Office, PDFium, PowerShell, or exte
 
 Chart painting requires a resolved scene. Plot and secondary axes are selected
 from that scene, preserving declared ID order and explicit absence. The selected
-axis retains its scene-owned XML evidence for properties still read from markup;
-a second XML document cannot supply a missing axis.
+axis owns its resolved properties and explicit absence. The chart retains its
+original XML for properties still read from markup; a second document cannot
+supply a missing axis.
 
 Chart data, names, labels, paints, markers and pie/doughnut slice offsets consume
 their parsed plots and series. Cached/workbook values retain source indices and
