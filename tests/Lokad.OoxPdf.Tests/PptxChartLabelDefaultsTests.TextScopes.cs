@@ -9,17 +9,16 @@ internal static partial class PptxChartLabelDefaultsTests
     {
         foreach (string kind in new[] { "barChart", "lineChart", "areaChart", "scatterChart", "bubbleChart", "pieChart", "doughnutChart" })
         foreach (bool sparseRoot in new[] { false, true })
-        foreach (bool scene in new[] { false, true })
         {
             var (first, firstPlot) = TextScopeSource(kind, TextScopeParent, "<c:spPr/>", sparseRoot: sparseRoot);
             var (other, otherPlot) = TextScopeSource(kind, TextScopeOtherParent, "<c:spPr/>", sparseRoot: sparseRoot);
             var (plain, plainPlot) = TextScopeSource(kind, "", "<c:spPr/>", sparseRoot: sparseRoot);
-            object Point(PptxSceneChart chart, XElement plot) => Invoke("ResolveChartDataLabelOptions", Read(chart, plot, scene), 2);
-            object firstStyle = TextScopeStyle(Point(first, firstPlot));
-            TestAssert.Equal(TextScopeStyle(Point(plain, plainPlot)), firstStyle);
-            TestAssert.Equal(firstStyle, TextScopeStyle(Point(other, otherPlot)));
-            TestAssert.True(!TextScopeStyle(Invoke("ResolveChartDataLabelOptions", Read(first, firstPlot, scene), 0))
-                .Equals(TextScopeStyle(Invoke("ResolveChartDataLabelOptions", Read(other, otherPlot, scene), 0))),
+            object Point(PptxSceneChart chart) => Invoke("ResolveChartDataLabelOptions", Read(chart), 2);
+            object firstStyle = TextScopeStyle(Point(first));
+            TestAssert.Equal(TextScopeStyle(Point(plain)), firstStyle);
+            TestAssert.Equal(firstStyle, TextScopeStyle(Point(other)));
+            TestAssert.True(!TextScopeStyle(Invoke("ResolveChartDataLabelOptions", Read(first), 0))
+                .Equals(TextScopeStyle(Invoke("ResolveChartDataLabelOptions", Read(other), 0))),
                 "Changing container style still changes an unoverridden label.");
             TestAssert.Equal(null, first.Plots[0].DataLabels.Overrides.Single().TextStyle.FontFamily);
             TestAssert.Equal(null, first.Plots[0].DataLabels.Overrides.Single().TextStyle.FontSize);
@@ -35,12 +34,11 @@ internal static partial class PptxChartLabelDefaultsTests
             "<c:layout><c:manualLayout><c:xMode val=\"factor\"/><c:x val=\".1\"/></c:manualLayout></c:layout>"
         })
         foreach (bool sparseRoot in new[] { false, true })
-        foreach (bool scene in new[] { false, true })
         {
             foreach (string parent in new[] { TextScopeParent, TextScopeOtherParent })
             {
                 var (chart, plot) = TextScopeSource(kind, parent, point, sparseRoot: sparseRoot);
-                object options = Read(chart, plot, scene);
+                object options = Read(chart);
                 TestAssert.Equal(TextScopeStyle(options),
                     TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2)));
                 TestAssert.Equal(null, chart.Plots[0].DataLabels.Overrides.Single().TextStyle.FontFamily);
@@ -51,16 +49,14 @@ internal static partial class PptxChartLabelDefaultsTests
 
     public static void PptxDefinedSeriesTextStylesOwnDefaults()
     {
-        foreach (bool scene in new[] { false, true })
         foreach (bool defined in new[] { false, true })
         {
             var (chart, plot) = TextScopeSource("lineChart", TextScopeParent, "", series: defined ? "<c:dLbls/>" : "", sparseRoot: true);
-            object original = Read(chart, plot, scene);
-            object perSeries = Invoke("ReadSceneOrXmlSeriesDataLabelOptions", scene ? chart : null, scene ? chart.Plots[0] : null,
-                plot, PptxTheme.Empty, PptxColorMap.Default);
+            object original = Read(chart);
+            object perSeries = Invoke("ReadSceneSeriesDataLabelOptions", chart, chart.Plots[0]);
             object resolved = Invoke("ResolveChartDataLabelOptionsForSeries", original, perSeries, 0);
             var (baseline, baselinePlot) = TextScopeSource("lineChart", "", "", sparseRoot: true);
-            TestAssert.Equal(defined ? TextScopeStyle(Read(baseline, baselinePlot, scene)) : TextScopeStyle(original), TextScopeStyle(resolved));
+            TestAssert.Equal(defined ? TextScopeStyle(Read(baseline)) : TextScopeStyle(original), TextScopeStyle(resolved));
         }
     }
 
@@ -71,18 +67,16 @@ internal static partial class PptxChartLabelDefaultsTests
             """;
         var (chart, plot) = TextScopeSource("lineChart", TextScopeParent, own);
         var raw = chart.Plots[0].DataLabels.Overrides.Single().TextStyle;
-        foreach (object options in ReadBoth(chart, plot))
-        {
-            object style = TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2));
-            TestAssert.Equal("Point Face", TextScopeProperty(style, "FontFamily"));
-            TestAssert.Equal(12d, TextScopeProperty(style, "FontSize"));
-            TestAssert.Equal(.5d, TextScopeProperty(style, "CharacterSpacing"));
-            TestAssert.Equal(new RgbColor(1, 2, 3), TextScopeProperty(style, "Color"));
-            TestAssert.Equal(.8d, TextScopeProperty(style, "Alpha"));
-            foreach (string flag in new[] { "Bold", "Italic", "Underline", "Strike" }) TestAssert.Equal(false, TextScopeProperty(style, flag));
-            TestAssert.Equal(raw.RequestedTypeface, TextScopeProperty(style, "RequestedTypeface"));
-            TestAssert.Equal(raw.TypefaceSource, TextScopeProperty(style, "TypefaceSource"));
-        }
+        object options = Read(chart);
+        object style = TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2));
+        TestAssert.Equal("Point Face", TextScopeProperty(style, "FontFamily"));
+        TestAssert.Equal(12d, TextScopeProperty(style, "FontSize"));
+        TestAssert.Equal(.5d, TextScopeProperty(style, "CharacterSpacing"));
+        TestAssert.Equal(new RgbColor(1, 2, 3), TextScopeProperty(style, "Color"));
+        TestAssert.Equal(.8d, TextScopeProperty(style, "Alpha"));
+        foreach (string flag in new[] { "Bold", "Italic", "Underline", "Strike" }) TestAssert.Equal(false, TextScopeProperty(style, flag));
+        TestAssert.Equal(raw.RequestedTypeface, TextScopeProperty(style, "RequestedTypeface"));
+        TestAssert.Equal(raw.TypefaceSource, TextScopeProperty(style, "TypefaceSource"));
         TestAssert.Equal(raw, chart.Plots[0].DataLabels.Overrides.Single().TextStyle);
         TestAssert.Equal(null, raw.Color); TestAssert.Equal(null, raw.Alpha); TestAssert.Equal(null, raw.CharacterSpacing);
     }

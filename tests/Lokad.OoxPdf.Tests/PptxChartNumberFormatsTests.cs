@@ -228,12 +228,14 @@ internal static class PptxChartNumberFormatsTests
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlDataLabelOptions",
+            "ReadSceneDataLabelOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new System.InvalidOperationException("Expected data-label option resolver.");
         System.Reflection.MethodInfo formatLabel = typeof(PptxRenderer).GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
             .Single(m => m.Name == "FormatChartDataLabelValue" && m.GetParameters().Length == 4);
-        object datedOptions = readOptions.Invoke(null, new object?[] { null, null, dated, PptxTheme.Empty, PptxColorMap.Default }) ?? throw new System.InvalidOperationException("Expected dated label options.");
-        object undatedOptions = readOptions.Invoke(null, new object?[] { null, null, undated, PptxTheme.Empty, PptxColorMap.Default }) ?? throw new System.InvalidOperationException("Expected undated label options.");
+        PptxSceneChart datedChart = PptxTests.BuildSingleChartScene(dated.Document!.ToString())!;
+        PptxSceneChart undatedChart = PptxTests.BuildSingleChartScene(undated.Document!.ToString())!;
+        object datedOptions = readOptions.Invoke(null, new object?[] { datedChart, datedChart.Plots[0] }) ?? throw new System.InvalidOperationException("Expected dated label options.");
+        object undatedOptions = readOptions.Invoke(null, new object?[] { undatedChart, undatedChart.Plots[0] }) ?? throw new System.InvalidOperationException("Expected undated label options.");
         TestAssert.Equal("1/1/04", formatLabel.Invoke(null, new object?[] { 0d, datedOptions, null, null }) as string ?? throw new System.InvalidOperationException("Expected formatted dated data label."));
         TestAssert.Equal("1/0/00", formatLabel.Invoke(null, new object?[] { 0d, undatedOptions, null, null }) as string ?? throw new System.InvalidOperationException("Expected formatted undated data label."));
     }

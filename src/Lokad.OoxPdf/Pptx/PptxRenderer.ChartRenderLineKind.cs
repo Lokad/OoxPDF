@@ -144,8 +144,8 @@ internal sealed partial class PptxRenderer
                     categoryPointsOnTickMarks,
                     [],
                     [],
-                    ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
-                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
+                    ReadSceneDataLabelOptions(sceneChart, linePlot),
+                    ReadSceneSeriesDataLabelOptions(sceneChart, linePlot),
                     ReadSceneCategoryLabelVector(linePlot, workbook, plotVisibleOnly),
                     ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointLegend ? pointAppearance : null, seriesAppearance: seriesAppearance, categoryAxisReversed: categoryAxisReversed, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
                 return true;

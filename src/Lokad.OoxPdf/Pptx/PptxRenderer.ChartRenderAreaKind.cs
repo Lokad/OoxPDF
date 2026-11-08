@@ -149,8 +149,8 @@ internal sealed partial class PptxRenderer
                 await RenderCategoryPointDataLabelsAsync(
                     theme, colorMap, chartPalette, graphics, chartLayout.Frame, plotBox, areaSeriesVectors, valueExtents,
                     valueAxisOptions.Reversed, categoryPointsOnTickMarks, seriesStrokes, [],
-                    ReadSceneOrXmlDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),
-                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),
+                    ReadSceneDataLabelOptions(sceneChart, areaPlot),
+                    ReadSceneSeriesDataLabelOptions(sceneChart, areaPlot),
                     ReadSceneCategoryLabelVector(areaPlot, workbook, plotVisibleOnly),
                     ReadSharedChartSeriesNames(areaPlot, workbook), fontResolver, fonts, context,
                     sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,

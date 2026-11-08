@@ -417,45 +417,20 @@ internal sealed partial class PptxRenderer
         return majorLatin.Typeface is null ? default : majorLatin;
     }
 
-    private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
+    private static ChartDataLabelOptions ReadSceneDataLabelOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot)
     {
-        PptxSceneChartDataLabels labels = PptxSceneBuilder.ReadChartDataLabels(chartElement, theme, colorMap);
-        return labels.IsDefined
-            ? ToChartDataLabelOptions(labels, chartElement, ResolveDataLabelTextDefaults(null, chartElement, theme, colorMap),
-                seriesScope: chartElement.Name == ChartNamespace + "ser")
-            : ChartDataLabelOptions.None;
+        return ToChartDataLabelOptions(plot.DataLabels, plot.Source,
+            PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, default, "dataLabel"),
+            date1904: sceneChart.Options.Date1904 == true);
     }
 
-    private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
+    private static IReadOnlyList<ChartDataLabelOptions> ReadSceneSeriesDataLabelOptions(PptxSceneChart sceneChart, PptxSceneChartPlot plot)
     {
-        return plot is null
-            ? ReadChartDataLabelOptions(chartElement, theme, colorMap)
-            : ToChartDataLabelOptions(plot.DataLabels, chartElement, ResolveDataLabelTextDefaults(sceneChart, chartElement, theme, colorMap),
-                date1904: sceneChart?.Options.Date1904 == true);
-    }
-
-    private static IReadOnlyList<ChartDataLabelOptions> ReadSceneOrXmlSeriesDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        if (plot is not null)
-        {
-            PptxSceneChartTextStyleOverride defaults = ResolveDataLabelTextDefaults(sceneChart, chartElement, theme, colorMap);
-            return plot.Series
-                .Select(series => ToChartDataLabelOptions(series.DataLabels, chartElement, defaults,
-                    date1904: sceneChart?.Options.Date1904 == true, seriesScope: true))
-                .ToArray();
-        }
-
-        return chartElement
-            .Elements(ChartNamespace + "ser")
-            .Select(series => ReadChartDataLabelOptions(series, theme, colorMap))
+        PptxSceneChartTextStyleOverride defaults = PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, default, "dataLabel");
+        return plot.Series
+            .Select(series => ToChartDataLabelOptions(series.DataLabels, plot.Source, defaults,
+                date1904: sceneChart.Options.Date1904 == true, seriesScope: true))
             .ToArray();
-    }
-
-    private static PptxSceneChartTextStyleOverride ResolveDataLabelTextDefaults(PptxSceneChart? sceneChart, XElement chartElement, PptxTheme theme, PptxColorMap colorMap)
-    {
-        return sceneChart is not null
-            ? PptxSceneBuilder.ResolveChartElementTextStyleOverride(sceneChart, default, "dataLabel")
-            : PptxSceneBuilder.ReadChartTextStyleOverride(chartElement.AncestorsAndSelf(ChartNamespace + "chartSpace").FirstOrDefault(), theme, colorMap);
     }
 
     private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels, XElement chartElement,

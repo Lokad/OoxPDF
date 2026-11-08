@@ -282,8 +282,8 @@ internal sealed partial class PptxRenderer
                         extraValueAxisOptions,
                         extraSeriesFills,
                         extraPointFills,
-                        ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
-                        ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme, colorMap),
+                        ReadSceneDataLabelOptions(sceneChart, extraBarPlot),
+                        ReadSceneSeriesDataLabelOptions(sceneChart, extraBarPlot),
                         ReadSceneCategoryLabelVector(extraBarPlot, workbook, plotVisibleOnly),
                         ReadSharedChartSeriesNames(extraBarPlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
                         categoryPlacement: sharedValueAxis && extraHorizontalBars ? resolvedCategory : null).ConfigureAwait(false);
@@ -352,8 +352,8 @@ internal sealed partial class PptxRenderer
                         categoryPointsOnTickMarks: true,
                         lineSeriesStrokes,
                         lineMarkerStyles,
-                        ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),
-                        ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, comboLineChart, theme, colorMap),
+                        ReadSceneDataLabelOptions(sceneChart, linePlot),
+                        ReadSceneSeriesDataLabelOptions(sceneChart, linePlot),
                         ReadSceneCategoryLabelVector(linePlot, workbook, plotVisibleOnly),
                         ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
                 }
@@ -515,8 +515,8 @@ internal sealed partial class PptxRenderer
                     valueAxisOptions,
                     seriesFills,
                     pointFills,
-                    ReadSceneOrXmlDataLabelOptions(sceneChart, barPlot, barChart, theme, colorMap),
-                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, barPlot, barChart, theme, colorMap),
+                    ReadSceneDataLabelOptions(sceneChart, barPlot),
+                    ReadSceneSeriesDataLabelOptions(sceneChart, barPlot),
                     ReadSceneCategoryLabelVector(barPlot, workbook, plotVisibleOnly),
                     ReadSharedChartSeriesNames(barPlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, categoryPlacement: resolvedCategory).ConfigureAwait(false);
                 return true;

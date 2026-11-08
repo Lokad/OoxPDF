@@ -19,19 +19,17 @@ internal static partial class PptxChartLabelDefaultsTests
             var (chart, plot) = TextScopeSource(kind, TextScopeParent, body, sparseRoot: sparse);
             var raw = chart.Plots[0].DataLabels.Overrides.Single().TextStyle;
             TestAssert.Equal(null, raw.FontFamily); TestAssert.Equal(null, raw.FontSize);
-            foreach (object options in ReadBoth(chart, plot))
-            {
-                object style = TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2));
-                TestAssert.Equal("Arial", TextScopeProperty(style, "FontFamily"));
-                TestAssert.Equal(18d, TextScopeProperty(style, "FontSize"));
-                TestAssert.Equal(0d, TextScopeProperty(style, "CharacterSpacing"));
-                TestAssert.Equal(new RgbColor(0, 0, 0), TextScopeProperty(style, "Color"));
-                TestAssert.Equal(1d, TextScopeProperty(style, "Alpha"));
-                foreach (string flag in new[] { "Bold", "Italic", "Underline", "Strike" })
-                    TestAssert.Equal(false, TextScopeProperty(style, flag));
-                TestAssert.True(TextScopeProperty(TextScopeStyle(options), "FontSize") is 20d,
-                    "The point's implicit body cannot replace its container or neighboring points.");
-            }
+            object options = Read(chart);
+            object style = TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2));
+            TestAssert.Equal("Arial", TextScopeProperty(style, "FontFamily"));
+            TestAssert.Equal(18d, TextScopeProperty(style, "FontSize"));
+            TestAssert.Equal(0d, TextScopeProperty(style, "CharacterSpacing"));
+            TestAssert.Equal(new RgbColor(0, 0, 0), TextScopeProperty(style, "Color"));
+            TestAssert.Equal(1d, TextScopeProperty(style, "Alpha"));
+            foreach (string flag in new[] { "Bold", "Italic", "Underline", "Strike" })
+                TestAssert.Equal(false, TextScopeProperty(style, flag));
+            TestAssert.True(TextScopeProperty(TextScopeStyle(options), "FontSize") is 20d,
+                "The point's implicit body cannot replace its container or neighboring points.");
         }
     }
 
@@ -43,16 +41,14 @@ internal static partial class PptxChartLabelDefaultsTests
         {
             var (chart, plot) = TextScopeSource(kind, TextScopeParent,
                 TextBodySource("<a:pPr>" + defaults + "</a:pPr>", list));
-            foreach (object options in ReadBoth(chart, plot))
-            {
-                object style = TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2));
-                TestAssert.Equal("Root Face", TextScopeProperty(style, "FontFamily"));
-                TestAssert.Equal(defaults.Contains("1200", StringComparison.Ordinal) ? 12d : 10d,
-                    TextScopeProperty(style, "FontSize"));
-                TestAssert.Equal(.5d, TextScopeProperty(style, "CharacterSpacing"));
-                TestAssert.Equal(new RgbColor(1, 2, 3), TextScopeProperty(style, "Color"));
-                TestAssert.Equal(true, TextScopeProperty(style, "Bold"));
-            }
+            object options = Read(chart);
+            object style = TextScopeStyle(Invoke("ResolveChartDataLabelOptions", options, 2));
+            TestAssert.Equal("Root Face", TextScopeProperty(style, "FontFamily"));
+            TestAssert.Equal(defaults.Contains("1200", StringComparison.Ordinal) ? 12d : 10d,
+                TextScopeProperty(style, "FontSize"));
+            TestAssert.Equal(.5d, TextScopeProperty(style, "CharacterSpacing"));
+            TestAssert.Equal(new RgbColor(1, 2, 3), TextScopeProperty(style, "Color"));
+            TestAssert.Equal(true, TextScopeProperty(style, "Bold"));
         }
     }
 

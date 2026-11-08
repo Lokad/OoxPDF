@@ -39,8 +39,8 @@ internal sealed partial class PptxRenderer
                 ChartIndexedTextVector categoryLabels = ReadSceneCategoryLabelVector(piePlot, workbook, plotVisibleOnly);
                 IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(piePlot, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
-                    ReadSceneOrXmlDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
-                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
+                    ReadSceneDataLabelOptions(sceneChart, piePlot),
+                    ReadSceneSeriesDataLabelOptions(sceneChart, piePlot),
                     seriesIndex: 0);
                 ChartPolarPointOptions polarPoints = ReadSceneChartPolarPointOptions(piePlot, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
@@ -86,8 +86,8 @@ internal sealed partial class PptxRenderer
                 ChartIndexedTextVector categoryLabels = ReadSceneCategoryLabelVector(doughnutPlot, workbook, plotVisibleOnly);
                 IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(doughnutPlot, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
-                    ReadSceneOrXmlDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),
-                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),
+                    ReadSceneDataLabelOptions(sceneChart, doughnutPlot),
+                    ReadSceneSeriesDataLabelOptions(sceneChart, doughnutPlot),
                     seriesIndex: 0);
                 ChartDoughnutPlotOptions doughnutOptions = ReadSceneChartDoughnutOptions(doughnutPlot, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);

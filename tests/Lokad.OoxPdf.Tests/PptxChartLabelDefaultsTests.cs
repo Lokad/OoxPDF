@@ -25,12 +25,10 @@ internal static partial class PptxChartLabelDefaultsTests
         foreach (bool defined in new[] { false, true })
         {
             var (chart, plot) = Source(defined ? "<c:dLbls/>" : "");
-            foreach (object options in ReadBoth(chart, plot))
-            {
-                foreach (var component in Components)
-                    TestAssert.Equal(defined, Flag(options, component.Property));
-                TestAssert.True(!Flag(options, "ShowLeaderLines"), "Unproven leader-line fallback remains unchanged.");
-            }
+            object options = Read(chart);
+            foreach (var component in Components)
+                TestAssert.Equal(defined, Flag(options, component.Property));
+            TestAssert.True(!Flag(options, "ShowLeaderLines"), "Unproven leader-line fallback remains unchanged.");
             TestAssert.Equal(null, chart.Plots[0].DataLabels.ShowSeriesName);
             TestAssert.Equal(defined, chart.Plots[0].DataLabels.IsDefined);
         }
@@ -39,14 +37,12 @@ internal static partial class PptxChartLabelDefaultsTests
         {
             string attribute = value.Length == 0 ? "" : $" val=\"{value}\"";
             var (chart, plot) = Source($"<c:dLbls><c:{component.Element}{attribute}/></c:dLbls>");
-            foreach (object options in ReadBoth(chart, plot))
-            {
-                foreach (var other in Components)
-                    TestAssert.Equal(other == component ? value is not ("0" or "false") : true, Flag(options, other.Property));
-                object raw = PptxTests.ChartDataLabelFlagOption(options, component.Element);
-                TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(raw), "Explicit flags retain source presence.");
-                TestAssert.Equal(value, PptxTests.ChartBooleanOptionRawValue(raw));
-            }
+            object options = Read(chart);
+            foreach (var other in Components)
+                TestAssert.Equal(other == component ? value is not ("0" or "false") : true, Flag(options, other.Property));
+            object raw = PptxTests.ChartDataLabelFlagOption(options, component.Element);
+            TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(raw), "Explicit flags retain source presence.");
+            TestAssert.Equal(value, PptxTests.ChartBooleanOptionRawValue(raw));
         }
     }
 
@@ -61,30 +57,27 @@ internal static partial class PptxChartLabelDefaultsTests
         foreach (string seriesLabels in new[] { "<c:dLbls/>", series })
         {
             var (chart, plot) = Source(plotLabels, seriesLabels);
-            foreach (bool scene in new[] { false, true })
+            object options = Read(chart);
+            object perSeries = Invoke("ReadSceneSeriesDataLabelOptions", chart,
+                chart.Plots[0]);
+            object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
+            foreach (var component in Components)
+                TestAssert.Equal(!(seriesLabels == series && component.Property is "ShowValue" or "ShowSeriesName"), Flag(merged, component.Property));
+            if (seriesLabels == series)
             {
-                object options = Read(chart, plot, scene);
-                object perSeries = Invoke("ReadSceneOrXmlSeriesDataLabelOptions", scene ? chart : null,
-                    scene ? chart.Plots[0] : null, plot, PptxTheme.Empty, PptxColorMap.Default);
-                object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
-                foreach (var component in Components)
-                    TestAssert.Equal(!(seriesLabels == series && component.Property is "ShowValue" or "ShowSeriesName"), Flag(merged, component.Property));
-                if (seriesLabels == series)
-                {
-                    object point = Invoke("ResolveChartDataLabelOptions", merged, 0);
-                    TestAssert.True(Flag(point, "ShowSeriesName"), "The point's explicit true overrides an inherited false.");
-                    TestAssert.True(Flag(point, "ShowValue"), "A defined point takes its own missing-component defaults.");
-                    object deleted = Invoke("ResolveChartDataLabelOptions", merged, 1);
-                    TestAssert.True(!Flag(deleted, "HasVisibleContent"), "Deleted labels remain absent.");
-                }
+                object point = Invoke("ResolveChartDataLabelOptions", merged, 0);
+                TestAssert.True(Flag(point, "ShowSeriesName"), "The point's explicit true overrides an inherited false.");
+                TestAssert.True(Flag(point, "ShowValue"), "A defined point takes its own missing-component defaults.");
+                object deleted = Invoke("ResolveChartDataLabelOptions", merged, 1);
+                TestAssert.True(!Flag(deleted, "HasVisibleContent"), "Deleted labels remain absent.");
             }
         }
         foreach (bool deleted in new[] { false, true })
         {
             string point = "<c:dLbl><c:idx val=\"0\"/>" + (deleted ? "<c:delete val=\"1\"/>" : "") + "</c:dLbl>";
             var (chart, plot) = Source("", disabled.Replace("<c:dLbls>", "<c:dLbls>" + point, StringComparison.Ordinal));
-            object options = Read(chart, plot, true);
-            object perSeries = Invoke("ReadSceneOrXmlSeriesDataLabelOptions", chart, chart.Plots[0], plot, PptxTheme.Empty, PptxColorMap.Default);
+            object options = Read(chart);
+            object perSeries = Invoke("ReadSceneSeriesDataLabelOptions", chart, chart.Plots[0]);
             object merged = Invoke("ResolveChartDataLabelOptionsForSeries", options, perSeries, 0);
             TestAssert.Equal(!deleted, Flag(merged, "HasVisibleContent"));
         }
@@ -221,12 +214,8 @@ internal static partial class PptxChartLabelDefaultsTests
         return (PptxTests.BuildSingleChartScene(xml.ToString())!, xml.Descendants(C + "barChart").Single());
     }
 
-    private static IEnumerable<object> ReadBoth(PptxSceneChart chart, XElement plot)
-        => new[] { Read(chart, plot, false), Read(chart, plot, true) };
-
-    private static object Read(PptxSceneChart chart, XElement plot, bool scene)
-        => Invoke("ReadSceneOrXmlDataLabelOptions", scene ? chart : null, scene ? chart.Plots[0] : null,
-            plot, PptxTheme.Empty, PptxColorMap.Default);
+    private static object Read(PptxSceneChart chart)
+        => Invoke("ReadSceneDataLabelOptions", chart, chart.Plots[0]);
 
     private static object Invoke(string name, params object?[] arguments)
         => typeof(PptxRenderer).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, arguments)!;

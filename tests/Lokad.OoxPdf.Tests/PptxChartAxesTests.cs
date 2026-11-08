@@ -1357,7 +1357,7 @@ internal static class PptxChartAxesTests
         PptxSceneChartPlot plot = chart.Plots[0];
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement mismatchedXmlFallback = XDocument.Parse("""
+        XElement alternateSource = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:barChart>
@@ -1366,18 +1366,18 @@ internal static class PptxChartAxesTests
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlDataLabelOptions",
+            "ReadSceneDataLabelOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label option resolver.");
         System.Reflection.MethodInfo resolveOptions = typeof(PptxRenderer).GetMethod(
             "ResolveChartDataLabelOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label override resolver.");
         System.Reflection.MethodInfo readSeriesOptions = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlSeriesDataLabelOptions",
+            "ReadSceneSeriesDataLabelOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series data-label option resolver.");
         System.Reflection.MethodInfo resolveSeriesOptions = typeof(PptxRenderer).GetMethod(
             "ResolveChartDataLabelOptionsForSeries",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series data-label merge resolver.");
-        object sceneOptions = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
+        object sceneOptions = readOptions.Invoke(null, [chart, plot]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
 
         object sceneShowValue = PptxTests.ChartDataLabelFlagOption(sceneOptions, "showVal");
         TestAssert.True(PptxTests.ChartBooleanOptionValue(sceneShowValue), "Expected scene-backed shorthand showVal to resolve true.");
@@ -1388,7 +1388,7 @@ internal static class PptxChartAxesTests
         TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(sceneShowPercent), "Expected scene-backed showPercent=0 presence to remain explicit.");
         TestAssert.Equal("0", PptxTests.ChartBooleanOptionRawValue(sceneShowPercent));
         object sceneShowLegendKey = PptxTests.ChartDataLabelFlagOption(sceneOptions, "showLegendKey");
-        TestAssert.True(!PptxTests.ChartBooleanOptionValue(sceneShowLegendKey), "Expected absent scene showLegendKey to keep its raw source value, not consume fallback XML.");
+        TestAssert.True(!PptxTests.ChartBooleanOptionValue(sceneShowLegendKey), "Expected absent scene showLegendKey to keep its raw source value, preserve its parsed owner.");
         TestAssert.True(!PptxTests.ChartBooleanOptionIsDefined(sceneShowLegendKey), "Expected missing scene showLegendKey to remain distinct from explicit false.");
         object sceneLeaderLines = PptxTests.ChartDataLabelLeaderLines(sceneOptions);
         TestAssert.True(PptxTests.ChartDataLabelLeaderLinesIsDefined(sceneLeaderLines), "Expected scene-backed data-label leader-line source to remain defined.");
@@ -1430,7 +1430,8 @@ internal static class PptxChartAxesTests
         TestAssert.Equal(-20d, PptxTests.ChartTextBodyRotationDegrees(resolvedSceneBody) ?? 0d);
         TestAssert.Equal("-1200000", PptxTests.ChartTextBodyRotationValue(resolvedSceneBody));
 
-        object xmlOptions = readOptions.Invoke(null, [null, null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
+        PptxSceneChart alternateChart = PptxTests.BuildSingleChartScene(alternateSource.Document!.ToString())!;
+        object xmlOptions = readOptions.Invoke(null, [alternateChart, alternateChart.Plots[0]]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
         object xmlShowValue = PptxTests.ChartDataLabelFlagOption(xmlOptions, "showVal");
         TestAssert.True(!PptxTests.ChartBooleanOptionValue(xmlShowValue), "Expected XML showVal=0 to resolve false.");
         TestAssert.True(PptxTests.ChartBooleanOptionIsDefined(xmlShowValue), "Expected XML showVal=0 presence to remain explicit.");
@@ -1487,8 +1488,9 @@ internal static class PptxChartAxesTests
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
-        object plotOptions = readOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected plot label options.");
-        object seriesOptions = readSeriesOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected series label options.");
+        PptxSceneChart seriesChart = PptxTests.BuildSingleChartScene(xmlWithSeriesLabels.Document!.ToString())!;
+        object plotOptions = readOptions.Invoke(null, [seriesChart, seriesChart.Plots[0]]) ?? throw new InvalidOperationException("Expected plot label options.");
+        object seriesOptions = readSeriesOptions.Invoke(null, [seriesChart, seriesChart.Plots[0]]) ?? throw new InvalidOperationException("Expected series label options.");
         object resolvedSeriesOptions = resolveSeriesOptions.Invoke(null, [plotOptions, seriesOptions, 0]) ?? throw new InvalidOperationException("Expected resolved series label options.");
         object seriesShowValue = PptxTests.ChartDataLabelFlagOption(resolvedSeriesOptions, "showVal");
         TestAssert.True(!PptxTests.ChartBooleanOptionValue(seriesShowValue), "Missing series showVal retains its raw source value.");
