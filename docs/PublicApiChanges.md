@@ -2,6 +2,13 @@
 
 ## 0.3.0
 
+Font-subset preparation admits its glyph worklist and CID mapping before
+construction and retains mapping capacity alongside the resulting SFNT program.
+Governed conversions can refuse earlier, including during compound-glyph
+expansion. The existing reservation and host budget own this capacity; no option
+is added. Empty no-subset fallback and caller-owned source storage keep their
+existing ownership.
+
 Generated PDF text buffers and their immutable snapshots now grow the existing
 page construction grant before acquisition. Expanding number formats can increase
 admission requirements and cause an earlier `MemoryAdmission` refusal. This

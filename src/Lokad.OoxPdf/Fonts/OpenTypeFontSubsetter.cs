@@ -81,34 +81,46 @@ internal static class OpenTypeFontSubsetter
             throw new InvalidDataException("Font uses an unsupported loca format.");
         }
 
-        ushort[] originalGlyphs = BuildGlyphClosure(unicodeByOriginalGlyph.Keys);
-        if (originalGlyphs.Length <= 1)
-        {
-            return null;
-        }
-
-        var cidByOriginalGlyph = new Dictionary<ushort, ushort>(originalGlyphs.Length);
-        for (int i = 0; i < originalGlyphs.Length; i++)
+        int seedGlyphCount = 0;
+        foreach (ushort glyph in unicodeByOriginalGlyph.Keys)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            cidByOriginalGlyph[originalGlyphs[i]] = (ushort)i;
+            if (glyph != 0 && glyph < originalGlyphCount) seedGlyphCount++;
         }
+        if (seedGlyphCount == 0) return null;
 
-        int glyfLength = MeasureGlyfLength();
-        string[] optionalTags = ["cvt ", "fpgm", "prep", "gasp"];
-        long copiedBytes = (long)os2.Length + head.Length + hhea.Length + maxp.Length + name.Length;
-        foreach (string tag in optionalTags)
-            if (font.TryGetTable(tag, out TableRecord optional)) copiedBytes += optional.Length;
-        // One coarse construction reservation covers outline/metric/table buffers,
-        // both cmap formats and their assembly, and old/new SFNT overlap. Metadata
-        // and source/cache storage remain separate; this is not heap accounting.
-        long tableBytes = checked(glyfLength + 8L * originalGlyphs.Length + 4 + copiedBytes
-            + 32 + 60 + 20L * unicodeByOriginalGlyph.Count);
-        long constructionBytes = checked(2 * tableBytes + 12 + 20 * (10 + optionalTags.Length) + 4);
+        int glyphCapacity = seedGlyphCount + 1; // Includes the required .notdef glyph.
+        ushort[] originalGlyphs;
+        Dictionary<ushort, ushort> cidByOriginalGlyph;
         byte[] subsetHhea = [];
-        IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, constructionBytes);
+        // The existing owner admits the glyph-set/worklist/CID family before
+        // construction, then keeps the resulting CID map beside the SFNT bytes.
+        IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory,
+            GlyphConstructionCapacity(glyphCapacity));
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            originalGlyphs = BuildGlyphClosure(unicodeByOriginalGlyph.Keys);
+            if (originalGlyphs.Length <= 1) return null;
+
+            cidByOriginalGlyph = new Dictionary<ushort, ushort>(originalGlyphs.Length);
+            for (int i = 0; i < originalGlyphs.Length; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                cidByOriginalGlyph[originalGlyphs[i]] = (ushort)i;
+            }
+
+            int glyfLength = MeasureGlyfLength();
+            string[] optionalTags = ["cvt ", "fpgm", "prep", "gasp"];
+            long copiedBytes = (long)os2.Length + head.Length + hhea.Length + maxp.Length + name.Length;
+            foreach (string tag in optionalTags)
+                if (font.TryGetTable(tag, out TableRecord optional)) copiedBytes += optional.Length;
+            // Add outline/metric/table buffers, both cmap formats and their
+            // assembly, and old/new SFNT overlap to the same family grant.
+            long tableBytes = checked(glyfLength + 8L * originalGlyphs.Length + 4 + copiedBytes
+                + 32 + 60 + 20L * unicodeByOriginalGlyph.Count);
+            long constructionBytes = checked(2 * tableBytes + 12 + 20 * (10 + optionalTags.Length) + 4);
+            OoxMemory.Resize(storage, checked(constructionBytes + GlyphConstructionCapacity(originalGlyphs.Length)));
             cancellationToken.ThrowIfCancellationRequested();
             byte[] subsetGlyf = BuildGlyf(out byte[] subsetLoca);
             subsetHhea = CopyTable(source.Span, hhea);
@@ -146,9 +158,9 @@ internal static class OpenTypeFontSubsetter
 
             byte[] subsetBytes = BuildSfnt(source.Span.Slice(0, 4), outputTables);
             var result = new OpenTypeFontSubset(subsetBytes, cidByOriginalGlyph);
-            // Temporary table buffers have no further users. The conversion scope
-            // retains the resulting program through final resource emission.
-            OoxMemory.Resize(storage, subsetBytes.Length);
+            // Temporary construction has no further users. The conversion scope
+            // retains both the program and CID map through resource emission.
+            OoxMemory.Resize(storage, checked(subsetBytes.Length + RetainedGlyphCapacity(originalGlyphs.Length)));
             storage = null;
             return result;
         }
@@ -285,7 +297,7 @@ internal static class OpenTypeFontSubsetter
             foreach (ushort glyph in seedGlyphs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (glyph < originalGlyphCount && included.Add(glyph))
+                if (Include(glyph))
                 {
                     pending.Enqueue(glyph);
                 }
@@ -302,7 +314,7 @@ internal static class OpenTypeFontSubsetter
 
                 foreach (ushort component in components)
                 {
-                    if (component < originalGlyphCount && included.Add(component))
+                    if (Include(component))
                     {
                         pending.Enqueue(component);
                     }
@@ -310,6 +322,22 @@ internal static class OpenTypeFontSubsetter
             }
 
             return included.ToArray();
+
+            bool Include(ushort glyph)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (glyph >= originalGlyphCount) return false;
+                // Grow one aggregate window before the existing set/queue can
+                // expand. Repeated components do not request more capacity.
+                if (included.Count == glyphCapacity && !included.Contains(glyph))
+                {
+                    int capacity = Math.Min(originalGlyphCount, glyphCapacity * 2);
+                    OoxMemory.Resize(storage, GlyphConstructionCapacity(capacity));
+                    glyphCapacity = capacity;
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                return included.Add(glyph);
+            }
         }
 
         byte[] BuildCmap()
@@ -409,6 +437,10 @@ internal static class OpenTypeFontSubsetter
             }
         }
     }
+
+    // Coarse collection/overlap headroom, not object or whole-heap accounting.
+    private static long GlyphConstructionCapacity(int glyphs) => checked(128L + 128L * glyphs);
+    private static long RetainedGlyphCapacity(int glyphs) => checked(128L + 32L * glyphs);
 
     private static bool TryReadHorizontalMetric(
         ReadOnlySpan<byte> source,

@@ -101,7 +101,8 @@ internal static partial class OoxMemoryAdmissionTests
             PdfEmbeddedFont subset = PdfEmbeddedFont.Create(font, codePoints, default);
             TestAssert.True(subset.UsesSubsetFontProgram, "Exercise actual subset production.");
             TestAssert.True(subset.FontProgramBytes.Span.SequenceEqual(baseline.FontProgramBytes.Span), "Admission must preserve every subset byte.");
-            TestAssert.Equal((long)subset.FontProgramBytes.Length, pool.Reserved);
+            TestAssert.True(pool.Reserved > subset.FontProgramBytes.Length,
+                "The resulting CID mapping remains admitted beside its font program.");
             TestAssert.True(pool.Peak > pool.Reserved, "Construction funds temporary table buffers alongside the final SFNT.");
             constructionPeak = pool.Peak;
             long retained = pool.Reserved;
@@ -161,7 +162,8 @@ internal static partial class OoxMemoryAdmissionTests
             for (int i = 0; i < expected.Contours.Count; i++)
                 TestAssert.True(expected.Contours[i].Points.SequenceEqual(actual.Contours[i].Points), "Compound contours preserve all source points.");
             TestAssert.Equal(font.GetAdvanceWidth(originalGlyph), subset.GetAdvanceWidth(glyph));
-            TestAssert.Equal((long)embedded.FontProgramBytes.Length, pool.Reserved);
+            TestAssert.True(pool.Reserved > embedded.FontProgramBytes.Length,
+                "Compound-subset CID metadata remains funded with the program.");
         }
         TestAssert.Equal(0L, pool.Reserved);
         TestAssert.True(bytes.AsSpan().SequenceEqual(font.Bytes.Span), "Owned subset writes leave the original font unchanged.");
