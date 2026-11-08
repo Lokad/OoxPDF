@@ -103,13 +103,10 @@ internal static class DocxNestedCellEndTests
             var table = Outer([new DocxTableElement(child), new DocxParagraphElement(mark)]);
             var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
             var measurer = new Measurer(naturalMetrics: true);
-            var layout = Engine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(source, measurer, default);
-            var items = layout.Pages[0].Items.ToList();
-            double cursor = items.OfType<DocxTableRowLayout>().Single().Y;
-            double? anchor = DocxLayoutEngine.ApplyReviewTableBaselineGeometry(items, 0, null,
-                measurer, .75d, ref cursor, default);
-            TestAssert.True(anchor is not null, "The control must exercise the real Review baseline projection.");
-            var placed = items.OfType<DocxTableRowLayout>().Single();
+            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
+                .Create(source, measurer, default);
+            var placed = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            TestAssert.Equal(.75d, placed.ReviewBorderPrintScale);
             var carrier = placed.Cells[0].TextLines.Single();
             TestAssert.True(carrier.FirstLineInsetPoints is not null,
                 "Review projection retains the source frame even though the mark paints nothing.");
