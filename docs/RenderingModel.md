@@ -42,6 +42,12 @@ Note markers retain source-character or generated-run ownership independently of
 XML run grouping. Numbering and admission use those owners; custom marks bind only
 to an immediately following source character.
 
+Stored field results recognize text and mathematical inline items through one
+source-content rule. The diagnostic scan follows the reader's transparent
+metadata containers. Equations retain their existing result owner through nested
+fields; computed counters keep their replacement owner. Layout consumes the
+materialized inline sequence without a field-specific geometry correction.
+
 Unsupported features are detected as early as practical and emitted through `OoxPdfOptions.DiagnosticSink`.
 
 ## Layout Layer
