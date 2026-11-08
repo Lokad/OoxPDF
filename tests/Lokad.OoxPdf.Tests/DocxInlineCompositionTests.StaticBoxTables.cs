@@ -73,7 +73,8 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(1, actual.Length);
             TestAssert.True(ReferenceEquals(expected[0], actual[0]), "Table preparation retains its actual boxed equation owner.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true))
+            TestAssert.Throws<OperationCanceledException>(() => new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+                    OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .RenderPagesAsync(document, null, canceled.Token).ToBlockingEnumerable().ToArray());
         }
     }
