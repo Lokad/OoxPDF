@@ -51,6 +51,11 @@ Complete stored results may be empty: their source flags remain empty, while
 neighboring supported inline content remains eligible. Computed placeholders and
 instructions missing a result boundary retain their existing paths.
 
+Paragraph-property resolution retains its unique parsed change owner separately
+from aggregate revision metadata. Inline eligibility consumes that same owner;
+run, mark, range and inherited revisions still require their own source. This
+preserves equations beside formatting history without adding a geometry correction.
+
 Unsupported features are detected as early as practical and emitted through `OoxPdfOptions.DiagnosticSink`.
 
 ## Layout Layer
