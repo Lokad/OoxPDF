@@ -17,6 +17,11 @@ By default, markup modes keep the authored DOCX page media box and main text-col
 
 `OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup` is the explicit Office-compatible all-markup profile. It is also opt-in and has no effect outside `AllMarkup`. It uses a reserved review margin and Office-calibrated print scaling, text placement and balloon sizing. Mirrored pages keep equal scaled wrap widths and a fixed right balloon lane. Printed comment threads show the parent text without reply summaries, reply rows or separator strokes, matching Word 16 exports for resolved and open threads. Reply ownership and state remain available in the model and inspection; the other geometry profiles retain their compact reply summaries. Comment balloons and range markers print from the main body and its table cells; header/footer/note/textbox comments are omitted. Hidden-story-only comments retain nominal print scale and omit the gray lane. Surviving formatting balloons retain their lane. When no balloons survive, the authored body frame and nominal text placement are retained; unused comment parts and inline revisions do not reserve an empty margin. Document settings that hide comments also suppress their fitted text shift. Visible-balloon typography and positioning remain approximate. The profile remains approximate: see [DOCX markup fidelity triage](DocxMarkupFidelityTriage.md) for measured residuals.
 
+An explicit point anchor before paragraph content prints no comment balloon in
+Word-compatible geometry and reserves no review lane. Points after content keep
+their balloons. Comment metadata remains available for inspection; incomplete
+source ranges, fields and note-marker anchors retain their approximate fallback.
+
 Independent Word 16 references for this profile use mixed `RevisionsMode=2`,
 with comments, formatting changes and insertions/deletions explicitly enabled.
 Inline mode 1 suppresses formatting balloons and is equivalent only where the
@@ -61,6 +66,11 @@ Explicit markup modes emit approximation diagnostics instead of broad unsupporte
 
 `markup-summary.json` includes private-safe comment anchor accounting for DOCX inspection runs. Comment bodies are counted as visibly anchored, hidden by the selected revision-filtering mode, orphaned when no package anchor is present, or unsupported when the comment story has no usable id. It also reports the expected visible comment-story anchors for `AllMarkup`, how many rendered comment balloon candidates represent them, and how many visible story anchors did not produce a rendered balloon candidate. Its geometry summary carries the document mirror-margin setting, gutter tokens, reserve-margin measurements, and per-page body-frame/markup-lane rectangles. Its balloon counters distinguish raw markup signals from rendered placements and grouped candidates: `Raw*SignalCount` fields count source/layout review signals, `Rendered*PlacementCount` fields count emitted balloon rectangles, and `Rendered*CandidateCount` fields count the comment/revision candidates represented by those rectangles. Balloon side buckets, page-local markup side summaries, connector side-consistency counts, and clamped connector-anchor counts make left/right lane selection, mirrored-lane stem regressions, and page-edge anchor adjustments visible without inspecting individual balloon rectangles. Cached-reference gates include `connector-side-inconsistent-count` as a zero-tolerance markup-geometry gate.
 
+
+Anchor totals describe model visibility. A visible source anchor without a
+rendered balloon can reflect profile suppression, including static-story comments
+and points before paragraph content; the raw counter alone does not establish
+lost comment metadata or a rendering defect.
 
 ## Note navigation
 
