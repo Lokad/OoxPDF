@@ -41,7 +41,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisUnits axisUnits = ReadSceneChartValueAxisUnits(valueAxis.SceneAxis);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
-                bool radarManualPlot = TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout radarManualLayout);
+                bool radarManualPlot = TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout radarManualLayout);
                 ChartPlotBox plotBox = radarManualPlot ? radarManualLayout.PlotBox : defaultPlotBox;
                 PptxSceneChartRadarStyle radarStyle = ReadSceneChartRadarStyle(radarPlot);
                 bool radarHasTitle = !string.IsNullOrWhiteSpace(sceneChart.Title.Text);

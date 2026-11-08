@@ -69,13 +69,13 @@ internal sealed partial class PptxRenderer
         }
 
         if ((await TryRenderPieChartKindAsync(
-            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }
 
         if ((await TryRenderDoughnutChartKindAsync(
-            graphics, document, theme, colorMap, palette, bounds, chartXml, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
+            graphics, document, theme, colorMap, palette, bounds, sceneChart, workbook, fonts, fontResolver, plotVisibleOnly, context, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false)))
         {
             return true;
         }

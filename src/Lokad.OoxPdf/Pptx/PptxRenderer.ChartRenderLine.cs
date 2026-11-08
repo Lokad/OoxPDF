@@ -492,7 +492,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
             }
-            if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout))
+            if (!TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout))
                 return ChartPlotLayout.FromPlotBox(defaultPlotBox);
             // Other outer targets retain their existing container-specific owner.
             return sceneChart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner ||
@@ -751,7 +751,7 @@ internal sealed partial class PptxRenderer
     private static bool HasExplicitChartValueAxisScale(PptxSceneChartAxis? axis) =>
         axis is { Minimum: not null, Maximum: not null, MajorUnit: not null };
 
-    private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart sceneChart, PptxColorMap colorMap)
+    private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, PptxSceneChart sceneChart, PptxColorMap colorMap)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = sceneChart.Title.Text;
@@ -768,7 +768,7 @@ internal sealed partial class PptxRenderer
             ChartPlotBox defaultPlotBox = hasTitle && hasRightLegend
                 ? GetBubbleTitleRightLegendPlotBox()
                 : GetDefaultChartPlotBox(frame);
-            return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
+            return TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
                 ? manualPlotLayout
                 : ChartPlotLayout.FromPlotBox(defaultPlotBox);
 

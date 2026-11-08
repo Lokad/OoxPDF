@@ -18,7 +18,6 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         ChartColorPalette chartPalette,
         ShapeBounds bounds,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
@@ -45,7 +44,7 @@ internal sealed partial class PptxRenderer
                 ChartPolarPointOptions polarPoints = ReadSceneChartPolarPointOptions(piePlot, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
-                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
+                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 bool hasVisiblePieDataLabels = labelOptions.HasVisibleContent || pieSlices.Any(slice => ResolveChartDataLabelOptions(labelOptions, slice.Index).HasVisibleContent);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: hasVisiblePieDataLabels);
@@ -65,7 +64,6 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         ChartColorPalette chartPalette,
         ShapeBounds bounds,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         ChartWorkbookData? workbook,
         List<PdfFontResource> fonts,
@@ -92,7 +90,7 @@ internal sealed partial class PptxRenderer
                 ChartDoughnutPlotOptions doughnutOptions = ReadSceneChartDoughnutOptions(doughnutPlot, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
-                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
+                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 ChartPolarPointOptions polarPoints = doughnutOptions.PolarPoints;
                 IReadOnlyList<ChartLegendEntry> doughnutLegendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette, doughnutPlot, doughnutChart, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: doughnutSlices.Count);

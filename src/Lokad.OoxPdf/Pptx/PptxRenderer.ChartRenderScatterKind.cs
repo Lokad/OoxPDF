@@ -227,7 +227,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneSeriesFills(bubblePlot);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneSeriesStrokes(bubblePlot, null);
-                ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, chartXml, sceneChart, colorMap);
+                ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, sceneChart, colorMap);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, bubblePlot);

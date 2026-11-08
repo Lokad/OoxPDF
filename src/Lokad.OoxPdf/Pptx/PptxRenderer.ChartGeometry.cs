@@ -122,11 +122,11 @@ internal sealed partial class PptxRenderer
     {
         return Math.Max(0d, ringRightUnshrunk - legendBoxLeft + PptxChartMetricRules.DoughnutExplodedLegendClearance);
     }
-    private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
+    private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, PptxSceneChart sceneChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
-        return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
+        return TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
             ? manualPlotLayout.PlotBox
             : defaultPlotBox;
     }
@@ -369,21 +369,6 @@ internal sealed partial class PptxRenderer
             graphics.StrokeRectangle(frame.X, frame.Y, frame.Width, frame.Height);
             graphics.RestoreState();
         }
-    }
-
-    private static bool TryReadSceneOrXmlManualPlotLayout(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
-    {
-        if (sceneChart is not null)
-        {
-            return TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out plotLayout);
-        }
-
-        return TryReadManualPlotLayout(chartXml, frame, defaultPlotBox, out plotLayout);
-    }
-
-    private static bool TryReadManualPlotLayout(XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
-    {
-        return TryBuildManualPlotLayout(PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml), frame, defaultPlotBox, out plotLayout);
     }
 
     private static ChartPlotLayout ResolveCartesianPlotPosition(PptxSceneChartManualLayout source, ChartFrameBox frame, ChartPlotLayout layout)

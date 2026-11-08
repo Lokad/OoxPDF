@@ -1230,6 +1230,15 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-manual-axis-admission": [
+    "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
+    "PptxSyntheticAreaChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticRadarChartManualPlotBoxUsesSharedPath",
+    "PptxSyntheticPieChartManualPlotBoxUsesPolarPath",
+    "PptxSyntheticChartManualLayoutEdgeModesRender",
+    "PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox",
+    "PptxSyntheticChartManualLayoutUnknownTargetUsesDefaultPlotBox",
+    "PptxLegendlessLineEmptyManualLayoutKeepsAutomaticGeometry",
+    "PptxSyntheticBubbleRightLegendSharesAreaTextGap",
     "PptxOuterRotatedCaptionClearanceIsSideIndependent",
     "PptxOuterRotatedCaptionOffsetUsesMeasuredLineHeight",
     "PptxOuterRotatedCaptionClearanceKeepsCompleteInkAndAngles",

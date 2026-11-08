@@ -446,10 +446,11 @@ internal sealed partial class PptxRenderer
             { CategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
         }
 
-        ChartPlotBox manualDefaultPlotBox = horizontalBars && HasRecognizedManualPlotLayoutTarget()
+        ChartPlotBox manualDefaultPlotBox = horizontalBars && sceneChart.PlotAreaLayout is
+            { HasLayout: true, LayoutTargetKind: not PptxSceneChartManualLayoutTarget.Unknown }
             ? GetHorizontalBarManualLayoutTargetDefaultPlotBox(defaultPlotBox)
             : defaultPlotBox;
-        if (!TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, manualDefaultPlotBox, out ChartPlotLayout manualPlotLayout))
+        if (!TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, manualDefaultPlotBox, out ChartPlotLayout manualPlotLayout))
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox) with
             { CategoryLabelOffsetAdjustment = categoryLabelOffsetAdjustment, AutomaticCaptionFittingClearance = categoryFittingClearance };
@@ -1077,19 +1078,6 @@ internal sealed partial class PptxRenderer
             double? crossing = ReadSceneValueAxisCrossingValue(category.SceneAxis, valueExtents);
             return crossing > valueExtents.Min + PptxChartMetricRules.AxisValueEpsilon &&
                 crossing < valueExtents.Max - PptxChartMetricRules.AxisValueEpsilon;
-        }
-
-        bool HasRecognizedManualPlotLayoutTarget()
-        {
-            if (sceneChart is not null)
-            {
-                return sceneChart.PlotAreaLayout.HasLayout &&
-                    sceneChart.PlotAreaLayout.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Unknown;
-            }
-
-            PptxSceneChartManualLayout layout = PptxSceneBuilder.ReadChartPlotAreaManualLayout(chartXml);
-            return layout.HasLayout &&
-                layout.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Unknown;
         }
     }
 
