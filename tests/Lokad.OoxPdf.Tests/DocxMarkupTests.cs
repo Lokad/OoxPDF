@@ -493,18 +493,25 @@ internal static class DocxMarkupTests
             })
             {
                 DocxLayoutSnapshot protectedLayout = renderer.InspectLayout(WithRules(rules));
-                TestAssert.True(protectedLayout.Pages.Count == 2,
-                    $"Protected row pagination: words={wordCount}, rules={rules}, pages={protectedLayout.Pages.Count}; " +
-                    string.Join("; ", protectedLayout.Pages.Select((page, index) =>
-                        $"page{index}: " + string.Join(", ", page.TableRows.Select(row =>
-                            $"row Y={row.Y} H={row.Height} lines={row.TextLineCount} fragments={row.FragmentCount}")))));
                 var protectedRows = protectedLayout.Pages.SelectMany(page => page.TableRows).ToArray();
                 if (rules.WidowControl == true)
+                {
+                    TestAssert.Equal(2, protectedLayout.Pages.Count);
                     TestAssert.True(protectedRows.Length == 2 && protectedRows.All(row => row.TextLineCount >= 2),
                         "The earlier shared boundary must leave at least two lines in each widow-protected fragment.");
+                }
                 else
+                {
                     TestAssert.True(protectedRows.Length == 1 && protectedRows[0].FragmentCount == 1,
                         "Explicit keep policies retain their atomic row fallback.");
+                    // This 26-line atomic row exceeds a complete printed body.
+                    // Its existing overflow fallback does not give the following
+                    // paragraph additional capacity below that body boundary.
+                    TestAssert.Equal(3, protectedLayout.Pages.Count);
+                    TestAssert.True(protectedLayout.Pages[0].TableRows.Count == 0 &&
+                        protectedLayout.Pages[1].TableRows.Count == 1 && protectedLayout.Pages[2].TableRows.Count == 0,
+                        "Move the kept row atomically, then place the following paragraph on its own page.");
+                }
                 TestAssert.Equal(fragments.Sum(fragment => fragment.TextLineCount), protectedRows.Sum(row => row.TextLineCount));
             }
 
