@@ -47,7 +47,8 @@ internal static class DocxCommentAnchorTests
             "A surviving neighbor cannot make the empty source anchor paint a balloon.");
         TestAssert.Contains("Second comment", text);
         TestAssert.Equal(2, paragraph.CommentRanges.Count);
-        TestAssert.Equal(2, Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(source).Count);
+        TestAssert.Equal(2, Renderer(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectMarkupBalloons(source)
+            .Sum(placement => placement.CommentCandidateCount));
     }
 
     public static void DocxCommentUnknownEndpointsRetainTheirEstablishedFallback()
