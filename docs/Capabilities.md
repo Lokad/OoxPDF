@@ -472,7 +472,8 @@ Supported within the following constraints:
   nil/none suppression, repeated headers, split rows and cell content. Actual page
   occupancy controls following-prose admission. An empty terminal paragraph after
   a nested table keeps its source anchors without adding occupied height;
-  ordinary text and references keep their frames. Scaled Review tables share
+  its bookmarks use the placed insertion frame. Ordinary text and references
+  keep their frames. Scaled Review tables share
   printed body capacity for authored and nested rows. Oversized kept rows retain
   atomic overflow; arbitrary rich-row fragmentation remains approximate.
   Conditional bands, columns,
