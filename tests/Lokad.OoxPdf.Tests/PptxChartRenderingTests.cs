@@ -941,11 +941,8 @@ internal static class PptxChartRenderingTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Formula-only supported chart families should report missing cached data rather than a generic unsupported chart.");
     }
 
-    public static void PptxChartRawVectorsPreserveWorkbookSidecarPoints()
+    public static void PptxChartParsedVectorsPreserveWorkbookSidecarPoints()
     {
-        Type workbookType = typeof(PptxRenderer).GetNestedType(
-            "ChartWorkbookData",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -957,12 +954,16 @@ internal static class PptxChartRenderingTests
             }
         };
         object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
+
+        PptxSceneChartPlot ParsePlot(XElement element) => TestAssert.NotNull(PptxTests.BuildSingleChartScene(
+            $"""<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea>{element}</c:plotArea></c:chart></c:chartSpace>""")).Plots.Single();
+
         var readNumberVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "ReadChartNumberVector" && method.GetParameters().Length == 3);
+            .Single(method => method.Name == "ReadSceneChartSeriesVectors" && method.GetParameters().Length == 3);
         var readCategoryVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "ReadChartCategoryLabelVector" && method.GetParameters().Length == 3);
+            .Single(method => method.Name == "ReadSceneCategoryLabelVector" && method.GetParameters().Length == 3);
 
         XElement values = XElement.Parse("""
             <c:val xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
@@ -977,16 +978,19 @@ internal static class PptxChartRenderingTests
               </c:numRef>
             </c:val>
             """);
-        object numberVector = readNumberVector.Invoke(null, [values, workbook, true]) ?? throw new InvalidOperationException("Expected raw number vector.");
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        PptxSceneChartPlot numberPlot = ParsePlot(new XElement(c + "barChart", new XElement(c + "ser", values)));
+        object numberVector = ((System.Collections.IEnumerable)(readNumberVector.Invoke(null, [numberPlot, workbook, true])
+            ?? throw new InvalidOperationException("Expected parsed number vectors."))).Cast<object>().Single();
         object[] cacheNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("Points")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
         object[] workbookNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("WorkbookPoints")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
-        TestAssert.True(cacheNumberPoints.Length == 2, "Expected raw vector rendering points to stay bound to the chart cache.");
-        TestAssert.True((int?)cacheNumberPoints[0].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[0]) == 2, "Expected raw numeric cache point index to survive.");
+        TestAssert.True(cacheNumberPoints.Length == 2, "Expected parsed vector rendering points to stay bound to the chart cache.");
+        TestAssert.True((int?)cacheNumberPoints[0].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[0]) == 2, "Expected parsed numeric cache point index to survive.");
         TestAssert.Equal("OoxmlIndex", cacheNumberPoints[0].GetType().GetProperty("IndexSource")?.GetValue(cacheNumberPoints[0])?.ToString() ?? string.Empty);
         TestAssert.Equal(100d, (double?)cacheNumberPoints[0].GetType().GetProperty("Value")?.GetValue(cacheNumberPoints[0]) ?? 0d);
         TestAssert.True((int?)cacheNumberPoints[1].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[1]) == 1, "Expected malformed raw numeric cache point index to keep the ordinal fallback.");
         TestAssert.Equal("OrdinalFallback", cacheNumberPoints[1].GetType().GetProperty("IndexSource")?.GetValue(cacheNumberPoints[1])?.ToString() ?? string.Empty);
-        TestAssert.True(workbookNumberPoints.Length == 3, "Expected raw numeric vector to keep workbook sidecar points without promoting them to renderable cache points.");
+        TestAssert.True(workbookNumberPoints.Length == 3, "Expected parsed numeric vector to keep workbook sidecar points without promoting them to renderable cache points.");
         TestAssert.Equal("WorkbookRange", workbookNumberPoints[0].GetType().GetProperty("IndexSource")?.GetValue(workbookNumberPoints[0])?.ToString() ?? string.Empty);
         TestAssert.Equal("1.4", (string?)workbookNumberPoints[2].GetType().GetProperty("Text")?.GetValue(workbookNumberPoints[2]) ?? string.Empty);
 
@@ -1006,15 +1010,15 @@ internal static class PptxChartRenderingTests
               </c:ser>
             </c:barChart>
             """);
-        object categoryVector = readCategoryVector.Invoke(null, [chart, workbook, true]) ?? throw new InvalidOperationException("Expected raw category vector.");
+        object categoryVector = readCategoryVector.Invoke(null, [ParsePlot(chart), workbook, true]) ?? throw new InvalidOperationException("Expected parsed category vector.");
         object[] cacheTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("Points")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
         object[] workbookTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("WorkbookPoints")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
-        TestAssert.True(cacheTextPoints.Length == 2, "Expected raw category rendering points to stay bound to the chart cache.");
+        TestAssert.True(cacheTextPoints.Length == 2, "Expected parsed category rendering points to stay bound to the chart cache.");
         TestAssert.Equal("Cached", (string?)cacheTextPoints[0].GetType().GetProperty("Text")?.GetValue(cacheTextPoints[0]) ?? string.Empty);
         TestAssert.Equal("OoxmlIndex", cacheTextPoints[0].GetType().GetProperty("IndexSource")?.GetValue(cacheTextPoints[0])?.ToString() ?? string.Empty);
         TestAssert.True((int?)cacheTextPoints[1].GetType().GetProperty("Index")?.GetValue(cacheTextPoints[1]) == 1, "Expected malformed raw text cache point index to keep the ordinal fallback.");
         TestAssert.Equal("OrdinalFallback", cacheTextPoints[1].GetType().GetProperty("IndexSource")?.GetValue(cacheTextPoints[1])?.ToString() ?? string.Empty);
-        TestAssert.True(workbookTextPoints.Length == 3, "Expected raw category vector to keep workbook sidecar text points.");
+        TestAssert.True(workbookTextPoints.Length == 3, "Expected parsed category vector to keep workbook sidecar text points.");
         TestAssert.Equal("WorkbookRange", workbookTextPoints[0].GetType().GetProperty("IndexSource")?.GetValue(workbookTextPoints[0])?.ToString() ?? string.Empty);
         TestAssert.Equal("West", (string?)workbookTextPoints[2].GetType().GetProperty("Text")?.GetValue(workbookTextPoints[2]) ?? string.Empty);
     }
@@ -1494,11 +1498,6 @@ internal static class PptxChartRenderingTests
             """;
         PptxSceneChartPlot plot = PptxTests.BuildSingleChartScene(chartXml)?.Plots.Single()
             ?? throw new InvalidOperationException("Expected one chart plot.");
-        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "lineChart").Single();
-        Type workbookType = typeof(PptxRenderer).GetNestedType(
-            "ChartWorkbookData",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -1508,10 +1507,10 @@ internal static class PptxChartRenderingTests
         };
         object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         System.Reflection.MethodInfo readNameRecords = typeof(PptxRenderer).GetMethod(
-            "ReadSceneOrXmlChartSeriesNameRecords",
+            "ReadSceneChartSeriesNameRecords",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series-name record reader.");
 
-        object[] records = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [plot, chartElement, workbook])) ?? throw new InvalidOperationException("Expected series-name records.")).Cast<object>().ToArray();
+        object[] records = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [plot, workbook])) ?? throw new InvalidOperationException("Expected series-name records.")).Cast<object>().ToArray();
 
         TestAssert.True(records.Length == 1, "Expected one series-name record.");
         TestAssert.Equal("Cached Name", (string?)records[0].GetType().GetProperty("ActiveName")?.GetValue(records[0]) ?? string.Empty);
@@ -1529,20 +1528,13 @@ internal static class PptxChartRenderingTests
         string activeSeriesName = (string?)getActiveSeriesName.Invoke(null, [typedRecords, 0]) ?? string.Empty;
         TestAssert.Equal("Cached Name", activeSeriesName);
 
-        object[] rawRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [null, chartElement, workbook])) ?? throw new InvalidOperationException("Expected raw fallback series-name records.")).Cast<object>().ToArray();
-        TestAssert.True(rawRecords.Length == 1, "Expected raw XML fallback to preserve one series-name record.");
-        TestAssert.Equal("Cached Name", (string?)rawRecords[0].GetType().GetProperty("ActiveName")?.GetValue(rawRecords[0]) ?? string.Empty);
-        TestAssert.Equal("Cache", rawRecords[0].GetType().GetProperty("ActiveNameSource")?.GetValue(rawRecords[0])?.ToString() ?? string.Empty);
-        object rawSource = rawRecords[0].GetType().GetProperty("Source")?.GetValue(rawRecords[0]) ?? throw new InvalidOperationException("Expected raw series-name source metadata.");
-        TestAssert.Equal("Sheet1!$B$1", (string?)rawSource.GetType().GetProperty("Formula")?.GetValue(rawSource) ?? string.Empty);
-        object[] rawWorkbookPoints = (((System.Collections.IEnumerable?)rawRecords[0].GetType().GetProperty("WorkbookPoints")?.GetValue(rawRecords[0])) ?? throw new InvalidOperationException("Expected raw series-name workbook sidecar points.")).Cast<object>().ToArray();
-        TestAssert.True(rawWorkbookPoints.Length == 1, "Expected raw XML series-name fallback to preserve workbook sidecar points.");
-        TestAssert.Equal("Workbook Name", (string?)rawWorkbookPoints[0].GetType().GetProperty("Text")?.GetValue(rawWorkbookPoints[0]) ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, (PptxSceneChartDataSourceReferenceKind?)rawSource.GetType().GetProperty("ReferenceKindValue")?.GetValue(rawSource) ?? default);
-        TestAssert.Equal("strRef", (string?)rawSource.GetType().GetProperty("ReferenceKind")?.GetValue(rawSource) ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, (PptxSceneChartDataSourceCacheKind?)rawSource.GetType().GetProperty("CacheKindValue")?.GetValue(rawSource) ?? default);
-        TestAssert.Equal("strCache", (string?)rawSource.GetType().GetProperty("CacheKind")?.GetValue(rawSource) ?? string.Empty);
-        TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected raw series-name cache point presence to survive fallback parsing.");
+        object source = records[0].GetType().GetProperty("Source")?.GetValue(records[0]) ?? throw new InvalidOperationException("Expected parsed series-name source metadata.");
+        TestAssert.Equal("Sheet1!$B$1", (string?)source.GetType().GetProperty("Formula")?.GetValue(source) ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, (PptxSceneChartDataSourceReferenceKind?)source.GetType().GetProperty("ReferenceKindValue")?.GetValue(source) ?? default);
+        TestAssert.Equal("strRef", (string?)source.GetType().GetProperty("ReferenceKind")?.GetValue(source) ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, (PptxSceneChartDataSourceCacheKind?)source.GetType().GetProperty("CacheKindValue")?.GetValue(source) ?? default);
+        TestAssert.Equal("strCache", (string?)source.GetType().GetProperty("CacheKind")?.GetValue(source) ?? string.Empty);
+        TestAssert.True((bool?)source.GetType().GetProperty("HasCachedPoints")?.GetValue(source) == true, "Expected parsed series-name cache point presence to survive scene parsing.");
 
         const string noCacheChartXml = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -1558,14 +1550,9 @@ internal static class PptxChartRenderingTests
             """;
         PptxSceneChartPlot noCachePlot = PptxTests.BuildSingleChartScene(noCacheChartXml)?.Plots.Single()
             ?? throw new InvalidOperationException("Expected one no-cache chart plot.");
-        XElement noCacheChartElement = XDocument.Parse(noCacheChartXml).Descendants(chartNamespace + "lineChart").Single();
-        object[] noCacheSceneRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [noCachePlot, noCacheChartElement, workbook])) ?? throw new InvalidOperationException("Expected no-cache scene series-name records.")).Cast<object>().ToArray();
+        object[] noCacheSceneRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [noCachePlot, workbook])) ?? throw new InvalidOperationException("Expected no-cache scene series-name records.")).Cast<object>().ToArray();
         TestAssert.Equal("Workbook Name", (string?)noCacheSceneRecords[0].GetType().GetProperty("ActiveName")?.GetValue(noCacheSceneRecords[0]) ?? string.Empty);
         TestAssert.Equal("Workbook", noCacheSceneRecords[0].GetType().GetProperty("ActiveNameSource")?.GetValue(noCacheSceneRecords[0])?.ToString() ?? string.Empty);
-
-        object[] noCacheRawRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [null, noCacheChartElement, workbook])) ?? throw new InvalidOperationException("Expected no-cache raw series-name records.")).Cast<object>().ToArray();
-        TestAssert.Equal("Series 1", (string?)noCacheRawRecords[0].GetType().GetProperty("ActiveName")?.GetValue(noCacheRawRecords[0]) ?? string.Empty);
-        TestAssert.Equal("Default", noCacheRawRecords[0].GetType().GetProperty("ActiveNameSource")?.GetValue(noCacheRawRecords[0])?.ToString() ?? string.Empty);
     }
 
     public static void PptxChartCategoryAxisSourceAcceptsDateAxes()

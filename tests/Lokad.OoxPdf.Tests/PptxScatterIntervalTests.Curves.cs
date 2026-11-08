@@ -92,7 +92,7 @@ internal static partial class PptxScatterIntervalTests
         if (!includeScaling) element.Element(CurveC + "scaling")?.Remove();
         var chart = PptxTests.BuildSingleChartScene(xml.ToString())!;
         XElement plot = xml.Descendants(CurveC + "scatterChart").Single();
-        object series = CurveInvoke("ReadSceneOrXmlScatterSeries", chart.Plots.Single(), plot, false, null, true);
+        object series = CurveInvoke("ReadSceneScatterSeries", chart.Plots.Single(), false, null, true);
         object options = CurveInvoke("ReadSceneChartScatterOptions", chart.Plots.Single());
         object hidden = CurveInvoke("ReadSceneSeriesLineHidden", chart.Plots.Single());
         object measured = CurveInvoke("MeasureScatterChartExtents", series, options, hidden, cancellationToken);

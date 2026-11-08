@@ -29,7 +29,7 @@ internal sealed partial class PptxRenderer
         if (radarPlot is not null)
         {
             XElement radarChart = radarPlot.Source;
-            IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSharedChartSeriesVectors(radarPlot, radarChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSharedChartSeriesVectors(radarPlot, workbook, plotVisibleOnly);
             IReadOnlyList<ChartRadarSeries> radarSeries = BuildRadarSeries(radarSeriesVectors);
             if (radarSeries.Count != 0)
             {
@@ -51,7 +51,7 @@ internal sealed partial class PptxRenderer
                 RenderRadarChart(graphics, theme, colorMap, chartPalette, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits, radarStyleId, context: context);
                 if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    await RenderRadarCategoryLabelsAsync(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSharedCategoryLabels(radarPlot, radarChart, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts).ConfigureAwait(false);
+                    await RenderRadarCategoryLabelsAsync(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSharedCategoryLabels(radarPlot, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts).ConfigureAwait(false);
                 }
 
                 if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))

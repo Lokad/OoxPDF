@@ -72,10 +72,10 @@ internal sealed partial class PptxRenderer
     }
 
     private static IReadOnlyList<ChartLegendEntry> BuildLinePointLegendEntries(
-        PptxSceneChartPlot? plot, XElement xml, ChartWorkbookData? workbook, bool plotVisibleOnly,
+        PptxSceneChartPlot plot, XElement xml, ChartWorkbookData? workbook, bool plotVisibleOnly,
         int count, int? styleId, Func<int, int, ChartLineAppearance> appearance)
     {
-        IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, xml, workbook, plotVisibleOnly);
+        IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, workbook, plotVisibleOnly);
         var entries = new List<ChartLegendEntry>(count);
         for (int index = 0; index < count; index++)
         {

@@ -193,7 +193,7 @@ internal sealed partial class PptxRenderer
         XDocument chartXml,
         PptxSceneChart sceneChart,
         PptxColorMap colorMap,
-        PptxSceneChartPlot? barPlot,
+        PptxSceneChartPlot barPlot,
         XElement barChart,
         ChartBarPlotOptions barOptions,
         ChartWorkbookData? workbook,
@@ -292,7 +292,7 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame,
         XDocument chartXml,
         PptxSceneChart sceneChart,
-        PptxSceneChartPlot? barPlot,
+        PptxSceneChartPlot barPlot,
         XElement barChart,
         string? title,
         ChartLegendLayout legend,
@@ -321,7 +321,7 @@ internal sealed partial class PptxRenderer
             .Concat(ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Line)))
         {
             context?.CancellationToken.ThrowIfCancellationRequested();
-            if (CountRenderableSeries(ReadSharedChartSeriesVectors(owner, owner.Source, workbook, plotVisibleOnly)) == 0)
+            if (CountRenderableSeries(ReadSharedChartSeriesVectors(owner, workbook, plotVisibleOnly)) == 0)
                 continue;
             ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, owner)
                 .FirstOrDefault();
@@ -571,14 +571,14 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return plotBox;
             }
 
             bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
-            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percentStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartValueAxisRenderOptions valueOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, percentStacked);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? valueOptions.Units;
             ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
@@ -638,14 +638,14 @@ internal sealed partial class PptxRenderer
                 return measuredFrame ? new ChartPlotBox(plotBox.X, bottom, plotBox.Width, Math.Max(1d, automaticTop - bottom)) : plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> topBottomSeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> topBottomSeriesVectors = ReadSharedChartSeriesVectors(barPlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(topBottomSeriesVectors) == 0)
             {
                 return plotBox;
             }
 
             bool percentBottomStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
-            ChartValueExtents bottomValueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percentBottomStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartValueExtents bottomValueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percentBottomStacked, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits bottomAxisUnits = resolvedValueScale?.Units ?? ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, bottomValueExtents, percentBottomStacked).Units;
             ChartTextStyle bottomTickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             bool hasBottomValueLabel = false;
@@ -689,7 +689,7 @@ internal sealed partial class PptxRenderer
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxCategoryWidth = 0d;
             if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
-            foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
+            foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly))
             {
                 string? labelText = label?.Text;
                 if (!string.IsNullOrWhiteSpace(labelText))
@@ -706,7 +706,7 @@ internal sealed partial class PptxRenderer
                 {
                     bool percent = IsPercentStackedChartGrouping(barOptions.Grouping);
                     ChartValueExtents extents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, value.SceneAxis, value.XmlAxis,
-                        GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), percent, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                        GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), percent, false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                     ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, value.SceneAxis,
                         PptxChartMetricRules.ValueAxisFallbackFontSize, "valueAxis");
                     double first = await textMeasurer.MeasureAsync(FormatSceneOrXmlChartAxisLabel(extents.Min, value.SceneAxis, value.XmlAxis, percent ? "0%" : null), style).ConfigureAwait(false);
@@ -763,13 +763,13 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return plotBox;
             }
 
-            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barChart, barOptions.Grouping, workbook, plotVisibleOnly), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+            ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxis.XmlAxis, GetSharedBarChartValueExtents(barPlot, barOptions.Grouping, workbook, plotVisibleOnly), false, ResolveBarValueAxisHeadroom(horizontalBars, IsPercentStackedChartGrouping(barOptions.Grouping)), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), false);
             ChartTextStyle tickStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
@@ -848,7 +848,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+                IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSharedChartSeriesVectors(barPlot, workbook, plotVisibleOnly);
                 if (CountRenderableSeries(categorySeriesVectors) == 0 || !HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
                 {
                     return plotBox;
@@ -917,7 +917,7 @@ internal sealed partial class PptxRenderer
                 return plotBox;
             }
 
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return plotBox;
@@ -927,7 +927,7 @@ internal sealed partial class PptxRenderer
                 sceneChart,
                 valueAxis.SceneAxis,
                 valueAxis.XmlAxis,
-                GetSharedBarChartValueExtents(barPlot, barChart, grouping, workbook, plotVisibleOnly),
+                GetSharedBarChartValueExtents(barPlot, grouping, workbook, plotVisibleOnly),
                 percentStacked, ResolveBarValueAxisHeadroom(barOptions.BarDirection == PptxSceneChartBarDirection.Bar, percentStacked), PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisUnits axisUnits = resolvedValueScale?.Units ?? ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), percentStacked);
             string? defaultNumberFormat = percentStacked ? "0%" : null;
@@ -1007,11 +1007,11 @@ internal sealed partial class PptxRenderer
                 bool percentStacked = IsPercentStackedChartGrouping(owner.GroupingKind);
                 ChartValueExtents data;
                 if (owner.PlotKind == PptxSceneChartPlotKind.Bar)
-                    data = GetSharedBarChartValueExtents(owner, owner.Source, owner.GroupingKind, workbook, plotVisibleOnly);
+                    data = GetSharedBarChartValueExtents(owner, owner.GroupingKind, workbook, plotVisibleOnly);
                 else
                 {
                     var line = ReadSceneChartLineOptions(sceneChart, owner, PptxSceneChartGrouping.Standard);
-                    data = GetSharedLineChartValueExtents(owner, owner.Source, line.Stacked, line.PercentStacked, workbook, plotVisibleOnly);
+                    data = GetSharedLineChartValueExtents(owner, line.Stacked, line.PercentStacked, workbook, plotVisibleOnly);
                 }
                 ChartValueExtents extents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis,
                     valueAxis.XmlAxis, data, percentStacked, useNearMaximumHeadroom: !percentStacked,
@@ -1065,7 +1065,7 @@ internal sealed partial class PptxRenderer
 
         bool HasInsideValueAxisCrossing()
         {
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(barPlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) == 0)
             {
                 return false;
@@ -1076,7 +1076,7 @@ internal sealed partial class PptxRenderer
             ChartValueExtents valueExtents = resolvedValueScale?.Extents ?? ReadPercentStackedAwareValueAxisExtents(
                 valueAxis.SceneAxis,
                 valueAxis.XmlAxis,
-                GetSharedBarChartValueExtents(barPlot, barChart, grouping, workbook, plotVisibleOnly),
+                GetSharedBarChartValueExtents(barPlot, grouping, workbook, plotVisibleOnly),
                 IsPercentStackedChartGrouping(grouping), false, PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
             ChartAxisSource category = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
             double? crossing = ReadSceneOrXmlValueAxisCrossingValue(category.SceneAxis, category.XmlAxis, valueExtents);
@@ -1102,7 +1102,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         XDocument chartXml,
         PptxSceneChart sceneChart,
-        PptxSceneChartPlot? barPlot,
+        PptxSceneChartPlot barPlot,
         XElement barChart,
         ChartPlotLayout layout,
         bool horizontalBars,
@@ -1156,7 +1156,7 @@ internal sealed partial class PptxRenderer
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double maxCategoryWidth = 0d;
                 int labelIndex = 0;
-                foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
+                foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly))
                 {
                     // Mirror the emission skip logic in RenderChartCategoryLabels so the
                     // reserve covers rendered labels only.
@@ -1269,9 +1269,9 @@ internal sealed partial class PptxRenderer
     }
     // R15: existence probe over the sparse points; the dense array is only built
     // when labels actually render.
-    private static bool HasRenderableCategoryLabels(PptxSceneChartPlot? barPlot, XElement barChart, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    private static bool HasRenderableCategoryLabels(PptxSceneChartPlot barPlot, XElement barChart, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        return ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly).HasAnyVisibleText();
+        return ReadSceneCategoryLabelVector(barPlot, workbook, plotVisibleOnly).HasAnyVisibleText();
     }
     private static ChartPlotBox AdjustStackedColumnBottomLegendPlotBox(
         ChartPlotBox plotBox,
@@ -1316,7 +1316,7 @@ internal sealed partial class PptxRenderer
         PptxColorMap colorMap,
         PptxSceneChart sceneChart,
         XDocument chartXml,
-        PptxSceneChartPlot? barPlot,
+        PptxSceneChartPlot barPlot,
         XElement barChart,
         bool horizontalBars,
         bool usesMeasuredAxisInsets)

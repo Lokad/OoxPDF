@@ -11,58 +11,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<ChartIndexedNumberVector> ReadChartSeriesVectors(XElement chartElement, ChartWorkbookData? workbook, bool plotVisibleOnly)
-    {
-        var series = new List<ChartIndexedNumberVector>();
-        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
-        {
-            ChartIndexedNumberVector values = ReadChartNumberVector(element.Element(ChartNamespace + "val"), workbook, plotVisibleOnly);
-            if (values.Points.Count > 0 || values.PointCount is not null || values.HasAnyDenseSlot())
-            {
-                series.Add(values);
-            }
-        }
-
-        return series;
-    }
-
-    private static ChartIndexedNumberVector ReadChartNumberVector(XElement? container, ChartWorkbookData? workbook, bool plotVisibleOnly)
-    {
-        if (container is null)
-        {
-            return default;
-        }
-
-        XElement? cache = container
-            .Descendants(ChartNamespace + "numCache")
-            .Concat(container.Descendants(ChartNamespace + "numLit"))
-            .FirstOrDefault();
-        PptxSceneChartDataSource source = PptxSceneBuilder.ReadChartDataSource(container, "numRef");
-        if (cache is null)
-        {
-            return new ChartIndexedNumberVector(
-                [],
-                null,
-                source.Formula,
-                null,
-                source,
-                ReadWorkbookNumberPoints(workbook, source),
-                plotVisibleOnly);
-        }
-
-        ChartIndexedNumberPoint[] points = PptxSceneBuilder
-            .ReadChartNumberPoints(cache.Elements(ChartNamespace + "pt"), requireNonNegativeIndex: true)
-            .Select(ToChartIndexedNumberPoint)
-            .ToArray();
-        return new ChartIndexedNumberVector(
-            points,
-            PptxSceneBuilder.ReadChartCachePointCount(cache).Value ?? InferPointCount(points),
-            source.Formula,
-            (string?)cache.Element(ChartNamespace + "formatCode"),
-            source,
-            ReadWorkbookNumberPoints(workbook, source),
-            plotVisibleOnly);
-    }
 
     private static ChartFrameBox GetChartFrameBox(PptxDocument document, ShapeBounds bounds)
     {

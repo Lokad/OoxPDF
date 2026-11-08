@@ -32,12 +32,12 @@ internal sealed partial class PptxRenderer
         if (piePlot is not null)
         {
             XElement pieChart = piePlot.Source;
-            IReadOnlyList<ChartIndexedNumberVector> pieSeriesVectors = ReadSharedChartSeriesVectors(piePlot, pieChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> pieSeriesVectors = ReadSharedChartSeriesVectors(piePlot, workbook, plotVisibleOnly);
             IReadOnlyList<ChartIndexedPieSlice> pieSlices = pieSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(pieSeriesVectors[0]);
             if (pieSlices.Count != 0)
             {
-                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(piePlot, pieChart, workbook, plotVisibleOnly);
-                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(piePlot, pieChart, workbook);
+                ChartIndexedTextVector categoryLabels = ReadSceneCategoryLabelVector(piePlot, workbook, plotVisibleOnly);
+                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(piePlot, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
                     ReadSceneOrXmlDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, piePlot, pieChart, theme, colorMap),
@@ -79,12 +79,12 @@ internal sealed partial class PptxRenderer
         if (doughnutPlot is not null)
         {
             XElement doughnutChart = doughnutPlot.Source;
-            IReadOnlyList<ChartIndexedNumberVector> doughnutSeriesVectors = ReadSharedChartSeriesVectors(doughnutPlot, doughnutChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> doughnutSeriesVectors = ReadSharedChartSeriesVectors(doughnutPlot, workbook, plotVisibleOnly);
             IReadOnlyList<ChartIndexedPieSlice> doughnutSlices = doughnutSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(doughnutSeriesVectors[0]);
             if (doughnutSlices.Count != 0)
             {
-                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(doughnutPlot, doughnutChart, workbook, plotVisibleOnly);
-                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(doughnutPlot, doughnutChart, workbook);
+                ChartIndexedTextVector categoryLabels = ReadSceneCategoryLabelVector(doughnutPlot, workbook, plotVisibleOnly);
+                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(doughnutPlot, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
                     ReadSceneOrXmlDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme, colorMap),

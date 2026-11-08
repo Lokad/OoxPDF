@@ -71,10 +71,10 @@ internal sealed partial class PptxRenderer
     }
 
     private static IReadOnlyList<ChartLegendEntry> BuildLineSeriesLegendEntries(
-        PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook,
+        PptxSceneChartPlot plot, XElement chartElement, ChartWorkbookData? workbook,
         IReadOnlyList<ChartLineAppearance> appearance, IReadOnlyList<PptxSceneChartSeries> sources, double? themeWidth, bool reverseOrder, int? styleId)
     {
-        var names = ReadSharedChartSeriesNames(plot, chartElement, workbook);
+        var names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {

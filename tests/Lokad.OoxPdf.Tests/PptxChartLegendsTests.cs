@@ -1298,30 +1298,28 @@ internal static class PptxChartLegendsTests
         TestAssert.Equal(string.Empty, series.CategoryLevels[1][1].Text);
         TestAssert.True(series.CategoryLevels[1][1].HasText, "Expected blank multi-level category value to preserve its value element.");
 
-        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
-        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "lineChart").Single();
         System.Reflection.MethodInfo readCategoryLabelVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "ReadChartCategoryLabelVector" && method.GetParameters().Length == 3);
-        object rawVector = readCategoryLabelVector.Invoke(null, [chartElement, null, true]) ?? throw new InvalidOperationException("Expected raw category-label vector.");
+            .Single(method => method.Name == "ReadSceneCategoryLabelVector" && method.GetParameters().Length == 3);
+        object rawVector = readCategoryLabelVector.Invoke(null, [TestAssert.NotNull(chart).Plots[0], null, true]) ?? throw new InvalidOperationException("Expected parsed category-label vector.");
         TestAssert.Equal("Sheet1!$A$2:$B$4", (string?)rawVector.GetType().GetProperty("Formula")?.GetValue(rawVector) ?? string.Empty);
         TestAssert.Equal(3, (int?)rawVector.GetType().GetProperty("PointCount")?.GetValue(rawVector) ?? 0);
 
-        object rawSource = rawVector.GetType().GetProperty("Source")?.GetValue(rawVector) ?? throw new InvalidOperationException("Expected raw category source metadata.");
+        object rawSource = rawVector.GetType().GetProperty("Source")?.GetValue(rawVector) ?? throw new InvalidOperationException("Expected parsed category source metadata.");
         TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, (PptxSceneChartDataSourceReferenceKind?)rawSource.GetType().GetProperty("ReferenceKindValue")?.GetValue(rawSource) ?? default);
         TestAssert.Equal(PptxSceneChartDataSourceCacheKind.MultiLevelStringCache, (PptxSceneChartDataSourceCacheKind?)rawSource.GetType().GetProperty("CacheKindValue")?.GetValue(rawSource) ?? default);
-        TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected raw multi-level category cache point presence to survive fallback parsing.");
+        TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected parsed multi-level category cache point presence to survive fallback parsing.");
 
-        object[] rawPoints = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Points")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected raw category points.")).Cast<object>().ToArray();
+        object[] rawPoints = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Points")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected parsed category points.")).Cast<object>().ToArray();
         TestAssert.Equal(5, rawPoints.Length);
-        object[] rawLevels = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Levels")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected raw category levels.")).Cast<object>().ToArray();
+        object[] rawLevels = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Levels")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected parsed category levels.")).Cast<object>().ToArray();
         TestAssert.Equal(2, rawLevels.Length);
         object[] rawFirstLevel = (((System.Collections.IEnumerable?)rawLevels[0]) ?? throw new InvalidOperationException("Expected first raw category level.")).Cast<object>().ToArray();
         object[] rawSecondLevel = (((System.Collections.IEnumerable?)rawLevels[1]) ?? throw new InvalidOperationException("Expected second raw category level.")).Cast<object>().ToArray();
         TestAssert.Equal(2, rawFirstLevel.Length);
         TestAssert.Equal(3, rawSecondLevel.Length);
         TestAssert.Equal(string.Empty, (string?)rawSecondLevel[1].GetType().GetProperty("Text")?.GetValue(rawSecondLevel[1]) ?? string.Empty);
-        TestAssert.True((bool?)rawSecondLevel[1].GetType().GetProperty("HasText")?.GetValue(rawSecondLevel[1]) == true, "Expected raw blank multi-level category value to preserve its value element.");
+        TestAssert.True((bool?)rawSecondLevel[1].GetType().GetProperty("HasText")?.GetValue(rawSecondLevel[1]) == true, "Expected parsed blank multi-level category value to preserve its value element.");
     }
 
     public static void PptxScenePreservesChartNumberFormatMetadata()
@@ -2152,7 +2150,7 @@ internal static class PptxChartLegendsTests
         Type strokeListType = typeof(List<>).MakeGenericType(buildEntries.GetParameters()[5].ParameterType.GetGenericArguments()[0]);
         object emptyStrokes = Activator.CreateInstance(strokeListType) ?? throw new InvalidOperationException("Expected stroke list.");
 
-        object[] entries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, new List<bool> { true, false }, null])) ?? throw new InvalidOperationException("Expected stroke legend entries.")).Cast<object>().ToArray();
+        object[] entries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, markerPlot, scatterChart, emptyStrokes, markerStyles, false, null, new List<bool> { true, false }, null])) ?? throw new InvalidOperationException("Expected stroke legend entries.")).Cast<object>().ToArray();
         TestAssert.Equal(2, entries.Length);
         TestAssert.Equal("Series 1", (string?)entries[0].GetType().GetProperty("Name")?.GetValue(entries[0]) ?? string.Empty);
         TestAssert.True((bool?)entries[0].GetType().GetProperty("LineHidden")?.GetValue(entries[0]) == true, "Expected the explicit-noFill series to suppress its legend line sample (Office marker-only key).");
@@ -2164,7 +2162,7 @@ internal static class PptxChartLegendsTests
         TestAssert.Equal("diamond", PptxTests.ChartMarkerStyleSymbol(marker0!));
         TestAssert.Equal(9d, PptxTests.ChartMarkerStyleSize(marker0!));
 
-        object[] defaultEntries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, null, scatterChart, emptyStrokes, markerStyles, false, null, null, null])) ?? throw new InvalidOperationException("Expected default stroke legend entries.")).Cast<object>().ToArray();
+        object[] defaultEntries = (((System.Collections.IEnumerable?)buildEntries.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, markerPlot, scatterChart, emptyStrokes, markerStyles, false, null, null, null])) ?? throw new InvalidOperationException("Expected default stroke legend entries.")).Cast<object>().ToArray();
         TestAssert.True((bool?)defaultEntries[0].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[0]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
         TestAssert.True((bool?)defaultEntries[1].GetType().GetProperty("LineHidden")?.GetValue(defaultEntries[1]) == false, "Expected missing hidden-line info to keep line samples (bar/line behavior).");
     }    public static void PptxSyntheticBubbleRightLegendSharesAreaTextGap()

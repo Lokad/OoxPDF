@@ -32,7 +32,7 @@ internal sealed partial class PptxRenderer
         if (linePlot is not null)
         {
             XElement lineChart = linePlot.Source;
-            IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, lineChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSharedChartSeriesVectors(linePlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(lineSeriesVectors) != 0)
             {
                 double? themeLineWidth = ReadChartLineThemeWidth(theme);
@@ -50,7 +50,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, linePlot).FirstOrDefault();
                 XElement? valueAxisForScale = valueAxis.XmlAxis;
                 bool categoryPointsOnTickMarks = ResolveSceneCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis);
-                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(linePlot, lineChart, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                ChartValueExtents valueExtents = ReadCartesianChartValueAxisExtents(sceneChart, valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxisForScale, theme, valueExtents, lineOptions.PercentStacked) with
                 { TickPolicy = ReadCartesianChartAxisTickPolicy(sceneChart, valueAxis.SceneAxis, valueExtents, lineOptions.PercentStacked) };
                 ChartLayout chartLayout = (await GetCartesianChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, workbook, plotVisibleOnly, fontResolver, resolvedValueExtents: valueExtents, context: context).ConfigureAwait(false));
@@ -74,7 +74,7 @@ internal sealed partial class PptxRenderer
                 }
                 ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, linePlot);
                 bool categoryAxisReversed = ReadSceneOrXmlValueAxisReversed(categoryAxis.SceneAxis, categoryAxis.XmlAxis);
-                var categoryLabels = ReadSharedCategoryLabels(linePlot, lineChart, workbook, plotVisibleOnly);
+                var categoryLabels = ReadSharedCategoryLabels(linePlot, workbook, plotVisibleOnly);
                 chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
                     valueAxis, valueExtents, valueAxisOptions, GetValueAxisAutoTickTargetCount(false, true, false), axesStyle.ValueAxisRightSide,
                     categoryAxis, categoryLabels, chartLayout.CategoryAxisPlacement?.LabelPlotRatio ?? 0d,
@@ -102,7 +102,7 @@ internal sealed partial class PptxRenderer
                 {
                     await RenderChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, rightSide: axesStyle.ValueAxisRightSide, axisSideSlot: 0, manualPlotLayoutApplied: false, useTextSizedWidth: false, defaultNumberFormat: lineOptions.PercentStacked ? "0%" : null, fontResolver: fontResolver, chartFonts: fonts, tickPolicy: valueAxisOptions.TickPolicy, context: context).ConfigureAwait(false);
                 }
-                await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, GetSharedLineChartValueExtents(linePlot, lineChart, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueAxis.SceneAxis, primaryXmlAxis: valueAxis.XmlAxis, context: context).ConfigureAwait(false);
+                await RenderSecondaryChartValueAxisLabelsAsync(theme, graphics, plotBox, chartXml, sceneChart, GetSharedLineChartValueExtents(linePlot, lineOptions.Stacked, lineOptions.PercentStacked, workbook, plotVisibleOnly), fontResolver, chartFonts: fonts, primarySceneAxis: valueAxis.SceneAxis, primaryXmlAxis: valueAxis.XmlAxis, context: context).ConfigureAwait(false);
                 // Major value tick marks (Office honors out/in/cross at value gridlines).
                 if (axesStyle.ValueAxisVisible)
                 {
@@ -146,8 +146,8 @@ internal sealed partial class PptxRenderer
                     [],
                     ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, lineChart, theme, colorMap),
-                    ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook, plotVisibleOnly),
-                    ReadSharedChartSeriesNames(linePlot, lineChart, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointLegend ? pointAppearance : null, seriesAppearance: seriesAppearance, categoryAxisReversed: categoryAxisReversed, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
+                    ReadSceneCategoryLabelVector(linePlot, workbook, plotVisibleOnly),
+                    ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointLegend ? pointAppearance : null, seriesAppearance: seriesAppearance, categoryAxisReversed: categoryAxisReversed, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
                 return true;
             }
         }

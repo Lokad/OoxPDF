@@ -89,7 +89,7 @@ internal static partial class PptxScatterIntervalTests
     public static void PptxScatterMeasurementsRetainTranslatedAndSubunitDataExtrema()
     {
         const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
-        var read = typeof(PptxRenderer).GetMethod("ReadSceneOrXmlScatterSeries", flags)!;
+        var read = typeof(PptxRenderer).GetMethod("ReadSceneScatterSeries", flags)!;
         foreach (bool bubble in new[] { false, true })
         foreach (double scale in new[] { 1d, .01d })
         foreach (double shift in new[] { -100d, 0d, 100d })
@@ -106,7 +106,7 @@ internal static partial class PptxScatterIntervalTests
                 """;
             XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
             var scene = PptxTests.BuildSingleChartScene(source)!;
-            object series = read.Invoke(null, [scene.Plots.Single(), XDocument.Parse(source).Descendants(c+kind).Single(), bubble, null, true])!;
+            object series = read.Invoke(null, [scene.Plots.Single(), bubble, null, true])!;
             foreach (var axis in new[] { ("X", 1d, 8d), ("Y", 2d, 79d) })
             {
                 object measured = typeof(PptxRenderer).GetMethod("MeasureScatterChartExtents", flags)!.Invoke(null, [series, null, null, CancellationToken.None])!;

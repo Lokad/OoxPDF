@@ -32,7 +32,7 @@ internal sealed partial class PptxRenderer
         if (areaPlot is not null)
         {
             XElement areaChart = areaPlot.Source;
-            IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSharedChartSeriesVectors(areaPlot, areaChart, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSharedChartSeriesVectors(areaPlot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(areaSeriesVectors) != 0)
             {
                 ChartAreaPlotOptions areaOptions = ReadSceneChartAreaOptions(sceneChart, areaPlot, PptxSceneChartGrouping.Standard);
@@ -65,7 +65,7 @@ internal sealed partial class PptxRenderer
                     chartLayout = prepared.Layout;
                     preparedLegendBox = prepared.Box;
                 }
-                var categoryLabels = ReadSharedCategoryLabels(areaPlot, areaChart, workbook, plotVisibleOnly);
+                var categoryLabels = ReadSharedCategoryLabels(areaPlot, workbook, plotVisibleOnly);
                 chartLayout = await PrepareCartesianCategoryFramesAsync(chartLayout, theme, sceneChart, chartXml,
                     valueAxis, valueExtents, valueAxisOptions, GetValueAxisAutoTickTargetCount(false, true, false), axesStyle.ValueAxisRightSide,
                     categoryAxis, categoryLabels, chartLayout.CategoryAxisPlacement?.LabelPlotRatio ?? 0d,
@@ -151,8 +151,8 @@ internal sealed partial class PptxRenderer
                     valueAxisOptions.Reversed, categoryPointsOnTickMarks, seriesStrokes, [],
                     ReadSceneOrXmlDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, areaPlot, areaChart, theme, colorMap),
-                    ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook, plotVisibleOnly),
-                    ReadSharedChartSeriesNames(areaPlot, areaChart, workbook), fontResolver, fonts, context,
+                    ReadSceneCategoryLabelVector(areaPlot, workbook, plotVisibleOnly),
+                    ReadSharedChartSeriesNames(areaPlot, workbook), fontResolver, fonts, context,
                     sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
                     categoryAxisReversed: categoryAxisReversed, areaOptions: areaOptions,
                     areaSeriesFills: seriesFills, areaCrossingValue: valueAxisOptions.CrossingValue).ConfigureAwait(false);

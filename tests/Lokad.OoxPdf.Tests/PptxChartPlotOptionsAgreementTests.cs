@@ -110,24 +110,24 @@ internal static class PptxChartPlotOptionsAgreementTests
         }
     }
 
-    public static void SeriesNamesAgreeBetweenSceneAndXml()
+    public static void SeriesNamesUseParsedSourceValues()
     {
-        string[] names = new[]
-        {
-            "",
-            "<c:tx><c:v>Solo</c:v></c:tx>",
-            "<c:tx><c:v>  Padded  </c:v></c:tx>",
-            "<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>Cached</c:v></c:pt></c:strCache></c:strRef></c:tx>",
-            "<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f></c:strRef></c:tx>",
-        };
+        (string Xml, string Expected, string Source)[] cases =
+        [
+            ("", "Series 1", "Default"),
+            ("<c:tx><c:v>Solo</c:v></c:tx>", "Solo", "Cache"),
+            ("<c:tx><c:v>  Padded  </c:v></c:tx>", "Padded", "Cache"),
+            ("<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>Cached</c:v></c:pt></c:strCache></c:strRef></c:tx>", "Cached", "Cache"),
+            ("<c:tx><c:strRef><c:f>Sheet1!$A$1</c:f></c:strRef></c:tx>", "Series 1", "Default")
+        ];
         Type workbookType = TestAssert.NotNull(typeof(PptxRenderer).Assembly.GetType("Lokad.OoxPdf.Pptx.PptxRenderer+ChartWorkbookData"));
-        
-        foreach (string name in names)
+        foreach (var test in cases)
         {
-            (object? plot, XElement element) = LoadPlot("barChart", "", name);
-            object? xml = Invoke("ReadSceneOrXmlChartSeriesNameRecords", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { null, element, null });
-            object? scene = Invoke("ReadSceneOrXmlChartSeriesNameRecords", new[] { typeof(PptxSceneChartPlot), typeof(XElement), workbookType }, new object?[] { plot, element, null });
-            TestAssert.True(SeriesNamesEqual(xml, scene), "Series names must agree for ser XML: " + name);
+            var (plot, _) = LoadPlot("barChart", "", test.Xml);
+            object record = ((System.Collections.IEnumerable)TestAssert.NotNull(Invoke("ReadSceneChartSeriesNameRecords",
+                [typeof(PptxSceneChartPlot), workbookType], [plot, null]))).Cast<object>().Single();
+            TestAssert.Equal(test.Expected, (string?)record.GetType().GetProperty("ActiveName")?.GetValue(record) ?? string.Empty);
+            TestAssert.Equal(test.Source, record.GetType().GetProperty("ActiveNameSource")?.GetValue(record)?.ToString() ?? string.Empty);
         }
     }
 
@@ -416,18 +416,6 @@ internal static class PptxChartPlotOptionsAgreementTests
             var xmlList = xmlItems.Cast<object?>().ToList();
             var sceneList = sceneItems.Cast<object?>().ToList();
             return xmlList.Count == sceneList.Count && xmlList.SequenceEqual(sceneList);
-        }
-
-        return Equals(xml, scene);
-    }
-
-    private static bool SeriesNamesEqual(object? xml, object? scene)
-    {
-        if (xml is System.Collections.IEnumerable xmlItems && scene is System.Collections.IEnumerable sceneItems)
-        {
-            List<object?> xmlList = xmlItems.Cast<object?>().ToList();
-            List<object?> sceneList = sceneItems.Cast<object?>().ToList();
-            return xmlList.Count == sceneList.Count && xmlList.Zip(sceneList).All(pair => SeriesNameEqual(pair.First, pair.Second));
         }
 
         return Equals(xml, scene);

@@ -601,7 +601,7 @@ internal sealed partial class PptxRenderer
                 if (titleLegendPlotElement is not null)
                 {
                     PptxSceneChartPlot? titleLegendPlot = categoryPlot;
-                    IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSharedChartSeriesNames(titleLegendPlot, titleLegendPlotElement, workbook);
+                    IReadOnlyList<ChartSeriesNameRecord> titleLegendSeriesNames = ReadSharedChartSeriesNames(titleLegendPlot, workbook);
                     double titleLegendWidth = (await ResolveRightLegendWidthAsync(titleLegendSeriesNames, legendTextStyle, includeAreaReserve: false, fontResolver, lastCategoryLabelWidth: 0d).ConfigureAwait(false));
                     right = ResolveTitledRightLegendPlotRight(presetRight, frame.X + frame.Width, titleLegendWidth);
                 }
@@ -669,7 +669,7 @@ internal sealed partial class PptxRenderer
             return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineNoTitleRightLegend);
         XElement plotElement = plot.Source;
         PptxSceneChartPlotKind plotKind = plot.PlotKind;
-        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(plot, plotElement, workbook);
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSharedChartSeriesNames(plot, workbook);
         double lastCategoryLabelWidth = plotKind == PptxSceneChartPlotKind.Area
             ? (await MeasureLastCategoryLabelWidthAsync(theme, sceneChart, chartXml, plot, plotElement, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false))
             : 0d;
@@ -689,7 +689,7 @@ internal sealed partial class PptxRenderer
         bool explicitValueAxisScale = false;
         if (plotKind == PptxSceneChartPlotKind.Scatter)
         {
-            IReadOnlyList<ScatterSeries> series = ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
+            IReadOnlyList<ScatterSeries> series = ReadSceneScatterSeries(plot, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
             if (series.Count > 0)
             {
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadChartValueAxesForPlot(sceneChart, plot);
@@ -714,13 +714,13 @@ internal sealed partial class PptxRenderer
             PptxSceneChartGrouping grouping = ReadSceneChartGrouping(plot, PptxSceneChartGrouping.Standard);
             bool stacked = IsStackedChartGrouping(grouping);
             bool percentStacked = IsPercentStackedChartGrouping(grouping);
-            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(plot, plotElement, workbook, plotVisibleOnly);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(seriesVectors) > 0)
             {
                 ChartAxisSource valueAxis = ReadChartValueAxesForPlot(sceneChart, plot).FirstOrDefault();
                 XElement? valueAxisForScale = valueAxis.XmlAxis;
                 explicitValueAxisScale = HasExplicitChartValueAxisScale(valueAxis.SceneAxis);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, plotElement, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetSharedLineChartValueExtents(plot, stacked, percentStacked, workbook, plotVisibleOnly), percentStacked, useNearMaximumHeadroom: !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount, context: context);
                 ChartTextStyle valueAxisTextStyle = ReadSceneChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
@@ -815,11 +815,11 @@ internal sealed partial class PptxRenderer
     // Width of the last visible category label for the area right-legend reserve: the
     // legend swatch clears the end of that edge label by a fixed lead, so the reserve
     // grows with half of it. A blank or missing last label contributes nothing.
-    private static async ValueTask<double> MeasureLastCategoryLabelWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartPlot? plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static async ValueTask<double> MeasureLastCategoryLabelWidthAsync(PptxTheme theme, PptxSceneChart sceneChart, XDocument chartXml, PptxSceneChartPlot plot, XElement plotElement, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         ChartAxisSource categoryAxis = ReadChartCategoryAxisForPlot(sceneChart, plot);
         ChartTextStyle categoryStyle = ReadSceneChartTextStyle(theme, sceneChart, categoryAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize, chartStyleRole: "categoryAxis");
-        IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, plotElement, workbook, plotVisibleOnly);
+        IReadOnlyList<ChartIndexedTextPoint?> labels = ReadSharedCategoryLabels(plot, workbook, plotVisibleOnly);
         int skip = ResolveSceneCategoryAxisTickLabelSkip(categoryAxis.SceneAxis);
         int last = -1;
         for (int i = labels.Count - 1; i >= 0; i--)
@@ -855,7 +855,7 @@ internal sealed partial class PptxRenderer
             return 0d;
         }
 
-        var measured = MeasureScatterChartExtents(ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly),
+        var measured = MeasureScatterChartExtents(ReadSceneScatterSeries(plot, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly),
             ReadSceneChartScatterOptions(plot), ReadSceneSeriesLineHidden(plot), fontResolver?.CancellationToken ?? default);
         var (xExtents, xOptions) = ReadChartPointValueAxisScale(theme, xValueAxis, measured.DataX, measured.PathX, bubble: false, horizontal: true, scatterXTickTargetCount);
         ChartTextStyle style = ReadSceneChartTextStyle(theme, sceneChart, xValueAxis.SceneAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");

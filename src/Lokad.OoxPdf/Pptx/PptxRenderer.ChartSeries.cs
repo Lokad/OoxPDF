@@ -319,40 +319,30 @@ internal sealed partial class PptxRenderer
         return index;
     }
 
-    private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneOrXmlChartSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneChartSeriesVectors(PptxSceneChartPlot plot, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        if (plot is not null)
-        {
-            return plot.Series
-                .Select(series => BuildChartIndexedNumberVector(
-                    series.Values,
-                    series.ValuePoints,
-                    series.ValuePointCount,
-                    series.ValueFormatCode,
-                    series.DataSources.Values,
-                    workbook,
-                    plotVisibleOnly))
-                .ToArray();
-        }
-
-        return ReadChartSeriesVectors(chartElement, workbook, plotVisibleOnly);
+        return plot.Series
+            .Select(series => BuildChartIndexedNumberVector(
+                series.Values,
+                series.ValuePoints,
+                series.ValuePointCount,
+                series.ValueFormatCode,
+                series.DataSources.Values,
+                workbook,
+                plotVisibleOnly))
+            .ToArray();
     }
 
-    private static IReadOnlyList<ScatterSeries> ReadSceneOrXmlScatterSeries(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    private static IReadOnlyList<ScatterSeries> ReadSceneScatterSeries(PptxSceneChartPlot plot, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        return ReadSceneOrXmlScatterSeriesVectors(plot, chartElement, readBubbleSize, workbook, plotVisibleOnly)
+        return ReadSceneScatterSeriesVectors(plot, readBubbleSize, workbook, plotVisibleOnly)
             .Select(BuildScatterSeries)
             .Where(series => series.Points.Count != 0)
             .ToArray();
     }
 
-    private static IReadOnlyList<ChartIndexedScatterSeries> ReadSceneOrXmlScatterSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    private static IReadOnlyList<ChartIndexedScatterSeries> ReadSceneScatterSeriesVectors(PptxSceneChartPlot plot, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        if (plot is null)
-        {
-            return ReadScatterSeriesVectors(chartElement, readBubbleSize, workbook, plotVisibleOnly);
-        }
-
         return plot.Series
             .Select(item => new ChartIndexedScatterSeries(
                 BuildChartIndexedNumberVector(
@@ -383,85 +373,74 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static ChartIndexedTextVector ReadSceneOrXmlCategoryLabelVector(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook, bool plotVisibleOnly)
+    private static ChartIndexedTextVector ReadSceneCategoryLabelVector(PptxSceneChartPlot plot, ChartWorkbookData? workbook, bool plotVisibleOnly)
     {
-        if (plot is not null)
-        {
-            return plot.Series
-                .Select(series => BuildChartIndexedTextVector(
-                    series.Categories,
-                    series.CategoryPoints,
-                    series.CategoryPointCount,
-                    series.CategoryLevels,
-                    series.DataSources.Categories,
-                    workbook,
-                    plotVisibleOnly))
-                .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null || vector.HasAnyDenseSlot());
-        }
-
-        return ReadChartCategoryLabelVector(chartElement, workbook, plotVisibleOnly);
+        return plot.Series
+            .Select(series => BuildChartIndexedTextVector(
+                series.Categories,
+                series.CategoryPoints,
+                series.CategoryPointCount,
+                series.CategoryLevels,
+                series.DataSources.Categories,
+                workbook,
+                plotVisibleOnly))
+            .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null || vector.HasAnyDenseSlot());
     }
 
     // R15: per-frame shared dense category labels behind one call shape. Workbook-less
     // (literal-only) charts densify directly; workbook-backed charts share one dense
     // array across the reserve, emission, and legend passes of a frame.
     private static IReadOnlyList<ChartIndexedTextPoint?> ReadSharedCategoryLabels(
-        PptxSceneChartPlot? plot,
-        XElement chartElement,
+        PptxSceneChartPlot plot,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly)
     {
         if (workbook is null)
         {
-            return ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly).DensePoints();
+            return ReadSceneCategoryLabelVector(plot, workbook, plotVisibleOnly).DensePoints();
         }
 
-        object? source = plot is not null ? plot : null;
         return workbook.GetOrAddCategoryLabels(
-            source,
-            chartElement,
+            plot,
+            plot.Source,
             plotVisibleOnly,
-            () => ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly).DensePoints());
+            () => ReadSceneCategoryLabelVector(plot, workbook, plotVisibleOnly).DensePoints());
     }
 
     // R15: per-frame shared series names behind one call shape, mirroring shared
     // category labels. Workbook-less charts read directly.
     private static IReadOnlyList<ChartSeriesNameRecord> ReadSharedChartSeriesNames(
-        PptxSceneChartPlot? plot,
-        XElement chartElement,
+        PptxSceneChartPlot plot,
         ChartWorkbookData? workbook)
     {
         if (workbook is null)
         {
-            return ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
+            return ReadSceneChartSeriesNameRecords(plot, workbook);
         }
 
-        object? source = plot is not null ? plot : null;
         return workbook.GetOrAddSeriesNames(
-            source,
-            chartElement,
-            () => ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook));
+            plot,
+            plot.Source,
+            () => ReadSceneChartSeriesNameRecords(plot, workbook));
     }
 
     // R15: per-frame shared series vectors behind one call shape, mirroring shared
     // labels and names. Workbook-less charts rebuild directly.
     private static IReadOnlyList<ChartIndexedNumberVector> ReadSharedChartSeriesVectors(
-        PptxSceneChartPlot? plot,
-        XElement chartElement,
+        PptxSceneChartPlot plot,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly)
     {
         if (workbook is null)
         {
-            return ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly);
+            return ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly);
         }
 
-        object? source = plot is not null ? plot : null;
         return workbook.GetOrAddSeriesVectors(
-            source,
-            chartElement,
+            plot,
+            plot.Source,
             plotVisibleOnly,
-            () => ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly));
+            () => ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly));
     }
 
     // R15: per-frame shared bar value extents behind one call shape, mirroring
@@ -469,31 +448,28 @@ internal sealed partial class PptxRenderer
     // crossing passes within one frame share one result. Workbook-less charts
     // compute directly.
     private static ChartValueExtents GetSharedBarChartValueExtents(
-        PptxSceneChartPlot? plot,
-        XElement chartElement,
+        PptxSceneChartPlot plot,
         PptxSceneChartGrouping grouping,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly)
     {
         if (workbook is null)
         {
-            return GetBarChartValueExtents(ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), grouping);
+            return GetBarChartValueExtents(ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly), grouping);
         }
 
-        object? source = plot is not null ? plot : null;
         return workbook.GetOrAddValueExtents(
-            source,
-            chartElement,
+            plot,
+            plot.Source,
             grouping,
             plotVisibleOnly,
-            () => GetBarChartValueExtents(ReadSharedChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), grouping));
+            () => GetBarChartValueExtents(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), grouping));
     }
 
     // R15: per-frame shared line value extents behind one call shape, mirroring
     // shared bar extents. Workbook-less charts compute directly.
     private static ChartValueExtents GetSharedLineChartValueExtents(
-        PptxSceneChartPlot? plot,
-        XElement chartElement,
+        PptxSceneChartPlot plot,
         bool stacked,
         bool percentStacked,
         ChartWorkbookData? workbook,
@@ -501,17 +477,16 @@ internal sealed partial class PptxRenderer
     {
         if (workbook is null)
         {
-            return GetLineChartValueExtents(ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), stacked, percentStacked);
+            return GetLineChartValueExtents(ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked);
         }
 
-        object? source = plot is not null ? plot : null;
         return workbook.GetOrAddLineValueExtents(
-            source,
-            chartElement,
+            plot,
+            plot.Source,
             stacked,
             percentStacked,
             plotVisibleOnly,
-            () => GetLineChartValueExtents(ReadSharedChartSeriesVectors(plot, chartElement, workbook, plotVisibleOnly), stacked, percentStacked));
+            () => GetLineChartValueExtents(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), stacked, percentStacked));
     }
 
     // Called after shared-axis ownership is established. Preserve the existing
@@ -525,7 +500,7 @@ internal sealed partial class PptxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (ReferenceEquals(plot, primaryPlot)) continue;
-            var vectors = ReadSharedChartSeriesVectors(plot, plot.Source, workbook, plotVisibleOnly);
+            var vectors = ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly);
             if (CountRenderableSeries(vectors) == 0) continue;
             var data = plot.PlotKind == PptxSceneChartPlotKind.Bar
                 ? GetBarChartValueExtents(vectors, plot.GroupingKind)
@@ -910,24 +885,4 @@ internal sealed partial class PptxRenderer
             style.OuterShadow);
     }
 
-    private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook, bool plotVisibleOnly)
-    {
-        var series = new List<ChartIndexedScatterSeries>();
-        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
-        {
-            ChartIndexedNumberVector xValues = ReadChartNumberVector(element.Element(ChartNamespace + "xVal"), workbook, plotVisibleOnly);
-            ChartIndexedNumberVector yValues = ReadChartNumberVector(element.Element(ChartNamespace + "yVal"), workbook, plotVisibleOnly);
-            ChartIndexedNumberVector bubbleSizes = readBubbleSize
-                ? ReadChartNumberVector(element.Element(ChartNamespace + "bubbleSize"), workbook, plotVisibleOnly)
-                : default;
-            if (!xValues.HasAnyDenseSlot() && !yValues.HasAnyDenseSlot())
-            {
-                continue;
-            }
-
-            series.Add(new ChartIndexedScatterSeries(xValues, yValues, bubbleSizes, readBubbleSize));
-        }
-
-        return series;
-    }
 }

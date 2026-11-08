@@ -11,9 +11,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false)
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes, int paletteOffset, ChartWorkbookData? workbook, bool reverseOrder = false)
     {
-        IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, chartElement, workbook);
+        IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
@@ -47,9 +47,9 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook, bool plotVisibleOnly, int valuePointCount = 0, Func<int, ChartSeriesFill>? resolveFill = null, Func<int, ChartSeriesStroke?>? resolveStroke = null)
     {
-        IReadOnlyList<ChartIndexedTextPoint> points = ReadSharedCategoryLabels(plot, chartElement, workbook, plotVisibleOnly)
+        IReadOnlyList<ChartIndexedTextPoint> points = ReadSharedCategoryLabels(plot, workbook, plotVisibleOnly)
             .OfType<ChartIndexedTextPoint>()
             .ToArray();
         var entries = new List<ChartLegendEntry>(points.Count);
@@ -95,9 +95,9 @@ internal sealed partial class PptxRenderer
         return chartStyleId == 18 || chartStyleId == 118 || chartStyleId == 26 || chartStyleId == 126;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null, int? chartStyleId = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, PptxColorMap colorMap, ChartColorPalette chartPalette, PptxSceneChartPlot plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles, bool reverseOrder, ChartWorkbookData? workbook, IReadOnlyList<bool>? seriesLineHidden = null, int? chartStyleId = null)
     {
-        IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, chartElement, workbook);
+        IReadOnlyList<ChartSeriesNameRecord> names = ReadSharedChartSeriesNames(plot, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
@@ -140,67 +140,34 @@ internal sealed partial class PptxRenderer
                 Size = PptxChartMarkerMetricRules.StyleLegendMarkerSize }
             : marker;
 
-    private static IReadOnlyList<ChartSeriesNameRecord> ReadSceneOrXmlChartSeriesNameRecords(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook)
+    private static IReadOnlyList<ChartSeriesNameRecord> ReadSceneChartSeriesNameRecords(PptxSceneChartPlot plot, ChartWorkbookData? workbook)
     {
-        if (plot is not null)
-        {
-            return plot.Series
-                .Select((series, index) =>
-                {
-                    IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, series.DataSources.Name);
-                    if (!string.IsNullOrWhiteSpace(series.Name))
-                    {
-                        return new ChartSeriesNameRecord(
-                            series.Name.Trim(),
-                            series.Name.Trim(),
-                            ChartSeriesNameSource.Cache,
-                            series.DataSources.Name,
-                            workbookPoints);
-                    }
-
-                    string? workbookName = workbookPoints
-                        .Where(value => value.HasText)
-                        .Select(value => value.Text)
-                        .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
-                    return new ChartSeriesNameRecord(
-                        string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim(),
-                        string.Empty,
-                        string.IsNullOrWhiteSpace(workbookName) ? ChartSeriesNameSource.Default : ChartSeriesNameSource.Workbook,
-                        series.DataSources.Name,
-                        workbookPoints);
-                })
-                .ToArray();
-        }
-
-        return ReadChartSeriesNameRecords(chartElement, workbook);
-    }
-
-    private static IReadOnlyList<ChartSeriesNameRecord> ReadChartSeriesNameRecords(XElement chartElement, ChartWorkbookData? workbook)
-    {
-        return chartElement
-            .Elements(ChartNamespace + "ser")
+        return plot.Series
             .Select((series, index) =>
             {
-                string cacheName = ReadChartSeriesName(series)?.Trim() ?? string.Empty;
-                string activeName = string.IsNullOrWhiteSpace(cacheName) ? $"Series {index + 1}" : cacheName;
-                PptxSceneChartDataSource ReadChartSeriesNameDataSource()
+                IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, series.DataSources.Name);
+                if (!string.IsNullOrWhiteSpace(series.Name))
                 {
-                    return PptxSceneBuilder.ReadChartDataSource(series.Element(ChartNamespace + "tx"), "strRef", "numRef");
+                    return new ChartSeriesNameRecord(
+                        series.Name.Trim(),
+                        series.Name.Trim(),
+                        ChartSeriesNameSource.Cache,
+                        series.DataSources.Name,
+                        workbookPoints);
                 }
 
-                PptxSceneChartDataSource source = ReadChartSeriesNameDataSource();
-                IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
-                ChartSeriesNameSource activeNameSource = !string.IsNullOrWhiteSpace(cacheName)
-                    ? ChartSeriesNameSource.Cache
-                    : ChartSeriesNameSource.Default;
-                return new ChartSeriesNameRecord(activeName, cacheName, activeNameSource, source, workbookPoints);
+                string? workbookName = workbookPoints
+                    .Where(value => value.HasText)
+                    .Select(value => value.Text)
+                    .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+                return new ChartSeriesNameRecord(
+                    string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim(),
+                    string.Empty,
+                    string.IsNullOrWhiteSpace(workbookName) ? ChartSeriesNameSource.Default : ChartSeriesNameSource.Workbook,
+                    series.DataSources.Name,
+                    workbookPoints);
             })
             .ToArray();
-    }
-
-    private static string? ReadChartSeriesName(XElement series)
-    {
-        return PptxSceneBuilder.ReadChartText(series.Element(ChartNamespace + "tx"), trimLiteral: true);
     }
 
     private static ChartLegendLayout ReadSceneChartLegendLayout(PptxSceneChart sceneChart)
