@@ -1,5 +1,7 @@
 {
   "docx-cell-source-frame": [
+    "DocxInlineCompositionReviewNestedPlacementKeepsWholeTreeFallbacks",
+    "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
     "DocxNestedCellEnd",
     "DocxRepeatedTableHeader",
     "DocxBookmarkViewport",
