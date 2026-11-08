@@ -129,7 +129,8 @@ internal sealed partial class OpenTypeFont
     {
         private readonly List<Action<KerningPairWriter>> batches = new();
         private int sourceCount;
-        private long classCapacity;
+        private long metadataCapacity;
+        private long coverageBytes;
         private IMemoryReservation? construction;
         public void CheckCancellation() => token.ThrowIfCancellationRequested();
         public void CheckAdditionalCount(long additional)
@@ -141,21 +142,33 @@ internal sealed partial class OpenTypeFont
         {
             CheckCancellation();
             CheckAdditionalCount(additional);
+            if (additional == 0) return;
             sourceCount += (int)additional;
-            if (classCapacity != 0) AdmitConstruction();
-            if (additional != 0) batches.Add(write);
+            AdmitConstruction(additionalBatch: true);
+            batches.Add(write);
+        }
+        public void AdmitCoverageStorage(int glyphs)
+        {
+            coverageBytes = 2L * glyphs;
+            if (glyphs == 0) { CheckCancellation(); return; }
+            metadataCapacity = Math.Max(metadataCapacity, checked(128L + 4L * glyphs));
+            AdmitConstruction();
         }
         public void AdmitClassStorage(int glyphs, int classes)
         {
             // One reusable family window covers class-map construction while
             // previously registered batches retain their glyph arrays. Actual
             // source pairs bound retained batch storage; zero batches add none.
-            classCapacity = Math.Max(classCapacity, checked(128L * classes + 4L * glyphs));
+            metadataCapacity = Math.Max(metadataCapacity, checked(coverageBytes + 128L * classes + 4L * glyphs));
             AdmitConstruction();
         }
-        private void AdmitConstruction()
+        private void AdmitConstruction(bool additionalBatch = false)
         {
-            long capacity = checked(classCapacity + 32L * sourceCount);
+            // One coarse window includes current coverage/class construction
+            // and the callbacks retained until Build. Sparse batches also own
+            // metadata; their admission cannot depend on reaching a class table.
+            long capacity = checked(metadataCapacity + 32L * sourceCount +
+                256L * (batches.Count + (additionalBatch ? 1 : 0)));
             if (construction is null) construction = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, capacity);
             else OoxMemory.Resize(construction, capacity);
             CheckCancellation();
@@ -339,48 +352,21 @@ internal sealed partial class OpenTypeFont
         }
 
         ushort positionFormat = U16(bytes, subtable);
+        if (positionFormat is not (1 or 2)) return;
         int coverage = subtable + U16(bytes, subtable + 2);
         ushort valueFormat1 = U16(bytes, subtable + 4);
         ushort valueFormat2 = U16(bytes, subtable + 6);
         int valueRecordSize1 = ValueRecordSize(valueFormat1);
         int valueRecordSize2 = ValueRecordSize(valueFormat2);
-        if (!TryReadCoverage(bytes, coverage, tableEnd, out ushort[] coverageGlyphs))
+        if (!TryReadCoverage(bytes, coverage, tableEnd, pairs, out ushort[] coverageGlyphs))
         {
             return;
         }
 
         if (positionFormat == 1)
         {
-            ushort pairSetCount = U16(bytes, subtable + 8);
-            for (int i = 0; i < pairSetCount && i < coverageGlyphs.Length && subtable + 10 + i * 2 + 2 <= tableEnd; i++)
-            {
-                int pairSet = subtable + U16(bytes, subtable + 10 + i * 2);
-                if (pairSet + 2 > tableEnd)
-                {
-                    continue;
-                }
-
-                ushort pairValueCount = U16(bytes, pairSet);
-                int pairValue = pairSet + 2;
-                int stride = 2 + valueRecordSize1 + valueRecordSize2;
-                int nonzero = 0;
-                for (int j = 0, candidate = pairValue; j < pairValueCount && candidate + stride <= tableEnd; j++, candidate += stride)
-                {
-                    if ((j & 1023) == 0) pairs.CheckCancellation();
-                    if (ReadXAdvance(bytes, candidate + 2, valueFormat1) != 0) nonzero++;
-                }
-                ushort leftGlyph = coverageGlyphs[i];
-                int candidates = Math.Min(pairValueCount, Math.Max(0, (tableEnd - pairValue) / stride));
-                pairs.Register(nonzero, writer =>
-                {
-                    for (int j = 0, cursor = pairValue; j < candidates; j++, cursor += stride)
-                    {
-                        if ((j & 1023) == 0) pairs.CheckCancellation();
-                        short advance = ReadXAdvance(bytes, cursor + 2, valueFormat1);
-                        if (advance != 0) writer.Add(((uint)leftGlyph << 16) | U16(bytes, cursor), advance);
-                    }
-                });
-            }
+            ReadGposPairSets(bytes, subtable, tableEnd, coverageGlyphs, valueFormat1,
+                valueRecordSize1 + valueRecordSize2, pairs);
         }
         else if (positionFormat == 2 && subtable + 16 <= tableEnd)
         {
@@ -527,7 +513,42 @@ internal sealed partial class OpenTypeFont
         return 0;
     }
 
-    private static bool TryReadCoverage(byte[] bytes, int offset, int tableEnd, out ushort[] glyphs)
+    private static void ReadGposPairSets(byte[] bytes, int subtable, int tableEnd, ushort[] coverageGlyphs,
+        ushort valueFormat1, int valueRecordSize, KerningPairBuilder pairs)
+    {
+        // Keep sparse callbacks independent of the class branch's closure.
+        // Each needs one left glyph, never the complete coverage array.
+        ushort pairSetCount = U16(bytes, subtable + 8);
+        for (int i = 0; i < pairSetCount && i < coverageGlyphs.Length && subtable + 10 + i * 2 + 2 <= tableEnd; i++)
+        {
+            if ((i & 1023) == 0) pairs.CheckCancellation();
+            int pairSet = subtable + U16(bytes, subtable + 10 + i * 2);
+            if (pairSet + 2 > tableEnd) continue;
+            ushort pairValueCount = U16(bytes, pairSet);
+            int pairValue = pairSet + 2;
+            int stride = 2 + valueRecordSize;
+            int nonzero = 0;
+            for (int j = 0, candidate = pairValue; j < pairValueCount && candidate + stride <= tableEnd; j++, candidate += stride)
+            {
+                if ((j & 1023) == 0) pairs.CheckCancellation();
+                if (ReadXAdvance(bytes, candidate + 2, valueFormat1) != 0) nonzero++;
+            }
+            if (nonzero == 0) continue;
+            ushort leftGlyph = coverageGlyphs[i];
+            int candidates = Math.Min(pairValueCount, Math.Max(0, (tableEnd - pairValue) / stride));
+            pairs.Register(nonzero, writer =>
+            {
+                for (int j = 0, cursor = pairValue; j < candidates; j++, cursor += stride)
+                {
+                    if ((j & 1023) == 0) pairs.CheckCancellation();
+                    short advance = ReadXAdvance(bytes, cursor + 2, valueFormat1);
+                    if (advance != 0) writer.Add(((uint)leftGlyph << 16) | U16(bytes, cursor), advance);
+                }
+            });
+        }
+    }
+
+    private static bool TryReadCoverage(byte[] bytes, int offset, int tableEnd, KerningPairBuilder pairs, out ushort[] glyphs)
     {
         glyphs = [];
         if (offset + 4 > tableEnd)
@@ -544,9 +565,11 @@ internal sealed partial class OpenTypeFont
                 return false;
             }
 
-            glyphs = new ushort[count];
+            pairs.AdmitCoverageStorage(count);
+            glyphs = count == 0 ? [] : new ushort[count];
             for (int i = 0; i < glyphs.Length; i++)
             {
+                if ((i & 1023) == 0) pairs.CheckCancellation();
                 glyphs[i] = U16(bytes, offset + 4 + i * 2);
             }
 
@@ -558,24 +581,32 @@ internal sealed partial class OpenTypeFont
             return false;
         }
 
-        var list = new List<ushort>();
+        int glyphCount = 0;
         for (int i = 0; i < count; i++)
         {
+            if ((i & 1023) == 0) pairs.CheckCancellation();
             int range = offset + 4 + i * 6;
             ushort start = U16(bytes, range);
             ushort end = U16(bytes, range + 2);
-            for (int glyph = start; glyph <= end; glyph++)
+            int additional = Math.Max(0, end - start + 1);
+            if (additional > MaxCoverageGlyphs - glyphCount)
+                throw new InvalidDataException($"Font coverage table expands beyond the maximum supported glyph count of {MaxCoverageGlyphs}.");
+            glyphCount += additional;
+        }
+        pairs.AdmitCoverageStorage(glyphCount);
+        glyphs = glyphCount == 0 ? [] : new ushort[glyphCount];
+        int target = 0;
+        for (int i = 0; i < count; i++)
+        {
+            if ((i & 1023) == 0) pairs.CheckCancellation();
+            int range = offset + 4 + i * 6;
+            int end = U16(bytes, range + 2);
+            for (int glyph = U16(bytes, range); glyph <= end; glyph++)
             {
-                if (list.Count >= MaxCoverageGlyphs)
-                {
-                    throw new InvalidDataException($"Font coverage table expands beyond the maximum supported glyph count of {MaxCoverageGlyphs}.");
-                }
-
-                list.Add((ushort)glyph);
+                if ((target & 1023) == 0) pairs.CheckCancellation();
+                glyphs[target++] = (ushort)glyph;
             }
         }
-
-        glyphs = list.ToArray();
         return true;
     }
 
