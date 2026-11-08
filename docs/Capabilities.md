@@ -646,7 +646,11 @@ Approximate or restricted:
   bold/mixed faces, kept paragraphs and neighboring tables/wrapped paragraphs.
   Qualified minimum-line backgrounds follow natural line height while the
   occupied minimum slot and joined source spacing remain unchanged.
-  Multiline minimum paragraphs, columns, unresolved static frames, unsupported
+  In scaled Review output, qualified plain minimum paragraphs share printed
+  advances and source baseline bearings with kept/wrapped flow. Independent Word
+  PDF controls cover pagination and paragraph origins; shading geometry and
+  strict image differences remain approximate. Unscaled multiline minimum
+  paragraphs, columns, unresolved static frames, unsupported
   spacing/contextual styles and complex note-marker formatting retain restrictions.
 - Review balloons, ranges, revision bands, comment collision/layout and note-marker
   revisions remain partial. Remaining typography/geometry and extraction failures
