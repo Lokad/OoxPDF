@@ -576,6 +576,9 @@ Approximate or restricted:
   bold/italic descriptions share run and paragraph-mark resolution. Other changes
   retain generic summaries; balloon placement and complete-page fidelity remain
   approximate.
+  Tables inside mapped inline header/footer boxes retain their rows, equations,
+  links and bookmark targets in the painted frame, including nested tables.
+  Horizontal cell padding and complete-page appearance remain approximate.
   Adjacent display containers combine using the later container's justification;
   subsequent display rows share the first effective display row's owner.
   `centerGroup` and the omitted default center one maximum-width group across

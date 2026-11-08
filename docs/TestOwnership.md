@@ -22,6 +22,11 @@ scenarios. Windows junctions and hard links run without symlink privilege. Only
 the file-symlink methods declare that environmental precondition. Linux runs all
 eleven library scenarios.
 
+`docx-static-box-table-placement` selects 27 methods covering boxed tables,
+neighboring static frames, body preservation, source identity, cancellation and
+navigation. Pinned portable fonts cover all markup views; independent Word
+vertical origins remain separate from unresolved horizontal and image gates.
+
 `PptxChartPaletteTests` compares painted output against 481 independent Office bar
 colors across counts, themes and orientations. It replaces eighteen tests of
 private fitted helpers. The `pptx-automatic-palette` selection includes negative
