@@ -212,6 +212,9 @@ internal static partial class DocxCommentsTests
                 BodyElements = [new DocxParagraphElement(body)],
                 PageSettings = source.PageSettings with
                 {
+                    // This control requires a fitting header inside the 36 pt
+                    // top margin. The omitted 36 pt distance would overflow it.
+                    HeaderDistancePoints = 18d,
                     HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>
                         { ["default"] = [new DocxParagraphElement(header)] }
                 }
@@ -249,7 +252,12 @@ internal static partial class DocxCommentsTests
             BookmarkAnchors = [new DocxBookmarkAnchor("1", "BodyTarget", 0, 0, 0)],
             Hyperlinks = [new DocxHyperlinkSpan(null, "BodyTarget", null, null, null, null, null, 0, 1, 0, 3, 1)]
         };
-        DocxDocument withHeader = source with { BodyElements = [new DocxParagraphElement(body)] };
+        DocxDocument withHeader = source with
+        {
+            BodyElements = [new DocxParagraphElement(body)],
+            // Keep this fitting-header control independent of the omitted default.
+            PageSettings = source.PageSettings with { HeaderDistancePoints = 18d }
+        };
         DocxDocument withoutHeader = withHeader with { PageSettings = DocxPageSettings.Empty };
         var renderer = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
