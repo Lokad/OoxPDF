@@ -17,7 +17,7 @@ internal static partial class DocxInlineCompositionTests
             var paragraph = ParagraphMarkCaptionOwner(ReadParagraphMarkCaptionSource(row, mode));
             var mark = paragraph.ParagraphMarkRun!;
             var revision = mark.Revisions.Single();
-            var change = TestAssert.NotNull(revision.RunFormattingChange);
+            var change = revision.RunFormattingChange ?? throw new InvalidOperationException("Expected resolved paragraph-mark formatting.");
             TestAssert.True(change.Bold == true || change.Italic == true, "The existing resolver retains the authored boolean change.");
             TestAssert.True(paragraph.Revisions.Any(owner => ReferenceEquals(owner, revision)), "The typed snapshot is shared before source publication.");
             TestAssert.Equal(row.GetProperty("Body").GetString(), DocxRenderer.BuildWordCompatibleRunFormattingPreview(paragraph, default));
