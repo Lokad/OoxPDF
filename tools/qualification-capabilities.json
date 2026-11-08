@@ -1,4 +1,28 @@
 {
+  "docx-cell-source-frame": [
+    "DocxNestedCellEnd",
+    "DocxRepeatedTableHeader",
+    "DocxBookmarkViewport",
+    "DocxRendererEmitsInternalHyperlinkDestinationsFromBookmarks",
+    "DocxRendererUsesSourceRunIndexesForBookmarkDestinations",
+    "DocxRendererUsesSourceTextOffsetsForBookmarkDestinations",
+    "DocxInlineCompositionNestedNavigationKeepsOriginalSourceAndCellOwner",
+    "DocxInlineCompositionNestedMathKeepsContainingRowsAtomicAtPageBoundaries",
+    "DocxInlinePictureBookmarks",
+    "DocxFirstMathBookmark",
+    "DocxNonpaintingRunsKeepPaintAndMathematicalLinkDestinations",
+    "DocxInnerMathBookmarksKeepPortablePaintAndInternalLinks",
+    "DocxInnerMathBookmarksMatchIndependentWordViewports",
+    "DocxInnerMathBookmarksSurviveCompositeBoxTranslations",
+    "DocxMinimumBookmarksKeepSourceMetadataOutOfVisibleFrames",
+    "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
+    "DocxInlineBoxBookmarksPreservePlacedLinksAndSiblingContent",
+    "DocxNoteMathFieldsStaticTablesPreserveCompleteMixedContent",
+    "DocxNoteMathFieldsStaticTablesRetainExactClippedAndUnsupportedFallbacks",
+    "DocxTableLayoutStageAppliesCellVerticalAlignment",
+    "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
+    "StagedPageMemory"
+  ],
   "docx-comment-endpoints": [
     "DocxCommentEndpoint",
     "DocxCommentUnknownEndpoints",

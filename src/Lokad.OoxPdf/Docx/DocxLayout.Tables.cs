@@ -210,7 +210,11 @@ internal sealed partial class DocxLayoutEngine
                 cells[cellIndex] = cell with
                 {
                     TextLines = cell.TextLines.Select(line => line with { BaselineY = line.BaselineY +
-                        (line.InlineFrame is null ? baselineCorrection : ownedCorrection) + Reduction(line.SourceParagraphIndex) }).ToArray(),
+                        (line.InlineFrame is null ? baselineCorrection : ownedCorrection) + Reduction(line.SourceParagraphIndex),
+                        // A source frame follows its container, not the extra
+                        // glyph-baseline projection within that container.
+                        FirstLineInsetPoints = line.FirstLineInsetPoints -
+                            (line.InlineFrame is null ? baselineCorrection - ownedCorrection : 0d) }).ToArray(),
                     InlineImages = cell.InlineImages.Count == 0 ? cell.InlineImages :
                         cell.InlineImages.Select(image => image.Translate(0d, ownedCorrection + Reduction(image.SourceParagraphIndex))).ToArray(),
                     InlineTextBoxes = cell.InlineTextBoxes.Select(box =>

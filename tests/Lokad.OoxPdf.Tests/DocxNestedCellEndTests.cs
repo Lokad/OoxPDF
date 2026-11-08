@@ -75,6 +75,69 @@ internal static class DocxNestedCellEndTests
         }
     }
 
+    public static void DocxNestedCellEndMarkKeepsItsPlacedInsertionFrame()
+    {
+        foreach (var mode in Modes)
+        foreach (double size in new[] { 12d, 36d })
+        foreach (double before in new[] { 0d, 20d })
+        {
+            var mark = Paragraph(string.Empty, size) with { SpacingBeforePoints = before, SpacingAfterPoints = 20d };
+            var table = Outer([new DocxTableElement(Nested()), new DocxParagraphElement(mark)]);
+            var placed = Layout(table, mode).Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            var carrier = placed.Cells[0].TextLines.Single();
+            TestAssert.True(carrier.FirstLineInsetPoints is { } inset && double.IsFinite(inset),
+                "The zero-occupancy source owner publishes its placed insertion frame independently of glyph metrics.");
+            TestAssert.Equal(170d, carrier.BaselineY + carrier.FirstLineInsetPoints!.Value);
+            TestAssert.Equal(20d, placed.Height);
+            TestAssert.Equal(new DocxOccupiedLineBox(0d, 0d), carrier.OccupiedLineBox);
+        }
+    }
+
+    public static void DocxNestedCellEndMarkRetainsItsSourceFrameThroughReviewProjection()
+    {
+        foreach (double size in new[] { 12d, 36d })
+        {
+            var mark = Paragraph(string.Empty, size) with { LineSpacingPoints = null };
+            var childParagraph = Paragraph("Child") with { LineSpacingPoints = null };
+            var child = new DocxTable("fixed", [80d], [new([Cell(childParagraph)], null)]);
+            var table = Outer([new DocxTableElement(child), new DocxParagraphElement(mark)]);
+            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
+                .Create(source, new Measurer(), default);
+            var placed = layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single();
+            var carrier = placed.Cells[0].TextLines.Single();
+            TestAssert.Equal(.75d, placed.ReviewBorderPrintScale);
+            TestAssert.True(carrier.FirstLineInsetPoints is not null,
+                "Review projection retains the source frame even though the mark paints nothing.");
+            TestAssert.True(Math.Abs(carrier.BaselineY + carrier.FirstLineInsetPoints!.Value - placed.Y) < .000001d,
+                "The insertion frame follows the containing row; an additional glyph-baseline projection must not move it.");
+        }
+    }
+
+    public static void DocxNestedCellEndBookmarkUsesThePlacedFrameWithoutGlyphAscent()
+    {
+        foreach (var mode in Modes)
+        foreach (double size in new[] { 12d, 36d })
+        {
+            var mark = Paragraph(string.Empty, size);
+            var run = mark.Runs[0] with { SourceRunIndex = 0 };
+            mark = mark with { Runs = [run], InlineContent = [],
+                BookmarkAnchors = [new("5", "CellEnd", 0, 0, 0) { InlineItemIndex = 0 }] };
+            var table = Outer([new DocxTableElement(Nested()), new DocxParagraphElement(mark)]);
+            var jump = Paragraph("Jump");
+            jump = jump with { Runs = [jump.Runs[0] with { SourceRunIndex = 0 }],
+                Hyperlinks = [new(null, "CellEnd", null, null, null, null, null, 0, 1, 0, 1, 4)] };
+            var source = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table), new DocxParagraphElement(jump)], [table]);
+            var pages = new DocxRenderer(new TestFaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup, mode)
+                .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            var destination = pages.SelectMany(page => page.Annotations).Single(annotation => annotation.Destination is not null)
+                .Destination!.Value;
+            TestAssert.Equal(0, destination.PageIndex);
+            TestAssert.True(Math.Abs(destination.Top!.Value - 170d) < .001d,
+                "A bookmark on a source-only cell mark uses the placed cell end, independent of the empty run's font size.");
+        }
+    }
+
     private static readonly OoxPdfDocxMarkupGeometryMode[] Modes =
         [OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup];
     private static DocxLayoutEngine Engine(OoxPdfDocxMarkupGeometryMode mode) => new(mode, wordCompatiblePrintScale: 1d);

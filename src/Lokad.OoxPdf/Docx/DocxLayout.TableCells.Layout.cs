@@ -807,12 +807,13 @@ internal sealed partial class DocxLayoutEngine
             paragraphIndex++;
             if (terminalMark)
             {
-                // Keep the source line and its nominal navigation geometry, but
-                // give this nonpainting cell-end carrier no occupied frame.
+                // Keep the placed insertion frame relative to the nominal
+                // baseline, including spacing that owns no occupied height.
                 cursorY = paragraphCursorY;
                 pendingSpacingAfter = 0d;
                 for (int i = paragraphLineStart; i < lines.Count; i++)
-                    lines[i] = lines[i] with { OccupiedLineBox = new(0d, 0d),
+                    lines[i] = lines[i] with { FirstLineInsetPoints = paragraphCursorY + cellFirstBaselineInset - lines[i].BaselineY,
+                        OccupiedLineBox = new(0d, 0d),
                         AppliedBeforeSpacing = 0d, PendingAfterSpacing = 0d,
                         ParagraphBeforeSpacing = 0d, ParagraphAfterSpacing = 0d };
             }

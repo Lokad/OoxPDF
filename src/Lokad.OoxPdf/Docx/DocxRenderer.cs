@@ -1415,16 +1415,22 @@ internal sealed partial class DocxRenderer
                             targetX += columnOffsetX - viewportContextPoints * textEmissionFontScale;
                         }
 
-                        // RV01: fallback segments use diagnosed constants for bookmark targets.
-                        double ascender;
-                        if (target.FallbackFace is not null)
+                        double anchorInset;
+                        if (DocxInlineLineGeometry.IsNonPaintingSourceCarrier(line) &&
+                            line.FirstLineInsetPoints is { } sourceInset && double.IsFinite(sourceInset))
                         {
-                            ascender = target.FontSize * PdfFallbackFont.AscentEm;
+                            // Source-only marks keep their placed insertion
+                            // frame; its relative inset already uses printed points.
+                            anchorInset = sourceInset;
+                        }
+                        else if (target.FallbackFace is not null)
+                        {
+                            anchorInset = target.FontSize * PdfFallbackFont.AscentEm;
                         }
                         else if (target.Resource is { } bookmarkResource)
                         {
                             OpenTypeFont bookmarkFont = bookmarkResource.Embedded.Font;
-                            ascender = line.UsesUniformBodyTypographicBaseline && (bookmarkFont.Os2.SelectionFlags & 0x80) != 0 &&
+                            anchorInset = line.UsesUniformBodyTypographicBaseline && (bookmarkFont.Os2.SelectionFlags & 0x80) != 0 &&
                                 Math.Abs(target.FontSize - line.FontSize * textEmissionFontScale) < 0.000001d
                                 ? DocxLineMetrics.MeasureTypographicBaselineInset(bookmarkFont, target.FontSize)
                                 : bookmarkFont.Os2.WindowsAscender * target.FontSize / bookmarkFont.UnitsPerEm;
@@ -1436,7 +1442,7 @@ internal sealed partial class DocxRenderer
                         destinations[bookmark.Name] = new PdfLinkDestination(
                             pageIndex,
                             targetX,
-                            target.BaselineY + ascender,
+                            target.BaselineY + anchorInset,
                             Zoom: null);
                     }
                 }
