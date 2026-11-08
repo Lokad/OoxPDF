@@ -38,12 +38,15 @@ internal static class DocxRepeatedTableHeaderTests
         foreach (var mode in Modes)
         {
             var table = Table(1);
-            var before = DocxTests.CreateDocxLayoutParagraph("Before", 10d, 175d);
-            var source = Document(table, 0) with
-            { BodyElements = [new DocxParagraphElement(before), new DocxTableElement(table)] };
+            // A single paragraph's large line pitch does not establish its
+            // occupied trailing frame. Use an explicit fixed row as the filler.
+            var before = new DocxTable("fixed", [80d], [new DocxTableRow(
+                [Cell(DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d))], 175d)
+                { HeightRuleValue = "exact", HeightValue = "3500", CantSplit = true }]);
+            var source = DocxTests.CreateLayoutTestDocument(
+                [new DocxTableElement(before), new DocxTableElement(table)], [before, table]);
             var layout = Layout(source, mode);
-            TestAssert.True(!layout.Pages[0].Items.OfType<DocxTableRowLayout>().Any(),
-                "The header cannot fit beside the preceding paragraph.");
+            TestAssert.Equal(175d, layout.Pages[0].Items.OfType<DocxTableRowLayout>().Single().Height);
             var headers = layout.Pages.SelectMany(p => p.Items.OfType<DocxTableRowLayout>().Where(r => r.IsHeader)).ToArray();
             TestAssert.True(headers.Length > 1, "The deferred table still repeats its source header.");
             TestAssert.True(headers.All(r => Text(r) == "H0=2"),
@@ -132,7 +135,9 @@ internal static class DocxRepeatedTableHeaderTests
     }
 
     private static DocxLayout Layout(DocxDocument document, OoxPdfDocxMarkupGeometryMode mode) =>
-        new DocxLayoutEngine(mode, knownPageCount: 20).Create(document, new Measurer(), default);
+        // Keep admission geometry fixed across modes in these semantic tests.
+        // Independent source/PDF controls exercise the actual public print scale.
+        new DocxLayoutEngine(mode, wordCompatiblePrintScale: 1d, knownPageCount: 20).Create(document, new Measurer(), default);
 
     private static DocxTableCell Cell(DocxParagraph paragraph) =>
         new(paragraph.Runs[0].Text, [paragraph], null, null, null, null, [],
