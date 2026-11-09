@@ -74,7 +74,7 @@ internal static partial class DocxInlineCompositionTests
     {
         const string prefix = "tests/Lokad.OoxPdf.Tests/Cases/";
         string input = row.GetProperty("Input").GetString()!;
-        TestAssert.True(input.StartsWith(prefix, StringComparison.Ordinal));
+        TestAssert.True(input.StartsWith(prefix, StringComparison.Ordinal), "Container-grid inputs stay in the public fixture tree.");
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", input[prefix.Length..]));
         using var stream = File.OpenRead(path);
         TestAssert.Equal(row.GetProperty("Sha256").GetString(), Convert.ToHexString(SHA256.HashData(stream)));
