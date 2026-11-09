@@ -39,14 +39,14 @@ internal sealed partial class DocxRenderer
             ? WordCompatibleAllMarkupLaneBackgroundRightBleedPoints
             : page.Width - width - WordCompatibleAllMarkupLaneBackgroundRightBleedPoints;
         if (!ShouldUseLeftMarkupLane(page) &&
-            Math.Abs(markupContext.WordCompatiblePrintScale - 1d) >= 0.000000001d &&
             string.Equals(ResolveMarkupBalloonArea(page, markupContext).Side, "Right", StringComparison.Ordinal))
         {
             // Office A/B (mirrored/dense/landscape/author probes plus the unresolved
             // reference, Word-COM rendered across four print scales): the gray lane hugs
             // balloon bodies at a 22.56pt design inset (pads 16.73/17.11/17.52/18.12 at
             // scales 0.7423/0.7575/0.7762/0.8028, all within 0.02 of the fit), so the edge
-            // follows placed bodies instead of a fixed scaled lane width.
+            // follows placed bodies. Unit-scale Word controls retain that same
+            // physical inset when the existing page margin fits the balloons.
             double balloonBodyX = ResolveMarkupBalloonArea(page, markupContext).X;
             x = Math.Max(0d, balloonBodyX - WordCompatibleAllMarkupBalloonLaneBackgroundBalloonInsetPoints * markupContext.WordCompatiblePrintScale);
             width = Math.Max(0d, page.Width - WordCompatibleAllMarkupLaneBackgroundRightBleedPoints - x);

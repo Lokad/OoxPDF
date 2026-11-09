@@ -1,0 +1,105 @@
+{
+  "Scope": "Five independent Word PDF Review paper/first-body-origin controls; three wide-margin compound sources plus two original unit-scale comment controls. All four raw lane edges and body origins use1pt; font size uses0.1pt. Not an application-view or full-page fidelity claim. Footer placement/print-scale exceptions remain documented separately.",
+  "Rows": [
+    {
+      "Id": "unit-footer",
+      "Input": "unit-footer.docx",
+      "Sha256": "D696B6DAFC9684CA3F4E01A9E282376FD2D294155AF898CF2282AF206D5A02B9",
+      "BodyText": "Composed story.",
+      "BodyOrigin": [
+        72.02400207519531,
+        82.46002197265625
+      ],
+      "BodySize": 11.039999961853027,
+      "Lane": [
+        333.07000732421875,
+        0.0,
+        612.1199951171875,
+        792.1199951171875
+      ],
+      "ReferencePdfSha256": "6E87E58631C6CA6F46A73698669A15B3D67CFB776D603A182729C2B7B48DFEC3",
+      "ExportLogSha256": "BA90B064CE572F4DE792408E37047B50E12B8BA3DEE55C254C0D24BFE8998782",
+      "ExpectedEquationCount": 4
+    },
+    {
+      "Id": "wide-margin-letter",
+      "Input": "wide-margin-letter.docx",
+      "Sha256": "09B9035FB539E9093414E1EF5E2310843B418B239DDAD1276057830B1B8C9442",
+      "BodyText": "Composed story.",
+      "BodyOrigin": [
+        72.02400207519531,
+        82.46002197265625
+      ],
+      "BodySize": 11.039999961853027,
+      "Lane": [
+        321.07000732421875,
+        0.0,
+        612.1199951171875,
+        792.1199951171875
+      ],
+      "ReferencePdfSha256": "8E7D4947418CE5867ACC99B80CA01670E6344C1DFABDDE2C3D3A49458F94C7FA",
+      "ExportLogSha256": "BD825F0321D4ECD0BB5E947949E4C0EE464C3AA82FE9022BE789EB815FA1A992",
+      "ExpectedEquationCount": 4
+    },
+    {
+      "Id": "wide-margin-a4",
+      "Input": "wide-margin-a4.docx",
+      "Sha256": "9D35A02B65BCAB3F811E65DCFCF6AEFEA4975F6526E33B8DDB2CBC5527113AB5",
+      "BodyText": "Composed story.",
+      "BodyOrigin": [
+        72.02400207519531,
+        82.44000244140625
+      ],
+      "BodySize": 11.039999961853027,
+      "Lane": [
+        304.3699951171875,
+        0.0,
+        595.4400024414062,
+        842.0399780273438
+      ],
+      "ReferencePdfSha256": "AC4BAE0BF61791E8A21AD41A43A95E864239B053501139D45FAEC74BD5481E4B",
+      "ExportLogSha256": "5564C39BF9A75C910A006879847E544E200A67226C6B0438C075D2D6A092977B",
+      "ExpectedEquationCount": 4
+    },
+    {
+      "Id": "arial-unscaled",
+      "Input": "arial-unscaled.docx",
+      "Sha256": "8D2D4514B7C7D586E58FE6AA7E2EF041FFD416C4CE207E885C69A919C1BDBD8B",
+      "BodyText": "Prior public glyphs gyp.",
+      "BodyOrigin": [
+        72.02400207519531,
+        83.27996826171875
+      ],
+      "BodySize": 12.0,
+      "Lane": [
+        337.8699951171875,
+        0.0,
+        595.4400024414062,
+        842.0399780273438
+      ],
+      "ReferencePdfSha256": "40A79E31F2ECB76757F728571021B38AC63BFA63F0A0C4D114D3A04C078479D2",
+      "ExportLogSha256": "2C8C226F540F2B29DB4DA470129059A9AE8F3DC4E5C89B8B6852C91E608F4C64",
+      "ExpectedEquationCount": 0
+    },
+    {
+      "Id": "unit-calibri12-auto",
+      "Input": "unit-calibri12-auto.docx",
+      "Sha256": "9D432EBE81FE92F3521D2EC96908B40EF9604EA2903A7B19229C1590CF3D22FB",
+      "BodyText": "Prior public glyphs gyp.",
+      "BodyOrigin": [
+        72.02400207519531,
+        83.39996337890625
+      ],
+      "BodySize": 12.0,
+      "Lane": [
+        337.8699951171875,
+        0.0,
+        595.4400024414062,
+        842.0399780273438
+      ],
+      "ReferencePdfSha256": "F27AF9048915612C6B1EADD6E349C2A2692519CD4E5794CAF4BD017A736CBEBA",
+      "ExportLogSha256": "2E7E627A2F6BAED739A6ACA9F7A458FDD39DFC516FA6F7FC1795365BCB968D82",
+      "ExpectedEquationCount": 0
+    }
+  ]
+}

@@ -629,7 +629,8 @@ internal sealed partial class DocxRenderer
             return 1d;
         }
 
-        return document.PageWidthPoints / designWidth;
+        // A page that already has room for the lane retains its authored size.
+        return Math.Min(1d, document.PageWidthPoints / designWidth);
     }
 
     private static bool HasWordCompatibleBalloonContent(DocxDocument document, DocxMarkupContext markupContext)

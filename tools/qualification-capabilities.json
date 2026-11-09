@@ -59,6 +59,17 @@
     "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms",
     "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets"
   ],
+  "docx-shrink-only-printing": [
+    "DocxUnitPrintOrigins",
+    "DocxWordCompatiblePrintScale",
+    "DocxWordCompatibleReviewPaneMatchesIndependentPaperFrames",
+    "DocxBalloonFramesUnitScaleEdgesMatchIndependentWord",
+    "DocxBalloonFramesPreservePortableContentAndCancellation",
+    "DocxBalloonFramesKeepBookmarksAndRunSplitsNeutral",
+    "PortableRenderingPrintedHyperlinkFramesCoverSourceOrigins",
+    "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms",
+    "PortableRenderingNoteFooterFramesKeepEmptyContinuationContentVisible"
+  ],
   "docx-unit-print-origins": [
     "DocxUnitPrintOrigins",
     "DocxWordCompatibleTextYOffset",

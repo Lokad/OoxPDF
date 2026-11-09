@@ -50,6 +50,44 @@ internal static class DocxUnitPrintOriginTests
         static string Normalize(string text) => Regex.Replace(text, @"\s+", "");
     }
 
+    public static void DocxUnitPrintOriginsAlreadyFittingPagesKeepPortableSizeAndPaperBounds()
+    {
+        using var sources = ReadJson("shrink-only-office.json");
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (var source in sources.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            var page = Render(source, resolver);
+            var lane = DocxCommentsTests.ReviewLaneBounds(page);
+            TestAssert.True(Math.Abs(lane.Y) < .001d && Math.Abs(lane.Height - page.Height) < .001d,
+                "An already fitting page is not magnified beyond its paper.");
+            var body = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                .Single(show => show.Text.Trim() == source.GetProperty("BodyText").GetString());
+            TestAssert.True(Math.Abs(body.Size - source.GetProperty("BodySize").GetDouble()) < .1d,
+                "A wide markup margin does not magnify authored body type.");
+        }
+    }
+
+    public static void DocxUnitPrintOriginsAlreadyFittingPagesMatchIndependentWordPaperAndBody()
+    {
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent paper/body origins use installed Windows fonts.");
+        using var sources = ReadJson("shrink-only-office.json");
+        foreach (var source in sources.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            var page = Render(source, null);
+            var lane = DocxCommentsTests.ReviewLaneBounds(page);
+            double[] edges = [lane.X, page.Height - lane.Y - lane.Height, lane.X + lane.Width, page.Height - lane.Y];
+            for (int index = 0; index < edges.Length; index++)
+                TestAssert.True(Math.Abs(edges[index] - source.GetProperty("Lane")[index].GetDouble()) < 1d,
+                    "Printed lane edges retain independent Word geometry: " + source.GetProperty("Id").GetString());
+            var body = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                .Single(show => show.Text.Trim() == source.GetProperty("BodyText").GetString());
+            TestAssert.True(Math.Abs(body.X - source.GetProperty("BodyOrigin")[0].GetDouble()) < 1d &&
+                Math.Abs(page.Height - body.Y - source.GetProperty("BodyOrigin")[1].GetDouble()) < 1d &&
+                Math.Abs(body.Size - source.GetProperty("BodySize").GetDouble()) < .1d,
+                "Already fitting pages retain independent body origins and size: " + source.GetProperty("Id").GetString());
+        }
+    }
+
     private static PdfPage Render(JsonElement source, IFontResolver? resolver, CancellationToken cancellationToken = default)
     {
         string file = Path.GetFileName(source.GetProperty("Input").GetString()!);
