@@ -260,14 +260,17 @@ internal sealed partial class DocxLayoutEngine
         }
         else
         {
-            // A complete automatic picture-only paragraph owns the same frame
-            // in every container. Ordinary static text and inline boxes retain
-            // their existing source eligibility; mixed unprepared pictures do not.
-            if (paragraph.InlineTextBoxes.Count == 0 &&
-                !(allowStaticFallback && paragraph.Images.Count == 0) &&
+            // Ordinary static prose shares the declared-row contract already
+            // used for prepared inline content. Pictures and box hosts retain
+            // their automatic-flow admission; notes do not opt into this path.
+            bool plainStaticText = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0 && paragraph.Images.Count == 0;
+            bool supportedFlow = plainStaticText
+                ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
+                : DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
+            if (!plainStaticText && paragraph.InlineTextBoxes.Count == 0 &&
                 !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
-                !DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph) ||
+                !supportedFlow ||
                 paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
             // Source-owned boxes and sibling pictures carry the parser's ordered view.
             // Ordinary static text reuses run affinity without mutating its model.

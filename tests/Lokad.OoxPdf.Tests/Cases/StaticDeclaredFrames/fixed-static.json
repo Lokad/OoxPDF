@@ -160,5 +160,19 @@
       "DIRECT STATIC SOUTH"
     ],
     "Role": "DirectFixed"
+  },
+  {
+    "Id": "footer-terminal-min-text12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/footer-terminal-min-text12.docx",
+    "Sha256": "DD60FCC1A6565F09173FA178DFBD1F406378EB08D89E6327FD7F16DD62A423C8",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Terminal box control."
+    ],
+    "Role": "StaticBox"
   }
 ]
