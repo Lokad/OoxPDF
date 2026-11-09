@@ -11998,7 +11998,7 @@
     "DocxInlineCompositionMinimumLineSlotOwnsLeadingAndRetainsSpacingFallbacks"
   ],
   "docx-minimum-static-frames": [
-    "DocxStaticMinimumFrames",
+    "DocxStaticDeclaredFrames",
     "DocxInlineCompositionMinimumStaticFrames",
     "PortableRenderingMinimumStaticFrames",
     "DocxStaticFrameMapping",
@@ -12058,7 +12058,7 @@
     "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection",
     "PortableRenderingAtomicFootnoteRetainsLastBodyLine",
     "DocxInlineCompositionMinimumLineSlotOwnsLeadingAndRetainsSpacingFallbacks",
-    "DocxStaticMinimumFrames",
+    "DocxStaticDeclaredFrames",
     "DocxInlineCompositionMinimumStaticFrames",
     "PortableRenderingMinimumStaticFrames",
     "DocxStaticFrameMapping",
@@ -12086,7 +12086,7 @@
     "DocxContinuedEndnoteFooterFramesKeepSelectedStoriesClearAndPreserveSourceLines"
   ],
   "docx-typographic-static-minimums": [
-    "DocxStaticMinimumFrames",
+    "DocxStaticDeclaredFrames",
     "DocxInlineCompositionMinimumStaticFrames",
     "PortableRenderingMinimumStaticFrames",
     "DocxStaticFrameMapping",
