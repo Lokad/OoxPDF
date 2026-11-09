@@ -27,9 +27,10 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureBoxArgument(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         OpenTypeFont metricFont, double spacingSize, CancellationToken token, out DocxMathBox? child, out string? fallback,
         DocxMathRowLayout.Neighbors neighbors = default, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null) =>
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null,
+        IMemoryReservation? assemblyStorage = null) =>
         HasStructuredBoxArgument(equation, token)
-            ? TryMeasure(equation, resolveFont, token, out child, out fallback, metricFont, resolveControlFont, resolveControlMetrics, rowControlSize: spacingSize)
+            ? TryMeasure(equation, resolveFont, token, out child, out fallback, metricFont, resolveControlFont, resolveControlMetrics, rowControlSize: spacingSize, assemblyStorage: assemblyStorage)
             : TryMeasureLiteralArgument(equation.Content, resolveFont, metricFont, spacingSize, 0, token,
                 out child, out fallback, out _, exportFontSize: true, operatorSpacingFontSize: spacingSize, neighbors: neighbors);
 }

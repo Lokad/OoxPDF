@@ -10,7 +10,8 @@ internal static partial class DocxMathLayout
         double XMin, double YMin, double XMax, double YMax, IReadOnlyList<DocxMathGlyphPartPlacement> Parts);
 
     private static bool TryMeasureVerticalGlyphShape(PdfFontResource resource, int point, double height, double glyphScale,
-        bool nearest, CancellationToken token, [NotNullWhen(true)] out VerticalGlyphShape? shape)
+        bool nearest, CancellationToken token, [NotNullWhen(true)] out VerticalGlyphShape? shape,
+        IMemoryReservation? assemblyStorage)
     {
         shape = null;
         var font = resource.Font.Font;
@@ -24,26 +25,37 @@ internal static partial class DocxMathLayout
             // an assembly only supplies a height that ready-made shapes cannot.
             return TryMeasureFixedGlyphShape(resource, selected.Glyph, selected.Advance, out shape);
         }
-        if (!font.TryGetMathVerticalAssembly(canonical, token, out var assembly) || assembly is null ||
-            !DocxMathGlyphAssembly.TryArrange(assembly, height, token, out var arranged, out double advanceHeight) || arranged is null) return false;
-        var parts = new DocxMathGlyphPartPlacement[arranged.Count];
-        double xMin = double.PositiveInfinity, yMin = double.PositiveInfinity,
-            xMax = double.NegativeInfinity, yMax = double.NegativeInfinity, advance = 0d;
-        for (int index = 0; index < arranged.Count; index++)
+        long previousCapacity = assemblyStorage?.Bytes ?? 0;
+        bool retained = false;
+        try
         {
-            token.ThrowIfCancellationRequested();
-            var part = arranged[index];
-            if (!font.TryGetGlyphBounds(part.Part.Glyph, out var bounds) ||
-                !resource.Font.TryGetEncodedCid(part.Part.Glyph, out ushort cid)) return false;
-            string encoded = cid.ToString("X4", CultureInfo.InvariantCulture);
-            parts[index] = new(part.Part.Glyph, encoded, 0d, part.Offset * glyphScale);
-            advance = Math.Max(advance, font.GetAdvanceWidth(part.Part.Glyph));
-            xMin = Math.Min(xMin, bounds.XMin); xMax = Math.Max(xMax, bounds.XMax);
-            yMin = Math.Min(yMin, part.Offset + bounds.YMin); yMax = Math.Max(yMax, part.Offset + bounds.YMax);
+            if (!font.TryGetMathVerticalAssembly(canonical, token, out var assembly) || assembly is null ||
+                !DocxMathGlyphAssembly.TryArrange(assembly, height, token, out var arranged, out double advanceHeight,
+                    assemblyStorage) || arranged is null) return false;
+            var parts = new DocxMathGlyphPartPlacement[arranged.Count];
+            double xMin = double.PositiveInfinity, yMin = double.PositiveInfinity,
+                xMax = double.NegativeInfinity, yMax = double.NegativeInfinity, advance = 0d;
+            for (int index = 0; index < arranged.Count; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                var part = arranged[index];
+                if (!font.TryGetGlyphBounds(part.Part.Glyph, out var bounds) ||
+                    !resource.Font.TryGetEncodedCid(part.Part.Glyph, out ushort cid)) return false;
+                string encoded = cid.ToString("X4", CultureInfo.InvariantCulture);
+                parts[index] = new(part.Part.Glyph, encoded, 0d, part.Offset * glyphScale);
+                advance = Math.Max(advance, font.GetAdvanceWidth(part.Part.Glyph));
+                xMin = Math.Min(xMin, bounds.XMin); xMax = Math.Max(xMax, bounds.XMax);
+                yMin = Math.Min(yMin, part.Offset + bounds.YMin); yMax = Math.Max(yMax, part.Offset + bounds.YMax);
+            }
+            shape = new(parts[0].OriginalGlyph, parts[0].EncodedGlyph, advanceHeight, advance,
+                xMin, yMin, xMax, yMax, Array.AsReadOnly(parts));
+            retained = true;
+            return true;
         }
-        shape = new(parts[0].OriginalGlyph, parts[0].EncodedGlyph, advanceHeight, advance,
-            xMin, yMin, xMax, yMax, Array.AsReadOnly(parts));
-        return true;
+        finally
+        {
+            if (!retained) OoxMemory.Resize(assemblyStorage, previousCapacity);
+        }
     }
 
     private static bool TryMeasureFixedGlyphShape(PdfFontResource resource, ushort glyph, double advanceHeight,

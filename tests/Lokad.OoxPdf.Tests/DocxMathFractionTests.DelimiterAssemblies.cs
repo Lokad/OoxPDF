@@ -98,9 +98,16 @@ internal static partial class DocxMathFractionTests
             using var output = new MemoryStream();
             PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]), new OoxConversionLimits(), diagnosticSink: null, default, temporaryStorage: new OoxPdfFileTemporaryStorage(Path.GetTempPath())).GetAwaiter().GetResult();
             TestAssert.True(output.Length > 0, "Complete delimiter assemblies write as one logical scalar per mark.");
-            bool complete = DocxMathLayout.TryMeasure(equation, _ => missing, default, out var absent, out _, resolveControlFont: _ => missing);
+            var budget = new TestMemoryBudget();
+            using var storage = OoxMemory.Reserve(budget, 37);
+            bool complete = DocxMathLayout.TryMeasure(equation, _ => missing, default, out var absent, out _,
+                resolveControlFont: _ => missing, assemblyStorage: storage);
             TestAssert.True(grow ? !complete && absent is null : complete,
                 "Missing late assembly encoding rejects the whole growing box; fixed glyphs need no parts.");
+            // The opening assembly may remain with the caller's failed equation;
+            // the failed closing shape refunds its own construction immediately.
+            long openParts = grow ? box.Glyphs.First().AssemblyParts.Count : 0;
+            TestAssert.Equal(37 + openParts * DocxMathGlyphAssembly.PartCapacity, budget.Reserved);
             if (!grow) continue;
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();

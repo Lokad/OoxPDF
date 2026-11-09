@@ -17,7 +17,8 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureRadical(DocxEquation equation, DocxMathRadical radical,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics,
+        IMemoryReservation? assemblyStorage = null)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources))
@@ -33,7 +34,7 @@ internal static partial class DocxMathLayout
         // Discovery admits existing bounded fraction/script boxes; their own
         // literal-role checks prevent arbitrary recursive radicands.
         bool measuredChild = TryMeasureBoxArgument(radicandEquation, resolveFont, font, size, token, out var child, out fallback,
-            resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics);
+            resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics, assemblyStorage: assemblyStorage);
         if (!measuredChild || child is null)
         { fallback ??= "EmptyMathRadical"; return false; }
         double scale = size / font.UnitsPerEm;
@@ -43,7 +44,7 @@ internal static partial class DocxMathLayout
         double extra = constants.GetValue(OpenTypeMathConstant.RadicalExtraAscender) * scale;
         double needed = child.AboveBaseline + (child.EnclosureBelowBaseline ?? child.BelowBaseline) + gap + rule;
         if (gap < 0d || rule <= 0d || extra < 0d || !double.IsFinite(needed) ||
-            !TryMeasureVerticalGlyphShape(resource, 0x221A, needed / glyphScale, glyphScale, nearest: false, token, out var shape))
+            !TryMeasureVerticalGlyphShape(resource, 0x221A, needed / glyphScale, glyphScale, nearest: false, token, out var shape, assemblyStorage))
         { fallback = "UnsupportedMathRadicalVariant"; return false; }
         gap += Math.Max(0d, shape.AdvanceHeight * glyphScale - needed) / 2d;
         double baseline = child.AboveBaseline + gap + rule - shape.YMax * glyphScale;

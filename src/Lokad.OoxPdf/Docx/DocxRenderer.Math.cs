@@ -332,13 +332,34 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (candidate.ControlFaces.Any(unavailableControlFaces.Contains)) { continue; }
-            if (!DocxMathLayout.TryMeasure(candidate.Equation,
-                run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _, candidate.ParentMetrics,
-                control => controlKeys.TryGetValue(control, out var controlKey) && fonts.TryGetValue(controlKey, out var resource) ? resource : null,
-                control => controlKeys.TryGetValue(control, out var controlKey) && fontCache.TryGetValue(controlKey, out var metricFont) ? metricFont : null) ||
-                box is null || box.Glyphs.Count == 0) { continue; }
-            if (TryPrepareMathParagraph(candidate.Paragraph, candidate.Equation, candidate.SourceEquation, box, token, out var prepared))
-                layouts.Add(candidate.SourceEquation, prepared!);
+            IMemoryReservation? assemblyStorage = OoxMemory.Reserve(OoxConversionBudget.Current?.Models, 0);
+            try
+            {
+                if (!DocxMathLayout.TryMeasure(candidate.Equation,
+                    run => runKeys.TryGetValue(run, out var key) ? fonts[key] : null, token, out DocxMathBox? box, out _, candidate.ParentMetrics,
+                    control => controlKeys.TryGetValue(control, out var controlKey) && fonts.TryGetValue(controlKey, out var resource) ? resource : null,
+                    control => controlKeys.TryGetValue(control, out var controlKey) && fontCache.TryGetValue(controlKey, out var metricFont) ? metricFont : null,
+                    assemblyStorage: assemblyStorage) ||
+                    box is null || box.Glyphs.Count == 0) { continue; }
+                if (TryPrepareMathParagraph(candidate.Paragraph, candidate.Equation, candidate.SourceEquation, box, token, out var prepared))
+                {
+                    if (assemblyStorage is not null)
+                    {
+                        long retainedParts = 0;
+                        foreach (var glyph in box.Glyphs)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            retainedParts = checked(retainedParts + glyph.AssemblyParts.Count);
+                        }
+                        OoxMemory.Resize(assemblyStorage, checked(DocxMathGlyphAssembly.PartCapacity * retainedParts));
+                    }
+                    layouts.Add(candidate.SourceEquation, prepared!);
+                    // The existing model group retains successful capacity until its
+                    // final layout/painting user. Failed preparation refunds here.
+                    assemblyStorage = null;
+                }
+            }
+            finally { assemblyStorage?.Dispose(); }
         }
         return layouts;
     }

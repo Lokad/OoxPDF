@@ -25,7 +25,8 @@ internal static partial class DocxMathLayout
 
     private static bool TryMeasureScripts(DocxEquation equation, DocxMathScripts scripts,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token, out DocxMathBox? box, out string? fallback,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, int startingLevel = 0)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, int startingLevel = 0,
+        IMemoryReservation? assemblyStorage = null)
     {
         box = null; fallback = null;
         if (!TryGetRuns(equation, token, out IReadOnlyList<DocxMathRunSource> sources) ||
@@ -58,7 +59,7 @@ internal static partial class DocxMathLayout
         // composition step cannot recurse through arbitrary authored nesting.
         bool measuredBase = fractionBase
             ? TryMeasure(baseEquation, resolveFont, token, out DocxMathBox? basis, out fallback,
-                resolveControlMetrics: resolveControlMetrics)
+                resolveControlMetrics: resolveControlMetrics, assemblyStorage: assemblyStorage)
             : TryMeasureLiteralArgument(scripts.Base, resolveFont, font, size, startingLevel, token, out basis, out fallback, out _, exportFontSize: true);
         if (!measuredBase || basis is null) { fallback ??= "EmptyMathScriptBase"; return false; }
         if (basis.Glyphs.Any(glyph => !ReferenceEquals(glyph.Font.Font.Font, font)))

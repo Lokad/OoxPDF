@@ -55,7 +55,8 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureDelimiter(DocxEquation equation, DocxMathDelimiter delimiter,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics,
+        IMemoryReservation? assemblyStorage = null)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources))
@@ -73,7 +74,7 @@ internal static partial class DocxMathLayout
         {
             token.ThrowIfCancellationRequested();
             if (!TryMeasureBoxArgument(equation with { Content = argument }, resolveFont, font, size, token,
-                out var child, out fallback, resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics) || child is null)
+                out var child, out fallback, resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics, assemblyStorage: assemblyStorage) || child is null)
             { fallback ??= "UnsupportedMathDelimiterArgument"; return false; }
             children.Add(child);above = Math.Max(above, child.AboveBaseline);below = Math.Max(below, child.BelowBaseline);
         }
@@ -123,7 +124,7 @@ internal static partial class DocxMathLayout
             VerticalGlyphShape? shape;
             bool measured = delimiter.GrowValue == false
                 ? TryMeasureFixedGlyphShape(resource, font.MapCodePoint(point), 0d, out shape)
-                : TryMeasureVerticalGlyphShape(resource, point, height / scale, scale, nearest: true, token, out shape);
+                : TryMeasureVerticalGlyphShape(resource, point, height / scale, scale, nearest: true, token, out shape, assemblyStorage);
             if (!measured || shape is null) return false;
             double baseline = axis - (shape.YMax + shape.YMin) / 2d * scale;
             double glyphAdvance = shape.AdvanceWidth * scale;

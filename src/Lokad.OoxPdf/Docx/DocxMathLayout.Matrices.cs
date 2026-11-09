@@ -58,7 +58,8 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureMatrix(DocxEquation equation, DocxMathMatrix matrix,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize = null)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize = null,
+        IMemoryReservation? assemblyStorage = null)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources))
@@ -106,7 +107,7 @@ internal static partial class DocxMathLayout
                 }
                 if (!TryMeasureBoxArgument(equation with { Content = matrix.Rows[r].Cells[c], ParentFontSize = size },
                     resolveFont, font, size, token, out var cell, out fallback, neighbors: new(After: DocxMathRowLayout.AtomKind.Ordinary),
-                    resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics) ||
+                    resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics, assemblyStorage: assemblyStorage) ||
                     cell is null || cell.Glyphs.Count == 0 && cell.AdvanceWidth <= 0d && cell.AboveBaseline + cell.BelowBaseline <= 0d)
                 { fallback ??= "UnsupportedMathMatrixCell"; return false; }
                 measured[c] = cell; widths[c] = Math.Max(widths[c], cell.AdvanceWidth);

@@ -6,6 +6,31 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathFractionTests
 {
+    public static void DocxMathAssemblyRepeatedPartsAdmitConstructionBeforeMaterializing()
+    {
+        var assembly = new OpenTypeMathGlyphAssembly(0, 0, [new(34, 0, 0, 1, true)]);
+        foreach (bool refuse in new[] { false, true })
+        {
+            var budget = new TestMemoryBudget(refuse ? 8192 : 1024 * 1024);
+            using (var storage = OoxMemory.Reserve(budget, 4096))
+            {
+                if (refuse)
+                    TestAssert.Equal(OoxPdfLimitKind.MemoryAdmission, TestAssert.Throws<OoxPdfLimitExceededException>(() =>
+                        DocxMathGlyphAssembly.TryArrange(assembly, 1000d, default, out _, out _, storage)).Kind);
+                else
+                {
+                    TestAssert.True(DocxMathGlyphAssembly.TryArrange(assembly, 1000d, default, out var result, out double height, storage),
+                        "Repeated extenders keep complete source order and exact height.");
+                    TestAssert.Equal(1000, TestAssert.NotNull(result).Count);
+                    TestAssert.Equal(1000d, height);
+                    TestAssert.True(budget.Reserved >= 4096 + 1000 * 8,
+                        "Repeated output capacity is additional to earlier equation storage.");
+                }
+            }
+            TestAssert.Equal(0L, budget.Reserved);
+        }
+    }
+
     public static void DocxMathGlyphAssemblyAvoidsRedundantLargePartCopies()
     {
         var warmup = new OpenTypeMathGlyphAssembly(0, 0, [new(34, 0, 0, 1, false)]);

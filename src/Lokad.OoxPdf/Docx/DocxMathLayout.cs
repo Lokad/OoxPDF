@@ -201,10 +201,11 @@ internal static partial class DocxMathLayout
     public static bool TryMeasure(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont = null,
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont = null,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null, double? rowControlSize = null)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics = null, double? rowControlSize = null,
+        IMemoryReservation? assemblyStorage = null)
     {
         bool measured = TryMeasureCore(equation, resolveFont, token, out box, out fallback, parentMetricsFont,
-            resolveControlFont, resolveControlMetrics, rowControlSize);
+            resolveControlFont, resolveControlMetrics, rowControlSize, assemblyStorage);
         if (measured && box is not null) box = WithStandaloneBookmarks(equation, box, token);
         return measured;
     }
@@ -212,22 +213,23 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureCore(DocxEquation equation, Func<DocxMathRun, PdfFontResource?> resolveFont,
         CancellationToken token, out DocxMathBox? box, out string? fallback, OpenTypeFont? parentMetricsFont,
         Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize,
+        IMemoryReservation? assemblyStorage)
     {
         if (GetMatrix(equation, token) is { } matrix)
-            return TryMeasureMatrix(equation, matrix, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize);
+            return TryMeasureMatrix(equation, matrix, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize, assemblyStorage);
         if (GetFunction(equation) is { } function)
-            return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize);
+            return TryMeasureFunction(equation, function, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, rowControlSize, assemblyStorage);
         if (GetScripts(equation) is { } scripts)
-            return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback, resolveControlMetrics);
+            return TryMeasureScripts(equation, scripts, resolveFont, token, out box, out fallback, resolveControlMetrics, assemblyStorage: assemblyStorage);
         if (GetNary(equation, token) is { } nary)
-            return TryMeasureNary(equation, nary, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
+            return TryMeasureNary(equation, nary, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, assemblyStorage: assemblyStorage);
         if (GetDelimiter(equation) is { } delimiter)
-            return TryMeasureDelimiter(equation, delimiter, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
+            return TryMeasureDelimiter(equation, delimiter, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, assemblyStorage: assemblyStorage);
         if (GetRadical(equation) is { } radical)
-            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics);
+            return TryMeasureRadical(equation, radical, resolveFont, token, out box, out fallback, resolveControlFont, resolveControlMetrics, assemblyStorage: assemblyStorage);
         if (GetStructuredRow(equation, token) is { } compound)
-            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics, rowControlSize);
+            return TryMeasureStructuredRow(equation, compound, resolveFont, token, out box, out fallback, parentMetricsFont, resolveControlFont, resolveControlMetrics, rowControlSize, assemblyStorage);
         if (GetFraction(equation) is not { } fraction)
             return DocxMathRowLayout.TryMeasure(equation.Content, resolveFont, token, out box, out fallback);
         if (fraction.TypeValue == "skw")
@@ -289,7 +291,7 @@ internal static partial class DocxMathLayout
             {
                 empty = false;
                 return TryMeasureScripts(childEquation, childScripts, resolveFont, token, out child, out reason,
-                    resolveControlMetrics, startingLevel: scriptLevel);
+                    resolveControlMetrics, startingLevel: scriptLevel, assemblyStorage: assemblyStorage);
             }
             return TryMeasureLiteralArgument(argument, resolveFont, metricOwner, parentSize, scriptLevel, token,
                 out child, out reason, out empty, operatorSpacingFontSize: parentSize);

@@ -35,7 +35,8 @@ internal static partial class DocxMathLayout
     private static bool TryMeasureFunction(DocxEquation equation, DocxMathFunction function,
         Func<DocxMathRun, PdfFontResource?> resolveFont, CancellationToken token,
         out DocxMathBox? box, out string? fallback, Func<IDocxMathControl, PdfFontResource?>? resolveControlFont,
-        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize = null)
+        Func<IDocxMathControl, OpenTypeFont?>? resolveControlMetrics, double? rowControlSize = null,
+        IMemoryReservation? assemblyStorage = null)
     {
         box = null;
         if (!TryGetRuns(equation, token, out var sources) || sources.Count == 0)
@@ -54,9 +55,9 @@ internal static partial class DocxMathLayout
         { fallback ??= "UnsupportedMathFunctionName"; return false; }
         DocxEquation argumentEquation = equation with { Content = function.Argument };
         bool measured = GetDelimiter(argumentEquation) is not null
-            ? TryMeasure(argumentEquation, resolveFont, token, out var argument, out fallback, font, resolveControlFont, resolveControlMetrics)
+            ? TryMeasure(argumentEquation, resolveFont, token, out var argument, out fallback, font, resolveControlFont, resolveControlMetrics, assemblyStorage: assemblyStorage)
             : TryMeasureBoxArgument(argumentEquation, resolveFont, font, size, token, out argument, out fallback,
-                resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics);
+                resolveControlFont: resolveControlFont, resolveControlMetrics: resolveControlMetrics, assemblyStorage: assemblyStorage);
         if (!measured || argument is null)
         { fallback ??= "UnsupportedMathFunctionArgument"; return false; }
         double gap = argument.Edges?.First == DocxMathRowLayout.AtomKind.Open ? 0d : size / 6d;

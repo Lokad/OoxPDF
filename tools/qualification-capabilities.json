@@ -37,6 +37,7 @@
     "DocxWrappedCalibriKerning"
   ],
   "font-math-assembly-metadata": [
+    "DocxMathAssembly",
     "MathFontVertical",
     "MathFontRadical",
     "MathFontDelimiterAssemblies",

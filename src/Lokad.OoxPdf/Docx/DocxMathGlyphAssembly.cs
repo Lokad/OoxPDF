@@ -8,10 +8,17 @@ internal readonly record struct DocxMathGlyphPartPosition(OpenTypeMathGlyphPart 
 // keeps one source symbol for the complete assembly.
 internal static class DocxMathGlyphAssembly
 {
+    // Coarse preparation-family capacity: selected/repeated records, construction
+    // positions and retained placements/encodings. Painting has separate headroom.
+    internal const long PartCapacity = 256;
+
     public static bool TryArrange(OpenTypeMathGlyphAssembly assembly, double targetHeight, CancellationToken token,
-        out IReadOnlyList<DocxMathGlyphPartPosition>? positions, out double height)
+        out IReadOnlyList<DocxMathGlyphPartPosition>? positions, out double height,
+        IMemoryReservation? assemblyStorage = null)
     {
         positions = null; height = 0d;
+        long previousCapacity = assemblyStorage?.Bytes ?? 0;
+        int admittedParts = 0;
         token.ThrowIfCancellationRequested();
         var parts = assembly.Parts;
         int minimum = assembly.MinimumConnectorOverlap;
@@ -30,6 +37,7 @@ internal static class DocxMathGlyphAssembly
         IReadOnlyList<OpenTypeMathGlyphPart> selected = parts;
         if (fixedCount != parts.Count)
         {
+            Admit(fixedCount);
             var fixedParts = new OpenTypeMathGlyphPart[fixedCount];
             int index = 0;
             foreach (var part in parts)
@@ -58,6 +66,7 @@ internal static class DocxMathGlyphAssembly
                     if (part.IsExtender && part.FullAdvance > minimum) count += additional;
                 }
                 if (count > int.MaxValue) return false;
+                Admit((int)count);
                 var expanded = new OpenTypeMathGlyphPart[(int)count];
                 int index = 0;
                 foreach (var part in parts)
@@ -72,6 +81,7 @@ internal static class DocxMathGlyphAssembly
         }
         if (!TryRange(selected, out double smallest, out double largest) || largest < targetHeight ||
             smallest > ushort.MaxValue) return false;
+        Admit(selected.Count);
         double actualHeight = Math.Max(smallest, targetHeight);
         // Distribute growth equally until a connection reaches its minimum
         // overlap, then distribute the remainder over the other connections.
@@ -112,6 +122,14 @@ internal static class DocxMathGlyphAssembly
         height = offset + selected[^1].FullAdvance;
         positions = Array.AsReadOnly(result);
         return true;
+
+        void Admit(int count)
+        {
+            if (assemblyStorage is null || count <= admittedParts) return;
+            OoxMemory.Resize(assemblyStorage, checked(previousCapacity + PartCapacity * count));
+            admittedParts = count;
+            token.ThrowIfCancellationRequested();
+        }
 
         bool TryRange(IReadOnlyList<OpenTypeMathGlyphPart> sequence, out double smallest, out double largest)
         {
