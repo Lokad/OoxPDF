@@ -1,0 +1,235 @@
+[
+  {
+    "Id": "static-box-table-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-header.docx",
+    "Sha256": "03017F132EE45D994D3862B8876CA97287B6FF9BA98094398DA751E37AD3E257",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "static-box-table-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-footer.docx",
+    "Sha256": "84CAA9E8CC97DFF6D1A12A68895B89A512B2938B65E225B6D1E0D10B00477400",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "MathPart": "word/static-inline-ordinary-footer-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "static-box-table-nested-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-nested-header.docx",
+    "Sha256": "7DADD32A8125AE1DCFEE105B6B60612B957231F1C5FB2F491453A332B2534AC4",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "static-box-table-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/InlineBoxMath/static-box-table-body.docx",
+    "Sha256": "6DA01F9AE600EB4970BCB42719BDAA380ADB7AE16CA4887A56549E192A46AF34",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "MathPart": "word/document.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "box-grid-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/box-grid-zero.docx",
+    "Sha256": "DD62C9B2B872A2FC789DE665949FEC5162FD1D0C0EE95FD137151C8660815FBF",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "box-grid-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/box-grid-wide.docx",
+    "Sha256": "6A4D602916D323E164D65A62DB6A30424A3BC9A00211E99B34AC493F57738729",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "box-grid-indent",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/box-grid-indent.docx",
+    "Sha256": "531012E0CF882B87B374912ECE3044960D88A9F4D6FAEF7986FFB4CD389CF963",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "box-grid-body-cell",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/box-grid-body-cell.docx",
+    "Sha256": "BADF913040BD2E78B3C9544ED6BD02DF7B5298BE09A96E0B4C5669870066B304",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/document.xml",
+    "Role": "NestedResidual"
+  },
+  {
+    "Id": "body-text-first",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/body-text-first.docx",
+    "Sha256": "E2299B6B95AB7753A08AB763C3E27D4E749CBFE480BFFDB44C0CC6B52E929FFD",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/document.xml",
+    "Role": "NestedRelative",
+    "RelativeParentText": "Outer origin control."
+  },
+  {
+    "Id": "nested-box-wide",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/nested-box-wide.docx",
+    "Sha256": "5C95151DEDCA969727C1A2042F7FC6BB79D4EFC7EC27560F9BBF3ACB08ECB9BA",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "body-absent",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/body-absent.docx",
+    "Sha256": "4B99F74BD6089CF3BAC26AF015CF8193347CF0D8CBCFEA0DAE7E750392FB76BB",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/document.xml",
+    "Role": "FlowingControl"
+  },
+  {
+    "Id": "body-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/body-zero.docx",
+    "Sha256": "C19D045C9886A8624CB843CDF0109AAAFFBEE2DB0F888F2FEA198BEEB3F19089",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/document.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "box-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/box-zero.docx",
+    "Sha256": "8126C1C422B7A3795E45AFC402BFE1714068EF969AEDA96FA8E7442AA4A2EBE0",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "header-zero",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/header-zero.docx",
+    "Sha256": "AF8747F285DEAA1A73B5D2D6E895E3E8F769A68BAE650828790F8BEEFA4CCC49",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "box-table-margin",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/box-table-margin.docx",
+    "Sha256": "ACEA2B6A60ECCE167E193CBE478F9C62F12A705F3912555DE74E099318229848",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/static-inline-ordinary-header-box.xml",
+    "Role": "Contained"
+  },
+  {
+    "Id": "floating-table-ordered",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/TableGridOrigins/Containers/floating-table-ordered.docx",
+    "Sha256": "5C653E77A26B175374C222A8AA8E981E92FBC329170EACF9609B7C8F0CE49C9E",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "MathPart": "word/document.xml",
+    "Role": "Contained"
+  }
+]

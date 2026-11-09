@@ -2506,7 +2506,8 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber: pageNumber,
                     pageCount: pageCount,
                     paragraphSpacingScale: paragraphSpacingScale,
-                    mathEquations: mathEquations);
+                    mathEquations: mathEquations,
+                    anchorAuthoredCellText: story.Kind != DocxRelatedStoryKind.TextBox);
                 int relatedStoryPageNumber = pageNumber ?? 1;
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {

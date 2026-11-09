@@ -303,7 +303,8 @@ internal sealed partial class DocxLayoutEngine
             pageCount: context.PageCount,
             paragraphSpacingScale: context.ParagraphSpacingScale,
             mathEquations: context.MathEquations,
-            cancellationToken: context.CancellationToken);
+            cancellationToken: context.CancellationToken,
+            anchorAuthoredCellText: false);
         return frame.RowHeights.Sum();
     }
 
@@ -1178,7 +1179,8 @@ internal sealed partial class DocxLayoutEngine
                     pageCount: pageCount,
                     paragraphSpacingScale: paragraphSpacingScale,
                     mathEquations: mathEquations,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken,
+                    anchorAuthoredCellText: false);
                 for (int rowIndex = 0; rowIndex < tableElement.Table.Rows.Count; rowIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();

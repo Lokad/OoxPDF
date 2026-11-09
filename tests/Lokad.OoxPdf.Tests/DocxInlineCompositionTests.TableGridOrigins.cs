@@ -34,8 +34,8 @@ internal static partial class DocxInlineCompositionTests
                 var page = LayoutSharedTable(authored ? basis with { IndentPoints = 0d } : basis);
                 var flowing = page.Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
                 var stationary = page.StaticTableRows.Single().Cells.Single();
-                TestAssert.True(Math.Abs(stationary.X - page.MarginLeft) < .001d,
-                    "Static containers preserve their grid anchor with absent or authored zero indentation.");
+                TestAssert.True(Math.Abs(stationary.X - (authored ? flowing.X : page.MarginLeft)) < .001d,
+                    "Static containers keep an implicit grid origin; explicit zero indentation owns the same text anchor as body flow.");
                 TestAssert.Equal(flowing.Width, stationary.Width);
                 if (authored || margin is not null)
                     TestAssert.True(Math.Abs(flowing.TextLines.Single().X - page.MarginLeft) < .001d,

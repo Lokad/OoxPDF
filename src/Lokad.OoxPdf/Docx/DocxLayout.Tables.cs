@@ -1045,12 +1045,13 @@ internal sealed partial class DocxLayoutEngine
             {
                 gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
             }
-            else if (anchorAuthoredCellText && (table.IndentPoints is not null || firstCell.Margins.LeftPoints is not null))
+            else if (table.IndentPoints is not null ||
+                anchorAuthoredCellText && firstCell.Margins.LeftPoints is not null)
             {
-                // Flowing stories anchor the first text edge. Header/footer
-                // containers anchor the grid instead (independent zero/wide
-                // margin and ordinary/math-frame Word controls). Explicit
-                // indentation, style and compatibility retain their own rules.
+                // Resolved indentation, including explicit zero, owns the text
+                // anchor in every container. Without it, independent containers
+                // keep their grid origin; flowing stories retain their existing
+                // authored-margin fallback and its separate qualification.
                 gridX = tableX - ResolveTableCellHorizontalEdgeInset(firstCell, "left", firstCell.Margins.LeftPoints, fixedScale);
             }
         }
