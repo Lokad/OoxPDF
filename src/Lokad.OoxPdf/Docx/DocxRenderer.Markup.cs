@@ -985,7 +985,10 @@ internal sealed partial class DocxRenderer
                 var candidate = balloonCandidates[index];
                 if (candidate.Kind != DocxMarkupBalloonKind.Revision) continue;
                 CollectRevisionCaptionGlyphs(candidate, revisionCodepoints, cancellationToken);
-                if (revisionBodyResource is not null)
+                // A title-only caption has no body metrics. In particular, cell
+                // structure labels retain their independently anchored title frame.
+                if (revisionBodyResource is not null &&
+                    !string.IsNullOrWhiteSpace(candidate.WordCompatibleBody ?? candidate.Body))
                     balloonCandidates[index] = candidate with { WordCompatibleBodyResource = revisionBodyResource,
                         WordCompatibleBodyLineHeightEm = revisionLineHeightEm };
             }
