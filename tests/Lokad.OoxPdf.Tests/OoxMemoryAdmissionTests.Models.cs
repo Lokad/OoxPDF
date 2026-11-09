@@ -82,7 +82,7 @@ internal static partial class OoxMemoryAdmissionTests
             ["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"xml\" ContentType=\"application/xml\"/><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/></Types>",
             ["xl/workbook.xml"] = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Data\" sheetId=\"1\" r:id=\"s1\"/></sheets></workbook>",
             ["xl/_rels/workbook.xml.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"s1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/></Relationships>",
-            ["xl/worksheets/sheet1.xml"] = "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\"><v>42</v></c></row></sheetData></worksheet>"
+            ["xl/worksheets/sheet1.xml"] = "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><cols><col min=\"1\" max=\"16384\" hidden=\"1\"/></cols><sheetData><row r=\"1\"><c r=\"A1\"><v>42</v></c></row></sheetData></worksheet>"
         });
         var pool = new TestMemoryBudget();
         using (var operation = OoxConversionBudget.BeginScope(null, pool))
@@ -96,6 +96,8 @@ internal static partial class OoxMemoryAdmissionTests
             }
             TestAssert.True(pool.Reserved > 0, "Workbook records stay funded after nested package buffers refund.");
             TestAssert.Equal(1, data.ReadRangeCells("Data!A1:A1").Length);
+            TestAssert.True(data.ReadRangeCells("Data!XFD1").Single().ColumnHidden,
+                "Visibility remains available after nested package disposal.");
         }
         TestAssert.Equal(0L, pool.Reserved);
         TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);

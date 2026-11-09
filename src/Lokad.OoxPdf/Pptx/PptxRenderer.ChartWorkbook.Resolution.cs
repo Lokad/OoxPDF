@@ -184,7 +184,7 @@ internal sealed partial class PptxRenderer
                         format.ApplyNumberFormat,
                         format.NumberFormatIsDateLike,
                         worksheet.HiddenRows.Contains(row),
-                        worksheet.HiddenColumns.Contains(column)));
+                        worksheet.IsColumnHidden(column)));
                     index++;
                 }
             }

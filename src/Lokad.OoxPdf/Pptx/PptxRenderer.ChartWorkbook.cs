@@ -50,21 +50,24 @@ internal sealed partial class PptxRenderer
 
     internal sealed class ChartWorksheetData
     {
+        private readonly bool[] hiddenColumns;
+
         public ChartWorksheetData(
             Dictionary<string, ChartWorkbookCell> cells,
             IReadOnlySet<int> hiddenRows,
-            IReadOnlySet<int> hiddenColumns)
+            bool[] hiddenColumns)
         {
             Cells = cells;
             HiddenRows = hiddenRows;
-            HiddenColumns = hiddenColumns;
+            this.hiddenColumns = hiddenColumns;
         }
 
         public Dictionary<string, ChartWorkbookCell> Cells { get; }
 
         public IReadOnlySet<int> HiddenRows { get; }
 
-        public IReadOnlySet<int> HiddenColumns { get; }
+        public bool IsColumnHidden(int column) =>
+            column > 0 && column < hiddenColumns.Length && hiddenColumns[column];
     }
 
     internal readonly record struct ChartWorkbookCellFormat(

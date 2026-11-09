@@ -122,6 +122,40 @@ internal static class PptxChartRangeTests
         TestAssert.True(ReadRowHidden(cells, 2, 1), "Row 2 must report hidden.");
     }
 
+    public static void HiddenColumnStorageStaysBoundedAcrossWideRuns()
+    {
+        static object Read(int last) => ReadWorkbookFromSheetXml(
+            $"<cols><col min=\"4\" max=\"{last}\" hidden=\"1\"/></cols>" +
+            "<sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>");
+        Read(4);
+        static long Allocated(int last)
+        {
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            object workbook = Read(last);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            GC.KeepAlive(workbook);
+            return allocated;
+        }
+        long narrow = Allocated(4), wide = Allocated(16_383);
+        TestAssert.True(wide < narrow + 128 * 1024,
+            "Changing a range endpoint must not cause significant per-column construction growth.");
+    }
+
+    public static void HiddenColumnRunsIgnoreInvalidAndVisibleRanges()
+    {
+        foreach (string declaration in new[] { "", "<col min=\"1\" max=\"16384\" hidden=\"0\"/>",
+            "<col min=\"0\" max=\"0\" hidden=\"1\"/>", "<col min=\"16385\" max=\"2147483647\" hidden=\"1\"/>",
+            "<col min=\"8\" max=\"4\" hidden=\"1\"/>" })
+        {
+            object workbook = ReadWorkbookFromSheetXml("<cols>" + declaration +
+                "</cols><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>");
+            TestAssert.True(!ReadColumnHidden(ReadRangeCells(workbook, "Sheet1!A1"), 1, 1),
+                "Absent, visible and invalid runs preserve a visible first column.");
+            TestAssert.True(!ReadColumnHidden(ReadRangeCells(workbook, "Sheet1!XFD1"), 1, 16_384),
+                "Absent, visible and invalid runs preserve a visible last column.");
+        }
+    }
+
     public static void WorkbookSharedStringsBeyondBudgetThrow()
     {
         var strings = new System.Text.StringBuilder();

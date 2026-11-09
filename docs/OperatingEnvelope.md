@@ -100,7 +100,9 @@ The existing producer now owns one model scope separate from package buffers and
 emitted resources. DOCX models, PPTX scenes/charts and workbook records retain
 coarse capacity through page production, including font/staging awaits; nested
 package disposal does not refund a still-used workbook model. Factory construction
-headroom refunds after construction. Source-shape estimates cover ordinary model/
+headroom refunds after construction. Hidden-column visibility uses one lazy,
+fixed-domain flag array per worksheet within this headroom, independent of range width.
+Source-shape estimates cover ordinary model/
 placement overlap. Repeated DOCX page/static-story frames now have one additional
 coarse preparation grant, sized from effective section stories, the largest leading
 body-table header and conservative column multiplicity, then grown with observed

@@ -4644,6 +4644,8 @@
     "HiddenColumnRunBeyondGridIsClamped",
     "NarrowHiddenColumnRunPreservesSemantics",
     "OutOfGridHiddenRowIsIgnored",
+    "HiddenColumnStorageStaysBoundedAcrossWideRuns",
+    "HiddenColumnRunsIgnoreInvalidAndVisibleRanges",
     "WorkbookTotalCellsBeyondLimitThrows",
     "PptxChartWorkbookParsingPreservesRangeMetadata",
     "PptxChartParsedVectorsPreserveWorkbookSidecarPoints",
@@ -4658,6 +4660,7 @@
     "WorkbookSheetsBeyondBudgetThrow",
     "WorkbookDefinedNamesBeyondBudgetThrow",
     "ModelAdmissionWorkbookOutlivesItsNestedPackage",
+    "ModelAdmissionPublicRefusalPreservesDestinations",
     "MemoryBudgetNestedWorkbookRefusalEscapesChartRecovery",
     "ConvertPptxObservesCancellationAfterWorkBegins"
   ],

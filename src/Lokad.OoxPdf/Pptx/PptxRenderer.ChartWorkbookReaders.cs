@@ -408,7 +408,7 @@ internal sealed partial class PptxRenderer
         OoxMemory.GrowModel(modelStorage, document, cancellationToken);
         var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
         var hiddenRows = new HashSet<int>();
-        var hiddenColumns = new HashSet<int>();
+        bool[] hiddenColumns = [];
         foreach (XElement row in document.Descendants(SpreadsheetNamespace + "row"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -424,11 +424,6 @@ internal sealed partial class PptxRenderer
         foreach (XElement column in document.Descendants(SpreadsheetNamespace + "col"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (hiddenColumns.Count >= MaxSpreadsheetColumn)
-            {
-                break;
-            }
-
             if (!IsOoxmlTrue((string?)column.Attribute("hidden")) ||
                 ReadSpreadsheetIntegerAttribute(column, "min") is not { } minColumn ||
                 ReadSpreadsheetIntegerAttribute(column, "max") is not { } maxColumn ||
@@ -444,16 +439,13 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            for (int columnIndex = firstHiddenColumn; columnIndex <= lastHiddenColumn; columnIndex++)
+            // Fixed-domain flags fit the existing model window admitted above.
+            // Worksheets without a valid hidden range need no array.
+            if (hiddenColumns.Length == 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (hiddenColumns.Count >= MaxSpreadsheetColumn)
-                {
-                    break;
-                }
-
-                hiddenColumns.Add(columnIndex);
+                hiddenColumns = new bool[MaxSpreadsheetColumn + 1];
             }
+            hiddenColumns.AsSpan(firstHiddenColumn, lastHiddenColumn - firstHiddenColumn + 1).Fill(true);
         }
 
         foreach (XElement cell in document.Descendants(SpreadsheetNamespace + "c"))
