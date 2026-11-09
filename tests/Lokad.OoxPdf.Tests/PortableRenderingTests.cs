@@ -777,6 +777,9 @@ internal static class PortableRenderingTests
     public static void PortableRenderingRevisionBarsFollowParagraphAfterSpacing() =>
         DocxRevisionBarTests.CheckParagraphMarkAfterSpacing();
 
+    public static void PortableRenderingRevisionBarsKeepSeparatedParagraphsWithPictures() =>
+        DocxRevisionBarTests.CheckParagraphBandsWithInlinePicture();
+
     public static void PortableRenderingTextRevisionMathKeepsSourceOwnersAndFallbacks() =>
         DocxInlineCompositionTests.CheckTextRevisionMath(new PinnedResolver());
 

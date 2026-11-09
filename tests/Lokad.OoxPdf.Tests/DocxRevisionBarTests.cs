@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 
@@ -23,7 +24,7 @@ internal static class DocxRevisionBarTests
         {
             TestAssert.Equal(2, row.GetProperty("OfficeView").GetProperty("RevisionsMode").GetInt32());
             var page = RenderParagraphMark(row, null);
-            var bar = ReadParagraphMarkBar(page.Content, page.Height);
+            var bar = ReadParagraphMarkBars(page.Content, page.Height).Single();
             var expected = row.GetProperty("Bounds").EnumerateArray().Select(value => value.GetDouble()).ToArray();
             double[] actual = [bar.Left, bar.Top, bar.Right, bar.Bottom];
             TestAssert.True(actual.Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < 1d),
@@ -43,7 +44,7 @@ internal static class DocxRevisionBarTests
             .OrderBy(row => row.GetProperty("AfterPoints").GetInt32()).ToArray();
         TestAssert.Equal(2, rows.Length);
         var pages = rows.Select(row => RenderParagraphMark(row, resolver)).ToArray();
-        var bars = pages.Select(page => ReadParagraphMarkBar(page.Content, page.Height)).ToArray();
+        var bars = pages.Select(page => ReadParagraphMarkBars(page.Content, page.Height).Single()).ToArray();
         double nativeDelta = rows[1].GetProperty("Bounds")[3].GetDouble() - rows[0].GetProperty("Bounds")[3].GetDouble();
         TestAssert.True(Math.Abs(bars[1].Top - bars[0].Top) < .001d &&
             Math.Abs((bars[1].Bottom - bars[0].Bottom) - nativeDelta) < .05d,
@@ -52,6 +53,33 @@ internal static class DocxRevisionBarTests
             .Single(show => show.Text.Trim() == "Formatted:")).ToArray();
         TestAssert.True(Math.Abs(captions[0].Y - captions[1].Y) < .001d,
             "A trailing paragraph gap cannot move its caption.");
+    }
+
+    internal static void CheckParagraphBandsWithInlinePicture()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (bool picture in new[] { false, true })
+        {
+            var document = DocxInlineCompositionTests.ReadMutation("RevisionBars/paragraph-mark-picture20",
+                OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, m) =>
+                {
+                    var paragraphs = xml.Root!.Element(w + "body")!.Elements(w + "p").ToArray();
+                    var drawing = new XElement(xml.Descendants(w + "drawing").First());
+                    foreach (var old in xml.Descendants(w + "drawing").ToArray()) old.Remove();
+                    var mark = new XElement(paragraphs[0].Element(w + "pPr")!.Element(w + "rPr")!);
+                    mark.Element(w + "rPrChange")!.SetAttributeValue(w + "id", "993");
+                    var properties = paragraphs[2].Element(w + "pPr")!;
+                    properties.Element(w + "rPr")?.Remove();
+                    properties.Add(mark);
+                    if (picture) paragraphs[1].Element(w + "pPr")!.AddAfterSelf(new XElement(w + "r", drawing));
+                });
+            var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+            var bars = ReadParagraphMarkBars(page.Content, page.Height).OrderBy(bar => bar.Top).ToArray();
+            TestAssert.Equal(2, bars.Length);
+            TestAssert.True(bars[0].Bottom < bars[1].Top,
+                "An unchanged source paragraph separates changed bands even when it contains an inline picture, as independently observed in Word.");
+        }
     }
 
     private static JsonDocument ReadParagraphMarkReference() => JsonDocument.Parse(File.ReadAllText(
@@ -68,7 +96,7 @@ internal static class DocxRevisionBarTests
             .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToBlockingEnumerable().Single();
     }
 
-    private static (double Left, double Top, double Right, double Bottom) ReadParagraphMarkBar(string content, double pageHeight)
+    private static (double Left, double Top, double Right, double Bottom)[] ReadParagraphMarkBars(string content, double pageHeight)
     {
         var bars = Regex.Matches(content, @"(?m)^(?<x>-?[\d.]+) (?<y>-?[\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f\r?$")
             .Cast<Match>().Select(match => new
@@ -78,9 +106,7 @@ internal static class DocxRevisionBarTests
                 Width = double.Parse(match.Groups["w"].Value, CultureInfo.InvariantCulture),
                 Height = double.Parse(match.Groups["h"].Value, CultureInfo.InvariantCulture)
             }).Where(bar => bar.X < 60d && bar.Width < 1d && bar.Height > 5d).ToArray();
-        TestAssert.Equal(1, bars.Length);
-        var bar = bars[0];
-        return (bar.X, pageHeight - bar.Y - bar.Height, bar.X + bar.Width, pageHeight - bar.Y);
+        return bars.Select(bar => (bar.X, pageHeight - bar.Y - bar.Height, bar.X + bar.Width, pageHeight - bar.Y)).ToArray();
     }
 
     internal static void CheckHorizontalFrames(IFontResolver? resolver)

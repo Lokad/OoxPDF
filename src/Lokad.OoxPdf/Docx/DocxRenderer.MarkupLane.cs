@@ -116,12 +116,18 @@ internal sealed partial class DocxRenderer
 
         bool separateBodyBands = page.ColumnFrames.Count <= 1 &&
             !drawingPages.PageAll(pageIndex).Any(drawing => !IsStaticStoryFloatingDrawing(drawing)) &&
-            page.Items.All(item => item is DocxTextLineLayout { SourceParagraph: not null, SourceBlockIndex: >= 0 } line &&
-                (line.Story is null || line.Story?.Kind == DocxStoryKind.Body));
+            page.Items.All(item => item switch
+            {
+                DocxTextLineLayout { SourceParagraph: not null, SourceBlockIndex: >= 0 } line =>
+                    line.Story is null || line.Story?.Kind == DocxStoryKind.Body,
+                DocxInlineImageLayout { SourceBlockIndex: >= 0, SourceLineIndex: >= 0 } image =>
+                    image.Story is null || image.Story?.Kind == DocxStoryKind.Body,
+                _ => false
+            });
         if (separateBodyBands)
         {
             int? lastChangedBlock = null;
-            foreach (DocxTextLineLayout line in page.Items.Cast<DocxTextLineLayout>())
+            foreach (DocxTextLineLayout line in page.Items.OfType<DocxTextLineLayout>())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!HasTextLineRevision(line))
