@@ -1,0 +1,241 @@
+[
+  {
+    "Id": "arial10-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial10-auto.docx",
+    "Sha256": "9819CBCC4DD7CA705F590351FD2392ABE6452550696E2771E6077C47D18CF329",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 10,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": false
+  },
+  {
+    "Id": "arial12-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial12-auto.docx",
+    "Sha256": "D8606D622F4BCE42C7DBBAA11FDE461BCE797FD58DDE4DB085449441CF020A85",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": false
+  },
+  {
+    "Id": "calibri10-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/calibri10-auto.docx",
+    "Sha256": "428FB35CF1A787F6C5B846AAF472E05B7A5D4C711AB2BC9D8BF4E7014EA364E8",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Calibri",
+    "FontSize": 10,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": false
+  },
+  {
+    "Id": "calibri12-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/calibri12-auto.docx",
+    "Sha256": "7BC78B379613BC83AC193ADA0B1705D98A37421D094B30F5DD7078580A0C59B3",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Calibri",
+    "FontSize": 12,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": false
+  },
+  {
+    "Id": "arial12-min20",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial12-min20.docx",
+    "Sha256": "6E9F11985E1EAE92F085A8103B2C7414F03E10B53010E9FC667725CFA8A3A033",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "MarkedLineRule": "atLeast",
+    "MarkedHeightPoints": 20,
+    "SplitSourceRun": false
+  },
+  {
+    "Id": "arial12-exact20",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial12-exact20.docx",
+    "Sha256": "606DEF15CC196AE3395278F8030586302009038021E0F3EDC6EB351572F33462",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "MarkedLineRule": "exact",
+    "MarkedHeightPoints": 20,
+    "SplitSourceRun": false
+  },
+  {
+    "Id": "arial12-split-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial12-split-auto.docx",
+    "Sha256": "450E9835FCEA0C757921792FEA12490ECD2D681B3DB6D6381416576948282D10",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": true
+  },
+  {
+    "Id": "arial12-prior-exact1",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial12-prior-exact1.docx",
+    "Sha256": "64F8A89F7BB18C97E00F3ADE1F1EE4CF7DB646DB25E7C18A8D2E898739FEE73B",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": false
+  },
+  {
+    "Id": "arial9-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial9-auto.docx",
+    "Sha256": "5CBEAD29B8139C635C3CB8AEF2A96AFC5FADE156096AC17119255DCA3C07909D",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 9,
+    "SelectedText": "Selected public words."
+  },
+  {
+    "Id": "arial12-center",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial12-center.docx",
+    "Sha256": "DBAFB43488079686F0846A521D4B1EB520656C09E2ED0DE718B32760F879FB00",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "SelectedText": "Selected public words."
+  },
+  {
+    "Id": "calibri14-right-partial",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/calibri14-right-partial.docx",
+    "Sha256": "4E9FAE9E5B1CDEB08272769FB77FCE3EE545B2FD1FAD9A87445DFFA45152B3ED",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Calibri",
+    "FontSize": 14,
+    "SelectedText": "public"
+  },
+  {
+    "Id": "arial12-larger-neighbor",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalCommentFills/arial12-larger-neighbor.docx",
+    "Sha256": "6788EECCC549D560532AA1E18528AB0AD5A4A3AA88FCF5A28B90A3B9B6CC2CE1",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "LARGE Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "SelectedText": "Selected public words."
+  },
+  {
+    "Id": "arial-break",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalBodyLines/arial-break.docx",
+    "Sha256": "BB89C85AA3EF8A7EB01858A00A5857DEC00E2E9148FCEA4A06254F86945C0DB6",
+    "HeldOut": false,
+    "Font": "Arial",
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "LARGE",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0
+  },
+  {
+    "Id": "calibri-break",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalBodyLines/calibri-break.docx",
+    "Sha256": "DAA17C057734648CF01AEC78EC12EB96F087D2AF608F2F19A230AF29906A1836",
+    "HeldOut": true,
+    "Font": "Calibri",
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "LARGE",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0
+  },
+  {
+    "Id": "static-box-table-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/static-box-table-body.docx",
+    "Sha256": "257741BA414DC8098307E2A3315A623A3D9A634EDA3C2F356B044BB3D97B962E",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "Role": "BodyPreservation"
+  }
+]

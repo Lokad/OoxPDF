@@ -1,4 +1,23 @@
 {
+  "docx-natural-comment-fills": [
+    "DocxNaturalCommentFills",
+    "DocxNaturalBodyLines",
+    "DocxWordCompatibleAllMarkupOmitsInlineCommentMarkerLabels",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "DocxWordCompatibleAllMarkupRendersCommentRangeBrackets",
+    "DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers",
+    "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",
+    "DocxWordCompatibleAllMarkupRendersReaderCommentRangeFill",
+    "DocxWordCompatibleAllMarkupOmitsCommentRangeBracketsInStoryTables",
+    "DocxWordCompatibleAllMarkupOmitsStoryTableCommentConnectors",
+    "DocxWordCompatibleAllMarkupAnchorsTableCommentConnectorsAtCellRangeEnd",
+    "DocxInlineCompositionExactCommentFramesMatchIndependentWordVerticalBounds",
+    "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets",
+    "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms",
+    "DocxMathComments",
+    "DocxMathCommentBoundaries",
+    "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames"
+  ],
   "docx-natural-body-lines": [
     "DocxNaturalBodyLines",
     "DocxBodyMixedSizePitchTransitionsScaleWithPrintScale",

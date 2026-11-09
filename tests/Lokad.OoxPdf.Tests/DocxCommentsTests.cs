@@ -1461,7 +1461,7 @@ internal static partial class DocxCommentsTests
             textEmission.Lines.Count(line => !line.IsStaticStory && line.TextLength != 0) >= 2,
             "The public comment range fixture should wrap across multiple body lines.");
         TestAssert.True(
-            DocxTests.CountOccurrences(page.Content, " 11.625 re f") >= 2,
+            DocxTests.CountWordCompatibleCommentRangeFills(page.Content) >= 2,
             "Word-compatible all-markup should draw comment range fill markers on wrapped continuation lines, not only on the line containing the range start.");
     }
 

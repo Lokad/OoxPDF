@@ -250,21 +250,31 @@ internal sealed partial class DocxRenderer
         DocxTextLineLayout line,
         DocxParagraph paragraph,
         PdfGraphicsBuilder graphics,
-        DocxMarkupContext markupContext)
+        DocxFontResources fontResources,
+        DocxMarkupContext markupContext,
+        CancellationToken cancellationToken)
     {
+        DocxOccupiedLineBox? fillLineBox = TryResolveBodyCommentFillLineBox(line, paragraph, fontResources,
+            markupContext, cancellationToken, out var measuredBox) ? measuredBox : null;
         foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!markupContext.IsCommentMarkupVisible(paragraph, reference)) continue;
             DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
                 string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
             if (range is not null &&
-                TryResolveWordCompatibleCommentRangeBounds(line, range, ResolveTextEmissionXOffset(markupContext), out double startX, out double endX))
+                TryResolveWordCompatibleCommentRangeBounds(line, range, ResolveTextEmissionXOffset(markupContext),
+                    out double startX, out double endX, out var sourceBounds))
             {
                 double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
                 int authorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
                 var (above, below) = DocxInlineLineGeometry.VerticalExtents(line);
+                PdfRectangle? fill = fillLineBox is { } box && double.IsFinite(sourceBounds.Start) &&
+                    double.IsFinite(sourceBounds.End) && sourceBounds.End > sourceBounds.Start
+                    ? new PdfRectangle(Math.Max(0d, sourceBounds.Start), baselineY + box.BaselineInset - box.Height,
+                        sourceBounds.End - sourceBounds.Start, box.Height) : null;
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below,
-                    usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _));
+                    usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _), fillRectangle: fill);
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
                 TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, ResolveTextEmissionXOffset(markupContext), out startX, out endX))
@@ -282,6 +292,44 @@ internal sealed partial class DocxRenderer
                 range.EndSourceRunIndex is not null ||
                 range.EndTextOffset is not null;
         }
+    }
+
+    // Painting uses the measured body's text strut, independently of its glyph
+    // brackets. Other containers, inline objects, note markers and unmeasured
+    // lines retain their existing selection contract. A larger unselected run
+    // contributes to the same line's descent; minimum leading does not.
+    private static bool TryResolveBodyCommentFillLineBox(DocxTextLineLayout line, DocxParagraph paragraph,
+        DocxFontResources fontResources, DocxMarkupContext markupContext, CancellationToken cancellationToken,
+        out DocxOccupiedLineBox box)
+    {
+        box = default;
+        if (line.Story?.Kind != DocxStoryKind.Body || line.InlineFrame is not null ||
+            line.BodyLineBoxHeightPoints is not > 0d || line.BodyLineBoxBaselineInsetPoints is null ||
+            paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 || paragraph.Equations.Count != 0 ||
+            paragraph.ListLabel is not null || paragraph.FieldReferences.Count != 0 ||
+            paragraph.InlineReferences.Any(reference => reference.Kind != DocxRelatedStoryKind.Comment)) return false;
+
+        if (DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out box)) return true;
+        if (line.LineHeightSource is not (DocxLineHeightSource.BodySingleLineAuto or DocxLineHeightSource.AtLeastLineSpacing) ||
+            line.SingleLineHeight is not { } height || !double.IsFinite(height) || height <= 0d ||
+            fontResources.TextMeasurer is not IDocxStaticTextMetricsProvider metrics) return false;
+
+        double below = 0d;
+        bool hasText = false;
+        foreach (var segment in line.Segments)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (segment.Role != DocxTextSegmentRole.Text) return false;
+            if (string.IsNullOrWhiteSpace(segment.Text)) continue;
+            double descent = metrics.MeasureWindowsDescender(segment.StyleRun,
+                segment.FontSize ?? segment.StyleRun.EffectiveProperties.FontSize) * ResolveTextEmissionFontScale(markupContext);
+            if (!double.IsFinite(descent) || descent < 0d) return false;
+            below = Math.Max(below, descent);
+            hasText = true;
+        }
+        if (!hasText || below > height) return false;
+        box = new(height, height - below);
+        return true;
     }
 
     private static bool TryResolveWordCompatibleCommentReferenceMarkerBounds(
@@ -310,16 +358,19 @@ internal sealed partial class DocxRenderer
         DocxCommentRange range,
         double wordCompatibleXOffset,
         out double startX,
-        out double endX)
+        out double endX,
+        out (double Start, double End) sourceBounds)
     {
         startX = 0d;
         endX = 0d;
+        sourceBounds = default;
         if (TryResolveInlineCommentRangeBounds(line, range, out double inlineStart, out double inlineEnd))
         {
             // Ordered source extents already delimit the selected content. The
             // legacy prose reconstruction insets do not belong to this geometry.
             startX = inlineStart + wordCompatibleXOffset + WordCompatibleAllMarkupCommentRangeFillXInsetPoints;
             endX = inlineEnd + wordCompatibleXOffset + WordCompatibleAllMarkupCommentRangeFillXInsetPoints;
+            sourceBounds = (inlineStart + wordCompatibleXOffset, inlineEnd + wordCompatibleXOffset);
             return endX > startX;
         }
         DocxTextSegmentLayout[] rangeSegments = line.Segments
@@ -350,6 +401,7 @@ internal sealed partial class DocxRenderer
             WordCompatibleAllMarkupCommentRangeStartInsetPoints;
         endX = layoutEndX + wordCompatibleXOffset -
             WordCompatibleAllMarkupCommentRangeEndInsetPoints;
+        sourceBounds = (layoutStartX + wordCompatibleXOffset, layoutEndX + wordCompatibleXOffset);
         return endX > startX;
     }
 
@@ -422,7 +474,7 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxMarkupBalloonRgb fillRgb,
         DocxMarkupBalloonRgb strokeRgb,
-        double objectAbove = 0d, double objectBelow = 0d, bool usesExactFrame = false)
+        double objectAbove = 0d, double objectBelow = 0d, bool usesExactFrame = false, PdfRectangle? fillRectangle = null)
     {
         // Exact source boxes own both expansion and compression. Content-driven
         // inline frames retain the legacy minimum and grow for their visible ink.
@@ -442,11 +494,12 @@ internal sealed partial class DocxRenderer
         double verticalTopY = baselineY + WordCompatibleAllMarkupCommentRangeVerticalTopYOffsetPoints + markerTopExtension;
         double topTickY = baselineY + WordCompatibleAllMarkupCommentRangeTopTickYOffsetPoints + markerTopExtension;
         graphics.SetFillRgb(fillRgb.Red, fillRgb.Green, fillRgb.Blue);
-        graphics.FillRectangle(
+        PdfRectangle fill = fillRectangle ?? new(
             Math.Max(0d, startX - WordCompatibleAllMarkupCommentRangeFillXInsetPoints),
             baselineY + WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints - bottomExtension,
             Math.Max(0d, endX - startX),
             WordCompatibleAllMarkupCommentRangeFillHeightPoints + topExtension + bottomExtension);
+        graphics.FillRectangle(fill.X, fill.Y, fill.Width, fill.Height);
         graphics.SetStrokeRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         graphics.SetFillRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         graphics.SetLineWidth(WordCompatibleAllMarkupCommentRangeStrokeWidthPoints);

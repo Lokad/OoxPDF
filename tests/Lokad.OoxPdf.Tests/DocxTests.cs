@@ -90,7 +90,7 @@ internal static class DocxTests
         }
 
         TestAssert.True(
-            CountOccurrences(page.Content, " 11.625 re f") >= 1,
+            CountWordCompatibleCommentRangeFills(page.Content) >= 1,
             "Word-compatible all-markup should emit comment range fill geometry for " + flowName + ".");
         TestAssert.Contains("0.82 0.204 0.22 RG", page.Content);
         TestAssert.True(
@@ -106,6 +106,11 @@ internal static class DocxTests
             layout.StaticFloatingDrawings.Sum(drawing => drawing.TextBoxTextLineCount) > 0,
             "The " + flowName + " fixture should include a laid-out text line.");
     }
+
+    internal static int CountWordCompatibleCommentRangeFills(string content) => Regex.Matches(content,
+        @"0\.973 0\.863 0\.867 rg\s+[-\d.]+ [-\d.]+ (?<w>[\d.]+) (?<h>[\d.]+) re f")
+        .Count(match => double.Parse(match.Groups["w"].Value, CultureInfo.InvariantCulture) > 0d &&
+            double.Parse(match.Groups["h"].Value, CultureInfo.InvariantCulture) > 0d);
 
     internal static DocxTable CreateCommentRangeTable(string text, string commentId)
     {

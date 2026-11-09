@@ -654,7 +654,7 @@ internal sealed partial class DocxRenderer
             PaintMath(math, line.X, line.BaselineY, line.MathScale, graphics, markupContext, cancellationToken, background);
             return;
         }
-        RenderMarkupIndicators(line, graphics, fontResources, markupContext);
+        RenderMarkupIndicators(line, graphics, fontResources, markupContext, cancellationToken);
         foreach (DocxTextEmissionSegment segment in CreateTextEmissionSegments(
             line,
             fontResources,
@@ -683,7 +683,8 @@ internal sealed partial class DocxRenderer
         DocxTextLineLayout line,
         PdfGraphicsBuilder graphics,
         DocxFontResources fontResources,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext,
+        CancellationToken cancellationToken)
     {
         if (!markupContext.DrawsChangeBars && !markupContext.DrawsCommentMarkers)
         {
@@ -716,7 +717,7 @@ internal sealed partial class DocxRenderer
         {
             if (UsesWordCompatibleAllMarkupTextProfile(markupContext))
             {
-                RenderWordCompatibleCommentRangeMarkers(line, paragraph, graphics, markupContext);
+                RenderWordCompatibleCommentRangeMarkers(line, paragraph, graphics, fontResources, markupContext, cancellationToken);
                 return;
             }
 

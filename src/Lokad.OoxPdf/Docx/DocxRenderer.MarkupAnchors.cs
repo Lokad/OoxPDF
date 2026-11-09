@@ -178,7 +178,7 @@ internal sealed partial class DocxRenderer
         DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
             string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
         if (range is null || !TryResolveWordCompatibleCommentRangeBounds(line, range,
-                ResolveTextEmissionXOffset(markupContext), out _, out _))
+                ResolveTextEmissionXOffset(markupContext), out _, out _, out _))
             return (null, null);
         // A measured range attaches at its selection bottom. An authored exact
         // box also owns balloon placement at its top, independently of the
