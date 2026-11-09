@@ -27,6 +27,13 @@ neighboring static frames, body preservation, source identity, cancellation and
 navigation. Pinned portable fonts cover all markup views; independent Word
 vertical origins remain separate from unresolved horizontal and image gates.
 
+`docx-container-table-grids` selects 40 methods covering shared table anchors,
+explicit indentation, nested measurement/placement, floating boxes and navigation.
+Independent Word origins distinguish container placement from relative child
+offsets; neither accepts unresolved whole-body offsets. Portable checks use the
+same source files and cover painted links. Thirteen native-font checks declare
+their Windows precondition; Ubuntu runs the other 27 on the same frozen runtime.
+
 `PptxChartPaletteTests` compares painted output against 481 independent Office bar
 colors across counts, themes and orientations. It replaces eighteen tests of
 private fitted helpers. The `pptx-automatic-palette` selection includes negative
