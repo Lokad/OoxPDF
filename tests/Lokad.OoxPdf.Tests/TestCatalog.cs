@@ -126,6 +126,7 @@ internal static class TestCatalog
         .. FromType("docx-text", typeof(DocxNominalGlyphAdvanceTests)),
         .. FromType("docx-text", typeof(DocxMetGlyphAdvanceTests)),
         .. FromType("docx-text", typeof(DocxLineSpacingInheritanceTests)),
+        .. FromType("docx-text", typeof(DocxNaturalBodyLineTests)),
         .. FromType("docx-tables", typeof(DocxTablesTests)),
         .. FromType("docx-tables", typeof(DocxConditionalTableStyleTests)),
         .. FromType("docx-tables", typeof(DocxTableStyleMarginTests)),
