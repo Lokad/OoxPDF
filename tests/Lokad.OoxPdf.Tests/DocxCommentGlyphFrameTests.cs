@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -44,7 +45,15 @@ internal static class DocxCommentGlyphFrameTests
                 "Measured portable prose brackets retain a physical stroke: " + source.GetProperty("Id").GetString());
             foreach ((bool bookmark, bool split) in new[] { (true, false), (false, true), (true, true) })
             {
-                var document = DocxInlineCompositionTests.ReadMutation(Fixture(source), OoxPdfDocxMarkupMode.AllMarkup, bookmark, split);
+                var document = DocxInlineCompositionTests.ReadMutation(Fixture(source), OoxPdfDocxMarkupMode.AllMarkup, false, split,
+                    (xml, w, _) =>
+                    {
+                        if (!bookmark) return;
+                        var paragraph = xml.Descendants(w + "p").Single(p => p.Elements(w + "commentRangeStart").Any());
+                        var start = new XElement(w + "bookmarkStart", new XAttribute(w + "id", "8230"), new XAttribute(w + "name", "PublicCommentGlyphFrame"));
+                        if (paragraph.Element(w + "pPr") is { } properties) properties.AddAfterSelf(start); else paragraph.AddFirst(start);
+                        paragraph.Add(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "8230")));
+                    });
                 var page = Render(document, resolver);
                 var transformed = ReadGeometry(page);
                 AssertPathsEqual(original.Paths, transformed.Paths);
