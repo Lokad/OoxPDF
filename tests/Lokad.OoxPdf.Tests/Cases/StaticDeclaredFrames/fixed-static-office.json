@@ -1,0 +1,948 @@
+{
+  "ReferenceKind": "OfficePdf",
+  "ApplicationViewCalibrated": false,
+  "OriginThresholdPoints": 1,
+  "Scope": "Independent source origins/box edges;body control remains a preservation/raw-failure control. No normalized or pixel-perfect acceptance.",
+  "Rows": [
+    {
+      "Id": "static-box-table-header",
+      "Mode": "final-preserve",
+      "InputSha256": "6DE29BCEC55B955C429544863CD110101DBB5397ABECA055D1C705F87D379BDF",
+      "OfficePdfSha256": "D92B23EA2CFA7BC7DCD45197FE206185BBB25620220E5D723DA80D37F7C60A5B",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.06400299072266,
+          "Y": 49.67999267578125
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.06400299072266,
+          "Y": 65.39996337890625
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.4199981689453,
+          "Y": 58.91998291015625
+        },
+        {
+          "Text": "+",
+          "X": 181.33999633789062,
+          "Y": 58.91998291015625
+        },
+        {
+          "Text": "2",
+          "X": 187.25,
+          "Y": 58.91998291015625
+        },
+        {
+          "Text": "y",
+          "X": 181.4600067138672,
+          "Y": 70.91998291015625
+        }
+      ],
+      "Box": [
+        72.0,
+        36.0,
+        288.0,
+        96.0
+      ]
+    },
+    {
+      "Id": "static-box-table-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "6DE29BCEC55B955C429544863CD110101DBB5397ABECA055D1C705F87D379BDF",
+      "OfficePdfSha256": "1E301FC952C7AFE1530CBC26ACA27E66234C5E44424FF83D66A9303A04756DAC",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.56800079345703,
+          "Y": 141.1199951171875
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.56800079345703,
+          "Y": 152.97998046875
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 132.91000366210938,
+          "Y": 148.0799560546875
+        },
+        {
+          "Text": "+",
+          "X": 136.6300048828125,
+          "Y": 148.0799560546875
+        },
+        {
+          "Text": "2",
+          "X": 141.0500030517578,
+          "Y": 148.0799560546875
+        },
+        {
+          "Text": "y",
+          "X": 136.6999969482422,
+          "Y": 157.1300048828125
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        130.69195556640625,
+        217.09400939941406,
+        175.91998291015625
+      ]
+    },
+    {
+      "Id": "static-box-table-footer",
+      "Mode": "final-preserve",
+      "InputSha256": "9EFC5F739924DD3FEB5342C58AAEB1639208FFA6BF729E486E50A4B0C0D3A834",
+      "OfficePdfSha256": "45BCF844D6D16A922936D2D6706213D0D8E2DB9732EB0AA8099490D0F7670B02",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.06400299072266,
+          "Y": 749.3759765625
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.06400299072266,
+          "Y": 765.0960083007812
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.4199981689453,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "+",
+          "X": 181.33999633789062,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "2",
+          "X": 187.25,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "y",
+          "X": 181.4600067138672,
+          "Y": 770.615966796875
+        }
+      ],
+      "Box": [
+        72.0,
+        735.5689697265625,
+        288.0,
+        795.5689697265625
+      ]
+    },
+    {
+      "Id": "static-box-table-footer",
+      "Mode": "all-word-compatible",
+      "InputSha256": "9EFC5F739924DD3FEB5342C58AAEB1639208FFA6BF729E486E50A4B0C0D3A834",
+      "OfficePdfSha256": "B20252D227518EB169F7DDF3326D3304044257550911065147F6B0BE35451E2F",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.56800079345703,
+          "Y": 668.22998046875
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.56800079345703,
+          "Y": 680.0599975585938
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 132.91000366210938,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "+",
+          "X": 136.6300048828125,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "2",
+          "X": 141.0500030517578,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "y",
+          "X": 136.6999969482422,
+          "Y": 684.239990234375
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        658.031982421875,
+        217.09400939941406,
+        703.260009765625
+      ]
+    },
+    {
+      "Id": "static-box-table-nested-header",
+      "Mode": "final-preserve",
+      "InputSha256": "13044B23829F9F2F9C0C86A519C8AE1889EF701A4029B107A1C5BACA20634B4F",
+      "OfficePdfSha256": "8452177C9D6ED925CECD89C4ECC801818181F89604B53A04FD32AE96092A3F9F",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.54399871826172,
+          "Y": 50.15997314453125
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.54399871826172,
+          "Y": 65.8800048828125
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.89999389648438,
+          "Y": 59.39996337890625
+        },
+        {
+          "Text": "+",
+          "X": 181.82000732421875,
+          "Y": 59.39996337890625
+        },
+        {
+          "Text": "2",
+          "X": 187.72999572753906,
+          "Y": 59.39996337890625
+        },
+        {
+          "Text": "y",
+          "X": 181.94000244140625,
+          "Y": 71.39996337890625
+        }
+      ],
+      "Box": [
+        72.0,
+        36.0,
+        288.0,
+        96.0
+      ]
+    },
+    {
+      "Id": "static-box-table-nested-header",
+      "Mode": "all-word-compatible",
+      "InputSha256": "13044B23829F9F2F9C0C86A519C8AE1889EF701A4029B107A1C5BACA20634B4F",
+      "OfficePdfSha256": "EA98960482661D9B1810DDB55447EB493CC9225DF3BFEF894979D9EE7B3F8914",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.928001403808594,
+          "Y": 141.47998046875
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.928001403808594,
+          "Y": 153.3399658203125
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 133.27000427246094,
+          "Y": 148.44000244140625
+        },
+        {
+          "Text": "+",
+          "X": 136.99000549316406,
+          "Y": 148.44000244140625
+        },
+        {
+          "Text": "2",
+          "X": 141.41000366210938,
+          "Y": 148.44000244140625
+        },
+        {
+          "Text": "y",
+          "X": 137.05999755859375,
+          "Y": 157.489990234375
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        130.69195556640625,
+        217.09400939941406,
+        175.91998291015625
+      ]
+    },
+    {
+      "Id": "static-box-table-body",
+      "Mode": "final-preserve",
+      "InputSha256": "257741BA414DC8098307E2A3315A623A3D9A634EDA3C2F356B044BB3D97B962E",
+      "OfficePdfSha256": "DBD5E0A26F51F32A2BC5EF9354ACF1849B827DE268FBB53590878A9B824F522C",
+      "Role": "BodyPreservation",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.06400299072266,
+          "Y": 86.65997314453125
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.06400299072266,
+          "Y": 102.5
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.4199981689453,
+          "Y": 96.01995849609375
+        },
+        {
+          "Text": "+",
+          "X": 181.33999633789062,
+          "Y": 96.01995849609375
+        },
+        {
+          "Text": "2",
+          "X": 187.25,
+          "Y": 96.01995849609375
+        },
+        {
+          "Text": "y",
+          "X": 181.4600067138672,
+          "Y": 108.01995849609375
+        }
+      ],
+      "Box": [
+        72.0,
+        73.0,
+        288.0,
+        133.0
+      ]
+    },
+    {
+      "Id": "static-box-table-body",
+      "Mode": "all-word-compatible",
+      "InputSha256": "257741BA414DC8098307E2A3315A623A3D9A634EDA3C2F356B044BB3D97B962E",
+      "OfficePdfSha256": "815EFDDBD6497B642F34CF357E13F8A359F4BECE23CCC6F04BFD9D3D1C2478B9",
+      "Role": "BodyPreservation",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.56800079345703,
+          "Y": 168.9599609375
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.56800079345703,
+          "Y": 180.90997314453125
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 132.91000366210938,
+          "Y": 176.01995849609375
+        },
+        {
+          "Text": "+",
+          "X": 136.6300048828125,
+          "Y": 176.01995849609375
+        },
+        {
+          "Text": "2",
+          "X": 141.0500030517578,
+          "Y": 176.01995849609375
+        },
+        {
+          "Text": "y",
+          "X": 136.6999969482422,
+          "Y": 185.05999755859375
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        158.59197998046875,
+        217.09400939941406,
+        203.82000732421875
+      ]
+    },
+    {
+      "Id": "footer-terminal-exact12",
+      "Mode": "final-preserve",
+      "InputSha256": "7DF64B4DDE3691A774A5400C906003149FEA1FE508900F7503436C1D09CEA1FA",
+      "OfficePdfSha256": "4A2D5ADF06DA08C5B8C16C33842DDC6BF09C80A9207BCD6DEDDCB8EF25B6DFCE",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.06400299072266,
+          "Y": 749.3759765625
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.06400299072266,
+          "Y": 765.0960083007812
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.4199981689453,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "+",
+          "X": 181.33999633789062,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "2",
+          "X": 187.25,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "y",
+          "X": 181.4600067138672,
+          "Y": 770.615966796875
+        }
+      ],
+      "Box": [
+        72.0,
+        735.5689697265625,
+        288.0,
+        795.5689697265625
+      ]
+    },
+    {
+      "Id": "footer-terminal-exact12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "7DF64B4DDE3691A774A5400C906003149FEA1FE508900F7503436C1D09CEA1FA",
+      "OfficePdfSha256": "6E5C8E6F44617D4336E2A423F88988F4442302F57C0801E1D04107431E1B3992",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.56800079345703,
+          "Y": 668.22998046875
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.56800079345703,
+          "Y": 680.0599975585938
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 132.91000366210938,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "+",
+          "X": 136.6300048828125,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "2",
+          "X": 141.0500030517578,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "y",
+          "X": 136.6999969482422,
+          "Y": 684.239990234375
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        658.031982421875,
+        217.09400939941406,
+        703.260009765625
+      ]
+    },
+    {
+      "Id": "footer-terminal-min12",
+      "Mode": "final-preserve",
+      "InputSha256": "D33786C043B879738FD349DC00FBA566EAA7454B95B2D6FAF21B811E453AD32C",
+      "OfficePdfSha256": "206D4ECB5A05A49C622B1D51B4693CA3113494F7E7AD122B062AC368D0331665",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.06400299072266,
+          "Y": 749.3759765625
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.06400299072266,
+          "Y": 765.0960083007812
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.4199981689453,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "+",
+          "X": 181.33999633789062,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "2",
+          "X": 187.25,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "y",
+          "X": 181.4600067138672,
+          "Y": 770.615966796875
+        }
+      ],
+      "Box": [
+        72.0,
+        735.5689697265625,
+        288.0,
+        795.5689697265625
+      ]
+    },
+    {
+      "Id": "footer-terminal-min12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D33786C043B879738FD349DC00FBA566EAA7454B95B2D6FAF21B811E453AD32C",
+      "OfficePdfSha256": "BF7302A95E14A81AC1DAB30043D49A996185571197530D6AF40124F51AFEABA2",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.56800079345703,
+          "Y": 668.22998046875
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.56800079345703,
+          "Y": 680.0599975585938
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 132.91000366210938,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "+",
+          "X": 136.6300048828125,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "2",
+          "X": 141.0500030517578,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "y",
+          "X": 136.6999969482422,
+          "Y": 684.239990234375
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        658.031982421875,
+        217.09400939941406,
+        703.260009765625
+      ]
+    },
+    {
+      "Id": "footer-terminal-text12",
+      "Mode": "final-preserve",
+      "InputSha256": "ECB456E17883E77297026885D9F16E9F0D16CBC6D126DC97CA8E3D65C57BCDCC",
+      "OfficePdfSha256": "F3DA15ED856D643F57D709942DDB00F082DD29731651DCA43D34814C8AE17B92",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.06400299072266,
+          "Y": 749.3759765625
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.06400299072266,
+          "Y": 765.0960083007812
+        },
+        {
+          "Text": "Terminal box control.",
+          "X": 79.46399688720703,
+          "Y": 782.2559814453125
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.4199981689453,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "+",
+          "X": 181.33999633789062,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "2",
+          "X": 187.25,
+          "Y": 758.615966796875
+        },
+        {
+          "Text": "y",
+          "X": 181.4600067138672,
+          "Y": 770.615966796875
+        }
+      ],
+      "Box": [
+        72.0,
+        735.5689697265625,
+        288.0,
+        795.5689697265625
+      ]
+    },
+    {
+      "Id": "footer-terminal-text12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "ECB456E17883E77297026885D9F16E9F0D16CBC6D126DC97CA8E3D65C57BCDCC",
+      "OfficePdfSha256": "D656F98BA0496B9A62A7D95B4510DD7D82A8D8D98F04BC797F8A7817011B5354",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.56800079345703,
+          "Y": 668.22998046875
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.56800079345703,
+          "Y": 680.0599975585938
+        },
+        {
+          "Text": "Terminal box control.",
+          "X": 59.85599899291992,
+          "Y": 693.0
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 132.91000366210938,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "+",
+          "X": 136.6300048828125,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "2",
+          "X": 141.0500030517578,
+          "Y": 675.1900024414062
+        },
+        {
+          "Text": "y",
+          "X": 136.6999969482422,
+          "Y": 684.239990234375
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        658.031982421875,
+        217.09400939941406,
+        703.260009765625
+      ]
+    },
+    {
+      "Id": "header-terminal-text12",
+      "Mode": "final-preserve",
+      "InputSha256": "D424FC03AA518E6DB725C743D2B2AAB3F767D5C905ADAF71BFE9212EB050B6A1",
+      "OfficePdfSha256": "56FDC48A118A902E8E68345615796F84220BDFC00CF9CA9A517C6AD21C4761EA",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 83.06400299072266,
+          "Y": 49.67999267578125
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 83.06400299072266,
+          "Y": 65.39996337890625
+        },
+        {
+          "Text": "Terminal box control.",
+          "X": 79.46399688720703,
+          "Y": 82.67999267578125
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 176.4199981689453,
+          "Y": 58.91998291015625
+        },
+        {
+          "Text": "+",
+          "X": 181.33999633789062,
+          "Y": 58.91998291015625
+        },
+        {
+          "Text": "2",
+          "X": 187.25,
+          "Y": 58.91998291015625
+        },
+        {
+          "Text": "y",
+          "X": 181.4600067138672,
+          "Y": 70.91998291015625
+        }
+      ],
+      "Box": [
+        72.0,
+        36.0,
+        288.0,
+        96.0
+      ]
+    },
+    {
+      "Id": "header-terminal-text12",
+      "Mode": "all-word-compatible",
+      "InputSha256": "D424FC03AA518E6DB725C743D2B2AAB3F767D5C905ADAF71BFE9212EB050B6A1",
+      "OfficePdfSha256": "FEEEF4DCE73ECE127F50BAE8C36B1BB6D784CBD59442D7C3B6044A6D7A813034",
+      "Role": "StaticBox",
+      "TextOrigins": [
+        {
+          "Text": "BOX TABLE NORTH",
+          "X": 62.56800079345703,
+          "Y": 141.1199951171875
+        },
+        {
+          "Text": "BOX TABLE SOUTH",
+          "X": 62.56800079345703,
+          "Y": 152.97998046875
+        },
+        {
+          "Text": "Terminal box control.",
+          "X": 59.85599899291992,
+          "Y": 165.97998046875
+        }
+      ],
+      "Math": [
+        {
+          "Text": "x",
+          "X": 132.91000366210938,
+          "Y": 148.0799560546875
+        },
+        {
+          "Text": "+",
+          "X": 136.6300048828125,
+          "Y": 148.0799560546875
+        },
+        {
+          "Text": "2",
+          "X": 141.0500030517578,
+          "Y": 148.0799560546875
+        },
+        {
+          "Text": "y",
+          "X": 136.6999969482422,
+          "Y": 157.1300048828125
+        }
+      ],
+      "Box": [
+        54.27399826049805,
+        130.69195556640625,
+        217.09400939941406,
+        175.91998291015625
+      ]
+    },
+    {
+      "Id": "direct-header-exact14",
+      "Mode": "final-preserve",
+      "InputSha256": "61B326E96B5B99D2443ECE0BA57B6F365DC70613049843A117312F54540A7B95",
+      "OfficePdfSha256": "E39B49089ADAAC854E91145985319D112A4592BA486F54A659ABA9D44DBE08EF",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 72.02400207519531,
+          "Y": 47.27996826171875
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 72.02400207519531,
+          "Y": 61.20001220703125
+        }
+      ],
+      "Math": [],
+      "Box": []
+    },
+    {
+      "Id": "direct-header-exact14",
+      "Mode": "all-word-compatible",
+      "InputSha256": "61B326E96B5B99D2443ECE0BA57B6F365DC70613049843A117312F54540A7B95",
+      "OfficePdfSha256": "3414A19C7116438460323C75D52F2CFAFA11D61010C87B2BA9654D7D70FA2319",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 54.2400016784668,
+          "Y": 139.32000732421875
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 54.2400016784668,
+          "Y": 149.80999755859375
+        }
+      ],
+      "Math": [],
+      "Box": []
+    },
+    {
+      "Id": "direct-footer-exact14",
+      "Mode": "final-preserve",
+      "InputSha256": "C866D72A31FB37FEDA0F13E93417D05202F8C446BB1B2986E7C40FEC0FC52B45",
+      "OfficePdfSha256": "69441DCC39D6D6E3094CCDE9245334745885E47886530B661E16D3AD5B8B93FF",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 72.02400207519531,
+          "Y": 789.2160034179688
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 72.02400207519531,
+          "Y": 803.2799682617188
+        }
+      ],
+      "Math": [],
+      "Box": []
+    },
+    {
+      "Id": "direct-footer-exact14",
+      "Mode": "all-word-compatible",
+      "InputSha256": "C866D72A31FB37FEDA0F13E93417D05202F8C446BB1B2986E7C40FEC0FC52B45",
+      "OfficePdfSha256": "2B1C082BAD536F7B32AA00DD452EF991AA78FBAD6CD483748D35912CC0BB51F9",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 54.2400016784668,
+          "Y": 698.260009765625
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 54.2400016784668,
+          "Y": 708.8199462890625
+        }
+      ],
+      "Math": [],
+      "Box": []
+    },
+    {
+      "Id": "direct-footer-exact22",
+      "Mode": "final-preserve",
+      "InputSha256": "172B13FE2D30E2D560B55377CB78EDB0B65B02FEC712AA6EBCDE8F02D743139F",
+      "OfficePdfSha256": "D5FAA72F590DA3F949040DC10E49A6801EF526FFFF4A325D68607602F33B4240",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 72.02400207519531,
+          "Y": 779.615966796875
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 72.02400207519531,
+          "Y": 801.5999755859375
+        }
+      ],
+      "Math": [],
+      "Box": []
+    },
+    {
+      "Id": "direct-footer-exact22",
+      "Mode": "all-word-compatible",
+      "InputSha256": "172B13FE2D30E2D560B55377CB78EDB0B65B02FEC712AA6EBCDE8F02D743139F",
+      "OfficePdfSha256": "2FD029224810EDC108CBD3C64BDBB9F7805B26782FE0E2E27E61203E739BA320",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 54.2400016784668,
+          "Y": 691.010009765625
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 54.2400016784668,
+          "Y": 707.5699462890625
+        }
+      ],
+      "Math": [],
+      "Box": []
+    },
+    {
+      "Id": "direct-footer-exact8",
+      "Mode": "final-preserve",
+      "InputSha256": "2675A3EFD1064D8379206385108280AED3B7878DB6CDE093C5B027C65460F5EC",
+      "OfficePdfSha256": "05B117B71B94E6CA08FE95BDAFBFD74115F5B1A872F8D885DC908BFAF985C760",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 72.02400207519531,
+          "Y": 796.4400024414062
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 72.02400207519531,
+          "Y": 804.47998046875
+        }
+      ],
+      "Math": [],
+      "Box": []
+    },
+    {
+      "Id": "direct-footer-exact8",
+      "Mode": "all-word-compatible",
+      "InputSha256": "2675A3EFD1064D8379206385108280AED3B7878DB6CDE093C5B027C65460F5EC",
+      "OfficePdfSha256": "DF87C5D15B33F7E894ED7EFBBAE4552BE56B8B74F419048784688251D07C5219",
+      "Role": "DirectFixed",
+      "TextOrigins": [
+        {
+          "Text": "DIRECT STATIC NORTH",
+          "X": 54.2400016784668,
+          "Y": 703.6799926757812
+        },
+        {
+          "Text": "DIRECT STATIC SOUTH",
+          "X": 54.2400016784668,
+          "Y": 709.72998046875
+        }
+      ],
+      "Math": [],
+      "Box": []
+    }
+  ]
+}

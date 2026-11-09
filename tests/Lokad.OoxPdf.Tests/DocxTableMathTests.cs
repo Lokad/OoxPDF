@@ -9,15 +9,17 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTableMathTests
 {
-    public static void DocxStaticMinimumFramesMapCompleteSourceAndRetainFixedFallbacks()
+    public static void DocxStaticDeclaredFramesMapCompleteSourceAndRetainUnknownFallbacks()
     {
         const double scale = .75d;
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
         foreach (bool header in new[] { true, false })
+        foreach (string declaredRule in new[] { "atLeast", "exact" })
         foreach (double minimum in new[] { 0d, 8d, 20d, 40d })
         {
+            if (declaredRule == "exact" && minimum == 0d) continue;
             var first = DocxTests.CreateDocxLayoutParagraph("First static row.", 10d, minimum) with
-            { Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "atLeast" } };
+            { Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = declaredRule } };
             var last = first with { Runs = [first.Runs[0] with { Text = "Last static row." }] };
             var paragraphs = new Dictionary<string, IReadOnlyList<DocxParagraph>> { ["default"] = [first, last] };
             var document = DocxTests.CreateLayoutTestDocument(
@@ -39,8 +41,8 @@ internal static class DocxTableMathTests
             foreach (var pair in design.StaticTextLines.Zip(mapped.StaticTextLines))
             {
                 TestAssert.True(pair.Second.StaticStoryUsesPhysicalY && ReferenceEquals(pair.First.SourceParagraph, pair.Second.SourceParagraph),
-                    "A complete minimum-height story retains its measured source owner when mapped.");
-                if (minimum > 0d) // Zero retains the existing undeclared static-metrics fallback.
+                    "A complete declared-height story retains its measured source owner when mapped.");
+                if (minimum > 0d && declaredRule == "atLeast") // Minimum frames also own the measured strut.
                     TestAssert.True(pair.First.OccupiedLineBox is { } measured && pair.Second.OccupiedLineBox is { } placed &&
                         Math.Abs(placed.Height - measured.Height * scale) < 1e-9 &&
                         Math.Abs(placed.BaselineInset - measured.BaselineInset * scale) < 1e-9,
@@ -48,13 +50,14 @@ internal static class DocxTableMathTests
                 TestAssert.True(Math.Abs(pair.Second.BaselineY - mapped.Height / 2d -
                     (pair.First.BaselineY - design.Height / 2d) * scale) < 1e-9 &&
                     Math.Abs(pair.Second.LineHeight!.Value - pair.First.LineHeight!.Value * scale) < 1e-9,
-                    "Minimum slots and baselines share the existing complete-frame transform exactly once.");
+                    "Declared advances and baselines share the existing complete-frame transform exactly once.");
             }
             foreach (string rule in new[] { "exact", "future" })
             {
-                paragraphs["default"] = [first with { Spacing = first.Spacing with { LineRuleValue = rule } }];
+                paragraphs["default"] = [first with { LineSpacingPoints = rule == "exact" ? 0d : minimum,
+                    Spacing = first.Spacing with { LineRuleValue = rule } }];
                 TestAssert.True(Layout(document, scale).Pages.Single().StaticTextLines.All(line => !line.StaticStoryUsesPhysicalY),
-                    "Fixed and unknown line rules retain their coordinate fallback.");
+                    "Unresolved zero fixed-height and unknown line rules retain their coordinate fallback.");
             }
         }
     }

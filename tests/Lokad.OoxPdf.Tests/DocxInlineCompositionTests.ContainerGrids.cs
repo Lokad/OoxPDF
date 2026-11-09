@@ -70,7 +70,8 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static PdfPage RenderContainerGrid(JsonElement row, OoxPdfDocxMarkupMode mode, IFontResolver? resolver)
+    private static PdfPage RenderContainerGrid(JsonElement row, OoxPdfDocxMarkupMode mode, IFontResolver? resolver,
+        CancellationToken cancellationToken = default)
     {
         const string prefix = "tests/Lokad.OoxPdf.Tests/Cases/";
         string input = row.GetProperty("Input").GetString()!;
@@ -82,7 +83,7 @@ internal static partial class DocxInlineCompositionTests
         using var package = OoxPackage.Open(stream, default);
         var document = new DocxReader().Read(package, null, default, markupMode: mode);
         var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
-        return new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+        return new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, cancellationToken).ToBlockingEnumerable().Single();
     }
 
     private static JsonDocument ReadContainerGridJson(string name) => JsonDocument.Parse(File.ReadAllText(Path.GetFullPath(

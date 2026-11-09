@@ -93,8 +93,8 @@ internal sealed partial class DocxLayoutEngine
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
             page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
             page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
-            IsNaturalStaticStory(story, width / scale, mathEquations, token) &&
-            IsNaturalStaticStory(SelectStaticHeaderFooter(
+            CanUseStaticStoryFrame(story, width / scale, mathEquations, token) &&
+            CanUseStaticStoryFrame(SelectStaticHeaderFooter(
                 isHeader ? page.PageSettings.FooterBodyElementsByType : page.PageSettings.HeaderBodyElementsByType,
                 isHeader ? page.PageSettings.FooterParagraphsByType : page.PageSettings.HeaderParagraphsByType,
                 page.PageSettings, pageNumber, page.SectionFirstPageNumber), width / scale, mathEquations, token);
@@ -102,7 +102,7 @@ internal sealed partial class DocxLayoutEngine
         {
             var layout = CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,
                 textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathEquations);
-            return !isHeader && scale == 1d && IsNaturalStaticStory(story, width, mathEquations, token)
+            return !isHeader && scale == 1d && CanUseStaticStoryFrame(story, width, mathEquations, token)
                 ? PlaceFooterTableDrawingFrames(layout, page.MarginBottom, token) : layout;
         }
 
@@ -286,11 +286,11 @@ internal sealed partial class DocxLayoutEngine
         };
     }
 
-    private static bool IsNaturalStaticStory(DocxSelectedStaticStory story, double width,
+    private static bool CanUseStaticStoryFrame(DocxSelectedStaticStory story, double width,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
-        => IsNaturalStaticBody(story.BodyElements, width, mathEquations, token);
+        => CanUseStaticBodyFrame(story.BodyElements, width, mathEquations, token);
 
-    private static bool IsNaturalStaticBody(IReadOnlyList<DocxBodyElement> elements, double width,
+    private static bool CanUseStaticBodyFrame(IReadOnlyList<DocxBodyElement> elements, double width,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         foreach (var element in elements)
@@ -299,18 +299,18 @@ internal sealed partial class DocxLayoutEngine
             if (element is DocxParagraphElement direct &&
                 DocxInlineContent.HasSupportedParagraphRevisionOwners(direct.Paragraph, token, direct.Revisions))
             {
-                if (!IsNaturalStaticParagraph(direct.Paragraph, width, mathEquations, token)) return false;
+                if (!CanUseStaticParagraphFrame(direct.Paragraph, width, mathEquations, token)) return false;
             }
             else if (element is DocxTableElement table)
             {
-                if (!IsNaturalStaticTable(table.Table, width, mathEquations, token)) return false;
+                if (!CanUseStaticTableFrame(table.Table, width, mathEquations, token)) return false;
             }
             else { return false; }
         }
         return true;
     }
 
-    private static bool IsNaturalStaticTable(DocxTable table, double width,
+    private static bool CanUseStaticTableFrame(DocxTable table, double width,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         if (table.Revisions.Count != 0) return false;
@@ -327,11 +327,11 @@ internal sealed partial class DocxLayoutEngine
                     token.ThrowIfCancellationRequested();
                     if (child is DocxParagraphElement paragraph)
                     {
-                        if (!IsNaturalStaticParagraph(paragraph.Paragraph, width, mathEquations, token)) return false;
+                        if (!CanUseStaticParagraphFrame(paragraph.Paragraph, width, mathEquations, token)) return false;
                     }
                     else if (child is DocxTableElement nested)
                     {
-                        if (!IsNaturalStaticTable(nested.Table, width, mathEquations, token)) return false;
+                        if (!CanUseStaticTableFrame(nested.Table, width, mathEquations, token)) return false;
                     }
                     else return false;
                 }
@@ -340,11 +340,11 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
-    private static bool IsNaturalStaticParagraph(DocxParagraph paragraph, double width,
+    private static bool CanUseStaticParagraphFrame(DocxParagraph paragraph, double width,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (!paragraph.InlineTextBoxes.All(box => IsNaturalInlineBoxFrame(box, width, mathEquations, token))) return false;
+        if (!paragraph.InlineTextBoxes.All(box => CanUseInlineBoxFrame(box, width, mathEquations, token))) return false;
         // Legacy box-only models may lack a parsed ordered view. Mixed parsed
         // paragraphs use the same source ownership as body and cell containers.
         if (paragraph.InlineTextBoxes.Count != 0 && paragraph.Equations.Count == 0 &&
@@ -363,12 +363,15 @@ internal sealed partial class DocxLayoutEngine
             paragraph.Images.All(image => image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
                 double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
                 image.WidthPoints > 0d && image.HeightPoints > 0d && image.WidthPoints <= width) &&
-            (paragraph.InlineTextBoxes.Count == 0 ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) :
+            // A finite fixed line box retains its declared advance in the same
+            // static frame as automatic/minimum flow, including boxed children.
+            (paragraph.InlineTextBoxes.Count == 0 ?
+                DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph) :
                 paragraph.ListLabel is null && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) &&
             DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token);
     }
 
-    private static bool IsNaturalInlineBoxFrame(DocxInlineTextBox box, double width,
+    private static bool CanUseInlineBoxFrame(DocxInlineTextBox box, double width,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -383,6 +386,6 @@ internal sealed partial class DocxLayoutEngine
         }
         ResolveInlineTextBoxContentInsets(box, out double left, out _, out double right, out _);
         double contentWidth = boxWidth - left - right;
-        return contentWidth > 0d && IsNaturalStaticBody(box.BodyElements, contentWidth, mathEquations, token);
+        return contentWidth > 0d && CanUseStaticBodyFrame(box.BodyElements, contentWidth, mathEquations, token);
     }
 }

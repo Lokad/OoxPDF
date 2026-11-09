@@ -1,0 +1,164 @@
+[
+  {
+    "Id": "static-box-table-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/static-box-table-header.docx",
+    "Sha256": "6DE29BCEC55B955C429544863CD110101DBB5397ABECA055D1C705F87D379BDF",
+    "HeldOut": false,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "Role": "StaticBox"
+  },
+  {
+    "Id": "static-box-table-footer",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/static-box-table-footer.docx",
+    "Sha256": "9EFC5F739924DD3FEB5342C58AAEB1639208FFA6BF729E486E50A4B0C0D3A834",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "Role": "StaticBox"
+  },
+  {
+    "Id": "static-box-table-nested-header",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/static-box-table-nested-header.docx",
+    "Sha256": "13044B23829F9F2F9C0C86A519C8AE1889EF701A4029B107A1C5BACA20634B4F",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "Role": "StaticBox"
+  },
+  {
+    "Id": "static-box-table-body",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/static-box-table-body.docx",
+    "Sha256": "257741BA414DC8098307E2A3315A623A3D9A634EDA3C2F356B044BB3D97B962E",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Before public math table.",
+      "After public math table."
+    ],
+    "Role": "BodyPreservation"
+  },
+  {
+    "Id": "footer-terminal-exact12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/footer-terminal-exact12.docx",
+    "Sha256": "7DF64B4DDE3691A774A5400C906003149FEA1FE508900F7503436C1D09CEA1FA",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "Role": "StaticBox"
+  },
+  {
+    "Id": "footer-terminal-min12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/footer-terminal-min12.docx",
+    "Sha256": "D33786C043B879738FD349DC00FBA566EAA7454B95B2D6FAF21B811E453AD32C",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row."
+    ],
+    "Role": "StaticBox"
+  },
+  {
+    "Id": "footer-terminal-text12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/footer-terminal-text12.docx",
+    "Sha256": "ECB456E17883E77297026885D9F16E9F0D16CBC6D126DC97CA8E3D65C57BCDCC",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Terminal box control."
+    ],
+    "Role": "StaticBox"
+  },
+  {
+    "Id": "header-terminal-text12",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/header-terminal-text12.docx",
+    "Sha256": "D424FC03AA518E6DB725C743D2B2AAB3F767D5C905ADAF71BFE9212EB050B6A1",
+    "HeldOut": true,
+    "ExpectedEquationCount": 1,
+    "ExpectedText": [
+      "BOX TABLE NORTH",
+      "BOX TABLE SOUTH",
+      "Jump to box row.",
+      "Terminal box control."
+    ],
+    "Role": "StaticBox"
+  },
+  {
+    "Id": "direct-header-exact14",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/direct-header-exact14.docx",
+    "Sha256": "61B326E96B5B99D2443ECE0BA57B6F365DC70613049843A117312F54540A7B95",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "DIRECT STATIC NORTH",
+      "DIRECT STATIC SOUTH"
+    ],
+    "Role": "DirectFixed"
+  },
+  {
+    "Id": "direct-footer-exact14",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/direct-footer-exact14.docx",
+    "Sha256": "C866D72A31FB37FEDA0F13E93417D05202F8C446BB1B2986E7C40FEC0FC52B45",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "DIRECT STATIC NORTH",
+      "DIRECT STATIC SOUTH"
+    ],
+    "Role": "DirectFixed"
+  },
+  {
+    "Id": "direct-footer-exact22",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/direct-footer-exact22.docx",
+    "Sha256": "172B13FE2D30E2D560B55377CB78EDB0B65B02FEC712AA6EBCDE8F02D743139F",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "DIRECT STATIC NORTH",
+      "DIRECT STATIC SOUTH"
+    ],
+    "Role": "DirectFixed"
+  },
+  {
+    "Id": "direct-footer-exact8",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/StaticDeclaredFrames/direct-footer-exact8.docx",
+    "Sha256": "2675A3EFD1064D8379206385108280AED3B7878DB6CDE093C5B027C65460F5EC",
+    "HeldOut": true,
+    "ExpectedEquationCount": 0,
+    "ExpectedText": [
+      "DIRECT STATIC NORTH",
+      "DIRECT STATIC SOUTH"
+    ],
+    "Role": "DirectFixed"
+  }
+]
