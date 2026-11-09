@@ -2513,7 +2513,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     double rowHeight = frame.RowHeights[rowIndex];
-                    tableRows.Add(CreateTableRowLayout(
+                    tableRows.Add(ProjectContainedTableBaselines(CreateTableRowLayout(
                         tableElement.Table,
                         frame.Context,
                         tableElement.Table.Rows[rowIndex],
@@ -2533,7 +2533,7 @@ internal sealed partial class DocxLayoutEngine
                         Story: null,
                         pageCount: pageCount,
                         paragraphSpacingScale: paragraphSpacingScale,
-                        cellMemo: cellMemo));
+                        cellMemo: cellMemo), textMeasurer, paragraphSpacingScale, cancellationToken));
                     cursorY -= rowHeight;
                 }
 

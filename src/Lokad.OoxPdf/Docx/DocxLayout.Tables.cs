@@ -52,20 +52,10 @@ internal sealed partial class DocxLayoutEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxTableCellLayout cell = row.Cells[cellIndex];
-                IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell.VisualCell));
-                if (cell.TextLines.Count == 0 && cell.NestedRows.Count == 0 ||
-                    !HasOrderedInlineObjectOwners(cell, cancellationToken) ||
-                    cell.Cell.HasVerticalMerge ||
-                    hasNestedRows && !DocxMathParagraphPolicy.IsSupportedCellProperties(cell.VisualCell) ||
-                    paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is not null) ||
-                    !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
-                    !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) return false;
-                double inset = ResolveTableCellFirstBaselineInset(paragraphs, measurer);
+                if (!TryResolveReviewCellBaselineInset(cell, measurer, printScale, hasNestedRows,
+                    cancellationToken, out double inset)) return false;
                 if (cell.TextLines.Count != 0)
                 {
-                    if (inset == 0d && cell.TextLines[0].InlineFrame?.TextBaselineInset is { } measuredInset)
-                        inset = measuredInset / printScale;
-                    if (!double.IsFinite(inset) || inset <= 0d) return false;
                     if (cell.TextLines[0].BaselineY > highestBaseline)
                     {
                         highestBaseline = cell.TextLines[0].BaselineY;
@@ -209,12 +199,9 @@ internal sealed partial class DocxLayoutEngine
                     ? paragraphReductions[index] : 0d;
                 cells[cellIndex] = cell with
                 {
-                    TextLines = cell.TextLines.Select(line => line with { BaselineY = line.BaselineY +
-                        (line.InlineFrame is null ? baselineCorrection : ownedCorrection) + Reduction(line.SourceParagraphIndex),
-                        // A source frame follows its container, not the extra
-                        // glyph-baseline projection within that container.
-                        FirstLineInsetPoints = line.FirstLineInsetPoints -
-                            (line.InlineFrame is null ? baselineCorrection - ownedCorrection : 0d) }).ToArray(),
+                    TextLines = cell.TextLines.Select(line => ProjectReviewCellBaseline(line,
+                        baselineCorrection - ownedCorrection,
+                        ownedCorrection + Reduction(line.SourceParagraphIndex))).ToArray(),
                     InlineImages = cell.InlineImages.Count == 0 ? cell.InlineImages :
                         cell.InlineImages.Select(image => image.Translate(0d, ownedCorrection + Reduction(image.SourceParagraphIndex))).ToArray(),
                     InlineTextBoxes = cell.InlineTextBoxes.Select(box =>
@@ -273,6 +260,61 @@ internal sealed partial class DocxLayoutEngine
             }
             return count;
         }
+    }
+
+    private static bool TryResolveReviewCellBaselineInset(DocxTableCellLayout cell,
+        IDocxTextMeasurer measurer, double printScale, bool hasNestedRows,
+        CancellationToken token, out double inset)
+    {
+        inset = 0d;
+        token.ThrowIfCancellationRequested();
+        IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell.VisualCell));
+        if (cell.TextLines.Count == 0 && cell.NestedRows.Count == 0 ||
+            !HasOrderedInlineObjectOwners(cell, token) || cell.Cell.HasVerticalMerge ||
+            hasNestedRows && !DocxMathParagraphPolicy.IsSupportedCellProperties(cell.VisualCell) ||
+            paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is not null) ||
+            !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
+            !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) return false;
+        inset = ResolveTableCellFirstBaselineInset(paragraphs, measurer);
+        if (cell.TextLines.Count == 0) return true;
+        if (inset == 0d && cell.TextLines[0].InlineFrame?.TextBaselineInset is { } measuredInset)
+            inset = measuredInset / printScale;
+        return double.IsFinite(inset) && inset > 0d;
+    }
+
+    // The container owns translations. Only legacy lines still owe the nominal
+    // to printed inset conversion; ordered frames already own physical metrics.
+    private static DocxTextLineLayout ProjectReviewCellBaseline(DocxTextLineLayout line,
+        double insetCorrection, double ownerCorrection) => line with
+    {
+        BaselineY = line.BaselineY + ownerCorrection + (line.InlineFrame is null ? insetCorrection : 0d),
+        FirstLineInsetPoints = line.FirstLineInsetPoints - (line.InlineFrame is null ? insetCorrection : 0d)
+    };
+
+    private static DocxTableRowLayout ProjectContainedTableBaselines(DocxTableRowLayout row,
+        IDocxTextMeasurer measurer, double printScale, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (!double.IsFinite(printScale) || printScale <= 0d || printScale >= 1d ||
+            !HasAutomaticTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue) &&
+            !HasMinimumTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue) &&
+            !HasExactTableRowHeight(row.DeclaredHeightPoints, row.HeightRuleValue)) return row;
+        bool nested = row.Cells.Any(cell => cell.NestedRows.Count != 0);
+        return row with
+        {
+            Cells = row.Cells.Select(cell =>
+            {
+                token.ThrowIfCancellationRequested();
+                bool measured = TryResolveReviewCellBaselineInset(cell, measurer, printScale, nested, token, out double inset);
+                return cell with
+                {
+                    TextLines = measured ? cell.TextLines.Select(line =>
+                        ProjectReviewCellBaseline(line, inset * (1d - printScale), 0d)).ToArray() : cell.TextLines,
+                    NestedTableRows = cell.NestedRows.Count == 0 ? cell.NestedRows : cell.NestedRows.Select(child =>
+                        ProjectContainedTableBaselines(child, measurer, printScale, token)).ToArray()
+                };
+            }).ToArray()
+        };
     }
 
     private static bool HasExactTableRowHeight(double? height, string? rule) =>

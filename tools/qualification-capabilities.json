@@ -1,4 +1,20 @@
 {
+  "docx-contained-cell-baselines": [
+      "DocxStaticBoxTables",
+      "DocxFixedStaticFrames",
+      "PortableRenderingContainedTableBaselines",
+      "DocxReviewTableCellInsetsUsePrintedFontSize",
+      "DocxReviewTableCorrectionPreservesSurroundingTextFlow",
+      "DocxReviewTableSplitProjectionPreservesContinuationPitch",
+      "DocxTableMath",
+      "DocxTableCellTextLinesMemoSharesSplitCells",
+      "DocxStaticTableOriginsMatchIndependentWordContentAndGeometry",
+      "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+      "DocxRendererKeepsSplitTableCellHyperlinkAnnotationsOnVisibleFragment",
+      "DocxTableLayoutStageHonorsExactRowHeightRule",
+      "DocxInlineBoxMathKeepsIndependentContentAcrossContainers",
+      "StagedPageMemory"
+  ],
   "docx-wrapped-minimum-leading": [
       "DocxWrappedMinimumLeading",
       "DocxMinimumBodyLineLeading",

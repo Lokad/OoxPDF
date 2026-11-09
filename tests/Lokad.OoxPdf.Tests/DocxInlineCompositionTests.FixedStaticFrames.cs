@@ -15,9 +15,6 @@ internal static partial class DocxInlineCompositionTests
         using var gold = ReadFixedStaticFramesJson("fixed-static-office.json");
         foreach (var expected in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
-            // This source also exercises body placement, whose raw baseline
-            // residual is retained separately from static-frame acceptance.
-            if (expected.GetProperty("Role").GetString() == "BodyPreservation") continue;
             var source = cases.RootElement.EnumerateArray().Single(row => row.GetProperty("Id").GetString() == expected.GetProperty("Id").GetString());
             TestAssert.Equal(source.GetProperty("Sha256").GetString(), expected.GetProperty("InputSha256").GetString());
             var mode = expected.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;

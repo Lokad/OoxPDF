@@ -25,10 +25,7 @@ internal static partial class DocxInlineCompositionTests
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent static-box table origins use installed Windows fonts.");
         using var cases = ReadStaticBoxTableCases();
         using var golden = JsonDocument.Parse(File.ReadAllText(StaticBoxTablePath("static-box-tables-office.json")));
-        // Body placement is a preservation control. Its approximate Review
-        // baseline and every horizontal residual remain in qualification evidence.
-        foreach (var gold in golden.RootElement.GetProperty("Rows").EnumerateArray()
-            .Where(row => row.GetProperty("Id").GetString() != "static-box-table-body"))
+        foreach (var gold in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
             var row = cases.RootElement.EnumerateArray().Single(item =>
                 item.GetProperty("Id").GetString() == gold.GetProperty("Id").GetString());
@@ -77,6 +74,23 @@ internal static partial class DocxInlineCompositionTests
                     OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .RenderPagesAsync(document, null, canceled.Token).ToBlockingEnumerable().ToArray());
         }
+    }
+
+    internal static void CheckContainedTablePrintedBaselines()
+    {
+        using var cases = ReadStaticBoxTableCases();
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        double Gap(string id)
+        {
+            var source = cases.RootElement.EnumerateArray().Single(row => row.GetProperty("Id").GetString() == id);
+            var page = RenderStaticBoxTable(source, OoxPdfDocxMarkupMode.AllMarkup, resolver);
+            CheckStaticBoxTablePaint(page, id);
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true).ToArray();
+            return shows.Single(show => show.Text.Trim() == "BOX TABLE NORTH").Y -
+                shows.Single(show => show.Text.Trim() == "BOX TABLE SOUTH").Y;
+        }
+        TestAssert.True(Math.Abs(Gap("static-box-table-body") - Gap("static-box-table-header")) < .05d,
+            "The same plain/math rows retain their printed baseline spacing across body and header box placement.");
     }
 
     private static PdfPage RenderStaticBoxTable(JsonElement row, OoxPdfDocxMarkupMode mode, IFontResolver? resolver)
