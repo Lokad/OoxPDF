@@ -1702,7 +1702,8 @@ internal sealed partial class DocxLayoutEngine
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
                         paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
                     : null;
-                if (ShouldMoveParagraphForWidowControl(paragraph, lines, cursorY, lineHeightProfile, lineHeight,
+                bool useLineMetrics = UsesBodyTextLineMetrics(paragraph, lineHeightProfile, textMeasurer);
+                if (ShouldMoveParagraphForWidowControl(paragraph, lines, cursorY, useLineMetrics, lineHeight,
                     textMeasurer, CurrentParagraphFrameBottom(), HasCurrentColumnContent(), cancellationToken))
                 {
                     AdvanceColumnOrPage();
@@ -1718,7 +1719,7 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxWrappedTextLine line = lines[lineIndex];
-                    DocxParagraph metricParagraph = GetBodyTextLineMetricParagraph(paragraph, line, lineHeightProfile, textMeasurer);
+                    DocxParagraph metricParagraph = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;
                     double lineFontSize = ReferenceEquals(metricParagraph, paragraph) ? paragraphFontSize : GetParagraphFontSize(metricParagraph);
                     DocxLineHeightProfile lineProfile = ReferenceEquals(metricParagraph, paragraph) ? lineHeightProfile :
                         ResolveLineHeightProfile(metricParagraph, lineFontSize, textMeasurer);

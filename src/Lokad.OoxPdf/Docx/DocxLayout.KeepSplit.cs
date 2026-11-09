@@ -328,15 +328,16 @@ internal sealed partial class DocxLayoutEngine
     // wrapped line. The original paragraph still owns source ranges and layout.
     // Declared slots, lists, inline objects and unmeasured content keep their
     // existing metric contracts.
-    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph,
-        DocxWrappedTextLine line, DocxLineHeightProfile profile, IDocxTextMeasurer textMeasurer)
+    private static bool UsesBodyTextLineMetrics(DocxParagraph paragraph,
+        DocxLineHeightProfile profile, IDocxTextMeasurer textMeasurer) =>
+        profile.Source == DocxLineHeightSource.BodySingleLineAuto &&
+        textMeasurer is IDocxLineMetricsProvider &&
+        !paragraph.InlineReferences.Any(reference => reference.Kind != DocxRelatedStoryKind.Comment) &&
+        DocxPlainBodyFrame.HasPlainTextContent(paragraph);
+
+    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, DocxWrappedTextLine line)
     {
-        if (profile.Source != DocxLineHeightSource.BodySingleLineAuto ||
-            textMeasurer is not IDocxLineMetricsProvider ||
-            paragraph.InlineReferences.Any(reference => reference.Kind != DocxRelatedStoryKind.Comment) ||
-            !DocxPlainBodyFrame.HasPlainTextContent(paragraph) ||
-            line.Spans.Count == 0)
-            return paragraph;
+        if (line.Spans.Count == 0) return paragraph;
 
         bool sameRuns = line.Spans.Count == paragraph.Runs.Count;
         for (int index = 0; sameRuns && index < line.Spans.Count; index++)
@@ -350,7 +351,7 @@ internal sealed partial class DocxLayoutEngine
         DocxParagraph paragraph,
         IReadOnlyList<DocxWrappedTextLine> lines,
         double cursorY,
-        DocxLineHeightProfile profile,
+        bool useLineMetrics,
         double fallbackLineHeight,
         IDocxTextMeasurer textMeasurer,
         double marginBottom,
@@ -369,7 +370,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (var line in lines)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DocxParagraph metrics = GetBodyTextLineMetricParagraph(paragraph, line, profile, textMeasurer);
+            DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;
             double height = ReferenceEquals(metrics, paragraph) ? fallbackLineHeight :
                 ResolveLineHeightProfile(metrics, GetParagraphFontSize(metrics), textMeasurer).LineHeight;
             if (remaining < height) break;
@@ -652,13 +653,14 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, null);
         if (textSpans.Count != 0)
         {
+            bool useLineMetrics = UsesBodyTextLineMetrics(paragraph, profile, textMeasurer);
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale, defaultTabStopPoints);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
             foreach (var line in WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, cancellationToken: cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                DocxParagraph metrics = GetBodyTextLineMetricParagraph(paragraph, line, profile, textMeasurer);
+                DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;
                 height += ReferenceEquals(metrics, paragraph) ? lineHeight :
                     ResolveLineHeightProfile(metrics, GetParagraphFontSize(metrics), textMeasurer).LineHeight;
             }
