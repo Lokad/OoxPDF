@@ -78,10 +78,10 @@ internal sealed partial class DocxRenderer
 
         double? bottom = null;
         double? top = null;
-        void IncludeRevisionBounds(double y, double height)
+        void IncludeRevisionBounds(double lower, double upper)
         {
-            bottom = bottom is null ? y : Math.Min(bottom.Value, y);
-            top = top is null ? y + height : Math.Max(top.Value, y + height);
+            bottom = bottom is null ? lower : Math.Min(bottom.Value, lower);
+            top = top is null ? upper : Math.Max(top.Value, upper);
         }
 
         void PaintRevisionBounds()
@@ -91,8 +91,8 @@ internal sealed partial class DocxRenderer
                 return;
             }
 
-            double barBottom = Math.Max(0d, bottom.Value - WordCompatibleAllMarkupRevisionBarBottomOutsetPoints);
-            double barTop = Math.Min(page.Height, top.Value - WordCompatibleAllMarkupRevisionBarTopInsetPoints);
+            double barBottom = Math.Max(0d, bottom.Value);
+            double barTop = Math.Min(page.Height, top.Value);
             double barHeight = Math.Max(0d, barTop - barBottom);
             if (barHeight > 0d)
             {
@@ -139,9 +139,8 @@ internal sealed partial class DocxRenderer
                 {
                     PaintRevisionBounds();
                 }
-                double height = ResolveRevisionLineHeight(line, markupContext);
-                double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
-                IncludeRevisionBounds(baselineY - height * 0.25d, height);
+                var bounds = ResolveRevisionLineBounds(line, markupContext);
+                IncludeRevisionBounds(bounds.Bottom, bounds.Top);
                 lastChangedBlock = sourceBlock;
             }
             PaintRevisionBounds();
@@ -155,10 +154,8 @@ internal sealed partial class DocxRenderer
             var owner = RevisionBandOwner(source.Owner);
             if (separateBodyBands && owner.Kind == DocxStoryKind.Body || !HasTextLineRevision(line)) continue;
 
-            double height = ResolveRevisionLineHeight(line, markupContext);
-            double baselineY = line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext);
-            double y = baselineY - height * 0.25d;
-            IncludeStoryBounds(owner, y, height);
+            var bounds = ResolveRevisionLineBounds(line, markupContext);
+            IncludeStoryBounds(owner, bounds.Bottom, bounds.Top);
         }
 
         foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, drawingPages.PageAll(pageIndex)))
@@ -169,7 +166,9 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            IncludeStoryBounds(RevisionBandOwner(row.Story ?? DocxStoryId.Body()), row.Y, Math.Max(6d, row.Height));
+            IncludeStoryBounds(RevisionBandOwner(row.Story ?? DocxStoryId.Body()),
+                row.Y - WordCompatibleAllMarkupRevisionBarBottomOutsetPoints,
+                row.Y + Math.Max(6d, row.Height) - WordCompatibleAllMarkupRevisionBarTopInsetPoints);
         }
         foreach (var bounds in storyBounds.Values)
         {
@@ -178,10 +177,10 @@ internal sealed partial class DocxRenderer
             PaintRevisionBounds();
         }
 
-        void IncludeStoryBounds(DocxStoryId owner, double y, double height)
+        void IncludeStoryBounds(DocxStoryId owner, double lower, double upper)
         {
             storyBounds[owner] = storyBounds.TryGetValue(owner, out var bounds)
-                ? (Math.Min(bounds.Bottom, y), Math.Max(bounds.Top, y + height)) : (y, y + height);
+                ? (Math.Min(bounds.Bottom, lower), Math.Max(bounds.Top, upper)) : (lower, upper);
         }
 
         static DocxStoryId RevisionBandOwner(DocxStoryId owner) =>
@@ -202,11 +201,27 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    // The mapped inline frame owns physical extents. Related-story LineHeight
-    // may still describe its design-space slot after emission precompensation.
-    private static double ResolveRevisionLineHeight(DocxTextLineLayout line, DocxMarkupContext context) =>
-        Math.Max(6d, line.InlineFrame?.Height ?? line.LineHeight ??
+    private static (double Bottom, double Top) ResolveRevisionLineBounds(
+        DocxTextLineLayout line, DocxMarkupContext context)
+    {
+        double baselineOffset = ResolveTextEmissionBaselineOffset(context);
+        double after = line.ParagraphAfterSpacing ?? 0d;
+        // A paragraph-mark formatting range owns the complete measured row and
+        // its resolved trailing gap. Other revision owners keep their fallback.
+        if (line.SourceParagraph?.ParagraphMarkRun?.Revisions.Any(revision =>
+                revision.Kind == DocxRevisionKind.RunPropertiesChange) == true &&
+            double.IsFinite(after) && after >= 0d &&
+            DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double lower, out double upper))
+            return (lower - baselineOffset - after, upper - baselineOffset);
+
+        // Related-story LineHeight may still be a design-space slot. Prefer the
+        // mapped physical frame, preserving the existing unmeasured bar insets.
+        double height = Math.Max(6d, line.InlineFrame?.Height ?? line.LineHeight ??
             line.FontSize * ResolveTextEmissionFontScale(context) * 1.2d);
+        double y = line.BaselineY - baselineOffset - height * 0.25d;
+        return (y - WordCompatibleAllMarkupRevisionBarBottomOutsetPoints,
+            y + height - WordCompatibleAllMarkupRevisionBarTopInsetPoints);
+    }
 
     private static IReadOnlyList<DocxRevisionInfo> CollectTextLineRevisions(DocxTextLineLayout line, DocxMarkupContext markupContext,
         CancellationToken token = default)

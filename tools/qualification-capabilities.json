@@ -7176,7 +7176,9 @@
   ],
   "docx-revision-bar-frames": [
     "DocxRevisionBarHorizontalFramesMatchIndependentWord",
+    "DocxRevisionBarParagraphMarkFramesMatchIndependentWord",
     "PortableRenderingRevisionBarsKeepIndependentPageFrames",
+    "PortableRenderingRevisionBarsFollowParagraphAfterSpacing",
     "DocxWordCompatibleAllMarkupPaintsPageRevisionBar",
     "DocxWordCompatibleRevisionBars",
     "DocxWordCompatibleAllMarkupEmitsOfficeLikeMarkupPrimitiveInventory",

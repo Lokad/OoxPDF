@@ -1,0 +1,105 @@
+{
+  "Scope": "Four independently exported Word16 Review paragraph-mark bars. Existing1ptedge and.03ptX/thickness criteria. Complete paragraph source frames include resolved after-spacing. These references are PDF-backed and do not calibrate application view.",
+  "Rows": [
+    {
+      "Id": "paragraph-mark-picture20",
+      "Input": "paragraph-mark-picture20.docx",
+      "InputSha256": "84759E0A8BDF16F0FD1F918E24F2504BF7BC4EE2220ED9E3AD52B0B5A37991AF",
+      "AfterPoints": 6,
+      "PictureHeight": 20,
+      "Bounds": [
+        27.312000274658203,
+        150.02203369140625,
+        27.84000015258789,
+        175.1500244140625
+      ],
+      "ReferencePdfSha256": "94137AB84F6D4501CEF6AB223A941BD22F39FC9727F0C5F4BAB13F3D60DCCEC8",
+      "ExportLogSha256": "C18335677DCE356539AA6964779A2426E2CAF1D15D02855269C9C2E72CEA54C8",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      }
+    },
+    {
+      "Id": "paragraph-mark-picture40",
+      "Input": "paragraph-mark-picture40.docx",
+      "InputSha256": "9B9B19948100BDD950BBD293BF6908DA6FDD8D3BA260F93A2700F616C5D05215",
+      "AfterPoints": 6,
+      "PictureHeight": 40,
+      "Bounds": [
+        27.312000274658203,
+        150.0260009765625,
+        27.84000015258789,
+        190.25
+      ],
+      "ReferencePdfSha256": "6A620884DD82E3F6B2A2B6C25E18641667E43026D98F8549D63C59EC4BBC0640",
+      "ExportLogSha256": "79A78C01871D5997F4BC61376F47DC1453DEB7E852757F572C03EE6D3D06482F",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      }
+    },
+    {
+      "Id": "paragraph-mark-picture40-after0",
+      "Input": "paragraph-mark-picture40-after0.docx",
+      "InputSha256": "C5E58038FAB564287B5CDEB64B8D91DB01D76CB0EDAEC2B74662CA9F9D437D3C",
+      "AfterPoints": 0,
+      "PictureHeight": 40,
+      "Bounds": [
+        27.312000274658203,
+        150.0260009765625,
+        27.84000015258789,
+        185.69000244140625
+      ],
+      "ReferencePdfSha256": "636A20363D22C703A2397143B67CF767687E67639283854FC1509075CDD4DA34",
+      "ExportLogSha256": "002A0AEEEAB51543FCE2F02F1B44C64A2D34B7154DB2E2D79025E72C69F7C8B2",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      }
+    },
+    {
+      "Id": "paragraph-mark-picture40-after12",
+      "Input": "paragraph-mark-picture40-after12.docx",
+      "InputSha256": "7C3E91772E4D92FC56C25CFD425E00BB595C740BCB806CB539B24F9E326AB038",
+      "AfterPoints": 12,
+      "PictureHeight": 40,
+      "Bounds": [
+        27.312000274658203,
+        150.0260009765625,
+        27.84000015258789,
+        194.80999755859375
+      ],
+      "ReferencePdfSha256": "AB63572A129FD2B97A1489FE5261A4C971D57E090F88045B1B5D27FB3880A143",
+      "ExportLogSha256": "D56725D5A59AAFB5BBFDCAA02ED5D107FAD215816C6F5D4FE5802D9F10177985",
+      "OfficeView": {
+        "ShowRevisions": true,
+        "RevisionsView": 0,
+        "MarkupMode": 2,
+        "RevisionsMode": 2,
+        "ShowComments": true,
+        "ShowFormatChanges": true,
+        "ShowInsertionsAndDeletions": true,
+        "RejectAll": false
+      }
+    }
+  ]
+}
