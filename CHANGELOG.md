@@ -37,6 +37,7 @@
   page breaks and explicit paragraph gaps; connected backgrounds preserve their coverage.
   Text moving between columns or pages retains the admitted horizontal origin
   and measured minimum baseline.
+  Plain text reflows between unequal column widths and preserves widow-controlled tails.
   Diagnostics identify omitted story drawings and clipped automatic note rows.
 - PPTX charts: shares parsed source ownership across data, labels, axes, paint,
   markers and legends. Theme palettes and tint/shade order replace fitted color

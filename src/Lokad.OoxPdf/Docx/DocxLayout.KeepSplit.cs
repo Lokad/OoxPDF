@@ -356,7 +356,8 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer textMeasurer,
         double marginBottom,
         bool hasPageContent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool canSplitTail = false)
     {
         if (!DocxParagraphFragmentPolicy.HasWidowControl(paragraph) ||
             lines.Count <= 1 ||
@@ -378,7 +379,8 @@ internal sealed partial class DocxLayoutEngine
             fittingLineCount++;
         }
         return DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, lines.Count, fittingLineCount) ||
-            DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, lines.Count, fittingLineCount);
+            DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, lines.Count, fittingLineCount) &&
+            (!canSplitTail || DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, lines.Count, fittingLineCount - 1));
     }
 
     private static string NormalizeContextualSpacingStyleId(string? styleId)

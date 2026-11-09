@@ -17931,6 +17931,9 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-variable-column-widths": [
+    "DocxSyntheticParagraphWidowControlMovesThreeLineParagraphToNextPage",
+    "DocxSyntheticParagraphDefaultWidowControlMovesThreeLineParagraphToNextPage",
+    "DocxSyntheticParagraphExplicitWidowControlOffAllowsWidowLine",
     "DocxParagraphLayout",
     "DocxEmergencyWrappingBreaksOrdinaryWordsWithoutChangingProtectedSpans",
     "EmergencyWrapUnicodeBoundariesAreSafe",

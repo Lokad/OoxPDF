@@ -1703,7 +1703,7 @@ internal sealed partial class DocxLayoutEngine
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
                         paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
                     : null;
-                bool canResumeText = inlineMath is null && paragraph.Images.Count == 0;
+                bool canResumeText = paragraph.Equations.Count == 0 && paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
                 void RewrapRemainingText(int index)
                 {
                     double firstWidth = Math.Max(1d, width - (index == 0 ? textStartOffset : continuationTextStartOffset) - rightInset);
@@ -1717,7 +1717,8 @@ internal sealed partial class DocxLayoutEngine
                 }
                 bool useLineMetrics = UsesBodyTextLineMetrics(paragraph, lineHeightProfile, textMeasurer);
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines, cursorY, useLineMetrics, lineHeight,
-                    textMeasurer, CurrentParagraphFrameBottom(), HasCurrentColumnContent(), cancellationToken))
+                    textMeasurer, CurrentParagraphFrameBottom(), HasCurrentColumnContent(), cancellationToken,
+                    canSplitTail: canResumeText))
                 {
                     AdvanceColumnOrPage();
                     RegisterInFlightFootnotesForSourceBlock(elementIndex);
@@ -1762,11 +1763,21 @@ internal sealed partial class DocxLayoutEngine
 
                     if (completeFootnoteAdmission is not null)
                         RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Spans);
-                    if (cursorY - extraAbove - extraBelow - lineAdvance < CurrentParagraphFrameBottom(
-                        lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
+                    bool reserveTail = canResumeText && lineIndex > 0 &&
+                        DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, lines.Length, lineIndex + 1);
+                    double admissionAdvance = lineAdvance;
+                    if (reserveTail)
                     {
-                        AdvanceForOverflowingItem(extraAbove + extraBelow + lineAdvance, elementIndex, () => CurrentParagraphFrameBottom(
-                            lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d));
+                        var nextMetrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, lines[lineIndex + 1]) : paragraph;
+                        double nextHeight = ReferenceEquals(nextMetrics, paragraph) ? lineHeightProfile.LineHeight :
+                            ResolveLineHeightProfile(nextMetrics, GetParagraphFontSize(nextMetrics), textMeasurer).LineHeight;
+                        admissionAdvance += scalesExactBodyAdvance ? lineHeight : nextHeight;
+                    }
+                    double admissionAfter = lineIndex == lines.Length - 1 || reserveTail ? spacingProfile.ParagraphAfterSpacing : 0d;
+                    if (cursorY - extraAbove - extraBelow - admissionAdvance < CurrentParagraphFrameBottom(admissionAfter) &&
+                        (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
+                    {
+                        AdvanceForOverflowingItem(extraAbove + extraBelow + admissionAdvance, elementIndex, () => CurrentParagraphFrameBottom(admissionAfter));
                         if (canResumeText && width != wrappedFrameWidth)
                         {
                             // The rejected line consumed no source. Measure it in
