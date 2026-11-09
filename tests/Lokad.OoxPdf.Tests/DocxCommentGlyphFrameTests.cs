@@ -36,11 +36,12 @@ internal static class DocxCommentGlyphFrameTests
     public static void DocxCommentGlyphFramesKeepBookmarksRunSplitsAndCancellationNeutral()
     {
         using var sources = ReadJson("sources.json");
-        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        var resolver = new PortableRenderingTests.PinnedResolver();
         foreach (var source in sources.RootElement.EnumerateArray().Where(row => row.GetProperty("PortableProbe").GetBoolean()))
         {
             var original = ReadGeometry(Render(Read(source, default), resolver));
-            TestAssert.True(Math.Abs(original.StrokeWidth - .14d) < .001d, "Portable prose brackets retain a physical stroke.");
+            TestAssert.True(Math.Abs(original.StrokeWidth - .14d) < .001d,
+                "Measured portable prose brackets retain a physical stroke: " + source.GetProperty("Id").GetString());
             foreach ((bool bookmark, bool split) in new[] { (true, false), (false, true), (true, true) })
             {
                 var document = DocxInlineCompositionTests.ReadMutation(Fixture(source), OoxPdfDocxMarkupMode.AllMarkup, bookmark, split);
@@ -61,7 +62,7 @@ internal static class DocxCommentGlyphFrameTests
     {
         using var sources = ReadJson("sources.json");
         var source = sources.RootElement.EnumerateArray().Single(row => row.GetProperty("Id").GetString() == "arial12-auto");
-        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        var resolver = new PortableRenderingTests.PinnedResolver();
         double[][]? originalShape = null;
         double originalFill = 0d;
         foreach ((string rule, int twips) in new[] { ("auto", 240), ("atLeast", 1200), ("exact", 640), ("exact", 1200) })
@@ -89,6 +90,18 @@ internal static class DocxCommentGlyphFrameTests
                     "Exact spacing still owns the selection height while glyph brackets retain their natural shape.");
             }
         }
+    }
+
+    public static void DocxCommentGlyphFramesRetainUnmeasuredFontFallback()
+    {
+        using var sources = ReadJson("sources.json");
+        var source = sources.RootElement.EnumerateArray().Single(row => row.GetProperty("Id").GetString() == "arial10-auto");
+        // This math font's global Windows descent exceeds its ordinary text
+        // strut. That existing unmeasured selection fallback must stay explicit.
+        var page = Render(Read(source, default), new PortableRenderingTests.PinnedResolver(mathFont: true));
+        TestAssert.True(Math.Abs(ReadGeometry(page).StrokeWidth - .475d) < .001d,
+            "An unmeasured prose selection retains its established marker path.");
+        AssertContent(page, source);
     }
 
     private static (double[][] Paths, double StrokeWidth, double FillHeight) ReadGeometry(PdfPage page)
