@@ -213,7 +213,7 @@ internal sealed partial class DocxReader
         cancellationToken.ThrowIfCancellationRequested();
         if (HasUnsupportedMultiColumnSection(document))
         {
-            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", diagnosticPartName: "", fallback: "Explicit break-only column flow is supported");
+            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column balancing or in-flow section columns", diagnosticPartName: "", fallback: "Sequential flow uses the available column frames");
         }
 
         cancellationToken.ThrowIfCancellationRequested();

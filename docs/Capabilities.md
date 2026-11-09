@@ -627,7 +627,8 @@ Approximate or restricted:
   Plain text and supported prose with inline equations reflow when explicit column
   widths change. Inline pictures skip continuation columns too narrow to fit them.
   Plain-text widow control can move the final pair while preserving a nonempty head.
-  Complex mixed-object flow retains its qualified approximations.
+  Complex mixed-object flow retains its qualified approximations. Review-mode
+  vertical placement on custom paper remains approximate.
   Explicit before/after point spacing preserves these baselines; connected
   paragraph backgrounds retain their measured continuity, including different colors.
   Note-numbering, kerning and reduced-print alignment/spacing retain their separate limits.

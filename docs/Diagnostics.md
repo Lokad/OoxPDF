@@ -75,7 +75,7 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_FORMATTING_REVISIONS`: formatting revisions were detected outside a mode that approximates them, so they are ignored; the AllMarkup approximation is `DOCX_APPROXIMATED_FORMATTING_REVISIONS`.
 - `DOCX_UNSUPPORTED_MACRO`: a VBA project was detected and ignored.
 - `DOCX_UNSUPPORTED_MANUAL_BREAK`: an unsupported manual column-break container was detected; visible body column breaks are supported.
-- `DOCX_UNSUPPORTED_MULTI_COLUMN`: a multi-column section was detected and rendered as a single column.
+- `DOCX_UNSUPPORTED_MULTI_COLUMN`: column balancing or in-flow section columns may be approximated; supported content flows sequentially through the available column frames.
 - `DOCX_UNSUPPORTED_OLE_OBJECT`: embedded OLE content was detected and ignored.
 - `DOCX_UNSUPPORTED_SECTION_BREAK`: a continuous or unknown paragraph section break was detected; support is partial.
 - `DOCX_UNSUPPORTED_SMARTART`: a SmartArt diagram payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
