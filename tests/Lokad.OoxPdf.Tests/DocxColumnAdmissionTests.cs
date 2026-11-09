@@ -117,8 +117,20 @@ internal static class DocxColumnAdmissionTests
                 var pages = Renderer(review, new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(changed, null, default)
                     .ToBlockingEnumerable().ToArray();
                 TestAssert.Equal(original.Length, pages.Length);
-                TestAssert.True(Characters(original).SequenceEqual(Characters(pages)),
-                    "Source-preserving run splits and navigation keep every glyph and its placement.");
+                // Text-show chunks can split at source-run boundaries. Their
+                // starts do not describe the X of every decoded character.
+                TestAssert.True(Characters(original).Select(c => (c.Character, c.Page, c.Y, c.Size))
+                    .SequenceEqual(Characters(pages).Select(c => (c.Character, c.Page, c.Y, c.Size))),
+                    "Source-preserving transformations retain text, pages, baselines and sizes.");
+                var beforeLines = FrameLines(Layout(source)).ToArray();
+                var afterLines = FrameLines(Layout(changed)).ToArray();
+                TestAssert.Equal(beforeLines.Length, afterLines.Length);
+                foreach (var pair in beforeLines.Zip(afterLines))
+                    TestAssert.True(pair.First.Line.Text == pair.Second.Line.Text && pair.First.Page == pair.Second.Page &&
+                        Math.Abs(pair.First.Line.X - pair.Second.Line.X) < .00001d &&
+                        Math.Abs(pair.First.Line.BaselineY - pair.Second.Line.BaselineY) < .00001d &&
+                        Math.Abs(pair.First.Line.Width - pair.Second.Line.Width) < .00001d,
+                        "Run splitting and navigation preserve measured line geometry.");
                 if (!navigation) continue;
                 var target = FrameLines(Layout(changed)).First(line => line.Line.SourceBlockIndex == 4 && line.Line.SourceLineIndex == 0);
                 var destinations = pages.SelectMany(page => page.Annotations).Where(a => a.Destination is not null).ToArray();
