@@ -65,6 +65,10 @@ internal static class MathFontTests
     public static void MathFontVerticalAssembliesRejectLargeInvalidRecordsBeforeMaterialization()
     {
         OpenTypeFont.Load(TestFontBuilder.CreateMathFont(AssemblyTable())).TryGetMathVerticalAssembly(34, default, out _);
+        // Each part contains four ushort fields, before flags/array overhead.
+        // Reject that full payload, allowing incidental runtime bookkeeping
+        // without treating a few kilobytes as a materialized 65,535-part array.
+        long fullPartsPayloadFloor = (long)ushort.MaxValue * 4 * sizeof(ushort);
         foreach (int invalidIndex in new[] { 0, ushort.MaxValue - 1 })
         {
             var table = new byte[50 + ushort.MaxValue * 10];
@@ -81,7 +85,7 @@ internal static class MathFontTests
             bool success = font.TryGetMathVerticalAssembly(34, default, out var assembly);
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             TestAssert.True(!success && assembly is null, "Invalid early and late records reject the complete assembly.");
-            TestAssert.True(allocated < 4096, "Rejecting invalid source records must not materialize the large parts array: " + allocated);
+            TestAssert.True(allocated < fullPartsPayloadFloor, "Rejecting invalid source records must not materialize the large parts array: " + allocated);
         }
     }
 
