@@ -104,6 +104,50 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxParagraphMarkCaptionsKeepSourcePlacementWhenFirstFractionChanges()
+    {
+        using var gold = ReadParagraphMarkCaptionGolden();
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray()
+            .Where(row => row.GetProperty("Container").GetString() is "body" or "cell" or "header")
+            .Where(row => row.GetProperty("Input").GetString() is "math-mark-property-body.docx" or
+                "math-mark-property-cell.docx" or "math-mark-property-header.docx"))
+        {
+            var source = ReadParagraphMarkCaptionSource(row, OoxPdfDocxMarkupMode.AllMarkup);
+            var without = ReadMutation("CompositionProbes/" + Path.GetFileNameWithoutExtension(row.GetProperty("Input").GetString()!),
+                OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, m) => xml.Descendants(m + "oMath").First().Remove(),
+                partOverride: row.GetProperty("ChangedPart").GetString());
+            var positions = new List<(double X, double Y)>();
+            foreach (var document in new[] { source, without })
+            {
+                var page = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                    .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+                var title = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                    .Single(show => show.Text.Trim() == row.GetProperty("Title").GetString());
+                positions.Add((title.X, title.Y));
+            }
+            TestAssert.True(Math.Abs(positions[0].X - positions[1].X) < .001d &&
+                Math.Abs(positions[0].Y - positions[1].Y) < .001d,
+                "A paragraph-mark caption keeps its source placement when only the first fraction changes: " + row.GetProperty("Input").GetString());
+        }
+    }
+
+    public static void DocxParagraphMarkCaptionsMatchIndependentWordVerticalOrigins()
+    {
+        if (!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "cambria.ttc")))
+            TestAssert.Skip("Independent caption origins require installed Word-compatible fonts.");
+        using var gold = ReadParagraphMarkCaptionGolden();
+        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
+        {
+            var page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderPagesAsync(ReadParagraphMarkCaptionSource(row, OoxPdfDocxMarkupMode.AllMarkup), null, default).ToBlockingEnumerable().Single();
+            var title = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                .Single(show => show.Text.Trim() == row.GetProperty("Title").GetString());
+            TestAssert.True(Math.Abs(title.Y - row.GetProperty("TitleY").GetDouble()) < 1d,
+                "Captions retain the independent one-point Word vertical-origin gate: " + row.GetProperty("Input").GetString());
+        }
+    }
+
     private static JsonDocument ReadParagraphMarkCaptionGolden() =>
         JsonDocument.Parse(File.ReadAllText(NumberingMarkCase("math-mark-captions-office.json")));
 

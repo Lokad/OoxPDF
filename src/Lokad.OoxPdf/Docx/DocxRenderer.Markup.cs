@@ -818,7 +818,7 @@ internal sealed partial class DocxRenderer
                             markupContext.WordCompatiblePrintScale, revisionLineHeightEm, null, null, out var insets);
                         footerTop += insets.Top - WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints;
                     }
-                    balloonCandidates.Add(new DocxMarkupBalloonCandidate(
+                    var revisionCandidate = new DocxMarkupBalloonCandidate(
                         DocxMarkupBalloonKind.Revision,
                         revisionTitle,
                         revisionBody,
@@ -840,7 +840,22 @@ internal sealed partial class DocxRenderer
                         WordCompatiblePlacementTopY = footerTop,
                         WordCompatiblePlacementBottomY = footerTop is not null
                             ? new DocxPrintedPageFrame(page.Height, markupContext.WordCompatiblePrintScale).MapY(0d) : null
-                    });
+                    };
+                    if (footerTop is null && wordFormatting is not null &&
+                        UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
+                        paragraph.ParagraphMarkRun is { Revisions.Count: > 0 } &&
+                        line.InlineFrame is { TextBaselineInset: { } textInset } frame)
+                    {
+                        // Paragraph-mark formatting follows the source text strut,
+                        // independently of objects pushing its prose baseline down.
+                        // The connector retains the actual occupied source line.
+                        var placementAnchor = revisionCandidate with
+                        { AnchorY = line.BaselineY + frame.BaselineInset - textInset };
+                        revisionCandidate = revisionCandidate with
+                        { WordCompatiblePlacementTopY = ResolveMarkupBalloonPreferredTop(
+                            placementAnchor, page, markupContext, labelEmbedded, bodyEmbedded) };
+                    }
+                    balloonCandidates.Add(revisionCandidate);
                 }
             }
 
