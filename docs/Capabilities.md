@@ -624,9 +624,10 @@ Approximate or restricted:
   fills continuation slots. Note-link fallbacks remain.
   Ordinary text binds its horizontal origin after column/page admission; measured
   minimum baselines follow the admitted lines across column and page transitions.
-  Plain text reflows when explicit column widths change. Widow control can move
-  the final pair of text lines while preserving a nonempty paragraph head.
-  Mixed-object variable-width reflow retains its qualified approximations.
+  Plain text and supported prose with inline equations reflow when explicit column
+  widths change. Inline pictures skip continuation columns too narrow to fit them.
+  Plain-text widow control can move the final pair while preserving a nonempty head.
+  Complex mixed-object flow retains its qualified approximations.
   Explicit before/after point spacing preserves these baselines; connected
   paragraph backgrounds retain their measured continuity, including different colors.
   Note-numbering, kerning and reduced-print alignment/spacing retain their separate limits.
