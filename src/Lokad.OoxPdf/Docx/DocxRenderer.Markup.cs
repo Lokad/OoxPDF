@@ -712,7 +712,7 @@ internal sealed partial class DocxRenderer
                         if (fontResources is not null && TryResolveWordCompatibleBalloonTextInsets(labelEmbedded,
                                 qualifiedBody?.Embedded ?? bodyEmbedded, markupContext.WordCompatiblePrintScale,
                                 bodyLineHeightEm, qualifiedParts, commentParagraphs, out _) &&
-                            TryResolveBodyCommentFillLineBox(anchorLine, paragraph, fontResources, markupContext, cancellationToken, out var sourceBox))
+                            TryResolveBodyCommentLineBoxes(anchorLine, paragraph, fontResources, markupContext, cancellationToken, out var sourceBox, out _))
                             measuredBodyBox = sourceBox;
                         var commentFrame = ResolveCommentAnchorFrame(anchorLine, paragraph, reference, markupContext, measuredBodyBox);
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(

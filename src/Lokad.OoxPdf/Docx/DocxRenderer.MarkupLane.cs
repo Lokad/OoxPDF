@@ -254,8 +254,8 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         CancellationToken cancellationToken)
     {
-        DocxOccupiedLineBox? fillLineBox = TryResolveBodyCommentFillLineBox(line, paragraph, fontResources,
-            markupContext, cancellationToken, out var measuredBox) ? measuredBox : null;
+        DocxOccupiedLineBox? fillLineBox = TryResolveBodyCommentLineBoxes(line, paragraph, fontResources,
+            markupContext, cancellationToken, out var measuredBox, out var textLineBox) ? measuredBox : null;
         foreach (DocxInlineReference reference in paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -273,8 +273,11 @@ internal sealed partial class DocxRenderer
                     double.IsFinite(sourceBounds.End) && sourceBounds.End > sourceBounds.Start
                     ? new PdfRectangle(Math.Max(0d, sourceBounds.Start), baselineY + box.BaselineInset - box.Height,
                         sourceBounds.End - sourceBounds.Start, box.Height) : null;
+                PdfRectangle? glyphs = fill is not null && textLineBox is { } textBox
+                    ? new PdfRectangle(sourceBounds.Start, baselineY + textBox.BaselineInset - textBox.Height,
+                        sourceBounds.End - sourceBounds.Start, textBox.Height) : null;
                 RenderWordCompatibleCommentRangeMarker(startX, endX, baselineY, graphics, CommentAuthorFillRgb(authorSlot), CommentAuthorStrokeRgb(authorSlot), above, below,
-                    usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _), fillRectangle: fill);
+                    usesExactFrame: DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out _), fillRectangle: fill, glyphRectangle: glyphs);
             }
             else if ((range is null || !HasCommentRangeBounds(range)) &&
                 TryResolveWordCompatibleCommentReferenceMarkerBounds(line, reference, ResolveTextEmissionXOffset(markupContext), out startX, out endX))
@@ -294,39 +297,48 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    // Painting uses the measured body's text strut, independently of its glyph
-    // brackets. Other containers, inline objects, note markers and unmeasured
-    // lines retain their existing selection contract. A larger unselected run
-    // contributes to the same line's descent; minimum leading does not.
-    private static bool TryResolveBodyCommentFillLineBox(DocxTextLineLayout line, DocxParagraph paragraph,
+    // Selection consumes an authored exact slot or the natural text strut.
+    // Brackets consume the whole painted line's font box, including unselected
+    // runs, independently of authored minimum/exact spacing. Other containers,
+    // inline objects, note markers and unmeasured lines retain their fallback.
+    private static bool TryResolveBodyCommentLineBoxes(DocxTextLineLayout line, DocxParagraph paragraph,
         DocxFontResources fontResources, DocxMarkupContext markupContext, CancellationToken cancellationToken,
-        out DocxOccupiedLineBox box)
+        out DocxOccupiedLineBox box, out DocxOccupiedLineBox? textBox)
     {
         box = default;
+        textBox = null;
         if (line.Story?.Kind != DocxStoryKind.Body || line.InlineFrame is not null ||
             line.BodyLineBoxHeightPoints is not > 0d || line.BodyLineBoxBaselineInsetPoints is null ||
             paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0 || paragraph.Equations.Count != 0 ||
             paragraph.ListLabel is not null || paragraph.FieldReferences.Count != 0 ||
             paragraph.InlineReferences.Any(reference => reference.Kind != DocxRelatedStoryKind.Comment)) return false;
 
-        if (DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out box)) return true;
-        if (line.LineHeightSource is not (DocxLineHeightSource.BodySingleLineAuto or DocxLineHeightSource.AtLeastLineSpacing) ||
-            line.SingleLineHeight is not { } height || !double.IsFinite(height) || height <= 0d ||
-            fontResources.TextMeasurer is not IDocxStaticTextMetricsProvider metrics) return false;
+        bool exact = DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out box);
+        double height = line.SingleLineHeight ?? 0d;
+        if (!exact && (line.LineHeightSource is not (DocxLineHeightSource.BodySingleLineAuto or DocxLineHeightSource.AtLeastLineSpacing) ||
+            !double.IsFinite(height) || height <= 0d)) return false;
+        if (fontResources.TextMeasurer is not IDocxStaticTextMetricsProvider metrics) return exact;
 
-        double below = 0d;
-        bool hasText = false;
+        double above = 0d, below = 0d;
+        bool hasText = false, hasAscent = true;
         foreach (var segment in line.Segments)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (segment.Role != DocxTextSegmentRole.Text) return false;
+            if (segment.Role != DocxTextSegmentRole.Text) return exact;
             if (string.IsNullOrWhiteSpace(segment.Text)) continue;
-            double descent = metrics.MeasureWindowsDescender(segment.StyleRun,
-                segment.FontSize ?? segment.StyleRun.EffectiveProperties.FontSize) * ResolveTextEmissionFontScale(markupContext);
-            if (!double.IsFinite(descent) || descent < 0d) return false;
+            double fontSize = segment.FontSize ?? segment.StyleRun.EffectiveProperties.FontSize;
+            double scale = ResolveTextEmissionFontScale(markupContext);
+            double descent = metrics.MeasureWindowsDescender(segment.StyleRun, fontSize) * scale;
+            if (!double.IsFinite(descent) || descent < 0d) return exact;
+            double ascent = metrics.MeasureWindowsAscender(segment.StyleRun, fontSize) * scale;
+            hasAscent &= double.IsFinite(ascent) && ascent > 0d;
+            above = Math.Max(above, ascent);
             below = Math.Max(below, descent);
             hasText = true;
         }
+        if (hasText && hasAscent && double.IsFinite(above + below))
+            textBox = new(above + below, above);
+        if (exact) return true;
         if (!hasText || below > height) return false;
         box = new(height, height - below);
         return true;
@@ -474,7 +486,8 @@ internal sealed partial class DocxRenderer
         PdfGraphicsBuilder graphics,
         DocxMarkupBalloonRgb fillRgb,
         DocxMarkupBalloonRgb strokeRgb,
-        double objectAbove = 0d, double objectBelow = 0d, bool usesExactFrame = false, PdfRectangle? fillRectangle = null)
+        double objectAbove = 0d, double objectBelow = 0d, bool usesExactFrame = false,
+        PdfRectangle? fillRectangle = null, PdfRectangle? glyphRectangle = null)
     {
         // Exact source boxes own both expansion and compression. Content-driven
         // inline frames retain the legacy minimum and grow for their visible ink.
@@ -502,6 +515,23 @@ internal sealed partial class DocxRenderer
         graphics.FillRectangle(fill.X, fill.Y, fill.Width, fill.Height);
         graphics.SetStrokeRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
         graphics.SetFillRgb(strokeRgb.Red, strokeRgb.Green, strokeRgb.Blue);
+        if (glyphRectangle is { } glyphs)
+        {
+            // Word's prose brackets keep a physical stroke across print scales.
+            // Their natural font box and source endpoints do not inherit the
+            // selection's authored spacing or the legacy object-marker offsets.
+            const double stroke = 0.14d;
+            double left = glyphs.X, right = glyphs.X + glyphs.Width;
+            double bottom = glyphs.Y, top = glyphs.Y + glyphs.Height;
+            graphics.SetLineWidth(stroke);
+            graphics.StrokeLine(left + stroke, bottom - stroke, left, bottom);
+            graphics.StrokeLine(left, bottom, left, top);
+            graphics.StrokeLine(left, top, left + 2d * stroke, top + 2d * stroke);
+            graphics.StrokeLine(right - stroke, bottom - stroke, right, bottom);
+            graphics.StrokeLine(right, bottom, right, top);
+            graphics.StrokeLine(right, top, right - 2d * stroke, top + 2d * stroke);
+            return;
+        }
         graphics.SetLineWidth(WordCompatibleAllMarkupCommentRangeStrokeWidthPoints);
         graphics.StrokeLine(
             startX + WordCompatibleAllMarkupCommentRangeTickLengthPoints,

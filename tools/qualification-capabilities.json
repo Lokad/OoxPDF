@@ -1,4 +1,25 @@
 {
+  "docx-comment-glyph-frames": [
+    "DocxCommentGlyphFrames",
+    "DocxNaturalCommentFills",
+    "DocxBalloonFrames",
+    "DocxWordCompatibleAllMarkupRendersCommentRangeBrackets",
+    "DocxWordCompatibleAllMarkupRendersWrappedCommentRangeContinuationMarkers",
+    "DocxWordCompatibleAllMarkupRendersReaderCommentRangeFill",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "DocxWordCompatibleAllMarkupOmitsCommentRangeBracketsInStoryTables",
+    "DocxWordCompatibleAllMarkupOmitsStoryTableCommentConnectors",
+    "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",
+    "DocxWordCompatibleAllMarkupAnchorsTableCommentConnectorsAtCellRangeEnd",
+    "DocxWordCompatibleAllMarkupPreservesAuthoredWhitespaceTextOperation",
+    "PortableRenderingCommentsPreserveAuthoredWhitespace",
+    "DocxInlineCompositionExactCommentFramesMatchIndependentWordVerticalBounds",
+    "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets",
+    "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms",
+    "DocxMathComments",
+    "DocxMathCommentBoundaries",
+    "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames"
+  ],
   "docx-balloon-frames": [
     "DocxBalloonFrames",
     "DocxUnitPrintOrigins",
