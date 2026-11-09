@@ -63,10 +63,10 @@ internal static partial class DocxInlineCompositionTests
                 string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC));
             var link = page.Annotations.Single(annotation => annotation.Uri == "https://example.invalid/static-box-table");
             TestAssert.True(north.X >= link.X && north.X <= link.X + link.Width && north.Y >= link.Y && north.Y <= link.Y + link.Height,
-                "The clickable source follows its painted table row.");
+                $"The clickable source follows its painted table row: {row.GetProperty("Id").GetString()}/{mode}, glyph=({north.X},{north.Y}), link=({link.X},{link.Y},{link.Width},{link.Height}).");
             var destination = page.Annotations.Single(annotation => annotation.IsDestination).Destination!.Value;
             TestAssert.True(destination.PageIndex == 0 && destination.Top is double top && top >= north.Y && top <= page.Height,
-                "The bookmark viewport reveals its painted target.");
+                "The bookmark viewport reveals its painted target: " + row.GetProperty("Id").GetString() + "/" + mode);
         }
     }
 
