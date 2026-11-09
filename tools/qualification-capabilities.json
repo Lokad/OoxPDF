@@ -1,4 +1,18 @@
 {
+  "docx-wrapped-minimum-leading": [
+      "DocxWrappedMinimumLeading",
+      "DocxMinimumBodyLineLeading",
+      "DocxMinimumBodyFlow",
+      "DocxMarkedMinimumLeading",
+      "DocxOrdinaryMinimumSpacing",
+      "DocxMinimumBeforeLeading",
+      "DocxContextualMinimum",
+      "DocxMinimumPaintPreservesTextFramesAndBackgrounds",
+      "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
+      "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
+      "DocxPrintedMinimum",
+      "DocxWrappedFootnoteNumbersKeepUnqualifiedSourceFrames"
+  ],
   "font-math-assembly-metadata": [
     "MathFontVertical",
     "MathFontRadical",

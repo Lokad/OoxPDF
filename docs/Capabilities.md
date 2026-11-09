@@ -618,6 +618,10 @@ Approximate or restricted:
   qualified behavior; they are not promises for every combination.
   Bookmarks and unchanged-format hyperlinks preserve qualified plain-body minimum
   line placement; their navigation targets follow the placed content.
+  Ordinary minimum-spaced body text uses each measured line's natural baseline,
+  including wrapping and page continuation in Final and unscaled Word-compatible
+  Review. Paragraph shading leaves the first line's extra leading unpainted and
+  fills continuation slots. Other alignment, column and note-link fallbacks remain.
   Comment ranges and nonpainting comment references preserve the same text-frame
   classification. Actual note markers retain their own minimum-slot rules;
   printed Review balloons still own their scale and placement.

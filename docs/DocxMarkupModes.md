@@ -26,6 +26,10 @@ Print fitting shrinks pages when the body and review lane need more room;
 pages that already fit retain 100% scale. The gray lane follows the placed
 balloons at unit scale as well as on reduced pages.
 
+Ordinary minimum-spaced body paragraphs retain their measured line baselines when
+they wrap or continue onto another page, in Final and unscaled Word-compatible
+Review. Their backgrounds leave only the first source line's extra leading unshaded.
+
 Formatting captions use the available regular review UI face, while comment
 paragraphs retain their authored faces. Fitting footer formatting balloons share
 the occupied footer frame and printed body boundary; unused right-margin space

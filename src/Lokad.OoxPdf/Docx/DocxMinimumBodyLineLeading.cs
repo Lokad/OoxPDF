@@ -17,14 +17,6 @@ internal static class DocxMinimumBodyLineLeading
         cancellationToken.ThrowIfCancellationRequested();
         if (!DocxPlainBodyFrame.HasKnownBodyFrame(document) ||
             !DocxPlainBodyFrame.HasSupportedStaticLayout(document, source)) return false;
-        var counts = new Dictionary<DocxParagraph, int>(ReferenceEqualityComparer.Instance);
-        foreach (var line in source.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (line.SourceParagraph is { } paragraph)
-                counts[paragraph] = counts.GetValueOrDefault(paragraph) + 1;
-        }
-
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
         foreach (var page in source.Pages)
         {
@@ -35,17 +27,18 @@ internal static class DocxMinimumBodyLineLeading
                 cancellationToken.ThrowIfCancellationRequested();
                 if (line.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing ||
                     string.IsNullOrWhiteSpace(line.Text) ||
-                    line.SourceParagraph is not { } paragraph || counts[paragraph] != 1 ||
+                    line.SourceParagraph is not { } paragraph ||
                     !DocxPlainBodyFrame.IsPlainParagraph(paragraph) ||
                     !HasSupportedLineSource(paragraph, out bool marked, cancellationToken) ||
                     line.LineHeight is not > 0d || !double.IsFinite(line.LineHeight.Value) ||
                     line.LineHeight > page.Height - page.MarginTop - page.MarginBottom ||
                     line.SingleLineHeight is not > 0d || !double.IsFinite(line.SingleLineHeight.Value) ||
-                    line.FirstLineInsetPoints is not > 0d || !double.IsFinite(line.FirstLineInsetPoints.Value)) continue;
+                    line.IsFirstParagraphLine is not { } firstLine ||
+                    firstLine && (line.FirstLineInsetPoints is not > 0d || !double.IsFinite(line.FirstLineInsetPoints.Value))) continue;
                 // Compact marked slots retain their separately qualified link policy.
                 if (marked && line.LineHeight < 16d) continue;
 
-                // The measured natural line owns its bottom bearing. A larger
+                // Each measured natural line owns its bottom bearing. A larger
                 // minimum slot grows above that baseline, independently of other
                 // paragraphs, font size, surrounding tables or run paint.
                 double excess = Math.Max(0d, line.LineHeight.Value - line.SingleLineHeight.Value);
@@ -53,11 +46,14 @@ internal static class DocxMinimumBodyLineLeading
                 replacements.Add(line, line with {
                     BaselineY = line.BaselineY - excess,
                     FirstLineInsetPoints = line.FirstLineInsetPoints + excess,
-                    // Word shades the natural line at the lowered baseline;
-                    // the extra minimum leading stays outside its background.
+                    // Only the first source line leaves its extra leading
+                    // unshaded. Continuation backgrounds still fill their slots.
                     ParagraphShadingFrame = line.ParagraphShadingFrame is { } paint
-                        ? paint with { Height = Math.Max(0d, paint.Height - excess) } : null,
-                    // Generated markers retain the original source slot top.
+                        ? firstLine ? paint with { Height = Math.Max(0d, paint.Height - excess) }
+                            : paint with { BaselineInset = paint.BaselineInset + excess }
+                        : null,
+                    // Published first-line marker boxes retain their source top;
+                    // continuation marker links keep their existing fallback.
                     BodyLineBoxBaselineInsetPoints = marked ? line.FirstLineInsetPoints + excess : line.BodyLineBoxBaselineInsetPoints,
                     BodyLineBoxHeightPoints = marked ? line.LineHeight : line.BodyLineBoxHeightPoints
                 });
