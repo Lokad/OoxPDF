@@ -80,17 +80,22 @@ internal static partial class DocxInlineCompositionTests
     {
         using var cases = ReadStaticBoxTableCases();
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
-        double Gap(string id)
+        var source = cases.RootElement.EnumerateArray().Single(row => row.GetProperty("Id").GetString() == "static-box-table-body");
+        (double Depth, double Width) Frame(OoxPdfDocxMarkupMode mode)
         {
-            var source = cases.RootElement.EnumerateArray().Single(row => row.GetProperty("Id").GetString() == id);
-            var page = RenderStaticBoxTable(source, OoxPdfDocxMarkupMode.AllMarkup, resolver);
-            CheckStaticBoxTablePaint(page, id);
+            var page = RenderStaticBoxTable(source, mode, resolver);
+            CheckStaticBoxTablePaint(page, mode.ToString());
             var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true).ToArray();
-            return shows.Single(show => show.Text.Trim() == "BOX TABLE NORTH").Y -
-                shows.Single(show => show.Text.Trim() == "BOX TABLE SOUTH").Y;
+            var box = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re\s+S")
+                .Select(match => Enumerable.Range(1, 4).Select(i => double.Parse(match.Groups[i].Value, CultureInfo.InvariantCulture)).ToArray())
+                .Single(rect => rect[2] > 100d && rect[3] > 30d);
+            return (box[1] + box[3] - shows.Single(show => show.Text.Trim() == "BOX TABLE NORTH").Y, box[2]);
         }
-        TestAssert.True(Math.Abs(Gap("static-box-table-body") - Gap("static-box-table-header")) < .05d,
-            "The same plain/math rows retain their printed baseline spacing across body and header box placement.");
+        var final = Frame(OoxPdfDocxMarkupMode.Final);
+        var review = Frame(OoxPdfDocxMarkupMode.AllMarkup);
+        double scale = review.Width / final.Width;
+        TestAssert.True(scale > 0d && scale < 1d && Math.Abs(review.Depth - final.Depth * scale) < .05d,
+            $"The first legacy inset follows the printed frame: final={final.Depth}, review={review.Depth}, scale={scale}.");
     }
 
     private static PdfPage RenderStaticBoxTable(JsonElement row, OoxPdfDocxMarkupMode mode, IFontResolver? resolver)
