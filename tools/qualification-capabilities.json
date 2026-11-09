@@ -12,6 +12,8 @@
     "DocxPortableBalloonHeightFollowsPaintedRowsAcrossFonts",
     "DocxBalloonTextResourceCoversSyntheticTitleGlyphs",
     "DocxBalloonBodyEmissionCoversItsOwnFontSubset",
+    "DocxWordCompatibleAllMarkupMirrorsReviewLaneBackground",
+    "DocxWordCompatibleLaneBackgroundHugsBalloonBodies",
     "DocxWordCompatibleAllMarkupRendersFullLongCommentBalloonBody",
     "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
     "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",

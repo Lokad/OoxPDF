@@ -1883,15 +1883,18 @@ internal static class DocxMarkupTests
             .ToArray();
 
         TestAssert.True(pages.Length >= 2, "The mirrored-margin fixture should render odd and even review pages.");
-        // Office (mirrored/dense/landscape/author COM refs across four print scales): the gray lane hugs
-        // balloon bodies at a 22.56pt design inset; the mirrored odd page (s = 612 / 824.5) starts it at
-        // balloon-body 437.36 minus 22.56 * s = 420.615 (Office 420.60).
+        // The independent mirrored-page Office control starts the gray lane at
+        // 420.60 pt. Check that origin separately from the paper-edge contract;
+        // an exact pin to the old fitted balloon inset conflated their owners.
         foreach (PdfPage page in pages.Take(2))
         {
             Match lane = Regex.Match(page.Content, @"0\.949 g\r?\n(?<x>[\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f");
             TestAssert.True(lane.Success, "Both mirrored pages retain the right review lane.");
-            TestAssert.Equal(420.615d, double.Parse(lane.Groups["x"].Value, CultureInfo.InvariantCulture));
-            TestAssert.Equal(191.015d, double.Parse(lane.Groups["w"].Value, CultureInfo.InvariantCulture));
+            double x = double.Parse(lane.Groups["x"].Value, CultureInfo.InvariantCulture);
+            double width = double.Parse(lane.Groups["w"].Value, CultureInfo.InvariantCulture);
+            TestAssert.True(Math.Abs(x - 420.60d) < 0.05d, "Both mirrored lane origins retain the independent Office control.");
+            TestAssert.True(Math.Abs(x + width - (page.Width - 0.37d)) < 0.002d,
+                "The lane reaches the same physical paper inset when its balloon origin changes.");
         }
         // Vertical paper bounds have their separate independent Office controls.
     }
