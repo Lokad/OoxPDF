@@ -11,7 +11,14 @@
       "DocxMinimumHyperlinksKeepVisibleFramesAndTargets",
       "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames",
       "DocxPrintedMinimum",
-      "DocxWrappedFootnoteNumbersKeepUnqualifiedSourceFrames"
+      "DocxWrappedFootnoteNumbersKeepUnqualifiedSourceFrames",
+    "DocxElevenPoint",
+    "DocxOrdinaryKerning",
+    "DocxMinimumComment",
+    "DocxPassiveStaticPicturesKeepIntrusiveUnownedAndUnmeasuredFallbacks",
+    "DocxPassiveStaticTextKeepsIntrusiveUnsupportedAndUnmeasuredFallbacks",
+    "DocxInactiveStaticVariantsKeepSelectedRichStoryFallbacks",
+    "DocxWrappedCalibriKerning"
   ],
   "font-math-assembly-metadata": [
     "MathFontVertical",

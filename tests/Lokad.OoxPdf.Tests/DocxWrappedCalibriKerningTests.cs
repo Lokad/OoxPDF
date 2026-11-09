@@ -49,7 +49,7 @@ internal static class DocxWrappedCalibriKerningTests
         TestAssert.True(DocxWrappedCalibriKerning.TryCreateDocument(wrapped, layout, out var adjusted, out _), "Nominal frame must qualify.");
         var current = DocxPageFootnoteNumberingTests.CreateLayout(adjusted);
         TestAssert.True(!DocxPageFootnoteNumbering.HasCompleteNoteOwners(adjusted, current), "Complete-reserve owner mapping keeps its original one-line gate.");
-        TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(adjusted, current, out _), "Minimum leading remains outside wrapped flow.");
+        TestAssert.True(!DocxMinimumBodyLineLeading.TryCreateLayout(adjusted, current, out _), "Automatic line spacing does not request a minimum-leading correction.");
     }
 
     public static void DocxWrappedCalibriKerningRejectsShiftedSourceOwners()
