@@ -333,7 +333,8 @@ internal sealed partial class DocxLayoutEngine
     {
         if (profile.Source != DocxLineHeightSource.BodySingleLineAuto ||
             textMeasurer is not IDocxLineMetricsProvider ||
-            paragraph.InlineReferences.Count != 0 || !DocxPlainBodyFrame.HasPlainTextContent(paragraph) ||
+            paragraph.InlineReferences.Any(reference => reference.Kind != DocxRelatedStoryKind.Comment) ||
+            !DocxPlainBodyFrame.HasPlainTextContent(paragraph) ||
             line.Spans.Count == 0)
             return paragraph;
 
