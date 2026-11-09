@@ -1,4 +1,18 @@
 {
+  "docx-unit-print-origins": [
+    "DocxUnitPrintOrigins",
+    "DocxWordCompatibleTextYOffset",
+    "DocxWordCompatiblePrintScale",
+    "DocxBalloonlessUnitScaleOriginsDoNotRequireBodyText",
+    "DocxEndnoteOnlyContinuationsKeepUnscaledTextMathPictureAndClipOrigins",
+    "PortableRenderingPrintedHyperlinkFramesCoverSourceOrigins",
+    "PortableRenderingStaticPictureOnlyFramesRetainBodyAndResources",
+    "DocxNaturalCommentFills",
+    "DocxNaturalBodyLines",
+    "DocxFixedStaticFramesMatchIndependentWordOriginsAndBoxFrames",
+    "DocxInlineCompositionExactCommentFramesMatchIndependentWordVerticalBounds",
+    "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets"
+  ],
   "docx-natural-comment-fills": [
     "DocxNaturalCommentFills",
     "DocxNaturalBodyLines",
@@ -17459,7 +17473,7 @@
     "DocxWordCompatiblePrintScaleStaysUnitOutsideWordCompatible",
     "DocxWordCompatibleTextYOffsetPinsFirstBaseline",
     "DocxWordCompatibleTextYOffsetPinsFirstBaselineOffReference",
-    "DocxWordCompatibleTextYOffsetKeepsFittedAnchorWithBalloons",
+    "DocxWordCompatibleTextYOffsetUsesMeasuredUnitScaleOriginWithBalloons",
     "DocxWordCompatibleTextYOffsetDropsAnchorWithoutBalloons",
     "DocxWordCompatibleTextYOffsetStaysZeroOutsideWordCompatible",
     "DocxInlineCompositionFittingEndnotesOwnBoundariesWithoutChangingTypography",
@@ -17490,7 +17504,7 @@
     "DocxWordCompatiblePrintScaleStaysUnitOutsideWordCompatible",
     "DocxWordCompatibleTextYOffsetPinsFirstBaseline",
     "DocxWordCompatibleTextYOffsetPinsFirstBaselineOffReference",
-    "DocxWordCompatibleTextYOffsetKeepsFittedAnchorWithBalloons",
+    "DocxWordCompatibleTextYOffsetUsesMeasuredUnitScaleOriginWithBalloons",
     "DocxWordCompatibleTextYOffsetDropsAnchorWithoutBalloons",
     "DocxWordCompatibleTextYOffsetStaysZeroOutsideWordCompatible",
     "DocxInlineCompositionFittingEndnotesOwnBoundariesWithoutChangingTypography",
