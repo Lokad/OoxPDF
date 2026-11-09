@@ -1546,12 +1546,12 @@ internal static partial class DocxCommentsTests
                 bodyDescender: -50, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
+            var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            var shows = ReadEmbeddedGlyphTextShows(paintedPage)
                 .Where(show => show.Text.Length != 0 && show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(string.Concat(paragraphs.Select(paragraph => paragraph.Runs[0].Text + " ")),
                 string.Concat(shows.Select(show => show.Text)));
             int offset = 0;
-            double expectedHeight = 12.61d;
             double previousY = 0d, previousDescentEm = 0d;
             for (int paragraphIndex = 0; paragraphIndex < paragraphCount; paragraphIndex++)
             {
@@ -1588,9 +1588,7 @@ internal static partial class DocxCommentsTests
                         (font.Hhea.HorizontalAscender + font.Hhea.HorizontalLineGap) / (double)font.UnitsPerEm) * size;
                     TestAssert.True(Math.Abs(previousY - firstRow.Y - transition) < 0.02d,
                         "All adjacent transitions use previous descent and next ascent/gap.");
-                    expectedHeight += transition;
                 }
-                expectedHeight += (bodyRows.Length - 1) * pitch;
                 previousY = lastRow.Y;
                 previousDescentEm = -font.Hhea.HorizontalDescender / (double)font.UnitsPerEm;
                 int expectedMarkAdvance = markFamilies[paragraphIndex % markFamilies.Length] == "CommentFace" ? 123 : markFamilies[paragraphIndex % markFamilies.Length] == "OtherCommentFace" ? 900 : 500;
@@ -1608,8 +1606,7 @@ internal static partial class DocxCommentsTests
             }
             TestAssert.Equal(shows.Length, offset);
 
-            TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
-                "Inspection and emission share every continuation and all adjacent paragraph transitions.");
+            AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
             if (paragraphCount == 5 && wrappedMask == 0 && !supplementary && bodyGap == 0 && rightMargin == 72d)
             {
                 foreach (var resolver in new[]
@@ -1749,7 +1746,8 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
+            var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            var shows = ReadEmbeddedGlyphTextShows(paintedPage)
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             if (!wrappedFourth) { TestAssert.Equal(fourthParagraph ? 8 : 6, shows.Length); }
             TestAssert.Equal("Review table " + middleText + " ending. " + (fourthParagraph ? fourthText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
@@ -1766,12 +1764,10 @@ internal static partial class DocxCommentsTests
             TestAssert.True(Math.Abs(shows[0].Y - shows[2].Y - firstPitch * size) < 0.02d &&
                 Math.Abs(shows[2].Y - shows[4].Y - secondPitch * size) < 0.02d,
                 "Every paragraph transition uses its adjacent prepared body metrics.");
-            int fourthRowsCount = 0;
             if (fourthParagraph)
             {
                 var fourthRows = shows.Skip(6).Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
-                fourthRowsCount = fourthRows.Length;
-                TestAssert.True(fourthRowsCount >= (wrappedFourth ? 2 : 1), "The fourth body fits or wraps independently of its three leading paragraphs.");
+                TestAssert.True(fourthRows.Length >= (wrappedFourth ? 2 : 1), "The fourth body fits or wraps independently of its three leading paragraphs.");
                 TestAssert.Equal(500, (int)shows[6].Font.Font.GetAdvanceWidth(shows[6].Font.Font.MapCodePoint('b')));
                 TestAssert.Equal(123, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
                 TestAssert.True(Math.Abs(shows[4].Y - shows[6].Y - thirdPitch * size) < 0.02d && Math.Abs(shows[6].X - shows[4].X) < 0.001d,
@@ -1802,8 +1798,7 @@ internal static partial class DocxCommentsTests
             }
             TestAssert.True(Math.Abs(shows[2].X - shows[4].X) < 0.001d && shows[2].X < shows[0].X,
                 "Later paragraphs retain the continuation inset.");
-            TestAssert.True(Math.Abs(balloon.Height - (12.61d + (firstPitch + secondPitch + thirdPitch + Math.Max(0, fourthRowsCount - 1)) * size)) < 0.02d,
-                "Height and emission share every paragraph transition.");
+            AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
             if (!supplementary && !middleSameFace && !lastSameFace && prefixDescender == -50 && prefixGap == 0 && markFace == "AnchorFace")
             {
                 foreach (DocxBodyElement[] guardedElements in new DocxBodyElement[][]
@@ -1940,7 +1935,8 @@ internal static partial class DocxCommentsTests
                 bodyDescender: prefixDescender, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
+            var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            var shows = ReadEmbeddedGlyphTextShows(paintedPage)
                 .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(4, shows.Length);
             TestAssert.Equal(prefix, shows[0].Text);
@@ -1963,7 +1959,7 @@ internal static partial class DocxCommentsTests
                     "Each paragraph mark follows its own visible advance.");
             }
             TestAssert.True(shows[2].X < shows[0].X, "The second paragraph starts at the continuation inset.");
-            TestAssert.True(Math.Abs(balloon.Height - (12.61d + pitch * size)) < 0.02d, "Geometry and emission share the paragraph step.");
+            AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
             foreach (DocxBodyElement[] guardedElements in new DocxBodyElement[][]
             {
                 [new DocxParagraphElement(first with { Spacing = first.Spacing with { AfterLinesValue = "400" } }), new DocxParagraphElement(second)],
