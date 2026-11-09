@@ -1,5 +1,5 @@
 {
-  "Scope": "Independent supervised Word16PDF raw1ptX/Y/.1ptsize origins across two/three-column body flow and page transitions. All source/PDF/log pins and coordinates unchanged. Captures remain uncalibrated application view.",
+  "Scope": "Independent supervised Word16PDF raw1ptX/Y/.1ptsize across equal/unequal-width columns and physical pages. Existing8rows/pins unchanged. Captures remain uncalibrated application view.",
   "Rows": [
     {
       "Id": "two-short",
@@ -2397,6 +2397,4134 @@
           "Page": 1,
           "X": 324.07000732421875,
           "Y": 232.489990234375,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "wide-narrow",
+      "Input": "wide-narrow.docx",
+      "InputSha256": "0972FAAB38CADE3387DA655ED65B6A3FC52514F0AD504F9A9DE5BFBDD9E8A687",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "72C8D61A30E3B9722CF73F025266A4C9EB335958A9E43A1C9EFD983E9EE6943E",
+      "ExportLogSha256": "49D937592B3244242E597A28F4604A0EC248005B4CAC391A54693A0D7B0FF1FB",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 57,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 139,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 220,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 295,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 377,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 458,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 533,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 615,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 654,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 696,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 920,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 950,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 998,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1022,
+          "Character": "c",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1075,
+          "Character": "s",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1103,
+          "Character": "a",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1158,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1188,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "F",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "wide-narrow",
+      "Input": "wide-narrow.docx",
+      "InputSha256": "0972FAAB38CADE3387DA655ED65B6A3FC52514F0AD504F9A9DE5BFBDD9E8A687",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "90A0CE9F73DAE1943B4CE5CDA2A4798ADCBB63259CB6D5AFC37E97663C7E109A",
+      "ExportLogSha256": "3A434FD06FF126B7CDF703C0DBAB9330D696E7FF50708B6B8DE9811DE6A18504",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 57,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 139,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 220,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 295,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 377,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 458,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 533,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 615,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 654,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 696,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 920,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 950,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 998,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1022,
+          "Character": "c",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1075,
+          "Character": "s",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1103,
+          "Character": "a",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1158,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1188,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "F",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "narrow-wide",
+      "Input": "narrow-wide.docx",
+      "InputSha256": "875C49CCE8B2ED2207A71AF33FEDBF070601A24654821F19241143DA74CF954B",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "2C1530D0F69CE07E4D977DB60AA3971A535CE2E1B5802E34B97866A2CFECFF6A",
+      "ExportLogSha256": "C6F2EBD84058D8F8625F2871EAADE97AAA11D900F713BE0923C50E3FC8CA2E55",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 46,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 70,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 123,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 151,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 206,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 236,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 284,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 308,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 361,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 389,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 444,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 474,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 522,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 546,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 599,
+          "Character": "s",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 642,
+          "Character": "C",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 687,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 934,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1009,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1091,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1172,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "F",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "narrow-wide",
+      "Input": "narrow-wide.docx",
+      "InputSha256": "875C49CCE8B2ED2207A71AF33FEDBF070601A24654821F19241143DA74CF954B",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "0DE9F8342CD535B0EBF86098E8038C1DC23CF3C23E2D01953CD626E30BFA1151",
+      "ExportLogSha256": "57479B6BD5146D6C0A819B8C3F04C3E3C257AEE05861B4202AC4DB2E90E3B4D8",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 46,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 70,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 123,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 151,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 206,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 236,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 284,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 308,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 361,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 389,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 444,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 474,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 522,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 546,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 599,
+          "Character": "s",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 642,
+          "Character": "C",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 687,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 934,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1009,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1091,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1172,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "F",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "wide-narrow-pages",
+      "Input": "wide-narrow-pages.docx",
+      "InputSha256": "E2C938589588B93CFA24623AD9BF58C3DBF0E112B84D82879D7A1E0630376902",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "04D71F9E36661B869282D188E6E91A3205C888C12613C059CF0046B40EF8F1E3",
+      "ExportLogSha256": "B0A19DD030CEBD25DFD7D591C70373389574D1624DE42F3C3716BCC2F83A735E",
+      "Pages": 2,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection6.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection7.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection8.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection9.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection10.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection11.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection12.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 57,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 139,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 220,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 295,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 377,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 458,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 533,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 615,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 654,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 696,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 920,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 950,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 998,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1022,
+          "Character": "c",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1075,
+          "Character": "s",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1103,
+          "Character": "a",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1158,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1188,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1236,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1260,
+          "Character": "c",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1285,
+          "Character": "g",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1313,
+          "Character": "s",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1341,
+          "Character": "a",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1368,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1396,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1426,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1446,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1474,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 79.2239990234375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1498,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1536,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1579,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1618,
+          "Character": "v",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1664,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1684,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1723,
+          "Character": "l",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1761,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1805,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1844,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1886,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1922,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1961,
+          "Character": "l",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1999,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2043,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2082,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2124,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2160,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2199,
+          "Character": "l",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2237,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2281,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2320,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2362,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 79.2239990234375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2399,
+          "Character": "A",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2427,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2451,
+          "Character": "c",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2476,
+          "Character": "g",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2504,
+          "Character": "s",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2532,
+          "Character": "a",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2559,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2587,
+          "Character": "f",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2617,
+          "Character": "b",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2638,
+          "Character": "A",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2666,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2690,
+          "Character": "c",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2715,
+          "Character": "g",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2743,
+          "Character": "s",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2771,
+          "Character": "a",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2798,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2826,
+          "Character": "f",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2856,
+          "Character": "b",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2877,
+          "Character": "F",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 204.5,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "wide-narrow-pages",
+      "Input": "wide-narrow-pages.docx",
+      "InputSha256": "E2C938589588B93CFA24623AD9BF58C3DBF0E112B84D82879D7A1E0630376902",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "7BD3FA67F328924120F78948A774020AA5F5D75B4F1331984C1A6AC2B842A08B",
+      "ExportLogSha256": "3D02FA8121622732D5A0728FCC596EC893116FAA7F0F0D3DFF709F93FBCF8FE9",
+      "Pages": 2,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection6.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection7.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection8.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection9.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection10.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection11.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection12.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 57,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 139,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 220,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 295,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 377,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 458,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 533,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 615,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 654,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 696,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 920,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 950,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 998,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1022,
+          "Character": "c",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1075,
+          "Character": "s",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1103,
+          "Character": "a",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1158,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1188,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1236,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1260,
+          "Character": "c",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1285,
+          "Character": "g",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1313,
+          "Character": "s",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1341,
+          "Character": "a",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1368,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1396,
+          "Character": "f",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1426,
+          "Character": "b",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1446,
+          "Character": "A",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1474,
+          "Character": "w",
+          "Page": 0,
+          "X": 368.1099853515625,
+          "Y": 79.2239990234375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1498,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1536,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1579,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1618,
+          "Character": "v",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1664,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1684,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1723,
+          "Character": "l",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1761,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1805,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1844,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1886,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1922,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1961,
+          "Character": "l",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1999,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2043,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2082,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2124,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2160,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2199,
+          "Character": "l",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2237,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2281,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2320,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2362,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 79.2239990234375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2399,
+          "Character": "A",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2427,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2451,
+          "Character": "c",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2476,
+          "Character": "g",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2504,
+          "Character": "s",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2532,
+          "Character": "a",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2559,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2587,
+          "Character": "f",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2617,
+          "Character": "b",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2638,
+          "Character": "A",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2666,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2690,
+          "Character": "c",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2715,
+          "Character": "g",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2743,
+          "Character": "s",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2771,
+          "Character": "a",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2798,
+          "Character": "w",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2826,
+          "Character": "f",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2856,
+          "Character": "b",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2877,
+          "Character": "F",
+          "Page": 1,
+          "X": 368.1099853515625,
+          "Y": 204.5,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "narrow-wide-pages",
+      "Input": "narrow-wide-pages.docx",
+      "InputSha256": "A7C028C620BD34BE40F558E82102508F6680A44EAF760BEA47A4ACEDEFB777AE",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "363BF01EF53598D1D0A1492A0372052E9278710AF7756B2F202F75DF9E6AC99F",
+      "ExportLogSha256": "2D523C64110BA85C36D2E51EC971B0696D278525F875EC2C7F4AB8B296124392",
+      "Pages": 2,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection6.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection7.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection8.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection9.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection10.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection11.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection12.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 46,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 70,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 123,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 151,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 206,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 236,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 284,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 308,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 361,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 389,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 444,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 474,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 522,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 546,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 599,
+          "Character": "s",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 642,
+          "Character": "C",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 687,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 934,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1009,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1091,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1172,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1247,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1285,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1329,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1368,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1410,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1446,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1485,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 79.2239990234375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1523,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1551,
+          "Character": "s",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1579,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1606,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1634,
+          "Character": "f",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1664,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1684,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1712,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1736,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1761,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1789,
+          "Character": "s",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1817,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1844,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1872,
+          "Character": "f",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1902,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1922,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1950,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1974,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1999,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2027,
+          "Character": "s",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2055,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2082,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2110,
+          "Character": "f",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2151,
+          "Character": "s",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2160,
+          "Character": "A",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2199,
+          "Character": "l",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2237,
+          "Character": "g",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2281,
+          "Character": "c",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2320,
+          "Character": "w",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2362,
+          "Character": "b",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2399,
+          "Character": "A",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2438,
+          "Character": "l",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2476,
+          "Character": "g",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2520,
+          "Character": "c",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2559,
+          "Character": "w",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2601,
+          "Character": "b",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2638,
+          "Character": "A",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2677,
+          "Character": "l",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2715,
+          "Character": "g",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2759,
+          "Character": "c",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2798,
+          "Character": "w",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2840,
+          "Character": "b",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2877,
+          "Character": "F",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 148.46002197265625,
+          "Size": 12.0
+        }
+      ]
+    },
+    {
+      "Id": "narrow-wide-pages",
+      "Input": "narrow-wide-pages.docx",
+      "InputSha256": "A7C028C620BD34BE40F558E82102508F6680A44EAF760BEA47A4ACEDEFB777AE",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "6560A0EB3FF4740AAC9C47DB1E1962BB510A883AD6F574EC2B05A286E724C783",
+      "ExportLogSha256": "196C055AFF63E9293A4F1E8B976E8FA910D88CCA13CED9D44BDAB92D5F45A17D",
+      "Pages": 2,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection1.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection2.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection3.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection4.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection5.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection6.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection7.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection8.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection9.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection10.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection11.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Sourcesection12.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 46,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 70,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 596.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 123,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 568.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 151,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 540.5499877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 178,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 512.5900268554688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 206,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 484.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 236,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 456.54998779296875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 256,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 428.5899963378906,
+          "Size": 12.0
+        },
+        {
+          "Offset": 284,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 400.6300048828125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 308,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 372.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 333,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 344.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 361,
+          "Character": "s",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 316.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 389,
+          "Character": "a",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 288.5299987792969,
+          "Size": 12.0
+        },
+        {
+          "Offset": 416,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 260.57000732421875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 444,
+          "Character": "f",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 232.6099853515625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 474,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 204.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 494,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 176.53997802734375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 522,
+          "Character": "w",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 148.58001708984375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 546,
+          "Character": "c",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 120.5,
+          "Size": 12.0
+        },
+        {
+          "Offset": 571,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 92.54400634765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 599,
+          "Character": "s",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 642,
+          "Character": "C",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 687,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 732,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 771,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 809,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 853,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 892,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 934,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 970,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1009,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1047,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1091,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1130,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1172,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1208,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1247,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1285,
+          "Character": "g",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1329,
+          "Character": "c",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1368,
+          "Character": "w",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1410,
+          "Character": "b",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1446,
+          "Character": "A",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1485,
+          "Character": "l",
+          "Page": 0,
+          "X": 280.010009765625,
+          "Y": 79.2239990234375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1523,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1551,
+          "Character": "s",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1579,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1606,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1634,
+          "Character": "f",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1664,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1684,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1712,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1736,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1761,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1789,
+          "Character": "s",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1817,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1844,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1872,
+          "Character": "f",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1902,
+          "Character": "b",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1922,
+          "Character": "A",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1950,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1974,
+          "Character": "c",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 1999,
+          "Character": "g",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2027,
+          "Character": "s",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2055,
+          "Character": "a",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 135.1400146484375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2082,
+          "Character": "w",
+          "Page": 1,
+          "X": 72.02400207519531,
+          "Y": 107.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2110,
+          "Character": "f",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 695.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2151,
+          "Character": "s",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 667.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2160,
+          "Character": "A",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 639.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2199,
+          "Character": "l",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 611.260009765625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2237,
+          "Character": "g",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 583.2999877929688,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2281,
+          "Character": "c",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 555.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2320,
+          "Character": "w",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 527.22998046875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2362,
+          "Character": "b",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 499.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2399,
+          "Character": "A",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 471.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2438,
+          "Character": "l",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 443.2300109863281,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2476,
+          "Character": "g",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 415.2699890136719,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2520,
+          "Character": "c",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 387.19000244140625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2559,
+          "Character": "w",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 359.2099914550781,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2601,
+          "Character": "b",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 331.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2638,
+          "Character": "A",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 303.1700134277344,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2677,
+          "Character": "l",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 275.2099609375,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2715,
+          "Character": "g",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 247.25,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2759,
+          "Character": "c",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 219.16998291015625,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2798,
+          "Character": "w",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 191.17999267578125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2840,
+          "Character": "b",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 163.219970703125,
+          "Size": 12.0
+        },
+        {
+          "Offset": 2877,
+          "Character": "F",
+          "Page": 1,
+          "X": 280.010009765625,
+          "Y": 148.46002197265625,
           "Size": 12.0
         }
       ]

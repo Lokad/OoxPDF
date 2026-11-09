@@ -174,6 +174,7 @@ internal sealed record DocxWrappedTextLine(
     bool EndsWithIntraTokenBreak)
 {
     public int? InlineObjectCharOffset { get; init; }
+    public int SourceTextStart { get; init; }
 }
 
 internal sealed record DocxInlineImageLayout(

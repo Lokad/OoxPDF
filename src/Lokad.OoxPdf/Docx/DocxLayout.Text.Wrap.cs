@@ -106,11 +106,12 @@ internal sealed partial class DocxLayoutEngine
         bool allowOverwideTokenBreaks,
         int? dynamicFieldPageNumber,
         CancellationToken cancellationToken = default,
-        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null,
+        int sourceStartOffset = 0)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int lineIndex = 0;
-        int segmentStart = 0;
+        int segmentStart = sourceStartOffset;
         while (segmentStart <= text.Length)
         {
             int breakIndex = text.IndexOf('\n', segmentStart);
@@ -125,7 +126,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (!yielded && segmentLength == 0)
             {
-                yield return new DocxWrappedTextLine(string.Empty, [], false);
+                yield return new DocxWrappedTextLine(string.Empty, [], false) { SourceTextStart = segmentStart };
                 lineIndex++;
             }
 
@@ -844,7 +845,7 @@ internal sealed partial class DocxLayoutEngine
         return new DocxWrappedTextLine(
             RemoveHiddenBreakCharacters(lineText, preserveTerminalSoftHyphen),
             NormalizeHiddenBreakSpans(sliced, preserveTerminalSoftHyphen),
-            endsWithIntraTokenBreak) { InlineObjectCharOffset = objectOffset };
+            endsWithIntraTokenBreak) { InlineObjectCharOffset = objectOffset, SourceTextStart = start };
     }
 
     private static int FindSpanIndex(int[] spanStarts, int position)

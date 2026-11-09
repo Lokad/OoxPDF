@@ -84,14 +84,15 @@ internal static class DocxColumnAdmissionTests
 
     public static void DocxColumnAdmissionKeepsRunSplitsAndNavigation()
     {
+        foreach (string input in new[] { "two-pages.docx", "wide-narrow-pages.docx", "narrow-wide-pages.docx" })
         foreach (bool review in new[] { false, true })
         {
-            var source = Read("two-pages.docx", review);
+            var source = Read(input, review);
             var original = Renderer(review, new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(source, null, default)
                 .ToBlockingEnumerable().ToArray();
             foreach (bool navigation in new[] { false, true })
             {
-                var changed = Read("two-pages.docx", review, xml =>
+                var changed = Read(input, review, xml =>
                 {
                     var paragraphs = Paragraphs(xml); var target = paragraphs[4];
                     var run = target.Elements(Word + "r").First(); string text = run.Element(Word + "t")!.Value;
@@ -141,6 +142,41 @@ internal static class DocxColumnAdmissionTests
                         "The bookmark viewport uses the admitted column frame.");
                 }
             }
+        }
+    }
+
+    public static void DocxColumnWidthsRetainHardBreaksTabsAndPageCounters()
+    {
+        foreach (string input in new[] { "wide-narrow-pages.docx", "narrow-wide-pages.docx" })
+        foreach (bool review in new[] { false, true })
+        {
+            using var gold = Gold();
+            string expected = gold.RootElement.GetProperty("Rows").EnumerateArray()
+                .First(row => row.GetProperty("Input").GetString() == input).GetProperty("ExpectedBodyText").GetString()!;
+            var document = Read(input, review, xml =>
+            {
+                var paragraphs = Paragraphs(xml);
+                var run = paragraphs[4].Elements(Word + "r").First(); var text = run.Element(Word + "t")!;
+                string value = text.Value; int split = value.IndexOf("careful", StringComparison.Ordinal);
+                TestAssert.True(split > 0, "The break transformation must address real source text.");
+                text.Value = value[..split];
+                text.AddAfterSelf(new XElement(Word + "br"), new XElement(Word + "br"), new XElement(Word + "tab"),
+                    new XElement(Word + "t", value[split..]));
+                var properties = paragraphs[^1].Element(Word + "pPr")!;
+                var runProperties = paragraphs[^1].Elements(Word + "r").First().Element(Word + "rPr")!;
+                XElement Literal(string value) => new(Word + "r", new XElement(runProperties), new XElement(Word + "t", value));
+                var counter = new XElement(Word + "p", new XElement(properties), Literal("Counter"),
+                    new XElement(Word + "fldSimple", new XAttribute(Word + "instr", "PAGE"), Literal("1")), Literal("/"),
+                    new XElement(Word + "fldSimple", new XAttribute(Word + "instr", "NUMPAGES"), Literal("1")), Literal("."));
+                xml.Descendants(Word + "sectPr").Single().AddBeforeSelf(counter);
+            });
+            var pages = Renderer(review, new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, null, default)
+                .ToBlockingEnumerable().ToArray();
+            TestAssert.True(pages.Length > 1, "The counter control must cross a physical page.");
+            string text = new(Characters(pages).Select(c => c.Character).ToArray());
+            TestAssert.True(text.StartsWith(expected, StringComparison.Ordinal) &&
+                text.EndsWith($"Counter{pages.Length}/{pages.Length}.", StringComparison.Ordinal),
+                "Width changes retain explicit breaks, source content and counters on the final physical page.");
         }
     }
 

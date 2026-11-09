@@ -1691,16 +1691,30 @@ internal sealed partial class DocxLayoutEngine
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double labelStartOffset = GetParagraphLabelStartOffset(paragraph, paragraphSpacingScale);
-                double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
+                double paragraphWidth = Math.Max(1d, width - textStartOffset - rightInset);
+                double wrappedFrameWidth = width;
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
-                double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                double continuationParagraphWidth = Math.Max(1d, width - continuationTextStartOffset - rightInset);
                 DocxWrappedTextLine[] lines = WrapTextLines(textSpans, paragraphWidth, continuationParagraphWidth, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pages.Count + 1, cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, paragraphSpacingScale)).ToArray();
                 DocxMidLineMath? inlineMath = TryGetSinglePreparedMath(paragraph, mathEquations, out var preparedMath) &&
                     !preparedMath.Equation.Display
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
                         paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
                     : null;
+                bool canResumeText = inlineMath is null && paragraph.Images.Count == 0;
+                void RewrapRemainingText(int index)
+                {
+                    double firstWidth = Math.Max(1d, width - (index == 0 ? textStartOffset : continuationTextStartOffset) - rightInset);
+                    double nextWidth = Math.Max(1d, width - continuationTextStartOffset - rightInset);
+                    var remaining = WrapTextLines(textSpans, firstWidth, nextWidth, paragraphFontSize, textMeasurer,
+                        ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale,
+                        ShouldAllowCharacterLevelWordWrap(paragraph), pages.Count + 1, cancellationToken,
+                        sourceStartOffset: lines[index].SourceTextStart);
+                    lines = lines.Take(index).Concat(remaining).ToArray();
+                    wrappedFrameWidth = width;
+                }
                 bool useLineMetrics = UsesBodyTextLineMetrics(paragraph, lineHeightProfile, textMeasurer);
                 if (ShouldMoveParagraphForWidowControl(paragraph, lines, cursorY, useLineMetrics, lineHeight,
                     textMeasurer, CurrentParagraphFrameBottom(), HasCurrentColumnContent(), cancellationToken))
@@ -1717,6 +1731,7 @@ internal sealed partial class DocxLayoutEngine
                 for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (canResumeText && width != wrappedFrameWidth) RewrapRemainingText(lineIndex);
                     DocxWrappedTextLine line = lines[lineIndex];
                     DocxParagraph metricParagraph = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;
                     double lineFontSize = ReferenceEquals(metricParagraph, paragraph) ? paragraphFontSize : GetParagraphFontSize(metricParagraph);
@@ -1752,12 +1767,20 @@ internal sealed partial class DocxLayoutEngine
                     {
                         AdvanceForOverflowingItem(extraAbove + extraBelow + lineAdvance, elementIndex, () => CurrentParagraphFrameBottom(
                             lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d));
+                        if (canResumeText && width != wrappedFrameWidth)
+                        {
+                            // The rejected line consumed no source. Measure it in
+                            // the admitted frame before committing its metrics.
+                            lineIndex--;
+                            continue;
+                        }
                     }
 
                     cursorY -= extraAbove;
 
                     // Admission can move this line to another column or page.
                     double paragraphX = x + (firstLine ? textStartOffset : continuationTextStartOffset);
+                    paragraphWidth = Math.Max(1d, width - (firstLine ? textStartOffset : continuationTextStartOffset) - rightInset);
                     double lineInlineWidth = (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + (inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d);
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + lineInlineWidth;
                     // RV06 align matrix: Office centers/rights the drawable text, letting
@@ -1950,7 +1973,6 @@ internal sealed partial class DocxLayoutEngine
                     if (lineMath is not null) { currentItems.Add(lineMath); }
                     activeColumnHasContent = true;
                     firstLine = false;
-                    paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     cursorY -= lineAdvance + extraBelow;
                 }
 

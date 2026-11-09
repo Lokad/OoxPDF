@@ -17910,6 +17910,7 @@
   ],
   "docx-column-admission": [
     "DocxColumnAdmission",
+    "DocxColumnWidthsRetainHardBreaksTabsAndPageCounters",
     "DocxSectionBreakCustomColumnsCreatePageOwnedFrames",
     "DocxPageLayoutStageManualColumnBreakAdvancesActiveColumn",
     "DocxColumnBreakParagraphCarriesPitchAndCollapsedSpacingIntoNextFrame",
@@ -17928,5 +17929,12 @@
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
+  ],
+  "docx-variable-column-widths": [
+    "DocxParagraphLayout",
+    "DocxEmergencyWrappingBreaksOrdinaryWordsWithoutChangingProtectedSpans",
+    "EmergencyWrapUnicodeBoundariesAreSafe",
+    "EmergencyWrapCancelledTokenThrows",
+    "EmergencyWrapCancellationDuringLongGrowThrows"
   ]
 }
