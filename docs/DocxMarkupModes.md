@@ -22,6 +22,10 @@ glyph brackets retain the line's natural font height. Increasing exact line
 spacing can enlarge the fill without stretching the brackets. Balloons use
 measured font boxes where available; object and unmeasured cases remain approximate.
 
+Print fitting shrinks pages when the body and review lane need more room;
+pages that already fit retain 100% scale. The gray lane follows the placed
+balloons at unit scale as well as on reduced pages.
+
 Footer formatting balloons and custom page-height Review placement remain
 approximate. A retained custom-height probe has a large page-wide vertical shift
 in this profile, while its checked Final origins agree with Word.

@@ -676,6 +676,9 @@ Approximate or restricted:
   Measured ordinary-body ranges separate authored selection height from natural
   glyph brackets; balloons use measured font boxes where available. Object,
   point and unmeasured marker geometry retain their approximations.
+  Review print fitting never magnifies an already fitting page; its gray lane
+  follows the placed balloons at unit scale too. Footer formatting-balloon and
+  custom-page placement remain approximate.
   Plain comment paragraphs share measured rows without a five-paragraph limit;
   independent Office controls cover two through seven paragraphs and middle-row
   wrapping. Supported fitting/wrapped terminal font pairs now use the same
