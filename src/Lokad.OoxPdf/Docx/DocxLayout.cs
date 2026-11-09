@@ -1691,7 +1691,6 @@ internal sealed partial class DocxLayoutEngine
                 double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double continuationTextStartOffset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double labelStartOffset = GetParagraphLabelStartOffset(paragraph, paragraphSpacingScale);
-                double paragraphX = x + textStartOffset;
                 double paragraphWidth = Math.Max(1d, width - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                 DocxTextRun firstRun = paragraph.Runs[0];
                 bool firstLine = true;
@@ -1757,6 +1756,8 @@ internal sealed partial class DocxLayoutEngine
 
                     cursorY -= extraAbove;
 
+                    // Admission can move this line to another column or page.
+                    double paragraphX = x + (firstLine ? textStartOffset : continuationTextStartOffset);
                     double lineInlineWidth = (midLinePlan?.LineImageWidths[lineIndex] ?? 0d) + (inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d);
                     double lineWidth = MeasureTextSpansForLayout(line.Spans, paragraphFontSize, textMeasurer, ScaleTabStopPositions(effective.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, pages.Count + 1) + lineInlineWidth;
                     // RV06 align matrix: Office centers/rights the drawable text, letting
@@ -1949,7 +1950,6 @@ internal sealed partial class DocxLayoutEngine
                     if (lineMath is not null) { currentItems.Add(lineMath); }
                     activeColumnHasContent = true;
                     firstLine = false;
-                    paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
                     cursorY -= lineAdvance + extraBelow;
                 }

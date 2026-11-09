@@ -17907,5 +17907,26 @@
     "DocxNoteMathFieldsStaticCountersRetainUnknownAndInconsistentFallbacks",
     "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
     "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow"
+  ],
+  "docx-column-admission": [
+    "DocxColumnAdmission",
+    "DocxSectionBreakCustomColumnsCreatePageOwnedFrames",
+    "DocxPageLayoutStageManualColumnBreakAdvancesActiveColumn",
+    "DocxColumnBreakParagraphCarriesPitchAndCollapsedSpacingIntoNextFrame",
+    "DocxColumnBreakParagraphUsesItsResolvedFontPitch",
+    "DocxBookmarkViewportUsesColumnOriginForIndentedAndAlignedTargets",
+    "DocxBookmarkViewportTracksColumnBreaksAndMirroredReviewPages",
+    "DocxLayoutStageAppliesParagraphIndentsToWrapping",
+    "DocxInlineCompositionBodyCursorSkipsUnfitContinuationColumns",
+    "DocxTableLayoutStageContinuesRowsInActiveColumnFrame",
+    "DocxInlineCompositionRunSplittingPreservesMeasurementAndSourceOwners",
+    "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent",
+    "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback",
+    "DocxWrappedMinimumLeading",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ]
 }

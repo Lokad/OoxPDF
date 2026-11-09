@@ -622,6 +622,8 @@ Approximate or restricted:
   including wrapping, horizontal alignment and page continuation in Final and unscaled Word-compatible
   Review. Paragraph shading leaves the first line's extra leading unpainted and
   fills continuation slots. Column and note-link fallbacks remain.
+  Ordinary text binds its horizontal origin after column/page admission; minimum
+  leading within columns retains its separate vertical fallback.
   Explicit before/after point spacing preserves these baselines; connected
   paragraph backgrounds retain their measured continuity, including different colors.
   Note-numbering, kerning and reduced-print alignment/spacing retain their separate limits.

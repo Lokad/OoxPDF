@@ -16,6 +16,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxUnitPrintOriginTests)),
         .. FromType("rendering-portable", typeof(DocxFooterRevisionFrameTests)),
         .. FromType("rendering-portable", typeof(DocxWrappedMinimumLeadingTests)),
+        .. FromType("rendering-portable", typeof(DocxColumnAdmissionTests)),
         .. FromType("rendering-portable", typeof(DocxBalloonFrameTests)),
         .. FromType("rendering-portable", typeof(DocxCommentGlyphFrameTests)),
         .. FromType("rendering-portable", typeof(DocxEndnoteBlockTests)),
