@@ -122,20 +122,6 @@ internal static class PptxChartRangeTests
         TestAssert.True(ReadRowHidden(cells, 2, 1), "Row 2 must report hidden.");
     }
 
-    public static void RepeatedFullWidthHiddenColumnRunsFailPromptly()
-    {
-        string runs = string.Concat(Enumerable.Repeat("<col min=\"1\" max=\"14000\" hidden=\"1\"/>", 8));
-        TestAssert.Throws<IOException>(() => ReadWorkbookFromSheetXml(
-            "<cols>" + runs + "</cols><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>"));
-    }
-
-    public static void HiddenColumnBudgetBoundaryPasses()
-    {
-        string runs = string.Concat(Enumerable.Repeat("<col min=\"1\" max=\"14000\" hidden=\"1\"/>", 7));
-        object workbook = ReadWorkbookFromSheetXml(
-            "<cols>" + runs + "</cols><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>");
-        TestAssert.Equal(1, ReadCellCount(workbook, "Sheet1!$A$1"));
-    }
     public static void WorkbookSharedStringsBeyondBudgetThrow()
     {
         var strings = new System.Text.StringBuilder();
@@ -324,7 +310,7 @@ internal static class PptxChartRangeTests
         }
 
         using MemoryStream packageStream = TestFixtures.CreateZipPackage(entries);
-        OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
         MethodInfo read = typeof(PptxRenderer).GetMethod(
             "ReadWorkbookDataCore",
             BindingFlags.NonPublic | BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader.");

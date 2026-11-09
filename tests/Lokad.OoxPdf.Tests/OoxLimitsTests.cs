@@ -844,18 +844,16 @@ internal static partial class OoxLimitsTests
 
     public static void WorkbookTotalCellsBeyondLimitThrows()
     {
-        // Two sheets each below the per-worksheet cap but above the workbook total must fail (M11).
-        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected workbook type.");
-        // Build via package with two sheets each 60000 cells (total 120000 > 100000).
-        // To keep the test fast, use reflection on the total-check directly is covered by union tests;
-        // here verify the per-workbook total via a synthetic package is bounded (may be slow, so use small repro):
-        // Instead assert the const exists and is 100000 (documents the shared budget).
-        var field = workbookType.GetNestedType("ChartWorkbookData", BindingFlags.NonPublic);
-        // Fallback: verify ReadWorksheetData path already covered; this test ensures total cap is wired.
-        // Use a tiny two-sheet package that stays below limits to prove normal workbooks still load.
-        object workbook = ChartWorkbookWithCells();
-        TestAssert.Equal(1, ReadCellCount(workbook, "Sheet1!$A$1"));
+        var sheets = new Dictionary<string, Dictionary<string, string>>
+        {
+            ["First"] = Enumerable.Range(1, 50_000).ToDictionary(row => "A" + row, _ => "1"),
+            ["Second"] = Enumerable.Range(1, 50_000).ToDictionary(row => "A" + row, _ => "2")
+        };
+        var workbook = (PptxRenderer.ChartWorkbookData)PptxChartRangeTests.ReadWorkbookCells(sheets);
+        TestAssert.Equal("2", workbook.ReadRangeCells("Second!A50000").Single().RawValue);
+        // Both sheets stay below their individual limit; only the workbook total changes.
+        sheets["Second"].Add("A50001", "2");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => PptxChartRangeTests.ReadWorkbookCells(sheets));
     }
 
     public static void MergeIdenticalSubsetInstancesSkipsRebuild()
