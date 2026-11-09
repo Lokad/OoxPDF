@@ -31,7 +31,8 @@
   retains precedence. Floating-textbox navigation includes the painted content insets.
   Fixed-line static text and boxed children share measured frames, preserving
   footer content previously placed off-page in Word-compatible Review.
-  Review print fitting preserves authored size when the page already fits.
+  Review print fitting preserves authored size when the page already fits;
+  formatting balloons share occupied footer frames and UI text resources.
   Diagnostics identify omitted story drawings and clipped automatic note rows.
 - PPTX charts: shares parsed source ownership across data, labels, axes, paint,
   markers and legends. Theme palettes and tint/shade order replace fitted color

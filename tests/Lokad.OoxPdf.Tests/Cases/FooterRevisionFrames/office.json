@@ -1,0 +1,152 @@
+{
+  "Scope": "Seven independent Word PDF Review footer caption frames, unchanged1pt frame/title-origin gates. UI faces are Segoe UI bold/regular; other unscaled/scaled/caption approximations and custom-height absolute failure remain documented. Not an application-view or full-page pass.",
+  "Rows": [
+    {
+      "Id": "unit-footer",
+      "Input": "UnitPrintOrigins/unit-footer.docx",
+      "Sha256": "D696B6DAFC9684CA3F4E01A9E282376FD2D294155AF898CF2282AF206D5A02B9",
+      "ExpectedEquationCount": 4,
+      "Frame": [
+        355.6300048828125,
+        622.2999877929688,
+        607.5599975585938,
+        638.6199951171875
+      ],
+      "TitleOrigin": [
+        360.19000244140625,
+        634.2999877929688
+      ],
+      "TitleFont": "SegoeUI-Bold",
+      "BodyFont": "SegoeUI",
+      "Caption": "Font: Bold",
+      "ReferencePdfSha256": "6E87E58631C6CA6F46A73698669A15B3D67CFB776D603A182729C2B7B48DFEC3",
+      "ReferenceExportLogSha256": "BA90B064CE572F4DE792408E37047B50E12B8BA3DEE55C254C0D24BFE8998782"
+    },
+    {
+      "Id": "wide-margin-letter",
+      "Input": "UnitPrintOrigins/wide-margin-letter.docx",
+      "Sha256": "09B9035FB539E9093414E1EF5E2310843B418B239DDAD1276057830B1B8C9442",
+      "ExpectedEquationCount": 4,
+      "Frame": [
+        343.6300048828125,
+        622.2999877929688,
+        607.5599975585938,
+        638.6199951171875
+      ],
+      "TitleOrigin": [
+        348.19000244140625,
+        634.2999877929688
+      ],
+      "TitleFont": "SegoeUI-Bold",
+      "BodyFont": "SegoeUI",
+      "Caption": "Font: Bold",
+      "ReferencePdfSha256": "8E7D4947418CE5867ACC99B80CA01670E6344C1DFABDDE2C3D3A49458F94C7FA",
+      "ReferenceExportLogSha256": "BD825F0321D4ECD0BB5E947949E4C0EE464C3AA82FE9022BE789EB815FA1A992"
+    },
+    {
+      "Id": "wide-margin-a4",
+      "Input": "UnitPrintOrigins/wide-margin-a4.docx",
+      "Sha256": "9D35A02B65BCAB3F811E65DCFCF6AEFEA4975F6526E33B8DDB2CBC5527113AB5",
+      "ExpectedEquationCount": 4,
+      "Frame": [
+        326.8299865722656,
+        672.219970703125,
+        590.760009765625,
+        688.5399780273438
+      ],
+      "TitleOrigin": [
+        331.3900146484375,
+        684.219970703125
+      ],
+      "TitleFont": "SegoeUI-Bold",
+      "BodyFont": "SegoeUI",
+      "Caption": "Font: Bold",
+      "ReferencePdfSha256": "AC4BAE0BF61791E8A21AD41A43A95E864239B053501139D45FAEC74BD5481E4B",
+      "ReferenceExportLogSha256": "5564C39BF9A75C910A006879847E544E200A67226C6B0438C075D2D6A092977B"
+    },
+    {
+      "Id": "plain-footer",
+      "Input": "FooterRevisionFrames/plain-footer.docx",
+      "Sha256": "B6C550B085CD5675FC901EF5D104EBF08B754A52266E26829F9180133C719E23",
+      "ExpectedEquationCount": 0,
+      "Frame": [
+        343.6300048828125,
+        705.9359741210938,
+        607.5599975585938,
+        722.2559814453125
+      ],
+      "TitleOrigin": [
+        348.19000244140625,
+        717.9359741210938
+      ],
+      "TitleFont": "SegoeUI-Bold",
+      "BodyFont": "SegoeUI",
+      "Caption": "Font: Bold",
+      "ReferencePdfSha256": "BCCAB507F95048FDCFF7DA996511E2D17FC23B7454A5DD9BE653741E68C26678",
+      "ReferenceExportLogSha256": "8484F8025DAED9AC85B10A441EDBB02E4972CE6FEBF7F50698E5EF56A060C56D"
+    },
+    {
+      "Id": "tall-plain-footer",
+      "Input": "FooterRevisionFrames/tall-plain-footer.docx",
+      "Sha256": "262A8A5DAB1A36F84284FF8CD19FB3E4DFB0341050F8F472CB4E97148BFA5F68",
+      "ExpectedEquationCount": 0,
+      "Frame": [
+        343.6300048828125,
+        705.5759887695312,
+        607.5599975585938,
+        721.7760009765625
+      ],
+      "TitleOrigin": [
+        348.19000244140625,
+        717.5759887695312
+      ],
+      "TitleFont": "SegoeUI-Bold",
+      "BodyFont": "SegoeUI",
+      "Caption": "Font: Bold",
+      "ReferencePdfSha256": "D01558026A854A823921FC872F84D443779AF0961F85303DD9E8BEC952345CD6",
+      "ReferenceExportLogSha256": "73E6161C963615D5536F7323BEA6F9629521FA7A2B976269D74BC8769690FAC6"
+    },
+    {
+      "Id": "mark-footer",
+      "Input": "CompositionProbes/math-mark-property-footer.docx",
+      "Sha256": "EFE15230C11D9C7700E7EB8CB79947C4763A2D2F20DCED015CB6DFFE9FF37F6F",
+      "ExpectedEquationCount": 4,
+      "Frame": [
+        433.510009765625,
+        597.8900146484375,
+        608.0900268554688,
+        610.27001953125
+      ],
+      "TitleOrigin": [
+        436.9700012207031,
+        607.010009765625
+      ],
+      "TitleFont": "SegoeUI-Bold",
+      "BodyFont": "SegoeUI",
+      "Caption": "Font: Bold",
+      "ReferencePdfSha256": "7587CB8FECB20B56CFADA45B1D10F165AE678C7DFD8D39E4877F1C906C273E8C",
+      "ReferenceExportLogSha256": "4570559F0B84CC7360FD36B08FC793FEDBFDDC7E28FD2897EDBC78146D76E29C"
+    },
+    {
+      "Id": "mark-later-footer",
+      "Input": "CompositionProbes/math-mark-property-later-footer.docx",
+      "Sha256": "ECB7415FCEA6D33A40BD6D3B0BD6787106824F549CD5EE8BE4BADD041776F658",
+      "ExpectedEquationCount": 4,
+      "Frame": [
+        433.510009765625,
+        597.8900146484375,
+        608.0900268554688,
+        610.27001953125
+      ],
+      "TitleOrigin": [
+        436.9700012207031,
+        607.010009765625
+      ],
+      "TitleFont": "SegoeUI-Bold",
+      "BodyFont": "SegoeUI",
+      "Caption": "Font: Bold",
+      "ReferencePdfSha256": "F164C65B89AE6A5ADD051BA6049247B14BCB27F2D44E01211DD8C2B1B3CD96FF",
+      "ReferenceExportLogSha256": "EEA2A8E47D750462108B77D150CC60BDE7DC9A8E425A04FE009A83C9E2BC34D0"
+    }
+  ]
+}

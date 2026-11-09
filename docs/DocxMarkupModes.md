@@ -26,9 +26,12 @@ Print fitting shrinks pages when the body and review lane need more room;
 pages that already fit retain 100% scale. The gray lane follows the placed
 balloons at unit scale as well as on reduced pages.
 
-Footer formatting balloons and custom page-height Review placement remain
-approximate. A retained custom-height probe has a large page-wide vertical shift
-in this profile, while its checked Final origins agree with Word.
+Formatting captions use the available regular review UI face, while comment
+paragraphs retain their authored faces. Fitting footer formatting balloons share
+the occupied footer frame and printed body boundary; unused right-margin space
+remains available to them. Unmeasured/font-fallback cases and custom page-height
+Review placement remain approximate. A retained custom-height probe has a large
+page-wide vertical shift, while its checked Final origins agree with Word.
 
 An explicit point anchor before paragraph content prints no comment balloon in
 Word-compatible geometry and reserves no review lane. Points after content keep

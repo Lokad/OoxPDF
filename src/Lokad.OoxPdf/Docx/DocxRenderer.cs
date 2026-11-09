@@ -195,7 +195,10 @@ internal sealed partial class DocxRenderer
         {
             effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFace = ResolveBalloonTitleFaceAsync(fontResolver, effectiveMarkupContext, CancellationToken.None).GetAwaiter().GetResult() };
         }
-        (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource) = EnsureMarkupBalloonTextResources(layout, fontResources, effectiveMarkupContext, CancellationToken.None);
+        (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource,
+            DocxRunFontResource? revisionBodyResource) = EnsureMarkupBalloonTextResourcesAsync(
+                layout, fontResources, effectiveMarkupContext, fontResolver, CancellationToken.None).GetAwaiter().GetResult();
+        effectiveMarkupContext = effectiveMarkupContext with { RevisionBalloonBodyResource = revisionBodyResource };
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         DocxRunFontResource? balloonLabelResource = ResolveMarkupLabelFontResource(fontResources);
         PdfEmbeddedFont? balloonLabelEmbedded = balloonTitleResource?.Embedded ?? balloonLabelResource?.Embedded;
@@ -1134,7 +1137,10 @@ internal sealed partial class DocxRenderer
             markupContext = markupContext with { BalloonTitleFace = await ResolveBalloonTitleFaceAsync(fontResolver, markupContext, cancellationToken).ConfigureAwait(false) };
         }
         bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
-        (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource) = EnsureMarkupBalloonTextResources(layout, fontResources, markupContext, cancellationToken);
+        (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource,
+            DocxRunFontResource? revisionBodyResource) = await EnsureMarkupBalloonTextResourcesAsync(
+                layout, fontResources, markupContext, fontResolver, cancellationToken).ConfigureAwait(false);
+        markupContext = markupContext with { RevisionBalloonBodyResource = revisionBodyResource };
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(markupContext);

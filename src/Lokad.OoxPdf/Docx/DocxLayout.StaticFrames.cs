@@ -102,8 +102,13 @@ internal sealed partial class DocxLayoutEngine
         {
             var layout = CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,
                 textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathEquations);
-            return !isHeader && scale == 1d && CanUseStaticStoryFrame(story, width, mathEquations, token)
-                ? PlaceFooterTableDrawingFrames(layout, page.MarginBottom, token) : layout;
+            if (!isHeader && scale == 1d && CanUseStaticStoryFrame(story, width, mathEquations, token))
+            {
+                double top = ResolveStaticFooterContentTop(layout, unscaledLineMetrics);
+                layout = layout with { PhysicalFooterFrameTop = double.IsFinite(top) ? top : null };
+                return PlaceFooterTableDrawingFrames(layout, page.MarginBottom, token);
+            }
+            return layout;
         }
 
         // Lay out one source block using the existing natural metrics. Mapping

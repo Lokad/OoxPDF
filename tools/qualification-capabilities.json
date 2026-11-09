@@ -59,6 +59,26 @@
     "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms",
     "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets"
   ],
+  "docx-footer-revision-frames": [
+    "DocxFooterRevisionFrames",
+    "DocxParagraphMarkCaptions",
+    "DocxBalloonTitleFace",
+    "DocxBalloonTextResourceCoversSyntheticTitleGlyphs",
+    "DocxBalloonBodyEmissionCoversItsOwnFontSubset",
+    "DocxWordCompatibleAllMarkupRendersRevisionBalloonTextWithOfficeFont",
+    "DocxWordCompatiblePrintScale",
+    "DocxUnitPrintOrigins",
+    "DocxBalloonFrames",
+    "DocxBodyBreaksBeforeRaisedFooterFrameBottom",
+    "DocxFooterLeadingBeforeDoesNotMoveFooter",
+    "DocxStaticFooterAutoAdvanceBottomAnchorsBlock",
+    "DocxStaticFooterFollowerLinesUseBodyRuleOffsets",
+    "DocxContinuedFootnoteFooterFramesKeepHeadsSeparatorsAndTailClear",
+    "DocxContinuedEndnoteFooterFramesKeepSelectedStoriesClearAndPreserveSourceLines",
+    "PortableRenderingFooterTableContinuationFramesKeepSourceContent",
+    "PortableRenderingNoteFooterFramesKeepEmptyContinuationContentVisible",
+    "MissingFontsPreserveWordCompatibleBalloonText"
+  ],
   "docx-shrink-only-printing": [
     "DocxUnitPrintOrigins",
     "DocxWordCompatiblePrintScale",

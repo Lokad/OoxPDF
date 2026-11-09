@@ -677,8 +677,9 @@ Approximate or restricted:
   glyph brackets; balloons use measured font boxes where available. Object,
   point and unmeasured marker geometry retain their approximations.
   Review print fitting never magnifies an already fitting page; its gray lane
-  follows the placed balloons at unit scale too. Footer formatting-balloon and
-  custom-page placement remain approximate.
+  follows the placed balloons at unit scale too. Qualified footer formatting
+  balloons share occupied frames and review UI fonts; font-fallback, unmeasured
+  and custom-page placement retain approximations.
   Plain comment paragraphs share measured rows without a five-paragraph limit;
   independent Office controls cover two through seven paragraphs and middle-row
   wrapping. Supported fitting/wrapped terminal font pairs now use the same

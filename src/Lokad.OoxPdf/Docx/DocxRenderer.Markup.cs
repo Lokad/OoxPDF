@@ -55,10 +55,12 @@ internal sealed partial class DocxRenderer
             or DocxRevisionKind.SectionPropertiesChange;
     }
 
-    private static (DocxRunFontResource? LabelCoverage, DocxRunFontResource? Title, DocxRunFontResource? BodyCoverage) EnsureMarkupBalloonTextResources(
+    private static async ValueTask<(DocxRunFontResource? LabelCoverage, DocxRunFontResource? Title,
+        DocxRunFontResource? BodyCoverage, DocxRunFontResource? RevisionBody)> EnsureMarkupBalloonTextResourcesAsync(
         DocxLayout layout,
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
+        IFontResolver fontResolver,
         CancellationToken cancellationToken)
     {
         // Balloon titles and bodies are synthetic strings (comment metadata, revision labels),
@@ -72,13 +74,13 @@ internal sealed partial class DocxRenderer
         // Existing subsets remain untouched when their coverage is sufficient.
         if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
         {
-            return (null, null, null);
+            return (null, null, null, null);
         }
 
         DocxRunFontResource? labelResource = ResolveMarkupLabelFontResource(fontResources);
         if (labelResource is null)
         {
-            return (null, null, null);
+            return (null, null, null, null);
         }
 
         // R12: page drawings come from the once-per-pass page index instead of
@@ -88,6 +90,7 @@ internal sealed partial class DocxRenderer
         var codepoints = new HashSet<int>();
         var titleCodepoints = new HashSet<int>();
         var bodyCodepoints = new HashSet<int>();
+        var revisionCodepoints = new HashSet<int>();
         DocxRunFontResource bodyCoverageResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -100,7 +103,7 @@ internal sealed partial class DocxRenderer
                 labelResource.Embedded,
                 bodyCoverageResource.Embedded,
                 fontResources,
-                cancellationToken))
+                cancellationToken, revisionCodepoints))
             {
                 foreach (string? text in new string?[] { placement.Title, placement.Body, placement.WordCompatibleTitle, placement.WordCompatibleBody })
                 {
@@ -143,16 +146,46 @@ internal sealed partial class DocxRenderer
         }
 
         DocxRunFontResource? titleResource = EnsureMarkupBalloonTitleResource(fontResources, markupContext, titleCodepoints, cancellationToken);
+        DocxRunFontResource? revisionBody = await PrepareRevisionBalloonBodyResourceAsync(
+            fontResources, markupContext, fontResolver, revisionCodepoints, cancellationToken).ConfigureAwait(false);
         if (codepoints.Count == 0)
         {
-            return (null, titleResource, null);
+            return (null, titleResource, null, revisionBody);
         }
 
         DocxRunFontResource? labelCoverage = EnsureMarkupBalloonCoverageResource(fontResources, labelResource, codepoints, cancellationToken);
         DocxRunFontResource? bodyCoverage = EnsureMarkupBalloonCoverageResource(fontResources,
             bodyCoverageResource, bodyCodepoints, cancellationToken,
             reusableCoverage: ReferenceEquals(bodyCoverageResource, labelResource) ? labelCoverage : null);
-        return (labelCoverage, titleResource, bodyCoverage);
+        return (labelCoverage, titleResource, bodyCoverage, revisionBody);
+    }
+
+    private static async ValueTask<DocxRunFontResource?> PrepareRevisionBalloonBodyResourceAsync(
+        DocxFontResources fonts, DocxMarkupContext context, IFontResolver resolver,
+        IReadOnlySet<int> codepoints, CancellationToken token)
+    {
+        if (!UsesWordCompatibleAllMarkupTextProfile(context) || codepoints.Count == 0 ||
+            fonts.Resources is not List<PdfFontResource> resources) return null;
+        token.ThrowIfCancellationRequested();
+        FontFaceResolution resolution = resolver.Resolve(new FontRequest("Segoe UI"));
+        if (resolution.IsFallback || resolution.Bold || resolution.Italic || resolution.WeightClass >= 600) return null;
+        var existing = fonts.RunResources.Values.FirstOrDefault(resource =>
+            resource.Resolution.Source.StableId == resolution.Source.StableId &&
+            resource.Resolution.FontFaceIndex == resolution.FontFaceIndex);
+        OpenTypeFont? font = existing?.Embedded.Font ?? await FontProgramLoader.LoadAsync(resolution, token).ConfigureAwait(false);
+        if (font is null || !font.HasTrueTypeOutlines || font.Os2.WeightClass >= 600) return null;
+        foreach (int point in codepoints)
+        {
+            token.ThrowIfCancellationRequested();
+            if (font.MapCodePoint(point) == 0) return null;
+        }
+        if (existing is not null)
+            return EnsureMarkupBalloonCoverageResource(fonts, existing, codepoints, token) ?? existing;
+        var embedded = PdfEmbeddedFont.Create(font, codepoints, token);
+        string name = "F" + (resources.Count(resource => resource.ResourceName.StartsWith("F", StringComparison.Ordinal)) + 1)
+            .ToString(CultureInfo.InvariantCulture);
+        resources.Add(new PdfFontResource(name, embedded));
+        return new DocxRunFontResource(name, embedded, resolution);
     }
 
     private static DocxRunFontResource? EnsureMarkupBalloonCoverageResource(
@@ -401,7 +434,8 @@ internal sealed partial class DocxRenderer
         PdfEmbeddedFont? labelEmbedded,
         PdfEmbeddedFont? bodyEmbedded,
         DocxFontResources? fontResources = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ISet<int>? revisionCodepoints = null)
     {
         if (!markupContext.RendersCommentBalloons && !markupContext.RendersRevisionBalloons)
         {
@@ -627,6 +661,9 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<DocxMarkupBalloonCandidate> CollectMarkupBalloonCandidates(double textWidth)
         {
             var balloonCandidates = new List<DocxMarkupBalloonCandidate>();
+            var revisionBodyResource = markupContext.RevisionBalloonBodyResource;
+            double? revisionLineHeightEm = revisionBodyResource is not null
+                ? DocxLineMetrics.MeasureHheaLineHeight(revisionBodyResource.Embedded.Font, 1d) : null;
             // RV16: story lookup rides the markup context (built once per conversion);
             // entry paths without it fall back to a local build.
             MarkupCommentStoryIndex storyIndex = markupContext.CommentStoryIndex ?? MarkupCommentStoryIndex.Build(relatedStories);
@@ -763,6 +800,18 @@ internal sealed partial class DocxRenderer
                     string revisionTitle = TrimBalloonText(BuildRevisionBalloonTitle(paragraph.Revisions), textWidth);
                     string revisionBody = TrimBalloonText(BuildRevisionBalloonPreview(paragraph), textWidth);
                     string? wordFormatting = BuildWordCompatibleRunFormattingPreview(paragraph, cancellationToken);
+                    // The footer's occupied physical frame and printed body boundary
+                    // own placement, independently of caption wording or mark/run role.
+                    double? footerTop = UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
+                        line.Story?.Kind == DocxStoryKind.Footer && page.StaticFooterFrameTop is { } top
+                            ? Math.Max(top, new DocxPrintedPageFrame(page.Height, markupContext.WordCompatiblePrintScale)
+                                .MapY(page.MarginBottom)) + WordCompatibleAllMarkupBalloonTopInsetPoints : null;
+                    if (footerTop is not null)
+                    {
+                        TryResolveWordCompatibleBalloonTextInsets(labelEmbedded, revisionBodyResource?.Embedded ?? bodyEmbedded,
+                            markupContext.WordCompatiblePrintScale, revisionLineHeightEm, null, null, out var insets);
+                        footerTop += insets.Top - WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints;
+                    }
                     balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                         DocxMarkupBalloonKind.Revision,
                         revisionTitle,
@@ -782,16 +831,7 @@ internal sealed partial class DocxRenderer
                         BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
                         WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody))
                     {
-                        // Keep the qualified source-run geometry independent of
-                        // caption support. Mark-owned formatting retains its paragraph
-                        // anchor until the shared footer-frame correction is qualified.
-                        WordCompatiblePlacementTopY = wordFormatting is not null &&
-                            paragraph.ParagraphMarkRun?.Revisions.Any(IsFormattingRevision) != true &&
-                            UsesWordCompatibleAllMarkupTextProfile(markupContext) &&
-                            line.Story?.Kind == DocxStoryKind.Footer && line.StaticStoryUsesPhysicalY &&
-                            page.StaticFooterFrameTop is { } top
-                                ? top + WordCompatibleAllMarkupBalloonTopInsetPoints
-                                : null
+                        WordCompatiblePlacementTopY = footerTop
                     });
                 }
             }
@@ -931,6 +971,24 @@ internal sealed partial class DocxRenderer
                 }
             }
 
+            for (int index = 0; index < balloonCandidates.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var candidate = balloonCandidates[index];
+                if (candidate.Kind != DocxMarkupBalloonKind.Revision) continue;
+                if (revisionCodepoints is not null)
+                    foreach (string? text in new[] { candidate.WordCompatibleTitle ?? candidate.Title,
+                        candidate.WordCompatibleBody ?? candidate.Body,
+                        "0123456789 tracked changes markup items " })
+                    {
+                        if (text is null) continue;
+                        foreach (Rune rune in text.EnumerateRunes())
+                        { cancellationToken.ThrowIfCancellationRequested(); revisionCodepoints.Add(Rune.IsWhiteSpace(rune) ? ' ' : rune.Value); }
+                    }
+                if (revisionBodyResource is not null)
+                    balloonCandidates[index] = candidate with { WordCompatibleBodyResource = revisionBodyResource,
+                        WordCompatibleBodyLineHeightEm = revisionLineHeightEm };
+            }
             return balloonCandidates;
 
             DocxCommentThreadBalloonMetrics CountCommentThreadBalloonMetrics(DocxRelatedStoryLayout? storyLayout, IReadOnlyList<DocxRelatedStoryLayout> replies)
@@ -1404,6 +1462,9 @@ internal sealed partial class DocxRenderer
             double designBodyEnd = page.MarkupLaneDesignBodyEnd ?? (page.Width - page.MarginRight + page.MarkupMarginReservePoints);
             double printScale = markupContext.WordCompatiblePrintScale;
             bodyWidth = Math.Max(MinimumMarkupBalloonBodyWidthPoints, WordCompatibleAllMarkupBalloonBodyWidthPoints * printScale);
+            // An already fitting page leaves its unused authored margin available
+            // to the balloon instead of narrowing it to the reduced-page width.
+            bodyWidth += Math.Max(0d, page.Width - designBodyEnd - WordCompatibleBalloonLaneWidthPoints) * printScale;
             double scaledTextX = (designBodyEnd + WordCompatibleAllMarkupBalloonLaneGapPoints) * printScale;
             // Word prints balloon bodies to within 1.4pt of the media edge (R72/R207/dense rects),
             // so the scaled lane clamps at 1pt rather than the legacy 2pt guard.
