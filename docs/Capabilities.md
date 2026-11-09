@@ -573,7 +573,9 @@ Approximate or restricted:
   Resolved paragraph-formatting history and a unique owned paragraph-mark format
   change retain neighboring equations and source navigation, with or without a list
   label. Duplicate or unowned property changes keep their existing fallback;
-  bold/italic descriptions share run and paragraph-mark resolution. Other changes
+  bold/italic descriptions share run and paragraph-mark resolution. Word-compatible
+  Review anchors owned paragraph-mark captions to the measured text strut; footer
+  captions retain their printed frame. Other changes
   retain generic summaries; balloon placement and complete-page fidelity remain
   approximate.
   Tables inside mapped inline header/footer boxes retain their rows, equations,
