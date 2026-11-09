@@ -27,8 +27,9 @@ pages that already fit retain 100% scale. The gray lane follows the placed
 balloons at unit scale as well as on reduced pages.
 
 Ordinary minimum-spaced body paragraphs retain their measured line baselines when
-they wrap, align horizontally or continue onto another page, in Final and unscaled Word-compatible
-Review. Their backgrounds leave only the first source line's extra leading unshaded.
+they wrap, align horizontally or continue into another column or page, in Final
+and unscaled Word-compatible Review. Their backgrounds leave only the first
+source line's extra leading unshaded.
 Explicit before/after point spacing preserves these baselines. Connected shaded
 paragraphs also fill their shared gap. Note-numbering, kerning and reduced-print
 alignment and spacing retain their separate limits.

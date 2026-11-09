@@ -675,9 +675,8 @@ Approximate or restricted:
   PDF controls cover pagination and paragraph origins. Plain scaled backgrounds
   also use printed natural frames and actual connected leading/spacing, including
   suppressed spacing and different-color boundaries. Strict image differences
-  remain. Unscaled multiline minimum
-  paragraphs, columns, unresolved static frames, unsupported
-  spacing/contextual styles and complex note-marker formatting retain restrictions.
+  remain. Unresolved static frames, unsupported spacing/contextual styles and
+  complex note-marker formatting retain restrictions.
 - Review balloons, ranges, revision bands, comment collision/layout and note-marker
   revisions remain partial. Remaining typography/geometry and extraction failures
   are recorded in [document review](PreviewVisualReview.md); successful conversion
