@@ -1,5 +1,5 @@
 {
-  "Scope": "Twenty public minimum-leading sources, Final/Review: wrapping, explicit point spacing, joined backgrounds and navigation. Independent supervised Word16PDF origins; application-view calibration unavailable. Original1pt raw origins/frames and0.1pt ordinary text sizes remain. No full-image pass implied.",
+  "Scope": "Twenty-five public minimum-leading sources, Final/Review: wrapping, alignment, explicit point spacing, joined backgrounds and navigation. Independent supervised Word16PDF origins; application-view calibration unavailable. Original1pt raw origins/frames and0.1pt ordinary text sizes remain. No full-image pass implied.",
   "Rows": [
     {
       "Id": "s28",
@@ -3878,6 +3878,552 @@
           ]
         }
       ]
+    },
+    {
+      "Id": "center",
+      "Input": "centered28.docx",
+      "InputSha256": "585248BAE18F0B6AA76551D0C65444F41A17B0996595BBDC508BBB71D0795755",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "28F74EFEAD9F9B0FBCD458E37A209B379CFF09C4437B1E77FBF8B9462A848A84",
+      "ExportLogSha256": "2614E7020E12E9114C3D6B06B5512FAB997B528D70B6EE957DE69C8544921449",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 85.58399963378906,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 90.98400115966797,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 171,
+          "Character": "b",
+          "Page": 0,
+          "X": 108.9800033569336,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 609.9400024414062,
+          "Size": 12.0
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "center",
+      "Input": "centered28.docx",
+      "InputSha256": "585248BAE18F0B6AA76551D0C65444F41A17B0996595BBDC508BBB71D0795755",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "33ABDBB8AC0603645742070FFB2EC1044FCF314411A6B0D38FF322E0550D4A41",
+      "ExportLogSha256": "60B9A876393A25397A52865F07C0656355F4E3E4C20461EE987E77EB6A416A45",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 85.58399963378906,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 90.98400115966797,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 171,
+          "Character": "b",
+          "Page": 0,
+          "X": 108.9800033569336,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 609.9400024414062,
+          "Size": 12.0
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "right",
+      "Input": "right28.docx",
+      "InputSha256": "110EAFD466E48AB8A3256851BF821F491EC192C42448F4CF0451DBA14369ECD0",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "440E64FA8D527FD5C33D05ED5B1A6CC0CCEC348607CE5DBC0E87106BEDDFA53A",
+      "ExportLogSha256": "8DC480F5A4D60936A77E30BCF3723EB0738ED99BE7A8CEB497196BBF8C281052",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 99.14399719238281,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 110.05999755859375,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 171,
+          "Character": "b",
+          "Page": 0,
+          "X": 145.94000244140625,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 609.9400024414062,
+          "Size": 12.0
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "right",
+      "Input": "right28.docx",
+      "InputSha256": "110EAFD466E48AB8A3256851BF821F491EC192C42448F4CF0451DBA14369ECD0",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "3782E1C7438734F041D351D5192E780819CC76178F5CD2C342B4F88CA62BD9E0",
+      "ExportLogSha256": "7264AA6CA5D1FEDCBE6B25F52CA229E8ED76649AC27DD4B96F2820F9A157F239",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 99.14399719238281,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 110.05999755859375,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 171,
+          "Character": "b",
+          "Page": 0,
+          "X": 145.94000244140625,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 609.9400024414062,
+          "Size": 12.0
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "justify",
+      "Input": "justified28.docx",
+      "InputSha256": "AC280A6E96300EBB034367958F61B9C8A3BBB5D03D831788DD898262DF075A3B",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "5AF47F327FECF79489960295E6A16BA10FAC207D4C19D5BF837E91316701638A",
+      "ExportLogSha256": "D3A42D00645719CCFF545C6869E2F4EA7B958731DCB8432A9AF00548BAEA9078",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 171,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 609.9400024414062,
+          "Size": 12.0
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "justify",
+      "Input": "justified28.docx",
+      "InputSha256": "AC280A6E96300EBB034367958F61B9C8A3BBB5D03D831788DD898262DF075A3B",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "E201DFF6FA492D30698F74FECB15EA8D7ED14594AEC585364A5FB5D8A8E30A26",
+      "ExportLogSha256": "3AC82E3DA59856A60BB47ACCE9EDB81C224061979E0F2645D6A604BD18381FD8",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 708.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 680.6199951171875,
+          "Size": 12.0
+        },
+        {
+          "Offset": 95,
+          "Character": "g",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 652.6599731445312,
+          "Size": 12.0
+        },
+        {
+          "Offset": 171,
+          "Character": "b",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 624.5800170898438,
+          "Size": 12.0
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 609.9400024414062,
+          "Size": 12.0
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "arial-center",
+      "Input": "centered-arial24.docx",
+      "InputSha256": "94D065BA06848FCA4B96F8B140A8E1508280DBE0C7AC4F86E89655810ED041C5",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "4C767FDFB0885031620088E08CF52A60139AA6A397C098477F2BCB18FC14AF01",
+      "ExportLogSha256": "6702A46378C6AB0BFC6BAA1EA345DE8E3C9D69D5F4D3A324D519A6EB7BC89CD8",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 710.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 75.74400329589844,
+          "Y": 686.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 103,
+          "Character": "B",
+          "Page": 0,
+          "X": 76.2239990234375,
+          "Y": 662.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 185,
+          "Character": "t",
+          "Page": 0,
+          "X": 163.94000244140625,
+          "Y": 638.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 626.1400146484375,
+          "Size": 10.5600004196167
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "arial-center",
+      "Input": "centered-arial24.docx",
+      "InputSha256": "94D065BA06848FCA4B96F8B140A8E1508280DBE0C7AC4F86E89655810ED041C5",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "3FC6C48AC536A45163A9B188BE14A9562CA37BFEE3B5FCEE80981E1D682C58E3",
+      "ExportLogSha256": "32C5679A7E96E191AE5174BA72EFF4682F4E3A4D315A03C2F612F45F1DC1DA71",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 710.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 75.74400329589844,
+          "Y": 686.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 103,
+          "Character": "B",
+          "Page": 0,
+          "X": 76.2239990234375,
+          "Y": 662.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 185,
+          "Character": "t",
+          "Page": 0,
+          "X": 163.94000244140625,
+          "Y": 638.1400146484375,
+          "Size": 10.5600004196167
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 626.1400146484375,
+          "Size": 10.5600004196167
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "times-right",
+      "Input": "right-times32.docx",
+      "InputSha256": "0B4046B73A9A2DC39D0047A8AA0103616175285607B8B4F843149679E56E4CA5",
+      "Mode": "final-preserve",
+      "ReferencePdfSha256": "757BAB6F895CEABFEA1994251AB9F5C072E20F852F87E1A4C3A1E8CE6085DCD6",
+      "ExportLogSha256": "9C3555B4758C854D3F126B10D91A9B43108F8693209F506A34120FD036EDB869",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 706.9000244140625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 109.33999633789062,
+          "Y": 674.8599853515625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 84,
+          "Character": "t",
+          "Page": 0,
+          "X": 81.02400207519531,
+          "Y": 642.9400024414062,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 154,
+          "Character": "g",
+          "Page": 0,
+          "X": 74.54399871826172,
+          "Y": 610.9000244140625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 226,
+          "Character": "t",
+          "Page": 0,
+          "X": 447.19000244140625,
+          "Y": 578.8599853515625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 562.780029296875,
+          "Size": 14.039999961853027
+        }
+      ],
+      "Shading": []
+    },
+    {
+      "Id": "times-right",
+      "Input": "right-times32.docx",
+      "InputSha256": "0B4046B73A9A2DC39D0047A8AA0103616175285607B8B4F843149679E56E4CA5",
+      "Mode": "all-word-compatible",
+      "ReferencePdfSha256": "586313FE6596F21DEA9F0BAD3AC514E547F7A8753A6747DED2BD2DA175E4ED79",
+      "ExportLogSha256": "4E09A4B89EA0F9EA69669E1D566F950988DA3A033D751E6D284395F148FDDB6E",
+      "Pages": 1,
+      "ExpectedBodyText": "Precedingsentinel.Amberblanketscoverquiethillswhilecopperlanternsguidecarefulwalkersthroughopengardens.Birchbranchessheltersmallbirdsbesideclearstreamsandgentlepaths.Cedarbencheswelcometiredvisitorsafterthefinalbridgeandbeforetheeveningbell.Followingsentinel.",
+      "Anchors": [
+        {
+          "Offset": 0,
+          "Character": "P",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 706.9000244140625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 18,
+          "Character": "A",
+          "Page": 0,
+          "X": 109.33999633789062,
+          "Y": 674.8599853515625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 84,
+          "Character": "t",
+          "Page": 0,
+          "X": 81.02400207519531,
+          "Y": 642.9400024414062,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 154,
+          "Character": "g",
+          "Page": 0,
+          "X": 74.54399871826172,
+          "Y": 610.9000244140625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 226,
+          "Character": "t",
+          "Page": 0,
+          "X": 447.19000244140625,
+          "Y": 578.8599853515625,
+          "Size": 14.039999961853027
+        },
+        {
+          "Offset": 241,
+          "Character": "F",
+          "Page": 0,
+          "X": 72.02400207519531,
+          "Y": 562.780029296875,
+          "Size": 14.039999961853027
+        }
+      ],
+      "Shading": []
     }
   ]
 }

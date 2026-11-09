@@ -25,7 +25,9 @@ internal static class DocxWrappedMinimumLeadingTests
             int start = text.IndexOf(expected, StringComparison.Ordinal);
             TestAssert.True(start >= 0 && text.IndexOf(expected, start + 1, StringComparison.Ordinal) < 0,
                 "The complete source body survives once: " + row.GetProperty("Id").GetString());
-            foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
+            var anchors = row.GetProperty("Anchors");
+            TestAssert.True(anchors.GetArrayLength() != 0, "Native origin coverage must contain measured anchors.");
+            foreach (var anchor in anchors.EnumerateArray())
             {
                 var actual = chars[start + anchor.GetProperty("Offset").GetInt32()];
                 TestAssert.True(actual.Character.ToString() == anchor.GetProperty("Character").GetString() &&
@@ -61,6 +63,8 @@ internal static class DocxWrappedMinimumLeadingTests
                 TestAssert.True(excess > 0 && Math.Abs(pair.First.BaselineY - pair.Second.BaselineY - excess) < .00001d,
                     "Every natural baseline occupies the bottom of its measured minimum slot.");
                 TestAssert.True(ReferenceEquals(pair.First.Segments, pair.Second.Segments), "Placement retains measured text and source owners.");
+                TestAssert.Equal(pair.First.X, pair.Second.X);
+                TestAssert.Equal(pair.First.Width, pair.Second.Width);
                 TestAssert.Equal(pair.First.LineHeight, pair.Second.LineHeight);
                 TestAssert.Equal(pair.First.SourceLineIndex, pair.Second.SourceLineIndex);
                 if (pair.First.IsFirstParagraphLine == true)

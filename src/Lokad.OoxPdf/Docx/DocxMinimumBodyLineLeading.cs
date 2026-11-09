@@ -31,7 +31,7 @@ internal static class DocxMinimumBodyLineLeading
                 if (line.LineHeightSource != DocxLineHeightSource.AtLeastLineSpacing ||
                     string.IsNullOrWhiteSpace(line.Text) ||
                     line.SourceParagraph is not { } paragraph ||
-                    !DocxPlainBodyFrame.IsPlainParagraph(paragraph) ||
+                    !DocxPlainBodyFrame.HasPlainTextContent(paragraph) ||
                     !HasExplicitPointSpacing(paragraph, allowContextual: true) ||
                     !HasSupportedLineSource(paragraph, out bool marked, cancellationToken) ||
                     line.LineHeight is not > 0d || !double.IsFinite(line.LineHeight.Value) ||
@@ -44,7 +44,7 @@ internal static class DocxMinimumBodyLineLeading
 
                 // Each measured natural line owns its bottom bearing. A larger
                 // minimum slot grows above that baseline, independently of other
-                // paragraphs, font size, surrounding tables or run paint.
+                // paragraphs, font size, horizontal alignment or run paint.
                 double excess = Math.Max(0d, line.LineHeight.Value - line.SingleLineHeight.Value);
                 if (excess == 0d) continue;
                 bool isolatedFirstPaint = firstLine && !HasJoinedShadingBefore(page.Items, itemIndex, line);
