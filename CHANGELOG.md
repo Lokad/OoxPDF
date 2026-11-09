@@ -20,8 +20,9 @@
   paragraph-mark resolution. Tables inside inline header/footer boxes retain
   their content and navigation in Word-compatible Review.
 - DOCX layout: improves table sizing, merged-cell placement, conditional styles
-  and padding, page-local body origins, paragraph backgrounds and longer comment
-  balloons. Note numbering preserves distinct references within shared runs;
+  and padding, page-local body origins, paragraph backgrounds and comment frames
+  measured from source and font geometry. Note numbering preserves distinct
+  references within shared runs;
   qualified PAGE/NUMPAGES and endnote placement use their actual owners.
   Split field instructions retain complete opcodes and cached results.
   Comment annotations preserve supported minimum-line placement.

@@ -274,7 +274,7 @@ Approximate or restricted:
   their measured fonts. Category and numeric constraints activate independently;
   geometry shared by plots, labels and links follows the resulting rectangle.
   Independent Office PDFs correct displacements of28.4pt vertically and38.38pt
-  horizontally; two Arial baseline residuals remain1.18â€“1.52pt. Outer layouts,
+  horizontally; two Arial baseline residuals remain 1.18–1.52 pt. Outer layouts,
   authored title/legend geometry, explicit numeric crossings, secondary/log axes
   and rotated/wrapped categories retain their existing paths. Native-font
   geometry checks remain separate from portable content checks at font-dependent
@@ -673,6 +673,9 @@ Approximate or restricted:
   revisions remain partial. Remaining typography/geometry and extraction failures
   are recorded in [document review](PreviewVisualReview.md); successful conversion
   does not turn a failed visual threshold into a pass.
+  Measured ordinary-body ranges separate authored selection height from natural
+  glyph brackets; balloons use measured font boxes where available. Object,
+  point and unmeasured marker geometry retain their approximations.
   Plain comment paragraphs share measured rows without a five-paragraph limit;
   independent Office controls cover two through seven paragraphs and middle-row
   wrapping. Supported fitting/wrapped terminal font pairs now use the same
