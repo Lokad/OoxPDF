@@ -50,12 +50,11 @@ internal static class DocxMinimumBodyFlowTests
         TestAssert.Equal(0, Renderer(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Sum(p => p.Annotations.Count));
     }
 
-    public static void DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback()
+    public static void DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback()
     {
         Action<XDocument>[] guards =
         [
             xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
-            xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
             xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += " e\u0301"
         ];
         foreach (var modify in guards)
@@ -63,7 +62,7 @@ internal static class DocxMinimumBodyFlowTests
             var document = Read(ordinary: true, modify); var before = Layout(document);
             DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after);
             TestAssert.True(ReferenceEquals(Minimum(before)[0], Minimum(after)[0]),
-                "Unowned scripts, column and combining-text sources retain their local fallback.");
+                "Unowned scripts and combining-text sources retain their local fallback.");
         }
     }
 

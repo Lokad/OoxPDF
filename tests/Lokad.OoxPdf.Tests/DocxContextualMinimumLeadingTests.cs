@@ -79,7 +79,7 @@ internal static class DocxContextualMinimumLeadingTests
     public static void DocxContextualMinimumRejectsUnknownStyleIdentitiesAndRichFlow()
     {
         foreach (bool notes in new[] { false, true })
-        foreach (string guard in new[] { "missing-styles", "ambiguous-defaults", "unknown-named", "auto-spacing", "columns" })
+        foreach (string guard in new[] { "missing-styles", "ambiguous-defaults", "unknown-named", "auto-spacing" })
         {
             var source = Read(notes, (xml, styles) =>
             {
@@ -87,13 +87,12 @@ internal static class DocxContextualMinimumLeadingTests
                 if (guard == "ambiguous-defaults") { AddStyle(styles, "PublicContextualA", true); AddStyle(styles, "PublicContextualB", true); }
                 if (guard == "unknown-named") paragraphs[0].Element(Word + "pPr")!.AddFirst(new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissing")));
                 if (guard == "auto-spacing") Spacing(paragraphs[0]).SetAttributeValue(Word + "beforeAutospacing", "1");
-                if (guard == "columns") xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2")));
             }, removeStyles: guard == "missing-styles");
             var original = Layout(source);
             var excluded = Lines(original)[0];
             DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
             TestAssert.True(Lines(fallback).Any(line => ReferenceEquals(line, excluded)),
-                "Unknown contextual identities and columns retain their local line.");
+                "Unknown contextual identities retain their local line.");
         }
     }
 

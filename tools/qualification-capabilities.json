@@ -380,7 +380,7 @@
     "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent",
     "DocxMinimumBodyFlowDefaultNotesKeepSlotsRegionsAndActualTargets",
     "DocxMinimumBodyFlowOrdinaryPlacementKeepsCapacityAndPreserveEmission",
-    "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback",
+    "DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback",
     "DocxOrdinaryMinimumSpacing",
     "DocxPassiveStaticPicturesKeepIntrusiveUnownedAndUnmeasuredFallbacks",
     "DocxPassiveStaticTextKeepsIntrusiveUnsupportedAndUnmeasuredFallbacks",
@@ -4237,7 +4237,7 @@
       "DocxInactiveStaticVariantsKeepSelectedRichStoryFallbacks",
       "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent",
       "DocxMinimumBodyFlowDefaultNotesKeepSlotsRegionsAndActualTargets",
-      "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback",
+      "DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback",
       "DocxNativeStaticMathRetainsStoryFlow"
   ],
   "docx-local-minimum-leading": [
@@ -4281,7 +4281,7 @@
       "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent",
       "DocxMinimumBodyFlowDefaultNotesKeepSlotsRegionsAndActualTargets",
       "DocxMinimumBodyFlowOrdinaryPlacementKeepsCapacityAndPreserveEmission",
-      "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback"
+      "DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback"
   ],
   "pptx-chart-titles": [
     "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
@@ -17921,7 +17921,7 @@
     "DocxTableLayoutStageContinuesRowsInActiveColumnFrame",
     "DocxInlineCompositionRunSplittingPreservesMeasurementAndSourceOwners",
     "DocxMinimumBodyLineLeadingKeepsEmissionAndPreserveGeometryCoherent",
-    "DocxMinimumBodyFlowOrdinaryRichWrappedAndColumnPathsKeepFallback",
+    "DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback",
     "DocxWrappedMinimumLeading",
     "ConvertObservesCancellationAfterWorkBegins",
     "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",

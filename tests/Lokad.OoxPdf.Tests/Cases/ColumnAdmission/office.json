@@ -1,5 +1,5 @@
 {
-  "Scope": "Independent supervised Word16PDF horizontal origins, pages and sizes; nativeY is retained for unchanged full1ptX/Y/.1ptsize comparisons. Column minimum-leading Y remains an explicit unsupported correction at this checkpoint. Captures are uncalibrated application view.",
+  "Scope": "Independent supervised Word16PDF raw1ptX/Y/.1ptsize origins across two/three-column body flow and page transitions. All source/PDF/log pins and coordinates unchanged. Captures remain uncalibrated application view.",
   "Rows": [
     {
       "Id": "two-short",

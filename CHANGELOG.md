@@ -35,7 +35,8 @@
   formatting balloons share occupied footer frames and UI text resources.
   Minimum-spaced body text retains measured baselines across wrapping, alignment,
   page breaks and explicit paragraph gaps; connected backgrounds preserve their coverage.
-  Text moving between columns or pages uses the admitted column's horizontal origin.
+  Text moving between columns or pages retains the admitted horizontal origin
+  and measured minimum baseline.
   Diagnostics identify omitted story drawings and clipped automatic note rows.
 - PPTX charts: shares parsed source ownership across data, labels, axes, paint,
   markers and legends. Theme palettes and tint/shade order replace fitted color

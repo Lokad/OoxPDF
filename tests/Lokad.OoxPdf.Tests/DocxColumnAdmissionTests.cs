@@ -11,7 +11,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxColumnAdmissionTests
 {
-    public static void DocxColumnAdmissionMatchesIndependentWordHorizontalOrigins()
+    public static void DocxColumnAdmissionMatchesIndependentWordOrigins()
     {
         if (!OperatingSystem.IsWindows() || !File.Exists(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "calibri.ttf")))
@@ -33,10 +33,9 @@ internal static class DocxColumnAdmissionTests
                 TestAssert.True(actual.Character.ToString() == anchor.GetProperty("Character").GetString() &&
                     actual.Page == anchor.GetProperty("Page").GetInt32() &&
                     Math.Abs(actual.X - anchor.GetProperty("X").GetDouble()) <= 1d &&
+                    Math.Abs(actual.Y - anchor.GetProperty("Y").GetDouble()) <= 1d &&
                     Math.Abs(actual.Size - anchor.GetProperty("Size").GetDouble()) <= .1d,
-                    $"Admitted column X matches Word: {row.GetProperty("Id").GetString()}/{actual}.");
-                // Native Y is retained in the gold and full comparison reports;
-                // minimum-leading placement in columns remains a separate fallback.
+                    $"Admitted column origins match Word: {row.GetProperty("Id").GetString()}/{actual}.");
             }
         }
     }

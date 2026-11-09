@@ -90,7 +90,6 @@ internal static class DocxMinimumBeforeLeadingTests
             xml => Body(xml)[1].Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"),
                 new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissingContextualStyle"))),
             xml => Body(xml)[1].Descendants(Word + "rPr").First().Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
-            xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2")))
         ];
         foreach (var modify in guards)
         {
@@ -99,7 +98,7 @@ internal static class DocxMinimumBeforeLeadingTests
             var excluded = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, source.Paragraphs[1]));
             DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
             TestAssert.True(fallback.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
-                "Negative/line/automatic/unresolved contextual spacing, unowned scripts and columns retain their local line.");
+                "Negative/line/automatic/unresolved contextual spacing, unowned scripts retain their local line.");
         }
     }
 

@@ -63,14 +63,13 @@ internal static class DocxMinimumBodyLineLeadingTests
             (xml, _) => Target(xml).Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "lineRule", "exact"),
             (xml, _) => Target(xml).Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "lineRule", "auto"),
             (xml, _) => Target(xml).Descendants(Word + "rPr").First().Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
-            (xml, _) => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
         ];
         foreach (var modify in guards)
         {
             var document = ReadFixture(modify); var before = Layout(document);
             DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var fallback);
             TestAssert.True(ReferenceEquals(Minimum(before), Minimum(fallback)),
-                "Exact/auto, unowned scripts and columns retain the affected line; other measured paragraphs remain independent.");
+                "Exact/auto and unowned scripts retain the affected line; other measured paragraphs remain independent.");
         }
     }
 

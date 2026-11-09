@@ -22,8 +22,6 @@ internal static class DocxMinimumBodyLineLeading
         var replacements = new Dictionary<DocxTextLineLayout, DocxTextLineLayout>(ReferenceEqualityComparer.Instance);
         foreach (var page in source.Pages)
         {
-            // Column placement retains its independently qualified fallback.
-            if (page.ColumnFrames.Count > 1) continue;
             for (int itemIndex = 0; itemIndex < page.Items.Count; itemIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
