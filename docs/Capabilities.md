@@ -622,6 +622,8 @@ Approximate or restricted:
   including wrapping and page continuation in Final and unscaled Word-compatible
   Review. Paragraph shading leaves the first line's extra leading unpainted and
   fills continuation slots. Other alignment, column and note-link fallbacks remain.
+  This correction currently requires before/after paragraph spacing of at most
+  8 pt; larger gaps retain the previous approximate baseline.
   Comment ranges and nonpainting comment references preserve the same text-frame
   classification. Actual note markers retain their own minimum-slot rules;
   printed Review balloons still own their scale and placement.
