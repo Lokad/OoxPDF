@@ -584,6 +584,9 @@ Approximate or restricted:
   approximate.
   Tables inside mapped inline header/footer boxes retain their rows, equations,
   links and bookmark targets in the painted frame, including nested tables.
+  Word-compatible Review preserves first-row prose baselines alongside equations
+  in qualified body/header/footer boxes. Explicit cell spacing, vertical merges
+  and unsupported alignment retain their existing approximations.
   Horizontal cell padding and complete-page appearance remain approximate.
   Adjacent display containers combine using the later container's justification;
   subsequent display rows share the first effective display row's owner.
