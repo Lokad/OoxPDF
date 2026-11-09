@@ -102,6 +102,58 @@ internal static class PptxWorkbookOwnershipTests
             }
     }
 
+    public static void PptxWorkbookRepeatedHiddenColumnRunsKeepRangeVisibility()
+    {
+        foreach (int runs in new[] { 1, 7 })
+        {
+            var parts = Parts(PptxTests.EmbeddedChartWorkbook());
+            SetHiddenColumnRuns(parts, 2, runs);
+            var workbook = Read(parts);
+            var values = workbook.ReadRangeCells("Sheet1!A2:B2", default);
+            TestAssert.True(!values[0].ColumnHidden && values[1].ColumnHidden,
+                "Repeating a hidden range preserves adjacent visible and hidden columns.");
+            TestAssert.Equal("North", values[0].Text);
+            TestAssert.Equal("8.2", values[1].RawValue);
+            var lastColumns = workbook.ReadRangeCells("Sheet1!XFC2:XFD2", default);
+            TestAssert.True(lastColumns[0].ColumnHidden && !lastColumns[1].ColumnHidden,
+                "The last declared column is hidden; the next grid column remains visible.");
+            TestAssert.True(workbook.ReadRangeCells("Sheet1!B3", default).Single().RowHidden,
+                "Column declarations preserve independent row visibility.");
+        }
+    }
+
+    public static void PptxWorkbookRepeatedHiddenColumnRunsKeepChartPaint()
+    {
+        string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "pptx-ladder-11-chart-bar-clustered-port.pptx"));
+        var original = Parts(File.ReadAllBytes(source));
+        var baseline = Convert(original);
+        TestAssert.True(baseline.Bytes.Length > 1_000, "Use a complete rendered chart as the control.");
+        foreach (int runs in new[] { 1, 7 })
+        {
+            var parts = new Dictionary<string, byte[]>(original);
+            const string embedded = "ppt/embeddings/Microsoft_Excel_Sheet1.xlsx";
+            var workbook = Parts(parts[embedded]);
+            SetHiddenColumnRuns(workbook, 4, runs);
+            using (var bytes = TestFixtures.CreateZipPackage(workbook)) parts[embedded] = bytes.ToArray();
+            var current = Convert(parts);
+            TestAssert.True(baseline.Bytes.AsSpan().SequenceEqual(current.Bytes),
+                "Hidden columns outside the chart's source range must preserve the complete PDF.");
+            TestAssert.True(baseline.Diagnostics.SequenceEqual(current.Diagnostics),
+                "Repeated visibility declarations must not fail conversion or introduce recovery diagnostics.");
+        }
+    }
+
+    private static void SetHiddenColumnRuns(Dictionary<string, byte[]> parts, int firstColumn, int runs) =>
+        ChangeXml(parts, "xl/worksheets/sheet1.xml", xml =>
+        {
+            XNamespace s = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+            xml.Root!.Elements(s + "cols").Remove();
+            xml.Root.AddFirst(new XElement(s + "cols", Enumerable.Range(0, runs).Select(_ =>
+                new XElement(s + "col", new XAttribute("min", firstColumn),
+                    new XAttribute("max", 16_383), new XAttribute("hidden", 1)))));
+        });
+
     private static (byte[] Bytes, OoxPdfDiagnostic[] Diagnostics) Convert(Dictionary<string, byte[]> parts)
     {
         using var input = TestFixtures.CreateZipPackage(parts);
@@ -141,7 +193,7 @@ internal static class PptxWorkbookOwnershipTests
     private static PptxRenderer.ChartWorkbookData Read(Dictionary<string, byte[]> parts, CancellationToken token = default)
     {
         using var input = TestFixtures.CreateZipPackage(parts);
-        OoxPackage package = OoxPackage.Open(input, default);
+        using OoxPackage package = OoxPackage.Open(input, default);
         MethodInfo read = typeof(PptxRenderer).GetMethod("ReadWorkbookDataCore", BindingFlags.NonPublic | BindingFlags.Static)!;
         try { return (PptxRenderer.ChartWorkbookData)read.Invoke(null, [package, token])!; }
         catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }

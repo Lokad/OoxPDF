@@ -4640,6 +4640,7 @@
   ],
   "pptx-workbook-part-ownership": [
     "PptxWorkbookOptionalParts",
+    "PptxWorkbookRepeatedHiddenColumnRuns",
     "PptxChartWorkbookParsingPreservesRangeMetadata",
     "PptxChartParsedVectorsPreserveWorkbookSidecarPoints",
     "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
@@ -4647,7 +4648,14 @@
     "WorkbookSharedStringsBeyondBudgetThrow",
     "WorkbookCellFormatsBeyondBudgetThrow",
     "ChartWorkbookSharedAcrossFrames",
-    "CancelledRangeExpansionObservesCancellation"
+    "CancelledRangeExpansionObservesCancellation",
+    "OutOfGridReferencesResolveEmpty",
+    "WorksheetCells",
+    "WorkbookSheetsBeyondBudgetThrow",
+    "WorkbookDefinedNamesBeyondBudgetThrow",
+    "ModelAdmissionWorkbookOutlivesItsNestedPackage",
+    "MemoryBudgetNestedWorkbookRefusalEscapesChartRecovery",
+    "ConvertPptxObservesCancellationAfterWorkBegins"
   ],
   "pptx-picture-recovery": [
     "PptxPictureRecovery",

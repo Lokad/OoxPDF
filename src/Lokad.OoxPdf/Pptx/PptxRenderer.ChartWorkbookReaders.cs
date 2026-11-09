@@ -393,16 +393,8 @@ internal sealed partial class PptxRenderer
         return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row >= 1 && row <= maxRow;
     }
 
-    // Total hidden-column insertions examined across all <col> runs in one
-    // worksheet. The grid holds at most MaxSpreadsheetColumn distinct columns,
-    // so genuine files stay far below this budget; anything beyond signals a
-    // hostile repetition of wide runs. Mirrors MaxChartRangeCells.
-    private const long MaxHiddenColumnExpansions = 100_000;
-
-    // Count budgets for embedded-workbook expansion. Chart data ranges are
-    // already capped at MaxChartRangeCells cells, so genuine chart workbooks
-    // stay far below these counts; anything beyond signals a hostile payload
-    // smuggled in through an embedded spreadsheet.
+    // Bounds on materialized embedded-workbook records, independent of the
+    // number of cells selected by an individual chart reference.
     private const long MaxWorkbookSharedStrings = 100_000;
     private const long MaxWorkbookTotalCells = 100_000;
     private const long MaxWorksheetCells = 100_000;
@@ -429,7 +421,6 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        long hiddenColumnExpansions = 0;
         foreach (XElement column in document.Descendants(SpreadsheetNamespace + "col"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -462,11 +453,6 @@ internal sealed partial class PptxRenderer
                 }
 
                 hiddenColumns.Add(columnIndex);
-                hiddenColumnExpansions++;
-                if (hiddenColumnExpansions > MaxHiddenColumnExpansions)
-                {
-                    throw new OoxPdfLimitExceededException("Chart workbook hides more columns than the maximum supported count.");
-                }
             }
         }
 
