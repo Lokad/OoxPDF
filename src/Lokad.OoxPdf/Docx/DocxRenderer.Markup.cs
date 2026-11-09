@@ -850,7 +850,11 @@ internal sealed partial class DocxRenderer
                         // independently of objects pushing its prose baseline down.
                         // The connector retains the actual occupied source line.
                         var placementAnchor = revisionCandidate with
-                        { AnchorY = line.BaselineY + frame.BaselineInset - textInset };
+                        {
+                            AnchorY = line.BaselineY + frame.BaselineInset - textInset,
+                            WordCompatibleBodyResource = revisionBodyResource,
+                            WordCompatibleBodyLineHeightEm = revisionLineHeightEm
+                        };
                         revisionCandidate = revisionCandidate with
                         { WordCompatiblePlacementTopY = ResolveMarkupBalloonPreferredTop(
                             placementAnchor, page, markupContext, labelEmbedded, bodyEmbedded) };

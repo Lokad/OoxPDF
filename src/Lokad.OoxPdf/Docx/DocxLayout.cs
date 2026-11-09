@@ -1632,7 +1632,11 @@ internal sealed partial class DocxLayoutEngine
                         // Placement shares the ordinary body's scaled local inset
                         // and page anchor. The measured occupied height stays intact.
                         double labelLeading = line.BaselineInset - Math.Max(line.TextBaselineInset, objectInset);
-                        line = line with { BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading };
+                        line = line with
+                        {
+                            BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading,
+                            TextBaselineInset = baseInset * paragraphSpacingScale
+                        };
                         if (completeFootnoteAdmission is not null)
                             RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Fragments.SelectMany(fragment => fragment.Text));
                         if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom(
