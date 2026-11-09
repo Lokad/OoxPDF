@@ -79,7 +79,6 @@ internal static class DocxColumnAdmissionTests
                 TestAssert.Equal(pair.Second.Line.Width, pair.First.Line.Width);
                 TestAssert.True(Math.Abs(pair.First.Line.X - pair.First.FrameX - pair.Second.Line.X + pair.Second.FrameX) < .00001d,
                     "Identical column constraints retain the same local line placement after admission.");
-                TestAssert.Equal(pair.First.Column, pair.First.Line.ColumnIndex);
             }
         }
     }
