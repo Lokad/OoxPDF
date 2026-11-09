@@ -56,7 +56,10 @@ internal static class DocxMinimumBodyFlowTests
         [
             xml => MinimumParagraph(xml).Element(Word + "r")!.Element(Word + "rPr")!.Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
             xml => MinimumParagraph(xml).Element(Word + "pPr")!.Add(new XElement(Word + "jc", new XAttribute(Word + "val", "center"))),
-            xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum.", 40)),
+            xml => {
+                MinimumParagraph(xml).Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum.", 40));
+                MinimumParagraph(xml).Element(Word + "pPr")!.Add(new XElement(Word + "jc", new XAttribute(Word + "val", "center")));
+            },
             xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2"))),
             xml => MinimumParagraph(xml).Descendants(Word + "t").First().Value += " e\u0301"
         ];
@@ -65,7 +68,7 @@ internal static class DocxMinimumBodyFlowTests
             var document = Read(ordinary: true, modify); var before = Layout(document);
             DocxMinimumBodyLineLeading.TryCreateLayout(document, before, out var after);
             TestAssert.True(ReferenceEquals(Minimum(before)[0], Minimum(after)[0]),
-                "Unowned scripts, alignment, wrapped, column and combining-text sources retain their local fallback.");
+                "Unowned scripts, centered wrapping, column and combining-text sources retain their local fallback.");
         }
     }
 

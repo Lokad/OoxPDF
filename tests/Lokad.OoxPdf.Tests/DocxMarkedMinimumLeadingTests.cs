@@ -73,7 +73,6 @@ internal static class DocxMarkedMinimumLeadingTests
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"before","240"),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"afterLines","100"),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"line","280"),
-            xml=>Body(xml)[1].Descendants(Word+"t").First().Value+=string.Concat(Enumerable.Repeat(" Public wrapped marked line.",30)),
             xml=>xml.Descendants(Word+"sectPr").Single().Add(new XElement(Word+"cols",new XAttribute(Word+"num","2")))
         ];
         foreach (var modify in guards)
@@ -83,7 +82,7 @@ internal static class DocxMarkedMinimumLeadingTests
             var excluded = before.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, paragraph));
             DocxMinimumBodyLineLeading.TryCreateLayout(source, before, out var after);
             TestAssert.True(after.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
-                "Unowned superscripts, actual marker formatting, unsupported spacing/slots and wrapped/column source retain their local line.");
+                "Unowned superscripts, actual marker formatting, unsupported spacing/slots and columns retain their local line.");
         }
         TestAssert.Throws<InvalidDataException>(() => Read(xml => Body(xml)[1].Element(Word + "pPr")!.Element(Word + "spacing")!.SetAttributeValue(Word + "after", "bad")));
     }

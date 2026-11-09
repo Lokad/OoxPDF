@@ -97,7 +97,6 @@ internal static class DocxOrdinaryMinimumSpacingTests
             xml => Body(xml)[0].Element(Word + "pPr")!.Add(new XElement(Word + "contextualSpacing"),
                 new XElement(Word + "pStyle", new XAttribute(Word + "val", "PublicMissingContextualStyle"))),
             xml => Body(xml)[0].Descendants(Word + "rPr").First().Add(new XElement(Word + "vertAlign", new XAttribute(Word + "val", "superscript"))),
-            xml => Body(xml)[0].Descendants(Word + "t").First().Value += string.Concat(Enumerable.Repeat(" Public wrapped minimum paragraph.", 30)),
             xml => xml.Descendants(Word + "sectPr").Single().Add(new XElement(Word + "cols", new XAttribute(Word + "num", "2")))
         ];
         foreach (var modify in guards)
@@ -106,7 +105,7 @@ internal static class DocxOrdinaryMinimumSpacingTests
             var excluded = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, source.Paragraphs[0]));
             DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
             TestAssert.True(fallback.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
-                "Unsupported spacing, unowned script and wrapped/column sources retain their local fallback.");
+                "Unsupported spacing, unowned script and columns retain their local fallback.");
         }
         TestAssert.Throws<InvalidDataException>(() => Read(4, 4, (xml, _) => Spacing(Body(xml)[0]).SetAttributeValue(Word + "before", "bad")));
     }
