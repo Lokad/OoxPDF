@@ -34,13 +34,14 @@ internal static partial class DocxInlineCompositionTests
                 .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             var selected = pages.SelectMany(page => Regex.Matches(page.Content,
                 @"0\.973 0\.863 0\.867 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f")
-                .Cast<Match>().Select(match => (Page: page, X: Value(match, "x"), Width: Value(match, "w"), Height: Value(match, "h"))))
+                .Cast<Match>().Select(match => (Page: page, X: Value(match, "x"), Width: Value(match, "w"), Height: Value(match, "h"), AfterFill: match.Index + match.Length)))
                 .Single(fill => fill.X < 400d);
             TestAssert.True(Math.Abs(selected.Height - twips / 20d * scale) < .002d, "Selection consumes the changed authored box.");
-            var verticals = Regex.Matches(selected.Page.Content,
+            // Glyph brackets follow their fill in paint order. Their source
+            // coordinates remain independent of the measured fill rectangle.
+            var verticals = Regex.Matches(selected.Page.Content[selected.AfterFill..],
                 @"(?m)^(?<x>[-\d.]+) (?<y>[-\d.]+) m\s+(?<endX>[-\d.]+) (?<endY>[-\d.]+) l S")
-                .Cast<Match>().Where(match => Math.Abs(Value(match, "x") - Value(match, "endX")) < .001d &&
-                    Value(match, "x") >= selected.X && Value(match, "x") <= selected.X + selected.Width + 1d)
+                .Cast<Match>().Where(match => Math.Abs(Value(match, "x") - Value(match, "endX")) < .001d).Take(2)
                 .Select(match => Math.Abs(Value(match, "endY") - Value(match, "y"))).ToArray();
             TestAssert.True(verticals.Length >= 2, "The selected source retains both glyph brackets.");
             double markerHeight = verticals.Max();
