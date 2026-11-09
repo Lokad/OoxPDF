@@ -37,8 +37,7 @@ internal sealed partial class DocxLayoutEngine
             !DocxPlainBodyFrame.IsPlainParagraph(previousParagraph)) return line;
         bool sameParagraph = previousBlock == block;
         if (!sameParagraph && (previousBlock + 1 != block || !CanJoinParagraphShading(previousParagraph, paragraph))) return line;
-        if (Math.Abs(previous.X + previousPaint.OffsetX - line.X - paint.OffsetX) > .000001d ||
-            Math.Abs(previousPaint.Width - paint.Width) > .000001d) return line;
+        if (!ParagraphShadingEdgesAlign(previous, line)) return line;
 
         // The first natural box owns its top. Connected lines fill the actual
         // gap above the next box, including minimum leading. Paragraph spacing
@@ -58,6 +57,11 @@ internal sealed partial class DocxLayoutEngine
         placed[^1] = previous with { ParagraphShadingFrame = previousPaint };
         return line with { ParagraphShadingFrame = paint };
     }
+
+    internal static bool ParagraphShadingEdgesAlign(DocxTextLineLayout previous, DocxTextLineLayout line) =>
+        previous.ParagraphShadingFrame is { } before && line.ParagraphShadingFrame is { } after &&
+        Math.Abs(previous.X + before.OffsetX - line.X - after.OffsetX) <= .000001d &&
+        Math.Abs(before.Width - after.Width) <= .000001d;
 
     private static DocxParagraphPaintFrame? CreateParagraphShadingFrame(
         DocxParagraph paragraph, bool continuesShading, double frameX, double frameWidth, double itemX,

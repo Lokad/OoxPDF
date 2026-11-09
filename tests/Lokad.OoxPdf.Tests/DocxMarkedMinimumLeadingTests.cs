@@ -69,8 +69,6 @@ internal static class DocxMarkedMinimumLeadingTests
             xml=>Body(xml)[1].Descendants(Word+"vertAlign").Single().SetAttributeValue(Word+"val","baseline"),
             xml=>Body(xml)[1].Descendants(Word+"rPr").First().Add(new XElement(Word+"vertAlign",new XAttribute(Word+"val","superscript"))),
             xml=>Body(xml)[1].Descendants(Word+"footnoteReference").Single().Parent!.Element(Word+"rPr")!.Add(new XElement(Word+"b")),
-            xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"after","180"),
-            xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"before","240"),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"afterLines","100"),
             xml=>Body(xml)[1].Element(Word+"pPr")!.Element(Word+"spacing")!.SetAttributeValue(Word+"line","280"),
             xml=>xml.Descendants(Word+"sectPr").Single().Add(new XElement(Word+"cols",new XAttribute(Word+"num","2")))

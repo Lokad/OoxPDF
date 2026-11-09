@@ -111,7 +111,7 @@ internal static class DocxElevenPointBodyTests
             var first = Lines(layout)[0];
             DocxMinimumBodyLineLeading.TryCreateLayout(source, layout, out var placed);
             var actual = Lines(placed).First(line => line.SourceBlockIndex == first.SourceBlockIndex && line.SourceLineIndex == first.SourceLineIndex);
-            if (guard is "bold" or "mixed-size" or "mixed-family" or "malformed-kern" or "keep" or "wrapped")
+            if (guard is "bold" or "mixed-size" or "mixed-family" or "malformed-kern" or "keep" or "wrapped" or "large-spacing")
                 Near(first.LineHeight!.Value - first.SingleLineHeight!.Value, first.BaselineY - actual.BaselineY,
                     "Known measured minimum placement is independent of the separate kerning policy: " + guard);
             else TestAssert.True(ReferenceEquals(first, actual), "Unresolved spacing/style/flow retains the local minimum fallback: " + guard);

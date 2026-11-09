@@ -84,7 +84,6 @@ internal static class DocxMinimumBeforeLeadingTests
     {
         Action<XDocument>[] guards =
         [
-            xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "before", "240"),
             xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "before", "-80"),
             xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "beforeLines", "100"),
             xml => Spacing(Body(xml)[1]).SetAttributeValue(Word + "beforeAutospacing", "1"),
@@ -100,7 +99,7 @@ internal static class DocxMinimumBeforeLeadingTests
             var excluded = original.Pages.SelectMany(p => p.Items).OfType<DocxTextLineLayout>().First(l => ReferenceEquals(l.SourceParagraph, source.Paragraphs[1]));
             DocxMinimumBodyLineLeading.TryCreateLayout(source, original, out var fallback);
             TestAssert.True(fallback.Pages.SelectMany(p => p.Items).Any(item => ReferenceEquals(item, excluded)),
-                "Larger/negative/line/automatic/unresolved contextual spacing, unowned scripts and columns retain their local line.");
+                "Negative/line/automatic/unresolved contextual spacing, unowned scripts and columns retain their local line.");
         }
     }
 

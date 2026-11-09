@@ -89,8 +89,6 @@ internal static class DocxOrdinaryMinimumSpacingTests
     {
         Action<XDocument>[] guards =
         [
-            xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "before", "240"),
-            xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "after", "240"),
             xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "before", "-80"),
             xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "afterLines", "100"),
             xml => Spacing(Body(xml)[0]).SetAttributeValue(Word + "beforeAutospacing", "1"),

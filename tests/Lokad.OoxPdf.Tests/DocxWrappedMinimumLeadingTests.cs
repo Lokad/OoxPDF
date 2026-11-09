@@ -71,13 +71,13 @@ internal static class DocxWrappedMinimumLeadingTests
                 if (pair.First.ParagraphShadingFrame is { } paint)
                 {
                     var result = pair.Second.ParagraphShadingFrame!.Value;
-                    if (pair.First.IsFirstParagraphLine == true)
+                    if (pair.First.IsFirstParagraphLine == true && document.Paragraphs[0].Shading is null)
                         TestAssert.True(Math.Abs(result.Height - (paint.Height - excess)) < .00001d,
                             "The first natural line leaves its minimum leading unshaded.");
                     else
                         TestAssert.True(result.Height == paint.Height &&
                             Math.Abs(pair.First.BaselineY + paint.BaselineInset - pair.Second.BaselineY - result.BaselineInset) < .00001d,
-                            "Continuation backgrounds fill their original occupied slots across page breaks.");
+                            "Connected backgrounds fill their original occupied slots across paragraphs and page breaks.");
                 }
             }
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
@@ -91,14 +91,15 @@ internal static class DocxWrappedMinimumLeadingTests
         using var gold = ReadGold();
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
-            var pages = Renderer(row, new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(Read(row), null, default)
+            var document = Read(row);
+            var pages = Renderer(row, new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, null, default)
                 .ToBlockingEnumerable().ToArray();
             string text = Compact(string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page))
                 .Select(show => show.Text)));
             TestAssert.Contains(row.GetProperty("ExpectedBodyText").GetString()!, text);
-            if (row.GetProperty("Id").GetString() == "ln28")
+            if (document.Paragraphs.Any(p => p.Hyperlinks.Count != 0))
                 TestAssert.True(pages.Sum(page => page.Annotations.Count) >= 3, "The wrapped source link retains its clickable lines.");
-            if (row.GetProperty("Id").GetString() == "nt28")
+            if (document.Paragraphs.SelectMany(p => p.InlineReferences).Any(r => r.Kind == DocxRelatedStoryKind.Footnote))
             {
                 TestAssert.Contains("Boundednotetext.", text);
                 TestAssert.True(pages.SelectMany(page => page.Annotations).Any(a => a.Destination is not null),

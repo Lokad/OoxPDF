@@ -29,8 +29,9 @@ balloons at unit scale as well as on reduced pages.
 Ordinary minimum-spaced body paragraphs retain their measured line baselines when
 they wrap or continue onto another page, in Final and unscaled Word-compatible
 Review. Their backgrounds leave only the first source line's extra leading unshaded.
-The current correction requires before/after paragraph spacing of at most 8 pt;
-larger gaps retain their previous approximate baseline.
+Explicit before/after point spacing preserves these baselines. Connected shaded
+paragraphs also fill their shared gap. Note-numbering, kerning and reduced-print
+spacing retain their separate limits.
 
 Formatting captions use the available regular review UI face, while comment
 paragraphs retain their authored faces. Fitting footer formatting balloons share
