@@ -46,6 +46,11 @@ internal static class DocxBalloonFrameTests
                 "Balloon title origins retain the unchanged absolute Word threshold: " + source.GetProperty("Id").GetString());
             TestAssert.Equal(expected.GetProperty("Rows").GetInt32(), shows.Select(show => Math.Round(show.Y, 2)).Distinct().Count());
             TestAssert.Equal(Normalize(expected.GetProperty("Text").GetString()!), Normalize(string.Concat(shows.Select(show => show.Text))));
+            if (source.TryGetProperty("ExpectedCommentFamilies", out var families))
+                foreach (var family in families.EnumerateArray())
+                    TestAssert.True(shows.Where(show => !show.Text.StartsWith("Commented", StringComparison.Ordinal))
+                        .Any(show => show.Font.Font.FamilyName.Equals(family.GetString(), StringComparison.OrdinalIgnoreCase)),
+                        "Wrapping preserves the declared comment face: " + family.GetString());
         }
     }
 

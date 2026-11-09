@@ -689,8 +689,6 @@ internal sealed partial class DocxRenderer
                         string wordCompatibleCommentBody = BuildWordCompatibleCommentBalloonPreview(storyLayout);
                         DocxCommentThreadBalloonMetrics commentMetrics = CountCommentThreadBalloonMetrics(storyLayout, replies ?? []);
                         DocxTextLineLayout anchorLine = ResolveCommentAnchorLine(line, anchorTextLines, paragraph, reference, markupContext);
-                        var commentFrame = ResolveCommentAnchorFrame(anchorLine, paragraph, reference, markupContext,
-                            fontResources, cancellationToken);
                         // RV06: Word-compatible comment balloons wear the first-seen
                         // author color; other profiles keep the legacy cream palette.
                         int commentAuthorSlot = ResolveCommentAuthorSlot(markupContext.CommentAuthorPaletteSlots, reference.Id);
@@ -706,6 +704,17 @@ internal sealed partial class DocxRenderer
                         IReadOnlyList<DocxMarkupBalloonBodyPart>? qualifiedParts = qualifiedBody is null && UsesWordCompatibleAllMarkupTextProfile(markupContext)
                             ? ResolveMixedCommentBalloonBodyParts(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken)
                             : null;
+                        double? bodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
+                            ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null;
+                        var commentParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
+                            ? ResolveCommentBalloonParagraphs(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken) : null;
+                        DocxOccupiedLineBox? measuredBodyBox = null;
+                        if (fontResources is not null && TryResolveWordCompatibleBalloonTextInsets(labelEmbedded,
+                                qualifiedBody?.Embedded ?? bodyEmbedded, markupContext.WordCompatiblePrintScale,
+                                bodyLineHeightEm, qualifiedParts, commentParagraphs, out _) &&
+                            TryResolveBodyCommentFillLineBox(anchorLine, paragraph, fontResources, markupContext, cancellationToken, out var sourceBox))
+                            measuredBodyBox = sourceBox;
+                        var commentFrame = ResolveCommentAnchorFrame(anchorLine, paragraph, reference, markupContext, measuredBodyBox);
                         balloonCandidates.Add(new DocxMarkupBalloonCandidate(
                             DocxMarkupBalloonKind.Comment,
                             TrimBalloonText(BuildCommentBalloonTitle(storyLayout?.Story, reference.Id), textWidth),
@@ -733,12 +742,10 @@ internal sealed partial class DocxRenderer
                                 ? null : qualifiedBody,
                             WordCompatibleAnchorDepthPoints = commentFrame.Depth,
                             WordCompatiblePlacementTopY = commentFrame.Top,
-                            WordCompatibleBodyLineHeightEm = qualifiedBody is not null && qualifiedBody.Embedded.Font.UnitsPerEm > 0
-                                ? DocxLineMetrics.MeasureHheaLineHeight(qualifiedBody.Embedded.Font, 1d) : null,
+                            WordCompatibleBodyLineHeightEm = bodyLineHeightEm,
                             WordCompatibleTerminalResource = ResolveCommentBalloonTerminalResource(storyLayout, qualifiedBody, qualifiedParts, fontResources),
                             WordCompatibleBodyParts = qualifiedParts,
-                            WordCompatibleParagraphs = UsesWordCompatibleAllMarkupTextProfile(markupContext)
-                                ? ResolveCommentBalloonParagraphs(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken) : null,
+                            WordCompatibleParagraphs = commentParagraphs,
                             WordCompatibleMixedTerminal = UsesWordCompatibleAllMarkupTextProfile(markupContext)
                                 ? ResolveCommentMixedTerminalParagraph(storyLayout, wordCompatibleCommentBody, fontResources, cancellationToken) : null
                         });
@@ -1024,9 +1031,9 @@ internal sealed partial class DocxRenderer
         double insetAdjustment = 0d;
         if (UsesWordCompatibleAllMarkupTextProfile(markupContext) && !string.IsNullOrWhiteSpace(candidate.WordCompatibleTitle))
         {
-            var insets = ResolveWordCompatibleBalloonTextInsets(titleEmbedded,
+            TryResolveWordCompatibleBalloonTextInsets(titleEmbedded,
                 candidate.WordCompatibleBodyResource?.Embedded ?? bodyEmbedded, markupContext.WordCompatiblePrintScale,
-                candidate.WordCompatibleBodyLineHeightEm, candidate.WordCompatibleBodyParts);
+                candidate.WordCompatibleBodyLineHeightEm, candidate.WordCompatibleBodyParts, candidate.WordCompatibleParagraphs, out var insets);
             insetAdjustment = insets.Top - WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints;
         }
         double top = candidate.WordCompatiblePlacementTopY ??
@@ -1075,8 +1082,9 @@ internal sealed partial class DocxRenderer
                 string title = candidate.WordCompatibleTitle ?? candidate.Title;
                 string body = candidate.WordCompatibleBody ?? string.Empty;
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
-                var insets = ResolveWordCompatibleBalloonTextInsets(labelEmbedded, bodyEmbedded,
-                    markupContext.WordCompatiblePrintScale, candidate.WordCompatibleBodyLineHeightEm, candidate.WordCompatibleBodyParts);
+                TryResolveWordCompatibleBalloonTextInsets(labelEmbedded, bodyEmbedded,
+                    markupContext.WordCompatiblePrintScale, candidate.WordCompatibleBodyLineHeightEm, candidate.WordCompatibleBodyParts,
+                    candidate.WordCompatibleParagraphs, out var insets);
                 double titleWidth = labelEmbedded.MeasureTextPoints(title, fontSize);
                 ComputeWordCompatibleBalloonWrapWidths(titleWidth, balloonWidth, markupContext.WordCompatiblePrintScale, out double firstLineWidth, out double continuationWidth);
                 if (ResolveWordCompatibleFittingMixedTerminalRows(candidate.WordCompatibleMixedTerminal, fontSize, firstLineWidth, continuationWidth, cancellationToken) is { } mixedTerminalRows)
@@ -1547,8 +1555,9 @@ internal sealed partial class DocxRenderer
         string body = placement.WordCompatibleBody ?? string.Empty;
         double fontSize = 9d * wordCompatiblePrintScale;
         double textX = placement.X + ResolveWordCompatibleBalloonTextInsetX(wordCompatiblePrintScale);
-        var insets = ResolveWordCompatibleBalloonTextInsets(labelResource.Embedded, bodyResource.Embedded,
-            wordCompatiblePrintScale, placement.WordCompatibleBodyLineHeightEm, placement.WordCompatibleBodyParts);
+        TryResolveWordCompatibleBalloonTextInsets(labelResource.Embedded, bodyResource.Embedded,
+            wordCompatiblePrintScale, placement.WordCompatibleBodyLineHeightEm, placement.WordCompatibleBodyParts,
+            placement.WordCompatibleParagraphs, out var insets);
         double firstBaselineY = placement.Y + placement.Height - insets.Top;
         double lineGap = ResolveWordCompatibleBalloonLineGap(placement.WordCompatibleBodyLineHeightEm, fontSize);
         const byte titleRgb = 0;
@@ -1677,24 +1686,39 @@ internal sealed partial class DocxRenderer
     private static double ResolveWordCompatibleBalloonTextInsetX(double printScale) =>
         WordCompatibleAllMarkupBalloonTextInsetDesignPoints * printScale;
 
-    private static (double Top, double Bottom) ResolveWordCompatibleBalloonTextInsets(
+    private static bool TryResolveWordCompatibleBalloonTextInsets(
         PdfEmbeddedFont? titleEmbedded, PdfEmbeddedFont? bodyEmbedded, double printScale,
-        double? bodyLineHeightEm, IReadOnlyList<DocxMarkupBalloonBodyPart>? bodyParts)
+        double? bodyLineHeightEm, IReadOnlyList<DocxMarkupBalloonBodyPart>? bodyParts,
+        IReadOnlyList<DocxMarkupBalloonParagraph>? paragraphs,
+        out (double Top, double Bottom) insets)
     {
-        // A prepared uniform body already exposes its measured font/line owner.
-        // Mixed parts and unmeasured fallbacks retain their independently
-        // qualified insets until their row font extents have the same contract.
-        if (bodyLineHeightEm is null || bodyParts is not null || titleEmbedded is null || bodyEmbedded is null)
-            return (WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints, WordCompatibleAllMarkupBalloonBottomInsetPoints);
+        // Uniform bodies and prepared plain paragraphs expose the first and
+        // last row faces. Other mixed parts and unmeasured fallbacks retain
+        // their qualified insets until their row extents have this contract.
+        insets = (WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints, WordCompatibleAllMarkupBalloonBottomInsetPoints);
+        if (bodyParts is not null || titleEmbedded is null || bodyEmbedded is null)
+            return false;
+        OpenTypeFont firstBody = bodyEmbedded.Font;
+        OpenTypeFont lastBody = firstBody;
+        OpenTypeFont lastMark = lastBody;
+        if (paragraphs is { Count: > 0 })
+        {
+            firstBody = paragraphs[0].Body.Resource.Embedded.Font;
+            lastBody = paragraphs[^1].Body.Resource.Embedded.Font;
+            lastMark = paragraphs[^1].Mark.Embedded.Font;
+        }
+        else if (bodyLineHeightEm is null) return false;
         double fontSize = 9d * printScale;
         double padding = WordCompatibleAllMarkupBalloonTextPaddingDesignPoints * printScale;
         double titleAscent = DocxLineMetrics.MeasureWindowsAscender(titleEmbedded.Font, fontSize);
-        double bodyAscent = DocxLineMetrics.MeasureWindowsAscender(bodyEmbedded.Font, fontSize);
-        double descent = DocxLineMetrics.MeasureWindowsDescender(bodyEmbedded.Font, fontSize);
+        double bodyAscent = DocxLineMetrics.MeasureWindowsAscender(firstBody, fontSize);
+        double descent = Math.Max(DocxLineMetrics.MeasureWindowsDescender(lastBody, fontSize),
+            DocxLineMetrics.MeasureWindowsDescender(lastMark, fontSize));
         if (!double.IsFinite(titleAscent) || titleAscent <= 0d || !double.IsFinite(bodyAscent) || bodyAscent <= 0d ||
             !double.IsFinite(descent) || descent < 0d)
-            return (WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints, WordCompatibleAllMarkupBalloonBottomInsetPoints);
-        return (padding + Math.Max(titleAscent, bodyAscent), padding + descent);
+            return false;
+        insets = (padding + Math.Max(titleAscent, bodyAscent), padding + descent);
+        return true;
     }
 
     private static void RenderMarkupBalloonConnector(

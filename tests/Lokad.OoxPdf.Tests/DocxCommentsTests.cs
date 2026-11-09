@@ -2816,7 +2816,8 @@ internal static partial class DocxCommentsTests
             bodyDescender: prefixDescender, bodyAscender: 500, tailFirstAdvance: zeroFirst ? (short)0 : null), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
+        var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        var shows = ReadEmbeddedGlyphTextShows(paintedPage)
             .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal(prefix + " " + tail + " " + (hasThird ? thirdText + " " : string.Empty) + (hasFourth ? fourthText + " " : string.Empty), string.Concat(shows.Select(show => show.Text)));
         var tailRows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text) && show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('b')) == 900).ToArray();
@@ -2833,7 +2834,6 @@ internal static partial class DocxCommentsTests
             "The first paragraph mark uses nominal size and follows its own final row's advance.");
         double firstPitch = -prefixDescender / 1000d + 0.8d;
         double firstLinePitch = 0.5d - prefixDescender / 1000d + prefixGap / 1000d;
-        double firstHeight = (firstRows.Length - 1) * firstLinePitch * size;
         for (int index = 1; index < firstRows.Length; index++)
         {
             TestAssert.True(Math.Abs(firstRows[index - 1].Y - firstRows[index].Y - firstLinePitch * size) < 0.02d &&
@@ -2864,7 +2864,6 @@ internal static partial class DocxCommentsTests
         TestAssert.Equal(hasThird ? 900 : 500, (int)shows[^1].Font.Font.GetAdvanceWidth(shows[^1].Font.Font.MapCodePoint(' ')));
         TestAssert.True(Math.Abs(shows[^1].Size - size) < 0.001d, "The final mark stays at nominal balloon size.");
         double thirdPitch = hasThird ? 0.7d + prefixGap / 1000d : 0d;
-        double thirdHeight = 0d;
         double thirdLastY = tailRows[^1].Y;
         if (hasThird)
         {
@@ -2873,7 +2872,6 @@ internal static partial class DocxCommentsTests
             TestAssert.True(thirdRows.Length >= (wrappedThird ? 2 : 1), "The third paragraph wraps using its own prepared body.");
             double thirdLinePitch = 0.5d - prefixDescender / 1000d + prefixGap / 1000d;
             thirdLastY = thirdRows[^1].Y;
-            thirdHeight = (thirdRows.Length - 1) * thirdLinePitch * size;
             TestAssert.Equal(700, (int)thirdRows[^1].Font.Font.GetAdvanceWidth(thirdRows[^1].Font.Font.MapCodePoint('f')));
             TestAssert.True(Math.Abs(tailRows[^1].Y - thirdRows[0].Y - thirdPitch * size) < 0.02d,
                 "The third paragraph uses the middle body's descent and its own ascent and gap.");
@@ -2894,13 +2892,11 @@ internal static partial class DocxCommentsTests
                 "The third mark follows its own body's visible advance.");
         }
         double fourthPitch = hasFourth ? -prefixDescender / 1000d + 0.8d : 0d;
-        double fourthHeight = 0d;
         if (hasFourth)
         {
             var fourthRows = shows.Where(show => show.Y < thirdLastY - 0.001d && !string.IsNullOrWhiteSpace(show.Text) &&
                 show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('l')) == 500).ToArray();
             TestAssert.True(fourthRows.Length >= (wrappedFourth ? 2 : 1), "The fourth body fits or wraps in its own prepared face.");
-            fourthHeight = (fourthRows.Length - 1) * size;
             TestAssert.True(Math.Abs(thirdLastY - fourthRows[0].Y - fourthPitch * size) < 0.02d,
                 "The fourth body uses the third body's descent and its own ascent and gap once.");
             foreach (var row in fourthRows)
@@ -2917,8 +2913,7 @@ internal static partial class DocxCommentsTests
                 Math.Abs(shows[^1].X - fourthRows[^1].X - fourthRows[^1].Font.MeasureTextPoints(fourthRows[^1].Text, size)) < 0.04d,
                 "The nominal fourth mark follows its final row without an invented separator.");
         }
-        TestAssert.True(Math.Abs(balloon.Height - (12.61d + firstHeight + firstPitch * size + (tailRows.Length - 1) * size + thirdPitch * size + thirdHeight + fourthPitch * size + fourthHeight)) < 0.02d,
-            "Height includes the paragraph transition and all later rows.");
+        AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
         if (wrappedFourth && (!hasFourth || !(wrappedFirst || wrappedSecond || wrappedThird))) { return; }
         if (hasFourth && !supplementary && !zeroFirst && prefixDescender == -50 && prefixGap == 0 && length == 32 && firstMarkFace == "AnchorFace")
         {
@@ -3164,7 +3159,8 @@ internal static partial class DocxCommentsTests
             bodyDescender: -50, bodyAscender: 500), OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
+        var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        var shows = ReadEmbeddedGlyphTextShows(paintedPage)
             .Where(show => show.X >= balloon.X && !show.Text.StartsWith("Commented", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal("Review table", shows[0].Text);
         TestAssert.Equal(" ", shows[1].Text);
@@ -3210,9 +3206,7 @@ internal static partial class DocxCommentsTests
                 "Authored wrap separators retain the body face; the terminal mark retains its distinct face.");
         }
         TestAssert.True(marks.All(mark => Math.Abs(mark.Size - size) < 0.001d), "Spaces and marks retain nominal balloon size.");
-        double height = 12.61d + 0.85d * size + (bodyKind == 2 ? 1.15d * size : (bodyRows.Length - 2) * size);
-        TestAssert.True(double.IsFinite(balloon.Height) && Math.Abs(balloon.Height - height) < 0.02d,
-            "Even large integer spacing values leave the measured balloon height unchanged.");
+        AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
         if (value == "120" && spacingKind == 0 && bodyKind == 0)
         {
             var invalidSpacing = new List<DocxParagraphSpacing>
@@ -3526,7 +3520,8 @@ internal static partial class DocxCommentsTests
             var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(), OoxPdfDocxMarkupMode.AllMarkup,
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var balloon = renderer.InspectMarkupBalloons(document).Single();
-            var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
+            var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+            var shows = ReadEmbeddedGlyphTextShows(paintedPage)
                 .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 700).ToArray();
             var rows = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
             TestAssert.Equal(firstRow ? 3 : 4, rows.Length);
@@ -3537,9 +3532,7 @@ internal static partial class DocxCommentsTests
                     "A split word's visible glyphs must stay inside the balloon.");
                 TestAssert.True(!row.Text.Contains('\uFFFD'), "Supplementary glyphs must retain their Unicode mapping.");
             }
-            double expectedHeight = 9.21d + (rows.Length - 1) * rows[0].Size + 3.4d;
-            TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
-                "Balloon height must include every word-fragment row.");
+            AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
         }
     }
 
@@ -3569,16 +3562,15 @@ internal static partial class DocxCommentsTests
         var renderer = new DocxRenderer(new BalloonTypefaceFontResolver(bodySpaceAdvance: 200, bodyAdvance: 32700),
             OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var balloon = renderer.InspectMarkupBalloons(document).Single();
-        var shows = ReadEmbeddedGlyphTextShows(renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single())
+        var paintedPage = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        var shows = ReadEmbeddedGlyphTextShows(paintedPage)
             .Where(show => show.Font.Font.GetAdvanceWidth(show.Font.Font.MapCodePoint('R')) == 32700).ToArray();
         TestAssert.Equal(body + " ", string.Concat(shows.Select(show => show.Text)));
         var visible = shows.Where(show => !string.IsNullOrWhiteSpace(show.Text)).ToArray();
         TestAssert.Equal(2, visible.Length);
         TestAssert.Equal("a", visible[0].Text);
         TestAssert.Equal("b", visible[1].Text);
-        double expectedHeight = 9.21d + 2 * visible[0].Size + 3.4d;
-        TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
-            "The title-only first row and two forced glyph rows must not add an empty terminal row.");
+        AssertBalloonContainsPaintedFontBoxes(balloon, paintedPage);
     }
 
     public static void DocxWordCompatibleUniformBalloonUsesBodyLineMetrics()

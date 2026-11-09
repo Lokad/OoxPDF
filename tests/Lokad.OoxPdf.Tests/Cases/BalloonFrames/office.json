@@ -460,6 +460,28 @@
       ],
       "Rows": 7,
       "Text": "Commented [PR1]: Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. "
+    },
+    {
+      "Id": "mixed-single-tail-a4",
+      "InputSha256": "BA2FF0F6000222DE9E5341A4B5700EAD5D4A3BC19DDD27DEFC944A101EB9E8BC",
+      "ReferencePdfSha256": "5B1E64DB57DE0C3DBA2CEF44BF2D4E6BAAD9C1A733ACE2567C80335CE49D98A4",
+      "Bounds": [
+        418.010009765625,
+        168.3399658203125,
+        591.5,
+        188.03997802734375
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        177.3800048828125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation control. ",
+      "NativeFaces": [
+        "ArialMT",
+        "CourierNewPSMT",
+        "SegoeUI-Bold"
+      ]
     }
   ]
 }

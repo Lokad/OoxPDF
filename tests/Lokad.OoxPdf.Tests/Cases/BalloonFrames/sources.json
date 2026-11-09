@@ -353,5 +353,22 @@
       "Following public glyphs."
     ],
     "ExpectedEquationCount": 0
+  },
+  {
+    "Id": "mixed-single-tail-a4",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/BalloonFrames/mixed-single-tail-a4.docx",
+    "Sha256": "BA2FF0F6000222DE9E5341A4B5700EAD5D4A3BC19DDD27DEFC944A101EB9E8BC",
+    "UnitScale": false,
+    "PortableProbe": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "ExpectedCommentFamilies": [
+      "Arial",
+      "Courier New"
+    ]
   }
 ]

@@ -170,14 +170,11 @@ internal sealed partial class DocxRenderer
 
     private static (double? Depth, double? Top) ResolveCommentAnchorFrame(
         DocxTextLineLayout line, DocxParagraph paragraph, DocxInlineReference reference,
-        DocxMarkupContext markupContext, DocxFontResources? fontResources,
-        CancellationToken cancellationToken)
+        DocxMarkupContext markupContext, DocxOccupiedLineBox? measuredBodyBox = null)
     {
         if (!UsesWordCompatibleAllMarkupTextProfile(markupContext)) return (null, null);
         bool exact = DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out var authored);
-        bool measuredBody = !exact && fontResources is not null &&
-            TryResolveBodyCommentFillLineBox(line, paragraph, fontResources, markupContext, cancellationToken, out authored);
-        if (line.InlineFrame is null && !exact && !measuredBody)
+        if (line.InlineFrame is null && !exact && measuredBodyBox is null)
             return (null, null);
         DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
             string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
@@ -190,8 +187,8 @@ internal sealed partial class DocxRenderer
         // keep the established connector and placement contracts.
         if (exact) return (authored.Height - authored.BaselineInset,
             line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext) + authored.BaselineInset);
-        if (measuredBody) return (null,
-            line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext) + authored.BaselineInset);
+        if (measuredBodyBox is { } bodyBox) return (null,
+            line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext) + bodyBox.BaselineInset);
         return (Math.Max(-WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
             DocxInlineLineGeometry.VerticalExtents(line).Below), null);
     }

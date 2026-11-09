@@ -162,14 +162,14 @@ internal sealed partial class DocxRenderer
         ushort space = tail.Embedded.Font.MapCodePoint(' ');
         if (space == 0 || !tail.Embedded.TryGetEncodedCid(space, out _)) { return null; }
         string[] words = parts[1].Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length < 2) { return null; }
+        if (words.Length == 0) { return null; }
         double firstWordWidth = tail.Embedded.MeasureTextPoints(words[0] + " ", fontSize);
         if (!double.IsFinite(firstWordWidth)) { return null; }
         double? firstGapEm = null;
         if (firstWordWidth > tailFirstWidth && !parts[0].Text.All(char.IsAsciiLetterOrDigit))
         {
             string prefix = parts[0].Text;
-            if (!prefix.EndsWith(' ') || !prefix[..^1].All(char.IsAsciiLetterOrDigit))
+            if (!prefix.EndsWith(' '))
             {
                 return ResolveWordCompatibleComposedPrefixRows(parts[0], parts[1], fontSize,
                     continuationWidth, cancellationToken);
