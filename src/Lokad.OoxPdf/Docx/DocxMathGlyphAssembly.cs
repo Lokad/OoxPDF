@@ -17,17 +17,28 @@ internal static class DocxMathGlyphAssembly
         int minimum = assembly.MinimumConnectorOverlap;
         if (!double.IsFinite(targetHeight) || targetHeight < 0d || targetHeight > ushort.MaxValue ||
             parts.Count == 0 || parts.Count > ushort.MaxValue) return false;
-        var fixedParts = new List<OpenTypeMathGlyphPart>();
+        int fixedCount = 0;
         long growth = 0;
         foreach (var part in parts)
         {
             token.ThrowIfCancellationRequested();
             if (part.Glyph == 0 || part.FullAdvance == 0) return false;
-            if (!part.IsExtender) fixedParts.Add(part);
+            if (!part.IsExtender) fixedCount++;
             else growth += Math.Max(0, part.FullAdvance - minimum);
         }
         // First try the non-extending pieces alone, as specified by MATH.
-        IReadOnlyList<OpenTypeMathGlyphPart> selected = fixedParts;
+        IReadOnlyList<OpenTypeMathGlyphPart> selected = parts;
+        if (fixedCount != parts.Count)
+        {
+            var fixedParts = new OpenTypeMathGlyphPart[fixedCount];
+            int index = 0;
+            foreach (var part in parts)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!part.IsExtender) fixedParts[index++] = part;
+            }
+            selected = fixedParts;
+        }
         if (!TryRange(selected, out _, out double maximum) || maximum < targetHeight)
         {
             if (!TryRange(parts, out _, out maximum)) return false;
@@ -37,47 +48,54 @@ internal static class DocxMathGlyphAssembly
                 if (growth == 0) return false;
                 additional = (int)Math.Ceiling((targetHeight - maximum) / growth);
             }
-            long count = parts.Count;
-            foreach (var part in parts)
+            selected = parts;
+            if (additional > 0)
             {
-                token.ThrowIfCancellationRequested();
-                if (part.IsExtender && part.FullAdvance > minimum) count += additional;
+                long count = parts.Count;
+                foreach (var part in parts)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (part.IsExtender && part.FullAdvance > minimum) count += additional;
+                }
+                if (count > int.MaxValue) return false;
+                var expanded = new OpenTypeMathGlyphPart[(int)count];
+                int index = 0;
+                foreach (var part in parts)
+                {
+                    // Full-overlap extenders add no height and are never repeated.
+                    int copies = part.IsExtender && part.FullAdvance > minimum ? additional + 1 : 1;
+                    for (int copy = 0; copy < copies; copy++)
+                    { token.ThrowIfCancellationRequested(); expanded[index++] = part; }
+                }
+                selected = expanded;
             }
-            if (count > int.MaxValue) return false;
-            var expanded = new List<OpenTypeMathGlyphPart>((int)count);
-            foreach (var part in parts)
-            {
-                // A full-overlap extender adds no height. Repeating it would
-                // paint the same piece at the same origin with no visible gain.
-                int copies = part.IsExtender && part.FullAdvance > minimum ? additional + 1 : 1;
-                for (int copy = 0; copy < copies; copy++)
-                { token.ThrowIfCancellationRequested(); expanded.Add(part); }
-            }
-            selected = expanded;
         }
         if (!TryRange(selected, out double smallest, out double largest) || largest < targetHeight ||
             smallest > ushort.MaxValue) return false;
         double actualHeight = Math.Max(smallest, targetHeight);
-        var capacities = new int[selected.Count - 1];
-        for (int index = 0; index < capacities.Length; index++)
-        {
-            token.ThrowIfCancellationRequested();
-            capacities[index] = MaximumOverlap(selected[index], selected[index + 1]) - minimum;
-        }
         // Distribute growth equally until a connection reaches its minimum
         // overlap, then distribute the remainder over the other connections.
-        Array.Sort(capacities);
-        token.ThrowIfCancellationRequested();
         double remaining = actualHeight - smallest, reduction = 0d;
-        for (int index = 0; index < capacities.Length; index++)
+        if (remaining > 0d)
         {
+            var capacities = new int[selected.Count - 1];
+            for (int index = 0; index < capacities.Length; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                capacities[index] = MaximumOverlap(selected[index], selected[index + 1]) - minimum;
+            }
+            Array.Sort(capacities);
             token.ThrowIfCancellationRequested();
-            int active = capacities.Length - index;
-            double available = (capacities[index] - reduction) * active;
-            if (remaining <= available)
-            { reduction += remaining / active; remaining = 0d; break; }
-            remaining -= available;
-            reduction = capacities[index];
+            for (int index = 0; index < capacities.Length; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                int active = capacities.Length - index;
+                double available = (capacities[index] - reduction) * active;
+                if (remaining <= available)
+                { reduction += remaining / active; remaining = 0d; break; }
+                remaining -= available;
+                reduction = capacities[index];
+            }
         }
         var result = new DocxMathGlyphPartPosition[selected.Count];
         double offset = 0d;

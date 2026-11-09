@@ -62,15 +62,22 @@ internal sealed partial class OpenTypeFont
             ushort variantGlyph = U16(construction, 4 + index * 4), advance = U16(construction, 6 + index * 4);
             if (variantGlyph == 0 || variantGlyph >= GlyphCount || advance == 0) return false;
         }
+        // Reject the complete source before materializing it. A malformed
+        // early or late record must not allocate a maximum-sized parts array.
+        for (int index = 0; index < count; index++)
+        {
+            token.ThrowIfCancellationRequested();
+            int at = 6 + index * 10;
+            ushort partGlyph = U16(source, at), advance = U16(source, at + 6), flags = U16(source, at + 8);
+            if (partGlyph == 0 || partGlyph >= GlyphCount || advance == 0 || (flags & ~1) != 0) return false;
+        }
         var parts = new OpenTypeMathGlyphPart[count];
         for (int index = 0; index < count; index++)
         {
             token.ThrowIfCancellationRequested();
             int at = 6 + index * 10;
-            ushort partGlyph = U16(source, at), start = U16(source, at + 2), end = U16(source, at + 4),
-                advance = U16(source, at + 6), flags = U16(source, at + 8);
-            if (partGlyph == 0 || partGlyph >= GlyphCount || advance == 0 || (flags & ~1) != 0) return false;
-            parts[index] = new(partGlyph, start, end, advance, (flags & 1) != 0);
+            parts[index] = new(U16(source, at), U16(source, at + 2), U16(source, at + 4), U16(source, at + 6),
+                (U16(source, at + 8) & 1) != 0);
         }
         // Like MathConstants, retain the signed design-unit value without
         // following optional device-table offsets. Publish only complete parts.

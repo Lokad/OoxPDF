@@ -62,6 +62,29 @@ internal static class MathFontTests
         TestAssert.True(font.TryGetMathVerticalAssembly(34, default, out _), "A complete three-part read remains available.");
     }
 
+    public static void MathFontVerticalAssembliesRejectLargeInvalidRecordsBeforeMaterialization()
+    {
+        OpenTypeFont.Load(TestFontBuilder.CreateMathFont(AssemblyTable())).TryGetMathVerticalAssembly(34, default, out _);
+        foreach (int invalidIndex in new[] { 0, ushort.MaxValue - 1 })
+        {
+            var table = new byte[50 + ushort.MaxValue * 10];
+            AssemblyTable().AsSpan(0, 50).CopyTo(table);
+            BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(48), ushort.MaxValue);
+            for (int index = 0; index < ushort.MaxValue; index++)
+            {
+                int at = 50 + index * 10;
+                BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(at), (ushort)(index == invalidIndex ? 0 : 34));
+                BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(at + 6), 1);
+            }
+            var font = OpenTypeFont.Load(TestFontBuilder.CreateMathFont(table));
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            bool success = font.TryGetMathVerticalAssembly(34, default, out var assembly);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestAssert.True(!success && assembly is null, "Invalid early and late records reject the complete assembly.");
+            TestAssert.True(allocated < 4096, "Rejecting invalid source records must not materialize the large parts array: " + allocated);
+        }
+    }
+
     private static byte[] AssemblyTable()
     {
         byte[] table = VariantTable(false);

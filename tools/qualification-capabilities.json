@@ -1,4 +1,19 @@
 {
+  "font-math-assembly-metadata": [
+    "MathFontVertical",
+    "MathFontRadical",
+    "MathFontDelimiterAssemblies",
+    "MathFontDelimiterAssemblyParts",
+    "DocxMathGlyphAssemblyAvoidsRedundantLargePartCopies",
+    "DocxMathDelimiter",
+    "DocxNativeRadicals",
+    "DocxNativeLiteralDelimiter",
+    "DocxInlineCompositionRadical",
+    "DocxInlineCompositionDelimiter",
+    "PortableRenderingRadical",
+    "PortableRenderingDelimiter",
+    "PdfActualText"
+  ],
   "docx-comment-glyph-frames": [
     "DocxCommentGlyphFrames",
     "DocxNaturalCommentFills",

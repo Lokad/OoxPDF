@@ -6,6 +6,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathFractionTests
 {
+    public static void DocxMathGlyphAssemblyAvoidsRedundantLargePartCopies()
+    {
+        var warmup = new OpenTypeMathGlyphAssembly(0, 0, [new(34, 0, 0, 1, false)]);
+        TestAssert.True(DocxMathGlyphAssembly.TryArrange(warmup, 1d, default, out _, out _), "The bounded arranger is ready.");
+        foreach (int mode in new[] { 0, 1, 2 })
+        {
+            bool growing = mode == 2;
+            var part = new OpenTypeMathGlyphPart(34, growing ? (ushort)10 : (ushort)0,
+                growing ? (ushort)10 : (ushort)0, growing ? (ushort)10 : (ushort)1, mode == 1);
+            var source = new OpenTypeMathGlyphPart[ushort.MaxValue];
+            Array.Fill(source, part);
+            var assembly = new OpenTypeMathGlyphAssembly(0, 0, Array.AsReadOnly(source));
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            bool success = DocxMathGlyphAssembly.TryArrange(assembly, growing ? 16d : 1d, default, out var placed, out double height);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestAssert.True(success && placed is not null, "Fixed, unrepeated-extender and growing-overlap sequences remain complete.");
+            var positions = TestAssert.NotNull(placed);
+            TestAssert.Equal(source.Length, positions.Count);
+            TestAssert.True(Math.Abs(height - (growing ? 16d : source.Length)) < 0.000001d, "The full assembly retains its exact enclosing height.");
+            double step = growing ? 6d / (source.Length - 1) : 1d;
+            for (int index = 0; index < positions.Count; index++)
+            {
+                TestAssert.Equal(part, positions[index].Part);
+                TestAssert.True(Math.Abs(positions[index].Offset - index * step) < 0.000001d,
+                    "All source parts retain their order and equal overlap distribution.");
+            }
+            TestAssert.True(allocated < 2_000_000, "Result storage and required growth scratch do not need duplicate source lists: " + allocated);
+        }
+    }
+
     public static void MathFontRadicalAssembliesKeepOneLogicalSymbolAndAllPhysicalParts()
     {
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
