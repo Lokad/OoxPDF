@@ -853,14 +853,17 @@ internal static class DocxMarkupTests
         TestAssert.True(Math.Abs(yOffset - expected) < 0.000000001d, "Off-reference pages should pin their own first baseline, not the reference shift.");
     }
 
-    public static void DocxWordCompatibleTextYOffsetKeepsFittedAnchorWithBalloons()
+    public static void DocxWordCompatibleTextYOffsetUsesMeasuredUnitScaleOriginWithBalloons()
     {
         var document = new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], []);
         DocxMarkupContext context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, context);
 
         TestAssert.Equal(1d, scale);
-        TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: true));
+        TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: true));
+        TestAssert.Equal(2d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d,
+            hasBalloonContent: true, sourceBaselineOffset: 2d));
+        TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, null, 792d, hasBalloonContent: true));
     }
 
     public static void DocxWordCompatibleTextYOffsetDropsAnchorWithoutBalloons()

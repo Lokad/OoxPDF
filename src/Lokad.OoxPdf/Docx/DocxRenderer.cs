@@ -956,9 +956,8 @@ internal sealed partial class DocxRenderer
         return markupContext.WordCompatiblePrintScale;
     }
 
-    // Fitted anchor: the 69.58 baseline shift is the pre-layout default and is kept for
-    // unscaled pages with balloons and for lineless layouts. Balloonless unscaled pages
-    // print plain (Office: text-box reference), so they keep no shift.
+    // Fitted pre-layout/lineless fallback. Measured pages use their own printed
+    // frame, including its identity transform at unit scale.
     private const double WordCompatibleTextYOffsetReferenceAnchorPoints = 69.58d;
     internal static double ResolveWordCompatibleTextYOffset(DocxMarkupContext markupContext, double? firstBaselineY, double pageHeight, bool hasBalloonContent, double sourceBaselineOffset = 0d)
     {
@@ -973,11 +972,11 @@ internal sealed partial class DocxRenderer
             return 0d;
         }
 
-        // Unit-scale pages without balloons retain their physical origin even
-        // when they contain only note continuations and have no body baseline.
-        if (Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d)
+        // Balloonless unit-scale pages retain their physical origin even when
+        // they contain only note continuations and have no measured baseline.
+        if (Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d && !hasBalloonContent)
         {
-            return hasBalloonContent ? WordCompatibleTextYOffsetReferenceAnchorPoints : 0d;
+            return 0d;
         }
 
         if (firstBaselineY is null)

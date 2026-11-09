@@ -16,7 +16,7 @@ internal static class DocxNoteContinuationPaintTests
         {
             TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, baseline, 792d,
                 hasBalloonContent: false));
-            TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, baseline, 792d,
+            TestAssert.Equal(baseline is null ? 69.58d : 0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, baseline, 792d,
                 hasBalloonContent: true));
         }
         TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(

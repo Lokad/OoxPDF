@@ -1,0 +1,77 @@
+[
+  {
+    "Id": "arial-unscaled",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/UnitPrintOrigins/arial-unscaled.docx",
+    "Sha256": "8D2D4514B7C7D586E58FE6AA7E2EF041FFD416C4CE207E885C69A919C1BDBD8B",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": false,
+    "BaseSource": "arial12-auto",
+    "BaseSha256": "D8606D622F4BCE42C7DBBAA11FDE461BCE797FD58DDE4DB085449441CF020A85",
+    "PageWidthPoints": 595.3,
+    "PageHeightPoints": 841.9,
+    "RightMarginPoints": 266.5,
+    "ExpectedPrintScale": 1.0
+  },
+  {
+    "Id": "unit-calibri12-auto",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/UnitPrintOrigins/unit-calibri12-auto.docx",
+    "Sha256": "9D432EBE81FE92F3521D2EC96908B40EF9604EA2903A7B19229C1590CF3D22FB",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Calibri",
+    "FontSize": 12,
+    "MarkedLineRule": "auto",
+    "MarkedHeightPoints": null,
+    "SplitSourceRun": false,
+    "BaseSource": "calibri12-auto"
+  },
+  {
+    "Id": "unit-arial12-exact20",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/UnitPrintOrigins/unit-arial12-exact20.docx",
+    "Sha256": "C3235C2B62A9BE69EA2A1776334FCEEAAFBF923E836813BB08CD049BED6A317D",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "MarkedLineRule": "exact",
+    "MarkedHeightPoints": 20,
+    "SplitSourceRun": false,
+    "BaseSource": "arial12-exact20"
+  },
+  {
+    "Id": "unit-arial12-larger-neighbor",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/UnitPrintOrigins/unit-arial12-larger-neighbor.docx",
+    "Sha256": "AE4B8E3110585155F30E31229F5C30C61307CD20394D1CB1C698FC41D91D7926",
+    "HeldOut": true,
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "LARGE Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0,
+    "Font": "Arial",
+    "FontSize": 12,
+    "SelectedText": "Selected public words.",
+    "BaseSource": "arial12-larger-neighbor"
+  }
+]

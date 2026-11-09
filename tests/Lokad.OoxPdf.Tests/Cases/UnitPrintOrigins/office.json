@@ -1,0 +1,66 @@
+{
+  "ReferenceKind": "Owned supervised Word16 PDF; uncalibrated application view",
+  "ThresholdPoints": 1,
+  "Rows": [
+    {
+      "Id": "arial-unscaled",
+      "InputSha256": "8D2D4514B7C7D586E58FE6AA7E2EF041FFD416C4CE207E885C69A919C1BDBD8B",
+      "ReferencePdfSha256": "40A79E31F2ECB76757F728571021B38AC63BFA63F0A0C4D114D3A04C078479D2",
+      "Fill": [
+        72.02400207519531,
+        85.82000732421875,
+        192.16400146484375,
+        99.6199951171875
+      ],
+      "SelectedOrigin": [
+        72.02400207519531,
+        97.0999755859375
+      ]
+    },
+    {
+      "Id": "unit-calibri12-auto",
+      "InputSha256": "9D432EBE81FE92F3521D2EC96908B40EF9604EA2903A7B19229C1590CF3D22FB",
+      "ReferencePdfSha256": "F27AF9048915612C6B1EADD6E349C2A2692519CD4E5794CAF4BD017A736CBEBA",
+      "Fill": [
+        72.02400207519531,
+        86.65997314453125,
+        181.70401000976562,
+        101.29998779296875
+      ],
+      "SelectedOrigin": [
+        72.02400207519531,
+        98.05999755859375
+      ]
+    },
+    {
+      "Id": "unit-arial12-exact20",
+      "InputSha256": "C3235C2B62A9BE69EA2A1776334FCEEAAFBF923E836813BB08CD049BED6A317D",
+      "ReferencePdfSha256": "394E75594BB9DD78E80219BC9A0161C5C3AB55A961DC91FA4EFC8C1FABB79265",
+      "Fill": [
+        72.02400207519531,
+        85.82000732421875,
+        192.16400146484375,
+        105.8599853515625
+      ],
+      "SelectedOrigin": [
+        72.02400207519531,
+        101.89996337890625
+      ]
+    },
+    {
+      "Id": "unit-arial12-larger-neighbor",
+      "InputSha256": "AE4B8E3110585155F30E31229F5C30C61307CD20394D1CB1C698FC41D91D7926",
+      "ReferencePdfSha256": "9433E031F2F78198988172C46A8446557DA23EA3976A80CE78C2E955EA5024B0",
+      "Fill": [
+        138.02000427246094,
+        85.8199462890625,
+        258.1600036621094,
+        106.4599609375
+      ],
+      "SelectedOrigin": [
+        138.02000427246094,
+        102.6199951171875
+      ]
+    }
+  ]
+}
