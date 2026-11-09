@@ -59,7 +59,7 @@ internal static class DocxFooterRevisionFrameTests
             {
                 LineSpacingPoints = 8d,
                 Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact", LineValue = "160" },
-                Revisions = [new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, index.ToString(), "Public Reviewer", null,
+                Revisions = [new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, index.ToString(), "R", null,
                     "rPrChange", null, propertyElementNames: [property])]
             })).ToArray();
         var grouped = new DocxDocument(612d, 792d, 72d, 300d, 72d, 72d, DocxPageSettings.Empty, [], [], [], groupedParagraphs, [], [])
