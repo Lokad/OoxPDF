@@ -126,10 +126,10 @@ internal sealed partial class DocxRenderer
         out double firstLineWidth,
         out double continuationWidth)
     {
-        double bodyFirstLineX = WordCompatibleAllMarkupBalloonTextInsetXPoints + titleWidth;
+        double bodyFirstLineX = ResolveWordCompatibleBalloonTextInsetX(printScale) + titleWidth;
         double rightEdge = balloonWidth - 0.5d;
         firstLineWidth = Math.Max(0d, rightEdge - bodyFirstLineX - WordCompatibleAllMarkupBalloonBodyFirstLineTrailingPadPoints);
-        continuationWidth = Math.Max(0d, balloonWidth - 2d * WordCompatibleAllMarkupBalloonContinuationWrapInsetDesignPoints * printScale);
+        continuationWidth = Math.Max(0d, balloonWidth - 2d * WordCompatibleAllMarkupBalloonTextInsetDesignPoints * printScale);
     }
 
     private static int CountWordCompatibleBalloonTextRows(

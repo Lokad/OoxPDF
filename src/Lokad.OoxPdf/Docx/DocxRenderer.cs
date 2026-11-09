@@ -44,14 +44,15 @@ internal sealed partial class DocxRenderer
     internal const string DefaultDocumentTypefaceRequest = DocxFontFallbackRules.DefaultDocumentTypefaceRequest;
 
     private const double WordCompatibleAllMarkupMaxBodyTextFontSizePoints = 11.625d;
-    // Balloon title lands on the anchor row minus ~0.5 (Office: dense/c14/mirrored/threaded refs).
+    // Unmeasured balloon titles land on the anchor row minus ~0.5 (Office: dense/c14/mirrored/threaded refs).
     // = doc-adaptive baseline shift + title rule (top inset 11.15 - height 20.48 + first baseline 11.27 + 0.5).
     private const double WordCompatibleAllMarkupBalloonAnchorRowInsetPoints = 2.44d;
     private const double WordCompatibleAllMarkupBalloonHeightPoints = 20.48d;
     private const double WordCompatibleAllMarkupBalloonTopInsetPoints = 11.15d;
     private const double WordCompatibleAllMarkupConnectorStrokeWidthPoints = 0.475d;
     private const double WordCompatibleAllMarkupConnectorBodyAnchorInsetPoints = 3.18d;
-    private const double WordCompatibleAllMarkupBalloonTextInsetXPoints = 3.25d;
+    // Measured uniform balloon rows use font boxes plus review-design padding.
+    private const double WordCompatibleAllMarkupBalloonTextPaddingDesignPoints = 2.25d;
     // Office A/B (W5-X1 right-margin probes w5-xr72/w5-xr207 plus dense/landscape refs):
     // Word balloon text starts at (bodyEndDesign + gap) times the lane-fit scale
     // (implied gap 35.1/35.6/36.0/35.8 across the four datasets).
@@ -72,10 +73,12 @@ internal sealed partial class DocxRenderer
     // to 221.405pt design-width interval when the continuation's final blank is
     // excluded. Office text insets measure 4.42..4.44 design points; using 4.42
     // on each side gives 221.36pt and keeps the 41-character Courier guard out.
-    private const double WordCompatibleAllMarkupBalloonContinuationWrapInsetDesignPoints = 4.42d;
+    private const double WordCompatibleAllMarkupBalloonTextInsetDesignPoints = 4.42d;
+    // Legacy insets remain for mixed rows and unmeasured/fontless fallbacks.
     private const double WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints = 11.27d;
     private const double WordCompatibleAllMarkupBalloonFirstBaselineTopInsetPoints = WordCompatibleAllMarkupBalloonHeightPoints - WordCompatibleAllMarkupBalloonFirstBaselineOffsetPoints;
-    // Office A/B (tbxrev one-line plus dense two-line balloon rects, Word-COM rendered): reply-less balloon bodies fit the rendered text rows, so the top inset is the first-baseline inset above and 3.4pt pads the last baseline.
+    // Office A/B (tbxrev/dense): mixed/unmeasured bodies retain the established
+    // first-baseline inset and 3.4pt last-baseline padding.
     private const double WordCompatibleAllMarkupBalloonBottomInsetPoints = 3.4d;
     private const double WordCompatibleAllMarkupLaneBackgroundRightBleedPoints = 0.37d;
     private const double WordCompatibleAllMarkupLaneBackgroundWidthPoints = 199.70d;

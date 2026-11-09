@@ -3618,9 +3618,7 @@ internal static partial class DocxCommentsTests
                 TestAssert.True(Math.Abs(lines[index - 1].Y - lines[index].Y - expectedGap) < 0.02d,
                     "Uniform comment continuations must use valid body metrics or retain the fallback pitch.");
             }
-            double expectedHeight = 9.21d + (lines.Length - 1) * expectedGap + 3.4d;
-            TestAssert.True(Math.Abs(balloon.Height - expectedHeight) < 0.02d,
-                "Balloon geometry must use the same pitch as its emitted rows.");
+            AssertBalloonContainsPaintedFontBoxes(balloon, page);
         }
     }
 
@@ -3667,8 +3665,7 @@ internal static partial class DocxCommentsTests
                 TestAssert.True(Math.Abs(lines[index - 1].Y - lines[index].Y - expectedGap) < 0.02d,
                     "Same-face uniform comments need body metrics; mixed-face comments retain legacy pitch.");
             }
-            TestAssert.True(Math.Abs(balloon.Height - (9.21d + (lines.Length - 1) * expectedGap + 3.4d)) < 0.02d,
-                "Same-face metric admission must keep balloon height aligned with emitted rows.");
+            AssertBalloonContainsPaintedFontBoxes(balloon, page);
         }
     }
 
@@ -4749,9 +4746,8 @@ internal static partial class DocxCommentsTests
 
     public static void DocxWordCompatibleBalloonHeightFitsSingleLineContent()
     {
-        // Office A/B (tbxrev probe rects, Word-COM rendered): one-line revision balloons
-        // are 12.3 tall, not the flat 20.48 legacy height - heights must follow the
-        // rendered text rows.
+        // Portable fonts own their painted box. Independent Office frame values
+        // are qualified separately by DocxBalloonFrameTests.
         DocxParagraph paragraph = DocxTests.CreateCommentMarkerParagraph("R anchor", "1") with
         {
             Revisions =
@@ -4785,11 +4781,10 @@ internal static partial class DocxCommentsTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
 
-        DocxMarkupBalloonPlacementSnapshot placement = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
-            .InspectMarkupBalloons(document)
-            .Single(item => item.Kind == "Comment");
-
-        TestAssert.True(Math.Abs(placement.Height - 12.61d) < 0.05d, "Single-row balloons should fit one text row plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var placement = renderer.InspectMarkupBalloons(document).Single(item => item.Kind == "Comment");
+        var page = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+        AssertBalloonContainsPaintedFontBoxes(placement, page);
     }
 
     public static void DocxWordCompatibleBalloonHeightFitsWrappedBodyContent()
@@ -4810,9 +4805,7 @@ internal static partial class DocxCommentsTests
         var rows = ReadEmbeddedGlyphTextShows(page)
             .Where(show => show.Text.StartsWith("Balloon", StringComparison.Ordinal)).ToArray();
         TestAssert.Equal(4, rows.Length);
-        double expected = 9.21d + rows[0].Y - rows[^1].Y + 3.4d;
-
-        TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d, "Wrapped balloons should fit four text rows plus Office insets. Height=" + placement.Height.ToString(CultureInfo.InvariantCulture));
+        AssertBalloonContainsPaintedFontBoxes(placement, page);
     }
 
     public static void DocxPortableBalloonHeightFollowsPaintedRowsAcrossFonts()
@@ -4829,10 +4822,21 @@ internal static partial class DocxCommentsTests
             TestAssert.True(rows.Length > 1, "The portable control exercises a wrapped balloon.");
             TestAssert.Equal(24, Regex.Matches(string.Join(" ", rows.Select(row => row.Text)), @"\bBalloon\b").Count);
             TestAssert.True(rows.Zip(rows.Skip(1)).All(pair => pair.First.Y > pair.Second.Y), "Painted body rows advance down the balloon.");
-            double expected = 9.21d + rows[0].Y - rows[^1].Y + 3.4d;
-            TestAssert.True(Math.Abs(placement.Height - expected) < 0.05d,
-                "The same Office inset gate follows the painted row extent without assuming a font-specific row count.");
+            AssertBalloonContainsPaintedFontBoxes(placement, page);
         }
+    }
+
+    private static void AssertBalloonContainsPaintedFontBoxes(DocxMarkupBalloonPlacementSnapshot balloon, PdfPage page)
+    {
+        var shows = ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+            .Where(show => show.X >= balloon.X && show.X < balloon.X + balloon.Width && !string.IsNullOrWhiteSpace(show.Text)).ToArray();
+        TestAssert.True(shows.Length > 0, "The frame control must paint balloon text.");
+        double top = shows.Max(show => show.Y + DocxLineMetrics.MeasureWindowsAscender(show.Font.Font, show.Size));
+        double bottom = shows.Min(show => show.Y - DocxLineMetrics.MeasureWindowsDescender(show.Font.Font, show.Size));
+        TestAssert.True(balloon.Y < bottom && balloon.Y + balloon.Height > top,
+            "The frame must contain the painted font boxes with positive vertical padding.");
+        TestAssert.True(balloon.Height - (top - bottom) < shows.Max(show => show.Size),
+            "Padding must remain smaller than an additional text row.");
     }
 
     private static DocxDocument CreateWrappedBalloonHeightDocument()

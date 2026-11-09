@@ -170,20 +170,27 @@ internal sealed partial class DocxRenderer
 
     private static (double? Depth, double? Top) ResolveCommentAnchorFrame(
         DocxTextLineLayout line, DocxParagraph paragraph, DocxInlineReference reference,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext, DocxFontResources? fontResources,
+        CancellationToken cancellationToken)
     {
+        if (!UsesWordCompatibleAllMarkupTextProfile(markupContext)) return (null, null);
         bool exact = DocxInlineLineGeometry.TryGetExactBodyLineBox(line, out var authored);
-        if ((line.InlineFrame is null && !exact) || !UsesWordCompatibleAllMarkupTextProfile(markupContext))
+        bool measuredBody = !exact && fontResources is not null &&
+            TryResolveBodyCommentFillLineBox(line, paragraph, fontResources, markupContext, cancellationToken, out authored);
+        if (line.InlineFrame is null && !exact && !measuredBody)
             return (null, null);
         DocxCommentRange? range = paragraph.CommentRanges.FirstOrDefault(range =>
             string.Equals(range.Id, reference.Id, StringComparison.Ordinal));
         if (range is null || !TryResolveWordCompatibleCommentRangeBounds(line, range,
                 ResolveTextEmissionXOffset(markupContext), out _, out _, out _))
             return (null, null);
-        // A measured range attaches at its selection bottom. An authored exact
-        // box also owns balloon placement at its top, independently of the
-        // connector. Unmeasured and bare-reference anchors retain their fallback.
+        // Source selection tops own balloon placement, independently of the
+        // connector. Natural body struts include unselected runs on the line;
+        // exact slots retain their authored bounds. Other/unmeasured anchors
+        // keep the established connector and placement contracts.
         if (exact) return (authored.Height - authored.BaselineInset,
+            line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext) + authored.BaselineInset);
+        if (measuredBody) return (null,
             line.BaselineY - ResolveTextEmissionBaselineOffset(markupContext) + authored.BaselineInset);
         return (Math.Max(-WordCompatibleAllMarkupCommentRangeFillBaselineYOffsetPoints,
             DocxInlineLineGeometry.VerticalExtents(line).Below), null);

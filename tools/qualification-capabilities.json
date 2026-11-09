@@ -1,4 +1,23 @@
 {
+  "docx-balloon-frames": [
+    "DocxBalloonFrames",
+    "DocxUnitPrintOrigins",
+    "DocxNaturalCommentFills",
+    "DocxWordCompatibleUniformBalloonUsesBodyLineMetrics",
+    "DocxWordCompatibleSameFaceBalloonUsesBodyLineMetrics",
+    "DocxWordCompatibleBalloonHeight",
+    "DocxPortableBalloonHeightFollowsPaintedRowsAcrossFonts",
+    "DocxBalloonTextResourceCoversSyntheticTitleGlyphs",
+    "DocxBalloonBodyEmissionCoversItsOwnFontSubset",
+    "DocxWordCompatibleAllMarkupRendersFullLongCommentBalloonBody",
+    "DocxWordCompatibleAllMarkupRendersBareCommentReferenceMarker",
+    "DocxWordCompatibleAllMarkupAnchorsCommentConnectorsAtRangeEnd",
+    "DocxWordCompatibleAllMarkupPreservesAuthoredWhitespaceTextOperation",
+    "PortableRenderingCommentsPreserveAuthoredWhitespace",
+    "DocxInlineCompositionExactCommentFramesMatchIndependentWordVerticalBounds",
+    "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms",
+    "PortableRenderingExactCommentHeightChangesKeepGlyphBrackets"
+  ],
   "docx-unit-print-origins": [
     "DocxUnitPrintOrigins",
     "DocxWordCompatibleTextYOffset",

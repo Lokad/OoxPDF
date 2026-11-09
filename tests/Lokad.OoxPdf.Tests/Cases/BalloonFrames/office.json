@@ -1,0 +1,465 @@
+{
+  "ReferenceKind": "Owned supervised Word16 PDF;uncalibrated application view",
+  "ThresholdPoints": 1,
+  "Rows": [
+    {
+      "Id": "arial-unscaled",
+      "InputSha256": "8D2D4514B7C7D586E58FE6AA7E2EF041FFD416C4CE207E885C69A919C1BDBD8B",
+      "ReferencePdfSha256": "40A79E31F2ECB76757F728571021B38AC63BFA63F0A0C4D114D3A04C078479D2",
+      "Bounds": [
+        360.42999267578125,
+        85.82000732421875,
+        590.760009765625,
+        112.219970703125
+      ],
+      "FirstOrigin": [
+        364.8699951171875,
+        97.82000732421875
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "unit-calibri12-auto",
+      "InputSha256": "9D432EBE81FE92F3521D2EC96908B40EF9604EA2903A7B19229C1590CF3D22FB",
+      "ReferencePdfSha256": "F27AF9048915612C6B1EADD6E349C2A2692519CD4E5794CAF4BD017A736CBEBA",
+      "Bounds": [
+        360.42999267578125,
+        86.65997314453125,
+        590.760009765625,
+        113.05999755859375
+      ],
+      "FirstOrigin": [
+        364.8699951171875,
+        98.65997314453125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "unit-arial12-exact20",
+      "InputSha256": "C3235C2B62A9BE69EA2A1776334FCEEAAFBF923E836813BB08CD049BED6A317D",
+      "ReferencePdfSha256": "394E75594BB9DD78E80219BC9A0161C5C3AB55A961DC91FA4EFC8C1FABB79265",
+      "Bounds": [
+        360.42999267578125,
+        85.82000732421875,
+        590.760009765625,
+        112.219970703125
+      ],
+      "FirstOrigin": [
+        364.8699951171875,
+        97.82000732421875
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "unit-arial12-larger-neighbor",
+      "InputSha256": "AE4B8E3110585155F30E31229F5C30C61307CD20394D1CB1C698FC41D91D7926",
+      "ReferencePdfSha256": "9433E031F2F78198988172C46A8446557DA23EA3976A80CE78C2E955EA5024B0",
+      "Bounds": [
+        360.42999267578125,
+        85.82000732421875,
+        590.760009765625,
+        112.219970703125
+      ],
+      "FirstOrigin": [
+        364.8699951171875,
+        97.82000732421875
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial-letter",
+      "InputSha256": "D2E5D78799E5FACC8FAB3A874F989FBF433B163D428D804C7FCB316F6413A474",
+      "ReferencePdfSha256": "3B7284BA1833EC5588F49F12687A01F10F59672A3E7ACD75E042722E44442DA1",
+      "Bounds": [
+        433.510009765625,
+        160.489990234375,
+        608.0900268554688,
+        180.5
+      ],
+      "FirstOrigin": [
+        436.8699951171875,
+        169.58001708984375
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial-landscape",
+      "InputSha256": "9CF21711F5BF6920EFA15710DCC007AD3C01591924A92D24A4D0B5C23EBF0D93",
+      "ReferencePdfSha256": "11169E52877E829BE5FDAE6B319EE4569180BA27D6CE07C7E0E8DBCF5123F246",
+      "Bounds": [
+        603.8400268554688,
+        129.30999755859375,
+        788.760009765625,
+        150.52999877929688
+      ],
+      "FirstOrigin": [
+        607.4199829101562,
+        138.95999145507812
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "calibri-wide-margin",
+      "InputSha256": "EF8DD18B8EDA99D6EDD25F89E0DCC8AFD3885E937405DD8209BCEF045B15ED75",
+      "ReferencePdfSha256": "AA6EB20E13E64BA504918BD51B82B5E8EAF2FEB75A67DD49E89A633E78728577",
+      "Bounds": [
+        400.7799987792969,
+        143.69000244140625,
+        591.9400024414062,
+        165.5999755859375
+      ],
+      "FirstOrigin": [
+        404.5400085449219,
+        153.64996337890625
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial-neighbor-narrow-margin",
+      "InputSha256": "063B86132E6829BD247357A9986F3BF42FFEBF4D2D78DC0BB64E66FD5D8C82B9",
+      "ReferencePdfSha256": "70E5DD0CD13E751448E2FB15F202B58E9FC9940B672C331902EE2ADDE9A8AA96",
+      "Bounds": [
+        426.4100036621094,
+        179.29998779296875,
+        592.6300048828125,
+        198.3599853515625
+      ],
+      "FirstOrigin": [
+        429.70001220703125,
+        187.969970703125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "calibri-narrow-margin",
+      "InputSha256": "53A77E56888D06D95CCADF25517DAE198CD3D3852ADB3182C8C45EFA661FB0E9",
+      "ReferencePdfSha256": "9ED26ED332F7CD5EDCAC68953DE87CC4B90FDB489A8D6353AE84342E2E45EE00",
+      "Bounds": [
+        426.4100036621094,
+        178.17999267578125,
+        592.6300048828125,
+        197.13995361328125
+      ],
+      "FirstOrigin": [
+        429.70001220703125,
+        186.739990234375
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial10-auto",
+      "InputSha256": "9819CBCC4DD7CA705F590351FD2392ABE6452550696E2771E6077C47D18CF329",
+      "ReferencePdfSha256": "94047394DFCA84782CAB4F931148388B866B59C61BA46698F96AB5D49AFBB786",
+      "Bounds": [
+        418.010009765625,
+        166.6300048828125,
+        591.5,
+        186.42999267578125
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        175.55999755859375
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial12-auto",
+      "InputSha256": "D8606D622F4BCE42C7DBBAA11FDE461BCE797FD58DDE4DB085449441CF020A85",
+      "ReferencePdfSha256": "0A6FC035D83F74484BF585C0703B17FD022A81F40318B6A6D8EB862335E6AA0C",
+      "Bounds": [
+        418.010009765625,
+        168.3399658203125,
+        591.5,
+        188.22998046875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        177.3800048828125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "calibri10-auto",
+      "InputSha256": "428FB35CF1A787F6C5B846AAF472E05B7A5D4C711AB2BC9D8BF4E7014EA364E8",
+      "ReferencePdfSha256": "229F6A89CEDB90F26A6F4FFA4914AFC957E77F237BF451EDC388D085D7BF4A57",
+      "Bounds": [
+        418.010009765625,
+        167.15997314453125,
+        591.5,
+        186.9599609375
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        176.1099853515625
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "calibri12-auto",
+      "InputSha256": "7BC78B379613BC83AC193ADA0B1705D98A37421D094B30F5DD7078580A0C59B3",
+      "ReferencePdfSha256": "B1366ABD7DB7F73B8986D457732F00F12E042086319F886FC4B64EC39873A080",
+      "Bounds": [
+        418.010009765625,
+        168.9599609375,
+        591.5,
+        188.8599853515625
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        178.010009765625
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial12-min20",
+      "InputSha256": "6E9F11985E1EAE92F085A8103B2C7414F03E10B53010E9FC667725CFA8A3A033",
+      "ReferencePdfSha256": "1994763FE8019CC28A3A8EFDF3F07BA805C113A25C24AF94BF52E51CCA032B36",
+      "Bounds": [
+        418.010009765625,
+        173.03997802734375,
+        591.5,
+        192.8399658203125
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        181.989990234375
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial12-exact20",
+      "InputSha256": "606DEF15CC196AE3395278F8030586302009038021E0F3EDC6EB351572F33462",
+      "ReferencePdfSha256": "2B7A36F3B9072B92C31D2BEB54F2A6DA604C4B0981F6E37A111E7E21C900D3E6",
+      "Bounds": [
+        418.010009765625,
+        168.3399658203125,
+        591.5,
+        188.22998046875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        177.3800048828125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial12-split-auto",
+      "InputSha256": "450E9835FCEA0C757921792FEA12490ECD2D681B3DB6D6381416576948282D10",
+      "ReferencePdfSha256": "48BAAB2152CB382A7121EB7938D8463B87FAB0F841AACB40C1F2705C3D30C27E",
+      "Bounds": [
+        418.010009765625,
+        168.3399658203125,
+        591.5,
+        188.22998046875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        177.3800048828125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial12-prior-exact1",
+      "InputSha256": "64F8A89F7BB18C97E00F3ADE1F1EE4CF7DB646DB25E7C18A8D2E898739FEE73B",
+      "ReferencePdfSha256": "554AFF6106820668D0A7796B436BA48AF28AE01900E3EB13797D665B6AB40FB6",
+      "Bounds": [
+        418.010009765625,
+        158.65997314453125,
+        591.5,
+        178.55999755859375
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        167.7099609375
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial9-auto",
+      "InputSha256": "5CBEAD29B8139C635C3CB8AEF2A96AFC5FADE156096AC17119255DCA3C07909D",
+      "ReferencePdfSha256": "0BE7E74EAA49589C101A139804252DC5510A593BFDBEB35549B5B253D3A64FA3",
+      "Bounds": [
+        418.010009765625,
+        165.719970703125,
+        591.5,
+        185.6199951171875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        174.76995849609375
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial12-center",
+      "InputSha256": "DBAFB43488079686F0846A521D4B1EB520656C09E2ED0DE718B32760F879FB00",
+      "ReferencePdfSha256": "D662F150329DB5518ECA4F6230964D7360A212F8206592898EE4780E3ACEC8A0",
+      "Bounds": [
+        418.010009765625,
+        168.3399658203125,
+        591.5,
+        188.22998046875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        177.3800048828125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "calibri14-right-partial",
+      "InputSha256": "4E9FAE9E5B1CDEB08272769FB77FCE3EE545B2FD1FAD9A87445DFFA45152B3ED",
+      "ReferencePdfSha256": "FF3D972C87198507E73BB0EB983CB39A4D7908CE95EB99676FBB88B4D4F6C6B1",
+      "Bounds": [
+        418.010009765625,
+        170.77996826171875,
+        591.5,
+        190.67999267578125
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        179.8299560546875
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial12-larger-neighbor",
+      "InputSha256": "6788EECCC549D560532AA1E18528AB0AD5A4A3AA88FCF5A28B90A3B9B6CC2CE1",
+      "ReferencePdfSha256": "37C90F934307E15B3CA98BF6C815E58AE17E449077ABF3211FDF64486990814D",
+      "Bounds": [
+        418.010009765625,
+        168.3399658203125,
+        591.5,
+        188.22998046875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        177.3800048828125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "arial-break",
+      "InputSha256": "BB89C85AA3EF8A7EB01858A00A5857DEC00E2E9148FCEA4A06254F86945C0DB6",
+      "ReferencePdfSha256": "4608406905E4B9063539B9EA905B6CBCCD1AE3A854D67EAFD84FE8C351F45A0F",
+      "Bounds": [
+        418.010009765625,
+        183.88995361328125,
+        591.5,
+        203.77996826171875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        192.94000244140625
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "calibri-break",
+      "InputSha256": "DAA17C057734648CF01AEC78EC12EB96F087D2AF608F2F19A230AF29906A1836",
+      "ReferencePdfSha256": "6F9F5E60661D43407D4E1191B6DA7977B52240A273C59E55AC3B047196A8497B",
+      "Bounds": [
+        418.010009765625,
+        181.79998779296875,
+        591.5,
+        201.70001220703125
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        190.8499755859375
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "static-box-table-body",
+      "InputSha256": "257741BA414DC8098307E2A3315A623A3D9A634EDA3C2F356B044BB3D97B962E",
+      "ReferencePdfSha256": "815EFDDBD6497B642F34CF357E13F8A359F4BECE23CCC6F04BFD9D3D1C2478B9",
+      "Bounds": [
+        418.010009765625,
+        211.65997314453125,
+        591.5,
+        231.52996826171875
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        220.67999267578125
+      ],
+      "Rows": 2,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "calibri-short-unit",
+      "InputSha256": "173D3DAB65CF622F73AC5EF8C83E2C4685C71EB8439AB690A729AE44B89A9CA5",
+      "ReferencePdfSha256": "E02C40339AE458763486F12DF920040F3840DF11DFDDA5E68B84213FC1FB4E8A",
+      "Bounds": [
+        360.42999267578125,
+        85.82000732421875,
+        590.760009765625,
+        102.3800048828125
+      ],
+      "FirstOrigin": [
+        364.8699951171875,
+        97.82000732421875
+      ],
+      "Rows": 1,
+      "Text": "Commented [PR1]: Short public note. "
+    },
+    {
+      "Id": "times-review-normal",
+      "InputSha256": "CC023739A6C839576A85776371E5D1AF6D392AD31012DA6E78A733174C6BCA7E",
+      "ReferencePdfSha256": "906D3A11114E4A5B359BEC059C865593ACF3472A3053C4496DAE8F52330E749F",
+      "Bounds": [
+        418.010009765625,
+        168.3399658203125,
+        591.5,
+        180.4599609375
+      ],
+      "FirstOrigin": [
+        421.44000244140625,
+        177.3800048828125
+      ],
+      "Rows": 1,
+      "Text": "Commented [PR1]: Review the public calculation frame. "
+    },
+    {
+      "Id": "courier-long-landscape",
+      "InputSha256": "F0E50E79A632376BE1E52231EBD35A6CDC7F0AB82AF54FA77BC01018D48E3B29",
+      "ReferencePdfSha256": "11F8A638890926F617B60615F22AFF36BBE4DCEF9010C304CEEE9138F0667A94",
+      "Bounds": [
+        603.8400268554688,
+        129.30999755859375,
+        788.760009765625,
+        191.98001098632812
+      ],
+      "FirstOrigin": [
+        607.4199829101562,
+        138.95999145507812
+      ],
+      "Rows": 7,
+      "Text": "Commented [PR1]: Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. Public alpha beta gamma delta epsilon. "
+    }
+  ]
+}
