@@ -166,27 +166,27 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
+            DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out _, out _);
+            double contentX = placedX + insetLeft;
+            double contentTop = placedTop - insetTop;
             if (map is not { } emissionMap)
             {
                 foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
                 {
-                    yield return TranslateTextLine(line, placedX, placedTop);
+                    yield return TranslateTextLine(line, contentX, contentTop);
                 }
 
                 foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
                 {
                     foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
                     {
-                        yield return TranslateTextLine(cellLine, placedX, placedTop);
+                        yield return TranslateTextLine(cellLine, contentX, contentTop);
                     }
                 }
 
                 continue;
             }
 
-            DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out _, out _);
-            double contentX = placedX + insetLeft;
-            double contentTop = placedTop - insetTop;
             foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
             {
                 yield return emissionMap.PrecompensateLine(line, contentX, contentTop);
