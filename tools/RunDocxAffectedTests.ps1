@@ -78,13 +78,19 @@ if (!$AllDocx -and @($filters | Where-Object { $_ -in @('Docx', 'Balloon', '') }
     throw 'Use capability-specific filters, or explicit -AllDocx for a broader milestone'
 }
 $selected = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+# Search the catalogue in native string code instead of a PowerShell loop over
+# every selector/test pair. Newlines delimit names and cannot occur in a name.
+$catalogNames = [string]::Join("`n", [string[]]$catalog.Name) + "`n"
 foreach ($filter in $filters) {
     $found = $false
-    foreach ($test in $catalog) {
-        if ($test.Name.Contains($filter, [StringComparison]::OrdinalIgnoreCase)) {
-            $found = $true
-            $null = $selected.Add($test.Name)
-        }
+    $offset = 0
+    while (!$filter.Contains("`n") -and
+        ($match = $catalogNames.IndexOf($filter, $offset, [StringComparison]::OrdinalIgnoreCase)) -ge 0) {
+        $first = $catalogNames.LastIndexOf([char]10, $match) + 1
+        $last = $catalogNames.IndexOf([char]10, $match)
+        $null = $selected.Add($catalogNames.Substring($first, $last - $first))
+        $found = $true
+        $offset = $last + 1
     }
     if (!$found) { throw ('Empty capability selector: ' + $filter) }
 }

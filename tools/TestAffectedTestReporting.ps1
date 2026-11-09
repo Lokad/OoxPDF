@@ -14,6 +14,9 @@ function dotnet {
     if($args -contains '--list') {
         'FAST fixture ReportAlpha';'FAST fixture ReportNeighbor';'FAST auxiliary ReportGroupOnly'
         'SLOW auxiliary ReportGroupSlow';'SLOW fixture ReportExplicitSlow';'SLOW only-slow ReportSlowOnly'
+        'FAST selection SelectionAlpha';'FAST selection SelectionAlphaNeighbor';'FAST selection Outer.SelectionAlpha'
+        'FAST selection SelectionOther';'FAST selection Selection[Literal]';'FAST selection SelectionL'
+        'FAST selection item';'FAST selection İtemNeighbor'
         $global:LASTEXITCODE=0;return
     }
     $global:ooxPdfAffectedReportCalls++
@@ -102,6 +105,36 @@ try {
         }
         $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
     }
+
+    # An exact method name is still a substring selector. Preserve its neighbors,
+    # literal punctuation and ordinal casing, and never match across catalogue rows.
+    $selectorCases=@(
+        @{Name='selector-overlap';Filters=@('SelectionAlpha','ectionOther','SelectionAlpha');Wanted=@('SelectionAlpha','SelectionAlphaNeighbor','Outer.SelectionAlpha','SelectionOther')},
+        @{Name='selector-literal-case';Filters=@('selectionalpha','ITEM','Selection[Literal]');Wanted=@('SelectionAlpha','SelectionAlphaNeighbor','Outer.SelectionAlpha','item','Selection[Literal]')},
+        @{Name='selector-missing';Filters=@('SelectionAlpha','MissingSelection');Wanted=@()},
+        @{Name='selector-cross-row';Filters=@("SelectionAlpha`nSelectionAlphaNeighbor");Wanted=@()}
+    )
+    $previousCulture=[Globalization.CultureInfo]::CurrentCulture
+    try {
+        [Globalization.CultureInfo]::CurrentCulture=[Globalization.CultureInfo]::GetCultureInfo('tr-TR')
+        foreach($case in $selectorCases) {
+            $global:ooxPdfAffectedReportFault=''
+            $global:ooxPdfAffectedReportCalls=0
+            $output=Join-Path $root $case.Name
+            $caught=$null
+            try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter $case.Filters *> (Join-Path $root ($case.Name+'.log'))}
+            catch {$caught=$_.Exception.Message}
+            $shouldPass=$case.Wanted.Count -gt 0
+            if($shouldPass -eq ($null -ne $caught) -or $global:ooxPdfAffectedReportCalls -ne [int]$shouldPass) {throw ($case.Name+': unexpected selector outcome '+$caught)}
+            if($shouldPass) {
+                $actual=@(Get-Content -LiteralPath (Join-Path $output 'selected-methods.json') -Raw | ConvertFrom-Json)
+                if($actual.Count -ne $case.Wanted.Count -or @(Compare-Object $case.Wanted $actual -CaseSensitive).Count) {throw 'Selector matching changed'}
+            }
+            elseif($caught -notlike 'Empty capability selector:*') {throw 'Missing selector was not refused explicitly'}
+            $checks+=@{Case=$case.Name;GatePassed=$shouldPass;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
+        }
+    }
+    finally {[Globalization.CultureInfo]::CurrentCulture=$previousCulture}
 }
 finally {Remove-Item Function:dotnet; Remove-Variable ooxPdfAffectedReportFault,ooxPdfAffectedReportCalls -Scope Global}
 @{Checks=$checks;Builds=0;Conversions=0;RealTestsReplayed=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
