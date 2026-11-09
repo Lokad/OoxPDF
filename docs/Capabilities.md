@@ -575,7 +575,11 @@ Approximate or restricted:
   label. Duplicate or unowned property changes keep their existing fallback;
   bold/italic descriptions share run and paragraph-mark resolution. Word-compatible
   Review anchors owned paragraph-mark captions to the measured text strut; footer
-  captions retain their printed frame. Other changes
+  captions retain their printed frame. For measured paragraph-mark formatting
+  ranges, revision bars cover the occupied row and its resolved trailing gap.
+  Owned inline pictures preserve separate changed paragraph bands. Unmeasured
+  rows and floating/table compositions retain their existing bar fallbacks; bar
+  edges and complete-page appearance remain approximate. Other changes
   retain generic summaries; balloon placement and complete-page fidelity remain
   approximate.
   Tables inside mapped inline header/footer boxes retain their rows, equations,
