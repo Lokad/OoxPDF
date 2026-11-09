@@ -102,7 +102,7 @@ internal static class DocxNoteClippingTests
         TestAssert.True(DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top),
             "Use an actual measured source line for partial clipping.");
         var single = row with { Cells = row.Cells.Select(cell => cell with {
-            TextLines = cell.TextLines.Where(candidate => ReferenceEquals(candidate, line)).ToArray(), NestedRows = [] }).ToArray() };
+            TextLines = cell.TextLines.Where(candidate => ReferenceEquals(candidate, line)).ToArray() }).ToArray() };
         var partial = contained with { Y = (bottom + top) / 2d };
         TestAssert.True(inspect(single, partial, 0d, default), "A line crossing the final frame is partly clipped.");
         TestAssert.True(!inspect(row, outside, row.Height + 1000d, default), "Use the same baseline translation as painting.");
