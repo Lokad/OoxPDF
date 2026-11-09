@@ -10,6 +10,48 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNoteClippingTests
 {
+    public static void DocxPartiallyClippedNoteRowsReportTextAndMathContent()
+    {
+        foreach (bool math in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            using var input = BoundaryInput(math, overflow: true, exact: false);
+            byte[] source = input.ToArray();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            using var output = new MemoryStream();
+            OoxPdfConverter.Convert(input, output, Options(mode, diagnostics.Add));
+            var warning = diagnostics.Single(d => d.Id == "DOCX_CLIPPED_NOTE_TABLE_ROW");
+            TestAssert.Equal("/word/endnotes.xml", warning.PartName!);
+            TestAssert.True(warning.PageIndex is > 0, "Identify the page of the partially clipped source line.");
+            TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
+            TestAssert.Equal("Clipped", warning.Fallback!);
+            TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION") &&
+                (!math || diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION")),
+                "The matrix is supported; its final frame clipping needs a distinct warning.");
+            using var unobserved = new MemoryStream(source);
+            using var control = new MemoryStream();
+            OoxPdfConverter.Convert(unobserved, control, Options(mode, null));
+            TestAssert.True(output.ToArray().AsSpan().SequenceEqual(control.ToArray()),
+                "Observing partial clipping changes no rendered PDF bytes.");
+        }
+    }
+
+    public static void DocxPartialNoteRowsKeepFittingAndIntentionalClipExceptions()
+    {
+        foreach (bool math in new[] { false, true })
+        foreach (bool exact in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            using var input = BoundaryInput(math, overflow: exact, exact);
+            using var output = new MemoryStream();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            OoxPdfConverter.Convert(input, output, Options(mode, diagnostics.Add));
+            TestAssert.True(output.Length > 0 && !diagnostics.Any(d => d.Id == "DOCX_CLIPPED_NOTE_TABLE_ROW"),
+                "Fitting text/math frames and authored exact heights retain their own clipping policy.");
+            TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"), "The control must retain supported math.");
+        }
+    }
+
     public static void DocxUnfitNoteRowsReportClippingWithoutChangingPdf()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -49,12 +91,20 @@ internal static class DocxNoteClippingTests
         var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
         var row = layout.RelatedStories.Single(story => story.Story.Id == "37").TableRows.Single();
-        var inspect = typeof(DocxRenderer).GetMethod("HasClippedNoteTableText", BindingFlags.Static | BindingFlags.NonPublic)!
+        var inspect = typeof(DocxRenderer).GetMethod("HasClippedNoteTableLines", BindingFlags.Static | BindingFlags.NonPublic)!
             .CreateDelegate<Func<DocxTableRowLayout, PdfRectangle, double, CancellationToken, bool>>();
         var outside = new PdfRectangle(0d, row.Y + row.Height + 100d, 1000d, 100d);
         TestAssert.True(inspect(row, outside, 0d, default), "A complete source-contained line is wholly outside the final clip.");
         var contained = outside with { Y = row.Y - 1d, Height = row.Height + 2d };
         TestAssert.True(!inspect(row, contained, 0d, default), "Retain fitting geometry.");
+        var line = DocxTableCellClipGeometry.EnumerateCellLines(row, null, default).First(owner =>
+            !string.IsNullOrWhiteSpace(owner.Line.Text)).Line;
+        TestAssert.True(DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top),
+            "Use an actual measured source line for partial clipping.");
+        var single = row with { Cells = row.Cells.Select(cell => cell with {
+            TextLines = cell.TextLines.Where(candidate => ReferenceEquals(candidate, line)).ToArray(), NestedRows = [] }).ToArray() };
+        var partial = contained with { Y = (bottom + top) / 2d };
+        TestAssert.True(inspect(single, partial, 0d, default), "A line crossing the final frame is partly clipped.");
         TestAssert.True(!inspect(row, outside, row.Height + 1000d, default), "Use the same baseline translation as painting.");
         TestAssert.True(!inspect(row with { FragmentCount = 2 }, outside, 0d, default), "Real continuations may paint on another page.");
         TestAssert.True(!inspect(row with { HeightRuleValue = "exact", DeclaredHeightPoints = row.Height }, outside, 0d, default),
@@ -122,6 +172,52 @@ internal static class DocxNoteClippingTests
         DocxMarkupMode = mode, DocxMarkupGeometryMode = mode == OoxPdfDocxMarkupMode.Final
             ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
         FixedCreationDate = DateTimeOffset.UnixEpoch, DiagnosticSink = sink };
+
+    private static MemoryStream BoundaryInput(bool math, bool overflow, bool exact)
+    {
+        using var seed = Input(0, false);
+        using var archive = new ZipArchive(seed, ZipArchiveMode.Read);
+        var parts = archive.Entries.ToDictionary(entry => entry.FullName, entry => {
+            using var source = entry.Open(); using var copy = new MemoryStream(); source.CopyTo(copy); return copy.ToArray(); });
+        using var xmlStream = new MemoryStream(parts["word/endnotes.xml"]);
+        var xml = XDocument.Load(xmlStream);
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+        var note = xml.Root!.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "37");
+        var row = note.Element(w + "tbl")!.Element(w + "tr")!;
+        var cell = row.Element(w + "tc")!;
+        cell.Elements().Where(element => element.Name != w + "tcPr").Remove();
+        var paragraph = new XElement(w + "p", new XElement(w + "pPr", new XElement(w + "spacing",
+            new XAttribute(w + "before", "0"), new XAttribute(w + "after", "0"),
+            new XAttribute(w + "line", "240"), new XAttribute(w + "lineRule", "auto"))));
+        cell.Add(paragraph);
+        if (math)
+        {
+            var matrix = new XElement(m + "m");
+            for (int index = 0; index < (overflow ? 80 : 4); index++)
+            {
+                var run = new XElement(m + "r",
+                    new XElement(m + "rPr", new XElement(m + "sty", new XAttribute(m + "val", "p"))),
+                    new XElement(w + "rPr", new XElement(w + "rFonts", new XAttribute(w + "ascii", "Cambria Math"),
+                        new XAttribute(w + "hAnsi", "Cambria Math"))), new XElement(m + "t", "A"));
+                matrix.Add(new XElement(m + "mr", new XElement(m + "e", run)));
+            }
+            paragraph.Add(new XElement(m + "oMath", matrix));
+        }
+        else paragraph.Add(new XElement(w + "r", new XElement(w + "rPr",
+            new XElement(w + "rFonts", new XAttribute(w + "ascii", "Arial"), new XAttribute(w + "hAnsi", "Arial")),
+            new XElement(w + "sz", new XAttribute(w + "val", overflow ? "1200" : "24"))), new XElement(w + "t", "g")));
+        if (exact)
+        {
+            var properties = row.Element(w + "trPr");
+            if (properties is null) { properties = new XElement(w + "trPr"); row.AddFirst(properties); }
+            properties.Elements(w + "trHeight").Remove();
+            properties.Add(new XElement(w + "trHeight", new XAttribute(w + "val", "16000"), new XAttribute(w + "hRule", "exact")));
+        }
+        using var updated = new MemoryStream(); xml.Save(updated, SaveOptions.DisableFormatting);
+        parts["word/endnotes.xml"] = updated.ToArray();
+        return TestFixtures.CreateZipPackage(parts);
+    }
 
     private static MemoryStream Input(int tokens, bool exact)
     {

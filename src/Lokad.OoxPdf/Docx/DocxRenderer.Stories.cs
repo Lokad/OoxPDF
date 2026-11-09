@@ -81,9 +81,9 @@ internal sealed partial class DocxRenderer
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
             if (diagnosticSink is not null && item is DocxTableRowLayout row &&
                 story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-                HasClippedNoteTableText(row, clip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
+                HasClippedNoteTableLines(row, clip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
                 diagnosticSink(new OoxPdfDiagnostic("DOCX_CLIPPED_NOTE_TABLE_ROW", OoxPdfSeverity.Warning,
-                    "A note-table row exceeds its available frame; complete text lines are clipped. Row fragmentation for this content is unsupported.",
+                    "A note-table row exceeds its available frame; line content is clipped. Row fragmentation for this content is unsupported.",
                     story.StoryLayout.Story.PartName, PageIndex: pageNumber, Feature: "note table row", Fallback: "Clipped"));
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
         }
@@ -91,7 +91,7 @@ internal sealed partial class DocxRenderer
         graphics.RestoreState();
     }
 
-    private static bool HasClippedNoteTableText(DocxTableRowLayout row, PdfRectangle clip,
+    private static bool HasClippedNoteTableLines(DocxTableRowLayout row, PdfRectangle clip,
         double baselineOffset, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -103,8 +103,8 @@ internal sealed partial class DocxRenderer
         foreach (var (line, _) in DocxTableCellClipGeometry.EnumerateCellLines(row, null, token))
         {
             if (!string.IsNullOrWhiteSpace(line.Text) &&
-                DocxInlineLineGeometry.TryGetOccupiedBounds(line, out _, out double top) &&
-                top + baselineOffset < clip.Y - .000001d) return true;
+                DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out _) &&
+                bottom + baselineOffset < clip.Y - .000001d) return true;
         }
         return false;
     }

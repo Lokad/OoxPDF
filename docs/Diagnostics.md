@@ -86,7 +86,7 @@ Approximation warnings:
 
 - `DOCX_APPROXIMATED_COMMENTS`: comment markup was rendered through the selected markup mode with first-pass markers or balloons.
 - `DOCX_APPROXIMATED_ENDNOTE`: endnote references render through first-pass related-story bodies; split-note continuation stays approximate.
-- `DOCX_CLIPPED_NOTE_TABLE_ROW`: an unfragmented automatic note-table row has complete text lines below its final story clip. The warning carries the note part and page. Authored exact-height clipping, real continuation fragments and text already clipped by a cell are excluded; general note-row fragmentation remains unsupported.
+- `DOCX_CLIPPED_NOTE_TABLE_ROW`: an unfragmented automatic note-table row has measured text or math lines extending below its final story clip, including partially clipped lines. The warning carries the note part and page. Authored exact-height clipping, real continuation fragments and content already clipped by a cell are excluded; general note-row fragmentation remains unsupported.
 - `DOCX_APPROXIMATED_FOOTNOTE`: footnote references render through first-pass related-story bodies; split-note continuation stays approximate.
 - `DOCX_APPROXIMATED_FORMATTING_REVISIONS`: formatting revisions were detected and surfaced through private-safe property-family provenance, first-pass formatting balloons, change bars, or approximation diagnostics.
 - `DOCX_NUMBERING_INDENT`: a numbering indentation variant outside the supported twip-based left/right/first-line/hanging/tab model was detected, such as character-unit list indents.
