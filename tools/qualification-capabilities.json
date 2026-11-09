@@ -17939,5 +17939,26 @@
     "EmergencyWrapUnicodeBoundariesAreSafe",
     "EmergencyWrapCancelledTokenThrows",
     "EmergencyWrapCancellationDuringLongGrowThrows"
+  ],
+  "docx-mixed-column-flow": [
+    "DocxColumnAdmission",
+    "DocxColumnWidthsRetainHardBreaksTabsAndPageCounters",
+    "DocxInlineCompositionBodyCursor",
+    "DocxMathCenterGroupCounterResumptionReusesMeasuredFrames",
+    "PortableRenderingFirstDisplayGroupOwnsParagraphJustification",
+    "DocxInlineCompositionAutomaticSpacingSurvivesResumedWrapping",
+    "DocxInlineCompositionBodyPageCounters",
+    "PortableRenderingInlineLiteralOperatorBreakPreservesContent",
+    "DocxInlineCompositionRunSplittingPreservesMeasurementAndSourceOwners",
+    "DocxInlinePictureBookmarks",
+    "DocxInlinePictureLinks",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched",
+    "MemoryAdmissionRefundsOnFailureCancellationAndObserverException",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders",
+    "DocxMixedColumnFlow",
+    "DocxInlineCompositionFixedPictureSkipsUnfitContinuationColumn",
+    "DocxInlineCompositionSourceCursorConsumesTrailingWhitespace"
   ]
 }

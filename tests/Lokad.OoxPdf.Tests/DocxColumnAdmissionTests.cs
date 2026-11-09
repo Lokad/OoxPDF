@@ -9,7 +9,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxColumnAdmissionTests
+internal static partial class DocxColumnAdmissionTests
 {
     public static void DocxColumnAdmissionMatchesIndependentWordOrigins()
     {

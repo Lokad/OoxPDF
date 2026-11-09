@@ -1600,18 +1600,9 @@ internal sealed partial class DocxLayoutEngine
                             bound = rebound;
                             boundPage = pages.Count + 1;
                         }
-                        DocxMeasuredInlineLine? line;
-                        bool hasLine;
-                        if (atoms.CounterFragmentIndices.Count == 0)
-                        {
-                            // Fixed content keeps its already qualified wrap;
-                            // only counters need page-dependent source resumption.
-                            line = measured[index];
-                            hasLine = true;
-                        }
-                        else hasLine = TryGetNextOrderedInlineLine(bound, sourceCursor,
+                        bool hasLine = TryGetNextOrderedInlineLine(bound, sourceCursor,
                             Math.Max(1d, width - textInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
-                            cancellationToken, out line, physicalTextBaselineInset: baseInset * paragraphSpacingScale);
+                            cancellationToken, out var line, physicalTextBaselineInset: baseInset * paragraphSpacingScale);
                         if (!hasLine || line is null)
                         {
                             // An atomic item may fit the paragraph's initial
@@ -1621,9 +1612,9 @@ internal sealed partial class DocxLayoutEngine
                             RegisterInFlightFootnotesForSourceBlock(elementIndex);
                             continue;
                         }
-                        if (atoms.CounterFragmentIndices.Count != 0 && line.DisplayAlignment == DocxMathDisplayAlignment.CenterGroup)
+                        if (line.DisplayAlignment == DocxMathDisplayAlignment.CenterGroup)
                         {
-                            // Counter reflow can change line counts, but pure math
+                            // Resumed wrapping can change line counts, but pure math
                             // retains its source cursor and measured group frame.
                             // Walk the existing wrap once instead of remeasuring it.
                             while (referenceLine < measured.Count && measured[referenceLine].EndCursor.AtomIndex < line.EndCursor.AtomIndex)
