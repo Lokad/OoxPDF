@@ -54,20 +54,20 @@ internal static class DocxFooterRevisionFrameTests
                 font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))).ToArray();
             TestAssert.Equal(row.GetProperty("ExpectedEquationCount").GetInt32() == 0 ? 0 : 18, math.Length);
         }
-        var groupedParagraphs = new[] { "Public alpha α", "Public beta β", "Public gamma γ" }
-            .Select((text, index) => new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph(text, 11d, 8d) with
+        var groupedParagraphs = new[] { "α", "β", "γ" }
+            .Select((property, index) => new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public revision source", 11d, 8d) with
             {
                 LineSpacingPoints = 8d,
                 Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact", LineValue = "160" },
                 Revisions = [new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, index.ToString(), "Public Reviewer", null,
-                    "rPrChange", null, propertyElementNames: ["b"])]
+                    "rPrChange", null, propertyElementNames: [property])]
             })).ToArray();
         var grouped = new DocxDocument(612d, 792d, 72d, 300d, 72d, 72d, DocxPageSettings.Empty, [], [], [], groupedParagraphs, [], [])
             { MarkupMode = OoxPdfDocxMarkupMode.AllMarkup };
         var groupedPage = Render(grouped, new ReviewResolver());
         string captions = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(groupedPage, true)
             .Where(show => show.Font.Font.FamilyName == "DejaVu Sans").Select(show => show.Text));
-        foreach (string expected in new[] { "Public alpha α", "Public beta β", "Public gamma γ" })
+        foreach (string expected in new[] { "α", "β", "γ", ";" })
             TestAssert.Contains(expected, captions);
         var commentResolver = new ReviewResolver();
         _ = Render(DocxTests.ReadDocx(Path.Combine(Cases, "UnitPrintOrigins", "arial-unscaled.docx"),
