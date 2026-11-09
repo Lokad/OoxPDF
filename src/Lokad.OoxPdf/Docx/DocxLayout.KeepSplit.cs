@@ -324,24 +324,59 @@ internal sealed partial class DocxLayoutEngine
         return wrappedLineCount > 1 ? RoundToTwips() : lineHeight;
     }
 
+    // Ordinary automatic body text takes its metrics from the runs on this
+    // wrapped line. The original paragraph still owns source ranges and layout.
+    // Declared slots, lists, inline objects and unmeasured content keep their
+    // existing metric contracts.
+    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph,
+        DocxWrappedTextLine line, DocxLineHeightProfile profile, IDocxTextMeasurer textMeasurer)
+    {
+        if (profile.Source != DocxLineHeightSource.BodySingleLineAuto ||
+            textMeasurer is not IDocxLineMetricsProvider ||
+            paragraph.InlineReferences.Count != 0 || !DocxPlainBodyFrame.HasPlainTextContent(paragraph) ||
+            line.Spans.Count == 0)
+            return paragraph;
+
+        bool sameRuns = line.Spans.Count == paragraph.Runs.Count;
+        for (int index = 0; sameRuns && index < line.Spans.Count; index++)
+            sameRuns = ReferenceEquals(line.Spans[index].StyleRun, paragraph.Runs[index]);
+        if (sameRuns) return paragraph;
+
+        return paragraph with { Runs = line.Spans.Select(span => span.StyleRun).ToArray() };
+    }
+
     private static bool ShouldMoveParagraphForWidowControl(
         DocxParagraph paragraph,
-        int lineCount,
+        IReadOnlyList<DocxWrappedTextLine> lines,
         double cursorY,
-        double lineHeight,
+        DocxLineHeightProfile profile,
+        double fallbackLineHeight,
+        IDocxTextMeasurer textMeasurer,
         double marginBottom,
-        bool hasPageContent)
+        bool hasPageContent,
+        CancellationToken cancellationToken)
     {
         if (!DocxParagraphFragmentPolicy.HasWidowControl(paragraph) ||
-            lineCount <= 1 ||
+            lines.Count <= 1 ||
             !hasPageContent)
         {
             return false;
         }
 
-        int fittingLineCount = (int)Math.Floor(Math.Max(0d, cursorY - marginBottom) / lineHeight);
-        return DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, lineCount, fittingLineCount) ||
-            DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, lineCount, fittingLineCount);
+        double remaining = Math.Max(0d, cursorY - marginBottom);
+        int fittingLineCount = 0;
+        foreach (var line in lines)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxParagraph metrics = GetBodyTextLineMetricParagraph(paragraph, line, profile, textMeasurer);
+            double height = ReferenceEquals(metrics, paragraph) ? fallbackLineHeight :
+                ResolveLineHeightProfile(metrics, GetParagraphFontSize(metrics), textMeasurer).LineHeight;
+            if (remaining < height) break;
+            remaining -= height;
+            fittingLineCount++;
+        }
+        return DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, lines.Count, fittingLineCount) ||
+            DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, lines.Count, fittingLineCount);
     }
 
     private static string NormalizeContextualSpacingStyleId(string? styleId)
@@ -619,7 +654,13 @@ internal sealed partial class DocxLayoutEngine
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale, defaultTabStopPoints);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
-            height += WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale)).Count() * lineHeight;
+            foreach (var line in WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, cancellationToken: cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale)))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                DocxParagraph metrics = GetBodyTextLineMetricParagraph(paragraph, line, profile, textMeasurer);
+                height += ReferenceEquals(metrics, paragraph) ? lineHeight :
+                    ResolveLineHeightProfile(metrics, GetParagraphFontSize(metrics), textMeasurer).LineHeight;
+            }
         }
         else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
         {

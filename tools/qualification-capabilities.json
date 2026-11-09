@@ -1,4 +1,22 @@
 {
+  "docx-natural-body-lines": [
+    "DocxNaturalBodyLines",
+    "DocxBodyMixedSizePitchTransitionsScaleWithPrintScale",
+    "DocxBodyExactFirstBaselineFollowsOfficeRatio",
+    "DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage",
+    "DocxSyntheticParagraphKeepNextMovesPairToNextPage",
+    "DocxSyntheticParagraphKeepNextChainsAcrossConsecutiveParagraphsToNextPage",
+    "DocxSyntheticPageKeepNextEstimatesIndentedBlockTarget",
+    "DocxLayoutUsesResolvedPageFieldForKeepEstimate",
+    "DocxSyntheticParagraphWidowControlMovesThreeLineParagraphToNextPage",
+    "DocxSyntheticParagraphDefaultWidowControlMovesThreeLineParagraphToNextPage",
+    "DocxSyntheticAtLeastLineSpacingUsesMinimumAndNaturalLineHeight",
+    "DocxSyntheticExactLineHeightPositionsNextParagraph",
+    "DocxLineSpacingInheritance",
+    "DocxParagraphShadingUsesSourceIndentsAndFragmentLineBoxes",
+    "DocxInlineCompositionExactCommentFramesMatchIndependentWordVerticalBounds",
+    "DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames"
+  ],
   "docx-container-table-grids": [
     "DocxContainerTableGrids",
     "DocxAuthoredZeroTableIndents",

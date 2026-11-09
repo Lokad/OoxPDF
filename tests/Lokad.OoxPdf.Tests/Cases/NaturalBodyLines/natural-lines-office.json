@@ -1,0 +1,118 @@
+{
+  "ReferenceKind": "Supervised Word16 PDF export; uncalibrated application view",
+  "ThresholdPoints": 1,
+  "Rows": [
+    {
+      "Id": "arial-break",
+      "Mode": "final-preserve",
+      "InputSha256": "BB89C85AA3EF8A7EB01858A00A5857DEC00E2E9148FCEA4A06254F86945C0DB6",
+      "PdfSha256": "5C0EAE846BB6E5331F11B75AC19C3E7298A3CE6D2997448C49258BE7D49EAA2D",
+      "TextOrigins": [
+        {
+          "Text": "Prior public glyphs gyp.",
+          "X": 72.02400207519531,
+          "Y": 83.27996826171875
+        },
+        {
+          "Text": "LARGE",
+          "X": 72.02400207519531,
+          "Y": 102.6199951171875
+        },
+        {
+          "Text": "Selected public words.",
+          "X": 72.02400207519531,
+          "Y": 117.739990234375
+        },
+        {
+          "Text": "Following public glyphs.",
+          "X": 72.02400207519531,
+          "Y": 131.53997802734375
+        }
+      ]
+    },
+    {
+      "Id": "arial-break",
+      "Mode": "all-word-compatible",
+      "InputSha256": "BB89C85AA3EF8A7EB01858A00A5857DEC00E2E9148FCEA4A06254F86945C0DB6",
+      "PdfSha256": "4608406905E4B9063539B9EA905B6CBCCD1AE3A854D67EAFD84FE8C351F45A0F",
+      "TextOrigins": [
+        {
+          "Text": "Prior public glyphs gyp.",
+          "X": 54.2400016784668,
+          "Y": 166.44000244140625
+        },
+        {
+          "Text": "LARGE",
+          "X": 54.2400016784668,
+          "Y": 181.010009765625
+        },
+        {
+          "Text": "Selected public words.",
+          "X": 54.2400016784668,
+          "Y": 192.3800048828125
+        },
+        {
+          "Text": "Following public glyphs.",
+          "X": 54.2400016784668,
+          "Y": 202.77996826171875
+        }
+      ]
+    },
+    {
+      "Id": "calibri-break",
+      "Mode": "final-preserve",
+      "InputSha256": "DAA17C057734648CF01AEC78EC12EB96F087D2AF608F2F19A230AF29906A1836",
+      "PdfSha256": "C5FF7D4BEEDA17507732B03F534839FB7D2C7B5970EF99E626AA155F1530E406",
+      "TextOrigins": [
+        {
+          "Text": "Prior public glyphs gyp.",
+          "X": 72.02400207519531,
+          "Y": 81.5999755859375
+        },
+        {
+          "Text": "LARGE",
+          "X": 72.02400207519531,
+          "Y": 99.3800048828125
+        },
+        {
+          "Text": "Selected public words.",
+          "X": 72.02400207519531,
+          "Y": 113.29998779296875
+        },
+        {
+          "Text": "Following public glyphs.",
+          "X": 72.02400207519531,
+          "Y": 125.53997802734375
+        }
+      ]
+    },
+    {
+      "Id": "calibri-break",
+      "Mode": "all-word-compatible",
+      "InputSha256": "DAA17C057734648CF01AEC78EC12EB96F087D2AF608F2F19A230AF29906A1836",
+      "PdfSha256": "6F9F5E60661D43407D4E1191B6DA7977B52240A273C59E55AC3B047196A8497B",
+      "TextOrigins": [
+        {
+          "Text": "Prior public glyphs gyp.",
+          "X": 54.2400016784668,
+          "Y": 165.16998291015625
+        },
+        {
+          "Text": "LARGE",
+          "X": 54.2400016784668,
+          "Y": 178.55999755859375
+        },
+        {
+          "Text": "Selected public words.",
+          "X": 54.2400016784668,
+          "Y": 189.04998779296875
+        },
+        {
+          "Text": "Following public glyphs.",
+          "X": 54.2400016784668,
+          "Y": 198.260009765625
+        }
+      ]
+    }
+  ]
+}

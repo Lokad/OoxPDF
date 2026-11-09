@@ -1,0 +1,30 @@
+[
+  {
+    "Id": "arial-break",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalBodyLines/arial-break.docx",
+    "Sha256": "BB89C85AA3EF8A7EB01858A00A5857DEC00E2E9148FCEA4A06254F86945C0DB6",
+    "HeldOut": false,
+    "Font": "Arial",
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "LARGE",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0
+  },
+  {
+    "Id": "calibri-break",
+    "Input": "tests/Lokad.OoxPdf.Tests/Cases/NaturalBodyLines/calibri-break.docx",
+    "Sha256": "DAA17C057734648CF01AEC78EC12EB96F087D2AF608F2F19A230AF29906A1836",
+    "HeldOut": true,
+    "Font": "Calibri",
+    "ExpectedText": [
+      "Prior public glyphs gyp.",
+      "LARGE",
+      "Selected public words.",
+      "Following public glyphs."
+    ],
+    "ExpectedEquationCount": 0
+  }
+]

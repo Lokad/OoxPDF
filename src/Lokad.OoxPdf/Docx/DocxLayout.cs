@@ -1702,7 +1702,8 @@ internal sealed partial class DocxLayoutEngine
                     ? WrapInlineMath(paragraph, preparedMath, textSpans, ref lines, paragraphWidth, continuationParagraphWidth,
                         paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints, pages.Count + 1, cancellationToken)
                     : null;
-                if (ShouldMoveParagraphForWidowControl(paragraph, lines.Length, cursorY, lineHeight, CurrentParagraphFrameBottom(), HasCurrentColumnContent()))
+                if (ShouldMoveParagraphForWidowControl(paragraph, lines, cursorY, lineHeightProfile, lineHeight,
+                    textMeasurer, CurrentParagraphFrameBottom(), HasCurrentColumnContent(), cancellationToken))
                 {
                     AdvanceColumnOrPage();
                     RegisterInFlightFootnotesForSourceBlock(elementIndex);
@@ -1717,6 +1718,14 @@ internal sealed partial class DocxLayoutEngine
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxWrappedTextLine line = lines[lineIndex];
+                    DocxParagraph metricParagraph = GetBodyTextLineMetricParagraph(paragraph, line, lineHeightProfile, textMeasurer);
+                    double lineFontSize = ReferenceEquals(metricParagraph, paragraph) ? paragraphFontSize : GetParagraphFontSize(metricParagraph);
+                    DocxLineHeightProfile lineProfile = ReferenceEquals(metricParagraph, paragraph) ? lineHeightProfile :
+                        ResolveLineHeightProfile(metricParagraph, lineFontSize, textMeasurer);
+                    double lineBaselineHeight = lineProfile.LineHeight;
+                    double lineAdvance = scalesExactBodyAdvance ? lineHeight : lineBaselineHeight;
+                    double? lineTypographicInset = ReferenceEquals(metricParagraph, paragraph) ? typographicBaselineInset :
+                        DocxLineMetrics.ResolveUniformBodyTypographicBaselineInset(metricParagraph, lineFontSize, textMeasurer);
                     // RV05 calibration (Word 16.0): the image top pins to the natural line top,
                     // so an auto-spaced line shifts down by image height minus ascent here; the
                     // advance below never grows. Exact spacing stays rigid (no shift).
@@ -1738,10 +1747,10 @@ internal sealed partial class DocxLayoutEngine
 
                     if (completeFootnoteAdmission is not null)
                         RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Spans);
-                    if (cursorY - extraAbove - extraBelow - lineHeight < CurrentParagraphFrameBottom(
+                    if (cursorY - extraAbove - extraBelow - lineAdvance < CurrentParagraphFrameBottom(
                         lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d) && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
                     {
-                        AdvanceForOverflowingItem(extraAbove + extraBelow + lineHeight, elementIndex, () => CurrentParagraphFrameBottom(
+                        AdvanceForOverflowingItem(extraAbove + extraBelow + lineAdvance, elementIndex, () => CurrentParagraphFrameBottom(
                             lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d));
                     }
 
@@ -1765,10 +1774,10 @@ internal sealed partial class DocxLayoutEngine
                     // surrounding natural lines. Do not mix scaled font metrics
                     // with an authored, unscaled minimum height.
                     IDocxTextMeasurer? baselineMeasurer = scalesMinimumBodyAdvance ? unscaledTextMeasurer : textMeasurer;
-                    double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, baselineMeasurer as IDocxLineMetricsProvider);
-                    double? bodyTierAMax = DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, baselineMeasurer);
-                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(paragraphFontSize, baselineLineHeight, IsExactLineSpacing(effective), bodyHheaAscender, bodyTierAMax);
-                    baselineOffset = typographicBaselineInset ?? baselineOffset;
+                    double? bodyHheaAscender = DocxLineMetrics.ResolveHheaAscenderPoints(metricParagraph, baselineMeasurer as IDocxLineMetricsProvider);
+                    double? bodyTierAMax = DocxLineMetrics.ResolveBodyTierAMaxPoints(metricParagraph, baselineMeasurer);
+                    double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(lineFontSize, lineBaselineHeight, IsExactLineSpacing(effective), bodyHheaAscender, bodyTierAMax);
+                    baselineOffset = lineTypographicInset ?? baselineOffset;
                     double sourceMinimumLeading = scalesMinimumBodyAdvance && lineHeightProfile.SingleLineHeight is { } naturalHeight
                         ? Math.Max(0d, baselineLineHeight - naturalHeight) / paragraphSpacingScale : 0d;
                     baselineOffset += sourceMinimumLeading;
@@ -1871,7 +1880,7 @@ internal sealed partial class DocxLayoutEngine
                     var placedLine = new DocxTextLineLayout(
                         lineShape.Text,
                         firstRun,
-                        paragraphFontSize,
+                        lineFontSize,
                         lineShape.X,
                         cursorY - baselineOffset,
                         lineShape.Width + (inlineMath?.LineIndex == lineIndex ? inlineMath.Width : 0d),
@@ -1879,17 +1888,17 @@ internal sealed partial class DocxLayoutEngine
                         SourceBlockIndex: elementIndex,
                         SourceParagraphIndex: 0,
                         SourceLineIndex: lineIndex,
-                        LineHeight: lineHeight,
+                        LineHeight: lineAdvance,
                         AppliedBeforeSpacing: firstLine ? spacingProfile.AppliedBeforeSpacing : 0d,
                         IsFirstParagraphLine: firstLine,
                         EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak,
-                        SingleLineHeight: lineHeightProfile.SingleLineHeight,
-                        ListLabelSingleLineHeight: lineHeightProfile.ListLabelSingleLineHeight,
-                        BodyWindowsLineHeight: lineHeightProfile.BodyWindowsLineHeight,
-                        ListLabelWindowsLineHeight: lineHeightProfile.ListLabelWindowsLineHeight,
-                        EffectiveLineSpacingFactor: lineHeightProfile.EffectiveLineSpacingFactor,
-                        LineSpacingFactorFloorApplied: lineHeightProfile.LineSpacingFactorFloorApplied,
-                        LineHeightSource: lineHeightProfile.Source,
+                        SingleLineHeight: lineProfile.SingleLineHeight,
+                        ListLabelSingleLineHeight: lineProfile.ListLabelSingleLineHeight,
+                        BodyWindowsLineHeight: lineProfile.BodyWindowsLineHeight,
+                        ListLabelWindowsLineHeight: lineProfile.ListLabelWindowsLineHeight,
+                        EffectiveLineSpacingFactor: lineProfile.EffectiveLineSpacingFactor,
+                        LineSpacingFactorFloorApplied: lineProfile.LineSpacingFactorFloorApplied,
+                        LineHeightSource: lineProfile.Source,
                         PendingAfterSpacing: firstLine ? spacingProfile.PendingAfterSpacing : null,
                         ParagraphBeforeSpacing: firstLine ? spacingProfile.ParagraphBeforeSpacing : null,
                         ParagraphAfterSpacing: firstLine ? spacingProfile.ParagraphAfterSpacing : null,
@@ -1907,7 +1916,7 @@ internal sealed partial class DocxLayoutEngine
                         ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(document.BodyElements, elementIndex), x, width, lineShape.X,
                             (usesPrintedNaturalPaint ? (rawBaselineOffset - sourceMinimumLeading) * paragraphSpacingScale
                                 : baselineOffset - sourceMinimumLeading) + extraAbove,
-                            lineHeight - sourceMinimumLeading * paragraphSpacingScale + extraAbove + extraBelow, paragraphSpacingScale,
+                            lineAdvance - sourceMinimumLeading * paragraphSpacingScale + extraAbove + extraBelow, paragraphSpacingScale,
                             lineIndex == lines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
                             firstLine ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
                         InlineObjectEndOffsetX = lineMath is null ? null : lineMath.X + inlineMath!.Width - lineShape.X,
@@ -1918,13 +1927,13 @@ internal sealed partial class DocxLayoutEngine
                             (scalesMinimumBodyAdvance && firstLine ? spacingProfile.AppliedBeforeSpacing * (1d / paragraphSpacingScale - 1d) : 0d) +
                             (IsExactLineSpacing(effective) || midLinePlan is null ? 0d :
                                 Math.Max(0d, midLinePlan.SourceShiftAboveHeights[lineIndex] - extraAbove)),
-                        UsesUniformBodyTypographicBaseline = typographicBaselineInset is not null,
+                        UsesUniformBodyTypographicBaseline = lineTypographicInset is not null,
                         BodyLineBoxBaselineInsetPoints = scalesMinimumBodyAdvance || lineHeightProfile.Source is DocxLineHeightSource.ExactLineSpacing or DocxLineHeightSource.BodySingleLineAuto
                             ? rawBaselineOffset * paragraphSpacingScale : null,
                         BodyLineBoxHeightPoints = lineHeightProfile.Source switch
                         {
                             DocxLineHeightSource.ExactLineSpacing => baselineLineHeight * paragraphSpacingScale,
-                            DocxLineHeightSource.BodySingleLineAuto => lineHeight,
+                            DocxLineHeightSource.BodySingleLineAuto => lineAdvance,
                             DocxLineHeightSource.AtLeastLineSpacing when scalesMinimumBodyAdvance => lineHeight,
                             _ => null
                         }
@@ -1941,7 +1950,7 @@ internal sealed partial class DocxLayoutEngine
                     firstLine = false;
                     paragraphX = x + continuationTextStartOffset;
                     paragraphWidth = Math.Max(1d, width - continuationTextStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                    cursorY -= lineHeight + extraBelow;
+                    cursorY -= lineAdvance + extraBelow;
                 }
 
                 // RV06: break-adjacent spacing rows (Word 16.0 spill-matrix and
