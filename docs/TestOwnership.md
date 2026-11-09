@@ -34,6 +34,13 @@ offsets; neither accepts unresolved whole-body offsets. Portable checks use the
 same source files and cover painted links. Thirteen native-font checks declare
 their Windows precondition; Ubuntu runs the other 27 on the same frozen runtime.
 
+`docx-fixed-static-frames` selects 45 methods covering declared-line measurement,
+static placement, boxed children, navigation, cancellation and clipping fallbacks.
+Its thirteen public sources include fixed/minimum flow, empty/visible paragraphs,
+two fonts and a short fixed-line control. Independent Word origins retain the
+1 pt limit; the body preservation control keeps its raw baseline failure separate.
+Ubuntu runs 34 methods and declares eleven native-font skips on the same artifact.
+
 `PptxChartPaletteTests` compares painted output against 481 independent Office bar
 colors across counts, themes and orientations. It replaces eighteen tests of
 private fitted helpers. The `pptx-automatic-palette` selection includes negative

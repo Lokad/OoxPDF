@@ -28,6 +28,8 @@
   Omitted header/footer distances use Word's half-inch default across body margins.
   Textboxes and nested cells share table-grid anchors; explicit zero indentation
   retains precedence. Floating-textbox navigation includes the painted content insets.
+  Fixed-line static text and boxed children share measured frames, preserving
+  footer content previously placed off-page in Word-compatible Review.
   Diagnostics identify omitted story drawings and clipped automatic note rows.
 - PPTX charts: shares parsed source ownership across data, labels, axes, paint,
   markers and legends. Theme palettes and tint/shade order replace fitted color
