@@ -23,7 +23,7 @@ internal sealed partial class OpenTypeFont
         variant = default;
         token.ThrowIfCancellationRequested();
         if (glyph == 0 || glyph >= GlyphCount || !double.IsFinite(minimumHeight) || minimumHeight < 0d ||
-            minimumHeight > ushort.MaxValue || !TryGetMathVerticalConstruction(glyph, out _, out var construction)) { return false; }
+            minimumHeight > ushort.MaxValue || !TryGetMathVerticalConstruction(glyph, out _, out var construction, out _)) { return false; }
         int count = U16(construction, 2);
         bool found = false, adequate = false;
         OpenTypeMathGlyphVariant selected = default;
@@ -50,7 +50,7 @@ internal sealed partial class OpenTypeFont
     {
         assembly = null;
         token.ThrowIfCancellationRequested();
-        if (!TryGetMathVerticalConstruction(glyph, out var variants, out var construction)) return false;
+        if (!TryGetMathVerticalConstruction(glyph, out var variants, out var construction, out int constructionStart)) return false;
         int offset = U16(construction, 0), recordsEnd = 4 + U16(construction, 2) * 4;
         if (offset == 0 || offset < recordsEnd || construction.Length - offset < 6) return false;
         ReadOnlySpan<byte> source = construction.Slice(offset);
@@ -62,8 +62,7 @@ internal sealed partial class OpenTypeFont
             ushort variantGlyph = U16(construction, 4 + index * 4), advance = U16(construction, 6 + index * 4);
             if (variantGlyph == 0 || variantGlyph >= GlyphCount || advance == 0) return false;
         }
-        // Reject the complete source before materializing it. A malformed
-        // early or late record must not allocate a maximum-sized parts array.
+        // Validate the complete source before publishing its immutable view.
         for (int index = 0; index < count; index++)
         {
             token.ThrowIfCancellationRequested();
@@ -71,25 +70,19 @@ internal sealed partial class OpenTypeFont
             ushort partGlyph = U16(source, at), advance = U16(source, at + 6), flags = U16(source, at + 8);
             if (partGlyph == 0 || partGlyph >= GlyphCount || advance == 0 || (flags & ~1) != 0) return false;
         }
-        var parts = new OpenTypeMathGlyphPart[count];
-        for (int index = 0; index < count; index++)
-        {
-            token.ThrowIfCancellationRequested();
-            int at = 6 + index * 10;
-            parts[index] = new(U16(source, at), U16(source, at + 2), U16(source, at + 4), U16(source, at + 6),
-                (U16(source, at + 8) & 1) != 0);
-        }
         // Like MathConstants, retain the signed design-unit value without
-        // following optional device-table offsets. Publish only complete parts.
+        // following optional device-table offsets. The private font already owns
+        // these records; decoding needs no second retained copy or cache.
         assembly = new(System.Buffers.Binary.BinaryPrimitives.ReadInt16BigEndian(source),
-            U16(variants, 0), Array.AsReadOnly(parts));
+            U16(variants, 0), new MathGlyphParts(bytes.AsMemory(checked(constructionStart + offset + 6), count * 10)));
         return true;
     }
 
     private bool TryGetMathVerticalConstruction(ushort glyph, out ReadOnlySpan<byte> variants,
-        out ReadOnlySpan<byte> construction)
+        out ReadOnlySpan<byte> construction, out int constructionStart)
     {
         variants = construction = default;
+        constructionStart = 0;
         if (glyph == 0 || glyph >= GlyphCount || !tables.TryGetValue("MATH", out TableRecord math)) return false;
         ReadOnlySpan<byte> table = bytes.AsSpan(math.Offset, math.Length);
         if (table.Length < 10 || U16(table, 0) != 1 || U16(table, 2) != 0) { return false; }
@@ -105,7 +98,28 @@ internal sealed partial class OpenTypeFont
         int constructionOffset = U16(variants, 10 + index * 2);
         if (constructionOffset < offsetsEnd || variants.Length - constructionOffset < 4) { return false; }
         construction = variants.Slice(constructionOffset);
+        constructionStart = checked(math.Offset + variantsOffset + constructionOffset);
         int count = U16(construction, 2);
         return construction.Length - 4 >= count * 4;
+    }
+
+    // The view retains the private immutable SFNT, already owned by the font.
+    private sealed class MathGlyphParts(ReadOnlyMemory<byte> source) : IReadOnlyList<OpenTypeMathGlyphPart>
+    {
+        public int Count => source.Length / 10;
+        public OpenTypeMathGlyphPart this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= Count) throw new ArgumentOutOfRangeException(nameof(index));
+                var part = source.Span.Slice(index * 10, 10);
+                return new(U16(part, 0), U16(part, 2), U16(part, 4), U16(part, 6), (U16(part, 8) & 1) != 0);
+            }
+        }
+        public IEnumerator<OpenTypeMathGlyphPart> GetEnumerator()
+        {
+            for (int index = 0; index < Count; index++) yield return this[index];
+        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

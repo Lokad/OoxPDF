@@ -16,7 +16,10 @@ internal static class MathFontTests
         {
             new(34, 0, 300, 500, false), new(35, 200, 200, 200, true), new(36, 250, 0, 400, false)
         }), "The bottom, repeatable extender and top remain distinct source roles.");
-        TestAssert.Throws<NotSupportedException>(() => ((IList<OpenTypeMathGlyphPart>)assembly.Parts)[0] = default);
+        TestAssert.True(assembly.Parts is not IList<OpenTypeMathGlyphPart> mutable || mutable.IsReadOnly,
+            "The published parts cannot expose a mutable list.");
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => { _ = assembly.Parts[-1]; });
+        TestAssert.Throws<ArgumentOutOfRangeException>(() => { _ = assembly.Parts[assembly.Parts.Count]; });
         byte[] overhangingConnector = AssemblyTable();
         BinaryPrimitives.WriteUInt16BigEndian(overhangingConnector.AsSpan(72), ushort.MaxValue);
         TestAssert.True(OpenTypeFont.Load(TestFontBuilder.CreateMathFont(overhangingConnector))
@@ -87,6 +90,30 @@ internal static class MathFontTests
             TestAssert.True(!success && assembly is null, "Invalid early and late records reject the complete assembly.");
             TestAssert.True(allocated < fullPartsPayloadFloor, "Rejecting invalid source records must not materialize the large parts array: " + allocated);
         }
+    }
+
+    public static void MathFontVerticalAssembliesReadMaximumSourceWithoutASecondPartsArray()
+    {
+        byte[] table = new byte[50 + ushort.MaxValue * 10];
+        AssemblyTable().AsSpan(0, 50).CopyTo(table);
+        BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(48), ushort.MaxValue);
+        for (int index = 0; index < ushort.MaxValue; index++)
+        {
+            BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(50 + index * 10), 34);
+            BinaryPrimitives.WriteUInt16BigEndian(table.AsSpan(56 + index * 10), 1);
+        }
+        byte[] shared = TestFontBuilder.CreateMathFont(table);
+        var font = OpenTypeFont.LoadShared(shared, 0, default);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        TestAssert.True(font.TryGetMathVerticalAssembly(34, default, out var decoded), "Complete maximum source records remain supported.");
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        long fullPartsPayloadFloor = (long)ushort.MaxValue * 4 * sizeof(ushort);
+        TestAssert.True(allocated < fullPartsPayloadFloor, "Source decoding must not materialize a second full parts array: " + allocated);
+        var parts = TestAssert.NotNull(decoded).Parts;
+        TestAssert.Equal((int)ushort.MaxValue, parts.Count);
+        Array.Clear(shared);
+        TestAssert.True(parts.All(part => part.Glyph == 34 && part.FullAdvance == 1),
+            "The private program owns every record even after caller-owned bytes change.");
     }
 
     private static byte[] AssemblyTable()
