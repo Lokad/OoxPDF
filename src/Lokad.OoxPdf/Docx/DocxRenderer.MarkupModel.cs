@@ -63,6 +63,9 @@ internal sealed partial class DocxRenderer
         // An explicit printed frame top can own placement independently of
         // the changed source line or cell center retained by the connector.
         public double? WordCompatiblePlacementTopY { get; init; }
+        // A footer balloon occupies the printed paper lane, independently of
+        // the main-body admission boundary. Null retains the body-lane bound.
+        public double? WordCompatiblePlacementBottomY { get; init; }
         public DocxMarkupBalloonRgb? WordCompatibleStrokeRgb { get; init; }
         public DocxRunFontResource? WordCompatibleBodyResource { get; init; }
         public double? WordCompatibleBodyLineHeightEm { get; init; }
@@ -76,7 +79,7 @@ internal sealed partial class DocxRenderer
         int Index,
         IReadOnlyList<DocxMarkupBalloonCandidate> Candidates,
         double TopLimit,
-        double MaxBalloonHeight,
+        double MinimumTop,
         int CandidateCount);
 
     private sealed record DocxMarkupBalloonBodyPart(string Text, DocxRunFontResource Resource);

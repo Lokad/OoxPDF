@@ -145,6 +145,8 @@ internal sealed partial class DocxRenderer
             }
         }
 
+        titleCodepoints.UnionWith(revisionCodepoints);
+        bodyCodepoints.UnionWith(revisionCodepoints);
         DocxRunFontResource? titleResource = EnsureMarkupBalloonTitleResource(fontResources, markupContext, titleCodepoints, cancellationToken);
         DocxRunFontResource? revisionBody = await PrepareRevisionBalloonBodyResourceAsync(
             fontResources, markupContext, fontResolver, revisionCodepoints, cancellationToken).ConfigureAwait(false);
@@ -449,6 +451,8 @@ internal sealed partial class DocxRenderer
                         CollectMarkupBalloonCandidates(area.Width), cancellationToken)),
                     area.Width))
             .ToArray();
+        foreach (var candidate in candidates)
+            CollectRevisionCaptionGlyphs(candidate, revisionCodepoints, cancellationToken);
 
         IReadOnlyList<DocxMarkupBalloonCandidate> GroupNearbyMarkupBalloonCandidates(
             IEnumerable<DocxMarkupBalloonCandidate> orderedCandidates,
@@ -507,7 +511,7 @@ internal sealed partial class DocxRenderer
         int nextOverflowStartIndex = 1;
         foreach (DocxMarkupBalloonLaneBand laneBand in laneBands)
         {
-            double bandTopLimit = Math.Max(laneBand.TopLimit, page.MarginBottom + laneBand.MaxBalloonHeight);
+            double bandTopLimit = Math.Max(laneBand.TopLimit, laneBand.MinimumTop);
             nextTop = Math.Min(nextTop, bandTopLimit);
             var overflowCandidates = new List<DocxMarkupBalloonCandidate>();
             var placedBandCandidates = new List<DocxMarkupBalloonCandidate>();
@@ -517,15 +521,16 @@ internal sealed partial class DocxRenderer
                 double height = ResolveMarkupBalloonHeight(candidate, markupContext, labelEmbedded, bodyEmbedded, area.Width, cancellationToken);
                 double desiredTop = Math.Min(nextTop, ResolveMarkupBalloonPreferredTop(candidate, page, markupContext, labelEmbedded, bodyEmbedded));
                 double y = desiredTop - height;
-                if (y < page.MarginBottom)
+                double bottom = candidate.WordCompatiblePlacementBottomY ?? page.MarginBottom;
+                if (y < bottom)
                 {
-                    if (nextTop - height < page.MarginBottom)
+                    if (nextTop - height < bottom)
                     {
                         overflowCandidates.Add(candidate);
                         continue;
                     }
 
-                    y = page.MarginBottom;
+                    y = bottom;
                 }
 
                 int nearbyAnchorConnectorCount = placements.Count(placement =>
@@ -603,7 +608,7 @@ internal sealed partial class DocxRenderer
             var current = new List<DocxMarkupBalloonCandidate>();
             double currentTopLimit = 0d;
             double currentBottom = 0d;
-            double currentMaxBalloonHeight = 0d;
+            double currentMinimumTop = 0d;
 
             foreach (DocxMarkupBalloonCandidate candidate in candidates)
             {
@@ -621,13 +626,14 @@ internal sealed partial class DocxRenderer
                 {
                     currentTopLimit = preferredTop;
                     currentBottom = preferredBottom;
-                    currentMaxBalloonHeight = height;
+                    currentMinimumTop = (candidate.WordCompatiblePlacementBottomY ?? page.MarginBottom) + height;
                 }
                 else
                 {
                     currentTopLimit = Math.Max(currentTopLimit, preferredTop);
                     currentBottom = Math.Min(currentBottom, preferredBottom);
-                    currentMaxBalloonHeight = Math.Max(currentMaxBalloonHeight, height);
+                    currentMinimumTop = Math.Max(currentMinimumTop,
+                        (candidate.WordCompatiblePlacementBottomY ?? page.MarginBottom) + height);
                 }
 
                 current.Add(candidate);
@@ -648,7 +654,7 @@ internal sealed partial class DocxRenderer
                     index,
                     current.ToArray(),
                     currentTopLimit,
-                    currentMaxBalloonHeight,
+                    currentMinimumTop,
                     current.Sum(candidate => candidate.CandidateCount)));
             }
         }
@@ -831,7 +837,9 @@ internal sealed partial class DocxRenderer
                         BodySummaryPartCount: CountBalloonSummaryPart(revisionBody),
                         WordCompatibleBodySummaryPartCount: CountBalloonSummaryPart(revisionBody))
                     {
-                        WordCompatiblePlacementTopY = footerTop
+                        WordCompatiblePlacementTopY = footerTop,
+                        WordCompatiblePlacementBottomY = footerTop is not null
+                            ? new DocxPrintedPageFrame(page.Height, markupContext.WordCompatiblePrintScale).MapY(0d) : null
                     });
                 }
             }
@@ -976,15 +984,7 @@ internal sealed partial class DocxRenderer
                 cancellationToken.ThrowIfCancellationRequested();
                 var candidate = balloonCandidates[index];
                 if (candidate.Kind != DocxMarkupBalloonKind.Revision) continue;
-                if (revisionCodepoints is not null)
-                    foreach (string? text in new[] { candidate.WordCompatibleTitle ?? candidate.Title,
-                        candidate.WordCompatibleBody ?? candidate.Body,
-                        "0123456789 tracked changes markup items " })
-                    {
-                        if (text is null) continue;
-                        foreach (Rune rune in text.EnumerateRunes())
-                        { cancellationToken.ThrowIfCancellationRequested(); revisionCodepoints.Add(Rune.IsWhiteSpace(rune) ? ' ' : rune.Value); }
-                    }
+                CollectRevisionCaptionGlyphs(candidate, revisionCodepoints, cancellationToken);
                 if (revisionBodyResource is not null)
                     balloonCandidates[index] = candidate with { WordCompatibleBodyResource = revisionBodyResource,
                         WordCompatibleBodyLineHeightEm = revisionLineHeightEm };
@@ -1027,6 +1027,17 @@ internal sealed partial class DocxRenderer
                     }
                 }
             }
+        }
+    }
+
+    private static void CollectRevisionCaptionGlyphs(DocxMarkupBalloonCandidate candidate, ISet<int>? glyphs, CancellationToken token)
+    {
+        if (glyphs is null || candidate.Kind != DocxMarkupBalloonKind.Revision) return;
+        foreach (string? text in new[] { candidate.WordCompatibleTitle ?? candidate.Title, candidate.WordCompatibleBody ?? candidate.Body })
+        {
+            if (text is null) continue;
+            foreach (Rune rune in text.EnumerateRunes())
+            { token.ThrowIfCancellationRequested(); glyphs.Add(Rune.IsWhiteSpace(rune) ? ' ' : rune.Value); }
         }
     }
 
@@ -1233,8 +1244,12 @@ internal sealed partial class DocxRenderer
             : wordCompatibleBodyParts.Length == 0 ? null : TrimBalloonText(string.Join("; ", wordCompatibleBodyParts), textWidth);
         return group[0] with
         {
-            WordCompatibleBodyResource = null,
-            WordCompatibleBodyLineHeightEm = null,
+            WordCompatibleBodyResource = allRevisions && group.All(candidate =>
+                ReferenceEquals(candidate.WordCompatibleBodyResource, group[0].WordCompatibleBodyResource))
+                    ? group[0].WordCompatibleBodyResource : null,
+            WordCompatibleBodyLineHeightEm = allRevisions && group.All(candidate =>
+                ReferenceEquals(candidate.WordCompatibleBodyResource, group[0].WordCompatibleBodyResource))
+                    ? group[0].WordCompatibleBodyLineHeightEm : null,
             WordCompatibleTerminalResource = null,
             WordCompatibleBodyParts = null,
             WordCompatibleParagraphs = null,
@@ -1252,6 +1267,8 @@ internal sealed partial class DocxRenderer
                 ? group[0].WordCompatibleStrokeRgb : null,
             WordCompatiblePlacementTopY = group.All(candidate => candidate.WordCompatiblePlacementTopY is not null)
                 ? group.Max(candidate => candidate.WordCompatiblePlacementTopY) : null,
+            WordCompatiblePlacementBottomY = group.All(candidate => candidate.WordCompatiblePlacementBottomY is not null)
+                ? group.Max(candidate => candidate.WordCompatiblePlacementBottomY) : null,
             AnchorConnectorX = allRevisions
                 ? group.Select(candidate => candidate.AnchorConnectorX).DefaultIfEmpty(group[0].AnchorConnectorX).Average()
                 // Office: connectors attach at the range end, i.e. the last range line (lowest anchor).

@@ -54,6 +54,21 @@ internal static class DocxFooterRevisionFrameTests
                 font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))).ToArray();
             TestAssert.Equal(row.GetProperty("ExpectedEquationCount").GetInt32() == 0 ? 0 : 18, math.Length);
         }
+        var groupedParagraphs = new[] { "Public alpha α", "Public beta β", "Public gamma γ" }
+            .Select((text, index) => new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph(text, 11d, 8d) with
+            {
+                LineSpacingPoints = 8d,
+                Spacing = DocxParagraphSpacing.Empty with { LineRuleValue = "exact", LineValue = "160" },
+                Revisions = [new DocxRevisionInfo(DocxRevisionKind.RunPropertiesChange, index.ToString(), "Public Reviewer", null,
+                    "rPrChange", null, propertyElementNames: ["b"])]
+            })).ToArray();
+        var grouped = new DocxDocument(612d, 792d, 72d, 300d, 72d, 72d, DocxPageSettings.Empty, [], [], [], groupedParagraphs, [], [])
+            { MarkupMode = OoxPdfDocxMarkupMode.AllMarkup };
+        var groupedPage = Render(grouped, new ReviewResolver());
+        string captions = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(groupedPage, true)
+            .Where(show => show.Font.Font.FamilyName == "DejaVu Sans").Select(show => show.Text));
+        foreach (string expected in new[] { "Public alpha α", "Public beta β", "Public gamma γ" })
+            TestAssert.Contains(expected, captions);
         var commentResolver = new ReviewResolver();
         _ = Render(DocxTests.ReadDocx(Path.Combine(Cases, "UnitPrintOrigins", "arial-unscaled.docx"),
             OoxPdfDocxMarkupMode.AllMarkup), commentResolver);
@@ -108,11 +123,20 @@ internal static class DocxFooterRevisionFrameTests
             return mode switch
             {
                 "missing" => face with { IsFallback = true },
-                "incomplete" => face with { Source = new MemoryFontProgramSource("footer-ui-incomplete", TestFontBuilder.CreateTestFont()) },
+                "incomplete" => face with { Source = new MemoryFontProgramSource("footer-ui-incomplete", IncompleteFont()) },
                 "cff" => face with { Source = new MemoryFontProgramSource("footer-ui-cff", TestFontBuilder.CreateCffKindFont()) },
                 "unloadable" or "refused" or "cancel" => face with { Source = new FailedUiSource(mode, cancellation) },
                 _ => face
             };
+        }
+
+        private static byte[] IncompleteFont()
+        {
+            byte[] bytes = TestFontBuilder.CreateTestFont();
+            var cmap = TestFontBuilder.GetTableRange(bytes, "cmap");
+            bytes[cmap.Offset + 2] = bytes[cmap.Offset + 3] = 0;
+            TestAssert.Equal((ushort)0, OpenTypeFont.Load(bytes).MapCodePoint('F'));
+            return bytes;
         }
     }
 
