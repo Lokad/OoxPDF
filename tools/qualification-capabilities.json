@@ -3,6 +3,8 @@
     "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
     "DocxFloatingTableCellInlineBoxLabelsRemainVisibleInFinalAndReview",
     "DocxFloatingChildPicturesKeepCompleteSourceAndClearLabelInk",
+    "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
+    "DocxOrdinaryPictureBoxesRetainOrderedOwnersAndReuseChildren",
     "DocxInlineImageClipTravelsWithScaledStoryPlacement",
     "DocxPictureLineFrameTravelsWithImagePlacement",
     "PortableRenderingStaticSvgFramesPreserveBodyAndVectorPaint",

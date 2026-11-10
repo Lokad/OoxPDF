@@ -44,12 +44,28 @@ internal static partial class DocxInlineCompositionTests
         using var cancellation = new CancellationTokenSource();
         TestAssert.Throws<OperationCanceledException>(() => DocxLayoutEngine.TryMeasureOrderedInlineAtoms(source,
             null, new SiblingFrameMeasurer(cancellation), 11d, 10d, 16d, 1d, cancellation.Token, out _));
-        var pictureOnly = source with { InlineTextBoxes = [], InlineContent = TestAssert.NotNull(source.InlineContent)
+        var withoutBox = source with { InlineTextBoxes = [], InlineContent = TestAssert.NotNull(source.InlineContent)
             .Where(item => item is not DocxInlineBox).ToArray() };
+        // The historical method name describes the old conservative fallback.
+        // Removing a box does not remove this paragraph's prose. Containers now
+        // opt into the shared picture/text path; callers without that contract
+        // keep their existing fallback.
+        TestAssert.True(withoutBox.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text)),
+            "This admission witness contains both prose and a picture.");
         foreach (bool staticFallback in new[] { false, true })
-            TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(pictureOnly, null, new SiblingFrameMeasurer(),
-                11d, 10d, 16d, 1d, default, out _, allowStaticFallback: staticFallback),
-                "Pure-picture paragraphs retain their established placement path.");
+        {
+            bool measured = DocxLayoutEngine.TryMeasureOrderedInlineAtoms(withoutBox, null, new SiblingFrameMeasurer(),
+                11d, 10d, 16d, 1d, default, out var atoms, allowStaticFallback: staticFallback);
+            TestAssert.Equal(staticFallback, measured);
+            if (!measured) continue;
+            var fragments = TestAssert.NotNull(atoms).Fragments;
+            TestAssert.Equal(1, fragments.Count(fragment => fragment.Source is DocxInlinePicture picture &&
+                ReferenceEquals(picture.Image, withoutBox.Images.Single())));
+            TestAssert.True(fragments.All(fragment => fragment.TextBox is null), "The removed box supplies no frame.");
+            string expected = string.Concat(TestAssert.NotNull(withoutBox.InlineContent).OfType<DocxInlineText>()
+                .Select(text => text.Run.Text.Substring(text.Start, text.Length)));
+            TestAssert.Equal(expected, string.Concat(fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text)));
+        }
     }
 
     public static void DocxOrdinaryPictureBoxesMatchIndependentWordOrigins()
