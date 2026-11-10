@@ -185,8 +185,8 @@ internal static partial class DocxInlineCompositionTests
     private static void AssertCompleteFloatingPicture(PdfPage page, string context, double aspectRatio = 2d)
     {
         var (bounds, clip) = ReadPictureBounds(page).Single();
-        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width / bounds.Height - aspectRatio) < .001d,
-            "The complete source picture retains its aspect ratio.");
+        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width / aspectRatio - bounds.Height) < .001d,
+            "The complete source picture retains its aspect ratio within PDF coordinate precision: " + context);
         TestAssert.True(bounds.X >= clip.X - .01d && bounds.Y >= clip.Y - .01d &&
             bounds.X + bounds.Width <= clip.X + clip.Width + .01d &&
             bounds.Y + bounds.Height <= clip.Y + clip.Height + .01d,
