@@ -483,12 +483,11 @@ internal sealed partial class DocxLayoutEngine
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    // Adjacent ordinary paragraphs own their shared spacing even
-                    // when an earlier note needs table/block placement. That source
-                    // does not give these later paragraphs another separator gap.
+                    // A measured paragraph boundary belongs to its neighboring
+                    // source blocks, independently of whether later notes fit.
                     bool localBoundary = !collapseEndnoteBoundaries && !plainEndnoteFlow && localEndnoteBoundaries &&
-                        previousEndnote is not null && HasPlainNoteFlowStory(previousEndnote) &&
-                        HasPlainNoteFlowStory(endnoteStoryLayout);
+                        previousEndnote is not null &&
+                        HasMeasuredEndnoteParagraphBoundary(previousEndnote, endnoteStoryLayout, cancellationToken);
                     double boundaryOverlap = (collapseEndnoteBoundaries || plainEndnoteFlow || localBoundary) && previousEndnote is not null
                         ? ResolveEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout) : 0d;
                     double boundaryGap = localBoundary ? FootnoteSeparatorGapPoints : 0d;

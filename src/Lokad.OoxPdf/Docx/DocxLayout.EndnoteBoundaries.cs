@@ -73,7 +73,7 @@ internal sealed partial class DocxLayoutEngine
     // The first complete source block owns the document-end start boundary.
     // Later notes may need continuation pages without adding the separator's
     // latent paragraph spacing back above this already measured block. Whole-
-    // group fitting still owns counter admission, footer flow and overlaps.
+    // group fitting still owns counter admission and complete footer flow.
     private static bool CanUseMeasuredEndnoteStart(DocxDocument document, DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,
@@ -88,6 +88,23 @@ internal sealed partial class DocxLayoutEngine
             first.Story.BodyElements[0] is DocxParagraphElement paragraph &&
             ReferenceEquals(first.TextLines[0].SourceParagraph, paragraph.Paragraph) &&
             HasCompleteMeasuredNoteBlocks(first, token);
+    }
+
+    // Adjacent source paragraphs own their shared boundary even when a
+    // complete table or inline object precedes the trailing paragraph. The
+    // placement caller still admits the next head against the actual page.
+    private static bool HasMeasuredEndnoteParagraphBoundary(DocxRelatedStoryLayout previous,
+        DocxRelatedStoryLayout current, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (HasPlainNoteFlowStory(previous) && HasPlainNoteFlowStory(current)) return true;
+        return previous.Story.BodyElements.Count != 0 && current.Story.BodyElements.Count != 0 &&
+            previous.TextLines.Count != 0 && current.TextLines.Count != 0 &&
+            previous.Story.BodyElements[^1] is DocxParagraphElement tail &&
+            current.Story.BodyElements[0] is DocxParagraphElement head &&
+            ReferenceEquals(previous.TextLines[^1].SourceParagraph, tail.Paragraph) &&
+            ReferenceEquals(current.TextLines[0].SourceParagraph, head.Paragraph) &&
+            HasCompleteMeasuredNoteBlocks(previous, token) && HasCompleteMeasuredNoteBlocks(current, token);
     }
 
     // Fitting-boundary collapse and complete-block admission use the same source

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Pdf;
@@ -95,6 +96,72 @@ internal static partial class DocxEndnoteBlockTests
             foreach (int index in Enumerable.Range(0, 800))
                 TestAssert.True(text.Contains($"LaterNote{index:000}", StringComparison.Ordinal), "Retain every later-note token.");
         }
+    }
+
+    public static void DocxPictureNoteFollowingBoundaryDoesNotDependOnLaterNoteLength()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var before = PictureLayout(36, mode);
+            var after = PictureLayout(36, mode, laterNoteWords: 800);
+            foreach (string id in new[] { "4", "73" })
+            {
+                var a = before.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+                    .Where(story => story.StoryLayout.Story.Id == id).Select(story => (Page: index, Story: story))).Single();
+                var b = after.Pages.SelectMany((page, index) => page.PlacedRelatedStories
+                    .Where(story => story.StoryLayout.Story.Id == id).Select(story => (Page: index, Story: story))).Single();
+                TestAssert.Equal(a.Page, b.Page);
+                TestAssert.Equal(a.Story.TopY, b.Story.TopY);
+                TestAssert.Equal(a.Story.TextLines[0].BaselineY, b.Story.TextLines[0].BaselineY);
+                TestAssert.True(!b.Story.UsesCompleteDocumentEndnoteFlow && !b.Story.UsesPlainDocumentEndnoteTypography,
+                    "The local boundary does not promote the whole overflowing group or its typography.");
+            }
+        }
+    }
+
+    public static void DocxPictureNoteFollowingHeadUsesRemainingMeasuredSpace()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var layout = PictureLayout(570, mode);
+            int pageIndex = Enumerable.Range(0, layout.Pages.Count).Single(index =>
+                layout.Pages[index].PlacedRelatedStories.Any(story => story.StoryLayout.Story.Id == "37" && story.TableRows.Count != 0));
+            var page = layout.Pages[pageIndex];
+            var previous = page.PlacedRelatedStories.Single(story => story.StoryLayout.Story.Id == "37");
+            var current = layout.RelatedStories.Single(story => story.Story.Id == "4");
+            double available = previous.TopY - previous.Height - page.MarginBottom;
+            TestAssert.True(current.ContentHeight <= available && current.ContentHeight + 3d > available,
+                "The measured next note fits this remaining window; an extra separator gap would force a page turn.");
+            var following = page.PlacedRelatedStories.Single(story => story.StoryLayout.Story.Id == "4");
+            TestAssert.True(following.TopY - following.Height >= page.MarginBottom,
+                "The actual next head stays wholly within the unchanged page frame.");
+        }
+    }
+
+    public static void DocxMeasuredEndnoteBoundaryRejectsUnownedOrClippedSource()
+    {
+        var layout = PictureLayout(36, OoxPdfDocxMarkupMode.Final);
+        var previous = layout.RelatedStories.Single(story => story.Story.Id == "37");
+        var current = layout.RelatedStories.Single(story => story.Story.Id == "4");
+        var inspect = typeof(DocxLayoutEngine).GetMethod("HasMeasuredEndnoteParagraphBoundary", BindingFlags.Static | BindingFlags.NonPublic)!
+            .CreateDelegate<Func<DocxRelatedStoryLayout, DocxRelatedStoryLayout, CancellationToken, bool>>();
+        TestAssert.True(inspect(previous, current, default), "A complete measured block owns its trailing source boundary.");
+        var row = previous.TableRows.Single();
+        var cell = row.Cells.Single();
+        foreach (var unsupported in new[] {
+            previous with { TextLines = [previous.TextLines[0]] },
+            previous with { HasResolvedCounterInputs = false },
+            previous with { TableRows = [row with { FragmentCount = 2 }] },
+            previous with { TableRows = [row with { Cells = [cell with { Height = .001d }] }] },
+            previous with { TableRows = [row with { Cells = [cell with { VisualOwnership = DocxTableCellVisualOwnership.VerticalMergeOwner }] }] } })
+            TestAssert.True(!inspect(unsupported, current, default),
+                "Missing tail ownership, unresolved inputs, source clipping and borrowed/fragmented rows keep the existing fallback.");
+        TestAssert.True(!inspect(previous, current with { TextLines = [] }, default), "A source paragraph without a measured head is not admitted.");
+        TestAssert.True(!inspect(previous, current with { TextLines = [current.TextLines[0] with {
+            SourceParagraph = previous.TextLines[^1].SourceParagraph }] }, default), "Head ownership belongs to the next source paragraph.");
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(() =>
+            inspect(previous, current, cancellation.Token)).CancellationToken);
     }
 
     private static DocxLayout PictureLayout(int height, OoxPdfDocxMarkupMode mode, int? exactHeight = null, int laterNoteWords = 0)
