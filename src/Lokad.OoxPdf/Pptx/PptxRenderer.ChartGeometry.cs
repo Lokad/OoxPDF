@@ -154,9 +154,12 @@ internal sealed partial class PptxRenderer
                 PlotAreaBox = layout.PlotAreaBox with { Height = layout.PlotAreaBox.Height - reserve }
             };
         }
-        if (!layout.Legend.Visible || !IsHorizontalLegendPosition(layout.Legend.PositionKind)) return (layout, null);
+        // Authored legend coordinates retain their source fallback until the
+        // manual frame mapping is independently qualified with wrapped entries.
+        if (!layout.Legend.Visible || layout.Legend.Layout.HasGeometryValues ||
+            !IsHorizontalLegendPosition(layout.Legend.PositionKind)) return (layout, null);
         var prepared = await LayoutChartLegendRowsAsync(layout, entries, style, resolver, context,
-            layout.Frame.Width, measuredBand: !layout.Legend.Layout.HasGeometryValues).ConfigureAwait(false);
+            layout.Frame.Width, measuredBand: true).ConfigureAwait(false);
         return (prepared.Layout, prepared.Box);
     }
 
