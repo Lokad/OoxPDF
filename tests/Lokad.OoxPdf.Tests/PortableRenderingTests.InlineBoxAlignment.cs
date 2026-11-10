@@ -95,6 +95,50 @@ internal static partial class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingStaticFallbackKeepsItsCounterpartVisible()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false);
+            var baseline = RenderAlignmentProbe(document, mode);
+            var pictureSource = document.Paragraphs.SelectMany(paragraph => paragraph.Images).Single();
+            foreach (double rotation in new[] { 0d, 90d })
+            {
+                var headers = document.PageSettings.HeaderBodyElementsByType.ToDictionary(pair => pair.Key, pair => pair.Value);
+                var owner = headers["default"].OfType<DocxParagraphElement>()
+                    .First(element => element.Paragraph.Equations.Count == 0 && element.Paragraph.Runs.Count != 0);
+                var paragraph = owner.Paragraph;
+                var picture = pictureSource with
+                {
+                    WidthPoints = 20d, HeightPoints = 20d, PictureFrame = new(20d, 20d), RotationDegrees = rotation,
+                    SourceRunIndex = paragraph.Runs.Count - 1, SourceTextOffsetInRun = paragraph.Runs[^1].Text.Length
+                };
+                paragraph = paragraph with
+                {
+                    Images = [.. paragraph.Images, picture],
+                    InlineContent = [.. TestAssert.NotNull(paragraph.InlineContent), new DocxInlinePicture(picture)]
+                };
+                headers["default"] = headers["default"].Select(element => ReferenceEquals(element, owner)
+                    ? owner with { Paragraph = paragraph } : element).ToArray();
+                var source = document with { PageSettings = document.PageSettings with { HeaderBodyElementsByType = headers } };
+                var pages = RenderAlignmentProbe(source, mode);
+                TestAssert.Equal(baseline.Length, pages.Length);
+                for (int index = 0; index < pages.Length; index++)
+                {
+                    const string footer = "Public synthetic composition portfolio";
+                    var expected = ReadPaintedSourceLabel(baseline[index], footer);
+                    var actual = ReadPaintedSourceLabel(pages[index], footer);
+                    TestAssert.Equal(expected.Count, actual.Count);
+                    AssertSamePaintOrigin(expected[0], actual[0]);
+                    ReadPaintedSourceLabel(pages[index], "Quarterly operations report");
+                    string math = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(baseline[index], usePageCoordinates: true,
+                        fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).Select(show => show.Text));
+                    ReadPaintedSourceLabel(pages[index], math, mathOnly: true);
+                }
+            }
+        }
+    }
+
     private static void AssertSameStaticMathPaint(PdfPage before, PdfPage after)
     {
         var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(before, usePageCoordinates: true,

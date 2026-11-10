@@ -93,11 +93,9 @@ internal sealed partial class DocxLayoutEngine
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
             page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
             page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
-            CanUseStaticStoryFrame(story, width / scale, mathEquations, token) &&
-            CanUseStaticStoryFrame(SelectStaticHeaderFooter(
-                isHeader ? page.PageSettings.FooterBodyElementsByType : page.PageSettings.HeaderBodyElementsByType,
-                isHeader ? page.PageSettings.FooterParagraphsByType : page.PageSettings.HeaderParagraphsByType,
-                page.PageSettings, pageNumber, page.SectionFirstPageNumber), width / scale, mathEquations, token);
+            // Each story owns its measured frame. A counterpart's fallback
+            // cannot revoke physical placement of otherwise supported content.
+            CanUseStaticStoryFrame(story, width / scale, mathEquations, token);
         if (!canMap)
         {
             var layout = CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,

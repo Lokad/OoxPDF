@@ -452,8 +452,14 @@ internal static class DocxTableMathTests
                     mathEquations: guard == "unprepared-math" ? null :
                         new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph.Equations.Single()] = prepared });
             TestAssert.True(layout.Pages.SelectMany(page => page.StaticTextLines)
-                .All(line => line.StaticStoryUsesPhysicalY == (guard == "field")),
-                "Resolved page inputs share the static frame; incomplete fields, declared frames, table-first bodies and unresolved metrics/math retain their fallback: " + guard);
+                .All(line => line.StaticStoryUsesPhysicalY == (guard switch
+                {
+                    "field" => true,
+                    "unresolved-field" or "declared" => line.Story?.Kind == DocxStoryKind.Header,
+                    "unprepared-math" => line.Story?.Kind == DocxStoryKind.Footer,
+                    _ => false
+                })),
+                "Each story retains its own source fallback; table-first bodies and unresolved metrics retain the common fallback: " + guard);
             if (guard == "field")
                 TestAssert.Equal("1", layout.Pages.Single().StaticTextLines.Single(line => line.Story?.Kind == DocxStoryKind.Footer).Text);
         }
