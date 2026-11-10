@@ -138,6 +138,8 @@ Approximate or restricted:
   spacing, polar label formatting and plot-level point-label fallback retain
   known differences from Office; restored text can still fail image thresholds.
   Manual point-label coordinates and multiline label wrapping remain approximate.
+  Authored polar legend frames can clip whole entries; an image-threshold pass
+  does not establish complete legend content.
 - Automatic chart layout, label strips/baselines, dense intervals, source crossings,
   reversed axes and manual-layout combinations retain their semantic guards.
   Qualified automatic single-line plots share axis/label placement, including
