@@ -6463,6 +6463,7 @@
     "DocxInlineCompositionCommentsPreserveMathematicsAndCaptions"
   ],
   "docx-static-page-fields": [
+    "PortableRenderingPlainStaticCountersKeepFooterInkAndIndependentFrames",
     "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
     "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
     "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",

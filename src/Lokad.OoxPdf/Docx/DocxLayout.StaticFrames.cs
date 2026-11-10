@@ -373,7 +373,9 @@ internal sealed partial class DocxLayoutEngine
             (paragraph.InlineTextBoxes.Count == 0 ?
                 DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph) :
                 paragraph.ListLabel is null && DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph)) &&
-            DocxInlineContent.HasSupportedSourceOwner(paragraph, token: token);
+            // Static placement resolves page inputs; boxed ordered content
+            // separately verifies its actual counter dependencies at measurement.
+            DocxInlineContent.HasSupportedSourceOwner(paragraph, hasPageInputs: true, token: token);
     }
 
     private static bool CanUseInlineBoxFrame(DocxInlineTextBox box, double width,

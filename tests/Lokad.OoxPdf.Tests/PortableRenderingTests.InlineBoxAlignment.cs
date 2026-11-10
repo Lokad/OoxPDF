@@ -56,16 +56,54 @@ internal static partial class PortableRenderingTests
                     var after = ReadPaintedSourceLabel(pages[index], footer);
                     TestAssert.Equal(before.Count, after.Count);
                     AssertSamePaintOrigin(before[0], after[0]);
-                    var expectedMath = DocxCommentsTests.ReadEmbeddedGlyphTextShows(baseline[index], usePageCoordinates: true,
-                        fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal));
-                    var actualMath = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[index], usePageCoordinates: true,
-                        fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal));
-                    TestAssert.True(expectedMath.Select(show => (show.Text, show.Size, show.X, show.Y))
-                        .SequenceEqual(actualMath.Select(show => (show.Text, show.Size, show.X, show.Y))),
-                        "Justifying one short plain static paragraph preserves the existing mathematical frames.");
+                    AssertSameStaticMathPaint(baseline[index], pages[index]);
                 }
             }
         }
+    }
+
+    public static void PortableRenderingPlainStaticCountersKeepFooterInkAndIndependentFrames()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var baseline = RenderAlignmentProbe(DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false), mode);
+            foreach (string part in new[] { "word/header1.xml", "word/footer1.xml" })
+            {
+                var source = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
+                {
+                    var paragraph = xml.Descendants(w + "p").First(p => !p.Descendants(m + "oMath").Any() &&
+                        p.Descendants(w + "t").Any(t => t.Value.Length != 0));
+                    void Text(string value) => paragraph.Add(new XElement(w + "r", new XElement(w + "t",
+                        new XAttribute(XNamespace.Xml + "space", "preserve"), value)));
+                    void Field(string instruction) => paragraph.Add(new XElement(w + "fldSimple",
+                        new XAttribute(w + "instr", instruction), new XElement(w + "r", new XElement(w + "t", "99"))));
+                    Text(" Page "); Field(" PAGE "); Text(" of "); Field(" NUMPAGES ");
+                }, partOverride: part);
+                var pages = RenderAlignmentProbe(source, mode);
+                TestAssert.Equal(baseline.Length, pages.Length);
+                for (int index = 0; index < pages.Length; index++)
+                {
+                    const string footer = "Public synthetic composition portfolio";
+                    var before = ReadPaintedSourceLabel(baseline[index], footer);
+                    var after = ReadPaintedSourceLabel(pages[index], footer);
+                    TestAssert.Equal(before.Count, after.Count);
+                    AssertSamePaintOrigin(before[0], after[0]);
+                    ReadPaintedSourceLabel(pages[index], "Page " + (index + 1) + " of " + pages.Length);
+                    AssertSameStaticMathPaint(baseline[index], pages[index]);
+                }
+            }
+        }
+    }
+
+    private static void AssertSameStaticMathPaint(PdfPage before, PdfPage after)
+    {
+        var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(before, usePageCoordinates: true,
+            fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal));
+        var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(after, usePageCoordinates: true,
+            fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal));
+        TestAssert.True(expected.Select(show => (show.Text, show.Size, show.X, show.Y))
+            .SequenceEqual(actual.Select(show => (show.Text, show.Size, show.X, show.Y))),
+            "Equivalent static paragraph edits retain neighboring prepared math and physical frames.");
     }
 
     private static PdfPage[] RenderAlignmentProbe(DocxDocument document, OoxPdfDocxMarkupMode mode,
