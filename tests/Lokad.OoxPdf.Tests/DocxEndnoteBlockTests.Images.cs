@@ -123,7 +123,15 @@ internal static partial class DocxEndnoteBlockTests
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var layout = PictureLayout(567, mode);
+            var seed = PictureLayout(36, mode);
+            var seedPage = seed.Pages.Single(page => page.PlacedRelatedStories.Any(story =>
+                story.StoryLayout.Story.Id == "37" && story.TableRows.Count != 0));
+            var seedPrevious = seedPage.PlacedRelatedStories.Single(story => story.StoryLayout.Story.Id == "37");
+            double headHeight = seed.RelatedStories.Single(story => story.Story.Id == "4").ContentHeight;
+            // Construct a one-to-two-point slack window from measured content,
+            // independently of the test font's paragraph-mark metrics.
+            int height = (int)Math.Floor(36d + seedPrevious.TopY - seedPrevious.Height - seedPage.MarginBottom - headHeight - 1d);
+            var layout = PictureLayout(height, mode);
             int pageIndex = Enumerable.Range(0, layout.Pages.Count).Single(index =>
                 layout.Pages[index].PlacedRelatedStories.Any(story => story.StoryLayout.Story.Id == "37" && story.TableRows.Count != 0));
             var page = layout.Pages[pageIndex];
