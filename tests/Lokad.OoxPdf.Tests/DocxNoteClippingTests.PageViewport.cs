@@ -54,6 +54,17 @@ internal static partial class DocxNoteClippingTests
         }
     }
 
+    public static void DocxPhysicalPaintFramesRetainQuarterTurnClipBounds()
+    {
+        const string content = "q\n0 1 -1 0 80 10 cm\n5 7 20 30 re W n\n/Image Do\nQ\n";
+        var frame = ReadPhysicalPaintFrames(new PdfPage(100d, 100d, content, [])).Single();
+        TestAssert.Equal(new PdfRectangle(43d, 15d, 30d, 20d), frame.Clip);
+        TestAssert.Equal(new Matrix3x2(0f, 1f, -1f, 0f, 80f, 10f), frame.Transform);
+        string oblique = content.Replace("0 1 -1 0", "0.707107 0.707107 -0.707107 0.707107", StringComparison.Ordinal);
+        TestAssert.Throws<InvalidOperationException>(() =>
+            ReadPhysicalPaintFrames(new PdfPage(100d, 100d, oblique, [])).ToArray());
+    }
+
     // Read only generated q/Q, rectangle clips, matrices and text/image paints for these
     // fixtures. CID decoding stays in the existing glyph-show reader; standard
     // affine matrices map clips and glyph ink into physical page coordinates.
@@ -76,7 +87,8 @@ internal static partial class DocxNoteClippingTests
             }
             else if (operation.Groups["clip"].Success)
             {
-                TestAssert.True(Math.Abs(transform.M12) < .000001d && Math.Abs(transform.M21) < .000001d,
+                TestAssert.True(Math.Abs(transform.M12) < .000001d && Math.Abs(transform.M21) < .000001d ||
+                    Math.Abs(transform.M11) < .000001d && Math.Abs(transform.M22) < .000001d,
                     "The source uses axis-aligned rectangle clips.");
                 float[] v = operation.Groups["clip"].Value.Split(' ').Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
                 Vector2 first = Vector2.Transform(new(v[0], v[1]), transform);
