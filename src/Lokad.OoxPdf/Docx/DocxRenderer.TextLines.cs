@@ -45,16 +45,17 @@ internal sealed partial class DocxRenderer
             if (baseline is null || anchor > baseline.Value)
                 (baseline, sourceOffset) = (anchor, line.SourceBaselineOffset);
         }
-        // Leading picture-only blocks have their own frame origin. A later
+        // Leading standalone objects have their own measured frame origin. A later
         // caption cannot supply the source origin for already scaled content.
-        double? pictureTop = page.Items.FirstOrDefault() switch
+        double? objectTop = page.Items.FirstOrDefault() switch
         {
+            DocxEquationLayout equation => equation.BaselineY + equation.Math.BaselineInset * equation.Scale,
             DocxInlineImageLayout image => image.Y + image.Height,
             DocxTableRowLayout row when !EnumerateTableRowTextLines(row).Any() =>
                 row.Cells.SelectMany(cell => cell.InlineImages).Select(image => (double?)(image.Y + image.Height)).Max(),
             _ => null
         };
-        return pictureTop is { } top && (baseline is null || top > baseline.Value)
+        return objectTop is { } top && (baseline is null || top > baseline.Value)
             ? (top, 0d) : (baseline, sourceOffset);
     }
 

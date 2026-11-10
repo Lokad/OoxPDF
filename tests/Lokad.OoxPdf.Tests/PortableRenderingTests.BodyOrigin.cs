@@ -5,6 +5,45 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PortableRenderingTests
 {
+    public static void PortableRenderingLeadingEmptyAndEquationPagesKeepStaticInk()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var baseline = RenderAlignmentProbe(DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false), mode);
+            foreach (bool equationPage in new[] { false, true })
+            {
+                var source = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
+                {
+                    var body = xml.Root!.Element(w + "body")!;
+                    var equation = equationPage ? new XElement(body.Descendants(m + "oMath").First()) : null;
+                    body.AddFirst(new XElement(w + "p", new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "page")))));
+                    if (equation is not null) body.AddFirst(new XElement(w + "p", new XElement(m + "oMathPara", equation)));
+                });
+                var pages = RenderAlignmentProbe(source, mode);
+                TestAssert.Equal(baseline.Length + 1, pages.Length);
+                foreach (var page in pages)
+                {
+                    const string footer = "Public synthetic composition portfolio";
+                    var expected = ReadPaintedSourceLabel(baseline[0], footer);
+                    var actual = ReadPaintedSourceLabel(page, footer);
+                    TestAssert.Equal(expected.Count, actual.Count);
+                    AssertSamePaintOrigin(expected[0], actual[0]);
+                }
+                const string header = "Quarterly operations report";
+                var expectedHeader = ReadPaintedSourceLabel(baseline[^1], header);
+                var actualHeader = ReadPaintedSourceLabel(pages[0], header);
+                AssertSamePaintOrigin(expectedHeader[0], actualHeader[0]);
+                if (equationPage)
+                {
+                    var bodyMath = ReadPaintedSourceLabel(pages[0], "x+2y", mathOnly: true);
+                    var headerMath = ReadPaintedSourceLabel(pages[0], "a+b=c", mathOnly: true);
+                    TestAssert.True(bodyMath.Max(glyph => glyph.Origin.Y) < headerMath.Min(glyph => glyph.Origin.Y),
+                        "A standalone body equation remains below the independent header equation.");
+                }
+            }
+        }
+    }
+
     public static void PortableRenderingColumnFallbackKeepsBodyAndFooterInk()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

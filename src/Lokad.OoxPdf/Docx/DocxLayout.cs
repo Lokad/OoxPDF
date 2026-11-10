@@ -2271,8 +2271,7 @@ internal sealed partial class DocxLayoutEngine
             var headerKey = (templatePage.PageSettings, Math.Max(1d, templatePage.Width - templatePage.MarginLeft - templatePage.MarginRight), pageNumber, pageCount, templatePage.SectionFirstPageNumber);
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
-                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations,
-                    hasDocumentBodyOrigin: pages.Count != 0 && DocxRenderer.ResolveBodyPrintOrigin(pages[0]).BaselineY is not null);
+                headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations);
                 continuationHeaderByPage[headerKey] = headerLayout;
             }
 
@@ -2334,8 +2333,7 @@ internal sealed partial class DocxLayoutEngine
             if (!continuationFooterTopByPage.TryGetValue(key, out var bounds))
             {
                 var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
-                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathEquations: mathEquations,
-                    hasDocumentBodyOrigin: pages.Count != 0 && DocxRenderer.ResolveBodyPrintOrigin(pages[0]).BaselineY is not null);
+                    defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathEquations: mathEquations);
                 double top = footer is null ? double.NegativeInfinity : ResolveStaticFooterContentTop(footer,
                     (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider));
                 // Body admission uses the margin-anchored boundary. Note boxes

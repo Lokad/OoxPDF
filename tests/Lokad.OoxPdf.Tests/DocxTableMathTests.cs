@@ -459,7 +459,7 @@ internal static class DocxTableMathTests
                     "unprepared-math" => line.Story?.Kind == DocxStoryKind.Footer,
                     _ => false
                 })),
-                "Available body origins include table lines; each story retains its source fallback and unresolved metrics retain the common fallback: " + guard);
+                "Each story retains its source fallback and unresolved metrics retain the common fallback: " + guard);
             if (guard == "field")
                 TestAssert.Equal("1", layout.Pages.Single().StaticTextLines.Single(line => line.Story?.Kind == DocxStoryKind.Footer).Text);
         }
