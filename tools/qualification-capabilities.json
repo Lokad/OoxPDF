@@ -1,4 +1,22 @@
 {
+  "pptx-horizontal-polar-frame": [
+      "PptxPieHorizontalLegendsUseSelectedPlotMidpoint",
+      "PptxSyntheticPieChartManualPlotBoxUsesPolarPath",
+      "PptxSyntheticPolarLabeledLayoutShrinksAndCenters",
+      "PptxSyntheticDoughnutLeftGeometryFollowsLegendBox",
+      "PptxSyntheticExplodedDoughnutLayoutTranslatesRigidly",
+      "PptxSyntheticDoughnutTitledBandLowersRingCenter",
+      "PptxSyntheticDoughnutShortPlotRadiusFitsBand",
+      "PptxSyntheticChartPieRadiusBaseUsesPlotHeight",
+      "PptxSyntheticLineAndPieChartsRenderNativeCharts",
+      "PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts",
+      "PptxChartPolarPointOptionsUseSceneAuthoritativeDefaults",
+      "PptxChartDoughnutOptionsUseSceneAuthoritativeDefaults",
+      "PptxSyntheticPieAutoLabelsEmitNoLeaders",
+      "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
+      "PptxEmptyDataLabelKeysPreserveDisabledContentAcrossPlotKinds",
+      "PptxVisibleDataLabelsKeepKeysAcrossPlotKinds"
+  ],
   "pptx-label-unit-visibility": [
       "PptxEmptyFormattedDataLabelsDoNotPaintKeys",
       "PptxEmptyDataLabelKeys",

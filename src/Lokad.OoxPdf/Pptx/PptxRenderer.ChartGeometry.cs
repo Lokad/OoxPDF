@@ -233,6 +233,9 @@ internal sealed partial class PptxRenderer
             double GetPieOrDoughnutCenterXRatio()
             {
                 bool legendVisible = legend.Visible && !legend.Overlay;
+                // Horizontal legends reserve vertical space. Both polar kinds
+                // remain centered across the selected plot's width.
+                if (legendVisible && IsHorizontalLegendPosition(legend.PositionKind)) return 0.5d;
                 return kind switch
                 {
                     ChartPolarKind.Pie => legendVisible ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
@@ -242,7 +245,6 @@ internal sealed partial class PptxRenderer
                     ChartPolarKind.Doughnut when legendVisible && legend.PositionKind == PptxSceneChartLegendPosition.Right && hasLegendReserve => 0.5d,
                     ChartPolarKind.Doughnut when legendVisible && legend.PositionKind == PptxSceneChartLegendPosition.Right => PptxChartMetricRules.DoughnutRightLegendCenterXRatio,
                     ChartPolarKind.Doughnut when legendVisible && legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutLeftLegendCenterXRatio,
-                    ChartPolarKind.Doughnut when legendVisible && IsHorizontalLegendPosition(legend.PositionKind) => PptxChartMetricRules.DoughnutHorizontalLegendCenterXRatio,
                     ChartPolarKind.Doughnut => legendVisible ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
                     _ => legendVisible ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio
                 };
