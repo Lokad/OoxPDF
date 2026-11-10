@@ -595,6 +595,8 @@ internal sealed partial class PptxRenderer
              !string.IsNullOrWhiteSpace(CustomText))) ||
             Overrides.Values.Any(label => label.HasVisibleText);
 
+        // Component presence admits point overrides, including custom text.
+        // A key alone does not paint a label; layout/painting use HasVisibleText.
         public bool HasVisibleContent => HasVisibleText || (IsDeleted != true && ShowLegendKey) ||
             Overrides.Values.Any(label => label.HasVisibleContent);
     }

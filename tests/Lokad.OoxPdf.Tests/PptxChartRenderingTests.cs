@@ -3405,7 +3405,7 @@ internal static class PptxChartRenderingTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bar chart legends with stroked swatches should not emit unsupported chart diagnostics.");
     }
 
-    public static void PptxSyntheticLineChartRendersLegendKeyOnlyDataLabels()
+    public static void PptxSyntheticLineChartOmitsLegendKeyOnlyDataLabels()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -3452,7 +3452,7 @@ internal static class PptxChartRenderingTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.141 0.408 0.675 rg", pdf);
+        TestAssert.True(!pdf.Contains("0.141 0.408 0.675 rg", StringComparison.Ordinal), "A legend key alone does not create a label background.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Line charts with legend-key-only labels should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line charts with legend-key-only labels should not emit unsupported chart diagnostics.");
     }

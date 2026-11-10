@@ -35,7 +35,7 @@ internal sealed partial class PptxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         ChartBubbleSizing? bubbleSizing = null)
     {
-        if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
+        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
             return;
         }
@@ -51,7 +51,7 @@ internal sealed partial class PptxRenderer
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(
                     ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex),
                     point.Index);
-                if (!effectiveOptions.HasVisibleContent)
+                if (!effectiveOptions.HasVisibleText)
                 {
                     continue;
                 }

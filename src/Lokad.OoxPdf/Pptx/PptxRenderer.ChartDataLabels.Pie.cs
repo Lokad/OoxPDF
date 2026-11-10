@@ -27,7 +27,7 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
-        if (!labelOptions.HasVisibleContent || slices.Count == 0)
+        if (!labelOptions.HasVisibleText || slices.Count == 0)
         {
             return;
         }
@@ -53,7 +53,7 @@ internal sealed partial class PptxRenderer
         foreach (ChartIndexedPieSlice slice in slices)
         {
             ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, slice.Index);
-            if (!effectiveOptions.HasVisibleContent)
+            if (!effectiveOptions.HasVisibleText)
             {
                 continue;
             }

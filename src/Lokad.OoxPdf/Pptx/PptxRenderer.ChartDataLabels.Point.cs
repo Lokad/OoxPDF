@@ -39,7 +39,7 @@ internal sealed partial class PptxRenderer
         ChartAreaPlotOptions? areaOptions = null, IReadOnlyList<ChartSeriesFill?>? areaSeriesFills = null, double? areaCrossingValue = null,
         double? chartRootFontSize = null)
     {
-        if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
+        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
             return;
         }
@@ -98,7 +98,7 @@ internal sealed partial class PptxRenderer
                     if (areaLower is not null) areaLower[i] = span.UpperValue;
                 }
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
-                if (!effectiveOptions.HasVisibleContent)
+                if (!effectiveOptions.HasVisibleText)
                 {
                     continue;
                 }

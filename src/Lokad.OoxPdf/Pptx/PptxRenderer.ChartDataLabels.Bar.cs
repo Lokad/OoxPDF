@@ -79,7 +79,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartGrouping grouping = barOptions.Grouping;
         double gapWidthPercent = barOptions.GapWidth;
         bool varyColors = barOptions.VaryColors.Value;
-        if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
+        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
             return;
         }
@@ -152,7 +152,7 @@ internal sealed partial class PptxRenderer
                         : originX;
                     double barEndX = ChartValueToPlotCoordinate(extents, barEnd, plotBox.X, plotBox.Width, valueAxisReversed);
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
-                    if (!effectiveOptions.HasVisibleContent)
+                    if (!effectiveOptions.HasVisibleText)
                     {
                         continue;
                     }
@@ -271,7 +271,7 @@ internal sealed partial class PptxRenderer
                     if (!stacked && (columnCenterX < plotBox.X - PptxChartMetricRules.AxisValueEpsilon ||
                         columnCenterX > plotBox.X + plotBox.Width + PptxChartMetricRules.AxisValueEpsilon)) continue;
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
-                    if (!effectiveOptions.HasVisibleContent)
+                    if (!effectiveOptions.HasVisibleText)
                     {
                         continue;
                     }
