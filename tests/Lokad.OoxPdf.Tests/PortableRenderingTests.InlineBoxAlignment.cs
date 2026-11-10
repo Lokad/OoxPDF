@@ -116,7 +116,8 @@ internal static partial class PortableRenderingTests
                 paragraph = paragraph with
                 {
                     Images = [.. paragraph.Images, picture],
-                    InlineContent = [.. TestAssert.NotNull(paragraph.InlineContent), new DocxInlinePicture(picture)]
+                    InlineContent = [.. paragraph.InlineContent ?? DocxInlineContent.FromPrefix(
+                        paragraph.Runs, paragraph.Images, default, paragraph.InlineTextBoxes), new DocxInlinePicture(picture)]
                 };
                 headers["default"] = headers["default"].Select(element => ReferenceEquals(element, owner)
                     ? owner with { Paragraph = paragraph } : element).ToArray();
