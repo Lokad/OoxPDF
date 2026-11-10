@@ -45,7 +45,10 @@ internal static partial class PortableRenderingTests
                     TestAssert.Equal(expected.Count, actual.Count);
                     AssertSamePaintOrigin(expected[0], actual[0]);
                 }
-                ReadPaintedSourceLabel(pages[^1], "All quantities in this synthetic example are illustrative.");
+                string bodyParagraph = source.Paragraphs.Select(p => string.Concat(p.Runs.Select(r => r.Text)))
+                    .Single(text => text.StartsWith("Review section 6.", StringComparison.Ordinal));
+                var owner = pages.Single(page => DocxPageFootnoteNumberingTests.DecodeText(page).Contains("Review section 6.", StringComparison.Ordinal));
+                ReadPaintedSourceLabel(owner, bodyParagraph);
             }
         }
     }
