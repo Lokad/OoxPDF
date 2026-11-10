@@ -159,6 +159,45 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxStaticDeclaredPictureRowsKeepCompleteSourceAcrossMetadata()
+    {
+        const string caption = "STATIC CAPTION SOURCE STATIC CAPTION SOURCE STATIC CAPTION SOURCE ";
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string kind in new[] { "header", "footer" })
+        foreach (string rule in new[] { "auto", "exact", "atLeast" })
+        foreach (bool marked in new[] { false, true })
+        {
+            string fixture = "static-inline-ordinary-" + kind + "-picture";
+            var source = ReadMutation("InlineBoxMath/" + fixture, mode, false, false, (xml, w, _) =>
+            {
+                var paragraph = xml.Root!.Element(w + "p")!;
+                var picture = paragraph.Elements(w + "r").Single(run => run.Descendants().Any(e => e.Name.LocalName == "pic"));
+                picture.Remove();
+                paragraph.RemoveNodes();
+                paragraph.Add(new XElement(w + "pPr", new XElement(w + "spacing",
+                    new XAttribute(w + "before", 0), new XAttribute(w + "after", 0),
+                    new XAttribute(w + "line", 240), new XAttribute(w + "lineRule", rule))));
+                foreach (string text in marked ? new[] { caption[..33], caption[33..] } : new[] { caption })
+                    paragraph.Add(new XElement(w + "r", new XElement(w + "rPr",
+                        new XElement(w + "sz", new XAttribute(w + "val", 20)),
+                        new XElement(w + "rFonts", new XAttribute(w + "ascii", "Arial"), new XAttribute(w + "hAnsi", "Arial"))),
+                        new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), text)));
+                foreach (var extent in picture.Descendants().Where(e => e.Name.LocalName is "extent" or "ext" && e.Attribute("cy") is not null))
+                {
+                    extent.SetAttributeValue("cx", 240 * 12700);
+                    extent.SetAttributeValue("cy", 6 * 12700);
+                }
+                if (marked) paragraph.Add(new XElement(w + "bookmarkStart", new XAttribute(w + "id", 1701), new XAttribute(w + "name", "StaticPictureTarget")));
+                paragraph.Add(picture);
+                if (marked) paragraph.Add(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 1701)));
+            }, partOverride: "word/" + fixture + ".xml");
+            string context = $"{kind}/{rule}/{marked}/{mode}";
+            var page = AssertFloatingLabelsPaint(source, mode,
+                [caption.TrimEnd(), "Before public math table.", "After public math table."], context);
+            AssertCompleteFloatingPicture(page, context, 40d);
+        }
+    }
+
     private static DocxDocument ReadFloatingPictureWithUnsupportedMath(OoxPdfDocxMarkupMode mode,
         bool sameParagraph, bool fixedLine = false, bool includeUnsupported = true,
         Action<XDocument, XNamespace, XNamespace>? change = null) =>

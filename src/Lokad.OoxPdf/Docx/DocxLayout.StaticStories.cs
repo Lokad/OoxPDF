@@ -347,7 +347,8 @@ internal sealed partial class DocxLayoutEngine
             }
             bool pictureOnly = DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph);
             if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
-                paragraph.InlineTextBoxes.Count != 0 || pictureOnly && unscaledLineMetrics is not null)
+                paragraph.InlineTextBoxes.Count != 0 ||
+                paragraph.Images.Count != 0 && (!pictureOnly || unscaledLineMetrics is not null))
             {
                 double size = GetParagraphFontSize(paragraph);
                 var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
