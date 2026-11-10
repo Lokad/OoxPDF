@@ -14,7 +14,7 @@ namespace Lokad.OoxPdf.Tests;
 
 // Real rendering with one pinned, redistributable face. These are content and
 // resource checks on both platforms; Office visual comparisons remain separate.
-internal static class PortableRenderingTests
+internal static partial class PortableRenderingTests
 {
     public static void PortableRenderingEmptyChartCaptionsKeepTheirSpacing()
     {

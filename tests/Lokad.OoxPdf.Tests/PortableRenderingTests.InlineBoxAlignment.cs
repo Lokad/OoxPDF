@@ -7,19 +7,19 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static partial class DocxInlineCompositionTests
+internal static partial class PortableRenderingTests
 {
-    public static void DocxJustifiedInlineBoxChildKeepsPreparedParentContent()
+    public static void PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var baseline = RenderAlignmentProbe(ReadMutation("InlineBoxMath/inline-box-body-equation-inline-box-valid",
+            var baseline = RenderAlignmentProbe(DocxInlineCompositionTests.ReadMutation("InlineBoxMath/inline-box-body-equation-inline-box-valid",
                 mode, false, false), mode).Single();
             var expected = ReadPaintedSourceLabel(baseline, "x+2y", mathOnly: true);
             TestAssert.Equal(4, expected.Count);
             foreach (bool unsupportedChild in new[] { false, true })
             {
-                var source = ReadMutation("InlineBoxMath/inline-box-body-equation-inline-box-valid", mode, false, false,
+                var source = DocxInlineCompositionTests.ReadMutation("InlineBoxMath/inline-box-body-equation-inline-box-valid", mode, false, false,
                     (xml, w, m) =>
                     {
                         var paragraph = xml.Descendants(w + "txbxContent").Single().Elements(w + "p").Single();
@@ -37,14 +37,14 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    public static void DocxJustifiedStaticParagraphsKeepFooterInkAndPhysicalFrames()
+    public static void PortableRenderingJustifiedStaticParagraphsKeepFooterInkAndPhysicalFrames()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var baseline = RenderAlignmentProbe(ReadMutation("Composition/report", mode, false, false), mode);
+            var baseline = RenderAlignmentProbe(DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false), mode);
             foreach (string part in new[] { "word/header1.xml", "word/footer1.xml" })
             {
-                var source = ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
+                var source = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
                     SetJustified(xml.Descendants(w + "p").First(p => !p.Descendants(m + "oMath").Any() &&
                         p.Descendants(w + "t").Any(t => t.Value.Length != 0)), w), partOverride: part);
                 var pages = RenderAlignmentProbe(source, mode);
