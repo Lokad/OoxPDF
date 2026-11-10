@@ -93,6 +93,10 @@ Complete table/image blocks retain their trailing paragraph's ownership; the
 container still admits each following head against the available page frame.
 Whole-group fitting, typography, counter binding and clipping remain separate
 decisions. Unsupported source/static/scaled frames retain their existing fallbacks.
+Endnote counter binding admits a complete measured prefix against the selected
+footer edge. It stops at the first unfit or unsupported block; later notes do
+not change the reference page of an already admitted source block. Section-end
+and document-end placement use the same proof, independently of whole-group flow.
 
 Supported mixed DOCX content uses ordered source items for text, tabs, breaks,
 pictures and equations. Measurement produces inline fragments without page

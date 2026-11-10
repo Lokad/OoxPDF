@@ -664,11 +664,12 @@ Approximate or restricted:
   Fresh footnotes measure counters with their rendered reference page before
   slicing; unresolved references retain their existing fallback.
   Endnote PAGE is measured with its rendered reference page for existing plain
-  paragraph flow, including section-end notes and continuation, and complete mixed
-  groups at section or document end that
-  pass the source/frame/fit proof above the actual selected footer. Counter
-  ownership is independent of optional static-story typography corrections;
-  unresolved references and unfit note owners retain their fallback.
+  paragraph flow, including section-end notes and continuation, and the complete
+  fitting prefix of mixed groups at section or document end. Admission uses the
+  actual selected footer and stops at the first unfit or unsupported source block;
+  a later overflow cannot revoke an earlier reference context. Counter ownership
+  is independent of optional static-story typography corrections; unresolved
+  references and unfit note owners retain their fallback.
   Complete fitting mixed groups also retain their equations
   and counters alongside complete page-contained automatic header/footer frames,
   including complete simple tables, fully prepared equations, supported inline pictures
