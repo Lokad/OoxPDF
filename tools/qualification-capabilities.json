@@ -14830,6 +14830,15 @@
     "PortableRenderingMixedDisplayCountersPreserveTotalPageDependencies",
     "DocxTableCellPageFieldsEvaluatePerFragmentPage"
   ],
+  "docx-cell-counter-memo-portable": [
+    "CellMemoCounterInputs",
+    "MemoReturnsHitForSameKey",
+    "MemoReplaysAtChangedOrigin",
+    "MemoDistinguishesReferenceIdentity",
+    "MemoTiersPageStaticVsDynamic",
+    "MemoKeyIncludesMeasurerReference",
+    "DocxTableCellTextLinesMemoSharesSplitCells"
+  ],
   "docx-cell-counter-memo": [
     "CellMemoCounterInputs",
     "MemoReturnsHitForSameKey",
