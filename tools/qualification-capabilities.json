@@ -3661,6 +3661,9 @@
     "CffChartUnresolvableRunesSubstituteQuestionMark"
   ],
   "pptx-legend-rows": [
+    "PptxAuthoredPolarLegendKeepsEveryCompleteNameInsideItsClip",
+    "PptxPolarHorizontalRowsKeepEveryNameInsideTheirClip",
+    "PptxPolarLegendRowsStayAttachedWhilePieSpaceIsReserved",
     "PptxWrappedSeriesAndCategoryFillLegendsShareMeasuredCells",
     "PptxManualPlotWidthDoesNotConstrainTheBottomLegend",
     "PptxManualPlotLegendsWrapWithoutReservingTheAuthoredDataFrame",

@@ -69,25 +69,26 @@ internal sealed partial class PptxRenderer
         ChartLegendBox box = ResolveChartLegendBox(layout.Frame, layout.PlotBox, entries,
             layout.Legend, style, measure, ChartLegendPlacement.Default);
         if (!box.Horizontal) { return (layout, box, null); }
+        bool authoredFrame = layout.Legend.Layout.HasGeometryValues;
         bool bottom = layout.Legend.PositionKind == PptxSceneChartLegendPosition.Bottom;
         bool packedAsBottom = bottom || measuredBand;
         double gap = ComputeHorizontalLegendTextGap(style.FontSize, packedAsBottom);
         double padding = ResolveHorizontalLegendInterEntryGap(style.FontSize, entries, style, measure, packedAsBottom);
         var lineBox = measuredBand ? await measure.MeasureLineBoxAsync(style).ConfigureAwait(false) : default;
         if (measuredBand)
-            box = box with { LineHeight = lineBox.Height * HorizontalLegendLineBoxScale + HorizontalLegendRowPadding,
+            box = box with { LineHeight = authoredFrame ? lineBox.Height : lineBox.Height * HorizontalLegendLineBoxScale + HorizontalLegendRowPadding,
                 TextGap = gap, ContentAscent = Math.Max(lineBox.Ascent, box.MarkerSize), ContentDescent = lineBox.Descent };
         // The container supplies its row constraint; bar frames include the
         // axis strips, while line rows follow their plot width. Manual legends
         // keep their authored width. Painting consumes these same packed frames.
-        double availableWidth = layout.Legend.Layout.HasGeometryValues ? box.Width : Math.Min(layout.Frame.Width, maximumRowWidth);
+        double availableWidth = authoredFrame ? box.Width : Math.Min(layout.Frame.Width, maximumRowWidth);
         double[] widths = new double[entries.Count];
         var rows = new List<(int Start, int End, double Width)>();
-        bool automaticLegend = !layout.Legend.Layout.HasGeometryValues &&
+        bool automaticLegend = !authoredFrame &&
             (measuredBand || !layout.ManualPlotLayoutApplied);
         // Filled keys share natural-row admission and wrapped columns, whether
         // they identify series or categories and whether their keys have strokes.
-        bool measuredFillGrid = measuredBand && automaticLegend &&
+        bool measuredFillGrid = measuredBand &&
             entries.All(entry => entry.Fill is not null);
         double naturalWidth = 0d, widestNaturalCell = 0d;
         for (int i = 0; i < entries.Count; i++)
@@ -107,8 +108,9 @@ internal sealed partial class PptxRenderer
             // Office's automatic fill legend first admits a natural single row.
             // Wrapped rows use equal cells, including the incomplete last row;
             // alternating short/long names still occupy the widest cell. The
-            // independently observed frame limit also owns one-row admission.
-            availableWidth = Math.Min(availableWidth, layout.Frame.Width * 0.9d);
+            // independently observed automatic frame limit owns one-row
+            // admission; authored containers retain their supplied extent.
+            if (!authoredFrame) availableWidth = Math.Min(availableWidth, layout.Frame.Width * 0.9d);
             if (naturalWidth <= availableWidth)
             {
                 double packedWidth = widths.Sum() - padding;
@@ -133,14 +135,15 @@ internal sealed partial class PptxRenderer
                 int capacity = (int)Math.Min(entries.Count, Math.Max(1d, Math.Floor(availableWidth / widestNaturalCell)));
                 int rowCount = (entries.Count - 1) / capacity + 1;
                 int columns = (entries.Count - 1) / rowCount + 1;
-                Array.Fill(widths, widestNaturalCell);
+                double cellWidth = authoredFrame ? availableWidth / columns : widestNaturalCell;
+                Array.Fill(widths, cellWidth);
                 // Cell stride includes a marker-sized tail. The final cell's
                 // occupied extent ends with its key/text gap instead.
-                padding = box.MarkerSize - gap;
+                padding = authoredFrame ? 0d : box.MarkerSize - gap;
                 for (int start = 0; start < entries.Count; start += columns)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    rows.Add((start, Math.Min(entries.Count, start + columns), columns * widestNaturalCell - padding));
+                    rows.Add((start, Math.Min(entries.Count, start + columns), columns * cellWidth - padding));
                 }
             }
         }
@@ -209,7 +212,7 @@ internal sealed partial class PptxRenderer
         // Truncated Office legends allocate one further row at the tail; only
         // the admitted rows paint. Complete legends keep their existing extent.
         int placementRowCount = admittedRowCount + (admittedRowCount > 0 && admittedRowCount < rows.Count ? 1 : 0);
-        if (!layout.Legend.Layout.HasGeometryValues)
+        if (!authoredFrame)
         {
             double packedWidth = Math.Min(availableWidth, rows.Max(row => row.Width));
             double x = packedAsBottom
@@ -218,8 +221,20 @@ internal sealed partial class PptxRenderer
             box = box with { X = x, Width = packedWidth };
         }
         double firstY, clipY, clipHeight;
+        double rowAdvance = box.LineHeight;
         double? allocationBand = null;
-        if (measuredBand)
+        if (measuredBand && authoredFrame)
+        {
+            // An authored rectangle supplies the row cells, not an automatic
+            // plot reservation. Center each measured line in its cell; preserve
+            // overflowing-row diagnostics rather than shrinking the text.
+            clipY = box.ClipY;
+            clipHeight = box.ClipHeight;
+            rowAdvance = Math.Max(box.LineHeight, clipHeight / placementRowCount);
+            firstY = clipY + clipHeight - (rowAdvance + lineBox.Ascent - lineBox.Descent) / 2d;
+            allocationBand = 0d;
+        }
+        else if (measuredBand)
         {
             double occupied = placementRowCount * box.LineHeight - (placementRowCount > 1 ? HorizontalLegendWrappedHeightTrim : 0d);
             double requiredBand = admittedRowCount == 0 ? 0d : occupied + HorizontalLegendFrameInset;
@@ -250,7 +265,7 @@ internal sealed partial class PptxRenderer
         else
         {
             double extra = Math.Max(0, placementRowCount - 1) * box.LineHeight;
-            bool automatic = !layout.Legend.Overlay && !layout.Legend.Layout.HasGeometryValues && !layout.ManualPlotLayoutApplied;
+            bool automatic = !layout.Legend.Overlay && !authoredFrame && !layout.ManualPlotLayoutApplied;
             double reserved = automatic ? Math.Min(extra, Math.Max(0d, layout.PlotBox.Height - 1d)) : 0d;
             if (reserved > 0d)
             {
@@ -265,7 +280,7 @@ internal sealed partial class PptxRenderer
             firstY = box.FirstY + (bottom ? admitted : 0d);
             clipY = box.ClipY - (bottom ? 0d : admitted);
             clipHeight = box.ClipHeight + admitted;
-            if (layout.Legend.Layout.HasGeometryValues)
+            if (authoredFrame)
             {
                 clipY = box.ClipY;
                 clipHeight = box.ClipHeight;
@@ -280,11 +295,14 @@ internal sealed partial class PptxRenderer
         for (int row = 0; row < admittedRowCount; row++)
         {
             double x = box.X + Math.Max(0d, (box.Width - rows[row].Width) / 2d);
-            double y = firstY - row * box.LineHeight;
+            double y = firstY - row * rowAdvance;
             for (int i = rows[row].Start; i < rows[row].End; i++)
             {
-                frames[i] = new ChartLegendEntryFrame(x, y, widths[i]);
+                double cellInset = authoredFrame && measuredFillGrid && rows.Count > 1
+                    ? Math.Max(0d, (widths[i] - widestNaturalCell) / 2d) : 0d;
+                frames[i] = new ChartLegendEntryFrame(x + cellInset, y, widths[i] - cellInset);
                 clipped |= IsLegendBaselineClipped(box, y) || widths[i] - padding > box.Width;
+                clipped |= authoredFrame && measuredFillGrid && rows.Count > 1 && widestNaturalCell > widths[i];
                 x += widths[i];
             }
         }

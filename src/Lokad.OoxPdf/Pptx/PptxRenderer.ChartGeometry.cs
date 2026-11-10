@@ -154,10 +154,9 @@ internal sealed partial class PptxRenderer
                 PlotAreaBox = layout.PlotAreaBox with { Height = layout.PlotAreaBox.Height - reserve }
             };
         }
-        // Authored legend coordinates retain their source fallback until the
-        // manual frame mapping is independently qualified with wrapped entries.
-        if (!layout.Legend.Visible || layout.Legend.Layout.HasGeometryValues ||
-            !IsHorizontalLegendPosition(layout.Legend.PositionKind)) return (layout, null);
+        // The supplied container owns entry wrapping even when its coordinates
+        // are authored. Keep that coordinate fallback separate from row layout.
+        if (!layout.Legend.Visible || !IsHorizontalLegendPosition(layout.Legend.PositionKind)) return (layout, null);
         var prepared = await LayoutChartLegendRowsAsync(layout, entries, style, resolver, context,
             layout.Frame.Width, measuredBand: true).ConfigureAwait(false);
         return (prepared.Layout, prepared.Box);
