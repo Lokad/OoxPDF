@@ -46,6 +46,7 @@
   Improves composed scales, authored plot frames, numeric formatting, caption
   wrapping, titles, legends, reversal and supported scatter/bubble geometry.
   Allocated numeric captions survive later authored inner-plot placement.
+  Empty data-label units no longer paint phantom legend keys or backgrounds.
   Repeated hidden-column declarations no longer abort chart conversion.
 - PPTX content: preserves cells following horizontal merges and text/link geometry
   with standard-font fallback. Preset arcs handle extreme numeric guides without
