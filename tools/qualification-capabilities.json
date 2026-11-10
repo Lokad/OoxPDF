@@ -1,6 +1,9 @@
 {
   "docx-floating-nested-table": [
     "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
+    "DocxFloatingTableCellInlineBoxLabelsRemainVisibleInFinalAndReview",
+    "PortableRenderingStaticSourceFramesKeepProseOnPage",
+    "PortableRenderingOrdinaryPicturesAndBoxesRetainSourceContent",
     "DocxWordCompatibleFloatingTextBoxEmissionMapMatchesOfficeProbe",
     "DocxWordCompatibleFloatingTextBoxPrecompensatedEmissionMatchesCenterScale",
     "DocxRendererEmitsFloatingTextBoxTableRows",

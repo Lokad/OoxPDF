@@ -106,6 +106,23 @@ internal sealed partial class DocxRenderer
             return image.Relocate(PrecompensateX(originX + image.X), PrecompensateY(originY + image.Y), pageIndex);
         }
 
+        public DocxInlineTextBoxLayout PrecompensateBox(DocxInlineTextBoxLayout box)
+        {
+            FloatingTextBoxEmissionMap self = this;
+            return box with
+            {
+                BoxX = self.PrecompensateX(box.BoxX),
+                BoxTop = self.PrecompensateY(box.BoxTop),
+                BoxWidth = self.ScaleExtent(box.BoxWidth),
+                BoxHeight = self.ScaleExtent(box.BoxHeight),
+                PrintScale = box.PrintScale * self.PrintScale,
+                TextLines = box.TextLines.Select(line => self.PrecompensateLine(line, 0d, 0d)).ToArray(),
+                InlineImages = box.InlineImages.Select(image =>
+                    image.Relocate(self.PrecompensateX(image.X), self.PrecompensateY(image.Y))).ToArray(),
+                TableRows = box.TableRows.Select(self.PrecompensateRow).ToArray()
+            };
+        }
+
         public DocxTableRowLayout PrecompensateRow(DocxTableRowLayout row)
         {
             // Rows arrive translated to absolute design space. Paint bounds and
@@ -139,6 +156,7 @@ internal sealed partial class DocxRenderer
                         InlineImages = cell.InlineImages
                             .Select(cellImage => cellImage.Relocate(self.PrecompensateX(cellImage.X), self.PrecompensateY(cellImage.Y)))
                             .ToArray(),
+                        InlineTextBoxes = cell.InlineTextBoxes.Select(self.PrecompensateBox).ToArray(),
                         NestedTableRows = cell.NestedRows.Select(self.PrecompensateRow).ToArray()
                     })
                     .ToArray()

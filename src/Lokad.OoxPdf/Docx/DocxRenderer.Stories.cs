@@ -328,8 +328,8 @@ internal sealed partial class DocxRenderer
                 ? map.PrecompensateImage(image, contentX, contentTop, drawing.AnchorPageIndex ?? image.PageIndex)
                 : image.Relocate(contentX + image.X, contentTop + image.Y, drawing.AnchorPageIndex)))
             .Concat(textBoxLayout.TableRows.Select(row => uniformMap
-                ? map.PrecompensateRow(TranslateTableRow(row, contentX, contentTop))
-                : TranslateTableRow(row, contentX, contentTop)))
+                ? map.PrecompensateRow(DocxLayoutEngine.ShiftTableRow(row, contentTop, contentX))
+                : DocxLayoutEngine.ShiftTableRow(row, contentTop, contentX)))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);

@@ -42,53 +42,68 @@ internal static partial class DocxInlineCompositionTests
                     }
                     original.ReplaceWith(table);
                 });
-            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
-                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
-            const string number = @"[-+\d.eE]+";
-            var fills = Regex.Matches(page.Content, @"(?m)^(?<x>" + number + @") (?<y>" + number +
-                @") (?<w>" + number + @") (?<h>" + number + @") re f\r?$").Cast<Match>().Select(match =>
-                (Offset: match.Index, X: ReadNumber(match, "x"), Y: ReadNumber(match, "y"),
-                    Width: ReadNumber(match, "w"), Height: ReadNumber(match, "h"))).ToArray();
-            var labels = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalTextClips(page))
-            foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts)))
-            {
-                string label = show.Text.Trim();
-                if (label is not ("BOX TABLE NORTH" or "BOX TABLE SOUTH")) continue;
-                TestAssert.True(labels.Add(label), "Each source label paints once.");
-                TestAssert.True(Math.Abs(transform.M12) < .000001d && Math.Abs(transform.M21) < .000001d,
-                    "The source has axis-aligned glyph frames.");
-                TestAssert.True(Math.Abs(transform.M11 - 1f) < .000001d && Math.Abs(transform.M22 - 1f) < .000001d &&
-                    Math.Abs(transform.M31) < .000001d && Math.Abs(transform.M32) < .000001d,
-                    "These generated cell fills and glyphs use physical page coordinates.");
-                int paintOffset = page.Content.IndexOf(block, StringComparison.Ordinal);
-                var font = show.Font.Font;
-                double scale = show.Size / font.UnitsPerEm;
-                double cursor = show.X;
-                foreach (char character in label)
-                {
-                    ushort glyph = font.MapCodePoint(character);
-                    double glyphX = cursor;
-                    cursor += font.GetAdvanceWidth(glyph) * scale;
-                    if (char.IsWhiteSpace(character)) continue;
-                    TestAssert.True(font.TryGetGlyphBounds(glyph, out var ink),
-                        "The portable font supplies each source glyph.");
-                    double first = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
-                    double last = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
-                    TestAssert.True(Math.Min(first, last) >= clip.Y - .01d &&
-                        Math.Max(first, last) <= clip.Y + clip.Height + .01d,
-                        $"A complete floating-table label must survive its ancestor clips: depth={depth}/{mode}/{label}.");
-                    double left = glyphX + ink.XMin * scale, right = glyphX + ink.XMax * scale;
-                    TestAssert.True(!fills.Any(fill => fill.Offset > paintOffset &&
-                        Math.Min(fill.X + fill.Width, right) - Math.Max(fill.X, left) > .01d &&
-                        Math.Min(fill.Y + fill.Height, Math.Max(first, last)) - Math.Max(fill.Y, Math.Min(first, last)) > .01d),
-                        $"A later cell background must not cover a source label: depth={depth}/{mode}/{label}.");
-                }
-            }
-            TestAssert.Equal(2, labels.Count);
+            AssertFloatingLabelsPaint(source, mode, ["BOX TABLE NORTH", "BOX TABLE SOUTH"], "depth=" + depth);
         }
+    }
+
+    public static void DocxFloatingTableCellInlineBoxLabelsRemainVisibleInFinalAndReview()
+    {
+        string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-cell-inline-box.docx"));
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+            AssertFloatingLabelsPaint(DocxTests.ReadDocx(path, mode), mode,
+                ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], "inline child");
+    }
+
+    private static void AssertFloatingLabelsPaint(DocxDocument source, OoxPdfDocxMarkupMode mode,
+        IReadOnlyList<string> expectedLabels, string context)
+    {
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+            mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+        const string number = @"[-+\d.eE]+";
+        var fills = Regex.Matches(page.Content, @"(?m)^(?<x>" + number + @") (?<y>" + number +
+            @") (?<w>" + number + @") (?<h>" + number + @") re f\r?$").Cast<Match>().Select(match =>
+            (Offset: match.Index, X: ReadNumber(match, "x"), Y: ReadNumber(match, "y"),
+                Width: ReadNumber(match, "w"), Height: ReadNumber(match, "h"))).ToArray();
+        var labels = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalTextClips(page))
+        foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts)))
+        {
+            string label = show.Text.Trim();
+            if (!expectedLabels.Contains(label, StringComparer.Ordinal)) continue;
+            TestAssert.True(labels.Add(label), "Each source label paints once.");
+            TestAssert.True(Math.Abs(transform.M12) < .000001d && Math.Abs(transform.M21) < .000001d,
+                "The source has axis-aligned glyph frames.");
+            TestAssert.True(Math.Abs(transform.M11 - 1f) < .000001d && Math.Abs(transform.M22 - 1f) < .000001d &&
+                Math.Abs(transform.M31) < .000001d && Math.Abs(transform.M32) < .000001d,
+                "These generated cell fills and glyphs use physical page coordinates.");
+            int paintOffset = page.Content.IndexOf(block, StringComparison.Ordinal);
+            var font = show.Font.Font;
+            double scale = show.Size / font.UnitsPerEm;
+            double cursor = show.X;
+            foreach (char character in label)
+            {
+                ushort glyph = font.MapCodePoint(character);
+                double glyphX = cursor;
+                cursor += font.GetAdvanceWidth(glyph) * scale;
+                if (char.IsWhiteSpace(character)) continue;
+                TestAssert.True(font.TryGetGlyphBounds(glyph, out var ink),
+                    "The portable font supplies each source glyph.");
+                double first = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
+                double last = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
+                TestAssert.True(Math.Min(first, last) >= clip.Y - .01d &&
+                    Math.Max(first, last) <= clip.Y + clip.Height + .01d,
+                    $"A complete floating-table label must survive its ancestor clips: {context}/{mode}/{label}.");
+                double left = glyphX + ink.XMin * scale, right = glyphX + ink.XMax * scale;
+                TestAssert.True(!fills.Any(fill => fill.Offset > paintOffset &&
+                    Math.Min(fill.X + fill.Width, right) - Math.Max(fill.X, left) > .01d &&
+                    Math.Min(fill.Y + fill.Height, Math.Max(first, last)) - Math.Max(fill.Y, Math.Min(first, last)) > .01d),
+                    $"A later cell background must not cover a source label: {context}/{mode}/{label}.");
+            }
+        }
+        TestAssert.Equal(expectedLabels.Count, labels.Count);
 
         static double ReadNumber(Match match, string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
     }

@@ -2478,17 +2478,18 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyList<DocxTableRowLayout> ShiftTableRows(IReadOnlyList<DocxTableRowLayout> rows,
         double deltaY, double deltaX, int? pageIndex = null)
     {
-        return rows
-            .Select(row => row with
-            {
-                Table = row.Table with
-                {
-                    TableX = row.Table.TableX + deltaX
-                },
-                Y = row.Y + deltaY,
-                Cells = row.Cells.Select(cell => ShiftTableCell(cell, deltaY, deltaX, pageIndex)).ToArray()
-            })
-            .ToArray();
+        return rows.Select(row => ShiftTableRow(row, deltaY, deltaX, pageIndex)).ToArray();
+    }
+
+    internal static DocxTableRowLayout ShiftTableRow(DocxTableRowLayout row,
+        double deltaY, double deltaX, int? pageIndex = null)
+    {
+        return row with
+        {
+            Table = row.Table with { TableX = row.Table.TableX + deltaX },
+            Y = row.Y + deltaY,
+            Cells = row.Cells.Select(cell => ShiftTableCell(cell, deltaY, deltaX, pageIndex)).ToArray()
+        };
     }
 
     private static DocxTableCellLayout ShiftTableCell(DocxTableCellLayout cell,

@@ -344,7 +344,7 @@ internal sealed partial class DocxRenderer
     {
         DocxTextLineLayout line => AdjustStaticTextLine(line, markupContext),
         DocxTableRowLayout { StaticStoryUsesPhysicalY: true } row =>
-            TranslateTableRow(row, 0d, markupContext.WordCompatibleTextYOffset),
+            PrecompensateStaticTableRow(row, markupContext.WordCompatibleTextYOffset),
         _ => item
     };
 
@@ -440,7 +440,7 @@ internal sealed partial class DocxRenderer
 
             foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
             {
-                foreach (DocxTableRowLayout nested in EnumerateTableRows(TranslateTableRow(row, placedX, placedTop)))
+                foreach (DocxTableRowLayout nested in EnumerateTableRows(DocxLayoutEngine.ShiftTableRow(row, placedTop, placedX)))
                 {
                     yield return nested;
                 }
@@ -448,35 +448,32 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    private static DocxTableRowLayout TranslateTableRow(DocxTableRowLayout row, double deltaX, double deltaY)
+    // Static rows already own physical geometry. Precompensate only consumers
+    // of the body paint offset; inline boxes perform this at their own boundary.
+    private static DocxTableRowLayout PrecompensateStaticTableRow(DocxTableRowLayout row, double deltaY)
     {
         return row with
         {
-            Table = row.Table with
-            {
-                TableX = row.Table.TableX + deltaX
-            },
             Y = row.Y + deltaY,
             Cells = row.Cells
-                .Select(cell => TranslateTableCell(cell, deltaX, deltaY))
+                .Select(cell => PrecompensateStaticTableCell(cell, deltaY))
                 .ToArray()
         };
     }
 
-    private static DocxTableCellLayout TranslateTableCell(DocxTableCellLayout cell, double deltaX, double deltaY)
+    private static DocxTableCellLayout PrecompensateStaticTableCell(DocxTableCellLayout cell, double deltaY)
     {
         return cell with
         {
-            X = cell.X + deltaX,
             Y = cell.Y + deltaY,
             TextLines = cell.TextLines
-                .Select(line => TranslateTextLine(line, deltaX, deltaY))
+                .Select(line => TranslateTextLine(line, 0d, deltaY))
                 .ToArray(),
             InlineImages = cell.InlineImages
-                .Select(image => image.Translate(deltaX, deltaY))
+                .Select(image => image.Translate(0d, deltaY))
                 .ToArray(),
             NestedTableRows = cell.NestedRows
-                .Select(row => TranslateTableRow(row, deltaX, deltaY))
+                .Select(row => PrecompensateStaticTableRow(row, deltaY))
                 .ToArray()
         };
     }
