@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
@@ -26,16 +27,19 @@ internal static partial class DocxNoteClippingTests
                 .RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             int marginGlyphs = 0;
             foreach (PdfPage page in pages)
-            foreach (var (block, clip) in ReadPhysicalTextClips(page))
+            foreach (var (block, clip, transform) in ReadPhysicalTextClips(page))
             foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts)))
             {
                 if (!show.Text.Contains("FlowToken", StringComparison.Ordinal)) continue;
+                TestAssert.True(Math.Abs(transform.M12) < .000001d, "The source's note text has an axis-aligned vertical frame.");
                 var font = show.Font.Font;
                 double scale = show.Size / font.UnitsPerEm;
                 foreach (char character in show.Text)
                 {
                     if (char.IsWhiteSpace(character) || !font.TryGetGlyphBounds(font.MapCodePoint(character), out var ink)) continue;
-                    double bottom = show.Y + ink.YMin * scale, top = show.Y + ink.YMax * scale;
+                    double a = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
+                    double b = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
+                    double bottom = Math.Min(a, b), top = Math.Max(a, b);
                     // The unfit tail remains physically clipped by the page;
                     // only glyphs wholly on paper are required to survive.
                     if (bottom < 0d || top > page.Height || top >= 72d) continue;
@@ -51,35 +55,41 @@ internal static partial class DocxNoteClippingTests
     }
 
     // Read only generated q/Q, physical rectangle clips and BT blocks for this
-    // fixture. CID decoding stays in the existing glyph-show reader. Reject a
-    // transformed text/clip instead of silently pretending it is physical.
-    private static IEnumerable<(string Block, PdfRectangle Clip)> ReadPhysicalTextClips(PdfPage page)
+    // fixture. CID decoding stays in the existing glyph-show reader; standard
+    // affine matrices map clips and glyph ink into physical page coordinates.
+    private static IEnumerable<(string Block, PdfRectangle Clip, Matrix3x2 Transform)> ReadPhysicalTextClips(PdfPage page)
     {
         const string number = @"[-+\d.eE]+";
         string rectangle = number + @"(?: " + number + @"){3}";
         string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<text>BT))\r?$";
-        var saved = new Stack<(PdfRectangle Clip, bool Transformed)>();
+        var saved = new Stack<(PdfRectangle Clip, Matrix3x2 Transform)>();
         var clip = new PdfRectangle(0d, 0d, page.Width, page.Height);
-        bool transformed = false;
+        var transform = Matrix3x2.Identity;
         foreach (Match operation in Regex.Matches(page.Content, pattern))
         {
-            if (operation.Groups["save"].Success) saved.Push((clip, transformed));
-            else if (operation.Groups["restore"].Success) (clip, transformed) = saved.Pop();
-            else if (operation.Groups["matrix"].Success) transformed = true;
+            if (operation.Groups["save"].Success) saved.Push((clip, transform));
+            else if (operation.Groups["restore"].Success) (clip, transform) = saved.Pop();
+            else if (operation.Groups["matrix"].Success)
+            {
+                float[] v = operation.Groups["matrix"].Value.Split(' ').Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                transform = new Matrix3x2(v[0], v[1], v[2], v[3], v[4], v[5]) * transform;
+            }
             else if (operation.Groups["clip"].Success)
             {
-                TestAssert.True(!transformed, "This witness supplies physical rectangle clips.");
-                double[] v = operation.Groups["clip"].Value.Split(' ').Select(x => double.Parse(x, CultureInfo.InvariantCulture)).ToArray();
-                double x = Math.Max(clip.X, v[0]), y = Math.Max(clip.Y, v[1]);
-                clip = new PdfRectangle(x, y, Math.Min(clip.X + clip.Width, v[0] + v[2]) - x,
-                    Math.Min(clip.Y + clip.Height, v[1] + v[3]) - y);
+                TestAssert.True(Math.Abs(transform.M12) < .000001d && Math.Abs(transform.M21) < .000001d,
+                    "The source uses axis-aligned rectangle clips.");
+                float[] v = operation.Groups["clip"].Value.Split(' ').Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                Vector2 first = Vector2.Transform(new(v[0], v[1]), transform);
+                Vector2 last = Vector2.Transform(new(v[0] + v[2], v[1] + v[3]), transform);
+                double x = Math.Max(clip.X, Math.Min(first.X, last.X)), y = Math.Max(clip.Y, Math.Min(first.Y, last.Y));
+                clip = new PdfRectangle(x, y, Math.Min(clip.X + clip.Width, Math.Max(first.X, last.X)) - x,
+                    Math.Min(clip.Y + clip.Height, Math.Max(first.Y, last.Y)) - y);
             }
             else
             {
-                TestAssert.True(!transformed, "This witness emits its text in physical coordinates.");
                 int end = page.Content.IndexOf("\nET", operation.Index, StringComparison.Ordinal);
                 TestAssert.True(end >= 0, "Every generated text object terminates.");
-                yield return (page.Content[operation.Index..(end + 3)], clip);
+                yield return (page.Content[operation.Index..(end + 3)], clip, transform);
             }
         }
         TestAssert.Equal(0, saved.Count);
