@@ -65,6 +65,10 @@ Font directories are pre-sized from their validated table count. Collection
 discovery reuses its validated directory; extraction refunds directory scratch
 before constructing the selected SFNT. Retained tags/records share the existing
 private-font grant. These are coarse admission estimates, not heap ceilings.
+Validated MATH assembly parts use a read-only view of the font's private SFNT.
+Selected/repeated assembly arrays and placements grow an equation reservation in
+the existing model scope before construction. Failed preparation refunds it;
+successful retained capacity stays funded through the final layout/painting user.
 One source-shaped kerning construction window covers exact coverage arrays,
 class maps and retained sparse/class callbacks. Sparse callbacks retain only the
 needed glyph, not an entire coverage array; empty pair sets create no callbacks.

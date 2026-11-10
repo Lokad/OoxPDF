@@ -83,8 +83,16 @@ mapped static stories and bottom-anchored notes retain their own frames.
 
 Run and paragraph-mark formatting descriptions use the same property resolver.
 The mark and aggregate metadata share one resolved revision object. Caption
-recognition is separate from placement: mark captions retain their existing
-paragraph anchor while the shared footer-frame correction remains unqualified.
+recognition is separate from placement. Qualified footer captions and their
+frames share the source strut and physical story transform. Custom Review paper
+origins and remaining font/frame combinations retain the documented approximations.
+
+In qualified unscaled document-end notes, measured source paragraphs own the
+start and adjacent paragraph boundaries even when later notes need another page.
+Complete table/image blocks retain their trailing paragraph's ownership; the
+container still admits each following head against the available page frame.
+Whole-group fitting, typography, counter binding and clipping remain separate
+decisions. Unsupported source/static/scaled frames retain their existing fallbacks.
 
 Supported mixed DOCX content uses ordered source items for text, tabs, breaks,
 pictures and equations. Measurement produces inline fragments without page
