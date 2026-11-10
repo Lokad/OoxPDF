@@ -8,7 +8,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxChartTitleDefaultsTests
+internal static partial class PptxChartTitleDefaultsTests
 {
     public static void PptxInferredTitleDefaultsMatchIndependentOfficeSizes()
     {

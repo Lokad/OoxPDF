@@ -3,7 +3,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxChartRichParagraphTests
+internal static partial class PptxChartTitleDefaultsTests
 {
     public static void PptxRichParagraphDefaultsReachTitlesAndPointLabels()
     {
