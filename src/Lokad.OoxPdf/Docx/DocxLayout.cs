@@ -355,7 +355,7 @@ internal sealed partial class DocxLayoutEngine
         int tableIndex = 0;
         double defaultTabStopPoints = document.Settings.DefaultTabStopPoints ?? WordDefaultTabStopPoints;
         bool UsesPrintedBodyFrame() => scaleBaselineOffsetTransitions &&
-            paragraphSpacingScale < 1d && page.ColumnFrames.Count <= 1;
+            paragraphSpacingScale < 1d;
         IReadOnlyDictionary<DocxRelatedStory, DocxTextRun>? customNoteTargets = null;
         var relatedStoryLayoutsByBodyWidth = PlacementRelatedStoryMeasurements ??
             new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
