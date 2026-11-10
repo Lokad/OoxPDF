@@ -85,7 +85,8 @@ internal static class DocxEndnoteCounterPrefixTests
                 var run = new XElement(w + "r", new XElement(w + "t", value));
                 first.Add(instruction is null ? run : new XElement(w + "fldSimple", new XAttribute(w + "instr", instruction), run));
                 first.Add(new XElement(w + "r", new XElement(w + "t", ".")));
-                xml.Root.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "8").Element(w + "p")!
+                string laterId = position == "sectEnd" ? "4" : "8";
+                xml.Root.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == laterId).Element(w + "p")!
                     .Add(new XElement(w + "r", new XElement(w + "t", " " + string.Join(" ",
                         Enumerable.Range(0, 400).Select(index => $"LaterNote{index:000}")))));
             }, partOverride: "word/endnotes.xml");
@@ -95,7 +96,14 @@ internal static class DocxEndnoteCounterPrefixTests
             earlier.Add(new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Public earlier page", 12d, 14d)));
             earlier.Add(new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null));
         }
+        foreach (var element in source.BodyElements)
+        {
+            if (position == "sectEnd" && element is DocxParagraphElement paragraph &&
+                paragraph.Paragraph.InlineReferences.Any(item => item.Kind == DocxRelatedStoryKind.Endnote && item.Id == "4"))
+                earlier.Add(new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null));
+            earlier.Add(element);
+        }
         return source with { Settings = source.Settings with { EndnoteReferenceSettings =
-            source.Settings.EndnoteReferenceSettings with { PositionValue = position } }, BodyElements = [.. earlier, .. source.BodyElements] };
+            source.Settings.EndnoteReferenceSettings with { PositionValue = position } }, BodyElements = earlier };
     }
 }
