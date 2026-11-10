@@ -1,72 +1,69 @@
 # 0.3.0 development qualification
 
 Updated 2026-11-10. **0.3.0 is not published and is not a completed release
-candidate.** The shipped [0.2.0 qualification](PreviewQualification.md) remains a
-separate historical record. Development targets .NET 10 and .NET 11.
+candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
+separate. Development targets .NET 10 and .NET 11.
 
-The rendering checkpoint below is source
-`4131a48ae0c0468501e2924d87bb117c139029d5`. Its frozen .NET 11 library SHA-256 is
-`38DC9BF837E2226D064C7F31A6F8D1CE58AD1947DCD2BE3513C446CC13F31ED3`.
-Documentation updates do not rebuild that runtime.
+This snapshot pins production `a68b0e702eaa41dce90a71f067b02b1e352d8380` and
+harness `bb1375348529e7b382ef1f62cb1cbc1908ca3906`. The frozen .NET 11 library
+SHA-256 is `E884050BE14772A7B9BE585312E6D94721D68E8EB32B3539CB850027E21ACB76`.
+Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
-| Supported textbox neighbors | A fitting caption/picture retains shared wrapping beside an omitted unsupported equation. Final and Review recover picture bounds from 23.63% to 100%, including the green center. The equation warning remains; no unused math resource is published. Prepared-math frames, fixed-line picture admission and entirely unsupported paragraph fallbacks are preserved. Exact Office geometry for the new combined source remains unqualified. |
-| Ordered picture composition | Ordinary automatic-flow textboxes retain pictures and caption ink across left, center, right and justified alignment and equivalent run splits. Shared floating row/cell/box translation and complete image projection preserve nested content. These bounded controls do not establish unrestricted floating layout. |
-| Authored horizontal legend | All six names paint instead of two. Independent glyph-ink/clip checks supplement an image gate that previously concealed the omission. Origins still differ from the pinned Office PDF by about 11.17pt horizontally and 31.39pt vertically. |
-| Oversized endnote table | Final/Review each recover 30 complete labels: 249 → 279, plus 72pt of a tall picture. Six labels remain partial and fifteen extend beyond paper, matching the native viewport. General row fragmentation remains unsupported and diagnosed. |
-| Fixed composed portfolio | Nine sources/sixteen outcomes retain their PDF identities. Existing numerical results remain two PPTX passes and fourteen DOCX failures. Independent per-page character/picture checks and a 64-page-image readability review are reused through PDF identity; typography/geometry remain approximate. Shared report ancestry limits document diversity. |
-| Focused checks and transfer | Twenty-six exact checks pass on Windows; twenty-five pass on Ubuntu with one declared Windows-font anchor skip. The picture regression fails on the parent; neighboring controls pass. 44/46 PDFs and all source/page/diagnostic identities match the parent cohort, including all fixed-line and separate-paragraph controls. One accepted frozen runtime supplies the checks, document outputs and byte-identical root transfer with two integration smokes; no root build or local full DOCX replay. |
-| Prior broader gate | CI42856401794 records the preceding `207ecc530` rendering checkpoint and CI-only `61b64c900` repair: 4,759 Windows/2,225 Ubuntu passes, 19/129 reviewed skips, 69 .NET 10 checks per host and four package consumers. This is a historical broader gate, separate from the focused checkpoint above. CI builds platform binaries separately; no cross-platform binary-identity claim. |
+| Leading blank/equation pages | Restored five complete footer labels (175 hidden glyphs) across three Review probes, including later note-only continuation pages. Static stories use their own measured page frame; standalone equations retain their measured body origin. Six Final/Review outcomes contain 30,527 glyphs with no paper/rectangle-clip cuts or unknown traces. Body/header equation bounds remain separate. Exact combined-source Office geometry is unqualified. |
+| Note continuation composition | A leading blank page shifts the illustrated long-note report from four to five pages. All original text origins, sizes and bounds, picture/mask streams and link geometry remain unchanged; destinations move exactly one page. All 64 source continuation lines and both pictures survive in each mode. These are source-preserving transformation checks, not a new Word export. |
+| Fixed composed portfolio | Nine sources/sixteen outcomes retain their PDFs. Existing independent comparisons remain two PPTX image passes and fourteen DOCX image failures. The 64-page readability review is reused through PDF identity. Typography/geometry remain approximate; shared report ancestry limits document diversity. |
+| Fitting mixed notes | Four sources/eight outcomes retain exact PDFs and all 64 continuation lines in their original order/pages. Twenty pictures retain both source colors and complete clips. Independent head/link/picture geometry keeps the original one-point gates. Native PDF/raster files are absent from the selected legacy folders, so no fresh whole-page comparison is claimed. |
+| Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
+| Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
+| Focused checks | 61 exact checks pass on Windows; 41 pass on Ubuntu with 20 declared installed-font skips. Both new portable regressions fail against the parent. One production build and one harness extension supply all checks and outputs; unchanged checks are joined by verified identity. No root build or local full-DOCX replay. |
 
-Independent emitted-GID ink, effective rectangle clips and opaque-overpaint checks
-supplement extraction and image scores. Current controlled labels remain complete;
-the fixed portfolio's earlier 112,702-glyph screen is reused through PDF identity.
-These bounded checks do not prove arbitrary nonrectangular clipping, image
-occlusion, reading order or application-view parity. Original thresholds and
-failures remain unchanged.
+The preceding broader checkpoint `00cc795af` passed CI42903561738: 4,771 Windows/
+2,238 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
+package consumers. That historical gate is separate from the focused snapshot
+above. Consult the [qualification workflow](../.github/workflows/ci.yml) and the
+reports for the revision being consumed. CI builds platform binaries separately;
+source coverage does not imply binary identity across platforms.
 
-## Other retained evidence
+## Independent content checks and limits
 
-At source `207ecc530`, four fitting mixed-note sources/eight outcomes preserve
-all 64 continuation lines in order/on their independent Word pages. Twenty pictures
-fit clips and show both source colors; note heads, targets and image frames retain
-the original one-point numeric gates. A 66,612-glyph screen finds no clipping or
-opaque-rectangle/controlled-picture overlap. Native PDF/raster files are unavailable
-in the selected legacy folders; no fresh whole-page comparison is claimed.
+Ink checks bind each native paint span to its **actual embedded font program,
+resource and glyph IDs**. Normalized font names can alias regular/bold subsets;
+the earlier name-only 112,702-glyph portfolio claim is withdrawn. No corruption of
+library font data was demonstrated. Corrected evidence checks 56,513 unchanged
+portfolio glyphs and 66,612 fitting-note glyphs through verified PDF identities.
 
-Twelve earlier source-matched note/image comparisons retain their whole-image
-failures. Eight neighboring reference input hashes are stale and four Review
-picture outcomes lack references in those caches; they support no native fidelity
-conclusion. No new Office export was needed.
+Painted glyph/picture checks supplement source-text presence, extraction and image
+scores. These bounded checks do not establish arbitrary nonrectangular clipping,
+image occlusion, reading order or application-view parity. Oblique/mask clips,
+stroked text and unavailable/unsupported font programs remain unqualified. Native
+Python validation runs on Windows; Linux library checks are separate.
 
-At source `33609a92c`, the formerly failing
-`DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles` and all eight named Ubuntu
-inspection/chart-link failures in the
-[historical record](PreviewQualification.md#inherited-failures-and-limitations)
-actually passed with their preconditions satisfied. Their earlier failure reports
-remain valid for their original runtime/environment; this is not a claim that the
-current focused selection replays those nine checks.
+A custom resolver mapping all text to pinned DejaVu Math exposes a small clipped
+initial footnote A: 0.066pt in Final/0.050pt in Review. The same bearing overhang
+exists in one-column controls. All six probes paint the complete source label;
+the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
 
 ## Remaining release gaps
 
-- Supported content completeness is independent of whole-page image scores.
-  General note-row fragmentation/footnote overflow, body/nested-table origins,
-  custom Review print canvas, numbering, annotations and typography remain open.
-  Unfit fixed-line picture slots retain their clipped fallback; the new neighbor
-  correction qualifies ordinary automatic flow.
-- PPTX manual/side furniture, automatic ranges, dense plot allocation, font geometry
-  and palette/label rules remain approximate. No unvalidated count-specific or
-  document-shape-specific replacement is claimed.
-- **Office application-view calibration is unfinished.** Office-PDF comparisons
-  remain bootstrap references. Unavailable or rejected captures block dependent
-  conclusions only.
-- Coarse host-memory coverage remains partial. Existing cancellation, bounded
-  caches/staging, deterministic ownership/refunds, safe managed execution,
-  publication guarantees and PDF validity remain; no comprehensive heap ceiling.
+- General note-row fragmentation/overflow, body/nested-table origins, floating
+  table placement, custom Review canvas, numbering, annotations and typography
+  remain open. Unfit fixed-line picture slots keep their clipped fallback.
+- Some native-matching unfragmented note tails still contain six partial and
+  fifteen off-paper labels. Fitting controls do not qualify those overflow cases.
+- PPTX manual/side furniture, automatic ranges, dense labels and font/plot/palette
+  geometry remain approximate. No new count-specific or document-shape patch is
+  claimed. Original visual thresholds and failures remain unchanged.
+- **Office application-view calibration is unfinished.** Office PDFs remain
+  bootstrap references. Unavailable or rejected captures block dependent
+  conclusions only; no new Office export was needed for these fixes.
+- Coarse host-memory coverage remains partial. Safe managed execution, cancellation,
+  input bounds, bounded caches/staging, deterministic ownership/refunds, atomic
+  publication and PDF validity remain; no comprehensive heap ceiling is claimed.
 
-The broader rendering, resource and qualification roadmap remains open.
-Publication/tagging stay deferred. See [capabilities](Capabilities.md),
-[diagnostics](Diagnostics.md) and [caller migration](PublicApiChanges.md).
+The broader roadmap remains open; publication/tagging stay deferred. See
+[capabilities](Capabilities.md), [diagnostics](Diagnostics.md) and
+[caller migration](PublicApiChanges.md).
