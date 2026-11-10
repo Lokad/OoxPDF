@@ -91,8 +91,9 @@ internal sealed partial class DocxLayoutEngine
             page.ColumnFrames.Count <= 1 &&
             (page.Items.FirstOrDefault() is DocxTextLineLayout || page.Items.Count == 0 && hasDocumentBodyOrigin) &&
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
-            page.PageSettings.HeaderFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
-            page.PageSettings.FooterFloatingDrawingsByType.Values.All(drawings => drawings.Count == 0) &&
+            SelectStaticHeaderFooterDrawings(isHeader ? page.PageSettings.HeaderFloatingDrawingsByType :
+                page.PageSettings.FooterFloatingDrawingsByType, page.PageSettings, pageNumber,
+                page.SectionFirstPageNumber).Drawings.Count == 0 &&
             // Each story owns its measured frame. A counterpart's fallback
             // cannot revoke physical placement of otherwise supported content.
             CanUseStaticStoryFrame(story, width / scale, mathEquations, token);

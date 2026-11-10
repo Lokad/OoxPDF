@@ -5759,6 +5759,12 @@
     "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets"
   ],
   "docx-static-frame": [
+    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames",
+    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
+    "DocxSectionNavigationKeepsIndependentWordControlContent",
+    "DocxSectionNavigationSelectsFirstThenDefaultAndEvenStories",
+    "DocxSectionNavigationDoesNotBackfillAnUndefinedFirstHeader",
+    "DocxRendererTreatsStaticHeaderFloatingImagesAsRenderableContent",
     "DocxPhysicalPaintFramesRetainQuarterTurnClipBounds",
     "PortableRenderingStaticFallbackKeepsItsCounterpartVisible",
     "DocxStaticHeader",
