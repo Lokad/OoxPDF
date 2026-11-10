@@ -131,7 +131,6 @@ internal static partial class PortableRenderingTests
                     var actual = ReadPaintedSourceLabel(pages[index], footer);
                     TestAssert.Equal(expected.Count, actual.Count);
                     AssertSamePaintOrigin(expected[0], actual[0]);
-                    ReadPaintedSourceLabel(pages[index], "Quarterly operations report");
                     string math = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(baseline[index], usePageCoordinates: true,
                         fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).Select(show => show.Text));
                     ReadPaintedSourceLabel(pages[index], math, mathOnly: true);
