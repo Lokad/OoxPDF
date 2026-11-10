@@ -267,7 +267,7 @@ internal sealed partial class DocxLayoutEngine
             bool supportedFlow = plainStaticText
                 ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
                 : DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
-            if (!plainStaticText && paragraph.InlineTextBoxes.Count == 0 &&
+            if (!allowStaticFallback && paragraph.InlineTextBoxes.Count == 0 &&
                 !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !supportedFlow ||

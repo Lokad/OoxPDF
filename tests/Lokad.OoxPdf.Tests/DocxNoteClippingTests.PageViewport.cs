@@ -27,7 +27,7 @@ internal static partial class DocxNoteClippingTests
                 .RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             int marginGlyphs = 0;
             foreach (PdfPage page in pages)
-            foreach (var (block, clip, transform) in ReadPhysicalTextClips(page))
+            foreach (var (block, clip, transform) in ReadPhysicalPaintFrames(page))
             foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts)))
             {
                 if (!show.Text.Contains("FlowToken", StringComparison.Ordinal)) continue;
@@ -54,14 +54,14 @@ internal static partial class DocxNoteClippingTests
         }
     }
 
-    // Read only generated q/Q, physical rectangle clips and BT blocks for these
+    // Read only generated q/Q, rectangle clips, matrices and text/image paints for these
     // fixtures. CID decoding stays in the existing glyph-show reader; standard
     // affine matrices map clips and glyph ink into physical page coordinates.
-    internal static IEnumerable<(string Block, PdfRectangle Clip, Matrix3x2 Transform)> ReadPhysicalTextClips(PdfPage page)
+    internal static IEnumerable<(string Block, PdfRectangle Clip, Matrix3x2 Transform)> ReadPhysicalPaintFrames(PdfPage page)
     {
         const string number = @"[-+\d.eE]+";
         string rectangle = number + @"(?: " + number + @"){3}";
-        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<text>BT))\r?$";
+        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<text>BT)|(?<image>/[A-Za-z0-9_]+ Do))\r?$";
         var saved = new Stack<(PdfRectangle Clip, Matrix3x2 Transform)>();
         var clip = new PdfRectangle(0d, 0d, page.Width, page.Height);
         var transform = Matrix3x2.Identity;
@@ -85,12 +85,13 @@ internal static partial class DocxNoteClippingTests
                 clip = new PdfRectangle(x, y, Math.Min(clip.X + clip.Width, Math.Max(first.X, last.X)) - x,
                     Math.Min(clip.Y + clip.Height, Math.Max(first.Y, last.Y)) - y);
             }
-            else
+            else if (operation.Groups["text"].Success)
             {
                 int end = page.Content.IndexOf("\nET", operation.Index, StringComparison.Ordinal);
                 TestAssert.True(end >= 0, "Every generated text object terminates.");
                 yield return (page.Content[operation.Index..(end + 3)], clip, transform);
             }
+            else yield return (operation.Value.TrimEnd('\r'), clip, transform);
         }
         TestAssert.Equal(0, saved.Count);
     }

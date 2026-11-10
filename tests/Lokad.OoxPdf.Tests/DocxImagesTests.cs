@@ -83,8 +83,10 @@ internal static class DocxImagesTests
         DocxInlineImageLayout mapped = map.PrecompensateImage(image, 36d, 400d, 2);
         TestAssert.True(mapped.ClipBounds is { } clip && Math.Abs(clip.X - mapped.X) < .000001d &&
             Math.Abs(clip.Y - mapped.Y) < .000001d, "Image and clip must share the mapped origin.");
-        TestAssert.Equal(144d, mapped.ClipBounds!.Value.Width);
-        TestAssert.Equal(17.6d, mapped.ClipBounds.Value.Height);
+        TestAssert.True(Math.Abs(144d * .76d - mapped.ClipBounds!.Value.Width) < .000001d,
+            "The image clip retains its full extent in the scaled story frame.");
+        TestAssert.True(Math.Abs(17.6d * .76d - mapped.ClipBounds.Value.Height) < .000001d,
+            "The authored clip height follows the same scale as its picture.");
         TestAssert.Equal(2, mapped.PageIndex);
     }
 
@@ -398,9 +400,11 @@ internal static class DocxImagesTests
         TestAssert.Equal(13d, moved.ClipBounds!.Value.Y);
         var map = new DocxRenderer.FloatingTextBoxEmissionMap(0.76d, -17d, 75d, 792d);
         DocxInlineImageLayout mapped = map.PrecompensateImage(image, 36d, 400d, 2);
-        TestAssert.True(Math.Abs((mapped.LineFrame!.Value.Bottom - image.LineFrame!.Value.Bottom) - (mapped.Y - image.Y)) < 0.000001d,
-            "The line slot must follow the same placement shift as the picture.");
-        TestAssert.Equal(90d, mapped.LineFrame!.Value.Height); TestAssert.Equal(2, mapped.PageIndex);
+        TestAssert.True(Math.Abs(mapped.LineFrame!.Value.Bottom - map.PrecompensateY(400d + 12d)) < .000001d,
+            "The line slot maps its own source origin rather than borrowing the picture's translation.");
+        TestAssert.True(Math.Abs(68.4d - mapped.LineFrame.Value.Height) < .000001d,
+            "The line frame height scales with its image.");
+        TestAssert.Equal(2, mapped.PageIndex);
     }
 
     public static void DocxTablePictureLineFrameCoversTheAuthoredImageTop()

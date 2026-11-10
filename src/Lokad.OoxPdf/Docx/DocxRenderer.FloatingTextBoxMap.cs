@@ -83,10 +83,10 @@ internal sealed partial class DocxRenderer
             };
         }
 
-        public DocxInlineImageLayout PrecompensateNoteImage(DocxInlineImageLayout image, int pageIndex)
+        public DocxInlineImageLayout PrecompensateImage(DocxInlineImageLayout image, int pageIndex)
         {
-            // Notes retain design-space positions and extents through layout.
-            // Their image frame joins the same printed map as text and math.
+            // Design-space pictures, their clipping and their occupied line
+            // frame join the same printed map as text and container bounds.
             return image with
             {
                 X = PrecompensateX(image.X), Y = PrecompensateY(image.Y),
@@ -101,9 +101,7 @@ internal sealed partial class DocxRenderer
 
         public DocxInlineImageLayout PrecompensateImage(DocxInlineImageLayout image, double originX, double originY, int pageIndex)
         {
-            // Image dimensions stay file values, like body images on scaled pages; only the
-            // position joins the uniform map.
-            return image.Relocate(PrecompensateX(originX + image.X), PrecompensateY(originY + image.Y), pageIndex);
+            return PrecompensateImage(image.Translate(originX, originY), pageIndex);
         }
 
         public DocxInlineTextBoxLayout PrecompensateBox(DocxInlineTextBoxLayout box)
@@ -117,8 +115,7 @@ internal sealed partial class DocxRenderer
                 BoxHeight = self.ScaleExtent(box.BoxHeight),
                 PrintScale = box.PrintScale * self.PrintScale,
                 TextLines = box.TextLines.Select(line => self.PrecompensateLine(line, 0d, 0d)).ToArray(),
-                InlineImages = box.InlineImages.Select(image =>
-                    image.Relocate(self.PrecompensateX(image.X), self.PrecompensateY(image.Y))).ToArray(),
+                InlineImages = box.InlineImages.Select(image => self.PrecompensateImage(image, image.PageIndex)).ToArray(),
                 TableRows = box.TableRows.Select(self.PrecompensateRow).ToArray()
             };
         }
@@ -154,7 +151,7 @@ internal sealed partial class DocxRenderer
                             .Select(cellLine => self.PrecompensateLine(cellLine, 0d, 0d))
                             .ToArray(),
                         InlineImages = cell.InlineImages
-                            .Select(cellImage => cellImage.Relocate(self.PrecompensateX(cellImage.X), self.PrecompensateY(cellImage.Y)))
+                            .Select(cellImage => self.PrecompensateImage(cellImage, cellImage.PageIndex))
                             .ToArray(),
                         InlineTextBoxes = cell.InlineTextBoxes.Select(self.PrecompensateBox).ToArray(),
                         NestedTableRows = cell.NestedRows.Select(self.PrecompensateRow).ToArray()
