@@ -97,7 +97,8 @@ internal static partial class DocxEndnoteBlockTests
                 }
             }, partOverride: "word/endnotes.xml");
         return new DocxLayoutEngine(mode == OoxPdfDocxMarkupMode.Final
-                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
+                wordCompatiblePrintScale: 1d)
             .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
     }
 }
