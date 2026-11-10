@@ -271,7 +271,7 @@ internal sealed partial class DocxLayoutEngine
                 !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !supportedFlow ||
-                paragraph.Alignment is not (DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right)) return false;
+                !DocxMathParagraphPolicy.HasSupportedOrderedAlignment(paragraph)) return false;
             // Source-owned boxes and sibling pictures carry the parser's ordered view.
             // Ordinary static text reuses run affinity without mutating its model.
             items ??= DocxInlineContent.FromPrefix(paragraph.Runs, paragraph.Images, token);

@@ -301,7 +301,7 @@ internal static class DocxMathParagraphPolicy
     private static bool HasSimpleRelocationAlignment(DocxParagraph paragraph) =>
         paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right;
 
-    private static bool HasSupportedOrderedAlignment(DocxParagraph paragraph) =>
+    internal static bool HasSupportedOrderedAlignment(DocxParagraph paragraph) =>
         HasSimpleRelocationAlignment(paragraph) || paragraph.Alignment == DocxTextAlignment.Justified;
 
     // Preparation needs the dependency kind, not a guessed counter value.

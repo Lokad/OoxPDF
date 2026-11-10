@@ -77,6 +77,30 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxFloatingChildPictureAlignmentKeepsContentAcrossRunSplits()
+    {
+        foreach (string alignment in new[] { "left", "center", "right", "both" })
+        foreach (bool split in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = ReadMutation("TableGridOrigins/Containers/floating-cell-wide-picture", mode, false, split,
+                (xml, w, _) =>
+                {
+                    var paragraph = xml.Descendants(w + "txbxContent").Last().Elements(w + "p").Single();
+                    var properties = paragraph.Element(w + "pPr")!;
+                    properties.Element(w + "jc")?.Remove();
+                    properties.Add(new XElement(w + "jc", new XAttribute(w + "val", alignment)));
+                });
+            var page = AssertFloatingLabelsPaint(source, mode,
+                ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], alignment + "/split=" + split);
+            var picture = ReadPictureBounds(page).Single();
+            TestAssert.True(picture.Bounds.X >= picture.Clip.X - .01d && picture.Bounds.Y >= picture.Clip.Y - .01d &&
+                picture.Bounds.X + picture.Bounds.Width <= picture.Clip.X + picture.Clip.Width + .01d &&
+                picture.Bounds.Y + picture.Bounds.Height <= picture.Clip.Y + picture.Clip.Height + .01d,
+                $"Alignment and equivalent run splitting must retain the complete fitting picture: {alignment}/{split}/{mode}.");
+        }
+    }
+
     private static PdfPage AssertFloatingLabelsPaint(DocxDocument source, OoxPdfDocxMarkupMode mode,
         IReadOnlyList<string> expectedLabels, string context)
     {
@@ -94,13 +118,27 @@ internal static partial class DocxInlineCompositionTests
             .Concat(ReadPictureBounds(page).Select(picture =>
                 (Offset: int.MaxValue, X: picture.Bounds.X, Y: picture.Bounds.Y,
                     Width: picture.Bounds.Width, Height: picture.Bounds.Height))).ToArray();
-        var labels = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
-        foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts)))
+        var paints = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).SelectMany(frame =>
+            DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, frame.Block, page.Fonts))
+                .Select(show => (frame.Block, frame.Clip, frame.Transform, Show: show))).ToArray();
+        // Justification and equivalent run splits may emit a label in several
+        // text shows. Match its complete source characters, then check each
+        // show's ink in its own frame rather than requiring one Tj per label.
+        string text = string.Concat(paints.SelectMany(paint => paint.Show.Text).Where(c => !char.IsWhiteSpace(c)));
+        var labels = expectedLabels.Select(label =>
         {
-            string label = show.Text.Trim();
-            if (!expectedLabels.Contains(label, StringComparer.Ordinal)) continue;
-            TestAssert.True(labels.Add(label), "Each source label paints once.");
+            string compact = string.Concat(label.Where(c => !char.IsWhiteSpace(c)));
+            int start = text.IndexOf(compact, StringComparison.Ordinal);
+            TestAssert.True(start >= 0 && start == text.LastIndexOf(compact, StringComparison.Ordinal),
+                "Each complete source label paints once: " + context + "/" + mode + "/" + label);
+            return (Start: start, End: start + compact.Length);
+        }).ToArray();
+        int characterIndex = 0;
+        foreach (var (block, clip, transform, show) in paints)
+        {
+            int start = characterIndex;
+            characterIndex += show.Text.Count(c => !char.IsWhiteSpace(c));
+            if (!labels.Any(label => label.Start < characterIndex && label.End > start)) continue;
             TestAssert.True(Math.Abs(transform.M12) < .000001d && Math.Abs(transform.M21) < .000001d,
                 "The source has axis-aligned glyph frames.");
             TestAssert.True(Math.Abs(transform.M11 - 1f) < .000001d && Math.Abs(transform.M22 - 1f) < .000001d &&
@@ -110,27 +148,32 @@ internal static partial class DocxInlineCompositionTests
             var font = show.Font.Font;
             double scale = show.Size / font.UnitsPerEm;
             double cursor = show.X;
-            foreach (char character in label)
+            int index = start;
+            foreach (char character in show.Text)
             {
                 ushort glyph = font.MapCodePoint(character);
                 double glyphX = cursor;
                 cursor += font.GetAdvanceWidth(glyph) * scale;
                 if (char.IsWhiteSpace(character)) continue;
+                bool inLabel = labels.Any(label => index >= label.Start && index < label.End);
+                index++;
+                if (!inLabel) continue;
                 TestAssert.True(font.TryGetGlyphBounds(glyph, out var ink),
                     "The portable font supplies each source glyph.");
                 double first = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
                 double last = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
                 TestAssert.True(Math.Min(first, last) >= clip.Y - .01d &&
                     Math.Max(first, last) <= clip.Y + clip.Height + .01d,
-                    $"A complete floating-table label must survive its ancestor clips: {context}/{mode}/{label}.");
+                    $"A complete floating-table label must survive its ancestor clips: {context}/{mode}/{show.Text}.");
                 double left = glyphX + ink.XMin * scale, right = glyphX + ink.XMax * scale;
+                TestAssert.True(left >= clip.X - .01d && right <= clip.X + clip.Width + .01d,
+                    $"A floating-table label must retain its horizontal ink: {context}/{mode}/{show.Text}.");
                 TestAssert.True(!fills.Any(fill => fill.Offset > paintOffset &&
                     Math.Min(fill.X + fill.Width, right) - Math.Max(fill.X, left) > .01d &&
                     Math.Min(fill.Y + fill.Height, Math.Max(first, last)) - Math.Max(fill.Y, Math.Min(first, last)) > .01d),
-                    $"A cell background or picture must not cover a source label: {context}/{mode}/{label}.");
+                    $"A cell background or picture must not cover a source label: {context}/{mode}/{show.Text}.");
             }
         }
-        TestAssert.Equal(expectedLabels.Count, labels.Count);
         return page;
 
         static double ReadNumber(Match match, string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
