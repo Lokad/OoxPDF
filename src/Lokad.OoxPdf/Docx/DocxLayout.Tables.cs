@@ -288,6 +288,8 @@ internal sealed partial class DocxLayoutEngine
         double insetCorrection, double ownerCorrection) => line with
     {
         BaselineY = line.BaselineY + ownerCorrection + (line.InlineFrame is null ? insetCorrection : 0d),
+        SourceBaselineOffset = line.SourceBaselineOffset +
+            (line.InlineFrame is not null && !DocxInlineLineGeometry.HasTextOrMath(line) ? ownerCorrection : 0d),
         FirstLineInsetPoints = line.FirstLineInsetPoints - (line.InlineFrame is null ? insetCorrection : 0d)
     };
 
