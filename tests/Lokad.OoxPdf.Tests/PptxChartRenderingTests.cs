@@ -325,7 +325,7 @@ internal static class PptxChartRenderingTests
             "The automatic label box stays centered on its plotted category point inside the authored plot frame.");
         TestAssert.Contains("0.8 0.933 1 rg", pdf);
         Match sizedShape = Regex.Match(pdf, @"0\.8 0\.933 1 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) 28\.8 17\.28 re f");
-        TestAssert.True(sizedShape.Success, "The authored0.1Ã—0.08 label scales with its288Ã—216pt chart frame.");
+        TestAssert.True(sizedShape.Success, "The authored0.1Ãƒâ€”0.08 label scales with its288Ãƒâ€”216pt chart frame.");
         TestAssert.Contains("0.4 0 0.8 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 9 Tf"), "Expected per-label custom data label text style to drive font size.");
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
@@ -3434,7 +3434,7 @@ internal static class PptxChartRenderingTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
                   <c:grouping val="standard"/>
-                  <c:dLbls><c:showVal val="0"/><c:showLegendKey val="1"/><c:dLblPos val="t"/><c:spPr><a:solidFill><a:srgbClr val="2468AC"/></a:solidFill></c:spPr></c:dLbls>
+                  <c:dLbls><c:showVal val="0"/><c:showLegendKey val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/><c:dLblPos val="t"/><c:spPr><a:solidFill><a:srgbClr val="2468AC"/></a:solidFill></c:spPr></c:dLbls>
                   <c:ser>
                     <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
                     <c:spPr><a:ln w="38100"><a:solidFill><a:srgbClr val="C00000"/></a:solidFill></a:ln></c:spPr>
