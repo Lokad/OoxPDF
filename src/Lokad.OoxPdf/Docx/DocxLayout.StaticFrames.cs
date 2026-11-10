@@ -364,7 +364,7 @@ internal sealed partial class DocxLayoutEngine
                 // ordered source items still own a static frame.
                 paragraph.Equations.All(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth <= width) &&
                 paragraph.Images.All(image => image.WidthPoints <= width));
-        return paragraph.Alignment is DocxTextAlignment.Left or DocxTextAlignment.Center or DocxTextAlignment.Right &&
+        return DocxMathParagraphPolicy.HasSupportedOrderedAlignment(paragraph) &&
             paragraph.Images.All(image => image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
                 double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
                 image.WidthPoints > 0d && image.HeightPoints > 0d && image.WidthPoints <= width) &&

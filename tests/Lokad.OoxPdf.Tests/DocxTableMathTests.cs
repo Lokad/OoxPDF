@@ -468,12 +468,13 @@ internal static class DocxTableMathTests
             DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, .75d)
                 .Create(document, new DocxTests.ScaledLayoutTextMeasurer(measurer, .75d, .75d), default, measurer);
             var line = layout.Pages.Single().StaticTextLines.Single();
-            TestAssert.Equal(alignment != DocxTextAlignment.Justified, line.StaticStoryUsesPhysicalY);
-            if (alignment != DocxTextAlignment.Justified) positions.Add(line.X);
+            TestAssert.True(line.StaticStoryUsesPhysicalY, "Supported ordered alignment keeps the physical static source frame.");
+            positions.Add(line.X);
             TestAssert.Equal(alignment, paragraph.Alignment);
         }
         TestAssert.True(positions[0] < positions[1] && positions[1] < positions[2],
-            "Already supported left/center/right placement shares one source rule while body/note eligibility remains left-only.");
+            "Left/center/right placement shares one source rule while body/note eligibility remains left-only.");
+        TestAssert.Equal(positions[0], positions[3]); // A final justified line keeps its natural left origin.
     }
 
     public static void DocxStaticTableMathAndPlainFramesMatchIndependentWordAnchors()

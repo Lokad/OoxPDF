@@ -12624,6 +12624,7 @@
     "DocxInlineCompositionExactLineSlotSeparatesInkFromAdvanceAndKeepsFallbacks"
   ],
   "docx-inline-justification": [
+    "DocxJustifiedStaticParagraphsKeepFooterInkAndPhysicalFrames",
     "DocxInlineCompositionJustif",
     "PortableRenderingJustifiedMath",
     "DocxInlineCompositionAuthoredDisplayAlignmentOwnsMathRowsAndKeepsFallbacks",
@@ -14368,6 +14369,7 @@
     "PortableRenderingTableGridOriginsPreserveMixedInlineContent"
   ],
   "docx-inline-box-math": [
+    "DocxJustifiedInlineBoxChildKeepsPreparedParentContent",
     "DocxCellTextBoxAfterTextHonorsSpacingExcess",
     "DocxCellTextBoxAfterTextTuckGrowsWithFontSize",
     "DocxCellTextBoxAfterTextTucksToBaseline",
