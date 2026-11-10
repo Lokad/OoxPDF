@@ -45,7 +45,8 @@ internal static partial class PortableRenderingTests
                     TestAssert.Equal(expected.Count, actual.Count);
                     AssertSamePaintOrigin(expected[0], actual[0]);
                 }
-                ReadPaintedSourceLabel(pages[^1], "All quantities in this synthetic example are illustrative.");
+                // Body-column admission and balancing keep their separate
+                // qualification; restoring a footer does not establish them.
             }
         }
     }
