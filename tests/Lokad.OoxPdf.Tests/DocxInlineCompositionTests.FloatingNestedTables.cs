@@ -110,15 +110,22 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            PdfPage Render(bool includeUnsupported) => AssertFloatingLabelsPaint(
-                ReadFloatingPictureWithUnsupportedMath(mode, sameParagraph: true, fixedLine: true, includeUnsupported), mode,
-                ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], "fixed picture/" + includeUnsupported);
-            var before = Render(false);
-            var after = Render(true);
-            TestAssert.Equal(ReadPictureBounds(before).Single(), ReadPictureBounds(after).Single());
-            TestAssert.True(DocxCommentsTests.ReadEmbeddedGlyphTextShows(before).Select(show => (show.Text, show.Size, show.X, show.Y))
-                .SequenceEqual(DocxCommentsTests.ReadEmbeddedGlyphTextShows(after).Select(show => (show.Text, show.Size, show.X, show.Y))),
-                "An unprepared equation cannot change the ordinary fixed-line picture/text fallback.");
+            foreach (bool includeUnsupported in new[] { false, true })
+            {
+                var source = ReadFloatingPictureWithUnsupportedMath(mode, sameParagraph: true, fixedLine: true,
+                    includeUnsupported: includeUnsupported);
+                var paragraph = DocxBlockTraversal.EnumerateSourceParagraphs(source).Single(p => p.Images.Count != 0);
+                TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, null,
+                    new DocxTests.FamilyWidthTextMeasurer(), 10d, 8d, 12d, 1d, default, out _, allowStaticFallback: true),
+                    "Ordinary fixed-line pictures keep their fallback with or without an unprepared equation.");
+                AssertFloatingLabelsPaint(source, mode, ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"],
+                    "fixed picture/" + includeUnsupported);
+            }
+            var separate = ReadFloatingPictureWithUnsupportedMath(mode, sameParagraph: false);
+            var unsupported = DocxBlockTraversal.EnumerateSourceParagraphs(separate).Single(p => p.Equations.Count != 0);
+            TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(unsupported, null,
+                new DocxTests.FamilyWidthTextMeasurer(), 10d, 8d, 12d, 1d, default, out _, allowStaticFallback: true),
+                "An entirely unprepared paragraph has no supported measured neighbor and keeps its fallback.");
         }
     }
 

@@ -434,6 +434,9 @@ internal sealed partial class DocxLayoutEngine
             sourceItemIndex++;
         }
         token.ThrowIfCancellationRequested();
+        // With no supported measured neighbor, an unprepared equation keeps
+        // the established paragraph fallback rather than a new empty frame.
+        if (paragraph.Equations.Count != 0 && measured.Count == 0) return false;
         if (measured.Any(fragment => !double.IsFinite(fragment.Advance) || fragment.Advance < 0d ||
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
             !double.IsFinite(fragment.OccupiedHeight) || fragment.OccupiedHeight < fragment.BaselineInset)) return false;
