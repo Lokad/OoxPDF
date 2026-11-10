@@ -165,11 +165,12 @@ internal static partial class PortableRenderingTests
         properties.Add(new XElement(w + "jc", new XAttribute(w + "val", "both")));
     }
 
-    private static void AssertSamePaintOrigin((Vector2 Origin, double Size) before, (Vector2 Origin, double Size) after) =>
+    private static void AssertSamePaintOrigin((Vector2 Origin, double Size, PdfRectangle Ink) before,
+        (Vector2 Origin, double Size, PdfRectangle Ink) after) =>
         TestAssert.True(Vector2.Distance(before.Origin, after.Origin) < .002f && Math.Abs(before.Size - after.Size) < .001d,
             "The equivalent single-line alignment keeps its source origin and physical font size.");
 
-    private static IReadOnlyList<(Vector2 Origin, double Size)> ReadPaintedSourceLabel(PdfPage page,
+    private static IReadOnlyList<(Vector2 Origin, double Size, PdfRectangle Ink)> ReadPaintedSourceLabel(PdfPage page,
         string label, bool mathOnly = false)
     {
         // Match source characters across text-show boundaries, then check their
@@ -199,21 +200,26 @@ internal static partial class PortableRenderingTests
         int start = actual.IndexOf(wanted, StringComparison.Ordinal);
         TestAssert.True(start >= 0 && start == actual.LastIndexOf(wanted, StringComparison.Ordinal),
             "Each complete source label paints once: " + label);
-        var result = new List<(Vector2 Origin, double Size)>();
+        var result = new List<(Vector2 Origin, double Size, PdfRectangle Ink)>();
         foreach (var character in characters.Where(c => c.Offset >= start && c.Offset < start + wanted.Length))
         {
             var font = character.Font.Font;
             TestAssert.True(font.TryGetGlyphBounds(character.Glyph, out var ink), "Pinned fonts supply the source glyph ink.");
             double scale = character.Size / font.UnitsPerEm;
+            double left = double.PositiveInfinity, bottom = double.PositiveInfinity;
+            double right = double.NegativeInfinity, top = double.NegativeInfinity;
             foreach (double x in new[] { ink.XMin, ink.XMax })
             foreach (double y in new[] { ink.YMin, ink.YMax })
             {
                 var point = Vector2.Transform(new((float)(character.X + x * scale), (float)(character.Y + y * scale)), character.Transform);
+                left = Math.Min(left, point.X); right = Math.Max(right, point.X);
+                bottom = Math.Min(bottom, point.Y); top = Math.Max(top, point.Y);
                 TestAssert.True(point.X >= character.Clip.X - .01d && point.X <= character.Clip.X + character.Clip.Width + .01d &&
                     point.Y >= character.Clip.Y - .01d && point.Y <= character.Clip.Y + character.Clip.Height + .01d,
                     "Every source glyph must remain inside the paper and effective clips: " + label);
             }
-            result.Add((Vector2.Transform(new((float)character.X, (float)character.Y), character.Transform), character.Size));
+            result.Add((Vector2.Transform(new((float)character.X, (float)character.Y), character.Transform), character.Size,
+                new PdfRectangle(left, bottom, right - left, top - bottom)));
         }
         TestAssert.Equal(wanted.Length, result.Count);
         return result;

@@ -51,12 +51,24 @@ internal sealed partial class DocxRenderer
         {
             DocxEquationLayout equation => equation.BaselineY + equation.Math.BaselineInset * equation.Scale,
             DocxInlineImageLayout image => image.Y + image.Height,
-            DocxTableRowLayout row when !EnumerateTableRowTextLines(row).Any() =>
-                row.Cells.SelectMany(cell => cell.InlineImages).Select(image => (double?)(image.Y + image.Height)).Max(),
+            // Cell-end source carriers do not turn a picture-only row into text.
+            DocxTableRowLayout row when !EnumerateTableRowTextLines(row)
+                .Any(line => !DocxInlineLineGeometry.IsNonPaintingSourceCarrier(line)) =>
+                TablePictures(row).Select(image => (double?)(image.Y + image.Height)).Max(),
             _ => null
         };
         return objectTop is { } top && (baseline is null || top > baseline.Value)
             ? (top, 0d) : (baseline, sourceOffset);
+
+        static IEnumerable<DocxInlineImageLayout> TablePictures(DocxTableRowLayout row)
+        {
+            foreach (var cell in row.Cells)
+            {
+                foreach (var image in cell.InlineImages) yield return image;
+                foreach (var nested in cell.NestedRows)
+                    foreach (var image in TablePictures(nested)) yield return image;
+            }
+        }
     }
 
     private static IEnumerable<DocxTextLineLayout> EnumerateRenderedPageTextLines(

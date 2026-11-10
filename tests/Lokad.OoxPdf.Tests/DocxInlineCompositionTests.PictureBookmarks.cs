@@ -23,7 +23,7 @@ internal static partial class DocxInlineCompositionTests
             var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var painted = pages.Select((page, index) => (Page: page, Index: index)).Single(pair => pair.Page.Images.Count != 0);
             var destination = pages.SelectMany(page => page.Annotations).Single(a => a.Destination is not null).Destination!.Value;
-            var picture = ReadPictureBookmarkFrame(painted.Page);
+            var picture = ReadPaintedPictureFrame(painted.Page);
             double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
@@ -61,13 +61,13 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(control.Length, pages.Length);
                 TestAssert.Equal(expectedText, string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)));
                 TestAssert.Equal(expected, actual);
-                TestAssert.Equal(ReadPictureBookmarkFrame(control.Single(p => p.Images.Count != 0)),
-                    ReadPictureBookmarkFrame(pages.Single(p => p.Images.Count != 0)));
+                TestAssert.Equal(ReadPaintedPictureFrame(control.Single(p => p.Images.Count != 0)),
+                    ReadPaintedPictureFrame(pages.Single(p => p.Images.Count != 0)));
             }
         }
     }
 
-    private static (double X, double Top) ReadPictureBookmarkFrame(PdfPage page)
+    internal static (double X, double Top) ReadPaintedPictureFrame(PdfPage page)
     {
         var draw = Regex.Match(page.Content, @"([-\d.]+) 0 0 ([-\d.]+) ([-\d.]+) ([-\d.]+) cm\s+/" +
             Regex.Escape(page.Images.Single().ResourceName) + @" Do");

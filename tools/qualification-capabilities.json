@@ -5759,6 +5759,12 @@
     "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets"
   ],
   "docx-static-body-origin": [
+    "PortableRenderingPictureOnlyNestedTablesKeepTheirBodyOrigin",
+    "DocxNestedCellEndMarkHasNoOccupiedHeightAndRetainsItsSource",
+    "DocxNestedCellEndMarkKeepsVisibleLeadingAndReferenceFrames",
+    "DocxNestedCellEndMarkUsesTheSameFrameForPaginationAndPlacement",
+    "DocxInlineCompositionPictureFirstTablesUseTheirOwnedTextAnchor",
+    "PortableRenderingPictureFirstTablesRetainTheirTextStrutAnchor",
     "PortableRenderingBlankLeadingPageKeepsContinuationFooters",
     "PortableRenderingLeadingEmptyAndEquationPagesKeepStaticInk",
     "PortableRenderingColumnFallbackKeepsBodyAndFooterInk",
