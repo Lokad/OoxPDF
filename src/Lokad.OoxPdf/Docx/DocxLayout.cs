@@ -817,7 +817,6 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            var (pageStoryLayouts, storyByKey) = GetFootnoteStoryLookup();
             var pageFootnoteStories = new List<DocxReferencedRelatedStoryLayout>();
             foreach (int blockIndex in blocksOnPage.OrderBy(index => index))
             {
@@ -846,16 +845,6 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
-                    if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
-                    {
-                        continue;
-                    }
-
-                    if (storyLayout.TextLines.Count == 0)
-                    {
-                        continue;
-                    }
-
                     if (location.Reference.SourceRunIndex < 0)
                     {
                         continue;
@@ -875,6 +864,13 @@ internal sealed partial class DocxLayoutEngine
                     }
 
                     if (!matched)
+                    {
+                        continue;
+                    }
+
+                    var (_, storyByKey) = GetFootnoteStoryLookup();
+                    if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) ||
+                        storyLayout.ContentHeight <= 0d || storyLayout.TextLines.Count == 0)
                     {
                         continue;
                     }
@@ -953,6 +949,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             var headScratchPages = new List<DocxLayoutPage> { templatePage };
+            var (pageStoryLayouts, _) = GetFootnoteStoryLookup();
             DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
             DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
             IDocxTextMeasurer? separatorMeasurer = unscaledTextMeasurer ?? textMeasurer;
