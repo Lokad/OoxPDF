@@ -42,7 +42,7 @@ internal static class DocxPassiveStaticBodyTests
         CheckBodyBaselines(null, compareWord: true, "minimum-static-picture-frames-office.json", comparePictures: true);
     }
 
-    public static void DocxStaticPictureOnlyFramesKeepDeclaredAndMixedTextFallbacks()
+    public static void DocxStaticPictureRowsKeepDeclaredSlotsAndMixedText()
     {
         XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         foreach (string kind in new[] { "header", "footer" })
@@ -64,8 +64,17 @@ internal static class DocxPassiveStaticBodyTests
             });
             var page = Layout(document).Pages.Single();
             TestAssert.Equal(1, page.StaticInlineImages.Count);
-            TestAssert.True(page.StaticTextLines.All(line => line.InlineFrame is null),
-                "Declared spacing and mixed static text retain their established placement path.");
+            var line = page.StaticTextLines.Single();
+            var frame = TestAssert.NotNull(line.InlineFrame);
+            var picture = page.StaticInlineImages.Single();
+            if (declared) TestAssert.Equal(12d, frame.Height);
+            else TestAssert.Contains("Public picture text.", line.Text);
+            TestAssert.True(picture.Y >= line.BaselineY - (frame.Height - frame.BaselineInset) - .001d &&
+                picture.Y + picture.Height <= line.BaselineY + frame.BaselineInset + .001d,
+                "A fitting static picture stays inside its occupied row, including the authored exact slot.");
+            TestAssert.True(picture.X >= 0d && picture.X + picture.Width <= page.Width &&
+                picture.Y >= 0d && picture.Y + picture.Height <= page.Height,
+                "Shared wrapping must preserve the complete fitting static picture on paper.");
         }
     }
 
