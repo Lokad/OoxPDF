@@ -24,8 +24,8 @@ Documentation and harness updates do not rebuild that library.
 The preceding broader checkpoint `00cc795af` passed CI42903561738: 4,771 Windows/
 2,238 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
 package consumers. That historical gate is separate from the focused snapshot
-above. Consult the [qualification workflow](../.github/workflows/ci.yml) and the
-reports for the revision being consumed. CI builds platform binaries separately;
+above. Consult the CI reports for the revision being consumed. CI builds
+platform binaries separately;
 source coverage does not imply binary identity across platforms.
 
 ## Independent content checks and limits
