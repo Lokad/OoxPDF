@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -49,9 +50,40 @@ internal static partial class PortableRenderingTests
                 var actual = ReadPaintedSourceLabel(pages[index], footer);
                 TestAssert.Equal(expected.Count, actual.Count);
                 AssertSamePaintOrigin(expected[0], actual[0]);
+                AssertStaticSelectionPictureFrame(pages[index]);
             }
         }
     }
+
+    public static void PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var document = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false);
+            var baseline = RenderAlignmentProbe(document, mode);
+            var drawings = document.PageSettings.FooterFloatingDrawingsByType.ToDictionary(pair => pair.Key, pair => pair.Value);
+            drawings["default"] = [CreateStaticSelectionPicture(document)];
+            var source = document with { PageSettings = document.PageSettings with { FooterFloatingDrawingsByType = drawings } };
+            var pages = RenderAlignmentProbe(source, mode);
+            TestAssert.Equal(baseline.Length, pages.Length);
+            for (int index = 0; index < pages.Length; index++)
+            {
+                const string footer = "Public synthetic composition portfolio";
+                var expected = ReadPaintedSourceLabel(baseline[index], footer);
+                var actual = ReadPaintedSourceLabel(pages[index], footer);
+                TestAssert.Equal(expected.Count, actual.Count);
+                AssertSamePaintOrigin(expected[0], actual[0]);
+                AssertStaticSelectionPictureFrame(pages[index]);
+            }
+        }
+    }
+
+    private static void AssertStaticSelectionPictureFrame(PdfPage page) =>
+        TestAssert.True(DocxNoteClippingTests.ReadPhysicalPaintFrames(page).Any(frame => frame.Block.StartsWith("/", StringComparison.Ordinal) &&
+            Math.Abs(frame.Transform.M11 - 20d) < .001d && Math.Abs(frame.Transform.M22 - 20d) < .001d &&
+            Math.Abs(frame.Transform.M12) < .001d && Math.Abs(frame.Transform.M21) < .001d &&
+            Math.Abs(frame.Transform.M31 - 420d) < .001d && Math.Abs(frame.Transform.M32 - (page.Height - 44d)) < .001d),
+            "The floating picture retains its authored page frame independently of static text placement.");
 
     private static DocxFloatingDrawing CreateStaticSelectionPicture(DocxDocument document) =>
         new("0", "0", "0", "0", "0", "0", "1", "0", "1", "1", "254000", "254000",
