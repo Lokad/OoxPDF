@@ -5,6 +5,28 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PortableRenderingTests
 {
+    public static void PortableRenderingBlankLeadingPageKeepsContinuationFooters()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            const string fixture = "CompositionProbes/long-note-inline-picture-report";
+            var baseline = RenderAlignmentProbe(DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false), mode);
+            var source = DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
+                xml.Root!.Element(w + "body")!.AddFirst(new XElement(w + "p", new XElement(w + "r",
+                    new XElement(w + "br", new XAttribute(w + "type", "page"))))));
+            var pages = RenderAlignmentProbe(source, mode);
+            TestAssert.Equal(baseline.Length + 1, pages.Length);
+            foreach (var page in pages)
+            {
+                const string footer = "Public synthetic composition portfolio";
+                var expected = ReadPaintedSourceLabel(baseline[0], footer);
+                var actual = ReadPaintedSourceLabel(page, footer);
+                TestAssert.Equal(expected.Count, actual.Count);
+                AssertSamePaintOrigin(expected[0], actual[0]);
+            }
+        }
+    }
+
     public static void PortableRenderingLeadingEmptyAndEquationPagesKeepStaticInk()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
