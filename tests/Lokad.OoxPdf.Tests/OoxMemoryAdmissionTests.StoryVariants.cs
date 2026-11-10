@@ -38,7 +38,9 @@ internal static partial class OoxMemoryAdmissionTests
                 "Placement retries borrow the same admitted width families.");
             package.Dispose();
             TestAssert.True(pool.Reserved > 0, "Measured variants outlive package storage.");
-            TestAssert.Contains("Variant note", measurements.Values.Last().Last().TextLines[0].Text);
+            var retainedNote = measurements.Values.Last().Single(note =>
+                note.Story.IsNormalStoryType && note.Story.Id == "8");
+            TestAssert.Contains("Variant note", string.Concat(retainedNote.TextLines.Select(line => line.Text)));
             TestAssert.True(second.Pages.SelectMany(page => page.PlacedRelatedStories).Any(), "The reused layout remains readable.");
         }
         TestAssert.Equal(0L, pool.Reserved);
