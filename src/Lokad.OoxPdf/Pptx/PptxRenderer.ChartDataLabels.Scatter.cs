@@ -60,7 +60,7 @@ internal sealed partial class PptxRenderer
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                 string label = FormatScatterDataLabel(point, seriesIndex, effectiveOptions, seriesNames);
-                if (string.IsNullOrEmpty(label) && !effectiveOptions.ShowLegendKey)
+                if (string.IsNullOrEmpty(label))
                 {
                     continue;
                 }

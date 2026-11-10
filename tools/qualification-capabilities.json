@@ -1,5 +1,6 @@
 {
   "pptx-label-unit-visibility": [
+      "PptxEmptyFormattedDataLabelsDoNotPaintKeys",
       "PptxEmptyDataLabelKeys",
       "PptxVisibleDataLabelsKeepKeys",
       "PptxCustomDataLabelTextKeepsItsKeys",

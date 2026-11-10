@@ -133,7 +133,7 @@ internal sealed partial class PptxRenderer
                     ? fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor : lineBox.Height;
                 bool hasPoint = densePointIndexes[seriesIndex].TryGetValue(i, out ChartIndexedNumberPoint point);
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, point, (workbookIndexes[seriesIndex].TryGetValue(hasPoint ? point.Index : i, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
-                if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
+                if (!string.IsNullOrEmpty(label))
                 {
                     bool measured = areaOptions is null && CanMeasurePlainChartLabelFrame(effectiveOptions);
                     ChartLineAppearance? appearance = pointAppearance?.Invoke(seriesIndex, i) ?? seriesAppearance?[seriesIndex];

@@ -170,7 +170,7 @@ internal sealed partial class PptxRenderer
                                 seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio) - labelHeight / 2d;
                     ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(category, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
-                    if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
+                    if (!string.IsNullOrEmpty(label))
                     {
                         ChartSeriesFill? keyFill = effectiveOptions.ShowLegendKey
                             ? ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, denseValueSeries.Count, varyColors, seriesFills, legendPointFills, values.Count,
@@ -291,7 +291,7 @@ internal sealed partial class PptxRenderer
                     }
                     ChartIndexedNumberPoint point = densePointIndexes[seriesIndex].TryGetValue(category, out ChartIndexedNumberPoint densePoint) ? densePoint : default;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, point, (workbookIndexes[seriesIndex].TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null), series[seriesIndex].FormatCode, effectiveOptions, categoryLabelIndex, seriesNames);
-                    if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
+                    if (!string.IsNullOrEmpty(label))
                     {
                         if (!stacked && barEndY >= barBaseY &&
                             ResolveChartDataLabelPosition(labelPosition) == PptxSceneChartDataLabelPosition.OutsideEnd &&

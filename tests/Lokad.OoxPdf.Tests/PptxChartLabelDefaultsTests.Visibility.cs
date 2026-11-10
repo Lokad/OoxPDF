@@ -68,6 +68,28 @@ internal static partial class PptxChartLabelDefaultsTests
         TestAssert.Equal(9, PptxChartPaletteTests.ReadColoredPaints(page.Content, strokes: true).Count());
     }
 
+    public static void PptxEmptyFormattedDataLabelsDoNotPaintKeys()
+    {
+        foreach (var (input, component) in new[] {
+            ("BuiltinPalettes/line-3.pptx", "showPercent"),
+            ("BuiltinPalettes/line-3.pptx", "showBubbleSize"),
+            ("BuiltinPalettes/area-3.pptx", "showPercent"),
+            ("BuiltinPalettes/area-3.pptx", "showBubbleSize"),
+            ("BuiltinPalettes/count-series-3.pptx", "showPercent"),
+            ("BuiltinPalettes/count-series-3.pptx", "showBubbleSize"),
+            ("BuiltinPalettes/pie-vary.pptx", "showBubbleSize"),
+            ("pptx-ladder-11-chart-scatter-clusters-port.pptx", "showPercent") })
+        {
+            var absent = RenderVisibilityCase(input, key: true, value: false);
+            var empty = RenderVisibilityCase(input, key: true, value: false,
+                labels => labels.Element(C + component)!.SetAttributeValue("val", "1"));
+            foreach (bool strokes in new[] { false, true })
+                TestAssert.True(PptxChartPaletteTests.ReadColoredPaints(absent.Content, strokes: strokes)
+                    .SequenceEqual(PptxChartPaletteTests.ReadColoredPaints(empty.Content, strokes: strokes)),
+                    input + ": a component with no formatted text cannot paint a standalone key.");
+        }
+    }
+
     private static PdfPage RenderVisibilityCase(string input, bool key, bool value, Action<XElement>? customize = null)
     {
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", input));

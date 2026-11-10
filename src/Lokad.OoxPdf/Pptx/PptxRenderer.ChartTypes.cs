@@ -590,6 +590,8 @@ internal sealed partial class PptxRenderer
 
         public PptxSceneChartPointTextScope TextScope { get; init; }
 
+        // Potential text components guide layout. A component can format to no
+        // text for this plot kind; painting checks the actual formatted result.
         public bool HasVisibleText => (IsDeleted != true &&
             (ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
              !string.IsNullOrWhiteSpace(CustomText))) ||

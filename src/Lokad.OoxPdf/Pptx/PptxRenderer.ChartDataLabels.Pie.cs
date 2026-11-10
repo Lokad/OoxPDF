@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
             }
 
             string label = JoinChartDataLabelParts();
-            if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
+            if (!string.IsNullOrEmpty(label))
             {
                 // Factor-mode manuals resolve on a circle past the rim with content-tight
                 // boxes clamped into the plot; out-of-range manuals fall back to auto,
