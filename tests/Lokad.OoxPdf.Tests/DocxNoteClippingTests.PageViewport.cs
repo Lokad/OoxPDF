@@ -15,7 +15,7 @@ internal static partial class DocxNoteClippingTests
         // edge. The former body-bottom clip hid30additional complete words.
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "NoteTables", "unfit-endnote-row.docx"));
         TestAssert.Equal("274A9989DAB970D7D39E0DC1230EC77BA014B13E4C7C1CE4A87DDCFDCE355ED0",
-            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
+            System.Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var source = DocxTests.ReadDocx(path, mode);
@@ -44,7 +44,7 @@ internal static partial class DocxNoteClippingTests
                         "A page-contained note-cell glyph cannot be lost to the story's flow-admission clip.");
                 }
             }
-            TestAssert.True(marginGlyphs > 0, "The witness exercises visible table ink below its72ptbody margin: " + mode);
+            TestAssert.True(marginGlyphs > 0, "The witness exercises visible table ink below its72pt body margin: " + mode);
             TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_CLIPPED_NOTE_TABLE_ROW"),
                 "The remaining row tail beyond the paper still reports unsupported fragmentation.");
         }
