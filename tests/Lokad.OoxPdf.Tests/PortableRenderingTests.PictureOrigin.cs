@@ -45,10 +45,10 @@ internal static partial class PortableRenderingTests
                 var actual = DocxInlineCompositionTests.ReadPaintedPictureFrame(page);
                 expected ??= actual;
                 TestAssert.True(Math.Abs(expected.Value.X - actual.X) < .002d && Math.Abs(expected.Value.Top - actual.Top) < .002d,
-                    "A picture-only nested cell and its nonpainting terminal marks retain the same measured body origin.");
+                    $"Picture-only body origin: {mode}, mark={markSize}, depth={depth}, expected={expected.Value}, actual={actual}.");
                 var header = ReadPaintedSourceLabel(page, "a+b=c", mathOnly: true);
                 TestAssert.True(header.All(glyph => glyph.Ink.Y > actual.Top),
-                    "The opaque body picture cannot overpaint the source header equation.");
+                    $"The opaque body picture cannot overpaint the source header equation: {mode}, mark={markSize}, depth={depth}.");
             }
         }
     }

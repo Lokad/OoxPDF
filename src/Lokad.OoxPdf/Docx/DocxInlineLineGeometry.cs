@@ -2,12 +2,15 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxInlineLineGeometry
 {
+    internal static bool HasTextOrMath(DocxTextLineLayout line) =>
+        line.Math is not null || line.InlineMath.Count != 0 || !string.IsNullOrWhiteSpace(line.Text) ||
+        line.Segments.Any(segment => !string.IsNullOrWhiteSpace(segment.Text));
+
     // Known source-only cells can keep nominal segments for navigation without
     // owning a painted/occupied frame. Unknown measurements never gain this role.
     internal static bool IsNonPaintingSourceCarrier(DocxTextLineLayout line) =>
         line.OccupiedLineBox is { Height: 0d, BaselineInset: 0d } && line.InlineFrame is null &&
-        line.Math is null && line.InlineMath.Count == 0 && string.IsNullOrWhiteSpace(line.Text) &&
-        line.Segments.All(segment => string.IsNullOrWhiteSpace(segment.Text));
+        !HasTextOrMath(line);
 
     internal static bool TryGetPreparedMathBounds(DocxTextLineLayout line, out double bottom, out double top)
     {
