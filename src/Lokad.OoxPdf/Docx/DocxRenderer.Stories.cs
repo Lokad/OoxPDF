@@ -81,9 +81,9 @@ internal sealed partial class DocxRenderer
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
             if (diagnosticSink is not null && item is DocxTableRowLayout row &&
                 story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-                HasClippedNoteTableLines(row, clip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
+                HasClippedNoteTableContent(row, clip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
                 diagnosticSink(new OoxPdfDiagnostic("DOCX_CLIPPED_NOTE_TABLE_ROW", OoxPdfSeverity.Warning,
-                    "A note-table row exceeds its available frame; line content is clipped. Row fragmentation for this content is unsupported.",
+                    "A note-table row exceeds its available frame; content is clipped. Row fragmentation for this content is unsupported.",
                     story.StoryLayout.Story.PartName, PageIndex: pageNumber, Feature: "note table row", Fallback: "Clipped"));
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
         }
@@ -91,7 +91,7 @@ internal sealed partial class DocxRenderer
         graphics.RestoreState();
     }
 
-    private static bool HasClippedNoteTableLines(DocxTableRowLayout row, PdfRectangle clip,
+    private static bool HasClippedNoteTableContent(DocxTableRowLayout row, PdfRectangle clip,
         double baselineOffset, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -106,7 +106,25 @@ internal sealed partial class DocxRenderer
                 DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out _) &&
                 bottom + baselineOffset < clip.Y - .000001d) return true;
         }
-        return false;
+        // Cell pictures paint with the cell's baseline translation. Only a
+        // complete source-contained frame demonstrates loss at the note clip;
+        // authored cell/ancestor/view clipping retains its existing policy.
+        bool HasClippedImages(DocxTableRowLayout current)
+        {
+            foreach (var cell in current.Cells)
+            {
+                token.ThrowIfCancellationRequested();
+                foreach (var image in cell.InlineImages)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (image.Image.RotationDegrees == 0d && image.Y - baselineOffset < clip.Y - .000001d) return true;
+                }
+                foreach (var nested in cell.NestedRows)
+                    if (HasClippedImages(nested)) return true;
+            }
+            return false;
+        }
+        return HasClippedImages(row) && DocxTableCellClipGeometry.HasCompleteMeasuredRows([row], token);
     }
 
     // Separator text lines render as a single pilcrow-sized mark space at the rule tab

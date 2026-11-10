@@ -10,6 +10,33 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxNoteClippingTests
 {
+    public static void DocxPictureOnlyNoteRowsReportClippingWithoutChangingPdf()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var (overflow, exact) in new[] { (false, false), (true, false), (true, true) })
+        {
+            using var input = BoundaryInput(false, overflow, exact, picture: true);
+            byte[] source = input.ToArray();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            using var output = new MemoryStream();
+            OoxPdfConverter.Convert(input, output, Options(mode, diagnostics.Add));
+            var warnings = diagnostics.Where(d => d.Id == "DOCX_CLIPPED_NOTE_TABLE_ROW").ToArray();
+            TestAssert.Equal(overflow && !exact ? 1 : 0, warnings.Length);
+            if (warnings.Length != 0)
+            {
+                TestAssert.Equal("/word/endnotes.xml", warnings[0].PartName!);
+                TestAssert.True(warnings[0].PageIndex is > 0, "Report the actual page containing the clipped picture.");
+                TestAssert.Equal(OoxPdfSeverity.Warning, warnings[0].Severity);
+                TestAssert.Equal("Clipped", warnings[0].Fallback!);
+            }
+            using var unobserved = new MemoryStream(source);
+            using var control = new MemoryStream();
+            OoxPdfConverter.Convert(unobserved, control, Options(mode, null));
+            TestAssert.True(output.ToArray().AsSpan().SequenceEqual(control.ToArray()),
+                "Observing a clipped image changes no PDF bytes; fitting and authored exact rows keep their policy.");
+        }
+    }
+
     public static void DocxPartiallyClippedNoteRowsReportTextAndMathContent()
     {
         foreach (bool math in new[] { false, true })
@@ -34,6 +61,40 @@ internal static class DocxNoteClippingTests
             TestAssert.True(output.ToArray().AsSpan().SequenceEqual(control.ToArray()),
                 "Observing partial clipping changes no rendered PDF bytes.");
         }
+    }
+
+    public static void DocxNotePictureClippingUsesCompleteSourceAndPaintFrames()
+    {
+        using var input = BoundaryInput(false, false, false, picture: true);
+        using var package = OoxPackage.Open(input, default);
+        var source = new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final);
+        var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+            .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+        var row = layout.RelatedStories.Single(story => story.Story.Id == "37").TableRows.Single();
+        var cell = row.Cells.Single();
+        var image = cell.InlineImages.Single();
+        var inspect = typeof(DocxRenderer).GetMethod("HasClippedNoteTableContent", BindingFlags.Static | BindingFlags.NonPublic)!
+            .CreateDelegate<Func<DocxTableRowLayout, PdfRectangle, double, CancellationToken, bool>>();
+        var frame = new PdfRectangle(cell.X - 1d, cell.Y - 1d, cell.Width + 2d, cell.Height + 2d);
+        TestAssert.True(!inspect(row, frame, 0d, default), "A complete fitting picture is retained.");
+        var partial = frame with { Y = image.Y + image.Height / 2d };
+        TestAssert.True(inspect(row, partial, 0d, default), "Report partial picture loss at the final note frame.");
+        TestAssert.True(!inspect(row, partial, -1000d, default), "Picture paint subtracts the baseline offset, lifting this frame clear.");
+        TestAssert.True(inspect(row, frame, 1000d, default), "Use the same downward translation as cell-picture painting.");
+        foreach (var intentional in new[] {
+            row with { FragmentCount = 2 },
+            row with { HeightRuleValue = "exact", DeclaredHeightPoints = row.Height },
+            row with { HeightRuleValue = "unknown" },
+            row with { Cells = [cell with { Height = .001d }] },
+            row with { Cells = [cell with { VisualOwnership = DocxTableCellVisualOwnership.VerticalMergeOwner }] },
+            row with { Cells = [cell with { InlineImages = [image with { Height = double.NaN }] }] },
+            row with { Cells = [cell with { InlineImages = [image with { ClipBounds = new PdfRectangle(image.X, image.Y, image.Width, image.Height / 2d) }] }] },
+            row with { Cells = [cell with { InlineImages = [image with { Image = image.Image with { RotationDegrees = 45d } }] }] } })
+            TestAssert.True(!inspect(intentional, partial, 0d, default),
+                "Source-clipped, fragmented, unknown, rotated or borrowed frames retain their diagnostic fallback.");
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(() =>
+            inspect(row, partial, 0d, cancellation.Token)).CancellationToken);
     }
 
     public static void DocxPartialNoteRowsKeepFittingAndIntentionalClipExceptions()
@@ -91,7 +152,8 @@ internal static class DocxNoteClippingTests
         var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
         var row = layout.RelatedStories.Single(story => story.Story.Id == "37").TableRows.Single();
-        var inspect = typeof(DocxRenderer).GetMethod("HasClippedNoteTableLines", BindingFlags.Static | BindingFlags.NonPublic)!
+        row = row with { Cells = row.Cells.Select(cell => cell with { InlineImages = [] }).ToArray() };
+        var inspect = typeof(DocxRenderer).GetMethod("HasClippedNoteTableContent", BindingFlags.Static | BindingFlags.NonPublic)!
             .CreateDelegate<Func<DocxTableRowLayout, PdfRectangle, double, CancellationToken, bool>>();
         var outside = new PdfRectangle(0d, row.Y + row.Height + 100d, 1000d, 100d);
         TestAssert.True(inspect(row, outside, 0d, default), "A complete source-contained line is wholly outside the final clip.");
@@ -173,7 +235,7 @@ internal static class DocxNoteClippingTests
             ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
         FixedCreationDate = DateTimeOffset.UnixEpoch, DiagnosticSink = sink };
 
-    private static MemoryStream BoundaryInput(bool math, bool overflow, bool exact)
+    private static MemoryStream BoundaryInput(bool math, bool overflow, bool exact, bool picture = false)
     {
         using var seed = Input(0, false);
         using var archive = new ZipArchive(seed, ZipArchiveMode.Read);
@@ -186,12 +248,21 @@ internal static class DocxNoteClippingTests
         var note = xml.Root!.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "37");
         var row = note.Element(w + "tbl")!.Element(w + "tr")!;
         var cell = row.Element(w + "tc")!;
+        var drawing = picture ? new XElement(cell.Descendants(w + "drawing").Single()) : null;
         cell.Elements().Where(element => element.Name != w + "tcPr").Remove();
         var paragraph = new XElement(w + "p", new XElement(w + "pPr", new XElement(w + "spacing",
             new XAttribute(w + "before", "0"), new XAttribute(w + "after", "0"),
             new XAttribute(w + "line", "240"), new XAttribute(w + "lineRule", "auto"))));
         cell.Add(paragraph);
-        if (math)
+        if (drawing is not null)
+        {
+            XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            foreach (var extent in drawing.Descendants().Where(node => node.Name == wp + "extent" || node.Name == a + "ext"))
+            { extent.SetAttributeValue("cx", 36 * 12700); extent.SetAttributeValue("cy", (overflow ? 900 : 36) * 12700); }
+            paragraph.Add(new XElement(w + "r", drawing));
+        }
+        else if (math)
         {
             var matrix = new XElement(m + "m");
             for (int index = 0; index < (overflow ? 80 : 4); index++)

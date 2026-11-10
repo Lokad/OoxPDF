@@ -1098,6 +1098,8 @@
     "PptxChartUnknownAxisOrientationUsesSceneAuthoritativeDefault"
   ],
   "docx-note-row-clipping": [
+    "DocxPictureOnlyNoteRowsReportClippingWithoutChangingPdf",
+    "DocxNotePictureClippingUsesCompleteSourceAndPaintFrames",
     "DocxPartiallyClippedNoteRowsReportTextAndMathContent",
     "DocxPartialNoteRowsKeepFittingAndIntentionalClipExceptions",
     "DocxUnfitNoteRowsReportClippingWithoutChangingPdf",
