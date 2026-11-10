@@ -428,9 +428,14 @@ internal static class DocxTableMathTests
     {
         var (paragraph, prepared) = Prepared(20d);
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
-        foreach (string guard in new[] { "field", "declared", "table-first", "missing-metrics", "unprepared-math" })
+        foreach (string guard in new[] { "field", "unresolved-field", "declared", "table-first", "missing-metrics", "unprepared-math" })
         {
-            DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph(guard == "field" ? "{PAGE}" : "Public footer.", 10d, 10d);
+            DocxParagraph footer = DocxTests.CreateDocxLayoutParagraph(guard switch
+            {
+                "field" => "{PAGE}",
+                "unresolved-field" => "Page: {PAGE}",
+                _ => "Public footer."
+            }, 10d, 10d);
             if (guard != "declared") footer = footer with { LineSpacingPoints = null };
             DocxPageSettings settings = DocxPageSettings.Empty with
             {
@@ -446,8 +451,11 @@ internal static class DocxTableMathTests
                     guard == "missing-metrics" ? null : measurer,
                     mathEquations: guard == "unprepared-math" ? null :
                         new Dictionary<DocxEquation, DocxPreparedMathParagraph>(ReferenceEqualityComparer.Instance) { [paragraph.Equations.Single()] = prepared });
-            TestAssert.True(layout.Pages.SelectMany(page => page.StaticTextLines).All(line => !line.StaticStoryUsesPhysicalY),
-                "Fields, declared frames, table-first bodies and unresolved metrics/math keep their existing coordinate owner.");
+            TestAssert.True(layout.Pages.SelectMany(page => page.StaticTextLines)
+                .All(line => line.StaticStoryUsesPhysicalY == (guard == "field")),
+                "Resolved page inputs share the static frame; incomplete fields, declared frames, table-first bodies and unresolved metrics/math retain their fallback: " + guard);
+            if (guard == "field")
+                TestAssert.Equal("1", layout.Pages.Single().StaticTextLines.Single(line => line.Story?.Kind == DocxStoryKind.Footer).Text);
         }
     }
 

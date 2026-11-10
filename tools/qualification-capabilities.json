@@ -6464,6 +6464,8 @@
   ],
   "docx-static-page-fields": [
     "PortableRenderingPlainStaticCountersKeepFooterInkAndIndependentFrames",
+    "DocxStaticFrameMappingKeepsFooterAnchoredAndUsesOneHeaderAdvance",
+    "DocxStaticFrameMappingRetainsIncompleteAndDeclaredSourceFallbacks",
     "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
     "DocxInlineCompositionPageFieldCacheEndsWithItsOwner",
     "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
