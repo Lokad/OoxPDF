@@ -5759,6 +5759,7 @@
     "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets"
   ],
   "docx-static-body-origin": [
+    "PortableRenderingColumnFallbackKeepsStaticFooterInk",
     "PortableRenderingLeadingBodyContainersKeepStaticFooterInk",
     "DocxStaticFrameMappingRetainsIncompleteAndDeclaredSourceFallbacks",
     "DocxLongFootnoteContinuationReservesHeaderZone",

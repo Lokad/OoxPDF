@@ -5,6 +5,51 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PortableRenderingTests
 {
+    public static void PortableRenderingColumnFallbackKeepsStaticFooterInk()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var baseline = RenderAlignmentProbe(DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false), mode);
+            foreach (bool tableFirst in new[] { false, true })
+            {
+                var source = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
+                {
+                    var body = xml.Root!.Element(w + "body")!;
+                    var section = body.Element(w + "sectPr")!;
+                    section.Element(w + "cols")?.Remove();
+                    section.Add(new XElement(w + "cols", new XAttribute(w + "num", 2), new XAttribute(w + "space", 360)));
+                    var table = body.Element(w + "tbl")!;
+                    var properties = table.Element(w + "tblPr")!;
+                    properties.Element(w + "tblW")?.Remove();
+                    properties.Element(w + "tblLayout")?.Remove();
+                    properties.Add(new XElement(w + "tblW", new XAttribute(w + "w", 4320), new XAttribute(w + "type", "dxa")),
+                        new XElement(w + "tblLayout", new XAttribute(w + "type", "fixed")));
+                    foreach (var column in table.Element(w + "tblGrid")!.Elements()) column.SetAttributeValue(w + "w", 2160);
+                    foreach (var cell in table.Descendants(w + "tc"))
+                    {
+                        var cellProperties = cell.Element(w + "tcPr");
+                        if (cellProperties is null) { cellProperties = new XElement(w + "tcPr"); cell.AddFirst(cellProperties); }
+                        cellProperties.Element(w + "tcW")?.Remove();
+                        cellProperties.Add(new XElement(w + "tcW", new XAttribute(w + "w", 2160), new XAttribute(w + "type", "dxa")));
+                    }
+                    if (tableFirst) { table.Remove(); body.AddFirst(table); }
+                });
+                // Balancing remains unsupported. Its fallback must still paint
+                // the unchanged page-wide footer within the original frame.
+                var pages = RenderAlignmentProbe(source, mode);
+                foreach (var page in pages)
+                {
+                    const string footer = "Public synthetic composition portfolio";
+                    var expected = ReadPaintedSourceLabel(baseline[0], footer);
+                    var actual = ReadPaintedSourceLabel(page, footer);
+                    TestAssert.Equal(expected.Count, actual.Count);
+                    AssertSamePaintOrigin(expected[0], actual[0]);
+                }
+                ReadPaintedSourceLabel(pages[^1], "All quantities in this synthetic example are illustrative.");
+            }
+        }
+    }
+
     public static void PortableRenderingLeadingBodyContainersKeepStaticFooterInk()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

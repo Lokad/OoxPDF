@@ -88,12 +88,12 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer? unscaledTextMeasurer, bool hasDocumentBodyOrigin = false)
     {
         bool canMap = scale is > 0d and < 1d && double.IsFinite(width / scale) &&
-            page.ColumnFrames.Count <= 1 &&
             (DocxRenderer.ResolveBodyPrintOrigin(page).BaselineY is not null || page.Items.Count == 0 && hasDocumentBodyOrigin) &&
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
             // Each story owns its measured frame. A counterpart's fallback
             // cannot revoke physical placement of otherwise supported content;
             // floating drawings already own independent page/margin frames.
+            // Body columns likewise do not change the page-wide static frame.
             CanUseStaticStoryFrame(story, width / scale, mathEquations, token);
         if (!canMap)
         {
