@@ -1,6 +1,7 @@
 {
   "pptx-horizontal-polar-frame": [
       "PptxPieHorizontalLegendsUseSelectedPlotMidpoint",
+      "PptxUntitledUnreservedPiesUseVerticalMidpoint",
       "PptxSyntheticPieChartManualPlotBoxUsesPolarPath",
       "PptxSyntheticPolarLabeledLayoutShrinksAndCenters",
       "PptxSyntheticDoughnutLeftGeometryFollowsLegendBox",

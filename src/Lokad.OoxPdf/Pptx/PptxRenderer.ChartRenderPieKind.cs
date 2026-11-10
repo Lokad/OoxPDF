@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 bool hasVisiblePieDataLabels = labelOptions.HasVisibleText || pieSlices.Any(slice => ResolveChartDataLabelOptions(labelOptions, slice.Index).HasVisibleText);
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: hasVisiblePieDataLabels);
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: hasVisiblePieDataLabels, hasTitle: !string.IsNullOrWhiteSpace(sceneChart.Title.Text));
                 RenderPieChart(graphics, theme, colorMap, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, polarPoints.FirstSliceAngle);
                 await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, polarPoints.FirstSliceAngle, pieSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 await RenderChartLegendAsync(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, colorMap, chartPalette, piePlot, pieChart, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: pieSlices.Count), legend, ReadSceneChartLegendTextStyle(theme, sceneChart), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts).ConfigureAwait(false);
@@ -106,7 +106,7 @@ internal sealed partial class PptxRenderer
                 bool isDoughnutLeftFillLegend = isDoughnutFillLegend && legend.PositionKind == PptxSceneChartLegendPosition.Left;
                 bool isExplodedDoughnut = polarPoints.PointExplosions.Count != 0;
                 double explodedDoughnutLegendReserve = 0d;
-                bool doughnutHasTitle = !string.IsNullOrWhiteSpace(sceneChart.Title.Text);
+                bool hasTitle = !string.IsNullOrWhiteSpace(sceneChart.Title.Text);
                 if (isDoughnutRightFillLegend && !isExplodedDoughnut)
                 {
                     var legendMeasurer = new ChartTextMeasurer(fontResolver);
@@ -123,7 +123,7 @@ internal sealed partial class PptxRenderer
                     double explodedBoxContent = MeasureDoughnutLegendContentWidth(doughnutLegendEntries, doughnutLegendStyle, legendMeasurer, PptxChartMetricRules.AreaRightLegendTextGap);
                     double explodedBoxLeft = frame.X + frame.Width - PptxChartMetricRules.DoughnutRightLegendTail - explodedBoxContent;
                     double maxExplosion = polarPoints.PointExplosions.Values.Max();
-                    ChartPolarLayout unshrunkLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, doughnutGeometryPlotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: false, hasLegendReserve: false, explodedRightLegendReserve: 0d, leftLegendBoxRight: 0d, doughnutHasTitle: doughnutHasTitle);
+                    ChartPolarLayout unshrunkLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, doughnutGeometryPlotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: false, hasLegendReserve: false, explodedRightLegendReserve: 0d, leftLegendBoxRight: 0d, hasTitle: hasTitle);
                     double ringRightUnshrunk = unshrunkLayout.Geometry.CenterX + unshrunkLayout.Geometry.Radius * (1d + maxExplosion);
                     explodedDoughnutLegendReserve = ComputeExplodedDoughnutRightLegendReserve(explodedBoxLeft, ringRightUnshrunk);
                 }
@@ -139,7 +139,7 @@ internal sealed partial class PptxRenderer
                     double leftContentWidth = MeasureDoughnutLegendContentWidth(doughnutLegendEntries, doughnutLegendStyle, legendMeasurer, PptxChartMetricRules.AreaRightLegendTextGap);
                     leftLegendBoxRight = frame.X + PptxChartMetricRules.DoughnutLeftLegendHeadInset + leftContentWidth;
                 }
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, doughnutGeometryPlotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: false, hasLegendReserve: hasDoughnutLegendReserve, explodedRightLegendReserve: explodedDoughnutLegendReserve, leftLegendBoxRight: leftLegendBoxRight, doughnutHasTitle: doughnutHasTitle);
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, doughnutGeometryPlotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: false, hasLegendReserve: hasDoughnutLegendReserve, explodedRightLegendReserve: explodedDoughnutLegendReserve, leftLegendBoxRight: leftLegendBoxRight, hasTitle: hasTitle);
                 RenderDoughnutChart(graphics, theme, colorMap, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle);
                 await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle, doughnutSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 await RenderChartLegendAsync(graphics, frame, plotBox, doughnutLegendEntries, legend, doughnutLegendStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, doughnutRightLegend: isDoughnutRightFillLegend, doughnutLeftLegend: isDoughnutLeftFillLegend, doughnutRingCenterY: polarLayout.Geometry.CenterY).ConfigureAwait(false);

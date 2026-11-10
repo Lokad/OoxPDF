@@ -417,7 +417,6 @@ internal sealed partial class PptxRenderer
         // short-probe1 with swapped content, so height drives it, not labels or width).
         // Unlabeled pies keep the constants above (5-categories port: 0.4595 center,
         // 0.4327 radius).
-        public const double PieLabeledCenterYRatio = 0.5d;
         public const double PieLabeledRadiusRatio = 0.40694d;
         // Short-plot labeled-pie radius ratio (300H Office renders; the 330H cutoff
         // splits the only observed heights with maximum margin; form beyond is open).

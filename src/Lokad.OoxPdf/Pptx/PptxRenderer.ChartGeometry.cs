@@ -148,7 +148,7 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.PieLabeledRadiusRatio;
     }
 
-    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false, double explodedRightLegendReserve = 0d, double leftLegendBoxRight = 0d, bool doughnutHasTitle = false)
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend, bool hasVisibleDataLabels, bool hasLegendReserve = false, double explodedRightLegendReserve = 0d, double leftLegendBoxRight = 0d, bool hasTitle = false)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -172,11 +172,11 @@ internal sealed partial class PptxRenderer
             bool leftFillLegend = legend.Visible && !legend.Overlay &&
                 legend.PositionKind == PptxSceneChartLegendPosition.Left;
             bool leftOrCalibratedRight = leftFillLegend ||
-                (legend.PositionKind == PptxSceneChartLegendPosition.Right && doughnutHasTitle && hasLegend) ||
-                (!legend.Visible && !doughnutHasTitle);
+                (legend.PositionKind == PptxSceneChartLegendPosition.Right && hasTitle && hasLegend) ||
+                (!legend.Visible && !hasTitle);
             if (kind == ChartPolarKind.Doughnut && leftOrCalibratedRight)
             {
-                double titleBand = doughnutHasTitle && hasLegend ? 2d * PptxChartMetricRules.DoughnutTitledCenterYOffset : 0d;
+                double titleBand = hasTitle && hasLegend ? 2d * PptxChartMetricRules.DoughnutTitledCenterYOffset : 0d;
                 radius = Math.Min(radius, Math.Max(1d, (plotBox.Height - titleBand - 2d * PptxChartMetricRules.DoughnutPlotSideMargin) / 2d));
             }
 
@@ -200,7 +200,7 @@ internal sealed partial class PptxRenderer
             // and title-less layouts keep the calibrated ratios (right-untitled is unobserved).
             if (kind == ChartPolarKind.Doughnut &&
                 (legend.PositionKind == PptxSceneChartLegendPosition.Left || legend.PositionKind == PptxSceneChartLegendPosition.Right) &&
-                doughnutHasTitle && hasLegend)
+                hasTitle && hasLegend)
             {
                 centerY = plotBox.Y + plotBox.Height / 2d - PptxChartMetricRules.DoughnutTitledCenterYOffset;
             }
@@ -259,7 +259,9 @@ internal sealed partial class PptxRenderer
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Top => PptxChartMetricRules.DoughnutTopLegendCenterYRatio,
                     ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Bottom => PptxChartMetricRules.DoughnutBottomLegendCenterYRatio,
-                    ChartPolarKind.Pie when !legendVisible && hasVisibleDataLabels => PptxChartMetricRules.PieLabeledCenterYRatio,
+                    // An unreserved, untitled plot centers both labeled and unlabeled pies.
+                    // Keep the existing titled fallback while its title band is approximate.
+                    ChartPolarKind.Pie when !legendVisible && (!hasTitle || hasVisibleDataLabels) => 0.5d,
                     _ => PptxChartMetricRules.PieCenterYRatio
                 };
             }

@@ -1862,7 +1862,7 @@ internal static partial class PptxChartsTests
         object labeled = method.Invoke(null, [pie, plotBox, empty, hidden, true, false, 0d, 0d, false])!;
         (double ux, double uy, double ur) = ReadPolarGeometry(unlabeled);
         (double lx, double ly, double lr) = ReadPolarGeometry(labeled);
-        TestAssert.True(Math.Abs(ux - 404d) < 0.01d && Math.Abs(uy - 284.88d) < 0.01d && Math.Abs(ur - 156.24d) < 0.01d, "Unlabeled pies keep the tall radius (5-categories port). Got " + ux + "/" + uy + "/" + ur);
+        TestAssert.True(Math.Abs(ux - 404d) < 0.01d && Math.Abs(uy - 300d) < 0.01d && Math.Abs(ur - 156.24d) < 0.01d, "Untitled, unreserved pies use the plot midpoint and keep their tall radius. Got " + ux + "/" + uy + "/" + ur);
         TestAssert.True(Math.Abs(lx - 404d) < 0.01d && Math.Abs(ly - 300d) < 0.01d && Math.Abs(lr - 146.5d) < 0.01d, "Labeled pies center with the tall radius (leader probes 146.50). Got " + lx + "/" + ly + "/" + lr);
         object shortPlotBox = System.Activator.CreateInstance(plotBoxType, [84d, 144d, 420d, 300d])!;
         object shortLabeled = method.Invoke(null, [pie, shortPlotBox, empty, hidden, true, false, 0d, 0d, false])!;

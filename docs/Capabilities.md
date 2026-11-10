@@ -67,7 +67,8 @@ Supported within the following constraints:
   Legend keys adorn visible data-label text; a key alone does not create a label
   or its background. Custom point text and enabled value labels keep their keys.
   Top/bottom polar legends preserve the selected plot's horizontal midpoint;
-  side placement and manual-factor plot mapping retain their approximations.
+  untitled pies with no space-reserving legend also retain the vertical midpoint.
+  Titled/side placement and manual-factor plot mapping remain approximate.
   Axes/data labels share number formatting, including dates, numeric sections,
   scaling, fractions and supported accounting/currency forms. Unsupported syntax,
   formula-only data without cached values and unsupported chart kinds are diagnosed.
