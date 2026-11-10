@@ -87,7 +87,7 @@ recognition is separate from placement. Qualified footer captions and their
 frames share the source strut and physical story transform. Custom Review paper
 origins and remaining font/frame combinations retain the documented approximations.
 
-In qualified unscaled document-end notes, measured source paragraphs own the
+In qualified unscaled section- and document-end notes, measured source paragraphs own the
 start and adjacent paragraph boundaries even when later notes need another page.
 Complete table/image blocks retain their trailing paragraph's ownership; the
 container still admits each following head against the available page frame.
