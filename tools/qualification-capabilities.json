@@ -1,4 +1,21 @@
 {
+  "docx-related-story-demand": [
+    "LayoutRelatedStoryMeasurements",
+    "LayoutAdmission",
+    "ModelAdmission",
+    "DocxEndnoteMeasurementsSkipUnrelatedBodyWidths",
+    "DocxLayoutWrapsDocumentEndEndnoteUsingFinalSectionPageWidth",
+    "DocxLayoutWrapsSectEndEndnoteUsingOwningSectionPageWidth",
+    "DocxKeepChainBlockIndexesFollowKeepNext",
+    "DocxLayoutReservesPageFootnoteStoryArea",
+    "DocxSimpleSectionPagination",
+    "DocxSectionNoteNumbers",
+    "DocxEndnoteCounterPrefix",
+    "DocxMidBodyFootnoteAnchor",
+    "DocxLongFootnoteSplitsAcrossPagesWithContinuationSeparator",
+    "DocxLongFootnoteWithoutSeparatorSplitsAcrossPages",
+    "DocxSharedFootnotePagesKeepBodyAboveNotes"
+  ],
   "docx-contained-cell-baselines": [
       "DocxStaticBoxTables",
       "DocxFixedStaticFrames",

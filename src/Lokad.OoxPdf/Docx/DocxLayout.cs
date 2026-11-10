@@ -365,6 +365,19 @@ internal sealed partial class DocxLayoutEngine
             return GetRelatedStoryLayouts(FootnoteStoryLayoutWidth(geometry));
         }
 
+        (IReadOnlyList<DocxRelatedStoryLayout> Layouts,
+            Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> Lookup) GetFootnoteStoryLookup()
+        {
+            var layouts = GetFootnoteStoryLayouts(page);
+            double key = Math.Round(Math.Max(1d, page.BodyWidth), 3);
+            if (!storyLookupByWidth.TryGetValue(key, out var lookup))
+            {
+                lookup = CreateRelatedStoryLookup(layouts);
+                storyLookupByWidth[key] = lookup;
+            }
+            return (layouts, lookup);
+        }
+
         // RV06 interleaving (Word 16.0, edge-footlong-mixed WC): Office keeps normal-note
         // text at the full section width while the review lane narrows body flow.
         // Footnote reserves and endnote placement share that design width.
@@ -609,16 +622,6 @@ internal sealed partial class DocxLayoutEngine
         double KeepChainFootnoteReserve(int sourceBlockIndex)
         {
             double reserve = 0d;
-            IReadOnlyList<DocxRelatedStoryLayout> pageStoryLayouts = GetFootnoteStoryLayouts(page);
-            double widthKey = Math.Round(Math.Max(1d, page.BodyWidth), 3);
-            if (!storyLookupByWidth.TryGetValue(widthKey, out Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>? storyByKey))
-            {
-                storyByKey = CreateRelatedStoryLookup(pageStoryLayouts);
-                storyLookupByWidth[widthKey] = storyByKey;
-            }
-
-            DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
-            DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
             foreach (int chainBlock in KeepChainBlockIndexes(document.BodyElements, sourceBlockIndex))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -647,6 +650,9 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
+                    // Endnotes and already consumed references do not need a
+                    // footnote measurement at this body's width.
+                    var (pageStoryLayouts, storyByKey) = GetFootnoteStoryLookup();
                     if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
                     {
                         continue;
@@ -658,6 +664,8 @@ internal sealed partial class DocxLayoutEngine
                     }
 
                     keepLookaheadYielded.Add(key);
+                    DocxRelatedStoryLayout? separatorLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.Separator);
+                    DocxRelatedStoryLayout? continuationLayout = FindSpecialRelatedStoryLayout(pageStoryLayouts, DocxRelatedStoryKind.Footnote, DocxRelatedStoryType.ContinuationSeparator) ?? separatorLayout;
                     var transient = new InFlightRelatedStory(storyLayout, separatorLayout, continuationLayout, chainBlock, location);
                     reserve += FootnoteRemainderHeight(transient, GetStoryTextLineBoxHeights(storyLayout), separatorMeasurerForNotes);
                 }
@@ -707,14 +715,6 @@ internal sealed partial class DocxLayoutEngine
             // remainder below. Blocks starting a fresh page keep the full bump, so
             // small-note marker pagination is unchanged.
 
-            IReadOnlyList<DocxRelatedStoryLayout> pageStoryLayouts = GetFootnoteStoryLayouts(page);
-            double widthKey = Math.Round(Math.Max(1d, page.BodyWidth), 3);
-            if (!storyLookupByWidth.TryGetValue(widthKey, out Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>? storyByKey))
-            {
-                storyByKey = CreateRelatedStoryLookup(pageStoryLayouts);
-                storyLookupByWidth[widthKey] = storyByKey;
-            }
-
             foreach (DocxInlineReferenceLocation location in blockLocations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -730,6 +730,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
+                var (pageStoryLayouts, storyByKey) = GetFootnoteStoryLookup();
                 if (!storyByKey.TryGetValue(key, out DocxRelatedStoryLayout? storyLayout) || storyLayout.ContentHeight <= 0d)
                 {
                     continue;
@@ -816,14 +817,7 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            IReadOnlyList<DocxRelatedStoryLayout> pageStoryLayouts = GetFootnoteStoryLayouts(page);
-            double widthKey = Math.Round(Math.Max(1d, page.BodyWidth), 3);
-            if (!storyLookupByWidth.TryGetValue(widthKey, out Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>? storyByKey))
-            {
-                storyByKey = CreateRelatedStoryLookup(pageStoryLayouts);
-                storyLookupByWidth[widthKey] = storyByKey;
-            }
-
+            var (pageStoryLayouts, storyByKey) = GetFootnoteStoryLookup();
             var pageFootnoteStories = new List<DocxReferencedRelatedStoryLayout>();
             foreach (int blockIndex in blocksOnPage.OrderBy(index => index))
             {
