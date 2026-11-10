@@ -65,15 +65,7 @@ internal static partial class DocxInlineCompositionTests
                 "TableGridOrigins", "Containers", "floating-cell-" + name + "-picture.docx"));
             var page = AssertFloatingLabelsPaint(DocxTests.ReadDocx(path, mode), mode,
                 ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], name + " picture");
-            var pictures = ReadPictureBounds(page).ToArray();
-            TestAssert.Equal(1, pictures.Length);
-            var (bounds, clip) = pictures[0];
-            TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width / bounds.Height - 2d) < .001d,
-                "The complete source picture retains its aspect ratio.");
-            TestAssert.True(bounds.X >= clip.X - .01d && bounds.Y >= clip.Y - .01d &&
-                bounds.X + bounds.Width <= clip.X + clip.Width + .01d &&
-                bounds.Y + bounds.Height <= clip.Y + clip.Height + .01d,
-                $"A fitting source picture cannot be lost to its child-box clip: {name}/{mode}.");
+            AssertCompleteFloatingPicture(page, name + "/" + mode);
         }
     }
 
@@ -93,21 +85,53 @@ internal static partial class DocxInlineCompositionTests
                 });
             var page = AssertFloatingLabelsPaint(source, mode,
                 ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], alignment + "/split=" + split);
-            var picture = ReadPictureBounds(page).Single();
-            TestAssert.True(picture.Bounds.X >= picture.Clip.X - .01d && picture.Bounds.Y >= picture.Clip.Y - .01d &&
-                picture.Bounds.X + picture.Bounds.Width <= picture.Clip.X + picture.Clip.Width + .01d &&
-                picture.Bounds.Y + picture.Bounds.Height <= picture.Clip.Y + picture.Clip.Height + .01d,
-                $"Alignment and equivalent run splitting must retain the complete fitting picture: {alignment}/{split}/{mode}.");
+            AssertCompleteFloatingPicture(page, alignment + "/" + split + "/" + mode);
         }
     }
 
+    public static void DocxFloatingChildUnsupportedMathKeepsSupportedPictureAndCaption()
+    {
+        foreach (bool sameParagraph in new[] { true, false })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = ReadMutation("TableGridOrigins/Containers/floating-cell-wide-picture", mode, false, false,
+                (xml, w, m) =>
+                {
+                    var owner = xml.Descendants(w + "txbxContent").Last();
+                    var equation = new XElement(m + "oMath", new XElement(m + "future"));
+                    if (sameParagraph) owner.Elements(w + "p").Single().Elements(w + "r").Last().AddBeforeSelf(equation);
+                    else owner.Add(new XElement(w + "p", equation));
+                });
+            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+            var page = AssertFloatingLabelsPaint(source, mode,
+                ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], "unsupported math/" + sameParagraph,
+                diagnostics.Add);
+            AssertCompleteFloatingPicture(page, "unsupported math/" + sameParagraph + "/" + mode);
+            TestAssert.Equal(1, diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"));
+            TestAssert.True(page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+                "The unsupported formula retains its warning without publishing an unused math resource.");
+        }
+    }
+
+    private static void AssertCompleteFloatingPicture(PdfPage page, string context)
+    {
+        var (bounds, clip) = ReadPictureBounds(page).Single();
+        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width / bounds.Height - 2d) < .001d,
+            "The complete source picture retains its aspect ratio.");
+        TestAssert.True(bounds.X >= clip.X - .01d && bounds.Y >= clip.Y - .01d &&
+            bounds.X + bounds.Width <= clip.X + clip.Width + .01d &&
+            bounds.Y + bounds.Height <= clip.Y + clip.Height + .01d,
+            "A fitting source picture cannot be lost to its child-box clip: " + context);
+    }
+
     private static PdfPage AssertFloatingLabelsPaint(DocxDocument source, OoxPdfDocxMarkupMode mode,
-        IReadOnlyList<string> expectedLabels, string context)
+        IReadOnlyList<string> expectedLabels, string context,
+        Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>? diagnosticSink = null)
     {
         var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
             mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-        var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+        var page = renderer.RenderPagesAsync(source, diagnosticSink, default).ToBlockingEnumerable().Single();
         const string number = @"[-+\d.eE]+";
         // These fixtures contain opaque pictures with separate inline advances.
         // A picture may not intersect label ink, regardless of paint order.

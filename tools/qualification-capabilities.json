@@ -4,6 +4,8 @@
     "DocxFloatingTableCellInlineBoxLabelsRemainVisibleInFinalAndReview",
     "DocxFloatingChildPicturesKeepCompleteSourceAndClearLabelInk",
     "DocxFloatingChildPictureAlignmentKeepsContentAcrossRunSplits",
+    "DocxFloatingChildUnsupportedMathKeepsSupportedPictureAndCaption",
+    "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks",
     "DocxInlineCompositionJustificationOwnsWhitespaceAndContinuation",
     "DocxInlineCompositionJustifiedMathMatchesIndependentWord",
     "PortableRenderingJustifiedMathRetainsContentAndNeutralOrigins",

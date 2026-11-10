@@ -249,9 +249,9 @@ internal sealed partial class DocxLayoutEngine
         bool retainPreparedContent = allowStaticFallback;
         if (paragraph.Equations.Count != 0)
         {
-            if (items is null || equations is null ||
+            if (items is null || equations is null && !allowStaticFallback ||
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
-            if (!retainPreparedContent)
+            if (!retainPreparedContent && equations is not null)
                 foreach (var equation in paragraph.Equations)
                 {
                     token.ThrowIfCancellationRequested();

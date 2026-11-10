@@ -2577,12 +2577,20 @@ internal sealed partial class DocxLayoutEngine
             // Normal notes and independently placed textbox stories share ordered
             // measurement. Notes retain their common emission mapping; textbox
             // geometry is shifted once through its existing container frame.
-            // Ordinary textbox text and pictures share the same source wrapping;
-            // unsupported source/flow properties retain the existing fallback.
-            bool ordinaryBoxParagraph = story.Kind == DocxRelatedStoryKind.TextBox &&
-                paragraph.Equations.Count == 0;
-            if (ordinaryBoxParagraph || paragraph.Equations.Count != 0 && (story.Kind == DocxRelatedStoryKind.TextBox ||
-                story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
+            // Prepared math owns its accepted frame. An unsupported equation
+            // does not turn its ordinary textbox neighbors into math content.
+            // Source/flow properties still retain their existing fallback.
+            bool textBoxParagraph = story.Kind == DocxRelatedStoryKind.TextBox;
+            bool hasPreparedMath = false;
+            if (textBoxParagraph && mathEquations is not null)
+                foreach (var equation in paragraph.Equations)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (mathEquations.ContainsKey(equation)) { hasPreparedMath = true; break; }
+                }
+            bool ordinaryBoxParagraph = textBoxParagraph && !hasPreparedMath;
+            if (textBoxParagraph || paragraph.Equations.Count != 0 &&
+                story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
             {
                 double size = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: !ordinaryBoxParagraph).LineHeight;
@@ -2597,7 +2605,7 @@ internal sealed partial class DocxLayoutEngine
                     Math.Max(1d, bodyWidth - firstInset - rightInset), Math.Max(1d, bodyWidth - nextInset - rightInset),
                     baseline, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
                     defaultTabStopPoints: defaultTabStopPoints, pageNumber: pageNumber, pageCount: pageCount,
-                    allowStaticFallback: ordinaryBoxParagraph))
+                    allowStaticFallback: textBoxParagraph))
                 {
                     for (int index = 0; index < measured.Count; index++)
                     {
