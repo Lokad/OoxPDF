@@ -225,10 +225,10 @@ internal sealed partial class DocxLayoutEngine
                             sectionEndStories, outputPages[sectionEndPageIndex]);
                         DocxLayoutPage sectionPage = outputPages[sectionEndPageIndex];
                         double bottom = footerKeepOut?.Invoke(sectionPage, sectionEndPageIndex + 1, outputPages.Count) ?? sectionPage.MarginBottom;
-                        if (CanUseReferenceBoundEndnoteGroup(sectionPage, sectionPage.PlacedRelatedStories,
-                            endnoteSeparatorLayout, printScale, boundStories, cancellationToken, bottom))
-                            for (int index = 0; index < sectionEndStories.Count; index++)
-                                sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
+                        int boundCount = CountReferenceBoundEndnotes(sectionPage, sectionPage.PlacedRelatedStories,
+                            endnoteSeparatorLayout, printScale, boundStories, cancellationToken, bottom);
+                        for (int index = 0; index < boundCount; index++)
+                            sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
                     }
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
                     PlaceSectionEndEndnoteStories(document, outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, completeStaticFrame, headerKeepOut, footerKeepOut, bodyBoundaryToNoteDesign);
@@ -303,9 +303,9 @@ internal sealed partial class DocxLayoutEngine
                     // wrapping. The actual available frame owns admission;
                     // optional typography corrections do not own its value.
                     double bottom = footerKeepOut?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom;
-                    if (CanUseReferenceBoundEndnoteGroup(activePage, activePlacedStories,
-                        documentEndSeparatorLayout, printScale, boundStories, cancellationToken, bottom))
-                        documentEndStories = boundStories;
+                    int boundCount = CountReferenceBoundEndnotes(activePage, activePlacedStories,
+                        documentEndSeparatorLayout, printScale, boundStories, cancellationToken, bottom);
+                    for (int index = 0; index < boundCount; index++) documentEndStories[index] = boundStories[index];
                 }
                 // Plain source/static semantics qualify the same footer edge used
                 // by body flow. Scaled, dynamic and rich frames keep their fallback;

@@ -4,15 +4,18 @@ internal sealed partial class DocxLayoutEngine
 {
     // Counter inputs belong to the rendered reference, independently of whether
     // this container ends a section or the document. Typography corrections do
-    // not own PAGE. Mixed notes still require a complete measured group inside
-    // the available frame, including the actual selected footer edge.
-    private static bool CanUseReferenceBoundEndnoteGroup(DocxLayoutPage page,
+    // not own PAGE. Each admitted source block must fit before the selected
+    // footer edge; an unrelated later overflow cannot revoke its context.
+    private static int CountReferenceBoundEndnotes(DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,
-        double frameBottom) =>
-        CanUsePlainDocumentEndnoteFlow(page, separator, printScale, stories, token, out _) ||
-        printScale == 1d && page.ColumnFrames.Count <= 1 &&
-        HasCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, frameBottom);
+        double frameBottom)
+    {
+        token.ThrowIfCancellationRequested();
+        if (CanUsePlainDocumentEndnoteFlow(page, separator, printScale, stories, token, out _)) return stories.Count;
+        return printScale == 1d && page.ColumnFrames.Count <= 1
+            ? CountCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, frameBottom) : 0;
+    }
 
     // A complete measured block owns paragraph boundaries even when its middle
     // contains supported inline objects or complete nested tables. This admission does
@@ -40,28 +43,37 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool HasCompleteFittingEndnoteBlocks(DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
+        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token, double frameBottom) =>
+        CountCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, frameBottom) == stories.Count &&
+        stories.Count != 0;
+
+    // Counter binding consumes the complete fitting prefix. Whole-group layout
+    // keeps the stricter all-blocks result through the predicate above. One
+    // source-order pass uses the same conservative charges and ownership proof.
+    private static int CountCompleteFittingEndnoteBlocks(DocxLayoutPage page,
+        IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token, double frameBottom)
     {
         token.ThrowIfCancellationRequested();
         frameBottom = Math.Max(page.MarginBottom, frameBottom);
         if (stories.Count == 0 || !double.IsFinite(frameBottom) ||
             separator?.FloatingDrawings.Count > 0 ||
-            placed.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)) return false;
+            placed.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)) return 0;
         double available = ResolveEndnoteStartTop(page, placed, printScale) - frameBottom;
         double height = separator?.ContentHeight ?? 0d;
-        if (!double.IsFinite(height) || height < 0d || !double.IsFinite(available)) return false;
+        if (!double.IsFinite(height) || height < 0d || !double.IsFinite(available)) return 0;
+        int count = 0;
         foreach (var story in stories)
         {
             token.ThrowIfCancellationRequested();
-            if (!double.IsFinite(story.ContentHeight) || story.ContentHeight <= 0d || story.FloatingDrawings.Count != 0) return false;
+            if (!double.IsFinite(story.ContentHeight) || story.ContentHeight <= 0d || story.FloatingDrawings.Count != 0) break;
             // Keep the conservative legacy charges for admission. Placement's
             // separately qualified paragraph boundaries may remove them later.
             height += story.ContentHeight + FootnoteSeparatorGapPoints;
-            if (!double.IsFinite(height) || height > available) return false;
+            if (!double.IsFinite(height) || height > available || !HasCompleteMeasuredNoteBlocks(story, token)) break;
+            count++;
         }
-        foreach (var story in stories)
-            if (!HasCompleteMeasuredNoteBlocks(story, token)) return false;
-        return true;
+        return count;
     }
 
     private static bool CanUseUnscaledEndnoteParagraphBoundaries(DocxDocument document,
@@ -73,7 +85,7 @@ internal sealed partial class DocxLayoutEngine
     // The first complete source block owns the document-end start boundary.
     // Later notes may need continuation pages without adding the separator's
     // latent paragraph spacing back above this already measured block. Whole-
-    // group fitting still owns counter admission and complete footer flow.
+    // Counter binding and complete footer flow retain separate admission.
     private static bool CanUseMeasuredEndnoteStart(DocxDocument document, DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
         double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,

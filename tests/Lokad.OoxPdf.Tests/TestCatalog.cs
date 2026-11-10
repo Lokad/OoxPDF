@@ -20,6 +20,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxBalloonFrameTests)),
         .. FromType("rendering-portable", typeof(DocxCommentGlyphFrameTests)),
         .. FromType("rendering-portable", typeof(DocxEndnoteBlockTests)),
+        .. FromType("rendering-portable", typeof(DocxEndnoteCounterPrefixTests)),
         .. FromType("rendering-portable", typeof(DocxNoteClippingTests)),
         .. FromType("rendering-portable", typeof(DocxDeletedParagraphMarkTests)),
         .. FromType("rendering-portable", typeof(DocxCellColumnBreakTests)),

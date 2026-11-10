@@ -17804,6 +17804,9 @@
       "RelatedStoryPageIndexMatchesLegacyMatching"
   ],
   "docx-counter-spacing": [
+    "DocxEndnoteCounterPrefix",
+    "DocxNoteMathFieldsReferenceBindingIsIndependentOfStaticTypography",
+    "DocxNoteMathFieldsCounterAdmissionUsesTheSelectedFooterEdge",
     "DocxSectionEndnotePageCountersPreserveReferenceAndFollowingSection",
     "DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry",
     "RelatedStoryPageIndexMatchesLegacyMatching",
