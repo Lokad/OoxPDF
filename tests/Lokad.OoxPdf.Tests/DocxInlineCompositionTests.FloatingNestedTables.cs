@@ -134,7 +134,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (string rule in new[] { "exact", "atLeast" })
         foreach (int slot in new[] { 12, 18 })
-        foreach (int height in rule == "exact" ? new[] { 4, 6 } : new[] { 6, 50 })
+        foreach (int height in rule == "exact" ? new[] { 4, 6 } : new[] { 6, 24 })
         foreach (bool unsupported in new[] { false, true })
         {
             var source = ReadFloatingPictureWithUnsupportedMath(mode, sameParagraph: true, fixedLine: true,
