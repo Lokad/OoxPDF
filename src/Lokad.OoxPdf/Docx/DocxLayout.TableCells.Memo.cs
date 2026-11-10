@@ -10,6 +10,8 @@ namespace Lokad.OoxPdf.Docx;
 // by shifting relative lines by the lookup origin. Source PAGE/NUMPAGES dependencies
 // select each page input independently, including inline-box children. The memo
 // stays within one table-layout pass; math/story context remains owned by that pass.
+// Each source/geometry key retains only its current counter inputs. Keeping all
+// prior PAGE values would retain a full cell measurement for every fragment.
 // Vertical-alignment
 // shifts stay outside the memo: every
 // caller applies its own height-dependent shift to the shared unshifted lines.
@@ -41,8 +43,9 @@ internal sealed partial class DocxLayoutEngine
             out double usedHeight)
         {
             if (entries.TryGetValue(
-                new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, dependencies),
-                out StoredLines? stored) && stored is not null)
+                new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale),
+                out StoredLines? stored) && stored is not null &&
+                stored.CounterInputs == ResolveCounterInputs(pageNumber, pageCount, dependencies))
             {
                 Hits++;
                 relativeLines = stored.Lines;
@@ -80,8 +83,15 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
             IReadOnlyList<DocxInlineImageLayout> relativePlaced = ToRelativeImages(absolutePlacedImages, originX, originY);
             var relativeBoxes = absolutePlacedBoxes.Select(box => ShiftInlineTextBox(box, -originY, -originX)).ToArray();
-            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, pageNumber, pageCount, dependencies)] = new StoredLines(relative, relativePlaced, relativeBoxes, usedHeight);
+            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale)] =
+                new StoredLines(relative, relativePlaced, relativeBoxes, usedHeight,
+                    ResolveCounterInputs(pageNumber, pageCount, dependencies));
         }
+
+        private static (int? PageNumber, int? PageCount) ResolveCounterInputs(
+            int? pageNumber, int? pageCount, DocxCounterDependencies dependencies) =>
+            ((dependencies & DocxCounterDependencies.PageNumber) != 0 ? pageNumber : null,
+             (dependencies & DocxCounterDependencies.PageCount) != 0 ? pageCount : null);
 
         internal static IReadOnlyList<DocxTextLineLayout> ToRelativeLines(
             IReadOnlyList<DocxTextLineLayout> lines,
@@ -150,8 +160,6 @@ internal sealed partial class DocxLayoutEngine
             private readonly double defaultTabStopPoints;
             private readonly double rowTopPadding;
             private readonly double paragraphSpacingScale;
-            private readonly int? pageNumber;
-            private readonly int? pageCount;
 
             public MemoKey(
                 DocxTableCell cell,
@@ -159,10 +167,7 @@ internal sealed partial class DocxLayoutEngine
                 IDocxTextMeasurer? measurer,
                 double defaultTabStopPoints,
                 double rowTopPadding,
-                double paragraphSpacingScale,
-                int? pageNumber,
-                int? pageCount,
-                DocxCounterDependencies dependencies)
+                double paragraphSpacingScale)
             {
                 this.cell = cell;
                 this.cellWidth = cellWidth;
@@ -170,8 +175,6 @@ internal sealed partial class DocxLayoutEngine
                 this.defaultTabStopPoints = defaultTabStopPoints;
                 this.rowTopPadding = rowTopPadding;
                 this.paragraphSpacingScale = paragraphSpacingScale;
-                this.pageNumber = (dependencies & DocxCounterDependencies.PageNumber) != 0 ? pageNumber : null;
-                this.pageCount = (dependencies & DocxCounterDependencies.PageCount) != 0 ? pageCount : null;
             }
 
             public bool Equals(MemoKey other)
@@ -181,9 +184,7 @@ internal sealed partial class DocxLayoutEngine
                     && ReferenceEquals(measurer, other.measurer)
                     && defaultTabStopPoints.Equals(other.defaultTabStopPoints)
                     && rowTopPadding.Equals(other.rowTopPadding)
-                    && paragraphSpacingScale.Equals(other.paragraphSpacingScale)
-                    && pageNumber == other.pageNumber
-                    && pageCount == other.pageCount;
+                    && paragraphSpacingScale.Equals(other.paragraphSpacingScale);
             }
 
             public override bool Equals(object? obj)
@@ -200,15 +201,16 @@ internal sealed partial class DocxLayoutEngine
                 hash.Add(defaultTabStopPoints);
                 hash.Add(rowTopPadding);
                 hash.Add(paragraphSpacingScale);
-                hash.Add(pageNumber);
-                hash.Add(pageCount);
                 return hash.ToHashCode();
             }
         }
 
         private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> placedImages,
-            IReadOnlyList<DocxInlineTextBoxLayout> placedBoxes, double usedHeight)
+            IReadOnlyList<DocxInlineTextBoxLayout> placedBoxes, double usedHeight,
+            (int? PageNumber, int? PageCount) counterInputs)
         {
+            public (int? PageNumber, int? PageCount) CounterInputs { get; } = counterInputs;
+
             public IReadOnlyList<DocxInlineTextBoxLayout> PlacedBoxes { get; } = placedBoxes;
             public IReadOnlyList<DocxTextLineLayout> Lines { get; } = lines;
 

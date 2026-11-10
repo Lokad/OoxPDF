@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using Lokad.OoxPdf.Docx;
 
@@ -114,6 +115,47 @@ internal static class DocxCellMemoTests
             TestAssert.Throws<OperationCanceledException>(() => PlaceCounterCell(cell, measurer, memo, 2, 13, token: cancellation.Token));
             TestAssert.Equal(1, memo.Hits);
         }
+    }
+
+    public static void CellMemoCounterInputsReleaseSupersededMeasurements()
+    {
+        foreach (var kind in new[] { DocxFieldKind.Page, DocxFieldKind.NumPages })
+        {
+            var paragraph = DocxTests.CreateDocxLayoutParagraph("Field", 10d, 10d);
+            var run = paragraph.Runs[0] with { Text = DocxFieldText.Placeholder(kind)!, FieldKind = kind };
+            paragraph = paragraph with { Runs = [run] };
+            var cell = new DocxTableCell(run.Text, [paragraph], null, null, null, null, [], DocxTableCellMargins.Empty);
+            var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
+            var measurer = new CountingMeasurer();
+            var superseded = CaptureCounterMeasurement(cell, measurer, memo, kind);
+            for (int value = 2; value <= 16; value++)
+            {
+                var current = PlaceCounterCell(cell, measurer, memo, value, value);
+                TestAssert.Equal(value.ToString(System.Globalization.CultureInfo.InvariantCulture), current.Lines.Single().Text);
+            }
+
+            // Only this test forces collection, to observe whether the cache
+            // still owns an obsolete measurement after its last caller returns.
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+            TestAssert.True(!superseded.IsAlive,
+                "Changing counter inputs must release superseded cell measurements: " + kind);
+            long calls = measurer.Calls;
+            var hit = PlaceCounterCell(cell, measurer, memo, 16, 16);
+            TestAssert.Equal("16", hit.Lines.Single().Text);
+            TestAssert.Equal(calls, measurer.Calls);
+            GC.KeepAlive(memo);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference CaptureCounterMeasurement(DocxTableCell cell, IDocxTextMeasurer measurer,
+        DocxLayoutEngine.DocxTableCellTextLinesMemo memo, DocxFieldKind kind)
+    {
+        _ = PlaceCounterCell(cell, measurer, memo, 1, 1);
+        var dependencies = kind == DocxFieldKind.Page ? DocxCounterDependencies.PageNumber : DocxCounterDependencies.PageCount;
+        TestAssert.True(memo.TryGetRelativeLines(cell, 160d, measurer, 36d, 0d, 1d, 1, 1, dependencies,
+            out var relative, out _, out _, out _), "Capture the live cached measurement.");
+        return new WeakReference(relative);
     }
 
     public static void CellMemoCounterInputsFollowChildBoxOwnership()
