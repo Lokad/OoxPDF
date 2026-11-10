@@ -72,7 +72,7 @@ internal static partial class PptxLegendRowsTests
 
     private static double[] ReadPolarLegendClip(PdfPage page, int width)
     {
-        var clips = Regex.Matches(page.Content, @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W n\r?$")
+        var clips = Regex.Matches(page.Content, @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W\*? n\r?$")
             .Select(match => match.Groups.Cast<Group>().Skip(1)
                 .Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray())
             .Where(rect => rect[2] <= width + .01d && rect[3] < 360d)
