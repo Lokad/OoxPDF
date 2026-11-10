@@ -664,6 +664,8 @@ Approximate or restricted:
   Supported note equations coexist with PAGE and NUMPAGES in paragraphs and cells.
   Fresh footnotes measure counters with their rendered reference page before
   slicing; unresolved references retain their existing fallback.
+  Footnote wrapping follows the current section's design width when margins
+  change, including unscaled review layouts whose body widths coincide.
   Endnote PAGE is measured with its rendered reference page for existing plain
   paragraph flow, including section-end notes and continuation, and the complete
   fitting prefix of mixed groups at section or document end. Admission uses the

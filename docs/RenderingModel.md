@@ -98,6 +98,10 @@ footer edge. It stops at the first unfit or unsupported block; later notes do
 not change the reference page of an already admitted source block. Section-end
 and document-end placement use the same proof, independently of whole-group flow.
 
+Footnote lookups use the same section note width as measurement. A fixed review
+lane can give different authored note widths the same body width; those note
+measurements remain distinct. Page-bound counter layouts stay outside that memo.
+
 Supported mixed DOCX content uses ordered source items for text, tabs, breaks,
 pictures and equations. Measurement produces inline fragments without page
 coordinates; body, cell and related-story containers own wrapping, admission and
