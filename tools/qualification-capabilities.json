@@ -17648,6 +17648,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-complete-endnote-rows": [
+    "DocxPictureOnly",
+    "DocxNestedCellEndMarkHasNoOccupiedHeightAndRetainsItsSource",
     "DocxOversizedEndnoteRowsDeferBeforeTheirBoundedClip",
     "DocxOversizedEndnoteRowsRetainHeightOnlyProgress",
     "DocxBalloonlessUnitScaleOriginsDoNotRequireBodyText",

@@ -409,8 +409,9 @@ internal sealed partial class DocxLayoutEngine
     internal static bool IsPlainContextualSpacingParagraph(DocxParagraph paragraph,
         bool allowSourceAffinedImages = false) =>
         HasAuthoredParagraphSpacing(paragraph) &&
+        // Source-affined pictures own spacing without requiring adjacent text.
+        // Measured-content callers still prove the complete painted frames.
         (paragraph.Images.Count == 0 || allowSourceAffinedImages &&
-            paragraph.Runs.Any(r => r.Text.Length != 0) &&
             paragraph.Images.All(i => i.SourceRunIndex >= 0 && i.Revisions.Count == 0 &&
                 double.IsFinite(i.WidthPoints) && i.WidthPoints > 0d &&
                 double.IsFinite(i.HeightPoints) && i.HeightPoints > 0d)) &&

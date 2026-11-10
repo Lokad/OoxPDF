@@ -8,7 +8,7 @@ internal static class DocxTableCellClipGeometry
         Func<DocxTextLineLayout, DocxTableCellClipSnapshot?, bool>? inspect = null)
     {
         long expected = 0, visible = 0;
-        bool Count(IReadOnlyList<DocxTableRowLayout> current)
+        bool Count(IReadOnlyList<DocxTableRowLayout> current, DocxTableCellClipSnapshot? parent)
         {
             foreach (var row in current)
             {
@@ -17,13 +17,29 @@ internal static class DocxTableCellClipGeometry
                 foreach (var cell in row.Cells)
                 {
                     token.ThrowIfCancellationRequested();
+                    var clip = Resolve(row, cell, parent);
+                    // A measured text carrier does not prove that its separate
+                    // picture placements survive the source cell/ancestor clips.
+                    foreach (var image in cell.InlineImages)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell ||
+                            !double.IsFinite(image.Width) || !double.IsFinite(image.Height) ||
+                            image.Width <= 0d || image.Height <= 0d ||
+                            !ContainsHorizontalRange(clip, image.X, image.Width) ||
+                            !ContainsVerticalRange(clip, image.Y, image.Y + image.Height) ||
+                            image.ClipBounds is { } viewport &&
+                            !(image.X >= viewport.X - .000001d && image.Y >= viewport.Y - .000001d &&
+                                image.X + image.Width <= viewport.X + viewport.Width + .000001d &&
+                                image.Y + image.Height <= viewport.Y + viewport.Height + .000001d)) return false;
+                    }
                     expected += cell.TextLines.Count(line => !DocxInlineLineGeometry.IsNonPaintingSourceCarrier(line));
-                    if (!Count(cell.NestedRows)) return false;
+                    if (!Count(cell.NestedRows, clip)) return false;
                 }
             }
             return true;
         }
-        if (!Count(rows)) return false;
+        if (!Count(rows, null)) return false;
         foreach (var row in rows)
         foreach (var owner in EnumerateCellLines(row, null, token))
         {

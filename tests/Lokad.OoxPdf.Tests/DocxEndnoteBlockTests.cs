@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxEndnoteBlockTests
+internal static partial class DocxEndnoteBlockTests
 {
     public static void DocxCompleteEndnoteRowDefersWithoutClippingItsContent() => Check(false);
 
