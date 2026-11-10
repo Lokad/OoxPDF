@@ -535,8 +535,10 @@ Supported within the following constraints:
   with measured text/math lines or complete unrotated source-cell pictures
   extending below the note frame report `DOCX_CLIPPED_NOTE_TABLE_ROW`, including
   partial clipping. Rotated pictures retain their diagnostic fallback.
-  Adjacent ordinary unscaled endnotes share paragraph before/after spacing even
-  after an earlier table; first-note/page-turn geometry remains approximate.
+  Adjacent source paragraphs in qualified unscaled endnotes share before/after
+  spacing, including after complete table-containing notes. Later continuation
+  does not add a separator gap to an earlier shared boundary. Other first-note
+  and page-turn geometry remains approximate.
   An already-started final next-page section keeps its document-end notes even
   without body text. In known unscaled frames, its default empty paragraph uses
   ordinary paragraph flow; remaining font metrics still affect the note origin.
