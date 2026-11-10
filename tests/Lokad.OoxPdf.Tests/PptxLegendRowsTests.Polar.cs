@@ -17,7 +17,7 @@ internal static partial class PptxLegendRowsTests
         {
             var result = Render(width, size, count, overlay, kind: kind,
                 categoryLegend: true, legendPosition: position);
-            var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(result.Page,
+            var names = DocxCommentsTests.ReadEmbeddedGlyphTextShows(result.Page, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
             TestAssert.True(names.Select(show => show.Text).SequenceEqual(
                 Enumerable.Range(1, count).Select(i => $"Category {i}")),
@@ -45,9 +45,9 @@ internal static partial class PptxLegendRowsTests
         {
             var overlay = Render(420, 12, 6, true, kind: kind, categoryLegend: true, legendPosition: position);
             var reserved = Render(420, 12, 6, false, kind: kind, categoryLegend: true, legendPosition: position);
-            var overlayNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(overlay.Page,
+            var overlayNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(overlay.Page, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
-            var reservedNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(reserved.Page,
+            var reservedNames = DocxCommentsTests.ReadEmbeddedGlyphTextShows(reserved.Page, usePageCoordinates: false,
                 fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
             TestAssert.True(overlayNames.Select(show => (show.Text, show.X, show.Y))
                 .SequenceEqual(reservedNames.Select(show => (show.Text, show.X, show.Y))),
