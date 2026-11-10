@@ -50,8 +50,8 @@ internal static partial class PptxChartLabelDefaultsTests
         {
             var plain = RenderVisibilityCase(source.Input, key: false, value: true);
             var keys = RenderVisibilityCase(source.Input, key: true, value: true);
-            int before = PptxChartPaletteTests.ReadColoredPaints(plain.Content, source.Stroke).Count();
-            int after = PptxChartPaletteTests.ReadColoredPaints(keys.Content, source.Stroke).Count();
+            int before = PptxChartPaletteTests.ReadColoredPaints(plain.Content, strokes: source.Stroke).Count();
+            int after = PptxChartPaletteTests.ReadColoredPaints(keys.Content, strokes: source.Stroke).Count();
             TestAssert.Equal(source.Keys, after - before);
         }
     }
