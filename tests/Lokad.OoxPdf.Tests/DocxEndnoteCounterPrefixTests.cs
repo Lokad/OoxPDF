@@ -7,7 +7,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxEndnoteCounterPrefixTests
+internal static partial class DocxEndnoteCounterPrefixTests
 {
     public static void DocxEndnoteCounterPrefixPreservesReferenceValueAndLiteralGeometry()
     {
@@ -75,7 +75,8 @@ internal static class DocxEndnoteCounterPrefixTests
             count(page, [], separator, 1d, stories, cancellation.Token, page.MarginBottom)).CancellationToken);
     }
 
-    private static DocxDocument Read(OoxPdfDocxMarkupMode mode, string position, int reference, string? instruction, string value)
+    private static DocxDocument Read(OoxPdfDocxMarkupMode mode, string position, int reference, string? instruction, string value,
+        int laterWords = 400, Action<XDocument, XNamespace>? change = null)
     {
         var source = DocxInlineCompositionTests.ReadMutation("CompositionProbes/mixed-note-endnote-table", mode, false, false,
             (xml, w, _) =>
@@ -88,7 +89,8 @@ internal static class DocxEndnoteCounterPrefixTests
                 string laterId = position == "sectEnd" ? "4" : "8";
                 xml.Root.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == laterId).Element(w + "p")!
                     .Add(new XElement(w + "r", new XElement(w + "t", " " + string.Join(" ",
-                        Enumerable.Range(0, 400).Select(index => $"LaterNote{index:000}")))));
+                        Enumerable.Range(0, laterWords).Select(index => $"LaterNote{index:000}")))));
+                change?.Invoke(xml, w);
             }, partOverride: "word/endnotes.xml");
         var earlier = new List<DocxBodyElement>();
         for (int page = 1; page < reference; page++)

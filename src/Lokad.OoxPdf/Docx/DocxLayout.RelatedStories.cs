@@ -483,24 +483,8 @@ internal sealed partial class DocxLayoutEngine
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    // A measured paragraph boundary belongs to its neighboring
-                    // source blocks, independently of whether later notes fit.
-                    bool localBoundary = !collapseEndnoteBoundaries && !plainEndnoteFlow && localEndnoteBoundaries &&
-                        previousEndnote is not null &&
-                        HasMeasuredEndnoteParagraphBoundary(previousEndnote, endnoteStoryLayout, cancellationToken);
-                    double boundaryOverlap = (collapseEndnoteBoundaries || plainEndnoteFlow || localBoundary) && previousEndnote is not null
-                        ? ResolveEndnoteBoundaryOverlap(previousEndnote, endnoteStoryLayout) : 0d;
-                    double boundaryGap = localBoundary ? FootnoteSeparatorGapPoints : 0d;
-                    // A shared paragraph boundary belongs on this page only when
-                    // the next paragraph's head fits. A page turn retains its
-                    // existing placement and destination policy.
-                    if (!collapseEndnoteBoundaries && (plainEndnoteFlow || localBoundary) &&
-                        cursorTop + boundaryGap + boundaryOverlap - ResolveStoryTextLineBoxHeight(endnoteStoryLayout.TextLines[0],
-                            endnoteStoryLayout.TextLines.Count == 1
-                                ? endnoteStoryLayout.TextLines[0].ParagraphAfterSpacing ?? 0d : 0d) < FrameBottom())
-                    {
-                        boundaryOverlap = 0d;
-                    }
+                    var (boundaryGap, boundaryOverlap) = ResolveEndnoteParagraphBoundary(previousEndnote, endnoteStoryLayout,
+                        cursorTop, FrameBottom(), collapseEndnoteBoundaries, plainEndnoteFlow, localEndnoteBoundaries, cancellationToken);
                     cursorTop += boundaryGap + boundaryOverlap;
                     PlaceRelatedStorySlices(
                         documentEndPages,
@@ -570,9 +554,16 @@ internal sealed partial class DocxLayoutEngine
             footerKeepOut?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom);
         bool followsBodyParagraph = completeBoundaries || CanUseTrailingParagraphEndnoteStart(activePage, activePlacedStories,
             endnoteSeparatorLayout, printScale, storyLayouts);
+        // Preserve existing plain-story placement. Newly admitted complete source
+        // blocks share the measured start used by document-end groups.
+        bool measuredStart = !followsBodyParagraph && CanUseMeasuredEndnoteStart(document, activePage, activePlacedStories,
+            endnoteSeparatorLayout, printScale, storyLayouts, cancellationToken, hasCompleteStaticFrame);
+        bool paragraphStart = completeBoundaries || measuredStart;
+        bool localBoundaries = measuredStart && DocxPlainBodyFrame.HasNoStaticStories(document) &&
+            !document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
-            followsBodyParagraph ? bodyBoundaryToNoteDesign : null, activePageIndex);
-        if (completeBoundaries) cursorTop -= ResolveTrailingBodyBoundarySpacing(activePage);
+            followsBodyParagraph || measuredStart ? bodyBoundaryToNoteDesign : null, activePageIndex);
+        if (paragraphStart) cursorTop -= ResolveTrailingBodyBoundarySpacing(activePage);
         if (endnoteSeparatorLayout is not null && sectionEndStories.Count > 0)
         {
             // RV06 endnote probes: the separator space sits exactly one body pitch below
@@ -580,27 +571,28 @@ internal sealed partial class DocxLayoutEngine
             // gap is added back); content keeps its gap below the separator.
             // The admitted paragraph boundary uses the normalized default source
             // spacing. Unqualified stories retain their legacy separator frame.
-            double? separatorHeight = completeBoundaries
+            double? separatorHeight = paragraphStart
                 ? ResolveParagraphBoundarySeparatorHeight(endnoteSeparatorLayout, activePage, separatorMeasurer, storyLayouts)
                 : followsBodyParagraph
                 ? Math.Max(0d, ResolvePlacedStoryHeight(endnoteSeparatorLayout, activePage) -
                     ResolveLatentSeparatorSpacing(endnoteSeparatorLayout.Story) * printScale) : null;
             (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, endnoteSeparatorLayout, sectionEndStories[0].Location.SourceBlockIndex, cursorTop + FootnoteSeparatorGapPoints, separatorMeasurer,
-                useSizeDrivenPlacementHeight: completeBoundaries, contentStoriesForHhea: storyLayouts,
+                useSizeDrivenPlacementHeight: paragraphStart, contentStoriesForHhea: storyLayouts,
                 placementHeightOverride: separatorHeight);
             activePlacedStories.Add(placedSeparator);
             outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
             var (mark, size) = FindSeparatorMarkFont(endnoteSeparatorLayout.TextLines);
-            cursorTop = separatorBottom - (completeBoundaries
+            cursorTop = separatorBottom - (paragraphStart
                 ? ResolveEndnoteContentGap(storyLayouts, mark, size, separatorMeasurer) : FootnoteSeparatorGapPoints);
         }
         DocxRelatedStoryLayout? previous = null;
         foreach (DocxReferencedRelatedStoryLayout story in sectionEndStories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            double overlap = completeBoundaries && previous is not null
-                ? ResolveEndnoteBoundaryOverlap(previous, story.StoryLayout) : 0d;
-            cursorTop += overlap;
+            var (gap, overlap) = ResolveEndnoteParagraphBoundary(previous, story.StoryLayout, cursorTop,
+                completeBoundaries ? footerKeepOut?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom
+                    : activePage.MarginBottom, completeBoundaries, plainFlow: false, localBoundaries, cancellationToken);
+            cursorTop += gap + overlap;
             PlaceRelatedStorySlices(
                 outputPages,
                 ref activePageIndex,

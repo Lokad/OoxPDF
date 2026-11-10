@@ -82,9 +82,9 @@ internal sealed partial class DocxLayoutEngine
         DocxPlainBodyFrame.HasKnownBodyFrame(document) && hasCompleteStaticFrame &&
         HasEmptyNoteSeparator(separator);
 
-    // The first complete source block owns the document-end start boundary.
+    // The first complete source block owns the note-group start boundary.
     // Later notes may need continuation pages without adding the separator's
-    // latent paragraph spacing back above this already measured block. Whole-
+    // latent paragraph spacing back above this already measured block.
     // Counter binding and complete footer flow retain separate admission.
     private static bool CanUseMeasuredEndnoteStart(DocxDocument document, DocxLayoutPage page,
         IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
@@ -117,6 +117,25 @@ internal sealed partial class DocxLayoutEngine
             ReferenceEquals(previous.TextLines[^1].SourceParagraph, tail.Paragraph) &&
             ReferenceEquals(current.TextLines[0].SourceParagraph, head.Paragraph) &&
             HasCompleteMeasuredNoteBlocks(previous, token) && HasCompleteMeasuredNoteBlocks(current, token);
+    }
+
+    // The container supplies its actual cursor and lower edge. Source ownership
+    // qualifies spacing; only an admitted next head can keep the overlap here.
+    private static (double Gap, double Overlap) ResolveEndnoteParagraphBoundary(
+        DocxRelatedStoryLayout? previous, DocxRelatedStoryLayout current, double cursorTop, double frameBottom,
+        bool completeBoundaries, bool plainFlow, bool allowLocalBoundary, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        bool local = !completeBoundaries && !plainFlow && allowLocalBoundary && previous is not null &&
+            HasMeasuredEndnoteParagraphBoundary(previous, current, token);
+        double overlap = (completeBoundaries || plainFlow || local) && previous is not null
+            ? ResolveEndnoteBoundaryOverlap(previous, current) : 0d;
+        double gap = local ? FootnoteSeparatorGapPoints : 0d;
+        if (!completeBoundaries && (plainFlow || local) &&
+            cursorTop + gap + overlap - ResolveStoryTextLineBoxHeight(current.TextLines[0],
+                current.TextLines.Count == 1 ? current.TextLines[0].ParagraphAfterSpacing ?? 0d : 0d) < frameBottom)
+            overlap = 0d;
+        return (gap, overlap);
     }
 
     // Fitting-boundary collapse and complete-block admission use the same source
