@@ -399,7 +399,12 @@ internal sealed partial class PptxSceneBuilder
             }
 
             XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-            runs.Add(new PptxSceneChartTextRun(runText, ReadChartTextRunStyle(runProperties, theme, colorMap), HyperlinkClickId: ReadChartHyperlinkClickId(runProperties), HyperlinkClickAction: ReadChartHyperlinkClickAction(runProperties)));
+            XElement? paragraphProperties = run.Ancestors(DrawingNamespace + "p").FirstOrDefault()?
+                .Element(DrawingNamespace + "pPr")?.Element(DrawingNamespace + "defRPr");
+            PptxSceneChartTextStyleOverride style = MergeChartTextStyleOverride(
+                ReadChartTextRunStyle(paragraphProperties, theme, colorMap),
+                ReadChartTextRunStyle(runProperties, theme, colorMap));
+            runs.Add(new PptxSceneChartTextRun(runText, style, HyperlinkClickId: ReadChartHyperlinkClickId(runProperties), HyperlinkClickAction: ReadChartHyperlinkClickAction(runProperties)));
         }
 
         return runs;

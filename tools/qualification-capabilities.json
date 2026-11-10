@@ -4394,8 +4394,8 @@
       "DocxMinimumBodyFlowRichAndCombiningSourcesKeepFallback"
   ],
   "pptx-chart-titles": [
-    "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
-    "PptxInferredTitleSizeFollowsSourcePrecedence",
+      "PptxInferredTitleDefaultsMatchIndependentOfficeSizes",
+      "PptxInferredTitleSizeFollowsSourcePrecedence",
       "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
       "PptxAutomaticChartTitleUsesAuthoredChartSizeBeforeGalleryDefaults",
       "PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox",
@@ -4425,7 +4425,14 @@
       "PptxChartAutoTitleDeletedSuppressesSingleSeriesName",
       "PptxChartAutoTitleDoesNotInventAmbiguousMultiSeriesTitle",
       "PptxChartAutoTitleFillsTextlessTitleElement",
-      "PptxVaryingBarCategoryLegends"
+      "PptxVaryingBarCategoryLegends",
+      "PptxRichParagraphDefaultsReachTitlesAndPointLabels",
+      "PptxRichParagraphFontSurvivesRunSplitsThroughPainting",
+      "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation",
+      "PptxPointTextStylesPreserveOverridesAndProvenance",
+      "PptxSyntheticTransparentChartTitleRichRunUsesGlyphOutlinePaths",
+      "PptxSyntheticChartStyleTitleAlphaUsesGlyphOutlinePaths",
+      "PptxChartCffTextSubstitutesFallbackWithDiagnostic"
   ],
   "pptx-inspection-fonts": [
       "SuppressedMasterShapesStayOutOfFontPreflight",
