@@ -540,7 +540,10 @@ Supported within the following constraints:
   without body text. In known unscaled frames, its default empty paragraph uses
   ordinary paragraph flow; remaining font metrics still affect the note origin.
   Document-endnote boundaries include the trailing ordinary paragraph's measured
-  automatic leading. Scaled and mixed-inline frames retain their existing policy.
+  automatic leading. In known unscaled frames, a complete measured first note
+  owns its start spacing even when later notes require continuation pages.
+  This does not admit the whole group to fitting-flow or counter corrections.
+  Scaled and unsupported source/static frames retain their existing policy.
   Empty continuous/parity sections retain existing fallbacks.
   Complex/continued/page-dependent note compositions and arbitrary
   nested stories retain explicit fallbacks and documented geometry residuals.
