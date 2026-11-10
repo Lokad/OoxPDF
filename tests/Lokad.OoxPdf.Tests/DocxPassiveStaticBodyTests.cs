@@ -65,7 +65,7 @@ internal static class DocxPassiveStaticBodyTests
             var page = Layout(document).Pages.Single();
             TestAssert.Equal(1, page.StaticInlineImages.Count);
             var line = page.StaticTextLines.Single();
-            var frame = TestAssert.NotNull(line.InlineFrame);
+            var frame = line.InlineFrame ?? throw new InvalidOperationException("A fitting static picture owns a measured row.");
             var picture = page.StaticInlineImages.Single();
             if (declared) TestAssert.Equal(12d, frame.Height);
             else TestAssert.Contains("Public picture text.", line.Text);
