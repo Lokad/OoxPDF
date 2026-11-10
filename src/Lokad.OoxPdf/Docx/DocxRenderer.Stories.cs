@@ -14,18 +14,29 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private static (bool Mapped, FloatingTextBoxEmissionMap Map, PdfRectangle Clip) ResolvePlacedStoryPaintFrame(
+    private static (bool Mapped, FloatingTextBoxEmissionMap Map, PdfRectangle Clip, PdfRectangle TableClip) ResolvePlacedStoryPaintFrame(
         DocxPlacedRelatedStoryLayout story, DocxMarkupContext context, double pageHeight)
     {
         FloatingTextBoxEmissionMap map = default;
-        bool mapped = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
+        bool note = story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
+        bool mapped = note &&
             FloatingTextBoxEmissionMap.TryCreate(context, pageHeight, out map);
+        PdfRectangle clip;
         if (mapped)
         {
             var (x, y, width, height) = map.MapClipRectangle(story.X, story.TopY, story.Width, story.Height);
-            return (true, map, new PdfRectangle(x, y, width, height));
+            clip = new PdfRectangle(x, y, width, height);
         }
-        return (false, map, new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height));
+        else clip = new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
+
+        // Flow admission bounds the selected text/image slice. Table cells own
+        // their content clips; an unfragmented row can extend into the margin,
+        // where Office clips it at the paper edge instead of the body bottom.
+        // Keep the horizontal/top story frame and every cell/ancestor clip.
+        PdfRectangle tableClip = note && story.StoryLayout.Story.IsNormalStoryType
+            ? new PdfRectangle(clip.X, 0d, clip.Width, Math.Clamp(clip.Y + clip.Height, 0d, pageHeight))
+            : clip;
+        return (mapped, map, clip, tableClip);
     }
 
     private static void RenderPlacedRelatedStory(
@@ -46,7 +57,7 @@ internal sealed partial class DocxRenderer
         // stories lay out unscaled in design space while emission maps uniformly
         // (WC first baseline 236.62 = affine-mapped design). Other stories keep
         // the body-shift path; tables inside mapped stories stay legacy.
-        var (mapStory, storyMap, clip) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
+        var (mapStory, storyMap, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
         if (story.SeparatorY is { } separatorY)
         {
             graphics.SetFillRgb(0, 0, 0);
@@ -77,18 +88,30 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutItem item = items[itemIndex];
+            bool tableViewport = item is DocxTableRowLayout && tableClip != clip;
+            if (tableViewport) SetClip(tableClip);
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
             if (diagnosticSink is not null && item is DocxTableRowLayout row &&
                 story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
-                HasClippedNoteTableContent(row, clip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
+                HasClippedNoteTableContent(row, tableClip, ResolveTextEmissionBaselineOffset(markupContext), cancellationToken))
                 diagnosticSink(new OoxPdfDiagnostic("DOCX_CLIPPED_NOTE_TABLE_ROW", OoxPdfSeverity.Warning,
                     "A note-table row exceeds its available frame; content is clipped. Row fragmentation for this content is unsupported.",
                     story.StoryLayout.Story.PartName, PageIndex: pageNumber, Feature: "note table row", Fallback: "Clipped"));
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
+            if (tableViewport) SetClip(clip);
         }
 
         graphics.RestoreState();
+
+        void SetClip(PdfRectangle viewport)
+        {
+            // PDF clips intersect. Restore the surrounding state before
+            // selecting another container, preserving sibling paint order.
+            graphics.RestoreState();
+            graphics.SaveState();
+            graphics.ClipRectangle(viewport.X, viewport.Y, viewport.Width, viewport.Height);
+        }
     }
 
     private static bool HasClippedNoteTableContent(DocxTableRowLayout row, PdfRectangle clip,

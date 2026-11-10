@@ -53,7 +53,7 @@ internal sealed partial class DocxRenderer
                 token.ThrowIfCancellationRequested();
                 if (!story.StoryLayout.Story.IsNormalStoryType ||
                     story.StoryLayout.Story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)) continue;
-                var (mapped, map, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
+                var (mapped, map, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
                 foreach (var image in story.InlineImages)
                 {
                     token.ThrowIfCancellationRequested();
@@ -62,7 +62,7 @@ internal sealed partial class DocxRenderer
                 }
                 // Painting keeps note tables in their placed legacy frame.
                 foreach (var row in story.TableRows)
-                    foreach (var image in CellImages(row, clip)) yield return image;
+                    foreach (var image in CellImages(row, tableClip)) yield return image;
             }
         }
 

@@ -1187,6 +1187,7 @@
     "PptxChartUnknownAxisOrientationUsesSceneAuthoritativeDefault"
   ],
   "docx-note-row-clipping": [
+    "DocxNoteTableCellsRetainPageContainedInkBeyondFlowAdmission",
     "DocxPictureOnlyNoteRowsReportClippingWithoutChangingPdf",
     "DocxNotePictureClippingUsesCompleteSourceAndPaintFrames",
     "DocxPartiallyClippedNoteRowsReportTextAndMathContent",
