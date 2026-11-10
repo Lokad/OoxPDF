@@ -650,7 +650,9 @@ Approximate or restricted:
   vertical placement on custom paper remains approximate.
   Explicit before/after point spacing preserves these baselines; connected
   paragraph backgrounds retain their measured continuity, including different colors.
-  Note-numbering, kerning and reduced-print alignment/spacing retain their separate limits.
+  Note-numbering and reduced-print alignment/spacing retain separate limits.
+  Kerning in qualified notes follows explicit thresholds; omitted settings keep
+  a disabled fallback that can differ from Word's resolved defaults.
   Comment ranges and nonpainting comment references preserve the same text-frame
   classification. Actual note markers retain their own minimum-slot rules;
   printed Review balloons still own their scale and placement.

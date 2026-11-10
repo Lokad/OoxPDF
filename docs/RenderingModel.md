@@ -102,6 +102,9 @@ Footnote lookups use the same section note width as measurement. A fixed review
 lane can give different authored note widths the same body width; those note
 measurements remain distinct. Page-bound counter layouts stay outside that memo.
 
+Qualified note flows honor explicit inherited kerning thresholds. An omitted
+setting keeps the disabled fallback and can differ from Word's resolved defaults.
+
 Supported mixed DOCX content uses ordered source items for text, tabs, breaks,
 pictures and equations. Measurement produces inline fragments without page
 coordinates; body, cell and related-story containers own wrapping, admission and
