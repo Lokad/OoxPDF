@@ -185,6 +185,10 @@ the construction window while models remain funded. Scene admission includes eac
 slide's copied master/layout content. Repagination does not accumulate another
 parsed-model charge. Estimates are capacity, not exact live bytes or a heap bound;
 remaining repeated-placement/vector resource coverage is tracked separately.
+DOCX related-story measurements reuse the first width's model headroom. Additional
+cached width families reserve source-shaped placement capacity before construction;
+their temporary second window refunds after measurement. Cache hits reuse the
+grant, and retained capacity ends with the existing model group.
 PDF content staging includes encoding/readback scratch and
 spill buffers, plus private SFNT/subset programs and retained kerning-pair arrays.
 Copied programs and pair arrays stay funded through emission. GPOS right-class map

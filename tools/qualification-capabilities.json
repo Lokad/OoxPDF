@@ -1,5 +1,6 @@
 {
   "docx-related-story-demand": [
+    "LayoutRelatedStoryVariant",
     "LayoutRelatedStoryMeasurements",
     "LayoutRelatedStoryLookup",
     "DocxFootnoteStoryLaysOutUnscaledDesignSpace",

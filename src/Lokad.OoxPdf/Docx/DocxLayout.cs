@@ -394,11 +394,31 @@ internal sealed partial class DocxLayoutEngine
             double key = Math.Round(Math.Max(1d, bodyWidth), 3);
             if (!relatedStoryLayoutsByBodyWidth.TryGetValue(key, out IReadOnlyList<DocxRelatedStoryLayout>? layouts))
             {
-                customNoteTargets ??= DocxCustomNoteMarkerOwners.ResolveTargets(document, cancellationToken);
-                layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints,
-                    paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, customNoteTargets, mathEquations,
-                    pageCount: knownPageCount);
-                relatedStoryLayoutsByBodyWidth[key] = layouts;
+                // The source-model grant covers ordinary placement, including the
+                // first family. Distinct widths retain additional measured lines.
+                long capacity = 0;
+                IMemoryReservation? storage = null;
+                if (textMeasurer is not null && relatedStoryLayoutsByBodyWidth.Count > 0 &&
+                    OoxConversionBudget.Current?.Models is { } owner)
+                {
+                    foreach (var story in document.RelatedStories)
+                        capacity = checked(capacity + EstimateBlockPlacementCapacity(story.BodyElements, cancellationToken));
+                    storage = OoxMemory.Reserve(owner, checked(2 * capacity));
+                }
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    customNoteTargets ??= DocxCustomNoteMarkerOwners.ResolveTargets(document, cancellationToken);
+                    layouts = CreateRelatedStoryLayouts(document.RelatedStories, key, textMeasurer, defaultTabStopPoints,
+                        paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, customNoteTargets, mathEquations,
+                        pageCount: knownPageCount);
+                    OoxMemory.Resize(storage, capacity);
+                    relatedStoryLayoutsByBodyWidth[key] = layouts;
+                    // The model group retains successful capacity through the final
+                    // layout/paint user. Construction scratch and failures refund here.
+                    storage = null;
+                }
+                finally { storage?.Dispose(); }
             }
 
             return layouts;
