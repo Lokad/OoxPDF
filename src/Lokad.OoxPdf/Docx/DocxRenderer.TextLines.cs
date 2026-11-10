@@ -40,12 +40,17 @@ internal sealed partial class DocxRenderer
         foreach (var line in EnumerateBodyTextLines(page))
         {
             double anchor = line.BaselineY;
+            double offset = line.SourceBaselineOffset;
             if (line.InlineFrame is { TextBaselineInset: { } textInset } frame)
+            {
                 // Object-only lines own their occupied top. Text/math lines
                 // retain the independently measured typographic anchor.
-                anchor += frame.BaselineInset - (DocxInlineLineGeometry.HasTextOrMath(line) ? textInset : 0d);
+                bool hasTextOrMath = DocxInlineLineGeometry.HasTextOrMath(line);
+                anchor += frame.BaselineInset - (hasTextOrMath ? textInset : 0d);
+                if (!hasTextOrMath) offset = 0d;
+            }
             if (baseline is null || anchor > baseline.Value)
-                (baseline, sourceOffset) = (anchor, line.SourceBaselineOffset);
+                (baseline, sourceOffset) = (anchor, offset);
         }
         // Leading standalone objects have their own measured frame origin. A later
         // caption cannot supply the source origin for already scaled content.
