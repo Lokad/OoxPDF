@@ -68,9 +68,9 @@ Supported within the following constraints:
   or its background. Custom point text and enabled value labels keep their keys.
   Horizontal pie/doughnut legends share measured rows and complete entry frames.
   Automatic pies reserve measured title/legend space before centering and fitting
-  their circle. Rich titles and custom labels inherit paragraph run defaults;
-  explicit run formatting takes precedence. Authored frames, side furniture, label
-  clearance and manual-factor plot mapping retain their existing approximations.
+  their circle. Rich titles inherit paragraph run defaults; custom labels retain
+  their point/container scope and direct run overrides. Authored frames, side
+  furniture, label clearance and manual-factor mapping remain approximate.
   Axes/data labels share number formatting, including dates, numeric sections,
   scaling, fractions and supported accounting/currency forms. Unsupported syntax,
   formula-only data without cached values and unsupported chart kinds are diagnosed.

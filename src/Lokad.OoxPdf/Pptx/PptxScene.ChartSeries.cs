@@ -375,7 +375,7 @@ internal sealed partial class PptxSceneBuilder
             ?.Attribute("action");
     }
 
-    internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme, PptxColorMap colorMap)
+    internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme, PptxColorMap colorMap, bool inheritParagraphFormatting = false)
     {
         XElement? rich = text?.Element(ChartNamespace + "rich");
         if (rich is null)
@@ -399,8 +399,12 @@ internal sealed partial class PptxSceneBuilder
             }
 
             XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-            XElement? paragraphProperties = run.Ancestors(DrawingNamespace + "p").FirstOrDefault()?
-                .Element(DrawingNamespace + "pPr")?.Element(DrawingNamespace + "defRPr");
+            // Titles inherit paragraph defaults. Data labels retain their native
+            // point/container scope; direct run declarations remain authoritative.
+            XElement? paragraphProperties = inheritParagraphFormatting
+                ? run.Ancestors(DrawingNamespace + "p").FirstOrDefault()?
+                    .Element(DrawingNamespace + "pPr")?.Element(DrawingNamespace + "defRPr")
+                : null;
             PptxSceneChartTextStyleOverride style = MergeChartTextStyleOverride(
                 ReadChartTextRunStyle(paragraphProperties, theme, colorMap),
                 ReadChartTextRunStyle(runProperties, theme, colorMap));

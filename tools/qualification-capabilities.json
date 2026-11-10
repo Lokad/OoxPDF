@@ -4426,7 +4426,7 @@
       "PptxChartAutoTitleDoesNotInventAmbiguousMultiSeriesTitle",
       "PptxChartAutoTitleFillsTextlessTitleElement",
       "PptxVaryingBarCategoryLegends",
-      "PptxRichParagraphDefaultsReachTitlesAndPointLabels",
+      "PptxRichParagraphDefaultsRespectTitleAndPointLabelScopes",
       "PptxRichParagraphFontSurvivesRunSplitsThroughPainting",
       "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation",
       "PptxPointTextStylesPreserveOverridesAndProvenance",

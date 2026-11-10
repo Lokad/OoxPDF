@@ -48,7 +48,7 @@
   Allocated numeric captions survive later authored inner-plot placement.
   Empty data-label units no longer paint phantom legend keys or backgrounds.
   Pie/doughnut horizontal legends wrap into measured rows; automatic pie circles
-  use the space reserved for titles and legends. Rich chart text inherits paragraph
+  use the space reserved for titles and legends. Rich chart titles inherit paragraph
   formatting while preserving explicit run overrides.
   Repeated hidden-column declarations no longer abort chart conversion.
 - PPTX content: preserves cells following horizontal merges and text/link geometry
