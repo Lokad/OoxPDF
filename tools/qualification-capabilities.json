@@ -6,6 +6,7 @@
     "DocxFloatingChildPictureAlignmentKeepsContentAcrossRunSplits",
     "DocxFloatingChildUnsupportedMathKeepsSupportedPictureAndCaption",
     "DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback",
+    "DocxFloatingChildFittingDeclaredPicturesKeepCompleteSource",
     "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks",
     "DocxInlineCompositionJustificationOwnsWhitespaceAndContinuation",
     "DocxInlineCompositionJustifiedMathMatchesIndependentWord",

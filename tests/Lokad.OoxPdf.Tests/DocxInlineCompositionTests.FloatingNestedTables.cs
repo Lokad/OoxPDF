@@ -129,8 +129,39 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxFloatingChildFittingDeclaredPicturesKeepCompleteSource()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string rule in new[] { "exact", "atLeast" })
+        foreach (int slot in new[] { 12, 18 })
+        foreach (int height in rule == "exact" ? new[] { 4, 6 } : new[] { 6, 50 })
+        foreach (bool unsupported in new[] { false, true })
+        {
+            var source = ReadFloatingPictureWithUnsupportedMath(mode, sameParagraph: true, fixedLine: true,
+                includeUnsupported: unsupported, change: (xml, w, _) =>
+                {
+                    var paragraph = xml.Descendants(w + "txbxContent").Last().Elements(w + "p").Single();
+                    var spacing = paragraph.Element(w + "pPr")!.Element(w + "spacing")!;
+                    spacing.SetAttributeValue(w + "line", slot * 20);
+                    spacing.SetAttributeValue(w + "lineRule", rule);
+                    foreach (var extent in paragraph.Descendants().Where(e =>
+                        e.Name.LocalName is "extent" or "ext" && e.Attribute("cy") is not null))
+                        extent.SetAttributeValue("cy", height * 12700);
+                });
+            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+            var page = AssertFloatingLabelsPaint(source, mode,
+                ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"],
+                $"{rule}/{slot}/{height}/{unsupported}/{mode}", diagnostics.Add);
+            AssertCompleteFloatingPicture(page, $"{rule}/{slot}/{height}/{unsupported}/{mode}", 100d / height);
+            TestAssert.Equal(unsupported ? 1 : 0, diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"));
+            TestAssert.True(page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
+                "An omitted equation cannot erase a supported fitting picture or publish an unused math font.");
+        }
+    }
+
     private static DocxDocument ReadFloatingPictureWithUnsupportedMath(OoxPdfDocxMarkupMode mode,
-        bool sameParagraph, bool fixedLine = false, bool includeUnsupported = true) =>
+        bool sameParagraph, bool fixedLine = false, bool includeUnsupported = true,
+        Action<XDocument, XNamespace, XNamespace>? change = null) =>
         ReadMutation("TableGridOrigins/Containers/floating-cell-wide-picture", mode, false, false,
             (xml, w, m) =>
             {
@@ -142,16 +173,19 @@ internal static partial class DocxInlineCompositionTests
                     spacing.SetAttributeValue(w + "line", "240");
                     spacing.SetAttributeValue(w + "lineRule", "exact");
                 }
-                if (!includeUnsupported) return;
-                var equation = new XElement(m + "oMath", new XElement(m + "future"));
-                if (sameParagraph) paragraph.Elements(w + "r").Last().AddBeforeSelf(equation);
-                else owner.Add(new XElement(w + "p", equation));
+                if (includeUnsupported)
+                {
+                    var equation = new XElement(m + "oMath", new XElement(m + "future"));
+                    if (sameParagraph) paragraph.Elements(w + "r").Last().AddBeforeSelf(equation);
+                    else owner.Add(new XElement(w + "p", equation));
+                }
+                change?.Invoke(xml, w, m);
             });
 
-    private static void AssertCompleteFloatingPicture(PdfPage page, string context)
+    private static void AssertCompleteFloatingPicture(PdfPage page, string context, double aspectRatio = 2d)
     {
         var (bounds, clip) = ReadPictureBounds(page).Single();
-        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width / bounds.Height - 2d) < .001d,
+        TestAssert.True(bounds.Width > 0d && bounds.Height > 0d && Math.Abs(bounds.Width / bounds.Height - aspectRatio) < .001d,
             "The complete source picture retains its aspect ratio.");
         TestAssert.True(bounds.X >= clip.X - .01d && bounds.Y >= clip.Y - .01d &&
             bounds.X + bounds.Width <= clip.X + clip.Width + .01d &&
