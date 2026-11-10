@@ -1,4 +1,15 @@
 {
+  "docx-floating-nested-table": [
+    "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
+    "DocxWordCompatibleFloatingTextBoxEmissionMapMatchesOfficeProbe",
+    "DocxWordCompatibleFloatingTextBoxPrecompensatedEmissionMatchesCenterScale",
+    "DocxRendererEmitsFloatingTextBoxTableRows",
+    "DocxRendererEmitsStaticFloatingTextBoxTableRows",
+    "DocxRendererEmitsPlacedFootnoteFloatingTextBoxTableRows",
+    "DocxRendererEmitsFloatingTextBoxExternalHyperlinkAnnotations",
+    "DocxRendererEmitsFloatingTextBoxInternalHyperlinkDestinations",
+    "DocxContainerTableGridsPreservePortableContentAndPaintedLinks"
+  ],
   "pptx-horizontal-polar-frame": [
       "PptxPieHorizontalLegendsUseSelectedPlotMidpoint",
       "PptxUntitledUnreservedPiesUseVerticalMidpoint",

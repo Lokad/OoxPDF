@@ -125,7 +125,8 @@ internal sealed partial class DocxRenderer
                             .ToArray(),
                         InlineImages = cell.InlineImages
                             .Select(cellImage => cellImage.Relocate(self.PrecompensateX(cellImage.X), self.PrecompensateY(cellImage.Y)))
-                            .ToArray()
+                            .ToArray(),
+                        NestedTableRows = cell.NestedRows.Select(self.PrecompensateRow).ToArray()
                     })
                     .ToArray()
             };

@@ -54,10 +54,10 @@ internal static partial class DocxNoteClippingTests
         }
     }
 
-    // Read only generated q/Q, physical rectangle clips and BT blocks for this
-    // fixture. CID decoding stays in the existing glyph-show reader; standard
+    // Read only generated q/Q, physical rectangle clips and BT blocks for these
+    // fixtures. CID decoding stays in the existing glyph-show reader; standard
     // affine matrices map clips and glyph ink into physical page coordinates.
-    private static IEnumerable<(string Block, PdfRectangle Clip, Matrix3x2 Transform)> ReadPhysicalTextClips(PdfPage page)
+    internal static IEnumerable<(string Block, PdfRectangle Clip, Matrix3x2 Transform)> ReadPhysicalTextClips(PdfPage page)
     {
         const string number = @"[-+\d.eE]+";
         string rectangle = number + @"(?: " + number + @"){3}";
