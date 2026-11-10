@@ -14,7 +14,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import fontTools
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont, TTLibError
 import pymupdf as fitz
 
 
@@ -113,9 +113,14 @@ def analyze_pdf(path, expected_sha256=None):
             fonts = {}
             for identity, data in device.programs.items():
                 if identity in embedded:
-                    font = TTFont(io.BytesIO(data))
+                    try:
+                        font = TTFont(io.BytesIO(data))
+                    except TTLibError:
+                        continue
                     if "glyf" in font:
                         fonts[identity] = font
+                    else:
+                        font.close()
             buffer = fitz.mupdf.fz_new_buffer(1024)
             output = fitz.mupdf.FzOutput(buffer)
             trace = fitz.mupdf.fz_new_trace_device(output)

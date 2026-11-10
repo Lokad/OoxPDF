@@ -84,6 +84,17 @@ class PdfInkTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "PDF hash differs"):
             analyze_pdf(self.pdf, "00" * 32)
 
+    def test_unembedded_font_remains_unknown(self):
+        document = fitz.open()
+        page = document.new_page(width=220, height=160)
+        page.insert_text((20, 50), "A", fontname="helv", fontsize=24)
+        document.save(self.pdf)
+        document.close()
+        result = analyze_pdf(self.pdf)
+        self.assertEqual(0, result["GlyphsMeasured"])
+        self.assertEqual("UnavailableEmbeddedTrueTypeProgram",
+                         result["UnmeasuredTextTraces"][0]["Reason"])
+
     def test_manifest_selection_and_library_identity(self):
         target = self.root / "probe-final-preserve"
         target.mkdir()
