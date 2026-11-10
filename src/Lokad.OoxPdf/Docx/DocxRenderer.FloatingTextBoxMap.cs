@@ -108,18 +108,31 @@ internal sealed partial class DocxRenderer
 
         public DocxTableRowLayout PrecompensateRow(DocxTableRowLayout row)
         {
-            // Rows arrive translated to absolute design space (TranslateTableRow first); only
-            // positions and text extents join the map, row/cell heights keep file behavior.
+            // Rows arrive translated to absolute design space. Paint bounds and
+            // descendants join the same map as glyphs; unscaled cell extents can
+            // otherwise cover the preceding row or clip a nested source.
             FloatingTextBoxEmissionMap self = this;
             return row with
             {
-                Table = row.Table with { TableX = self.PrecompensateX(row.Table.TableX) },
+                Table = row.Table with
+                {
+                    TableX = self.PrecompensateX(row.Table.TableX),
+                    ResolvedTableWidth = self.ScaleExtent(row.Table.ResolvedTableWidth),
+                    AlignedMinimumRowBottomMargins = row.Table.AlignedMinimumRowBottomMargins.Select(self.ScaleExtent).ToArray()
+                },
                 Y = self.PrecompensateY(row.Y),
+                Height = self.ScaleExtent(row.Height),
                 Cells = row.Cells
                     .Select(cell => cell with
                     {
                         X = self.PrecompensateX(cell.X),
                         Y = self.PrecompensateY(cell.Y),
+                        Width = self.ScaleExtent(cell.Width),
+                        Height = self.ScaleExtent(cell.Height),
+                        ContentPaddingLeft = self.ScaleExtent(cell.ContentPaddingLeft),
+                        ContentPaddingRight = self.ScaleExtent(cell.ContentPaddingRight),
+                        ContentPaddingTop = self.ScaleExtent(cell.ContentPaddingTop),
+                        ContentPaddingBottom = self.ScaleExtent(cell.ContentPaddingBottom),
                         TextLines = cell.TextLines
                             .Select(cellLine => self.PrecompensateLine(cellLine, 0d, 0d))
                             .ToArray(),

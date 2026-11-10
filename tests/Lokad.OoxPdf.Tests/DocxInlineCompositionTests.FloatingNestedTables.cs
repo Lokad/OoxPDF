@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Pdf;
@@ -44,6 +46,11 @@ internal static partial class DocxInlineCompositionTests
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                     : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            const string number = @"[-+\d.eE]+";
+            var fills = Regex.Matches(page.Content, @"(?m)^(?<x>" + number + @") (?<y>" + number +
+                @") (?<w>" + number + @") (?<h>" + number + @") re f\r?$").Cast<Match>().Select(match =>
+                (Offset: match.Index, X: ReadNumber(match, "x"), Y: ReadNumber(match, "y"),
+                    Width: ReadNumber(match, "w"), Height: ReadNumber(match, "h"))).ToArray();
             var labels = new HashSet<string>(StringComparer.Ordinal);
             foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalTextClips(page))
             foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts)))
@@ -53,21 +60,36 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(labels.Add(label), "Each source label paints once.");
                 TestAssert.True(Math.Abs(transform.M12) < .000001d && Math.Abs(transform.M21) < .000001d,
                     "The source has axis-aligned glyph frames.");
+                TestAssert.True(Math.Abs(transform.M11 - 1f) < .000001d && Math.Abs(transform.M22 - 1f) < .000001d &&
+                    Math.Abs(transform.M31) < .000001d && Math.Abs(transform.M32) < .000001d,
+                    "These generated cell fills and glyphs use physical page coordinates.");
+                int paintOffset = page.Content.IndexOf(block, StringComparison.Ordinal);
                 var font = show.Font.Font;
                 double scale = show.Size / font.UnitsPerEm;
+                double cursor = show.X;
                 foreach (char character in label)
                 {
+                    ushort glyph = font.MapCodePoint(character);
+                    double glyphX = cursor;
+                    cursor += font.GetAdvanceWidth(glyph) * scale;
                     if (char.IsWhiteSpace(character)) continue;
-                    TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(character), out var ink),
+                    TestAssert.True(font.TryGetGlyphBounds(glyph, out var ink),
                         "The portable font supplies each source glyph.");
                     double first = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
                     double last = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
                     TestAssert.True(Math.Min(first, last) >= clip.Y - .01d &&
                         Math.Max(first, last) <= clip.Y + clip.Height + .01d,
                         $"A complete floating-table label must survive its ancestor clips: depth={depth}/{mode}/{label}.");
+                    double left = glyphX + ink.XMin * scale, right = glyphX + ink.XMax * scale;
+                    TestAssert.True(!fills.Any(fill => fill.Offset > paintOffset &&
+                        Math.Min(fill.X + fill.Width, right) - Math.Max(fill.X, left) > .01d &&
+                        Math.Min(fill.Y + fill.Height, Math.Max(first, last)) - Math.Max(fill.Y, Math.Min(first, last)) > .01d),
+                        $"A later cell background must not cover a source label: depth={depth}/{mode}/{label}.");
                 }
             }
             TestAssert.Equal(2, labels.Count);
         }
+
+        static double ReadNumber(Match match, string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
     }
 }
