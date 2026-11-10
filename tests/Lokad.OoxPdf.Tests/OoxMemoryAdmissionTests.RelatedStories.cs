@@ -31,7 +31,7 @@ internal static partial class OoxMemoryAdmissionTests
                 { PlacementRelatedStoryMeasurements = measurements };
             var first = engine.Create(source, measurer, default);
             TestAssert.Equal(6, first.Pages.Select(page => page.Width).Distinct().Count());
-            TestAssert.Equal(footnote ? 3 : 2, measurements.Count,
+            TestAssert.True(measurements.Count == (footnote ? 3 : 2),
                 "Only the initial/final endnote frames and an actual footnote owner need measurements.");
             TestAssert.Equal(6, first.Pages.SelectMany(page => page.PlacedRelatedStories)
                 .Where(note => note.StoryLayout.Story.IsNormalStoryType && note.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote)
@@ -40,7 +40,7 @@ internal static partial class OoxMemoryAdmissionTests
             {
                 var owner = first.Pages.Single(page => page.PlacedRelatedStories.Any(note =>
                     note.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && note.StoryLayout.Story.IsNormalStoryType));
-                TestAssert.Equal(11840d / 20d, owner.Width, "Keep lookahead and registration retain the reference's section.");
+                TestAssert.True(owner.Width == 11840d / 20d, "Keep lookahead and registration retain the reference's section.");
                 TestAssert.True(measurements.ContainsKey(owner.Width - owner.MarginLeft - owner.MarginRight),
                     "A referenced footnote still measures its actual width.");
             }
@@ -56,7 +56,8 @@ internal static partial class OoxMemoryAdmissionTests
             package.Dispose();
             TestAssert.True(pool.Reserved > 0, "Retained source and placements outlive package buffers.");
             TestAssert.True(measurements.Values.SelectMany(value => value).Any(note =>
-                note.TextLines.Any(line => line.Text.Contains("Note text", StringComparison.Ordinal))));
+                note.TextLines.Any(line => line.Text.Contains("Note text", StringComparison.Ordinal))),
+                "Cached note content remains readable after package disposal.");
         }
         TestAssert.Equal(0L, pool.Reserved);
         TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
