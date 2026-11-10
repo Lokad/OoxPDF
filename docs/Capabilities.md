@@ -521,6 +521,10 @@ Supported within the following constraints:
   picture-only paragraphs share their measured row frame across body, cells and
   static stories. Expanded ordinary spacing follows the occupied math/picture
   row once; prepared display equations retain their own spacing owner.
+  Ordinary automatic-flow textbox captions and pictures keep shared wrapping
+  when a neighboring equation is omitted as unsupported. Its diagnostic remains;
+  prepared math, fixed-line pictures and entirely unsupported paragraphs retain
+  their respective measured-frame or fallback contracts.
   Inline pictures follow
   effective run hiding, including inherited styles and explicit false overrides;
   drawing-level `docPr hidden` alone retains Word's print behavior. Floating pictures/textboxes

@@ -13,6 +13,11 @@ inline pictures share measurement and placement in body paragraphs, simple table
 cells and direct headers/footers. Numbering owns the first authored row; formulas
 beside prose use inline sizing while a later math-only row owns display sizing.
 Links and annotations follow the resulting physical geometry.
+In qualified ordinary textboxes, omitting unsupported mathematics retains its
+diagnostic while supported captions and pictures keep their shared wrapping.
+Prepared math keeps its measured frame; entirely unsupported paragraphs and
+ordinary fixed-line pictures keep their existing fallback. Exact Office geometry
+for new combinations remains unqualified.
 Hyperlinks at an equation's root merge their fragments once per placed line and
 use its occupied frame and resolved after-gap. Links inside mathematical arguments
 retain local glyph/rule bounds. Targets survive wrapping and qualified revisions;
