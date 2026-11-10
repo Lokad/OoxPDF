@@ -521,9 +521,11 @@ Supported within the following constraints:
   picture-only paragraphs share their measured row frame across body, cells and
   static stories. Expanded ordinary spacing follows the occupied math/picture
   row once; prepared display equations retain their own spacing owner.
-  Ordinary automatic-flow textbox captions and pictures keep shared wrapping
-  when a neighboring equation is omitted as unsupported. Its diagnostic remains;
-  prepared math, fixed-line pictures and entirely unsupported paragraphs retain
+  Ordinary textbox/static captions and pictures share wrapping in automatic and
+  minimum-spaced rows, including beside an omitted, unsupported equation; its
+  diagnostic remains. Pictures contained above a fixed row's authored baseline
+  use the same wrapping. Overhanging fixed-line pictures, already prepared math
+  and entirely unsupported paragraphs retain
   their respective measured-frame or fallback contracts.
   Inline pictures follow
   effective run hiding, including inherited styles and explicit false overrides;
