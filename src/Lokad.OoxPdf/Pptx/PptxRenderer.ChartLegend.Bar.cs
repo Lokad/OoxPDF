@@ -87,7 +87,7 @@ internal sealed partial class PptxRenderer
             (measuredBand || !layout.ManualPlotLayoutApplied);
         // Filled keys share natural-row admission and wrapped columns, whether
         // they identify series or categories and whether their keys have strokes.
-        bool measuredFillGrid = measuredBand && bottom && automaticLegend &&
+        bool measuredFillGrid = measuredBand && automaticLegend &&
             entries.All(entry => entry.Fill is not null);
         double naturalWidth = 0d, widestNaturalCell = 0d;
         for (int i = 0; i < entries.Count; i++)

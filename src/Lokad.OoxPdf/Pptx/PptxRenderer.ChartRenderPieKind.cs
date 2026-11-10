@@ -42,15 +42,24 @@ internal sealed partial class PptxRenderer
                     ReadSceneSeriesDataLabelOptions(sceneChart, piePlot),
                     seriesIndex: 0);
                 ChartPolarPointOptions polarPoints = ReadSceneChartPolarPointOptions(piePlot, workbook);
-                ChartFrameBox frame = GetChartFrameBox(document, bounds);
-                ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
-                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, sceneChart);
+                ChartLayout sourceLayout = GetPolarChartLayout(document, bounds, sceneChart);
+                ChartFrameBox frame = sourceLayout.Frame;
+                ChartLegendLayout legend = sourceLayout.Legend;
+                ChartPlotBox plotBox = sourceLayout.PlotBox;
+                IReadOnlyList<ChartLegendEntry> legendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette,
+                    piePlot, pieChart, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: pieSlices.Count);
+                ChartTextStyle legendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
+                var prepared = await PreparePolarChartLayoutAsync(sourceLayout, theme, sceneChart,
+                    legendEntries, legendStyle, fontResolver, context).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 bool hasVisiblePieDataLabels = labelOptions.HasVisibleText || pieSlices.Any(slice => ResolveChartDataLabelOptions(labelOptions, slice.Index).HasVisibleText);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: hasVisiblePieDataLabels, hasTitle: !string.IsNullOrWhiteSpace(sceneChart.Title.Text));
+                if (UsesAutomaticPolarFrame(sourceLayout, sceneChart))
+                    polarLayout = FitPieLayoutToFrame(polarLayout, prepared.Layout.PlotBox, hasVisiblePieDataLabels);
                 RenderPieChart(graphics, theme, colorMap, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, polarPoints.FirstSliceAngle);
                 await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, polarPoints.FirstSliceAngle, pieSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                await RenderChartLegendAsync(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, colorMap, chartPalette, piePlot, pieChart, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: pieSlices.Count), legend, ReadSceneChartLegendTextStyle(theme, sceneChart), fontResolver, ChartLegendPlacement.Default, chartFonts: fonts).ConfigureAwait(false);
+                await RenderChartLegendAsync(graphics, frame, plotBox, legendEntries, legend, legendStyle,
+                    fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, preparedBox: prepared.LegendBox).ConfigureAwait(false);
                 return true;
             }
         }
@@ -88,13 +97,16 @@ internal sealed partial class PptxRenderer
                     ReadSceneSeriesDataLabelOptions(sceneChart, doughnutPlot),
                     seriesIndex: 0);
                 ChartDoughnutPlotOptions doughnutOptions = ReadSceneChartDoughnutOptions(doughnutPlot, workbook);
-                ChartFrameBox frame = GetChartFrameBox(document, bounds);
-                ChartLegendLayout legend = ReadSceneChartLegendLayout(sceneChart);
-                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, sceneChart);
+                ChartLayout sourceLayout = GetPolarChartLayout(document, bounds, sceneChart);
+                ChartFrameBox frame = sourceLayout.Frame;
+                ChartLegendLayout legend = sourceLayout.Legend;
+                ChartPlotBox plotBox = sourceLayout.PlotBox;
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 ChartPolarPointOptions polarPoints = doughnutOptions.PolarPoints;
                 IReadOnlyList<ChartLegendEntry> doughnutLegendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette, doughnutPlot, doughnutChart, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: doughnutSlices.Count);
                 ChartTextStyle doughnutLegendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
+                var prepared = await PreparePolarChartLayoutAsync(sourceLayout, theme, sceneChart,
+                    doughnutLegendEntries, doughnutLegendStyle, fontResolver, context).ConfigureAwait(false);
                 ChartPlotBox doughnutGeometryPlotBox = plotBox;
                 // Exploded charts keep the full-frame plot only while the legend fits the slack:
                 // narrow names show no Office shrink, but mid/wide Office rings translate rigidly
@@ -142,7 +154,7 @@ internal sealed partial class PptxRenderer
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, doughnutGeometryPlotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: false, hasLegendReserve: hasDoughnutLegendReserve, explodedRightLegendReserve: explodedDoughnutLegendReserve, leftLegendBoxRight: leftLegendBoxRight, hasTitle: hasTitle);
                 RenderDoughnutChart(graphics, theme, colorMap, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle);
                 await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle, doughnutSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
-                await RenderChartLegendAsync(graphics, frame, plotBox, doughnutLegendEntries, legend, doughnutLegendStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, doughnutRightLegend: isDoughnutRightFillLegend, doughnutLeftLegend: isDoughnutLeftFillLegend, doughnutRingCenterY: polarLayout.Geometry.CenterY).ConfigureAwait(false);
+                await RenderChartLegendAsync(graphics, frame, plotBox, doughnutLegendEntries, legend, doughnutLegendStyle, fontResolver, ChartLegendPlacement.Default, chartFonts: fonts, doughnutRightLegend: isDoughnutRightFillLegend, doughnutLeftLegend: isDoughnutLeftFillLegend, doughnutRingCenterY: polarLayout.Geometry.CenterY, preparedBox: prepared.LegendBox).ConfigureAwait(false);
                 return true;
             }
         }

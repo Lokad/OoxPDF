@@ -47,8 +47,8 @@
   wrapping, titles, legends, reversal and supported scatter/bubble geometry.
   Allocated numeric captions survive later authored inner-plot placement.
   Empty data-label units no longer paint phantom legend keys or backgrounds.
-  Pie geometry retains the horizontal midpoint under top/bottom legends and the
-  vertical midpoint when neither a title nor a nonoverlay legend reserves space.
+  Pie/doughnut horizontal legends wrap into measured rows; automatic pie circles
+  use the space reserved for titles and legends.
   Repeated hidden-column declarations no longer abort chart conversion.
 - PPTX content: preserves cells following horizontal merges and text/link geometry
   with standard-font fallback. Preset arcs handle extreme numeric guides without

@@ -122,13 +122,52 @@ internal sealed partial class PptxRenderer
     {
         return Math.Max(0d, ringRightUnshrunk - legendBoxLeft + PptxChartMetricRules.DoughnutExplodedLegendClearance);
     }
-    private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, PptxSceneChart sceneChart)
+    private static ChartLayout GetPolarChartLayout(PptxDocument document, ShapeBounds bounds, PptxSceneChart sceneChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
-        return TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
-            ? manualPlotLayout.PlotBox
-            : defaultPlotBox;
+        bool manual = TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout);
+        ChartPlotBox plot = manual ? manualPlotLayout.PlotBox : defaultPlotBox;
+        return new ChartLayout(frame, new ChartLayoutBox(plot.X, plot.Y, plot.Width, plot.Height), plot,
+            manual, sceneChart.Title.Text, sceneChart.Title.TextBodyProperties, ReadSceneChartLegendLayout(sceneChart));
+    }
+
+    private static bool UsesAutomaticPolarFrame(ChartLayout layout, PptxSceneChart chart) =>
+        !layout.ManualPlotLayoutApplied && !chart.Title.Layout.HasGeometryValues &&
+        !layout.Legend.Layout.HasGeometryValues &&
+        (!layout.Legend.Visible || layout.Legend.Overlay || IsHorizontalLegendPosition(layout.Legend.PositionKind));
+
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox? LegendBox)> PreparePolarChartLayoutAsync(
+        ChartLayout layout, PptxTheme theme, PptxSceneChart chart, IReadOnlyList<ChartLegendEntry> entries,
+        ChartTextStyle style, PresentationFontResolver resolver, PptxRenderContext context)
+    {
+        // Source geometry remains the coordinate reference for authored labels.
+        // The automatic placement frame owns measured title and legend space.
+        if (UsesAutomaticPolarFrame(layout, chart) && !string.IsNullOrWhiteSpace(layout.Title) && chart.Title.Overlay != true)
+        {
+            var title = await MeasureChartTitleLineAsync(theme, chart, resolver).ConfigureAwait(false);
+            double reserve = Math.Min(Math.Max(0d, layout.PlotBox.Height - 1d),
+                PptxChartMetricRules.ChartContentFrameInset + 2d * PptxChartMetricRules.ChartTitleLinePadding + title.Height);
+            layout = layout with
+            {
+                PlotBox = layout.PlotBox with { Height = layout.PlotBox.Height - reserve },
+                PlotAreaBox = layout.PlotAreaBox with { Height = layout.PlotAreaBox.Height - reserve }
+            };
+        }
+        if (!layout.Legend.Visible || !IsHorizontalLegendPosition(layout.Legend.PositionKind)) return (layout, null);
+        var prepared = await LayoutChartLegendRowsAsync(layout, entries, style, resolver, context,
+            layout.Frame.Width, measuredBand: !layout.Legend.Layout.HasGeometryValues).ConfigureAwait(false);
+        return (prepared.Layout, prepared.Box);
+    }
+
+    private static ChartPolarLayout FitPieLayoutToFrame(ChartPolarLayout layout, ChartPlotBox frame, bool hasVisibleDataLabels)
+    {
+        double radius = Math.Max(1d, Math.Min(frame.Width, frame.Height) / 2d - PptxChartMetricRules.PolarPlotSideMargin)
+            / (1d + layout.ExplosionReserve);
+        // Keep independently qualified label clearance while the placement frame
+        // bounds the circle. The source plot remains the authored-label reference.
+        if (hasVisibleDataLabels) radius = Math.Min(radius, layout.Geometry.Radius);
+        return layout with { Geometry = new ChartPolarGeometry(frame.X + frame.Width / 2d, frame.Y + frame.Height / 2d, radius) };
     }
 
     private static bool IsHorizontalLegendPosition(PptxSceneChartLegendPosition position)
@@ -164,7 +203,7 @@ internal sealed partial class PptxRenderer
             double radius = plotBox.Height * GetPieOrDoughnutRadiusRatio();
             if (kind == ChartPolarKind.Doughnut)
             {
-                radius = Math.Min(radius, Math.Max(1d, (plotBox.Width - 2d * PptxChartMetricRules.DoughnutPlotSideMargin) / 2d));
+                radius = Math.Min(radius, Math.Max(1d, (plotBox.Width - 2d * PptxChartMetricRules.PolarPlotSideMargin) / 2d));
             }
             // Titled doughnut rings fit between the title band and the bottom margin (landscape and
             // short Office renders agree to 0.03); untitled rings span the full height minus margins.
@@ -177,7 +216,7 @@ internal sealed partial class PptxRenderer
             if (kind == ChartPolarKind.Doughnut && leftOrCalibratedRight)
             {
                 double titleBand = hasTitle && hasLegend ? 2d * PptxChartMetricRules.DoughnutTitledCenterYOffset : 0d;
-                radius = Math.Min(radius, Math.Max(1d, (plotBox.Height - titleBand - 2d * PptxChartMetricRules.DoughnutPlotSideMargin) / 2d));
+                radius = Math.Min(radius, Math.Max(1d, (plotBox.Height - titleBand - 2d * PptxChartMetricRules.PolarPlotSideMargin) / 2d));
             }
 
             if (explosionReserve > 0d)
@@ -208,7 +247,7 @@ internal sealed partial class PptxRenderer
             // square Office rings bind it within 0.12; narrow/mid keep baseline radius).
             if (kind == ChartPolarKind.Doughnut && leftFillLegend && leftLegendBoxRight > 0d && explosionReserve == 0d)
             {
-                radius = Math.Min(radius, Math.Max(1d, plotBox.X + plotBox.Width - centerX - PptxChartMetricRules.DoughnutPlotSideMargin));
+                radius = Math.Min(radius, Math.Max(1d, plotBox.X + plotBox.Width - centerX - PptxChartMetricRules.PolarPlotSideMargin));
             }
             return new ChartPolarGeometry(
                 centerX,

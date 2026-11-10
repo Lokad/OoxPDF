@@ -149,7 +149,7 @@ internal static partial class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "")
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b")
     {
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
             <c:ser><c:idx val="{{i - 1}}"/><c:order val="{{i - 1}}"/><c:tx><c:v>North West Region {{i}}</c:v></c:tx>
@@ -164,16 +164,20 @@ internal static partial class PptxLegendRowsTests
                 $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
             series = $"<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:cat><c:strLit><c:ptCount val=\"{count}\"/>{categories}</c:strLit></c:cat><c:val><c:numLit><c:ptCount val=\"{count}\"/>{values}</c:numLit></c:val></c:ser>";
         }
-        bool bar = kind != "line";
+        bool polar = kind is "pie" or "doughnut";
+        bool bar = !polar && kind != "line";
         bool horizontal = kind == "bar";
-        string plot = bar ? "barChart" : "lineChart";
-        string chart = $$"""
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{plotLayout}}<c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}<c:grouping val="{{(bar ? "clustered" : "standard")}}"/>
-                <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}<c:axId val="1"/><c:axId val="2"/></c:{{plot}}>
+        string plot = polar ? kind + "Chart" : bar ? "barChart" : "lineChart";
+        string axes = polar ? "" : $$"""
                 <c:catAx><c:axId val="1"/><c:axPos val="{{(horizontal ? "l" : "b")}}"/><c:crossAx val="2"/>{{(categoryLegend ? "<c:tickLblPos val=\"none\"/>" : "")}}</c:catAx>
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
-              </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="b"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
+            """;
+        string chart = $$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{plotLayout}}<c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}{{(polar ? "" : "<c:grouping val=\"" + (bar ? "clustered" : "standard") + "\"/>")}}
+                <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}{{(polar ? "" : "<c:axId val=\"1\"/><c:axId val=\"2\"/>")}}</c:{{plot}}>
+                {{axes}}
+              </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="{{legendPosition}}"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
                 <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>
               </c:legend></c:chart>
             </c:chartSpace>

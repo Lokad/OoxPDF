@@ -360,7 +360,7 @@ internal sealed partial class PptxRenderer
         // Doughnut ring-to-plot-edge side margin: portrait/square Office rings fit
         // (plotW - 2m)/2 exactly (m = 10.97pt both sides, two samples), capped by the
         // height rule on wide plots.
-        public const double DoughnutPlotSideMargin = 10.97d;
+        public const double PolarPlotSideMargin = 10.97d;
         // Uniform frame tail past the longest right-legend entry for doughnut plots
         // (10.0 to 10.1pt over three Office renders, same phenomenon as the cartesian
         // 10pt tails).
