@@ -39,6 +39,7 @@
   and measured minimum baseline.
   Plain and supported mixed inline content reflows between unequal column widths;
   plain-text widow control preserves the final pair of lines.
+  Note-table cells retain on-paper text and pictures below the flow-admission frame.
   Diagnostics identify omitted story drawings and clipped automatic note rows.
 - PPTX charts: shares parsed source ownership across data, labels, axes, paint,
   markers and legends. Theme palettes and tint/shade order replace fitted color
@@ -48,7 +49,8 @@
   Allocated numeric captions survive later authored inner-plot placement.
   Empty data-label units no longer paint phantom legend keys or backgrounds.
   Pie/doughnut horizontal legends wrap into measured rows; automatic pie circles
-  use the space reserved for titles and legends. Rich chart titles inherit paragraph
+  use the space reserved for titles and legends. Qualified authored horizontal
+  legends retain complete names. Rich chart titles inherit paragraph
   formatting while preserving explicit run overrides.
   Repeated hidden-column declarations no longer abort chart conversion.
 - PPTX content: preserves cells following horizontal merges and text/link geometry

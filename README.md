@@ -9,6 +9,9 @@ on NuGet. Read the
 [changelog](CHANGELOG.md), [migration guide](docs/PublicApiChanges.md) and
 [supported scope and limitations](docs/PreviewRelease.md).
 
+Source development for **0.3.0** targets .NET 10 and .NET 11; see the
+[development qualification](docs/DevelopmentQualification.md). Publication is deferred.
+
 ## Usage
 
 Install with `dotnet add package Lokad.OoxPdf --version 0.2.0`.

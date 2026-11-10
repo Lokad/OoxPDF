@@ -3,8 +3,9 @@
 This is the **0.3.0 development scope**, including approximations and
 explicit fallbacks. A successful conversion or absence of diagnostics does not
 establish Office fidelity. Features outside this inventory remain unsupported.
-See [release scope](PreviewRelease.md), [measured qualification](PreviewQualification.md)
-and [diagnostics](Diagnostics.md) before relying on a conversion.
+See [development qualification](DevelopmentQualification.md), the
+[published 0.2.0 scope](PreviewRelease.md) and [diagnostics](Diagnostics.md)
+before relying on a conversion.
 
 ## Shared input and compatibility behavior
 
@@ -139,8 +140,9 @@ Approximate or restricted:
   spacing, polar label formatting and plot-level point-label fallback retain
   known differences from Office; restored text can still fail image thresholds.
   Manual point-label coordinates and multiline label wrapping remain approximate.
-  Authored polar legend frames can clip whole entries; an image-threshold pass
-  does not establish complete legend content.
+  Qualified authored horizontal legends retain every name; manual-factor
+  coordinates and other frame combinations remain approximate. An image-threshold
+  pass does not establish complete legend content.
 - Automatic chart layout, label strips/baselines, dense intervals, source crossings,
   reversed axes and manual-layout combinations retain their semantic guards.
   Qualified automatic single-line plots share axis/label placement, including
@@ -540,10 +542,12 @@ Supported within the following constraints:
   paragraph/table notes, oversized measured rows also defer from occupied frames
   before bounded clipping; empty frames make progress. Height-only continuation,
   scaled, already-clipped and unsupported compositions retain their fallbacks.
-  General fragmentation of note rows remains unsupported. Automatic complete rows
-  with measured text/math lines or complete unrotated source-cell pictures
-  extending below the note frame report `DOCX_CLIPPED_NOTE_TABLE_ROW`, including
-  partial clipping. Rotated pictures retain their diagnostic fallback.
+  Normal note tables retain their cell and ancestor clips while painting to the
+  physical page edge. General fragmentation of note rows remains unsupported.
+  Automatic unfragmented rows report `DOCX_CLIPPED_NOTE_TABLE_ROW` when measured
+  source-contained text/math or unrotated pictures extend beyond that viewport,
+  including partial clipping. Authored exact-height and cell clips retain their
+  intentional policy; rotated pictures retain their diagnostic fallback.
   Adjacent source paragraphs in qualified unscaled endnotes share before/after
   spacing, including after complete table-containing notes. Later continuation
   does not add a separator gap to an earlier shared boundary. Other first-note

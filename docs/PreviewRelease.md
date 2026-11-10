@@ -1,5 +1,8 @@
 # 0.2.0 release
 
+This page records the published release. For the current source branch, see
+[0.3.0 development qualification](DevelopmentQualification.md).
+
 Version **0.2.0** was published on NuGet on 2026-10-29 and targets .NET 10.
 It supports the scope below, with known rendering approximations; it
 does not promise arbitrary-document fidelity or pixel-perfect Office parity.

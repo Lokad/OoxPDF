@@ -1,5 +1,8 @@
 # 0.2.0 release qualification
 
+This is the historical 0.2.0 record, including failures observed at that time.
+Current results are recorded in [0.3.0 development qualification](DevelopmentQualification.md).
+
 The **0.2.0** package was [published on NuGet](https://www.nuget.org/packages/Lokad.OoxPdf/0.2.0)
 on 2026-10-29. Git release tag: `v0.2.0`.
 Frozen package source: `7c43223bbc2b93027ce7f23821216990c6a1c8bd`.
