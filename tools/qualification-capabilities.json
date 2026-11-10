@@ -5758,6 +5758,23 @@
     "DocxNonpaintingRunsKeepPaintAndMathematicalLinkDestinations",
     "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets"
   ],
+  "docx-static-body-origin": [
+    "PortableRenderingLeadingBodyContainersKeepStaticFooterInk",
+    "DocxStaticFrameMappingRetainsIncompleteAndDeclaredSourceFallbacks",
+    "DocxLongFootnoteContinuationReservesHeaderZone",
+    "DocxContinuedEndnoteFooterFramesKeepSelectedStoriesClearAndPreserveSourceLines",
+    "DocxContinuedFootnoteFooterFramesKeepHeadsSeparatorsAndTailClear",
+    "DocxContinuedFootnoteCapacityKeepsSeparatorInsetInsideAdmittedFrame",
+    "DocxHeaderFootnoteFramesRetainRichKeepContextualAndScaledFallbacks",
+    "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
+    "DocxStaticTableMathAndPlainFramesMatchIndependentWordAnchors",
+    "DocxStaticTableMathCompleteReportMatchesIndependentPrintedFrames",
+    "DocxBodyBreaksBeforeRaisedFooterFrameBottom",
+    "DocxOverflowingFooterTopIsExposedOnLayout",
+    "DocxEndnoteStartTopRecoversDesignBodyBottom",
+    "DocxFootnoteContinuationTakeChargesRideTolerance",
+    "DocxFootnoteContinuationTakeChargesRuleOverhead"
+  ],
   "docx-static-frame": [
     "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
     "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames",

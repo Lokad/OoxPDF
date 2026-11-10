@@ -454,12 +454,12 @@ internal static class DocxTableMathTests
             TestAssert.True(layout.Pages.SelectMany(page => page.StaticTextLines)
                 .All(line => line.StaticStoryUsesPhysicalY == (guard switch
                 {
-                    "field" => true,
+                    "field" or "table-first" => true,
                     "unresolved-field" or "declared" => line.Story?.Kind == DocxStoryKind.Header,
                     "unprepared-math" => line.Story?.Kind == DocxStoryKind.Footer,
                     _ => false
                 })),
-                "Each story retains its own source fallback; table-first bodies and unresolved metrics retain the common fallback: " + guard);
+                "Available body origins include table lines; each story retains its source fallback and unresolved metrics retain the common fallback: " + guard);
             if (guard == "field")
                 TestAssert.Equal("1", layout.Pages.Single().StaticTextLines.Single(line => line.Story?.Kind == DocxStoryKind.Footer).Text);
         }

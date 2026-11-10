@@ -89,7 +89,7 @@ internal sealed partial class DocxLayoutEngine
     {
         bool canMap = scale is > 0d and < 1d && double.IsFinite(width / scale) &&
             page.ColumnFrames.Count <= 1 &&
-            (page.Items.FirstOrDefault() is DocxTextLineLayout || page.Items.Count == 0 && hasDocumentBodyOrigin) &&
+            (DocxRenderer.ResolveBodyPrintOrigin(page).BaselineY is not null || page.Items.Count == 0 && hasDocumentBodyOrigin) &&
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
             // Each story owns its measured frame. A counterpart's fallback
             // cannot revoke physical placement of otherwise supported content;

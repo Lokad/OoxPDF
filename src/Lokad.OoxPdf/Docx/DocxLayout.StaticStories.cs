@@ -183,7 +183,7 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale,
                     unscaledLineMetrics,
                     cancellationToken, mathEquations, unscaledTextMeasurer,
-                    hasDocumentBodyOrigin: pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
+                    hasDocumentBodyOrigin: DocxRenderer.ResolveBodyPrintOrigin(pages[0]).BaselineY is not null);
             DocxStaticStoryLayoutResult footerLayout = CreatePageStaticStoryLayout(
                     page, selectedFooter,
                     page.MarginLeft,
@@ -198,7 +198,7 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale,
                     unscaledLineMetrics,
                     cancellationToken, mathEquations, unscaledTextMeasurer,
-                    hasDocumentBodyOrigin: pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
+                    hasDocumentBodyOrigin: DocxRenderer.ResolveBodyPrintOrigin(pages[0]).BaselineY is not null);
             // Stories that laid out no visible content (absent headers, empty selections)
             // displace nothing: their untouched start cursor sits inside the header zone,
             // which would otherwise read as overflow whenever the header distance is

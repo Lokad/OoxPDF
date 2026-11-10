@@ -2272,7 +2272,7 @@ internal sealed partial class DocxLayoutEngine
             if (!continuationHeaderByPage.TryGetValue(headerKey, out DocxStaticStoryLayoutResult? headerLayout))
             {
                 headerLayout = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: true, mathEquations: mathEquations,
-                    hasDocumentBodyOrigin: pages.Count != 0 && pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
+                    hasDocumentBodyOrigin: pages.Count != 0 && DocxRenderer.ResolveBodyPrintOrigin(pages[0]).BaselineY is not null);
                 continuationHeaderByPage[headerKey] = headerLayout;
             }
 
@@ -2335,7 +2335,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 var footer = LayoutContinuationStaticStory(templatePage, pageNumber, pageCount, textMeasurer,
                     defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, header: false, mathEquations: mathEquations,
-                    hasDocumentBodyOrigin: pages.Count != 0 && pages[0].Items.FirstOrDefault() is DocxTextLineLayout);
+                    hasDocumentBodyOrigin: pages.Count != 0 && DocxRenderer.ResolveBodyPrintOrigin(pages[0]).BaselineY is not null);
                 double top = footer is null ? double.NegativeInfinity : ResolveStaticFooterContentTop(footer,
                     (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider));
                 // Body admission uses the margin-anchored boundary. Note boxes
