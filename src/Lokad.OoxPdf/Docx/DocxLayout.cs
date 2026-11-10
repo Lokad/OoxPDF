@@ -1667,6 +1667,10 @@ internal sealed partial class DocxLayoutEngine
                             paragraphFontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
                         currentItems.Add(placed.Line with
                         {
+                            // Text-bearing rows retain their typographic origin.
+                            // An object-only row uses its occupied top instead;
+                            // undo this container's baseline shift in that map.
+                            SourceBaselineOffset = DocxInlineLineGeometry.HasTextOrMath(placed.Line) ? 0d : -anchorInset,
                             ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(document.BodyElements, elementIndex), x, width, placed.Line.X,
                                 line.BaselineInset, line.OccupiedHeight, paragraphSpacingScale,
                                 line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d,

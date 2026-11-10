@@ -47,7 +47,6 @@ internal sealed partial class DocxRenderer
                 // retain the independently measured typographic anchor.
                 bool hasTextOrMath = DocxInlineLineGeometry.HasTextOrMath(line);
                 anchor += frame.BaselineInset - (hasTextOrMath ? textInset : 0d);
-                if (!hasTextOrMath) offset = 0d;
             }
             if (baseline is null || anchor > baseline.Value)
                 (baseline, sourceOffset) = (anchor, offset);
