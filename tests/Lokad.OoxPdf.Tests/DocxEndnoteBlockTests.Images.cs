@@ -123,7 +123,7 @@ internal static partial class DocxEndnoteBlockTests
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var layout = PictureLayout(570, mode);
+            var layout = PictureLayout(567, mode);
             int pageIndex = Enumerable.Range(0, layout.Pages.Count).Single(index =>
                 layout.Pages[index].PlacedRelatedStories.Any(story => story.StoryLayout.Story.Id == "37" && story.TableRows.Count != 0));
             var page = layout.Pages[pageIndex];
@@ -131,7 +131,7 @@ internal static partial class DocxEndnoteBlockTests
             var current = layout.RelatedStories.Single(story => story.Story.Id == "4");
             double available = previous.TopY - previous.Height - page.MarginBottom;
             TestAssert.True(current.ContentHeight <= available && current.ContentHeight + 3d > available,
-                "The measured next note fits this remaining window; an extra separator gap would force a page turn.");
+                $"The measured {current.ContentHeight}pt next note fits the remaining {available}pt; an extra separator gap would force a page turn.");
             var following = page.PlacedRelatedStories.Single(story => story.StoryLayout.Story.Id == "4");
             TestAssert.True(following.TopY - following.Height >= page.MarginBottom,
                 "The actual next head stays wholly within the unchanged page frame.");
