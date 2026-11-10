@@ -6386,6 +6386,7 @@
     "DocxLayoutSplitsSingleSectEndEndnoteStoryBeforeFollowingSection"
   ],
   "docx-endnote-start-boundary": [
+    "DocxPictureNoteStartDoesNotDependOnLaterNoteLength",
     "DocxInlineCompositionEndnoteStartMatchesIndependentParagraphBoundary",
     "PortableRenderingEndnoteStartUsesLocalParagraphSpacing",
     "DocxDocumentEndnotesFollowTrailingBodySpacingAtNominalScale",

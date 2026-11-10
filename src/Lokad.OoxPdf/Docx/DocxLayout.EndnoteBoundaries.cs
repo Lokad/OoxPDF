@@ -70,6 +70,26 @@ internal sealed partial class DocxLayoutEngine
         DocxPlainBodyFrame.HasKnownBodyFrame(document) && hasCompleteStaticFrame &&
         HasEmptyNoteSeparator(separator);
 
+    // The first complete source block owns the document-end start boundary.
+    // Later notes may need continuation pages without adding the separator's
+    // latent paragraph spacing back above this already measured block. Whole-
+    // group fitting still owns counter admission, footer flow and overlaps.
+    private static bool CanUseMeasuredEndnoteStart(DocxDocument document, DocxLayoutPage page,
+        IReadOnlyList<DocxPlacedRelatedStoryLayout> placed, DocxRelatedStoryLayout? separator,
+        double printScale, IReadOnlyList<DocxRelatedStoryLayout> stories, CancellationToken token,
+        bool hasCompleteStaticFrame)
+    {
+        token.ThrowIfCancellationRequested();
+        if (!CanUseUnscaledEndnoteParagraphBoundaries(document, page, separator, printScale, hasCompleteStaticFrame) ||
+            !HasNumericTrailingBodyAfterSpacing(page) || stories.Count == 0 ||
+            placed.Any(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote)) return false;
+        var first = stories[0];
+        return first.Story.BodyElements.Count != 0 && first.TextLines.Count != 0 &&
+            first.Story.BodyElements[0] is DocxParagraphElement paragraph &&
+            ReferenceEquals(first.TextLines[0].SourceParagraph, paragraph.Paragraph) &&
+            HasCompleteMeasuredNoteBlocks(first, token);
+    }
+
     // Fitting-boundary collapse and complete-block admission use the same source
     // and occupied-frame proof. A measured first line alone cannot admit a cell
     // whose remaining content is clipped or whose source owner is unsupported.

@@ -334,7 +334,10 @@ internal sealed partial class DocxLayoutEngine
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken, completeStaticFrame,
                     footerKeepOut?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom);
                 if (fittingEndnoteBoundaries) endnoteFrameBottom = footerKeepOut;
-                bool FollowsBodyParagraph() => fittingEndnoteBoundaries || CanUseTrailingParagraphEndnoteStart(activePage,
+                bool measuredEndnoteStart = CanUseMeasuredEndnoteStart(document, activePage, activePlacedStories,
+                    documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken, completeStaticFrame);
+                bool FollowsBodyParagraph() => fittingEndnoteBoundaries || measuredEndnoteStart ||
+                    CanUseTrailingParagraphEndnoteStart(activePage,
                     activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
                 // Only the admitted source-owned note flow shares the body's
                 // physical origin. Rich/fragmented fallback stories retain

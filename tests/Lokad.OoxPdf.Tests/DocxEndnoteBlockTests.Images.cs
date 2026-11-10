@@ -72,7 +72,32 @@ internal static partial class DocxEndnoteBlockTests
         }
     }
 
-    private static DocxLayout PictureLayout(int height, OoxPdfDocxMarkupMode mode, int? exactHeight = null)
+    public static void DocxPictureNoteStartDoesNotDependOnLaterNoteLength()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var shortLayout = PictureLayout(36, mode);
+            var longLayout = PictureLayout(36, mode, laterNoteWords: 800);
+            (int Page, DocxPlacedRelatedStoryLayout Story) First(DocxLayout layout) => layout.Pages
+                .SelectMany((page, index) => page.PlacedRelatedStories
+                    .Where(story => story.StoryLayout.Story.Id == "37")
+                    .Select(story => (index, story))).First();
+            var before = First(shortLayout);
+            var after = First(longLayout);
+            TestAssert.Equal(before.Page, after.Page);
+            TestAssert.Equal(before.Story.TopY, after.Story.TopY);
+            TestAssert.Equal(before.Story.TableRows.Single().Cells.Single().InlineImages.Single().Y,
+                after.Story.TableRows.Single().Cells.Single().InlineImages.Single().Y);
+            TestAssert.True(before.Story.UsesCompleteDocumentEndnoteFlow && !after.Story.UsesCompleteDocumentEndnoteFlow,
+                "Start-boundary ownership does not promote an overflowing group to complete fitting flow.");
+            string text = string.Join(" ", longLayout.Pages.SelectMany(page => page.PlacedRelatedStories)
+                .Where(story => story.StoryLayout.Story.Id == "8").SelectMany(story => story.TextLines).Select(line => line.Text));
+            foreach (int index in Enumerable.Range(0, 800))
+                TestAssert.True(text.Contains($"LaterNote{index:000}", StringComparison.Ordinal), "Retain every later-note token.");
+        }
+    }
+
+    private static DocxLayout PictureLayout(int height, OoxPdfDocxMarkupMode mode, int? exactHeight = null, int laterNoteWords = 0)
     {
         var source = DocxInlineCompositionTests.ReadMutation("CompositionProbes/mixed-note-endnote-table", mode, false, false,
             (xml, w, _) =>
@@ -95,6 +120,10 @@ internal static partial class DocxEndnoteBlockTests
                     if (properties is null) { properties = new XElement(w + "trPr"); row.AddFirst(properties); }
                     properties.Add(new XElement(w + "trHeight", new XAttribute(w + "val", exact * 20), new XAttribute(w + "hRule", "exact")));
                 }
+                if (laterNoteWords != 0)
+                    xml.Root.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "8").Element(w + "p")!
+                        .Add(new XElement(w + "r", new XElement(w + "t", " " + string.Join(" ",
+                            Enumerable.Range(0, laterNoteWords).Select(index => $"LaterNote{index:000}")))));
             }, partOverride: "word/endnotes.xml");
         return new DocxLayoutEngine(mode == OoxPdfDocxMarkupMode.Final
                 ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup,
