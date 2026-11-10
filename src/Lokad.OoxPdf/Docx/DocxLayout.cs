@@ -369,7 +369,9 @@ internal sealed partial class DocxLayoutEngine
             Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout> Lookup) GetFootnoteStoryLookup()
         {
             var layouts = GetFootnoteStoryLayouts(page);
-            double key = Math.Round(Math.Max(1d, page.BodyWidth), 3);
+            // A fixed review lane can give different note widths the same
+            // body width. Match the width used by the measurement memo.
+            double key = Math.Round(Math.Max(1d, FootnoteStoryLayoutWidth(page)), 3);
             if (!storyLookupByWidth.TryGetValue(key, out var lookup))
             {
                 lookup = CreateRelatedStoryLookup(layouts);

@@ -1,6 +1,10 @@
 {
   "docx-related-story-demand": [
     "LayoutRelatedStoryMeasurements",
+    "LayoutRelatedStoryLookup",
+    "DocxFootnoteStoryLaysOutUnscaledDesignSpace",
+    "DocxWordCompatibleContinuationRuleSpansDesignBodyWidth",
+    "PortableRenderingNormalNotesKeepSectionDesignWidth",
     "LayoutAdmission",
     "ModelAdmission",
     "DocxEndnoteMeasurementsSkipUnrelatedBodyWidths",
