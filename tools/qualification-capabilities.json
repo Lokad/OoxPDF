@@ -5,6 +5,7 @@
     "DocxFloatingChildPicturesKeepCompleteSourceAndClearLabelInk",
     "DocxFloatingChildPictureAlignmentKeepsContentAcrossRunSplits",
     "DocxFloatingChildUnsupportedMathKeepsSupportedPictureAndCaption",
+    "DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback",
     "DocxInlineCompositionAtomicPlacementRetainsSourceBoundAndOverwidthFallbacks",
     "DocxInlineCompositionJustificationOwnsWhitespaceAndContinuation",
     "DocxInlineCompositionJustifiedMathMatchesIndependentWord",

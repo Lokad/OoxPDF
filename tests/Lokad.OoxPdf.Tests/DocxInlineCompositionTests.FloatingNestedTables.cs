@@ -94,14 +94,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (bool sameParagraph in new[] { true, false })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var source = ReadMutation("TableGridOrigins/Containers/floating-cell-wide-picture", mode, false, false,
-                (xml, w, m) =>
-                {
-                    var owner = xml.Descendants(w + "txbxContent").Last();
-                    var equation = new XElement(m + "oMath", new XElement(m + "future"));
-                    if (sameParagraph) owner.Elements(w + "p").Single().Elements(w + "r").Last().AddBeforeSelf(equation);
-                    else owner.Add(new XElement(w + "p", equation));
-                });
+            var source = ReadFloatingPictureWithUnsupportedMath(mode, sameParagraph);
             var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
             var page = AssertFloatingLabelsPaint(source, mode,
                 ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], "unsupported math/" + sameParagraph,
@@ -112,6 +105,41 @@ internal static partial class DocxInlineCompositionTests
                 "The unsupported formula retains its warning without publishing an unused math resource.");
         }
     }
+
+    public static void DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            PdfPage Render(bool includeUnsupported) => AssertFloatingLabelsPaint(
+                ReadFloatingPictureWithUnsupportedMath(mode, sameParagraph: true, fixedLine: true, includeUnsupported), mode,
+                ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], "fixed picture/" + includeUnsupported);
+            var before = Render(false);
+            var after = Render(true);
+            TestAssert.Equal(ReadPictureBounds(before).Single(), ReadPictureBounds(after).Single());
+            TestAssert.True(DocxCommentsTests.ReadEmbeddedGlyphTextShows(before).Select(show => (show.Text, show.Size, show.X, show.Y))
+                .SequenceEqual(DocxCommentsTests.ReadEmbeddedGlyphTextShows(after).Select(show => (show.Text, show.Size, show.X, show.Y))),
+                "An unprepared equation cannot change the ordinary fixed-line picture/text fallback.");
+        }
+    }
+
+    private static DocxDocument ReadFloatingPictureWithUnsupportedMath(OoxPdfDocxMarkupMode mode,
+        bool sameParagraph, bool fixedLine = false, bool includeUnsupported = true) =>
+        ReadMutation("TableGridOrigins/Containers/floating-cell-wide-picture", mode, false, false,
+            (xml, w, m) =>
+            {
+                var owner = xml.Descendants(w + "txbxContent").Last();
+                var paragraph = owner.Elements(w + "p").Single();
+                if (fixedLine)
+                {
+                    var spacing = paragraph.Element(w + "pPr")!.Element(w + "spacing")!;
+                    spacing.SetAttributeValue(w + "line", "240");
+                    spacing.SetAttributeValue(w + "lineRule", "exact");
+                }
+                if (!includeUnsupported) return;
+                var equation = new XElement(m + "oMath", new XElement(m + "future"));
+                if (sameParagraph) paragraph.Elements(w + "r").Last().AddBeforeSelf(equation);
+                else owner.Add(new XElement(w + "p", equation));
+            });
 
     private static void AssertCompleteFloatingPicture(PdfPage page, string context)
     {

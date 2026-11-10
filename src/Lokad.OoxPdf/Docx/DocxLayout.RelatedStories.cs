@@ -2605,7 +2605,7 @@ internal sealed partial class DocxLayoutEngine
                     Math.Max(1d, bodyWidth - firstInset - rightInset), Math.Max(1d, bodyWidth - nextInset - rightInset),
                     baseline, lineHeight, paragraphSpacingScale, cancellationToken, out var measured,
                     defaultTabStopPoints: defaultTabStopPoints, pageNumber: pageNumber, pageCount: pageCount,
-                    allowStaticFallback: textBoxParagraph))
+                    allowStaticFallback: ordinaryBoxParagraph))
                 {
                     for (int index = 0; index < measured.Count; index++)
                     {

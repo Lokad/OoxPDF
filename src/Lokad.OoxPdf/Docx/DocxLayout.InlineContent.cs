@@ -247,9 +247,16 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         var items = paragraph.InlineContent;
         bool retainPreparedContent = allowStaticFallback;
+        // Ordinary static prose can use declared rows; pictures and box hosts
+        // retain automatic flow even beside an omitted, unprepared equation.
+        bool plainStaticText = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0 && paragraph.Images.Count == 0;
+        bool supportedOrdinaryFlow = plainStaticText
+            ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
+            : DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
         if (paragraph.Equations.Count != 0)
         {
             if (items is null || equations is null && !allowStaticFallback ||
+                allowStaticFallback && !supportedOrdinaryFlow ||
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasActualFieldInputs, token).Count != paragraph.Equations.Count) return false;
             if (!retainPreparedContent && equations is not null)
                 foreach (var equation in paragraph.Equations)
@@ -260,17 +267,10 @@ internal sealed partial class DocxLayoutEngine
         }
         else
         {
-            // Ordinary static prose shares the declared-row contract already
-            // used for prepared inline content. Pictures and box hosts retain
-            // their automatic-flow admission; notes do not opt into this path.
-            bool plainStaticText = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0 && paragraph.Images.Count == 0;
-            bool supportedFlow = plainStaticText
-                ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
-                : DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
             if (!allowStaticFallback && paragraph.InlineTextBoxes.Count == 0 &&
                 !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
-                !supportedFlow ||
+                !supportedOrdinaryFlow ||
                 !DocxMathParagraphPolicy.HasSupportedOrderedAlignment(paragraph)) return false;
             // Source-owned boxes and sibling pictures carry the parser's ordered view.
             // Ordinary static text reuses run affinity without mutating its model.
