@@ -51,9 +51,9 @@ internal static partial class DocxInlineCompositionTests
             double Number(int group) => double.Parse(draw.Groups[group].Value, CultureInfo.InvariantCulture);
             var target = page.Annotations.Single(annotation => annotation.IsDestination).Destination!.Value;
             TestAssert.Equal(0, target.PageIndex);
-            TestAssert.True(Math.Abs(target.Left - (Number(3) - 3d)) <= .001d,
+            TestAssert.True(Math.Abs(target.Left!.Value - (Number(3) - 3d)) <= .001d,
                 "Picture bookmarks retain the existing viewport context at the placed picture, including wrapped body/cell lines.");
-            TestAssert.True(Math.Abs(target.Top - (Number(4) + Number(2))) <= .001d,
+            TestAssert.True(Math.Abs(target.Top!.Value - (Number(4) + Number(2))) <= .001d,
                 "The picture owns the top of its measured source line.");
             string painted = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true).Select(show => show.Text));
             TestAssert.Equal(wrapped ? 12 : 1, Regex.Matches(painted, "PublicPrefix").Count);
