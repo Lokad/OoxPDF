@@ -234,9 +234,9 @@ internal static partial class DocxInlineCompositionTests
 
     private static PdfPage AssertFloatingLabelsPaint(DocxDocument source, OoxPdfDocxMarkupMode mode,
         IReadOnlyList<string> expectedLabels, string context,
-        Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>? diagnosticSink = null)
+        Action<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>? diagnosticSink = null, bool mathFont = false)
     {
-        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+        var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont), mode,
             mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var page = renderer.RenderPagesAsync(source, diagnosticSink, default).ToBlockingEnumerable().Single();

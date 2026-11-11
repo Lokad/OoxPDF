@@ -1619,23 +1619,28 @@ internal sealed partial class DocxLayoutEngine
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            double fontSize = GetParagraphFontSize(paragraph);
+            double paragraphWidth = 0d;
+            // Intrinsic width and placement own the same source insets. Without
+            // them an autofit cell can end before its first visible character.
+            double paragraphInsets = GetParagraphFirstLineTextStartOffset(paragraph, fontSize,
+                textMeasurer, fixedScale, defaultTabStopPoints) + Math.Max(0d, GetParagraphRightInset(paragraph, fixedScale));
             if (paragraph.Equations.Count != 0 && mathEquations is not null)
             {
                 // Intrinsic maxima consume the same ordered advances as wrapping,
                 // including mixed text, pictures and equations at authored breaks.
-                double size = GetParagraphFontSize(paragraph);
-                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, size,
-                    double.MaxValue / 4d, double.MaxValue / 4d, 0d, Math.Max(1d, size * fixedScale),
+                if (TryMeasureOrderedInlineContent(paragraph, mathEquations, textMeasurer, fontSize,
+                    double.MaxValue / 4d, double.MaxValue / 4d, 0d, Math.Max(1d, fontSize * fixedScale),
                     fixedScale, cancellationToken, out var lines, defaultTabStopPoints: defaultTabStopPoints))
                 {
-                    maxWidth = Math.Max(maxWidth, lines.Max(line => line.Advance));
+                    double advance = lines.Max(line => line.Advance);
+                    maxWidth = Math.Max(maxWidth, advance > 0d ? advance + paragraphInsets : 0d);
                     continue;
                 }
             }
             IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
             if (textSpans.Count != 0)
             {
-                double fontSize = GetParagraphFontSize(paragraph);
                 double markerWidth = 0d;
                 foreach (DocxInlineReference reference in paragraph.InlineReferences)
                 {
@@ -1657,19 +1662,20 @@ internal sealed partial class DocxLayoutEngine
                 // Affined pictures consume width beside text, just as in the
                 // live cell wrapper; separate block pictures keep the maximum.
                 textWidth += ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale).Sum(image => image.Width);
-                maxWidth = Math.Max(maxWidth, markerWidth + textWidth);
+                paragraphWidth = markerWidth + textWidth;
             }
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
-                maxWidth = Math.Max(maxWidth, Math.Max(0d, image.WidthPoints) * fixedScale);
+                paragraphWidth = Math.Max(paragraphWidth, Math.Max(0d, image.WidthPoints) * fixedScale);
             }
 
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
                 double boxWidth = ReadEmuPoints(textBox.ExtentCxValue) ?? 0d;
-                maxWidth = Math.Max(maxWidth, Math.Max(0d, boxWidth) * fixedScale);
+                paragraphWidth = Math.Max(paragraphWidth, Math.Max(0d, boxWidth) * fixedScale);
             }
+            if (paragraphWidth > 0d) maxWidth = Math.Max(maxWidth, paragraphWidth + paragraphInsets);
         }
 
         return maxWidth;

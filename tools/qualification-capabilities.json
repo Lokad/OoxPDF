@@ -1,4 +1,9 @@
 {
+  "docx-autofit-paragraph-insets": [
+    "DocxAutofitParagraphInsetsKeepCompleteLabelInk",
+    "DocxTableLayoutStageNaturalAutoWidthUsesLayoutInsetsAndIgnoresGrid",
+    "DocxTableLayoutStageNaturalAutoWidthIgnoresEmptyParagraphMarks"
+  ],
   "docx-picture-placement": [
     "DocxOrderedPictureRotationKeepsMeasuredFramesAcrossContainers",
     "DocxPictureRotationRetainsIndependentOfficeAnchorAcrossFonts",
@@ -4071,6 +4076,7 @@
     "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "docx-autofit-spans": [
+    "DocxAutofitParagraphInsetsKeepCompleteLabelInk",
     "DocxAutofitSpans",
     "DocxAutofitTable",
     "DocxAutofitColumnWidthsAreIndependentOfCellRowPairing",
