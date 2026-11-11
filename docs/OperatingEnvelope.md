@@ -152,6 +152,10 @@ runtime/input/output/environment/stage pins and the historical baseline links.
 
 ## Fixed mixed-document baseline, 2026-10-18
 
+An evidence audit on November 11 retained the aggregate summaries for this and
+the C281 baseline, but found seven supporting reports missing. These historical
+observations are not a fully reproducible 0.3.0 capacity baseline.
+
 The existing frozen C212 library (`89fe008b`, root `a2608a43`) renders the four
 fixed DOCX sources in both public presets. The probe alone is built against its
 pinned library; no library rebuild or visual qualification replay.
