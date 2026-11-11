@@ -566,8 +566,11 @@ Supported within the following constraints:
   paragraph/table notes, oversized measured rows also defer from occupied frames
   before bounded clipping; empty frames make progress. Height-only continuation,
   scaled, already-clipped and unsupported compositions retain their fallbacks.
-  Normal note tables retain their cell and ancestor clips while painting to the
-  physical page edge. General fragmentation of note rows remains unsupported.
+  Complete fitting normal-story table subtrees share the printed-story frame
+  with surrounding prose, mathematics, pictures and drawing URI targets.
+  Exact/unfit/fragmented/merged or unresolved owners retain their staged fallback.
+  Note tables retain cell and ancestor clips while painting to the physical page
+  edge. General fragmentation of note rows remains unsupported.
   Automatic unfragmented rows report `DOCX_CLIPPED_NOTE_TABLE_ROW` when measured
   source-contained text/math or unrotated pictures extend beyond that viewport,
   including partial clipping. Authored exact-height and cell clips retain their

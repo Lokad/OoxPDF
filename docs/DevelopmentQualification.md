@@ -4,6 +4,30 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+The fitting-note frame repair (`5551aeff6`) applies the existing printed-story map
+to complete fitting normal-story table subtrees and their drawing URI targets.
+Review previously painted a footnote table below the following note and let an
+endnote calculation overlap following note text. Four causal sources/eight
+outcomes now retain source order, uniform prose/math/picture scale and existing
+internal destinations. Independent checks bind 2,992 glyphs to their actual font
+programs/GIDs: no measured clip cuts, unknown traces or picture/ink intersections.
+All four Final PDFs remain exact. Exact/unfit/fragmented/merged/unresolved table
+owners retain their staged fallbacks; transformed-source Word geometry remains
+unqualified. No Office action or application-view claim.
+
+The new portable regression fails on the parent. Windows passes 38 focused checks;
+Ubuntu passes 31 with seven font skips (six predeclared and one indirect guard
+reviewed after the original strict skip failure). Four fitting/unfit long-note
+boundary PDFs/diagnostics and all sixteen portfolio outputs remain exact; the two
+PPTX passes/fourteen DOCX image failures are unchanged. Corrected source XML order
+reproduces all prototype parent outputs; retained attempts document the repair.
+Two production builds include an unqualified trial before the physical-page fit
+guard. Only the final frozen .NET 11 library is qualified:
+`D227C261BDD418F9EAA24DE8A965921B18B818E1567A705A7140416A173FCC5F`.
+Transfer verifies 24 assets and two exact smoke PDFs without a root build or suite
+replay. Broader qualification is pending. The prepared package below predates
+this repair and remains parent evidence; publication stays deferred.
+
 The aligned-cell follow-up (`f5509b8ab`) keeps the shared printed frame for complete,
 measured centered/bottom-aligned cells. Four Review cases previously let pictures
 cover six caption letters; native picture-knockout checks reveal 512–514 hidden
@@ -191,9 +215,9 @@ library/PDB identity, current caller documentation and its local links. Cross-pl
 package checks should consume the same selected package with each framework's
 expected library hash, preserving the original qualified runtime.
 
-## Development package payload
+## Prepared parent package payload
 
-The current development package and symbols are prepared directly in
+The preceding qualified development package and symbols are prepared directly in
 `artifacts/nuget/`, with checksums and a separate qualification record. The exact
 same package passes Windows and Linux consumers on both frameworks. Windows CI
 consumed these archive bytes; its consumer results are reused. Both Linux checks
