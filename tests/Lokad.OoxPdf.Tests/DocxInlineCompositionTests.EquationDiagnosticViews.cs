@@ -33,8 +33,8 @@ internal static partial class DocxInlineCompositionTests
             // Final retains supported structural paint for inline deleted math;
             // an excluded paragraph block omits the whole equation instead.
             bool hidden = deleted ? block && mode == OoxPdfDocxMarkupMode.Final : mode == OoxPdfDocxMarkupMode.Original;
-            var owner = source.EquationParts.SingleOrDefault(item => item.PartName == "/" + part);
-            TestAssert.Equal(hidden ? 0 : 2, owner?.SourceCount ?? 0);
+            var owner = source.EquationParts.Single(item => item.PartName == "/" + part);
+            TestAssert.Equal(hidden ? 0 : 2, owner.SourceCount);
             var diagnostics = RenderEquationViewDiagnostics(source, mode);
             var equations = diagnostics.Where(item => item.PartName == "/" + part &&
                 item.Id is "DOCX_UNSUPPORTED_EQUATION" or "DOCX_APPROXIMATED_EQUATION").ToArray();
