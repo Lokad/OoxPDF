@@ -4,9 +4,9 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-This snapshot pins production `7343c768bd197919333c7adbc0a192167d9312ef` and
-harness `35c9e434f657e2bd42e29fc5a48eb7b9629d0ad9`. The frozen .NET 11 library
-SHA-256 is `F885FD51FA851283AB57587BF6D9454DA232802654B9353211385A6A24D53E47`.
+This snapshot pins production and harness
+`794acff1e2dfada5d2418b20560db1f89f3af4be`. The frozen .NET 11 library
+SHA-256 is `62854DC0BF465F502682840A22E64F19EA63CF7DF0314DF4CAFE0AEE791B1973`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
@@ -22,12 +22,15 @@ Documentation and harness updates do not rebuild that library.
 | Fitting mixed notes | Four sources/eight outcomes retain exact PDFs and all 64 continuation lines in their original order/pages. Twenty pictures retain both source colors and complete clips. Independent head/link/picture geometry keeps the original one-point gates. Native PDF/raster files are absent from the selected legacy folders, so no fresh whole-page comparison is claimed. |
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
-| Focused checks | 103 exact checks pass on Windows; 79 pass on Ubuntu with 24 reviewed installed-font skips. The new static-picture regression fails against the qualified parent; two neighboring controls pass. One production build supplies all outputs; test-only repairs preserve its assets. A legacy route assertion was replaced by declared-slot and complete-picture invariants. No root build or local full-DOCX replay. |
+| Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
+| Focused checks | 105 exact checks pass on Windows; 81 pass on Ubuntu with 24 reviewed installed-font skips. Both the visible-picture and legacy-ownership regressions fail against their respective parents. The repaired frozen runtime transfers 24 verified assets and two identical smoke PDFs. No root build or local full-DOCX replay. |
 
 The preceding broader checkpoint `48bf80f8d` passed CI42924107847: 4,775 Windows/
 2,242 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
 package consumers. That historical gate is separate from the focused snapshot
-above. Consult the CI reports for the revision being consumed. CI builds
+above. The later CI42929150677 failed the legacy static-image ownership control
+on both hosts; its reports remain retained. The focused repair above awaits a
+new broader result. Consult the CI reports for the revision being consumed. CI builds
 platform binaries separately;
 source coverage does not imply binary identity across platforms.
 
