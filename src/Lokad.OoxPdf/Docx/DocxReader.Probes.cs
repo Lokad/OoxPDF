@@ -16,6 +16,7 @@ internal sealed partial class DocxReader
         string partName,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxMarkupContext markupContext,
+        OoxPdfDocxMarkupMode revisionFilteringMarkupMode,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         HashSet<string> warnedParts,
         CancellationToken cancellationToken)
@@ -88,8 +89,10 @@ internal sealed partial class DocxReader
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (probeDocument.Descendants(MathNamespace + "oMath").Any() ||
-                probeDocument.Descendants(MathNamespace + "oMathPara").Any())
+            // A fully excluded story may have no parsed body at all. Filter at
+            // the source probe too, rather than retaining empty layout stories
+            // merely to suppress their later warning.
+            if (CountSelectedEquationSources(probeDocument, revisionFilteringMarkupMode, cancellationToken, out _) != 0)
             {
                 Emit("DOCX_UNSUPPORTED_EQUATION", "equation", probePartName, "Ignored");
             }
