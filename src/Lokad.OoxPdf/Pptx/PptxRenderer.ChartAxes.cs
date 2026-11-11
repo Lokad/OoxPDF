@@ -390,8 +390,14 @@ internal sealed partial class PptxRenderer
             {
                 ResolvedGlyphFont? resolved = await estimator.ResolveGlyphFontAsync(
                     style.FontFamily, style.Bold, style.Italic, rune.Value).ConfigureAwait(false);
-                if (resolved is null || !resolved.Font.TryGetGlyphBounds(resolved.Font.MapCodePoint(rune.Value), out var bounds))
+                if (resolved is null) return null;
+                if (!resolved.Font.TryGetGlyphBounds(resolved.Font.MapCodePoint(rune.Value), out var bounds))
+                {
+                    // Resolved whitespace has advance without an outline.
+                    // Its known absence of ink is not an unknown font bound.
+                    if (Rune.IsWhiteSpace(rune)) continue;
                     return null;
+                }
                 double scale = style.FontSize / resolved.Font.UnitsPerEm;
                 bottom = Math.Min(bottom, bounds.YMin * scale);
                 top = Math.Max(top, bounds.YMax * scale);
