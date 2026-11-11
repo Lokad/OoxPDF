@@ -4,7 +4,22 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-The retained local rendering baseline pins production
+The latest rendering slice (`044032aaf`) publishes the existing validated Review
+table frame for complete rows on every page. A long table previously let pictures
+cover caption glyph bottoms although text-count and clipping checks passed. Native
+ink/raster checks now retain 216 body-row paints, twelve mixed headers and all
+17,992 measured glyphs; eight causal outcomes have no picture/text intersections.
+The new portable regression fails on the parent. Focused .NET 11 checks pass95 on
+Windows; Ubuntu passes82 with13 font skips (two indirect guards reviewed and
+confirmed after the initial strict skip gate). Sixteen portfolio PDFs/diagnostics
+and the authored six-name legend remain byte-identical; their two PPTX passes and
+fourteen DOCX image failures are retained. No new Office/view parity is claimed.
+The frozen library SHA-256 is
+`DE83321FD2123FCB232056F935194EF84832D24C9C60443083510447D13867D2`.
+The prepared package documented below predates this fix; it is retained as parent
+evidence, pending the next coherent package qualification. Publication stays deferred.
+
+The previous local rendering baseline pins production
 `c1b59358b13c7c6b6492f8ab7cd20a7881bc1d2a`; harness
 `7196e18eb13656c6b6f233cfd98db470b0818786` repairs only a test fixture.
 The frozen .NET 11 library SHA-256 is

@@ -862,6 +862,9 @@
     "StagedPageMemory"
   ],
   "docx-review-table-frame": [
+    "DocxMixedTableRowsKeepCaptionInkAcrossPages",
+    "DocxTableLayoutStageContinuesRowsInActiveColumnFrame",
+    "PortableRenderingColumnFallbackKeepsBodyAndFooterInk",
     "DocxReviewAuthoredRowsStayInsideTheirPrintedPages",
     "DocxReviewNestedHeaderAndContinuationSharePrintedCapacity",
     "DocxReviewTablePagination",
@@ -5958,7 +5961,9 @@
   "docx-review-table-fragments": [
     "DocxReviewTable",
     "DocxReviewWrappedTable",
-    "PortableRendering",
+    "PortableRenderingCellPageNotesKeepLabelsMathImagesAndDestinations",
+    "PortableRenderingPlainCellPageNotesKeepLabelsAndDestinations",
+    "PortableRenderingContainedTableBaselinesKeepTheirPrintedInsets",
     "DocxWordCompatibleAllMarkupScalesKeepNextParagraphEstimate",
     "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate",
     "DocxTableMathInlineUnfitBoxesPreserveOrdinaryRowSplitting",
