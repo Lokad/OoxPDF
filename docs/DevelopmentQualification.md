@@ -4,15 +4,16 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-This snapshot pins production `012d64bf8113ca29c5a04402947462c620bd768a` and
-harness `685210088c6d59bcbf05eff29bfc40e85f5802be`. The frozen .NET 11 library
-SHA-256 is `D228F49AE59943FABFC8CC4A665F8C9932655539C013D62A36D5AC7FB9E8301A`.
+This snapshot pins production and harness
+`d2d869a11a5dd12bfb25488ab3148f964e3342b4`. The frozen .NET 11 library
+SHA-256 is `7BD4A37055C8D2695BC2C142B2ACE95EB80CD389AF6871D4F2665FC7B18EC85B`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
+| Side-legend ink | Four automatic left/right pie legends emitted all six names but cut 28 glyphs in their bottom labels. Their clips now include measured font ascent/descent within the chart frame; explicit authored viewports retain clipping. Twelve pie controls bind 804 glyphs with no cuts or unknown traces. Four pinned PowerPoint PDFs independently retain the complete labels. Text/key/plot origins, font programs, paths, colors and links remain unchanged. Whole-page pie comparisons remain two passes/ten failures; the four affected MAEs worsen slightly despite restored ink, and those results remain retained. |
 | Static picture bookmarks | Sixteen body links to header/footer picture bookmarks now resolve to their painted rows. The reader captures ordered source positions at each bookmark and removes later backfilling; unrelated math or caption links no longer determine whether the target exists. Painting streams, resource/font programs, image/mask data, glyph origins and image bounds remain identical. The native row-frame gate stays 0.001pt; exact combined-source Office geometry is unqualified. |
 | Direct header/footer pictures | Ordinary mixed pictures bypassed shared wrapping even when their source could be measured. Four Final controls retained only 54.14% of the picture bounds. Dispatch now uses the shared inline path; all sixteen direct/boxed controls retain full pictures and clear source text. The screen binds 1,880 glyphs to actual programs/resources/GIDs with no paper/rectangle-clip cuts or unknown traces. Eight boxed PDFs are identical; all source/page/diagnostic identities remain. Independent static Word anchors retain their gates; new combined-source Word geometry is unqualified. |
 | Fitting pictures in declared rows (prior milestone) | Fixed spacing bypassed wrapping and left a fitting picture's green center missing. Shared measurement now admits pictures contained above the declared baseline and grows minimum rows from their measured content. Twenty-four floating/inline automatic, fixed and minimum controls retain complete pictures. Eight inline outcomes keep every source text bound clear of the picture. The 28-outcome screen measures 4,046 actual-program-bound glyphs without paper/rectangle-clip cuts or unknown traces. Four oversized exact-slot fallbacks remain clipped and unqualified; authored floating `wrapNone` body-overlap residuals remain. New exact combined-source Word geometry is unqualified. |
@@ -24,15 +25,15 @@ Documentation and harness updates do not rebuild that library.
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
-| Focused checks | 86 exact checks pass on Windows; 72 pass on Ubuntu with 14 reviewed installed-font skips. Two source/placement regressions fail against the qualified parent; two neighboring controls pass. Test-only repairs retain authored boundaries before hidden runs and preserve rendered destinations. The 53-outcome batch retains all 29 portfolio/note/legend/unfit PDFs and eight caption-link controls; only the sixteen restored-link PDFs change. The frozen runtime transfers 24 verified assets and two identical smoke PDFs. No root build or local full-DOCX replay. |
+| Focused checks | 62 exact checks pass on both Windows and Ubuntu with zero skips. The portable glyph-ink regression covers 48 fill/stroke/polar variations and fails on the parent; the authored-viewport control passes on both. One production build supplies 29 document outcomes: only the four repaired-label PDFs change; the other 25, including the fixed portfolio and authored six-name legend, remain identical. The frozen runtime transfers 24 verified assets and two identical smoke PDFs. No harness repair, root build or local full-DOCX replay. |
 
-The preceding broader checkpoint `48bf80f8d` passed CI42924107847: 4,775 Windows/
-2,242 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
+The preceding broader checkpoint `80328bd8a` passed CI42933812903: 4,778 Windows/
+2,245 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
 package consumers. That historical gate is separate from the focused snapshot
-above. The later CI42929150677 failed the legacy static-image ownership control
-on both hosts; its reports remain retained. The ownership repair has separate
-broader CI42932044310, while the new source-boundary snapshot awaits its own
-broader result. Consult the CI reports for the revision being consumed. CI builds
+above. Earlier CI42929150677 failed the legacy static-image ownership control
+on both hosts; its reports remain retained, and the repair passed broader CI.
+The new legend-clip snapshot awaits its own broader result. Consult the CI
+reports for the revision being consumed. CI builds
 platform binaries separately;
 source coverage does not imply binary identity across platforms.
 
