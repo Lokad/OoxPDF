@@ -9,6 +9,48 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxPictureBookmarksWithoutMathUseTheSamePlacedSource()
+    {
+        foreach (string container in new[] { "body", "cell", "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool wrapped in new[] { false, true })
+        {
+            var source = ReadPictureBookmark(container, mode, 18, wrapped, includeMath: false);
+            var target = DocxBlockTraversal.EnumerateSourceParagraphs(source)
+                .First(paragraph => paragraph.BookmarkAnchors.Any(anchor => anchor.Name == "PictureTarget"));
+            var items = TestAssert.NotNull(target.InlineContent);
+            var anchor = target.BookmarkAnchors.Single(anchor => anchor.Name == "PictureTarget");
+            TestAssert.True(target.Equations.Count == 0 && target.Hyperlinks.Count == 0 &&
+                anchor.InlineItemIndex is int index && index >= 0 && index < items.Count &&
+                items[index] is DocxInlinePicture picture && ReferenceEquals(picture.Image, target.Images.Single()),
+                "Picture source ownership does not depend on math or a link in the target paragraph.");
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            var control = renderer.RenderPagesAsync(ReadPictureBookmark(container, mode, 18, wrapped,
+                includeMath: false, linkPrefix: true), null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(control.Length, pages.Length);
+            var destination = pages.SelectMany(page => page.Annotations).Single(a => a.Destination is not null).Destination!.Value;
+            var painted = pages.Select((page, index) => (Page: page, Index: index)).Single(pair => pair.Page.Images.Count != 0);
+            var frame = ReadPaintedPictureFrame(painted.Page);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            TestAssert.Equal(painted.Index, destination.PageIndex);
+            TestAssert.True(Math.Abs(frame.X - destination.Left!.Value - 3d * scale) < .001d &&
+                Math.Abs(frame.Top - destination.Top!.Value) < .001d,
+                "A picture-dominated row targets its painted frame in every container.");
+            for (int page = 0; page < pages.Length; page++)
+                TestAssert.Equal(control[page].Content, pages[page].Content);
+            foreach (var link in control.SelectMany(page => page.Annotations))
+                TestAssert.Equal(destination, link.Destination!.Value);
+            string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            foreach (string value in new[] { "PublicPrefix", "PublicSuffix", "Jump to picture" }) TestAssert.Contains(value, text);
+            TestAssert.Equal(1, pages.Sum(page => page.Images.Count));
+        }
+    }
+
     public static void DocxInlinePictureBookmarksFollowPaintedFramesAcrossContainers()
     {
         foreach (string container in new[] { "body", "cell", "header", "footer" })
@@ -77,7 +119,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadPictureBookmark(string container, OoxPdfDocxMarkupMode mode, int height,
-        bool wrapped, bool gap = false, bool hidden = false) => ReadMutation(
+        bool wrapped, bool gap = false, bool hidden = false, bool includeMath = true, bool linkPrefix = false) => ReadMutation(
         "CompositionProbes/" + (container == "cell" ? "body" : container), mode, false, false,
         (xml, w, m) =>
         {
@@ -86,8 +128,11 @@ internal static partial class DocxInlineCompositionTests
             foreach (var extent in picture.Descendants().Where(e => e.Name.LocalName is "extent" or "ext" && e.Attribute("cy") is not null))
                 extent.SetAttributeValue("cy", height * 12700);
             var first = paragraph.Elements().First(element => element.Name != w + "pPr");
-            first.AddBeforeSelf(new XElement(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"),
-                "PublicPrefix " + (wrapped ? string.Concat(Enumerable.Repeat("Visible wrapping prefix ", 12)) : string.Empty))));
+            var prefix = new XElement(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"),
+                "PublicPrefix " + (wrapped ? string.Concat(Enumerable.Repeat("Visible wrapping prefix ", 12)) : string.Empty)));
+            first.AddBeforeSelf(linkPrefix ? new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PictureTarget"), prefix) : prefix);
+            if (!includeMath)
+                foreach (var equation in paragraph.Elements(m + "oMath").ToArray()) equation.Remove();
             picture.AddBeforeSelf(new XElement(w + "bookmarkStart", new XAttribute(w + "id", "909"), new XAttribute(w + "name", "PictureTarget")));
             if (gap) picture.AddBeforeSelf(hidden
                 ? new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish")), new XElement(w + "t", "HiddenProbe"))

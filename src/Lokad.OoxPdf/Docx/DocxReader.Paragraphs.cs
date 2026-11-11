@@ -114,7 +114,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
-                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs, inlineItems?.Count);
+                AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs, GetInlineItemCount());
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
@@ -360,37 +360,9 @@ internal sealed partial class DocxReader
         {
             if (inlineItems is null)
             {
+                // Capture source boundaries as they are read. Metadata must not
+                // depend on later math or links initializing the ordered view.
                 inlineItems = DocxInlineContent.FromPrefix(runs, images, cancellationToken, inlineTextBoxes);
-                // At the painted text boundary, nonpainting runs may advance the
-                // raw source counter. Capture the ordered boundary without jumping
-                // past an intervening picture or box. Source anchors are ordered,
-                // so the prefix cursor advances only once.
-                int textBoundary = runs.Count;
-                while (textBoundary > 0 && (runs[textBoundary - 1].EffectiveProperties.Hidden || runs[textBoundary - 1].Text.Length == 0))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    textBoundary--;
-                }
-                int boundary = 0;
-                for (int index = 0; index < bookmarkAnchors.Count; index++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var anchor = bookmarkAnchors[index];
-                    if (anchor.SourceRunIndex > sourceRunIndex || anchor.TextRunIndex < textBoundary || anchor.TextRunIndex > runs.Count) continue;
-                    if (anchor.SourceRunIndex == sourceRunIndex)
-                    {
-                        bookmarkAnchors[index] = anchor with { InlineItemIndex = inlineItems.Count };
-                        continue;
-                    }
-                    while (boundary < inlineItems.Count)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (inlineItems[boundary] is DocxInlinePicture picture && picture.Image.SourceRunIndex >= anchor.SourceRunIndex ||
-                            inlineItems[boundary] is DocxInlineBox box && box.Box.SourceRunIndex >= anchor.SourceRunIndex) break;
-                        boundary++;
-                    }
-                    bookmarkAnchors[index] = anchor with { InlineItemIndex = boundary };
-                }
             }
         }
 
@@ -1200,7 +1172,7 @@ internal sealed partial class DocxReader
         List<DocxBookmarkAnchor> bookmarkAnchors,
         int sourceRunIndex,
         List<DocxTextRun> runs,
-        int? inlineItemIndex)
+        int inlineItemIndex)
     {
         bookmarkAnchors.Add(new DocxBookmarkAnchor(
             (string?)bookmarkStart.Attribute(WordprocessingNamespace + "id"),
