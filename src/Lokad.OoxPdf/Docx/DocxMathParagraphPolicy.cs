@@ -74,10 +74,15 @@ internal static class DocxMathParagraphPolicy
         foreach (var parent in parents)
         {
             token.ThrowIfCancellationRequested();
+            bool? supportsRevisedOwner = null;
             foreach (var box in parent.InlineTextBoxes)
             {
                 token.ThrowIfCancellationRequested();
-                if (box.Revisions.Count != 0) continue;
+                if (box.Revisions.Count != 0)
+                {
+                    supportsRevisedOwner ??= DocxInlineContent.HasSupportedSourceOwner(parent, hasPageInputs: true, token: token);
+                    if (supportsRevisedOwner != true) continue;
+                }
                 foreach (var element in box.BodyElements)
                 {
                     token.ThrowIfCancellationRequested();

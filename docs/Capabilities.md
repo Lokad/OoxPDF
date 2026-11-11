@@ -644,6 +644,9 @@ Approximate or restricted:
   A box's declared frame admits surrounding supported content even when its child
   story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
   ignored and warned; they do not discard supported outside formulas or pictures.
+  Parsed box insertions retain their actual source revision owners, preserving
+  supported child and sibling equations. Unowned/other revision kinds keep their
+  fallbacks; new insertion markup appearance and Word geometry remain unqualified.
   Word-compatible Review preserves first-row prose baselines alongside equations
   in qualified body/header/footer boxes. Explicit cell spacing, vertical merges
   and unsupported alignment retain their existing approximations.

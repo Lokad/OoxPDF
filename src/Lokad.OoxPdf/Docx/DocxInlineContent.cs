@@ -30,7 +30,7 @@ internal static class DocxInlineContent
         foreach (var item in items)
         {
             token.ThrowIfCancellationRequested();
-            if (item is DocxInlineBox box && (box.Box.SourceRunIndex < 0 || box.Box.Revisions.Count != 0 ||
+            if (item is DocxInlineBox box && (box.Box.SourceRunIndex < 0 ||
                 !remaining.Remove(box.Box))) return false;
         }
         return remaining.Count == 0;
@@ -259,7 +259,7 @@ internal static class DocxInlineContent
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
             paragraph.ListLabel is not null || paragraph.ParagraphMarkRun?.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange }]
                 ? paragraph.ParagraphMarkRun : null, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
-            paragraph.ConsumedParagraphMarks, paragraph.PropertyRevision);
+            paragraph.ConsumedParagraphMarks, paragraph.PropertyRevision, paragraph.InlineTextBoxes);
 
     // Reference identity and measured source position establish actual owners.
     // The hint avoids rediscovering unchanged math; it cannot invent ownership.
@@ -306,7 +306,8 @@ internal static class DocxInlineContent
     public static bool HasSupportedRunRevisionOwners(IReadOnlyList<DocxRevisionInfo> revisions,
         IReadOnlyList<DocxTextRun> runs, CancellationToken token, DocxTextRun? paragraphMark = null, IReadOnlyList<DocxInlineImage>? images = null,
         IReadOnlyList<DocxNonRenderingRunOwner>? nonRenderingRunOwners = null, IReadOnlyList<DocxEquation>? equations = null,
-        IReadOnlyList<DocxTextRun>? consumedParagraphMarks = null, DocxRevisionInfo? paragraphPropertyRevision = null)
+        IReadOnlyList<DocxTextRun>? consumedParagraphMarks = null, DocxRevisionInfo? paragraphPropertyRevision = null,
+        IReadOnlyList<DocxInlineTextBox>? inlineTextBoxes = null)
     {
         List<DocxRevisionInfo>? equationOwners = null;
         if (equations is not null)
@@ -315,7 +316,16 @@ internal static class DocxInlineContent
                 if (!TryGetEquationRevisionOwners(equation, token, out var owners)) return false;
                 if (owners.Count != 0) (equationOwners ??= []).AddRange(owners);
             }
-        if (revisions.Count == 0) return true;
+        if (revisions.Count == 0)
+        {
+            if (inlineTextBoxes is not null)
+                foreach (var box in inlineTextBoxes)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (box.Revisions.Count != 0) return false;
+                }
+            return true;
+        }
         var remaining = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
         foreach (var revision in revisions)
         {
@@ -332,6 +342,17 @@ internal static class DocxInlineContent
             if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange)) return false;
             remaining.Add(revision);
         }
+        // A resolved drawing owns its actual insertion references. Validate
+        // before other sources consume a shared wrapper; value-equal or
+        // unlisted metadata and other box revision kinds retain their fallback.
+        if (inlineTextBoxes is not null)
+            foreach (var box in inlineTextBoxes)
+                foreach (var revision in box.Revisions)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (box.SourceRunIndex < 0 || revision.Kind != DocxRevisionKind.Insertion ||
+                        !remaining.Contains(revision)) return false;
+                }
         // Resolved text owns its inserted/deleted content and run formatting.
         // Formatting balloons consume the same run's metadata independently of
         // equation measurement. A numbered inserted mark has its separate owner
@@ -370,6 +391,10 @@ internal static class DocxInlineContent
                         remaining.Remove(revision);
                 }
             }
+        if (inlineTextBoxes is not null)
+            foreach (var box in inlineTextBoxes)
+                foreach (var revision in box.Revisions)
+                { token.ThrowIfCancellationRequested(); remaining.Remove(revision); }
         if (equationOwners is not null)
             foreach (var owner in equationOwners)
             { token.ThrowIfCancellationRequested(); remaining.Remove(owner); }

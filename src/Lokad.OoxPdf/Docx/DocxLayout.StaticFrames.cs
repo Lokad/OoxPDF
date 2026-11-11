@@ -376,12 +376,13 @@ internal sealed partial class DocxLayoutEngine
 
     // The box owns a resolved frame even when its child story needs the existing
     // legacy fallback. Child-content support must not veto its prepared siblings.
+    // Callers validate revision/source ownership independently of this geometry.
     private static bool TryGetInlineBoxFrameWidth(DocxInlineTextBox box, double available,
         CancellationToken token, out double width)
     {
         token.ThrowIfCancellationRequested();
         width = ReadEmuPoints(box.ExtentCxValue) ?? 0d;
-        if (box.Revisions.Count != 0 || !double.IsFinite(width) || width <= 0d || width > available ||
+        if (!double.IsFinite(width) || width <= 0d || width > available ||
             ReadEmuPoints(box.ExtentCyValue) is not > 0d || box.BodyElements.Count == 0) return false;
         ResolveInlineTextBoxContentInsets(box, out double left, out _, out double right, out _);
         return width - left - right > 0d;
