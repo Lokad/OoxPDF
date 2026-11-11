@@ -1994,6 +1994,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-bubble-measured-geometry": [
+    "PptxBubbleLegendWhitespaceKeepsMeasuredInkCenter",
     "PptxBubbleMeasured",
     "PptxBubbleSubunit",
     "PptxBubbleCompound",
@@ -17368,6 +17369,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-area-legend-paint": [
+    "PptxBubbleLegendWhitespaceKeepsMeasuredInkCenter",
     "PptxAreaSideLegend",
     "PptxAreaRightLegend",
     "PptxRightLegendAdmission",

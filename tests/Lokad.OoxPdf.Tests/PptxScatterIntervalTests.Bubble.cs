@@ -11,6 +11,37 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxScatterIntervalTests
 {
+    public static void PptxBubbleLegendWhitespaceKeepsMeasuredInkCenter()
+    {
+        BubbleCase sample = BubbleCases().Single(c => c.Id == "bubble-query-base");
+        double? originalOffset = null;
+        foreach (string name in new[] { "RevenueGrowth", "Revenue Growth" })
+        {
+            PdfPage page = RenderBubble(sample, xml =>
+                xml.Descendants(CurveC + "ser").Single().Element(CurveC + "tx")!
+                    .ReplaceWith(new XElement(CurveC + "tx", new XElement(CurveC + "v", name))));
+            var show = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+                fontResourceFilter: resource => resource.StartsWith("CL", StringComparison.Ordinal)).Single();
+            TestAssert.Equal(name, show.Text);
+            var font = show.Font.Font;
+            var ink = name.Where(c => !char.IsWhiteSpace(c)).Select(character =>
+            {
+                TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(character), out var bounds),
+                    "The portable source letters have known actual ink.");
+                return bounds;
+            }).ToArray();
+            double center = show.Y + (ink.Min(b => b.YMin) + ink.Max(b => b.YMax)) * show.Size / (2d * font.UnitsPerEm);
+            var marker = BubbleCircles(page).Single(circle => circle.Radius <= 8d);
+            double offset = center - marker.Y;
+            if (originalOffset is { } expected)
+                TestAssert.True(Math.Abs(offset - expected) < .001d,
+                    "Adding a nonpainting space cannot switch the legend from measured ink to a nominal baseline.");
+            else originalOffset = offset;
+            TestAssert.Equal(4, BubbleCircles(page).Count(circle => circle.Radius > 8d));
+            TestAssert.True(BubbleText(page, "CSD").Contains("79"), "Changing the name retains the source value label.");
+        }
+    }
+
     public static void PptxBubbleMeasuredScalesPreserveNativeIntervalsAndContent()
     {
         foreach (BubbleCase sample in BubbleCases())
