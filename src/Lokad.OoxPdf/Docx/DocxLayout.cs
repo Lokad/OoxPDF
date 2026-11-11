@@ -1586,7 +1586,8 @@ internal sealed partial class DocxLayoutEngine
                 }
                 if (TryMeasureOrderedInlineAtoms(paragraph, mathEquations, textMeasurer, paragraphFontSize,
                     baseInset, lineHeight, paragraphSpacingScale, cancellationToken, out var atoms,
-                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pages.Count + 1, pageCount: knownPageCount) &&
+                    defaultTabStopPoints: defaultTabStopPoints, pageNumber: pages.Count + 1, pageCount: knownPageCount,
+                    physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&
                     TryWrapOrderedInlineAtoms(atoms, Math.Max(1d, width - firstInset - rightInset),
                         Math.Max(1d, width - nextInset - rightInset), cancellationToken, out var measured,
                         physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&

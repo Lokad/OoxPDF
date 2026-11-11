@@ -52,6 +52,52 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxFixedPictureRowsKeepFollowingWordsAndPhysicalSlots()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (bool mathFont in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool split in new[] { false, true })
+        foreach (int height in new[] { 4, 8 })
+        {
+            var source = ReadLeadingPictureWithLineFlow(mode, container, 350, split, null,
+                exact: 16, pictureHeight: height);
+            var page = AssertFloatingLabelsPaint(source, mode, ["After"],
+                $"fixed leading picture/{container}/{split}/{height}", mathFont: mathFont);
+            var (bounds, clip) = ReadPictureBounds(page).Single();
+            TestAssert.True(Math.Abs(bounds.Width - 240d) < .001d && Math.Abs(bounds.Height - height) < .001d,
+                "A fitting fixed-slot picture keeps its authored dimensions after first-line relocation.");
+            TestAssert.True(bounds.X >= clip.X - .001d && bounds.Y >= clip.Y - .001d &&
+                bounds.X + bounds.Width <= clip.X + clip.Width + .001d &&
+                bounds.Y + bounds.Height <= clip.Y + clip.Height + .001d,
+                "The picture and following word survive their ancestor clips.");
+        }
+    }
+
+    public static void DocxFixedPictureAdmissionUsesPhysicalSlot()
+    {
+        foreach (double scale in new[] { 1d, .75d })
+        foreach (int pictureHeight in new[] { 4, 10 })
+        {
+            var source = ReadLeadingPictureWithLineFlow(OoxPdfDocxMarkupMode.Final, "cell", 350, false, null,
+                exact: 16, pictureHeight: pictureHeight);
+            var paragraph = DocxBlockTraversal.EnumerateSourceParagraphs(source).Single(p => p.Images.Count != 0);
+            double physicalInset = 8d * scale;
+            bool admitted = DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, null,
+                new DocxTests.FamilyWidthTextMeasurer(), 11d, 12.8d, 16d, scale, default, out var atoms,
+                physicalTextBaselineInset: physicalInset);
+            TestAssert.True((pictureHeight == 4) == admitted,
+                "Containment uses the placed physical baseline, including scaled frames, rather than a nominal inset.");
+            if (!admitted) continue;
+            TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(TestAssert.NotNull(atoms),
+                118d * scale, 468d * scale, default, out var rows),
+                "The fitting source wraps into its first and continuation frames.");
+            TestAssert.True(TestAssert.NotNull(rows).All(row => Math.Abs(row.OccupiedHeight - 16d * scale) < .0000001d &&
+                Math.Abs(row.BaselineInset - physicalInset) < .0000001d),
+                "Relocation preserves the fixed physical advance and baseline on every row.");
+        }
+    }
+
     public static void DocxReviewPictureOwnerDescentKeepsFollowingParagraphClear()
     {
         foreach (bool mathFont in new[] { false, true })
@@ -86,7 +132,8 @@ internal static partial class DocxInlineCompositionTests
         }
     }
     private static DocxDocument ReadLeadingPictureWithLineFlow(OoxPdfDocxMarkupMode mode, string container,
-        int indent, bool split, int? minimum) => ReadMutation("docx-picture-rotated-raster", mode, false, false, (xml, w, _) =>
+        int indent, bool split, int? minimum, int? exact = null, int pictureHeight = 18) =>
+        ReadMutation("docx-picture-rotated-raster", mode, false, false, (xml, w, _) =>
         {
             XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
             XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
@@ -101,12 +148,12 @@ internal static partial class DocxInlineCompositionTests
             foreach (var extent in drawing.Descendants().Where(node => node.Name == a + "ext" || node.Name == wp + "extent"))
             {
                 extent.SetAttributeValue("cx", 240 * 12700);
-                extent.SetAttributeValue("cy", 18 * 12700);
+                extent.SetAttributeValue("cy", pictureHeight * 12700);
             }
             paragraph.AddFirst(new XElement(w + "pPr", new XElement(w + "ind",
                 new XAttribute(w + "firstLine", indent * 20))));
-            if (minimum is { } height) paragraph.Element(w + "pPr")!.Add(new XElement(w + "spacing",
-                new XAttribute(w + "line", height * 20), new XAttribute(w + "lineRule", "atLeast")));
+            if ((minimum ?? exact) is { } height) paragraph.Element(w + "pPr")!.Add(new XElement(w + "spacing",
+                new XAttribute(w + "line", height * 20), new XAttribute(w + "lineRule", exact is null ? "atLeast" : "exact")));
             if (container == "cell") paragraph.ReplaceWith(new XElement(w + "tbl",
                 new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "9360"))),
                 new XElement(w + "tr", new XElement(w + "tc", new XElement(paragraph)))));

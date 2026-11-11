@@ -22,6 +22,8 @@
   inside body/cell frames and retaining source-run descent in scaled Review.
   Ordinary pictures retain their ordered source owners in minimum-spaced paragraphs,
   preventing neighboring words from being clipped in fitting continuation frames.
+  Contained fixed-line pictures use the same wrapping rule and physical baseline,
+  preserving following words without enlarging the authored line slot.
   Stored field results and resolved formatting history, including paragraph marks,
   preserve neighboring equations. Bold/italic revision captions share run and
   paragraph-mark resolution. Tables inside inline header/footer boxes retain

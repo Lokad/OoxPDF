@@ -88,9 +88,13 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(DeclaredFlow(source, "atLeast"), null,
             new SiblingFrameMeasurer(), 11d, 10d, 32d, 1d, default, out _),
             "Box hosts retain their separately qualified automatic-flow eligibility.");
-        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(DeclaredFlow(withoutBox, "exact"), null,
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(DeclaredFlow(withoutBox, "exact"), null,
             new SiblingFrameMeasurer(), 11d, 10d, 32d, 1d, default, out _),
-            "Ordinary body/cell fixed-line hosts retain their explicit fallback.");
+            "Captured ordinary fixed-line pictures share the contained-slot rule.");
+        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(
+            DeclaredFlow(withoutBox with { InlineContent = null }, "exact"), null,
+            new SiblingFrameMeasurer(), 11d, 10d, 32d, 1d, default, out _),
+            "Reconstructed fixed-line owners retain their independently qualified fallback.");
     }
 
     public static void DocxOrdinaryPictureBoxesMatchIndependentWordOrigins()

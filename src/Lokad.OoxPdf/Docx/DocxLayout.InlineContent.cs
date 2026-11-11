@@ -114,6 +114,7 @@ internal sealed partial class DocxLayoutEngine
         double nextWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right - GetParagraphTextStartOffset(paragraph, scale));
         return TryMeasureOrderedInlineContent(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
             firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
+            physicalTextBaselineInset: DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ? baselineInset : null,
             defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount);
     }
 
@@ -234,7 +235,7 @@ internal sealed partial class DocxLayoutEngine
         lines = null;
         return double.IsFinite(firstWidth) && double.IsFinite(nextWidth) && firstWidth > 0d && nextWidth > 0d &&
             TryMeasureOrderedInlineAtoms(paragraph, equations, measurer, fontSize, baselineInset, lineHeight, scale,
-                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowStaticFallback) &&
+                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowStaticFallback, physicalTextBaselineInset) &&
             TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset);
     }
 
@@ -243,7 +244,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer measurer, double fontSize, double baselineInset, double lineHeight, double scale,
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? atoms,
         double defaultTabStopPoints = WordDefaultTabStopPoints, int? pageNumber = null, int? pageCount = null,
-        bool allowStaticFallback = false)
+        bool allowStaticFallback = false, double? physicalTextBaselineInset = null)
     {
         atoms = null;
         bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
@@ -253,16 +254,16 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         var items = paragraph.InlineContent;
         bool retainPreparedContent = allowStaticFallback;
-        // Ordinary picture/prose rows share content-driven automatic/minimum
-        // flow across containers. Prepared math and boxes retain their existing
-        // eligibility; only static hosts admit contained fixed-line pictures.
+        // Captured ordinary pictures share wrapping across containers. Fixed
+        // rows additionally require each picture to fit the physical text slot.
+        // Prepared math/boxes and reconstructed owners retain their eligibility.
         bool ordinaryStaticContent = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0;
-        // Minimum-flow admission needs the captured ordered source view.
+        // Declared-flow admission needs the captured ordered source view.
         // Legacy reconstructed owners retain their calibrated frame.
         bool ordinaryContent = items is not null && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
         bool supportedOrdinaryFlow = ordinaryContent || ordinaryStaticContent
             ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
-                ordinaryStaticContent && DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
+                DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
             : DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
         if (paragraph.Equations.Count != 0)
         {
@@ -303,7 +304,8 @@ internal sealed partial class DocxLayoutEngine
             // Containers share the authored physical slot; measured ink may
             // overhang it without changing advance or the text baseline.
             lineHeight = paragraph.LineSpacingPoints!.Value * scale;
-            baselineInset = DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing: true);
+            baselineInset = physicalTextBaselineInset ??
+                DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, lineHeight, hasExplicitLineSpacing: true);
         }
         if (paragraph.LineSpacingPoints is not null && DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph))
         {
@@ -402,7 +404,8 @@ internal sealed partial class DocxLayoutEngine
                     if (!double.IsFinite(imageWidth) || !double.IsFinite(imageHeight) || imageWidth <= 0d || imageHeight <= 0d) return false;
                     // Fixed rows can wrap a picture contained above their text
                     // baseline. Overhanging pictures keep the existing fallback.
-                    if (ordinaryStaticContent && DocxPlainBodyFrame.HasFixedLineFlow(paragraph) && imageHeight > baselineInset) return false;
+                    if ((ordinaryContent || ordinaryStaticContent) && DocxPlainBodyFrame.HasFixedLineFlow(paragraph) &&
+                        imageHeight > baselineInset) return false;
                     // A picture's source run owns its font strut even though it
                     // paints no glyphs. Reuse the ordinary row's descent growth;
                     // the picture stays at the baseline while following content
