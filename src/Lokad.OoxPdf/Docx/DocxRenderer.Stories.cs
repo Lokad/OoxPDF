@@ -55,10 +55,14 @@ internal sealed partial class DocxRenderer
         bool Fits(DocxTableRowLayout current, PdfRectangle parent)
         {
             token.ThrowIfCancellationRequested();
+            const double roundoff = .000001d;
             if (current.FragmentCount != 1 || current.Cells.Count == 0 ||
                 !DocxLayoutEngine.HasAutomaticTableRowHeight(current.DeclaredHeightPoints, current.HeightRuleValue) &&
                 !DocxLayoutEngine.HasMinimumTableRowHeight(current.DeclaredHeightPoints, current.HeightRuleValue) ||
-                !Contains(parent, parent.X, current.Y, parent.Width, current.Height)) return false;
+                !Contains(parent, parent.X, current.Y, parent.Width, current.Height) ||
+                current.Y < -roundoff || current.Y + current.Height > mapping.PageHeight + roundoff ||
+                mapping.MapEmissionY(current.Y) < -roundoff ||
+                mapping.MapEmissionY(current.Y + current.Height) > mapping.PageHeight + roundoff) return false;
             foreach (var cell in current.Cells)
             {
                 token.ThrowIfCancellationRequested();
