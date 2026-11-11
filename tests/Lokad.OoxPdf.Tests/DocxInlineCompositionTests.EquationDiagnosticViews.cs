@@ -34,7 +34,8 @@ internal static partial class DocxInlineCompositionTests
             var equations = diagnostics.Where(item => item.PartName == "/" + part &&
                 item.Id is "DOCX_UNSUPPORTED_EQUATION" or "DOCX_APPROXIMATED_EQUATION").ToArray();
             TestAssert.True(hidden ? equations.Length == 0 : equations.Length != 0,
-                "Selected note sources determine equation diagnostics with or without an initial reader sink.");
+                $"Selected note diagnostics: {kind}/{mode}/{(deleted ? "del" : "ins")}/readerSink={withReaderSink}, " +
+                $"selected={owner?.SourceCount}, emitted={string.Join(',', diagnostics.Select(item => item.Id + ":" + item.PartName))}.");
         }
     }
 
