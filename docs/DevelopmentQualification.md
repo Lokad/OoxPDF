@@ -4,6 +4,38 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+The revised-inline-box owner repair (`88ca67f52`) validates actual visible
+insertion/deletion references through the existing run-ownership set, separating
+ownership from finite frame geometry. It adds no source-style or ownership layer.
+Previously, marking only an existing drawing run as inserted/deleted could erase
+supported child or sibling formulas. Four public roots/24 Final/Review outputs
+now restore fifteen formula paints; selected hidden boxes retain their intentional
+omission. Native checks measure 2,027 glyphs without clip cuts, unknown traces or
+picture/ink intersections. Eight original control PDFs remain exact. Four unmasked
+Final raster pairs are exact; eight Review differences are confined to the existing
+revision-margin band. New-source Word geometry/appearance remains unqualified.
+
+Windows passes 55 focused checks; Ubuntu passes 48 with seven declared font skips.
+Unowned/copied/unsupported revision metadata, invalid extents and cancellation
+retain their checks. The parent regression fails on the missing first formula.
+One selector preflight repair ran no tests. A later test separated the inherited
+raw hidden-child equation warning from visible-content assertions; only that
+method was rerun per host, reusing 21 runtime assets/3,438 inputs. Original attempts
+remain recorded. Transfer verifies 24 assets/two exact smoke PDFs without a root
+build or suite replay. Final frozen .NET 11 library:
+`FC45A7429EF57D358BAB651D66ACF813C88514A777225667E75A9EE643675185`.
+All sixteen portfolio PDFs/diagnostics remain exact, retaining the two PPTX
+passes/fourteen DOCX image failures. Broader qualification is batched after the
+adjacent selected-view diagnostic work; the prepared package below is its parent
+and lacks this owner repair. Publication and the broader roadmap remain open.
+
+The independent comment-body follow-up finds no new defect in the report, letter
+and specification. Their three complete Review sentences appear on the same
+pinned Word pages, while Final intentionally omits them. All 264 selected glyphs
+across both producers match actual embedded cmaps and clear known clips; six crop
+pairs are reviewed. This covers simple literal one-paragraph bodies with shared
+source ancestry, without a general comment or application-view claim.
+
 The nested-inline-box fallback repair (`0bf14111c`) keeps a valid box's own frame
 independent of its unsupported children. Textbox stories measure supported source
 items through the shared ordered path, skipping nested frames at their original
