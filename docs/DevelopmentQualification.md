@@ -28,14 +28,12 @@ Documentation and harness updates do not rebuild that library.
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
 | Focused checks | 88 exact checks pass on both Windows and Ubuntu with zero skips. The new 64-variation Math/Sans and integer/fractional-size regression and bubble-space control fail on the parent; ordinary ink and authored-viewport controls pass. Three development production attempts and one test-only harness extension are retained; one accepted runtime supplies all qualification. All 29 ordinary document PDFs, including the fixed portfolio and authored six-name legend, remain identical. The frozen runtime transfers 24 verified assets and two identical smoke PDFs. No root build or local full-DOCX replay. |
 
-The preceding broader checkpoint `6b8ed604d` passed CI42938218391: 4,780 Windows/
-2,247 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
-package consumers. That historical gate is separate from the focused snapshot
-above. Earlier CI42929150677 failed the legacy static-image ownership control
-on both hosts; its reports remain retained, and the repair passed broader CI.
-The new actual-ink snapshot awaits its own broader result. Consult the CI
-reports for the revision being consumed. CI builds
-platform binaries separately;
+The actual-ink checkpoint `18a6385ca` passed CI42942093610: 4,782 Windows/
+2,249 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
+package consumers. Its focused frozen runtime is pinned above. Earlier
+CI42929150677 failed the legacy static-image ownership control on both hosts;
+those reports remain retained, and the repair passed broader CI. Consult the
+reports for the revision being consumed. CI builds platform binaries separately;
 source coverage does not imply binary identity across platforms.
 
 ## Independent content checks and limits
