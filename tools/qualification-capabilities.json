@@ -863,6 +863,7 @@
   ],
   "docx-review-table-frame": [
     "DocxMixedTableRowsKeepCaptionInkAcrossPages",
+    "DocxKeptMixedCellRetainsInkAndFollowingParagraphAfterPageAdmission",
     "DocxTableLayoutStageContinuesRowsInActiveColumnFrame",
     "PortableRenderingColumnFallbackKeepsBodyAndFooterInk",
     "DocxReviewAuthoredRowsStayInsideTheirPrintedPages",

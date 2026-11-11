@@ -23,6 +23,12 @@ CI builds have their own revision metadata. This does not complete the roadmap.
 The prepared package documented below predates this fix; it is retained as parent
 evidence, pending the next coherent package qualification. Publication stays deferred.
 
+Additional kept-cell checks move complete prose/formula/picture rows to a fresh
+page in both modes, with the following paragraph intact. Eight outcomes retain
+29,110 glyphs without clip cuts/unknown traces and complete opaque pictures;
+the portable regression passes on both hosts and fails on the parent. This extends
+the existing fix's evidence without another library change or Office export.
+
 The previous local rendering baseline pins production
 `c1b59358b13c7c6b6492f8ab7cd20a7881bc1d2a`; harness
 `7196e18eb13656c6b6f233cfd98db470b0818786` repairs only a test fixture.
