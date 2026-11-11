@@ -11,10 +11,10 @@ internal static partial class PortableRenderingTests
     public static void PortableRenderingInlineBoxFallbackKeepsOutsideSiblings()
     {
         foreach (string fixture in new[] { "inline-box-body-equation-inline-box-valid", "inline-sibling-mixed" })
-        foreach (bool mathFont in new[] { false, true })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont), mode,
+            // These sources request mathematical italic x/y, absent from pinned Sans.
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
             var control = DocxInlineCompositionTests.ReadMutation("InlineBoxMath/" + fixture, mode, false, false);
@@ -44,7 +44,7 @@ internal static partial class PortableRenderingTests
         }
 
         var failed = ReadNestedBoxFallback("inline-sibling-mixed", OoxPdfDocxMarkupMode.Final);
-        var observerRenderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(),
+        var observerRenderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
             OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         bool observed = false;
         TestAssert.Throws<InvalidOperationException>(() => observerRenderer.RenderPagesAsync(failed, diagnostic =>
