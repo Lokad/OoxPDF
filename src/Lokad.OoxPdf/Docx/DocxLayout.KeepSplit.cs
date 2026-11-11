@@ -660,7 +660,7 @@ internal sealed partial class DocxLayoutEngine
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale, defaultTabStopPoints);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
-            foreach (var line in WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, cancellationToken: cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale)))
+            foreach (var line in WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, cancellationToken: cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale), sourceParagraph: paragraph))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;

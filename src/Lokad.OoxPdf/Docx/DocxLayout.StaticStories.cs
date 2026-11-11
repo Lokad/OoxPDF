@@ -405,7 +405,7 @@ internal sealed partial class DocxLayoutEngine
             var placedStaticImages = new List<DocxInlineImage>();
             if (spans.Length != 0)
             {
-                DocxWrappedTextLine[] staticLines = WrapStaticTextLines(spans, width, textMeasurer, ResolveInlineImageWrapWidths(paragraph, spans)).ToArray();
+                DocxWrappedTextLine[] staticLines = WrapStaticTextLines(spans, width, textMeasurer, ResolveInlineImageWrapWidths(paragraph, spans), paragraph).ToArray();
                 // RV05: ordered inline atoms (static header/footer path). Affined images in
                 // text-mixed paragraphs attach to wrapped lines at run position.
                 DocxMidLinePlan? staticMidLinePlan = CreateStaticMidLinePlan(paragraph, spans, staticLines, width, isHeader, staticMetrics, unscaledLineMetrics, paragraphSpacingScale, cancellationToken);
@@ -847,7 +847,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<DocxTextSpan> spans,
         double maxWidth,
         IDocxTextMeasurer textMeasurer,
-        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int segmentStart = 0;
@@ -856,7 +856,7 @@ internal sealed partial class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapStaticWords(text, spans, segmentStart, segmentLength, maxWidth, textMeasurer, inlineImageWidths))
+            foreach (DocxWrappedTextLine line in WrapStaticWords(text, spans, segmentStart, segmentLength, maxWidth, textMeasurer, inlineImageWidths, sourceParagraph))
             {
                 yielded = true;
                 yield return line;
@@ -883,7 +883,7 @@ internal sealed partial class DocxLayoutEngine
         int segmentLength,
         double maxWidth,
         IDocxTextMeasurer textMeasurer,
-        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null)
     {
         IReadOnlyList<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
         if (tokens.Count == 0)
@@ -951,7 +951,7 @@ internal sealed partial class DocxLayoutEngine
             while (measureImagePrefix is not null)
             {
                 int imageBreakOffset = FindInlineImageWrapBreak(imageWrapIndex, lineStart, lineStart + lineLength,
-                    maxWidth, maxWidth, measureImagePrefix, includeEnd: true);
+                    maxWidth, maxWidth, measureImagePrefix, includeEnd: true, sourceParagraph: sourceParagraph);
                 if (imageBreakOffset <= lineStart) break;
                 yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
                 lineLength -= imageBreakOffset - lineStart;

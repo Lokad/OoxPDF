@@ -8,7 +8,8 @@
     "DocxOrdinaryPicturesKeepPaintWhenFormattedRunsAreMerged",
     "DocxOrdinaryPicturesKeepSourceOrderWithSeveralDrawingsInOneRun",
     "DocxOrdinaryPictureSoftBreaksKeepFollowingWordsClearOfPaint",
-    "DocxTerminalInlinePictures"
+    "DocxTerminalInlinePictures",
+    "DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback"
   ],
   "docx-floating-nested-table": [
     "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
@@ -5706,7 +5707,8 @@
     "DocxOrdinaryPicturesKeepPaintWhenFormattedRunsAreMerged",
     "DocxOrdinaryPicturesKeepSourceOrderWithSeveralDrawingsInOneRun",
     "DocxOrdinaryPictureSoftBreaksKeepFollowingWordsClearOfPaint",
-    "DocxTerminalInlinePictures"
+    "DocxTerminalInlinePictures",
+    "DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback"
   ],
   "docx-structural-metadata-wrappers": [
     "DocxStructuralMetadataWrappers",

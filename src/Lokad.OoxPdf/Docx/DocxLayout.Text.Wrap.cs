@@ -108,8 +108,12 @@ internal sealed partial class DocxLayoutEngine
     private static int FindInlineImageWrapBreak(
         (int[] Offsets, double[] PrefixSums) images, int start, int end,
         double available, double nextAvailable, Func<int, double> measurePrefix,
-        CancellationToken token = default, bool includeEnd = false)
+        CancellationToken token = default, bool includeEnd = false, DocxParagraph? sourceParagraph = null)
     {
+        // A new terminal-object row needs an owned occupied height. Fitting
+        // declared rows use ordered measurement; the unmeasured fixed-line
+        // fallback cannot grow that frame and retains its existing placement.
+        if (includeEnd && sourceParagraph is not null && DocxPlainBodyFrame.HasFixedLineFlow(sourceParagraph)) return -1;
         int first = FindInlineImageBoundary(images.Offsets, start);
         for (int index = first; index < images.Offsets.Length; index++)
         {
@@ -146,7 +150,7 @@ internal sealed partial class DocxLayoutEngine
         int? dynamicFieldPageNumber,
         CancellationToken cancellationToken = default,
         IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null,
-        int sourceStartOffset = 0)
+        int sourceStartOffset = 0, DocxParagraph? sourceParagraph = null)
     {
         string text = string.Concat(spans.Select(span => span.Text));
         int lineIndex = 0;
@@ -156,7 +160,7 @@ internal sealed partial class DocxLayoutEngine
             int breakIndex = text.IndexOf('\n', segmentStart);
             int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
             bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken, inlineImageWidths))
+            foreach (DocxWrappedTextLine line in WrapWords(text, spans, segmentStart, segmentLength, index => index == 0 && lineIndex == 0 ? firstLineMaxWidth : continuationLineMaxWidth, fontSize, textMeasurer, tabStops, defaultTabStopPoints, allowOverwideTokenBreaks, dynamicFieldPageNumber, cancellationToken, inlineImageWidths, sourceParagraph))
             {
                 yielded = true;
                 yield return line;
@@ -196,7 +200,7 @@ internal sealed partial class DocxLayoutEngine
         bool allowOverwideTokenBreaks,
         int? dynamicFieldPageNumber,
         CancellationToken cancellationToken,
-        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null)
+        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null)
     {
         // slice widths are memoized by text coordinates for this segment so
         // repeated measures of the same slice (whole-token checks, preferred/overwide
@@ -376,7 +380,8 @@ internal sealed partial class DocxLayoutEngine
             while (measureImagePrefix is not null)
             {
                 int imageBreakOffset = FindInlineImageWrapBreak(imageWrapIndex, lineStart, lineStart + lineLength,
-                    maxWidth(lineIndex), maxWidth(lineIndex + 1), measureImagePrefix, cancellationToken, includeEnd: true);
+                    maxWidth(lineIndex), maxWidth(lineIndex + 1), measureImagePrefix, cancellationToken, includeEnd: true,
+                    sourceParagraph: sourceParagraph);
                 if (imageBreakOffset <= lineStart) break;
                 yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
                 lineIndex++;
