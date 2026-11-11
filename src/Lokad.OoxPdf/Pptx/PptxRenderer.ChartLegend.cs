@@ -206,15 +206,25 @@ internal sealed partial class PptxRenderer
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         await textMeasurer.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         ChartLegendBox legendBox = preparedBox ?? ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
+        int admittedEntryCount = legendBox.EntryFrames?.Count ?? entries.Count;
         if (!legendBox.Horizontal && !layout.Layout.HasGeometryValues)
         {
-            // Automatic side clips contain the measured font box at both end
-            // baselines. An authored viewport keeps its explicit clipping.
+            // Nominal font boxes allocate rows; actual resolved glyphs can
+            // extend beyond them. Their ink shares the automatic viewport.
             var line = await textMeasurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
-            double bottom = Math.Min(legendBox.ClipY, Math.Max(frame.Y,
-                legendBox.FirstY - (entries.Count - 1) * legendBox.LineHeight - line.Descent));
-            double top = Math.Max(legendBox.ClipY + legendBox.ClipHeight,
-                Math.Min(frame.Y + frame.Height, legendBox.FirstY + line.Ascent));
+            double bottom = legendBox.ClipY, top = bottom + legendBox.ClipHeight;
+            for (int i = 0; i < admittedEntryCount; i++)
+            {
+                double baseline = legendBox.EntryFrames is { } frames ? frames[i].Y : legendBox.FirstY - i * legendBox.LineHeight;
+                double textBottom = baseline - line.Descent, textTop = baseline + line.Ascent;
+                if (await textMeasurer.TryMeasureInkBoundsAsync(entries[i].Name, style).ConfigureAwait(false) is { } ink)
+                {
+                    textBottom = Math.Min(textBottom, baseline + ink.Bottom);
+                    textTop = Math.Max(textTop, baseline + ink.Top);
+                }
+                bottom = Math.Min(bottom, Math.Max(frame.Y, textBottom));
+                top = Math.Max(top, Math.Min(frame.Y + frame.Height, textTop));
+            }
             legendBox = legendBox with { ClipY = bottom, ClipHeight = top - bottom,
                 ContentAscent = line.Ascent, ContentDescent = line.Descent };
         }
@@ -224,7 +234,6 @@ internal sealed partial class PptxRenderer
         bool emitBottomLegend = layout.PositionKind == PptxSceneChartLegendPosition.Bottom;
         double emitTextGap = ComputeHorizontalLegendTextGap(style.FontSize, emitBottomLegend);
         double emitEntryPadding = ResolveHorizontalLegendInterEntryGap(style.FontSize, entries, style, textMeasurer, emitBottomLegend);
-        int admittedEntryCount = legendBox.EntryFrames?.Count ?? entries.Count;
         var runs = new List<TextRun>(admittedEntryCount);
         for (int i = 0; i < admittedEntryCount; i++)
         {

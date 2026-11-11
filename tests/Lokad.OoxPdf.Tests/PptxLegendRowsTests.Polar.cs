@@ -15,30 +15,64 @@ internal static partial class PptxLegendRowsTests
         {
             var page = Render(576, size, count, overlay: false, kind: kind,
                 categoryLegend: kind != "line", legendPosition: position).Page;
-            int names = 0, measuredGlyphs = 0;
-            foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
-            foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(
-                new PdfPage(page.Width, page.Height, block, page.Fonts), usePageCoordinates: false,
-                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)))
-            {
-                names++;
-                var font = show.Font.Font;
-                foreach (char character in show.Text)
-                {
-                    if (char.IsWhiteSpace(character)) continue;
-                    TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(character), out var ink),
-                        "The pinned portable font exposes actual glyph ink.");
-                    double scale = show.Size / font.UnitsPerEm;
-                    double bottom = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
-                    double top = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
-                    measuredGlyphs++;
-                    TestAssert.True(bottom >= clip.Y - .01d && top <= clip.Y + clip.Height + .01d,
-                        $"A complete side-legend name cannot lose its glyph ink: {kind}/{position}/{size}/{count}/{show.Text}/{character}.");
-                }
-            }
-            TestAssert.Equal(count, names);
-            TestAssert.True(measuredGlyphs > count, "Every legend's source glyphs are checked independently of extraction.");
+            AssertSideLegendGlyphInk(page, count, $"{kind}/{position}/{size}/{count}");
         }
+    }
+
+    public static void PptxSideLegendClipsRetainInkBeyondNominalFontMetrics()
+    {
+        foreach (bool math in new[] { false, true })
+        foreach (string kind in new[] { "pie", "doughnut" })
+        foreach (string position in new[] { "l", "r" })
+        foreach (int size in new[] { 12, 18 })
+        foreach (int count in new[] { 2, 6 })
+        {
+            string[] labels = Enumerable.Range(1, count).Select(i => $"Category {i}").ToArray();
+            labels[^1] = math ? "Flow ⇶" : "Flow ⨜";
+            var page = Render(576, size, count, overlay: false, kind: kind,
+                categoryLegend: true, categoryNames: labels, legendPosition: position,
+                resolver: new PortableRenderingTests.PinnedResolver(mathFont: math)).Page;
+            TestAssert.True(AssertSideLegendGlyphInk(page, count, $"{kind}/{position}/{size}/{count}/math:{math}") > 0,
+                "These pinned font outlines extend beyond their nominal metric box.");
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal));
+            TestAssert.True(shows.Select(show => show.Text).SequenceEqual(labels),
+                "All source labels, including the tall symbol, survive in order.");
+        }
+    }
+
+    private static int AssertSideLegendGlyphInk(PdfPage page, int count, string context)
+    {
+        int names = 0, measuredGlyphs = 0, beyondNominal = 0;
+        foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
+        foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(
+            new PdfPage(page.Width, page.Height, block, page.Fonts), usePageCoordinates: false,
+            fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)))
+        {
+            names++;
+            var font = show.Font.Font;
+            bool typographic = (font.Os2.SelectionFlags & 0x80) != 0;
+            double ascent = typographic ? font.Os2.TypographicAscender : font.Os2.WindowsAscender;
+            double descent = typographic ? -(double)font.Os2.TypographicDescender : font.Os2.WindowsDescender;
+            foreach (char character in show.Text)
+            {
+                if (char.IsWhiteSpace(character)) continue;
+                ushort glyph = font.MapCodePoint(character);
+                TestAssert.True(glyph != 0, "The pinned font contains the source character.");
+                TestAssert.True(font.TryGetGlyphBounds(glyph, out var ink),
+                    "The pinned portable font exposes actual source glyph ink.");
+                if (ink.YMin < -descent || ink.YMax > ascent) beyondNominal++;
+                double scale = show.Size / font.UnitsPerEm;
+                double bottom = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
+                double top = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
+                measuredGlyphs++;
+                TestAssert.True(bottom >= clip.Y - .01d && top <= clip.Y + clip.Height + .01d,
+                    $"A complete side-legend name cannot lose its glyph ink: {context}/{show.Text}/{character}.");
+            }
+        }
+        TestAssert.Equal(count, names);
+        TestAssert.True(measuredGlyphs > count, "Every legend's source glyphs are checked independently of extraction.");
+        return beyondNominal;
     }
 
     public static void PptxAuthoredSideLegendRetainsItsExplicitViewport()

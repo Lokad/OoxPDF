@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -149,7 +150,7 @@ internal static partial class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b")
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null)
     {
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
             <c:ser><c:idx val="{{i - 1}}"/><c:order val="{{i - 1}}"/><c:tx><c:v>North West Region {{i}}</c:v></c:tx>
@@ -192,7 +193,7 @@ internal static partial class PptxLegendRowsTests
         using var package = OoxPackage.Open(stream, default);
         var document = new PptxReader().Read(package, default);
         var diagnostics = new List<OoxPdfDiagnostic>();
-        var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+        var page = new PptxRenderer(resolver ?? new PortableRenderingTests.PinnedResolver())
             .RenderPagesAsync(document, package, diagnostics.Add, default).ToBlockingEnumerable().Single();
         return (page, diagnostics);
     }
