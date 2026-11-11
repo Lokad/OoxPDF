@@ -1363,6 +1363,25 @@ internal sealed partial class DocxRenderer
                             continue;
                         }
 
+                        if (paragraph.InlineContent is { } pictureItems &&
+                            targetItemIndex is int pictureIndex && pictureIndex >= 0 && pictureIndex < pictureItems.Count &&
+                            pictureItems[pictureIndex] is DocxInlinePicture targetPicture)
+                        {
+                            // Legacy text wrapping still owns ordinary placement.
+                            // Borrow its actual picture, including container transforms,
+                            // rather than substituting a following prose segment.
+                            foreach (var (image, _) in EnumeratePlacedPictureFrames(page, pageNumber,
+                                EnumerateStaticLayoutItems(page, pageMarkupContext), pageMarkupContext,
+                                sourceImage => ReferenceEquals(sourceImage, targetPicture.Image), cancellationToken))
+                            {
+                                destinations.Add(bookmark.Name, new PdfLinkDestination(pageIndex,
+                                    image.X - viewportContextPoints * textEmissionFontScale,
+                                    image.Y + image.Height, Zoom: null));
+                                break;
+                            }
+                            continue;
+                        }
+
                         if (paragraph.InlineContent is { } sourceItems &&
                             targetItemIndex is int itemIndex && itemIndex >= 0 && itemIndex < sourceItems.Count &&
                             sourceItems[itemIndex] is DocxInlineEquation sourceEquation)

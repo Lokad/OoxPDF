@@ -29,9 +29,9 @@ internal static partial class DocxInlineCompositionTests
 
     public static void DocxPictureBookmarksWithoutMathUseTheSamePlacedSource()
     {
-        // Ordinary body/cell picture-plus-prose still uses legacy placement.
-        // Static stories admit this source to the shared measured path.
-        foreach (string container in new[] { "header", "footer" })
+        // Ordinary placement and ordered static stories publish different
+        // records, but both destinations must reveal their actual picture.
+        foreach (string container in new[] { "body", "cell", "header", "footer" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (bool wrapped in new[] { false, true })
         {
@@ -99,17 +99,20 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (string container in new[] { "body", "cell" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool includeMath in new[] { false, true })
         {
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var control = renderer.RenderPagesAsync(ReadPictureBookmark(container, mode, 18, false), null, default)
+            var control = renderer.RenderPagesAsync(ReadPictureBookmark(container, mode, 18, false,
+                includeMath: includeMath), null, default)
                 .ToBlockingEnumerable().ToArray();
             var expected = control.SelectMany(page => page.Annotations).Single(a => a.Destination is not null).Destination!.Value;
             string expectedText = string.Concat(control.Select(DocxPageFootnoteNumberingTests.DecodeText));
             foreach (bool hidden in new[] { false, true })
             {
-                var pages = renderer.RenderPagesAsync(ReadPictureBookmark(container, mode, 18, false, gap: true, hidden), null, default)
+                var pages = renderer.RenderPagesAsync(ReadPictureBookmark(container, mode, 18, false, gap: true, hidden,
+                    includeMath: includeMath), null, default)
                     .ToBlockingEnumerable().ToArray();
                 var actual = pages.SelectMany(page => page.Annotations).Single(a => a.Destination is not null).Destination!.Value;
                 TestAssert.Equal(control.Length, pages.Length);

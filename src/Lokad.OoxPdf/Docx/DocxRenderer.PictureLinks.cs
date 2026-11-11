@@ -23,7 +23,7 @@ internal sealed partial class DocxRenderer
         if (resources.Count == 0) yield break;
         var pageClip = new PdfRectangle(0d, 0d, page.Width, page.Height);
         HashSet<PdfImageXObject>? painted = null;
-        foreach (var (image, clip) in EnumerateImages())
+        foreach (var (image, clip) in EnumeratePlacedPictureFrames(page, pageNumber, staticItems, context, select, token))
         {
             token.ThrowIfCancellationRequested();
             if (image.Image.RotationDegrees != 0d ||
@@ -38,32 +38,44 @@ internal sealed partial class DocxRenderer
                 yield return image;
         }
 
-        IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> EnumerateImages()
+        static bool ContainsFrame(PdfRectangle outer, PdfRectangle frame) =>
+            double.IsFinite(outer.X) && double.IsFinite(outer.Y) && double.IsFinite(outer.Width) && double.IsFinite(outer.Height) &&
+            double.IsFinite(frame.X) && double.IsFinite(frame.Y) && double.IsFinite(frame.Width) && double.IsFinite(frame.Height) &&
+            frame.Width > 0d && frame.Height > 0d && outer.Width > 0d && outer.Height > 0d &&
+            frame.X >= outer.X - 1e-6 && frame.Y >= outer.Y - 1e-6 &&
+            frame.X + frame.Width <= outer.X + outer.Width + 1e-6 && frame.Y + frame.Height <= outer.Y + outer.Height + 1e-6;
+    }
+
+    // Source destinations and URI links borrow the same physical placement.
+    // URI links additionally require decoded resources and complete visible clips.
+    private static IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> EnumeratePlacedPictureFrames(
+        DocxLayoutPage page, int pageNumber, IEnumerable<DocxLayoutItem> staticItems,
+        DocxMarkupContext context, Func<DocxInlineImage, bool> select, CancellationToken token)
+    {
+        var pageClip = new PdfRectangle(0d, 0d, page.Width, page.Height);
+        foreach (var item in staticItems.Concat(page.Items))
         {
-            foreach (var item in staticItems.Concat(page.Items))
+            token.ThrowIfCancellationRequested();
+            if (item is DocxInlineImageLayout image && select(image.Image))
+                yield return (PlaceInlineImageForPaint(image, context), pageClip);
+            else if (item is DocxTableRowLayout row)
+                foreach (var child in CellImages(row, pageClip)) yield return child;
+        }
+        foreach (var story in page.PlacedRelatedStories)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!story.StoryLayout.Story.IsNormalStoryType ||
+                story.StoryLayout.Story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)) continue;
+            var (mapped, map, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
+            foreach (var image in story.InlineImages)
             {
                 token.ThrowIfCancellationRequested();
-                if (item is DocxInlineImageLayout image && select(image.Image))
-                    yield return (PlaceInlineImageForPaint(image, context), pageClip);
-                else if (item is DocxTableRowLayout row)
-                    foreach (var child in CellImages(row, pageClip)) yield return child;
+                if (select(image.Image))
+                    yield return (PlaceInlineImageForPaint(mapped ? map.PrecompensateImage(image, pageNumber) : image, context), clip);
             }
-            foreach (var story in page.PlacedRelatedStories)
-            {
-                token.ThrowIfCancellationRequested();
-                if (!story.StoryLayout.Story.IsNormalStoryType ||
-                    story.StoryLayout.Story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)) continue;
-                var (mapped, map, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
-                foreach (var image in story.InlineImages)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (select(image.Image))
-                        yield return (PlaceInlineImageForPaint(mapped ? map.PrecompensateImage(image, pageNumber) : image, context), clip);
-                }
-                // Painting keeps note tables in their placed legacy frame.
-                foreach (var row in story.TableRows)
-                    foreach (var image in CellImages(row, tableClip)) yield return image;
-            }
+            // Painting keeps note tables in their placed legacy frame.
+            foreach (var row in story.TableRows)
+                foreach (var image in CellImages(row, tableClip)) yield return image;
         }
 
         IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> CellImages(DocxTableRowLayout row, PdfRectangle parent)
@@ -96,11 +108,5 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        static bool ContainsFrame(PdfRectangle outer, PdfRectangle frame) =>
-            double.IsFinite(outer.X) && double.IsFinite(outer.Y) && double.IsFinite(outer.Width) && double.IsFinite(outer.Height) &&
-            double.IsFinite(frame.X) && double.IsFinite(frame.Y) && double.IsFinite(frame.Width) && double.IsFinite(frame.Height) &&
-            frame.Width > 0d && frame.Height > 0d && outer.Width > 0d && outer.Height > 0d &&
-            frame.X >= outer.X - 1e-6 && frame.Y >= outer.Y - 1e-6 &&
-            frame.X + frame.Width <= outer.X + outer.Width + 1e-6 && frame.Y + frame.Height <= outer.Y + outer.Height + 1e-6;
     }
 }
