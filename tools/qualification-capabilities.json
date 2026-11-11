@@ -18410,7 +18410,7 @@
     "DocxRevisedInlineBoxesRequireTheirActualVisibleOwners",
     "PortableRenderingRevisedInlineBoxesKeepVisibleSourceContent",
     "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
-    "DocxInlineCompositionRunPropertyChangesRetainRevisionFormattingOwners",
+    "DocxInlineCompositionRunFormattingOwnershipKeepsNonRunFallbacks",
     "DocxInlineCompositionListLabelsRetainParagraphRevisionOwners",
     "DocxDeletedParagraphMarksRequireConsumedRevisionOwners",
     "DocxInlineCompositionEquationRevisionsRequireActualSourceOwners",
