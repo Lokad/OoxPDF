@@ -9,13 +9,17 @@ table frame for complete rows on every page. A long table previously let picture
 cover caption glyph bottoms although text-count and clipping checks passed. Native
 ink/raster checks now retain 216 body-row paints, twelve mixed headers and all
 17,992 measured glyphs; eight causal outcomes have no picture/text intersections.
-The new portable regression fails on the parent. Focused .NET 11 checks pass95 on
-Windows; Ubuntu passes82 with13 font skips (two indirect guards reviewed and
+The new portable regression fails on the parent. Focused .NET 11 checks pass 95 on
+Windows; Ubuntu passes 82 with 13 font skips (two indirect guards reviewed and
 confirmed after the initial strict skip gate). Sixteen portfolio PDFs/diagnostics
 and the authored six-name legend remain byte-identical; their two PPTX passes and
 fourteen DOCX image failures are retained. No new Office/view parity is claimed.
 The frozen library SHA-256 is
 `DE83321FD2123FCB232056F935194EF84832D24C9C60443083510447D13867D2`.
+Broader CI43041456284 on `03ef23fcc` is green: Windows 4,799 passes/19 skips,
+Ubuntu 2,288/130, 69 .NET 10 checks per host, four package consumers and ten package
+preflight checks per host. Production/test source matches the frozen slice;
+CI builds have their own revision metadata. This does not complete the roadmap.
 The prepared package documented below predates this fix; it is retained as parent
 evidence, pending the next coherent package qualification. Publication stays deferred.
 
