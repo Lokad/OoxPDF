@@ -667,7 +667,10 @@ internal sealed partial class DocxReader
 
             if (placeholder is null &&
                 fieldInstruction is null &&
-                run.Elements().Any(child => IsInlineReferenceElement(child) || child.Annotation<AutomaticNoteStoryMarker>() is not null))
+                // Nontext children delimit the text before and after their
+                // source position, even when they share one formatted run.
+                run.Elements().Any(child => IsInlineReferenceElement(child) || child.Annotation<AutomaticNoteStoryMarker>() is not null ||
+                    child.Name == WordprocessingNamespace + "drawing" || child.Name == WordprocessingNamespace + "pict"))
             {
                 AddOrderedRunTextAndReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, effectiveRevisions);
             }

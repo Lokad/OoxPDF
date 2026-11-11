@@ -753,7 +753,7 @@ internal sealed partial class DocxLayoutEngine
             .ThenBy(item => item.Image.SourceTextOffsetInRun)
             .ThenBy(item => item.Image.SourceOrderInRun))
         {
-            int position = ResolveInlineImageCharOffset(paragraph, textSpans, image);
+            int position = ResolveInlineImageCharOffset(textSpans, image);
             // RV05: image-driven breaking can start a line exactly at the image offset;
             // that line wins over the line ending there, so the plan agrees with wrapping.
             int lineStart = 0;

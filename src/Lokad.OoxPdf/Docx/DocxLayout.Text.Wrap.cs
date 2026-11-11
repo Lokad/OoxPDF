@@ -17,16 +17,21 @@ internal sealed partial class DocxLayoutEngine
     // RV05: image-driven breaking. Character offset of an affined image in the concatenated
     // paragraph text, shared by wrapping and mid-line placement.
     private static int ResolveInlineImageCharOffset(
-        DocxParagraph paragraph,
         IReadOnlyList<DocxTextSpan> textSpans,
         DocxInlineImage image)
     {
         int position = 0;
         foreach (DocxTextSpan span in textSpans)
         {
-            if (span.SourceTextRunIndex >= 0 && span.SourceTextRunIndex < paragraph.Runs.Count && paragraph.Runs[span.SourceTextRunIndex].SourceRunIndex < image.SourceRunIndex)
+            // Span identities are source run numbers, not indexes into the
+            // filtered text-run collection. A drawing can also split one run.
+            if (span.SourceTextRunIndex < image.SourceRunIndex)
             {
                 position += span.Text.Length;
+            }
+            else if (span.SourceTextRunIndex == image.SourceRunIndex)
+            {
+                position += Math.Clamp(image.SourceTextOffsetInRun - span.SourceTextOffsetInRun, 0, span.Text.Length);
             }
         }
 
@@ -45,7 +50,7 @@ internal sealed partial class DocxLayoutEngine
         {
             if (paragraph.Images[i].SourceRunIndex >= 0)
             {
-                widths.Add((ResolveInlineImageCharOffset(paragraph, textSpans, paragraph.Images[i]), paragraph.Images[i].WidthPoints * imageScale));
+                widths.Add((ResolveInlineImageCharOffset(textSpans, paragraph.Images[i]), paragraph.Images[i].WidthPoints * imageScale));
             }
         }
 
