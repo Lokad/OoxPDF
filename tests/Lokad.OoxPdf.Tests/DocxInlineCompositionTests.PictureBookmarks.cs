@@ -40,7 +40,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(painted.Index, destination.PageIndex);
             TestAssert.True(Math.Abs(frame.X - destination.Left!.Value - 3d * scale) < .001d &&
                 destination.Top!.Value >= frame.Top - .001d,
-                "The target uses its picture's X and occupied row top in every container: " + container + "/" + mode + "/" + wrapped);
+                $"The target uses its picture's X and occupied row top: {container}/{mode}/{wrapped}, scale {scale}, picture {frame}, destination {destination}.");
             for (int page = 0; page < pages.Length; page++)
                 TestAssert.Equal(control[page].Content, pages[page].Content);
             foreach (var link in control.SelectMany(page => page.Annotations))
