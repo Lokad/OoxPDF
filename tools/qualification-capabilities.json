@@ -177,6 +177,7 @@
     "DocxSharedFootnotePagesKeepBodyAboveNotes"
   ],
   "docx-contained-cell-baselines": [
+    "DocxAlignedFooterCellsKeepCaptionInkAndPageCounters",
       "DocxStaticBoxTables",
       "DocxFixedStaticFrames",
       "PortableRenderingContainedTableBaselines",

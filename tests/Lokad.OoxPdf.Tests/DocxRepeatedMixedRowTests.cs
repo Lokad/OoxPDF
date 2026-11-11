@@ -127,6 +127,37 @@ internal static class DocxRepeatedMixedRowTests
         }
     }
 
+    public static void DocxAlignedFooterCellsKeepCaptionInkAndPageCounters()
+    {
+        const string caption = "Public synthetic composition portfolio";
+        foreach (bool mathFont in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string alignment in new[] { "top", "center", "bottom" })
+        {
+            var source = DocxInlineCompositionTests.ReadMutation("Composition/composed-static-cell-report", mode,
+                false, false, (xml, w, _) =>
+                {
+                    var cell = xml.Descendants(w + "tc").Single();
+                    cell.Element(w + "tcPr")!.Add(new XElement(w + "vAlign", new XAttribute(w + "val", alignment)));
+                    var row = cell.Parent!;
+                    var properties = row.Element(w + "trPr");
+                    if (properties is null) { properties = new XElement(w + "trPr"); row.AddFirst(properties); }
+                    properties.Add(new XElement(w + "trHeight", new XAttribute(w + "val", "1440"),
+                        new XAttribute(w + "hRule", "atLeast")));
+                }, partOverride: "word/footer1.xml");
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.True(pages.Length >= 2, "The composed report retains its body and continuous note pages.");
+            for (int index = 0; index < pages.Length; index++)
+                DocxInlineCompositionTests.AssertSourceLabelsPaint(pages[index], mode,
+                    [caption, $"Page {index + 1} of {pages.Length}"], $"footer/{mathFont}/{mode}/{alignment}/{index}");
+            TestAssert.True(pages.Length + 2 == pages.Sum(page => DocxInlineCompositionTests.ReadPictureBounds(page).Count()),
+                "Each footer picture repeats; the body and continuous note keep their own pictures.");
+        }
+    }
+
     private static DocxDocument ReadMixedTable(string fixture, OoxPdfDocxMarkupMode mode, string caption,
         Action<XElement, XNamespace> configure) =>
         DocxInlineCompositionTests.ReadMutation(fixture, mode, false, false, (xml, w, m) =>
