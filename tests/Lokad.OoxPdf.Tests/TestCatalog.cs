@@ -33,6 +33,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxEndnoteFinalSectionTests)),
         .. FromType("rendering-portable", typeof(DocxRegisteredSeparatorTests)),
         .. FromType("rendering-portable", typeof(DocxRepeatedTableHeaderTests)),
+        .. FromType("rendering-portable", typeof(DocxRepeatedMixedRowTests)),
         .. FromType("rendering-portable", typeof(DocxNestedCellEndTests)),
         .. FromType("rendering-portable", typeof(DocxReviewTableFrameTests)),
         .. FromType("rendering-portable", typeof(DocxCommentAnchorTests)),

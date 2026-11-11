@@ -240,6 +240,12 @@ internal static partial class DocxInlineCompositionTests
             mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                 : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         var page = renderer.RenderPagesAsync(source, diagnosticSink, default).ToBlockingEnumerable().Single();
+        return AssertSourceLabelsPaint(page, mode, expectedLabels, context);
+    }
+
+    internal static PdfPage AssertSourceLabelsPaint(PdfPage page, OoxPdfDocxMarkupMode mode,
+        IReadOnlyList<string> expectedLabels, string context)
+    {
         const string number = @"[-+\d.eE]+";
         // These fixtures contain opaque pictures with separate inline advances.
         // A picture may not intersect label ink, regardless of paint order.
@@ -312,7 +318,7 @@ internal static partial class DocxInlineCompositionTests
         static double ReadNumber(Match match, string name) => double.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture);
     }
 
-    private static IEnumerable<(PdfRectangle Bounds, PdfRectangle Clip)> ReadPictureBounds(PdfPage page)
+    internal static IEnumerable<(PdfRectangle Bounds, PdfRectangle Clip)> ReadPictureBounds(PdfPage page)
     {
         foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
         {
