@@ -1360,8 +1360,8 @@ internal sealed partial class DocxLayoutEngine
                 int itemCountBeforeTable = currentItems.Count;
                 int currentTableIndex = tableIndex++;
                 bool tableActiveFrameHasContent = false;
-                bool projectsReviewTableFragments = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1 &&
-                    CanUsePrintedReviewTextTableFrame(bodyTable);
+                bool projectsReviewTableFrames = scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1;
+                bool projectsReviewTableFragments = projectsReviewTableFrames && CanUsePrintedReviewTextTableFrame(bodyTable);
                 // Row content/keep policies can change fragmentation, but cannot
                 // grant additional space beyond the containing printed body.
                 double CurrentTableFrameBottom() => CurrentParagraphFrameBottom();
@@ -1393,11 +1393,14 @@ internal sealed partial class DocxLayoutEngine
                         tableActiveFrameHasContent = false;
                     }
                     : FinishPage;
-                Action advanceTableBoundary = reviewFragmentScale < 1d && textMeasurer is not null
+                // Complete rows own the same printed frame on every page.
+                // Text-only fragment admission is a separate eligibility policy.
+                Action advanceTableBoundary = projectsReviewTableFrames && textMeasurer is not null
                     ? () =>
                     {
                         ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
-                            textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken, allowPageBoundaryFragments: true);
+                            textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
+                            allowPageBoundaryFragments: reviewFragmentScale < 1d);
                         advanceTableBoundaryCore();
                         itemCountBeforeTable = 0;
                     }
@@ -1447,7 +1450,7 @@ internal sealed partial class DocxLayoutEngine
                     resolveNoteFragments: noteAdmission is null ? null : (row, fragments) => noteAdmission.TryPlan(row, fragments,
                         NoteFrameBottom, cursorY, page.Height - page.MarginTop, cancellationToken));
                 if (scaleBaselineOffsetTransitions &&
-                    (completedPagesBeforeTable == pages.Count || reviewFragmentScale < 1d) && textMeasurer is not null)
+                    (completedPagesBeforeTable == pages.Count || projectsReviewTableFrames) && textMeasurer is not null)
                 {
                     double? tableBodyAnchor = ApplyReviewTableBaselineGeometry(currentItems, itemCountBeforeTable, precedingBodyBaselineInset,
                         textMeasurer, paragraphSpacingScale, ref cursorY, cancellationToken,
