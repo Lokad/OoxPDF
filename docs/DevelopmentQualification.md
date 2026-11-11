@@ -5,15 +5,16 @@ candidate.** The published [0.2.0 qualification](PreviewQualification.md) remain
 separate. Development targets .NET 10 and .NET 11.
 
 This snapshot pins production and harness
-`cc61edc5eb3032dd4cc26945c56e795c82650d7a`.
+`0f3432b66d3c6d7d464ed305454639ff06af7716`.
 The frozen .NET 11 library SHA-256 is
-`4130802FE3A9B26F66B7794DD62950DA8F574AF17C00B2AA939A2B82744BC8A9`.
+`664B6D282C064163CA59A6F0CEB9E3E1E86CD512BAE7541BFC371486A9B094F7`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
+| Pictures after soft breaks | Two/three supported soft breaks caused an opaque inline picture to cover part of the following word, although the whole word remained extractable. Picture attachment now reuses wrapped source starts and per-line source offsets, removing duplicate painted-length reconstruction. Four native controls retain all source words/pages with no following-word overpaint; the unchanged no-break PDF is identical. The screen binds 44 glyphs without clip cuts or unknown traces; paired crops confirm restored visible words. Portable checks cover pinned Sans/Math, both presets and separate/merged runs; the regression fails against the parent. No new-source Word/application-view geometry claim. |
 | Pictures inside text runs | Merging equally formatted text/picture/text runs moved PNG/SVG pictures about 35.6pt left and shifted preceding prose behind them by the picture advance. The reader now retains text child boundaries, and shared wrapping/placement uses recorded source run numbers and offsets. Both corrected merged-run PDFs exactly match their original controls. Two portable regressions cover pinned Sans/Math fonts, Final/Review, multiple drawings in one run and cancellation; both fail against the parent. The affected native screen measures 22 glyphs without cuts or unknown traces. No ordinary-layout migration or new layout layer. |
 | Ordered picture rotation | Shared placement publishes the measured line frame, restoring six authored quarter-turns lost beside mathematics in body/header/footer content. Eight controls bind 546 glyphs without cuts or unknown text traces. The global transformed-origin change is reverted: five existing source-pinned Word PDF comparisons exposed ordinary PNG/SVG regressions, including a previously passing anchored picture. All five corrected PDFs are byte-identical to their earlier qualified outputs, restoring one pass and retaining four failures. A portable regression checks the Word anchor within the original 0.001pt gate with two pinned fonts and both modes. Source-fit dimensions, source-centered rotation, clips and invalid-frame fallback remain. |
 | Actual legend ink (prior milestone) | Two caller-supplied pinned Math-font labels retain their full arrow glyphs beyond nominal font metrics. Clipping uses resolved glyph bounds at the existing PDF emission font size; known empty whitespace no longer aborts ink measurement. Text origins, programs, paths and colors stay exact. The two public-API outputs bind 126 filled glyphs with no legend cuts; one unchanged synthetic-bold title stroke per PDF remains unqualified. Bubble legend alignment survives inserting a nonpainting space. No exact new-source Office or application-view claim. |
@@ -29,13 +30,13 @@ Documentation and harness updates do not rebuild that library.
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
-| Focused checks | 200 exact Windows checks pass; Ubuntu passes 160 with 40 understood native-font skips in the same exact set. Thirty neighbor PDFs retain exact identities: 17 ordinary outputs including the portfolio/legend, five standalone picture controls and eight original exact-terminal boxed-table outcomes. Those eight retain complete characters/pages, 1,084 actual-program glyphs without measured cuts or unknown traces, and all original one-point origin gates (maximum error 0.489pt). Twenty-four transferred assets and two smoke PDFs match. One frozen production build/shared fixture view; no root build/local full-DOCX replay. Rejected ordinary-picture migration and global-origin trials remain recorded. |
+| Focused checks | 201 exact Windows checks pass; Ubuntu passes 161 with 40 understood native-font skips in the same exact set. Thirty neighbor PDFs retain exact identities: 17 ordinary outputs including the portfolio/legend, five standalone picture controls and eight original exact-terminal boxed-table outcomes. Those eight retain complete characters/pages, 1,084 actual-program glyphs without measured cuts or unknown traces, and all original one-point origin gates (maximum error 0.489pt). Twenty-four transferred assets and two smoke PDFs match. One frozen production build/shared fixture view; no root build/local full-DOCX replay. Rejected ordinary-picture migration and global-origin trials remain recorded. |
 
-The preceding rotation correction at `93b69a134` passed CI42955182191: 4,784 Windows/
-2,253 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
-package consumers. It corrected the note-ownership assertion exposed by the failed
-CI42949586292 and added portable placement/ownership to Ubuntu's existing selection.
-The current source-run batch awaits its own broader platform/framework/package
+The preceding source-run correction at `df46a64e2` passed CI42958139030: 4,786 Windows/
+2,255 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
+package consumers. The earlier rotation correction also passed its broader gate
+after repairing the note-ownership assertion exposed by CI42949586292.
+The current soft-break batch awaits its own broader platform/framework/package
 result; the preceding gate is historical. Earlier
 CI42929150677 failed the legacy static-image ownership control on both hosts;
 those reports remain retained, and the repair passed broader CI. Consult the
