@@ -247,10 +247,12 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         var items = paragraph.InlineContent;
         bool retainPreparedContent = allowStaticFallback;
-        // Ordinary static content shares declared line flow. Box hosts retain
-        // their automatic-flow fallback; intrinsic pictures are checked below.
-        bool ordinaryStaticContent = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0;
-        bool supportedOrdinaryFlow = ordinaryStaticContent
+        // Source-owned ordinary pictures use the same measured line contract
+        // in body, cells and static stories. Unpositioned legacy images and box
+        // hosts retain their fallback; intrinsic picture fit is checked below.
+        bool ordinaryPictures = paragraph.Images.Count != 0 && paragraph.Images.All(image => image.SourceRunIndex >= 0);
+        bool ordinaryContent = (allowStaticFallback || ordinaryPictures) && paragraph.InlineTextBoxes.Count == 0;
+        bool supportedOrdinaryFlow = ordinaryContent
             ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
             : DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
         if (paragraph.Equations.Count != 0)
@@ -268,7 +270,7 @@ internal sealed partial class DocxLayoutEngine
         else
         {
             if (!allowStaticFallback && paragraph.InlineTextBoxes.Count == 0 &&
-                !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
+                !ordinaryPictures && !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !supportedOrdinaryFlow ||
                 !DocxMathParagraphPolicy.HasSupportedOrderedAlignment(paragraph)) return false;
@@ -386,7 +388,7 @@ internal sealed partial class DocxLayoutEngine
                     if (!double.IsFinite(imageWidth) || !double.IsFinite(imageHeight) || imageWidth <= 0d || imageHeight <= 0d) return false;
                     // Fixed rows can wrap a picture contained above their text
                     // baseline. Overhanging pictures keep the existing fallback.
-                    if (ordinaryStaticContent && DocxPlainBodyFrame.HasFixedLineFlow(paragraph) && imageHeight > baselineInset) return false;
+                    if (ordinaryContent && DocxPlainBodyFrame.HasFixedLineFlow(paragraph) && imageHeight > baselineInset) return false;
                     measured.Add(new(item, imageWidth, imageHeight, imageHeight, []));
                     break;
                 case DocxInlineBox box:

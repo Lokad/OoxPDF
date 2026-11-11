@@ -5673,6 +5673,7 @@
   ],
   "docx-inline-picture-links": [
     "DocxInlinePictureLinks",
+    "DocxOrdinaryPictureBookmarksFollowTheirPlacedSourceLine",
     "PortableRenderingInlinePictureLinksFollowVisibleFrames",
     "DocxOrdinaryPictureBoxesRetainOrderedOwnersAndReuseChildren",
     "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
