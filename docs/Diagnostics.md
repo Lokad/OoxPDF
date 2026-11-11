@@ -66,7 +66,7 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_CHART`: a DrawingML chart payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
 - `DOCX_UNSUPPORTED_IMAGE_TRANSFORM`: picture rotation has unusable or unresolved source/line dimensions; unrotated paint is retained, including supported crop/flips.
 - `DOCX_UNSUPPORTED_IMAGE_CROP`: the picture source rectangle is malformed, non-finite or empty; the uncropped image is retained.
-- `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default final output when markup printing was not requested.
+- `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default Final output when markup printing was not requested. Final intentionally omits printed comments; this legacy ID does not indicate loss of their anchor prose or lack of AllMarkup comment support.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: unsupported field nesting, malformed markup, or an incomplete result with neither a usable cache nor a dynamic placeholder. A complete stored result may be empty.
 - `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
 - `DOCX_APPROXIMATED_EQUATION`: native Office Math was painted with approximate layout; one warning per affected part. This is distinct from omitted unsupported equations.

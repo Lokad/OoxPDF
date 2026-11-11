@@ -612,6 +612,8 @@ Supported within the following constraints:
 Approximate or restricted:
 
 - Supported native equations share ordered inline measurement with text/pictures.
+  Owned ordinary pictures and prose use the same automatic-flow cursor in body/cells,
+  keeping a leading picture's following word inside the continuation frame.
   Fitting terminal inline pictures wrap after prose even without following text.
   Adjacent drawings share their source boundary's combined width; groups that fit
   no available row retain the existing unfit fallback.
