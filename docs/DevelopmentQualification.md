@@ -4,7 +4,7 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-This snapshot pins production
+The retained local rendering baseline pins production
 `c1b59358b13c7c6b6492f8ab7cd20a7881bc1d2a`; harness
 `7196e18eb13656c6b6f233cfd98db470b0818786` repairs only a test fixture.
 The frozen .NET 11 library SHA-256 is
@@ -128,10 +128,10 @@ opaque, and all eight paired picture crops were reviewed. This qualifies these
 source pictures without changing general mask handling or visual thresholds.
 
 No new serious omission, clipping or wrong page was demonstrated in this bounded
-review. The broader release gate remains open; candidate packaging/readiness is
-still to be audited, and publication remains deferred. This batch reused the
-qualified production runtime and closed CI evidence; no new library build, full
-suite, package qualification or Office action was needed.
+review. The broader release gate remains open; candidate preparation is recorded
+below and publication remains deferred. That evidence reconciliation reused the
+qualified production runtime and closed CI evidence without a library build, full
+suite, package qualification or Office action.
 
 Candidate packaging must keep both framework assets and their portable symbols
 bound to one committed build. Transferring a single-framework frozen runtime does
@@ -140,6 +140,32 @@ or freeze both targets in an explicit worktree before packing. Verify every pack
 library/PDB identity, current caller documentation and its local links. Cross-platform
 package checks should consume the same selected package with each framework's
 expected library hash, preserving the original qualified runtime.
+
+## Prepared development package
+
+A local 0.3.0 development package and portable symbols are prepared in
+`artifacts/nuget/`, with checksums and a separate preparation record. Compilation
+is the retained CI43015189979/f852e431d build; caller documentation is the committed
+066064feb snapshot. Both framework DLLs and PDBs match those CI assets exactly.
+Packing used an explicit worktree with no library rebuild or root build. The
+packaged guide is a pinned development snapshot, not a final release declaration.
+
+The CI-built .NET 11 runtime reproduces all sixteen portfolio PDFs and diagnostics
+exactly; their native glyph/page/Word-reference evidence is reused. The separate
+authored-legend PDF also matches the six-name/54-glyph audit. Two isolated Linux
+consumers use the exact prepared Windows-runtime package, one per framework;
+conversion, cancellation, refusal, ownership and publication checks pass. Windows
+CI consumer coverage is reused by runtime payload identity; this is not a fresh
+Windows consumer run of the documentation-updated ZIP. All 75 local package links
+and current caller files were audited separately. Native/runtime build hashes and
+package ZIP hashes remain distinct.
+
+The superseded October 31 candidate and its symbols are preserved under their
+source revision. Historical checksum errors are repaired with the original text
+retained in an ignored audit; published 0.2.0 assets are unchanged. CI artifact
+retention now includes symbols. Remaining rendering, calibration and resource
+gaps stay open; candidate preparation does not complete the broader roadmap or
+authorize publication.
 
 ## Independent content checks and limits
 
