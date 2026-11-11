@@ -168,6 +168,14 @@ expected library hash, preserving the original qualified runtime.
 
 ## Development package payload
 
+The current development package and symbols are prepared directly in
+`artifacts/nuget/`, with checksums and a separate qualification record. The exact
+new package passes Linux consumers on both frameworks; Windows CI consumer
+coverage is reused through exact runtime-payload identity. All sixteen portfolio
+PDFs/diagnostics and two transfer smokes remain identical, retaining two PPTX
+passes/fourteen DOCX image failures. Package documentation is pinned to `ebe78af09`;
+75 local links are checked. Preparation does not authorize publication.
+
 CI43041456284 / `03ef23fcc` supplies the compiled .NET 10/.NET 11 libraries and
 portable symbols for the refreshed 0.3.0 development package. The Windows artifact
 digest is verified, and all 48 frozen runtime assets match their identities. Both
