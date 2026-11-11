@@ -1,9 +1,10 @@
 # Composed-document reliability checkpoint
 
-The **0.2.0** release is published on NuGet. Current source/runtime,
-Windows/Linux results, package identity and CI provenance are recorded in
-[PreviewQualification.md](PreviewQualification.md). See [release scope](PreviewRelease.md)
-and [caller migration](PublicApiChanges.md).
+The **0.2.0** release is published on NuGet; its frozen qualification is recorded in
+[PreviewQualification.md](PreviewQualification.md). Current development source,
+runtime and package evidence belongs to
+[0.3.0 development qualification](DevelopmentQualification.md).
+See [release scope](PreviewRelease.md) and [caller migration](PublicApiChanges.md).
 
 The fixed portfolio has nine sources and sixteen outcomes across public Final
 with preserved layout and AllMarkup with Word-compatible review margins. It
@@ -35,11 +36,12 @@ unresolved. Strict image results remain two PPTX passes and fourteen DOCX
 failures; token presence does not prove glyph ink, clipping or placement.
 This validates the development runtime, without promoting a release candidate.
 
-The 0.2.0 maintenance checkpoint is complete. Development toward 0.3.0 now
-prioritizes composed DOCX layout, generalized PPTX chart styles and effective
-properties, and calibrated Office image references alongside the retained PDF
-comparisons. Changes need source-backed witnesses and independent appearance
-and content checks. Historical thresholds and residuals above remain visible.
+The 0.2.0 maintenance checkpoint is complete. Development toward 0.3.0 prioritizes
+visible content, serious clipping/overlap and correct pagination in composed
+documents. Supported content needs independent paint checks alongside the image
+scores. Broader feature expansion and sub-point tuning are deferred.
+Office application-view calibration remains unfinished; unavailable references
+block dependent conclusions only. Historical thresholds and residuals remain.
 
 The 0.3.0 table-padding/inheritance controls restore Word's text origins and
 distinguish table/cell formatting from text-only or empty style declarations.

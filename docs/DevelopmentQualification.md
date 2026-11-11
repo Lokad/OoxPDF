@@ -21,12 +21,17 @@ reviewed after the original strict skip failure). Four fitting/unfit long-note
 boundary PDFs/diagnostics and all sixteen portfolio outputs remain exact; the two
 PPTX passes/fourteen DOCX image failures are unchanged. Corrected source XML order
 reproduces all prototype parent outputs; retained attempts document the repair.
-Two production builds include an unqualified trial before the physical-page fit
-guard. Only the final frozen .NET 11 library is qualified:
+Two local production builds include an unqualified trial before the physical-page
+fit guard. Source/native evidence uses the final frozen .NET 11 library:
 `D227C261BDD418F9EAA24DE8A965921B18B818E1567A705A7140416A173FCC5F`.
 Transfer verifies 24 assets and two exact smoke PDFs without a root build or suite
-replay. Broader qualification is pending. The prepared package below predates
-this repair and remains parent evidence; publication stays deferred.
+replay. CI43081400120 on `8a4d30380` is green: Windows 4,802 passes/19 skips,
+Ubuntu 2,291/130, 69 .NET 10 checks per host, four package consumers and ten package
+inspections per host. Two additional .NET 10 note/footer regressions pass on each
+host using the CI assembly. Their first attempts stopped at missing public inputs;
+five hash-pinned fixtures repaired that binding without an assembly rebuild.
+Original setup failures remain recorded. The prepared package contains this
+repair; publication and the broader roadmap remain open.
 
 The aligned-cell follow-up (`f5509b8ab`) keeps the shared printed frame for complete,
 measured centered/bottom-aligned cells. Four Review cases previously let pictures
@@ -41,7 +46,7 @@ The frozen .NET 11 library SHA-256 is
 `303EC4FF9B7E47E0EACBA376152B0C7AEC27E3C7DC65ED8001F54A0BFDA576F2`.
 CI43062947587 on `e7d591999` is green: Windows 4,800 passes/19 skips, Ubuntu
 2,289/130, 69 .NET 10 checks per host, four package consumers and ten package
-inspections per host. The prepared package below now uses that exact CI archive.
+inspections per host. That package is retained as parent evidence.
 
 Six footer-cell outcomes retain 21,483 bound glyphs, all 24 source PNG paints,
 repeated captions and the correct PAGE/NUMPAGES values without measured cuts or
@@ -50,8 +55,8 @@ author footer hyperlinks. The new portable check passes both hosts and the paren
 so no additional footer defect is claimed. One harness-only build reuses the same
 library; two test API compile mistakes and their failed attempts are retained.
 Joined focused coverage is 92 Windows passes and 75 Ubuntu passes/17 declared
-skips, without replaying the preceding 91 checks. This test addition follows the
-broader CI run; no second full CI or new library qualification is claimed.
+skips, without replaying the preceding 91 checks. Those focused checks followed
+CI43062947587; the current broader CI above also includes the footer regression.
 
 The preceding rendering slice (`044032aaf`) publishes the existing validated Review
 table frame for complete rows on every page. A long table previously let pictures
@@ -215,30 +220,30 @@ library/PDB identity, current caller documentation and its local links. Cross-pl
 package checks should consume the same selected package with each framework's
 expected library hash, preserving the original qualified runtime.
 
-## Prepared parent package payload
+## Prepared development package payload
 
-The preceding qualified development package and symbols are prepared directly in
-`artifacts/nuget/`, with checksums and a separate qualification record. The exact
-same package passes Windows and Linux consumers on both frameworks. Windows CI
-consumed these archive bytes; its consumer results are reused. Both Linux checks
-consume that Windows package. There is no repack or library/root rebuild.
+The development package and symbols are prepared directly in `artifacts/nuget/`,
+with checksums and a separate qualification record. CI43081400120 / `8a4d30380`
+supplies both framework libraries, portable symbols and the original package ZIP.
+Windows CI consumed those exact archive bytes; its consumer evidence is reused.
+Both Linux framework checks consume the same Windows package. No repack or
+library/root rebuild was needed for preparation.
 
-CI43062947587 / `e7d591999` supplies the .NET 10/.NET 11 libraries, portable symbols
-and package. Its documentation remains the immutable CI snapshot; only later
-development qualification notes differ in the current source. All caller/API
-documents match, and 75 local links are checked. Status notes do not cause a repack.
-The Windows artifact
-digest is verified, and all 48 frozen runtime assets match their identities. Both
-framework package entries match those DLL/PDB bytes. Assembly/file versions are
-0.3.0.0; informational versions identify the same committed build.
+The Windows artifact digest and all 48 frozen runtime assets are verified. Both
+framework package entries match those DLL/PDB bytes; assembly/file versions are
+0.3.0.0 and informational versions identify the same committed build. The package
+SHA-256 is `136B0FBCD56ECAA45A1240DF50394CD15D0DD6DD29F848DF77605FE5E68E2B78`.
+All 75 packaged local links are checked. Documentation retains its immutable CI
+snapshot; later qualification/priority notes in this document and
+CompositionCheckpoint do not cause another repack. Caller/API documents match.
 
-The existing source-runtime portfolio/native evidence remains qualified; its
-sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures. Production/build
-inputs match the CI package, and two CI-runtime identity smokes reproduce the
-corrected deferred cell and six-name legend PDFs. No full portfolio or test-suite
-replay is claimed for this metadata transfer. The preparation record keeps the
-rendering and package runtime identities separate. The previous 03ef23fcc and
-f852e431d packages remain parent evidence; published 0.2.0 is protected.
+The source-runtime portfolio/native evidence remains separate from the CI build
+metadata: sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures.
+Production/build inputs match, and two CI-runtime identity smokes reproduce the
+corrected note table and six-name legend PDFs. No full portfolio or suite replay
+is claimed for that transfer. Additional .NET 10 regressions cover the note/footer
+frames on both hosts. The previous e7d591999 package is preserved as parent evidence,
+alongside earlier 03ef23fcc/f852e431 assets; published 0.2.0 is protected.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover
