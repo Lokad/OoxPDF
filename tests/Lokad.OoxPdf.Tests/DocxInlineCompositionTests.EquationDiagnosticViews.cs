@@ -19,9 +19,10 @@ internal static partial class DocxInlineCompositionTests
             var source = ReadMutation("CompositionProbes/math-note-content-" + kind + "-inline", mode, false, false,
                 (xml, w, m) =>
                 {
+                    int revisionId = 951;
                     foreach (var equation in xml.Descendants(m + "oMath").ToArray())
                     {
-                        var wrapper = new XElement(w + (deleted ? "del" : "ins"), new XAttribute(w + "id", "951"),
+                        var wrapper = new XElement(w + (deleted ? "del" : "ins"), new XAttribute(w + "id", revisionId++),
                             new XAttribute(w + "author", "Public Reviewer"));
                         equation.AddBeforeSelf(wrapper); equation.Remove(); wrapper.Add(equation);
                     }
