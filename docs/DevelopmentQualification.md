@@ -8,7 +8,7 @@ This snapshot pins production
 `24ac168a6ed3fe94135c33ea0bac7fcd7ad66016` and the same harness revision.
 The frozen .NET 11 library SHA-256 is
 `9AB5C2D619131EA71043E586F8E01F59D9F89A5DDC2C5C376F0EFA673F359582`.
-Documentation and harness updates do not rebuild that library.
+Documentation-only updates reuse that frozen library.
 
 ## Verified outcomes
 
@@ -16,7 +16,7 @@ Documentation and harness updates do not rebuild that library.
 |---|---|
 | Contained fixed-line pictures | Four fitting exact16 picture/prose outcomes hid four letters of After despite complete PDF operations. Captured ordinary rows now reuse shared contained-picture wrapping with the container's physical baseline, preserving fixed advance. All four words and authored picture dimensions are restored; six required outcomes retain 30 glyphs without measured cuts or unknown traces. Both first-frame and oversized fallback PDFs remain identical. The rendered regression fails against the parent. Existing independent exact-frame Word gates passed unchanged; new-source Word geometry remains unqualified. |
 | Minimum-spaced pictures | Changing only automatic spacing to atLeast16/32 left a partial A and hid the other four letters of After in four cell/preset outcomes. The reader now captures ordinary picture source items through the existing publication helper; captured ordinary content shares automatic/minimum measurement. All four words and authored 240x18pt pictures are restored, with all source color bands and 30 glyphs clear of measured clips. Automatic and exact-height control PDFs remain identical. Portable coverage checks two fonts, body/cells, both presets, split runs, declared minimum frames and cancellation. Reconstructed minimum frames keep their qualified fallback; math/box/exact eligibility remains distinct. Two regressions fail against the parent. Exact new-source Word geometry is unqualified. |
-| Leading pictures and following words | Two narrow-first-line cell controls clipped four letters of After despite complete source operations. Owned automatic-flow pictures and prose now share the existing ordered cursor; the word and full-size picture move into the continuation frame. All six causal outcomes retain the word, complete picture bounds and source colors; 30 actual-program glyphs have no clip cuts or unknowns, and the unindented PDF stays exact. Picture paint height stays separate from occupied descent. Three pinned Word controls preserve the original 0.1pt dimension/0.75pt baseline gates. Shared width-roundoff handling also removes an unnecessary cell line without changing the original hhea/image-baseline checks. Fixed/minimum, unowned and unfit fallbacks remain. No exact new-source Word/view or arbitrary overpaint claim. |
+| Leading pictures and following words | Two narrow-first-line cell controls clipped four letters of After despite complete source operations. Owned automatic-flow pictures and prose now share the existing ordered cursor; the word and full-size picture move into the continuation frame. All six causal outcomes retain the word, complete picture bounds and source colors; 30 actual-program glyphs have no clip cuts or unknowns, and the unindented PDF stays exact. Picture paint height stays separate from occupied descent. Three pinned Word controls preserve the original 0.1pt dimension/0.75pt baseline gates. Shared width-roundoff handling also removes an unnecessary cell line without changing the original hhea/image-baseline checks. At that milestone, declared, unowned and unfit rows retained their fallbacks; the fitting minimum/fixed rows are qualified separately above. No exact new-source Word/view or arbitrary overpaint claim. |
 | Autofit paragraph insets | A 72pt first-line indent hid every glyph of a short label while text operations remained present. Natural cell widths now fund the same paragraph offsets used by placement, including positive right insets and measured inline content. Both missing labels recover the controls' 270 raster ink pixels; four control PDFs are unchanged and 30 actual-program glyphs have no measured cuts/unknown traces. Portable checks cover two fonts/presets, split runs, grid hints, left/first/right insets and cancellation; the regression fails on the parent. No all-content, compressed-width or exact new-source Word/view claim. |
 | Terminal pictures | Fitting terminal/trailing-space pictures escaped width admission: body retained 69.98% of bounds and cells 39.78%. Both wrapping paths now share source-boundary admission, including final rows. Adjacent drawings use their combined advance at a shared offset, correcting a trial that retained only 8.49% of the second cell picture. Eight pictures in six native outputs retain complete bounds and all source colors; 636 actual-program glyphs have no measured clip/unknown traces. Portable regressions cover both presets, two pinned fonts, merged/split runs and adjacent pictures; parent/trial failures are retained. Unfit groups keep their existing fallback; arbitrary group splitting and exact new-source Word/view geometry remain unqualified. |
 | Pictures after soft breaks | Two/three supported soft breaks caused an opaque inline picture to cover part of the following word, although the whole word remained extractable. Picture attachment now reuses wrapped source starts and per-line source offsets, removing duplicate painted-length reconstruction. Four native controls retain all source words/pages with no following-word overpaint; the unchanged no-break PDF is identical. The screen binds 44 glyphs without clip cuts or unknown traces; paired crops confirm restored visible words. Portable checks cover pinned Sans/Math, both presets and separate/merged runs; the regression fails against the parent. No new-source Word/application-view geometry claim. |
@@ -61,9 +61,12 @@ resolved to an absent package file. The link was removed; the package check stay
 unchanged. Both terminal host logs were retained once. No local build or suite replay
 was needed for the repair.
 
-Broader qualification of the contained fixed-line picture change is pending.
-The local affected-test, content, neighbor and transfer gates above qualify the
-frozen artifact; they do not close the broader roadmap.
+The contained fixed-line picture source passed CI43002444011:
+**4,795 Windows/2,285 Ubuntu passes**, 19/130 skips, 69 .NET 10 checks per host
+and all four package consumers. Both terminal host logs were retained once.
+Platform binaries qualify source separately from the accepted local frozen artifact.
+Status-only documentation updates reuse that qualification without local builds,
+conversions or suite replay. The broader roadmap remains open.
 
 ## Independent content checks and limits
 
@@ -108,7 +111,10 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
 - Two oversized exact16 first-line controls still clip four letters of After
   without a diagnostic. Their established 117.04x8.778pt picture fallback remains
   identical. Fitting exact-slot pictures now retain complete words; the oversized
-  content/diagnostic gap and new-source Word geometry remain unresolved.
+  content/diagnostic gap and new-source Word geometry remain unresolved. Adding
+  one preserved space hides all five letters; removing only the indent or adding
+  a supported break retains every letter. These four-source controls isolate
+  word wrapping from the oversized picture's vertical clipping.
 - An unfit 300-label note row retains 279 complete labels, six partial and fifteen
   off-paper labels. The pinned Office PDFs also retain 279 complete/six partial,
   but omit the other fifteen paint operations. Both fitting 240-label controls
