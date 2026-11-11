@@ -31,12 +31,16 @@ Transfer verifies 24 assets and two exact smoke PDFs without a root build or sui
 replay. All sixteen portfolio PDFs/diagnostics are unchanged, retaining the two
 PPTX passes/fourteen DOCX image failures. Additional split-run/bookmark/body-link
 checks in cells and headers retain all eight formulas/links, 584 bound glyphs and
-twelve exact raster pairs without a new build or rendering fix. Broader
-CI43099685261 passed Ubuntu 2,292/130 but Windows failed the older staged-path
-assertion (4,804/one failure/19 skips). Terminal evidence is retained once; the
-repaired harness above awaits a replacement coherent CI/framework/package gate.
-The prepared package below is its parent
-and does not contain this repair. New-source Word geometry/application view remain
+twelve exact raster pairs. Eight two-page outcomes retain 704 glyphs/twelve
+formulas: the moved cell formula and link target follow page two, while header
+math repeats on both pages. All eight page-raster pairs are exact. These extensions
+need no new library build or rendering fix. CI43099685261's earlier Windows
+staged-path assertion failure remains recorded. Replacement CI43101429109 on
+`f5f0a7999` is green: Windows 4,805 passes/19 skips, Ubuntu 2,292/130, 69 .NET 10
+checks per host, four package consumers and ten inspections per host. Terminal
+logs are retained once. Four additional .NET 10 box fallback/ownership/source-index
+checks pass on each host using the CI assembly. The exact CI package below now
+contains this repair. New-source Word geometry/application view remain
 unqualified. No Office action, publication or roadmap completion is claimed.
 
 The fitting-note frame repair (`5551aeff6`) applies the existing printed-story map
@@ -273,7 +277,7 @@ expected library hash, preserving the original qualified runtime.
 ## Prepared development package payload
 
 The development package and symbols are prepared directly in `artifacts/nuget/`,
-with checksums and a separate qualification record. CI43081400120 / `8a4d30380`
+with checksums and a separate qualification record. CI43101429109 / `f5f0a7999`
 supplies both framework libraries, portable symbols and the original package ZIP.
 Windows CI consumed those exact archive bytes; its consumer evidence is reused.
 Both Linux framework checks consume the same Windows package. No repack or
@@ -282,18 +286,21 @@ library/root rebuild was needed for preparation.
 The Windows artifact digest and all 48 frozen runtime assets are verified. Both
 framework package entries match those DLL/PDB bytes; assembly/file versions are
 0.3.0.0 and informational versions identify the same committed build. The package
-SHA-256 is `136B0FBCD56ECAA45A1240DF50394CD15D0DD6DD29F848DF77605FE5E68E2B78`.
-All 75 packaged local links are checked. Documentation retains its immutable CI
+SHA-256 is `4E4A7902D612DBEF11CFF3B444D694C8F0D5FC7A7FDE868AC0A6CF6844CC5CF1`.
+All 76 packaged local links are checked. Documentation retains its immutable CI
 snapshot; later qualification/priority notes in this document and
 CompositionCheckpoint do not cause another repack. Caller/API documents match.
 
 The source-runtime portfolio/native evidence remains separate from the CI build
 metadata: sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures.
 Production/build inputs match, and two CI-runtime identity smokes reproduce the
-corrected note table and six-name legend PDFs. No full portfolio or suite replay
-is claimed for that transfer. Additional .NET 10 regressions cover the note/footer
-frames on both hosts. The previous e7d591999 package is preserved as parent evidence,
-alongside earlier 03ef23fcc/f852e431 assets; published 0.2.0 is protected.
+corrected mixed-box composition and six-name legend PDFs. No full portfolio or suite
+replay is claimed for that transfer. Four additional .NET 10 regressions cover box
+content, source indices and fallback guards on both hosts. The previous 8a4d30380
+package is preserved as parent evidence, alongside earlier e7d591999/03ef23fcc/
+f852e431 assets; published 0.2.0 is protected. An evidence join initially retained
+the parent's 75-link count; all consumers and the independent audit resolve 76.
+Only that metadata join was repaired, retaining its original script/log.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover
