@@ -73,9 +73,10 @@ internal sealed partial class DocxRenderer
                 if (select(image.Image))
                     yield return (PlaceInlineImageForPaint(mapped ? map.PrecompensateImage(image, pageNumber) : image, context), clip);
             }
-            // Painting keeps note tables in their placed legacy frame.
+            // Drawing URI targets follow the row's chosen physical paint frame.
             foreach (var row in story.TableRows)
-                foreach (var image in CellImages(row, tableClip)) yield return image;
+                foreach (var image in CellImages(ResolvePlacedStoryTablePaintFrame(
+                    story, row, mapped ? map : null, token), tableClip)) yield return image;
         }
 
         IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> CellImages(DocxTableRowLayout row, PdfRectangle parent)

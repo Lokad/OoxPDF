@@ -168,7 +168,7 @@ internal sealed partial class DocxLayoutEngine
         return row.Cells.Select(c => ResolveTableCellVerticalPadding(c.Margins.BottomPoints, fixedScale)).Max();
     }
 
-    private static bool HasMinimumTableRowHeight(double? height, string? rule) =>
+    internal static bool HasMinimumTableRowHeight(double? height, string? rule) =>
         height is double minimum && double.IsFinite(minimum) && minimum >= 0d &&
         (rule is null || string.Equals(rule, "atLeast", StringComparison.OrdinalIgnoreCase));
 

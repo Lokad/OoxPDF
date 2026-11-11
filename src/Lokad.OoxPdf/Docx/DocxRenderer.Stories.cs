@@ -39,6 +39,50 @@ internal sealed partial class DocxRenderer
         return (mapped, map, clip, tableClip);
     }
 
+    // Complete fitting note tables share their story's design-to-print map.
+    // Unfit, exact, fragmented or unresolved owners keep their staged paint path.
+    // Drawing links consume this same row instead of reconstructing its frame.
+    private static DocxTableRowLayout ResolvePlacedStoryTablePaintFrame(
+        DocxPlacedRelatedStoryLayout story, DocxTableRowLayout row,
+        FloatingTextBoxEmissionMap? map, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (map is not { } mapping || !story.StoryLayout.Story.IsNormalStoryType)
+            return row;
+        var bounds = new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
+        return Fits(row, bounds) ? mapping.PrecompensateRow(row) : row;
+
+        bool Fits(DocxTableRowLayout current, PdfRectangle parent)
+        {
+            token.ThrowIfCancellationRequested();
+            if (current.FragmentCount != 1 || current.Cells.Count == 0 ||
+                !DocxLayoutEngine.HasAutomaticTableRowHeight(current.DeclaredHeightPoints, current.HeightRuleValue) &&
+                !DocxLayoutEngine.HasMinimumTableRowHeight(current.DeclaredHeightPoints, current.HeightRuleValue) ||
+                !Contains(parent, parent.X, current.Y, parent.Width, current.Height)) return false;
+            foreach (var cell in current.Cells)
+            {
+                token.ThrowIfCancellationRequested();
+                if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell ||
+                    !DocxMathParagraphPolicy.IsSupportedCellProperties(cell.VisualCell) ||
+                    !Contains(parent, cell.X, cell.Y, cell.Width, cell.Height)) return false;
+                var cellBounds = new PdfRectangle(cell.X, cell.Y, cell.Width, cell.Height);
+                foreach (var child in cell.NestedRows)
+                    if (!Fits(child, cellBounds)) return false;
+            }
+            return true;
+        }
+
+        static bool Contains(PdfRectangle frame, double x, double y, double width, double height)
+        {
+            const double roundoff = .000001d;
+            return double.IsFinite(frame.X) && double.IsFinite(frame.Y) &&
+                double.IsFinite(frame.Width) && double.IsFinite(frame.Height) && frame.Width > 0d && frame.Height > 0d &&
+                double.IsFinite(x) && double.IsFinite(y) && double.IsFinite(width) && double.IsFinite(height) &&
+                width > 0d && height > 0d && x >= frame.X - roundoff && y >= frame.Y - roundoff &&
+                x + width <= frame.X + frame.Width + roundoff && y + height <= frame.Y + frame.Height + roundoff;
+        }
+    }
+
     private static void RenderPlacedRelatedStory(
         DocxPlacedRelatedStoryLayout story,
         PdfGraphicsBuilder graphics,
@@ -56,7 +100,8 @@ internal sealed partial class DocxRenderer
         // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
         // stories lay out unscaled in design space while emission maps uniformly
         // (WC first baseline 236.62 = affine-mapped design). Other stories keep
-        // the body-shift path; tables inside mapped stories stay legacy.
+        // the body-shift path. Complete fitting table subtrees join this map;
+        // their unsupported ownership/overflow cases retain the legacy frame.
         var (mapStory, storyMap, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
         if (story.SeparatorY is { } separatorY)
         {
@@ -80,7 +125,8 @@ internal sealed partial class DocxRenderer
         IReadOnlyList<DocxLayoutItem> items = (mapStory ? storyTextLines.Select(line => storyMap.PrecompensateLine(line, 0d, 0d)) : storyTextLines)
             .Cast<DocxLayoutItem>()
             .Concat(mapStory ? story.InlineImages.Select(image => storyMap.PrecompensateImage(image, pageNumber)) : story.InlineImages)
-            .Concat(story.TableRows)
+            .Concat(story.TableRows.Select(row => ResolvePlacedStoryTablePaintFrame(
+                story, row, mapStory ? storyMap : null, cancellationToken)))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);

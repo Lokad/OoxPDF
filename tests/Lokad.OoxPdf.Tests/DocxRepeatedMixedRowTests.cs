@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxRepeatedMixedRowTests
+internal static partial class DocxRepeatedMixedRowTests
 {
     public static void DocxMixedTableRowsKeepCaptionInkAcrossPages()
     {

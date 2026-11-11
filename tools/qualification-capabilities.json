@@ -11173,6 +11173,7 @@
     "DocxLongFootnoteHeadBlockSitsAtOfficePosition"
   ],
   "docx-note-table-composition": [
+    "DocxNoteTablesSharePrintedFramesWithSurroundingNotes",
     "DocxInlineCompositionNormalNoteSourcesRetainEquationOwners",
     "DocxInlineCompositionNormalNoteMathSurvivesRunSplittingAndContinuation",
     "DocxInlineCompositionNormalNoteBaselinesMatchIndependentOffice",
