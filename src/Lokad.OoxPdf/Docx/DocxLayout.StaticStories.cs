@@ -390,7 +390,9 @@ internal sealed partial class DocxLayoutEngine
                                 index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
                             AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
                             ParagraphAfterSpacing = index == measured.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d });
-                        images.AddRange(placed.Images);
+                        images.AddRange(placed.Images.Select(image =>
+                            DocxPlainBodyFrame.HasFixedLineFlow(paragraph) && image.Height > line.BaselineInset
+                                ? image.WithBaselineClip(line.BaselineInset) : image));
                         boxes.AddRange(placed.TextBoxes);
                         cursorY -= line.OccupiedHeight;
                     }
@@ -590,7 +592,7 @@ internal sealed partial class DocxLayoutEngine
                         foreach (DocxMidLineImage placed in staticMidLinePlan.ImagesByLine[staticLineIndex])
                         {
                             double beforeWidth = MeasureStaticTextSpans(SliceTextSpans(line.Spans, 0, placed.LineCharOffset), textMeasurer);
-                            images.Add(new DocxInlineImageLayout(
+                            var staticImage = new DocxInlineImageLayout(
                                 placed.Image,
                                 lineX + beforeWidth + placed.AdvanceBefore,
                                 staticSingleLineHeight.HasValue || staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
@@ -602,11 +604,10 @@ internal sealed partial class DocxLayoutEngine
                                 SourceParagraphIndex: paragraphIndex,
                                 Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType))
                             {
-                                LineFrame = DocxPictureLineFrame.FromLine(cursorY, staticLineHeight, extraAbove, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d),
-                                ClipBounds = staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
-                                    ? new PdfRectangle(lineX + beforeWidth + placed.AdvanceBefore, staticBaselineY, placed.Width, Math.Min(placed.Height, Math.Max(0d, cursorY - staticBaselineY)))
-                                    : null
-                            });
+                                LineFrame = DocxPictureLineFrame.FromLine(cursorY, staticLineHeight, extraAbove, staticLineIndex == staticLines.Length - 1 ? spacingProfile.ParagraphAfterSpacing : 0d)
+                            };
+                            images.Add(staticLineHeightSource == DocxLineHeightSource.ExactLineSpacing
+                                ? staticImage.WithBaselineClip(cursorY - staticBaselineY) : staticImage);
                             placedStaticImages.Add(placed.Image);
                         }
                     }

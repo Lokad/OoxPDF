@@ -86,15 +86,41 @@ internal static partial class DocxInlineCompositionTests
             bool admitted = DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, null,
                 new DocxTests.FamilyWidthTextMeasurer(), 11d, 12.8d, 16d, scale, default, out var atoms,
                 physicalTextBaselineInset: physicalInset);
-            TestAssert.True((pictureHeight == 4) == admitted,
-                "Containment uses the placed physical baseline, including scaled frames, rather than a nominal inset.");
-            if (!admitted) continue;
+            TestAssert.True(admitted,
+                "Captured ordinary content can keep a following word while retaining width-fitted overhang paint.");
             TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(TestAssert.NotNull(atoms),
                 118d * scale, 468d * scale, default, out var rows),
                 "The fitting source wraps into its first and continuation frames.");
             TestAssert.True(TestAssert.NotNull(rows).All(row => Math.Abs(row.OccupiedHeight - 16d * scale) < .0000001d &&
                 Math.Abs(row.BaselineInset - physicalInset) < .0000001d),
                 "Relocation preserves the fixed physical advance and baseline on every row.");
+            var picture = TestAssert.NotNull(rows).SelectMany(row => row.Fragments)
+                .Single(fragment => fragment.Source is DocxInlinePicture);
+            TestAssert.True(Math.Abs(picture.Advance - (pictureHeight == 4 ? 240d : 118d) * scale) < .0000001d,
+                "The physical inset selects intrinsic continuation placement or retained overhang width fitting.");
+        }
+    }
+
+    public static void DocxOversizedFixedPicturesKeepFollowingWords()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (bool mathFont in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool split in new[] { false, true })
+        foreach (bool space in new[] { false, true })
+        foreach (bool bookmark in new[] { false, true })
+        {
+            var source = ReadLeadingPictureWithLineFlow(mode, container, 350, split, null,
+                exact: 16, pictureHeight: 18, leadingSpace: space, bookmark: bookmark);
+            var page = AssertFloatingLabelsPaint(source, mode, ["After"],
+                $"fixed overhang/{container}/{split}/{space}/{bookmark}", mathFont: mathFont);
+            var (bounds, _) = ReadPictureBounds(page).Single();
+            TestAssert.True(bounds.Width > 0d && bounds.Width < 240d &&
+                Math.Abs(bounds.Width / bounds.Height - 240d / 18d) < .001d,
+                "The old first-frame width fit retains picture aspect while its following word wraps.");
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => PictureRunBoundaryRenderer(mode, mathFont)
+                .RenderPagesAsync(source, null, cancellation.Token).ToBlockingEnumerable().ToArray());
         }
     }
 
@@ -132,7 +158,8 @@ internal static partial class DocxInlineCompositionTests
         }
     }
     private static DocxDocument ReadLeadingPictureWithLineFlow(OoxPdfDocxMarkupMode mode, string container,
-        int indent, bool split, int? minimum, int? exact = null, int pictureHeight = 18) =>
+        int indent, bool split, int? minimum, int? exact = null, int pictureHeight = 18,
+        bool leadingSpace = true, bool bookmark = false) =>
         ReadMutation("docx-picture-rotated-raster", mode, false, false, (xml, w, _) =>
         {
             XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -140,7 +167,7 @@ internal static partial class DocxInlineCompositionTests
             var paragraph = xml.Descendants(w + "p").Single();
             var runs = paragraph.Elements(w + "r").ToArray();
             runs[0].Remove();
-            runs[2].Element(w + "t")!.Value = split ? " Af" : " After";
+            runs[2].Element(w + "t")!.Value = (leadingSpace ? " " : string.Empty) + (split ? "Af" : "After");
             runs[2].Element(w + "t")!.SetAttributeValue(XNamespace.Xml + "space", "preserve");
             if (split) paragraph.Add(new XElement(w + "r", new XElement(w + "t", "ter")));
             var drawing = runs[1].Element(w + "drawing")!;
@@ -154,6 +181,12 @@ internal static partial class DocxInlineCompositionTests
                 new XAttribute(w + "firstLine", indent * 20))));
             if ((minimum ?? exact) is { } height) paragraph.Element(w + "pPr")!.Add(new XElement(w + "spacing",
                 new XAttribute(w + "line", height * 20), new XAttribute(w + "lineRule", exact is null ? "atLeast" : "exact")));
+            if (bookmark)
+            {
+                paragraph.Element(w + "pPr")!.AddAfterSelf(new XElement(w + "bookmarkStart",
+                    new XAttribute(w + "id", 1702), new XAttribute(w + "name", "LeadingPictureWord")));
+                paragraph.Add(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", 1702)));
+            }
             if (container == "cell") paragraph.ReplaceWith(new XElement(w + "tbl",
                 new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "9360"))),
                 new XElement(w + "tr", new XElement(w + "tc", new XElement(paragraph)))));

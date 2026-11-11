@@ -49,6 +49,9 @@ internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, 
 
 internal sealed partial class DocxLayoutEngine
 {
+    private static bool HasCapturedOrdinaryInlineContent(DocxParagraph paragraph) =>
+        paragraph.InlineContent is not null && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+
     private static double ResolveOrderedInlineAlignment(DocxMeasuredInlineLine line,
         DocxTextAlignment alignment, double available) =>
         line.DisplayAlignment switch
@@ -254,13 +257,12 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         var items = paragraph.InlineContent;
         bool retainPreparedContent = allowStaticFallback;
-        // Captured ordinary pictures share wrapping across containers. Fixed
-        // rows additionally require each picture to fit the physical text slot.
+        // Captured ordinary pictures share wrapping across containers.
         // Prepared math/boxes and reconstructed owners retain their eligibility.
         bool ordinaryStaticContent = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0;
         // Declared-flow admission needs the captured ordered source view.
         // Legacy reconstructed owners retain their calibrated frame.
-        bool ordinaryContent = items is not null && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+        bool ordinaryContent = HasCapturedOrdinaryInlineContent(paragraph);
         bool supportedOrdinaryFlow = ordinaryContent || ordinaryStaticContent
             ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
                 DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
@@ -402,10 +404,6 @@ internal sealed partial class DocxLayoutEngine
                 case DocxInlinePicture picture:
                     double imageWidth = picture.Image.WidthPoints * scale, imageHeight = picture.Image.HeightPoints * scale;
                     if (!double.IsFinite(imageWidth) || !double.IsFinite(imageHeight) || imageWidth <= 0d || imageHeight <= 0d) return false;
-                    // Fixed rows can wrap a picture contained above their text
-                    // baseline. Overhanging pictures keep the existing fallback.
-                    if ((ordinaryContent || ordinaryStaticContent) && DocxPlainBodyFrame.HasFixedLineFlow(paragraph) &&
-                        imageHeight > baselineInset) return false;
                     // A picture's source run owns its font strut even though it
                     // paints no glyphs. Reuse the ordinary row's descent growth;
                     // the picture stays at the baseline while following content
@@ -464,6 +462,21 @@ internal sealed partial class DocxLayoutEngine
         // With no supported measured neighbor, an unprepared equation keeps
         // the established paragraph fallback rather than a new empty frame.
         if (paragraph.Equations.Count != 0 && measured.Count == 0) return false;
+        if ((ordinaryContent || ordinaryStaticContent) && DocxPlainBodyFrame.HasFixedLineFlow(paragraph))
+        {
+            bool followingText = false;
+            for (int index = measured.Count - 1; index >= 0; index--)
+            {
+                token.ThrowIfCancellationRequested();
+                var fragment = measured[index];
+                // A measured continuation can wrap away from retained picture
+                // paint. Terminal overhangs still lack a qualified row contract;
+                // keep their existing fallback, as the legacy wrapper does.
+                if (fragment.Source is DocxInlinePicture && fragment.BaselineInset > baselineInset &&
+                    (!ordinaryContent || !followingText)) return false;
+                followingText |= fragment.Text.Any(span => !string.IsNullOrWhiteSpace(span.Text));
+            }
+        }
         if (measured.Any(fragment => !double.IsFinite(fragment.Advance) || fragment.Advance < 0d ||
             !double.IsFinite(fragment.BaselineInset) || fragment.BaselineInset < 0d ||
             !double.IsFinite(fragment.OccupiedHeight) || fragment.OccupiedHeight < fragment.BaselineInset)) return false;
@@ -635,8 +648,23 @@ internal sealed partial class DocxLayoutEngine
                 Advance = partWidth, Text = [span], TextSegments = segments
             };
         }
-        DocxMeasuredInlineFragment Atom(int index) => index == cursor.AtomIndex && partial is not null ? partial : measured[index];
         var output = new List<DocxMeasuredInlineLine>();
+        bool fitFixedPictures = HasCapturedOrdinaryInlineContent(paragraph) && DocxPlainBodyFrame.HasFixedLineFlow(paragraph);
+        DocxMeasuredInlineFragment Atom(int index)
+        {
+            var fragment = index == cursor.AtomIndex && partial is not null ? partial : measured[index];
+            if (fitFixedPictures && fragment.Source is DocxInlinePicture picture &&
+                fragment.BaselineInset > baselineInset)
+            {
+                // Preserve the legacy width-fitted paint of an overhanging
+                // fixed-slot picture. Its source still consumes advance before
+                // the next word; the declared row never grows to contain ink.
+                var (width, height) = ResolveInlineImageSize(picture.Image, output.Count == 0 ? firstWidth : nextWidth, scale);
+                return fragment with { Advance = width, BaselineInset = height,
+                    OccupiedHeight = height + fragment.OccupiedHeight - fragment.BaselineInset };
+            }
+            return fragment;
+        }
         var current = new List<DocxMeasuredInlineFragment>();
         double advance = 0d, above = baselineInset, below = Math.Max(0d, lineHeight - baselineInset);
         bool authoredLineStart = cursor.AtomIndex == 0 && cursor.LineIndex == 0 ||
@@ -696,12 +724,7 @@ internal sealed partial class DocxLayoutEngine
             // A formatting/run boundary is not a word-break opportunity.
             if (!space && Atom(index).Source is DocxInlineText)
                 while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsSpace(Atom(end))) end++;
-            double groupWidth = 0d;
-            for (int offset = index; offset < end; offset++)
-            {
-                if (offset > index) groupWidth += InlineBoundaryAdvance(measured[offset - 1], Atom(offset));
-                groupWidth += Atom(offset).Advance;
-            }
+            double groupWidth = GroupAdvance(index, end);
             double width = output.Count == 0 ? firstWidth : nextWidth;
             if (!FitsLineWidth(groupWidth, Math.Max(firstWidth, nextWidth)))
             {
@@ -766,6 +789,7 @@ internal sealed partial class DocxLayoutEngine
                 if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                 Flush(new(index));
                 if (stopAfterFirstLine) { lines = output; return true; }
+                groupWidth = GroupAdvance(index, end);
             }
             if (current.Count == 0 && !FitsLineWidth(groupWidth, output.Count == 0 ? firstWidth : nextWidth))
             {
@@ -811,6 +835,18 @@ internal sealed partial class DocxLayoutEngine
             }
         }
         lines = output; return true;
+
+        double GroupAdvance(int begin, int end)
+        {
+            double width = 0d;
+            for (int index = begin; index < end; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (index > begin) width += InlineBoundaryAdvance(Atom(index - 1), Atom(index));
+                width += Atom(index).Advance;
+            }
+            return width;
+        }
 
         DocxInlineSourceCursor? CursorAfterSpan(DocxTextSpan span, int begin, int end)
         {

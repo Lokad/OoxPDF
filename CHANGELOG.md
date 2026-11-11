@@ -24,6 +24,8 @@
   preventing neighboring words from being clipped in fitting continuation frames.
   Contained fixed-line pictures use the same wrapping rule and physical baseline,
   preserving following words without enlarging the authored line slot.
+  Oversized fixed-line pictures with following prose retain width-fitted paint
+  while the word wraps; unresolved terminal overhangs retain their fallback.
   Stored field results and resolved formatting history, including paragraph marks,
   preserve neighboring equations. Bold/italic revision captions share run and
   paragraph-mark resolution. Tables inside inline header/footer boxes retain

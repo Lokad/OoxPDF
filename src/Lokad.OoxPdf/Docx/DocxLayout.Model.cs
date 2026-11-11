@@ -193,6 +193,11 @@ internal sealed record DocxInlineImageLayout(
     public PdfRectangle? ClipBounds { get; init; }
     public DocxPictureLineFrame? LineFrame { get; init; }
 
+    public DocxInlineImageLayout WithBaselineClip(double aboveBaseline) => this with
+    {
+        ClipBounds = new(X, Y, Width, Math.Min(Height, Math.Max(0d, aboveBaseline)))
+    };
+
     public DocxInlineImageLayout Translate(double deltaX, double deltaY) => this with
     {
         X = X + deltaX, Y = Y + deltaY,
