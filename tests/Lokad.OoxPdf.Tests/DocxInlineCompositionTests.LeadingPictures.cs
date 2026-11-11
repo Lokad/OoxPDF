@@ -12,32 +12,11 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (int indent in new[] { 0, 350 })
         foreach (bool split in new[] { false, true })
+        foreach (int? minimum in new int?[] { null, 16, 32 })
         {
-            var source = ReadMutation("docx-picture-rotated-raster", mode, false, false, (xml, w, _) =>
-            {
-                XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
-                XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
-                var paragraph = xml.Descendants(w + "p").Single();
-                var runs = paragraph.Elements(w + "r").ToArray();
-                runs[0].Remove();
-                runs[2].Element(w + "t")!.Value = split ? " Af" : " After";
-                runs[2].Element(w + "t")!.SetAttributeValue(XNamespace.Xml + "space", "preserve");
-                if (split) paragraph.Add(new XElement(w + "r", new XElement(w + "t", "ter")));
-                var drawing = runs[1].Element(w + "drawing")!;
-                drawing.Descendants(a + "xfrm").Single().Attribute("rot")!.Remove();
-                foreach (var extent in drawing.Descendants().Where(node => node.Name == a + "ext" || node.Name == wp + "extent"))
-                {
-                    extent.SetAttributeValue("cx", 240 * 12700);
-                    extent.SetAttributeValue("cy", 18 * 12700);
-                }
-                paragraph.AddFirst(new XElement(w + "pPr", new XElement(w + "ind",
-                    new XAttribute(w + "firstLine", indent * 20))));
-                if (container == "cell") paragraph.ReplaceWith(new XElement(w + "tbl",
-                    new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "9360"))),
-                    new XElement(w + "tr", new XElement(w + "tc", new XElement(paragraph)))));
-            });
+            var source = ReadLeadingPictureWithLineFlow(mode, container, indent, split, minimum);
             var page = AssertFloatingLabelsPaint(source, mode, ["After"],
-                $"leading picture/{container}/{indent}/{split}", mathFont: mathFont);
+                $"leading picture/{container}/{indent}/{split}/minimum={minimum}", mathFont: mathFont);
             var (bounds, clip) = ReadPictureBounds(page).Single();
             TestAssert.True(bounds.X >= clip.X - .001d && bounds.Y >= clip.Y - .001d &&
                 bounds.X + bounds.Width <= clip.X + clip.Width + .001d &&
@@ -48,6 +27,28 @@ internal static partial class DocxInlineCompositionTests
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => PictureRunBoundaryRenderer(mode, mathFont)
                 .RenderPagesAsync(source, null, cancellation.Token).ToBlockingEnumerable().ToArray());
+        }
+    }
+
+    public static void DocxMinimumPictureRowsKeepDeclaredLineFrames()
+    {
+        foreach (string container in new[] { "body", "cell" })
+        foreach (int minimum in new[] { 16, 32 })
+        {
+            var source = ReadLeadingPictureWithLineFlow(OoxPdfDocxMarkupMode.Final, container, 350, false, minimum);
+            var paragraph = DocxBlockTraversal.EnumerateSourceParagraphs(source).Single(p => p.Images.Count != 0);
+            TestAssert.True(TestAssert.NotNull(paragraph.InlineContent).OfType<DocxInlinePicture>()
+                .Any(item => ReferenceEquals(item.Image, paragraph.Images.Single())),
+                "The reader retains ordinary picture source ownership before any mathematics or metadata is added.");
+            var page = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default).Pages.Single();
+            var lines = container == "body" ? page.Items.OfType<DocxTextLineLayout>().ToArray()
+                : page.Items.OfType<DocxTableRowLayout>().Single().Cells.Single().TextLines.ToArray();
+            TestAssert.Equal(2, lines.Length);
+            TestAssert.True(lines.All(line => line.InlineFrame is { } frame && frame.Height >= minimum - .0000001d),
+                "Both the empty leading row and the picture/prose row retain the authored minimum.");
+            TestAssert.True(lines[0].BaselineY > lines[1].BaselineY,
+                "A picture fitting the continuation width advances past the authored first-line inset.");
         }
     }
 
@@ -84,4 +85,30 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(pictures[0], pictures[1]);
         }
     }
+    private static DocxDocument ReadLeadingPictureWithLineFlow(OoxPdfDocxMarkupMode mode, string container,
+        int indent, bool split, int? minimum) => ReadMutation("docx-picture-rotated-raster", mode, false, false, (xml, w, _) =>
+        {
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+            var paragraph = xml.Descendants(w + "p").Single();
+            var runs = paragraph.Elements(w + "r").ToArray();
+            runs[0].Remove();
+            runs[2].Element(w + "t")!.Value = split ? " Af" : " After";
+            runs[2].Element(w + "t")!.SetAttributeValue(XNamespace.Xml + "space", "preserve");
+            if (split) paragraph.Add(new XElement(w + "r", new XElement(w + "t", "ter")));
+            var drawing = runs[1].Element(w + "drawing")!;
+            drawing.Descendants(a + "xfrm").Single().Attribute("rot")!.Remove();
+            foreach (var extent in drawing.Descendants().Where(node => node.Name == a + "ext" || node.Name == wp + "extent"))
+            {
+                extent.SetAttributeValue("cx", 240 * 12700);
+                extent.SetAttributeValue("cy", 18 * 12700);
+            }
+            paragraph.AddFirst(new XElement(w + "pPr", new XElement(w + "ind",
+                new XAttribute(w + "firstLine", indent * 20))));
+            if (minimum is { } height) paragraph.Element(w + "pPr")!.Add(new XElement(w + "spacing",
+                new XAttribute(w + "line", height * 20), new XAttribute(w + "lineRule", "atLeast")));
+            if (container == "cell") paragraph.ReplaceWith(new XElement(w + "tbl",
+                new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "9360"))),
+                new XElement(w + "tr", new XElement(w + "tc", new XElement(paragraph)))));
+        });
 }

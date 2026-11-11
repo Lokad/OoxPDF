@@ -253,11 +253,16 @@ internal sealed partial class DocxLayoutEngine
                 DocxFieldText.CanResolve(kind, pageNumber, pageCount));
         var items = paragraph.InlineContent;
         bool retainPreparedContent = allowStaticFallback;
-        // Ordinary static content shares declared line flow. Box hosts retain
-        // their automatic-flow fallback; intrinsic pictures are checked below.
+        // Ordinary picture/prose rows share content-driven automatic/minimum
+        // flow across containers. Prepared math and boxes retain their existing
+        // eligibility; only static hosts admit contained fixed-line pictures.
         bool ordinaryStaticContent = allowStaticFallback && paragraph.InlineTextBoxes.Count == 0;
-        bool supportedOrdinaryFlow = ordinaryStaticContent
-            ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) || DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
+        // Minimum-flow admission needs the captured ordered source view.
+        // Legacy reconstructed owners retain their calibrated frame.
+        bool ordinaryContent = items is not null && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+        bool supportedOrdinaryFlow = ordinaryContent || ordinaryStaticContent
+            ? DocxPlainBodyFrame.HasContentDrivenLineFlow(paragraph) ||
+                ordinaryStaticContent && DocxPlainBodyFrame.HasFixedLineFlow(paragraph)
             : DocxPlainBodyFrame.HasAutomaticLineFlow(paragraph);
         if (paragraph.Equations.Count != 0)
         {

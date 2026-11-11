@@ -73,6 +73,24 @@ internal static partial class DocxInlineCompositionTests
             .Select(item => item is DocxInlinePicture picture ? picture with { Image = unknownImage } : item).ToArray() };
         TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(unknownOwner, null, new SiblingFrameMeasurer(),
             11d, 10d, 16d, 1d, default, out _), "Unowned pictures retain their explicit fallback.");
+        DocxParagraph DeclaredFlow(DocxParagraph value, string rule) => value with
+        {
+            LineSpacingPoints = 32d, LineSpacingFactor = 1d,
+            Spacing = value.Spacing with { LineValue = "640", LineRuleValue = rule }
+        };
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(DeclaredFlow(withoutBox, "atLeast"), null,
+            new SiblingFrameMeasurer(), 11d, 10d, 32d, 1d, default, out _),
+            "Content-driven ordinary rows share their measured source owners.");
+        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(
+            DeclaredFlow(withoutBox with { InlineContent = null }, "atLeast"), null,
+            new SiblingFrameMeasurer(), 11d, 10d, 32d, 1d, default, out _),
+            "Reconstructed minimum-row owners retain their independently qualified fallback.");
+        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(DeclaredFlow(source, "atLeast"), null,
+            new SiblingFrameMeasurer(), 11d, 10d, 32d, 1d, default, out _),
+            "Box hosts retain their separately qualified automatic-flow eligibility.");
+        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(DeclaredFlow(withoutBox, "exact"), null,
+            new SiblingFrameMeasurer(), 11d, 10d, 32d, 1d, default, out _),
+            "Ordinary body/cell fixed-line hosts retain their explicit fallback.");
     }
 
     public static void DocxOrdinaryPictureBoxesMatchIndependentWordOrigins()

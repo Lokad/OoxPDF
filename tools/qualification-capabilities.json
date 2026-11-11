@@ -6,6 +6,13 @@
   ],
   "docx-picture-placement": [
     "DocxLeadingInlinePicturesKeepFollowingWordInk",
+    "DocxMinimumPictureRowsKeepDeclaredLineFrames",
+    "DocxKeptMinimumPictureRowRetainsIncompleteFrameFallbacks",
+    "DocxKeptMinimumPictureRowUsesTheAdmittedOccupiedFrame",
+    "DocxTableMinimumPictureRowsUseTheOccupiedInlineExtent",
+    "DocxTableMinimumPicturesMoveWithTheirTextAndLineFrames",
+    "DocxTableMinimumPicturesPreserveWrappedLineAffinity",
+    "DocxTableMinimumPicturesRetainIncompleteAndComplexOwnershipFallbacks",
     "DocxReviewPictureOwnerDescentKeepsFollowingParagraphClear",
     "DocxExplicitPageStart",
     "DocxPictureRotationFitsTheSourceFrameAndPreservesFlowExtent",

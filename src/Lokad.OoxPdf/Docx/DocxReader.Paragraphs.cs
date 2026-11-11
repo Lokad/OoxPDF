@@ -368,6 +368,12 @@ internal sealed partial class DocxReader
 
         void PublishInlineRunItems(int firstRun, int firstImage, int? firstBox = null)
         {
+            // Pictures retain the same ordered ownership as math and boxes.
+            // Capture the preceding source once, then append this run's text,
+            // pictures and boxes together without duplicating current items.
+            if (inlineItems is null && images.Count > firstImage)
+                inlineItems = DocxInlineContent.FromPrefix(runs.Take(firstRun).ToArray(), images.Take(firstImage).ToArray(), cancellationToken,
+                    inlineTextBoxes.Take(firstBox ?? inlineTextBoxes.Count).ToArray());
             if (inlineItems is not null)
                 DocxInlineContent.AppendRun(inlineItems, runs.Skip(firstRun), images.Skip(firstImage), cancellationToken,
                     inlineTextBoxes.Skip(firstBox ?? inlineTextBoxes.Count));
