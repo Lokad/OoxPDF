@@ -1718,12 +1718,14 @@ internal static class DocxImagesTests
         DocxLayoutSnapshot imageSnapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(imageDocument, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
         DocxLayoutItemSnapshot firstLine = imageSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").First();
         DocxLayoutItemSnapshot secondLine = imageSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").Skip(1).First();
-        double lineHeight = firstLine.LineHeightPoints ?? 0d;
-        TestAssert.True(Math.Abs((firstLine.Y - secondLine.Y) - lineHeight) < 0.001, "Advance below the image line must stay at the line height: firstY=" + firstLine.Y + " secondY=" + secondLine.Y + " lineHeight=" + lineHeight);
         DocxParagraph plainParagraph = DocxTests.CreateDocxLayoutParagraph("BEFOREAFTER", 10d, 10d) with { LineSpacingPoints = null };
         DocxDocument plainDocument = DocxTests.CreateLayoutTestDocument(new DocxBodyElement[] { new DocxParagraphElement(plainParagraph), new DocxParagraphElement(secondParagraph) }, new DocxTable[0]);
         DocxLayoutSnapshot plainSnapshot = DocxLayoutSnapshot.FromLayout(new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Create(plainDocument, new DocxTests.FamilyWidthTextMeasurer(), System.Threading.CancellationToken.None));
         DocxLayoutItemSnapshot naturalFirst = plainSnapshot.Pages[0].Items.Where(item => item.Kind == "TextLine").First();
+        // Occupied height includes ink above the baseline. The independent
+        // ordinary-text control supplies the pitch retained below that baseline.
+        double lineHeight = naturalFirst.LineHeightPoints ?? 0d;
+        TestAssert.True(Math.Abs((firstLine.Y - secondLine.Y) - lineHeight) < 0.001, "Advance below the image line must retain the ordinary line pitch: firstY=" + firstLine.Y + " secondY=" + secondLine.Y + " lineHeight=" + lineHeight);
         double baselineOffset = DocxLineMetrics.ResolveBodyBaselineOffset(10d, lineHeight, false);
         TestAssert.True(Math.Abs((naturalFirst.Y - firstLine.Y) - (18d - baselineOffset)) < 0.001, "Image line must shift down by image height minus ascent: naturalY=" + naturalFirst.Y + " shiftedY=" + firstLine.Y);
     }
