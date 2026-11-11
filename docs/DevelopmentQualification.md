@@ -1,33 +1,39 @@
 # 0.3.0 development qualification
 
-Updated 2026-11-11. **0.3.0 is not published and is not a completed release
+Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-The revised-inline-box owner repair (`88ca67f52`) validates actual visible
-insertion/deletion references through the existing run-ownership set, separating
-ownership from finite frame geometry. It adds no source-style or ownership layer.
-Previously, marking only an existing drawing run as inserted/deleted could erase
-supported child or sibling formulas. Four public roots/24 Final/Review outputs
-now restore fifteen formula paints; selected hidden boxes retain their intentional
-omission. Native checks measure 2,027 glyphs without clip cuts, unknown traces or
-picture/ink intersections. Eight original control PDFs remain exact. Four unmasked
-Final raster pairs are exact; eight Review differences are confined to the existing
-revision-margin band. New-source Word geometry/appearance remains unqualified.
+The revised-inline-box owner repair (`88ca67f52`) restores fifteen formula paints
+across four public roots/24 Final/Review outcomes in body, cells and headers.
+Visible drawing insertions/deletions now use the existing revision ownership set;
+invalid owners and frames retain their fallbacks. Native checks bind 2,027 glyphs
+without measured clip cuts, unknown traces or picture/ink intersections. Eight
+original PDFs and four unmasked Final raster pairs remain exact; eight Review
+differences are confined to existing revision-margin bands. Transformed-source
+Word geometry and application view remain unqualified.
 
-Windows passes 55 focused checks; Ubuntu passes 48 with seven declared font skips.
-Unowned/copied/unsupported revision metadata, invalid extents and cancellation
-retain their checks. The parent regression fails on the missing first formula.
-One selector preflight repair ran no tests. A later test separated the inherited
-raw hidden-child equation warning from visible-content assertions; only that
-method was rerun per host, reusing 21 runtime assets/3,438 inputs. Original attempts
-remain recorded. Transfer verifies 24 assets/two exact smoke PDFs without a root
-build or suite replay. Final frozen .NET 11 library:
-`FC45A7429EF57D358BAB651D66ACF813C88514A777225667E75A9EE643675185`.
-All sixteen portfolio PDFs/diagnostics remain exact, retaining the two PPTX
-passes/fourteen DOCX image failures. Broader qualification is batched after the
-adjacent selected-view diagnostic work; the prepared package below is its parent
-and lacks this owner repair. Publication and the broader roadmap remain open.
+The adjacent diagnostic repair (`3b4683d12`) uses the existing selected revision
+and row rules in equation probes and expected-paint counts. Intentionally hidden
+equations no longer produce unsupported-equation warnings, including when an
+entire note body is excluded before layout. Final's supported deleted-math
+structure and warnings for visible malformed or unsupported payloads remain.
+Two hidden Final cases now pass strict CLI conversion with no diagnostics.
+
+Windows passes 64 focused checks; Ubuntu passes 56 with eight declared font skips.
+The final Windows selection runs one causal check and 63 neighbors without
+duplicating methods; Ubuntu runs one selection. The parent fails the restored
+hidden-warning assertion. Earlier production attempts exposed retained deleted
+math and absent note stories; their failures remain recorded. Two intermediate
+harness repairs reused the runtime. Final frozen .NET 11 library:
+`28314ACA5325238004F9FE3E002311CC5A96D77D9B85091BE35178E9E4E338C4`.
+Transfer verifies 24 assets/two exact smoke PDFs without a root build or suite
+replay. All 24 causal PDFs remain byte-identical to the content repair, with only
+two false warnings removed. All sixteen portfolio PDFs/diagnostics remain exact;
+independent paint evidence and two PPTX passes/fourteen DOCX image failures remain.
+The coherent broader Windows/Linux, framework and package milestone is pending.
+The prepared package below remains its parent and lacks these two repairs.
+Publication, application-view calibration and the broader roadmap remain open.
 
 The independent comment-body follow-up finds no new defect in the report, letter
 and specification. Their three complete Review sentences appear on the same
