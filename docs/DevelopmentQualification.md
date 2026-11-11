@@ -20,8 +20,8 @@ Broader CI43041456284 on `03ef23fcc` is green: Windows 4,799 passes/19 skips,
 Ubuntu 2,288/130, 69 .NET 10 checks per host, four package consumers and ten package
 preflight checks per host. Production/test source matches the frozen slice;
 CI builds have their own revision metadata. This does not complete the roadmap.
-The prepared package documented below predates this fix; it is retained as parent
-evidence, pending the next coherent package qualification. Publication stays deferred.
+The package refresh below uses the current CI production payloads; the previous
+prepared archive is retained as parent evidence. Publication stays deferred.
 
 Additional kept-cell checks move complete prose/formula/picture rows to a fresh
 page in both modes, with the following paragraph intact. Eight outcomes retain
@@ -166,42 +166,27 @@ library/PDB identity, current caller documentation and its local links. Cross-pl
 package checks should consume the same selected package with each framework's
 expected library hash, preserving the original qualified runtime.
 
-## Prepared development package
+## Development package payload
 
-A local 0.3.0 development package and portable symbols are prepared in
-`artifacts/nuget/`, with checksums and a separate preparation record. Compilation
-is the retained CI43015189979/f852e431d build; caller documentation is the committed
-066064feb snapshot. Both framework DLLs and PDBs match those CI assets exactly.
-Packing used an explicit worktree with no library rebuild or root build. The
-packaged guide is a pinned development snapshot, not a final release declaration.
+CI43041456284 / `03ef23fcc` supplies the compiled .NET 10/.NET 11 libraries and
+portable symbols for the refreshed 0.3.0 development package. The Windows artifact
+digest is verified, and all 48 frozen runtime assets match their identities. Both
+framework package entries match those DLL/PDB bytes. Assembly/file versions are
+0.3.0.0; informational versions identify the same committed build.
 
-The CI-built .NET 11 runtime reproduces all sixteen portfolio PDFs and diagnostics
-exactly; their native glyph/page/Word-reference evidence is reused. The separate
-authored-legend PDF also matches the six-name/54-glyph audit. Two isolated Linux
-consumers use the exact prepared Windows-runtime package, one per framework;
-conversion, cancellation, refusal, ownership and publication checks pass. Windows
-CI consumer coverage is reused by runtime payload identity; this is not a fresh
-Windows consumer run of the documentation-updated ZIP. All 75 local package links
-and current caller files were audited separately. Native/runtime build hashes and
-package ZIP hashes remain distinct.
+Package preparation reuses these compiled payloads with current committed caller
+documentation, without rebuilding the library or the root checkout. Assets,
+checksums and the separate preparation record belong directly in `artifacts/nuget/`.
+The record distinguishes runtime hashes, documentation revision and final ZIP
+identity, and binds the consumer/portfolio checks to the consumed payloads.
+The previous f852e431d package remains parent evidence; published 0.2.0 is protected.
 
-The superseded October 31 candidate and its symbols are preserved under their
-source revision. Historical checksum errors are repaired with the original text
-retained in an ignored audit; published 0.2.0 assets are unchanged. CI artifact
-retention now includes symbols. Remaining rendering, calibration and resource
-gaps stay open; candidate preparation does not complete the broader roadmap or
-authorize publication.
-
-Package preflight now compares the declared assembly, file and informational
-versions of every framework library. A controlled package made from the actual
-stale root outputs passed the old selected-hash check; it is now refused before
-consumer restore. `TestPackageSmoke.ps1 -InspectOnly` performs these metadata and
-caller-documentation checks without loading the DLLs, packing or running a
-consumer. A selected-framework qualified hash is still required; matching declared
-versions do not qualify unverified bytes. Ten focused checks pass on each host,
-and normal Windows/.NET 11 and Ubuntu/.NET 10 package consumers pass. The prepared
-package and symbols remain byte-identical; no library build, broad suite or
-portfolio replay was needed for this tooling repair.
+`TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
+links without packing, restoring or loading assemblies. Consumer checks cover
+conversion, cancellation, admission refusal, ownership and output publication.
+The selected framework still requires its qualified hash: matching versions alone
+do not qualify unverified bytes. Preparation does not complete the remaining
+rendering/calibration/resource roadmap or authorize publication.
 
 ## Independent content checks and limits
 
