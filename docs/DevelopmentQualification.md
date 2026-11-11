@@ -20,6 +20,14 @@ entire note body is excluded before layout. Final's supported deleted-math
 structure and warnings for visible malformed or unsupported payloads remain.
 Two hidden Final cases now pass strict CLI conversion with no diagnostics.
 
+Twelve additional revision-setting/view outcomes pass strict mode and match the
+existing Final PDFs exactly. Six source-preserving footer placement outcomes
+retain all five visible formulas and the one intentional omission; actual native
+font-program/GID sequences match controls, and 408 measured glyphs clear clips.
+A separate screen finds no cross-baseline ink-box intersections among the
+portfolio's 56,513 bound glyphs. Same-baseline/rotated text and arbitrary occlusion
+remain outside that screen; new-source Office appearance remains unqualified.
+
 Windows passes 64 focused checks; Ubuntu passes 56 with eight declared font skips.
 The final Windows selection runs one causal check and 63 neighbors without
 duplicating methods; Ubuntu runs one selection. The parent fails the restored
