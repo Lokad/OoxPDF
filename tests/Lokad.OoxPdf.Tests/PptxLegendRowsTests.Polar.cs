@@ -6,6 +6,52 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxLegendRowsTests
 {
+    public static void PptxSideLegendClipsRetainTheActualGlyphInk()
+    {
+        foreach (string kind in new[] { "pie", "doughnut", "column", "line" })
+        foreach (string position in new[] { "l", "r" })
+        foreach (int size in new[] { 8, 12, 18 })
+        foreach (int count in new[] { 2, 6 })
+        {
+            var page = Render(576, size, count, overlay: false, kind: kind,
+                categoryLegend: kind != "line", legendPosition: position).Page;
+            int names = 0, measuredGlyphs = 0;
+            foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
+            foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(
+                new PdfPage(page.Width, page.Height, block, page.Fonts), usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)))
+            {
+                names++;
+                var font = show.Font.Font;
+                foreach (char character in show.Text)
+                {
+                    if (char.IsWhiteSpace(character)) continue;
+                    TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(character), out var ink),
+                        "The pinned portable font exposes actual glyph ink.");
+                    double scale = show.Size / font.UnitsPerEm;
+                    double bottom = (show.Y + ink.YMin * scale) * transform.M22 + transform.M32;
+                    double top = (show.Y + ink.YMax * scale) * transform.M22 + transform.M32;
+                    measuredGlyphs++;
+                    TestAssert.True(bottom >= clip.Y - .01d && top <= clip.Y + clip.Height + .01d,
+                        $"A complete side-legend name cannot lose its glyph ink: {kind}/{position}/{size}/{count}/{show.Text}/{character}.");
+                }
+            }
+            TestAssert.Equal(count, names);
+            TestAssert.True(measuredGlyphs > count, "Every legend's source glyphs are checked independently of extraction.");
+        }
+    }
+
+    public static void PptxAuthoredSideLegendRetainsItsExplicitViewport()
+    {
+        const string layout = "<c:layout><c:manualLayout><c:xMode val=\"edge\"/><c:yMode val=\"edge\"/><c:wMode val=\"factor\"/><c:hMode val=\"factor\"/><c:x val=\".5\"/><c:y val=\".2\"/><c:w val=\".2\"/><c:h val=\".1\"/></c:manualLayout></c:layout>";
+        var page = Render(576, 18, 6, overlay: false, kind: "pie", categoryLegend: true,
+            legendPosition: "r", legendMetadata: layout).Page;
+        double[] clip = ReadPolarLegendClip(page, 576);
+        TestAssert.True(Math.Abs(clip[0] - 360d) < .001d && Math.Abs(clip[1] - (page.Height - 108d - 108d)) < .001d &&
+            Math.Abs(clip[2] - 115.2d) < .001d && Math.Abs(clip[3] - 36d) < .001d,
+            "The explicit source rectangle retains its own viewport even when all names do not fit.");
+    }
+
     public static void PptxPolarHorizontalRowsKeepEveryNameInsideTheirClip()
     {
         foreach (string kind in new[] { "pie", "doughnut" })

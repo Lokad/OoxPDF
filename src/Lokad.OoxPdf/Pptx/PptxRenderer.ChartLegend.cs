@@ -206,6 +206,18 @@ internal sealed partial class PptxRenderer
         var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
         await textMeasurer.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         ChartLegendBox legendBox = preparedBox ?? ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
+        if (!legendBox.Horizontal && !layout.Layout.HasGeometryValues)
+        {
+            // Automatic side clips contain the measured font box at both end
+            // baselines. An authored viewport keeps its explicit clipping.
+            var line = await textMeasurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
+            double bottom = Math.Min(legendBox.ClipY, Math.Max(frame.Y,
+                legendBox.FirstY - (entries.Count - 1) * legendBox.LineHeight - line.Descent));
+            double top = Math.Max(legendBox.ClipY + legendBox.ClipHeight,
+                Math.Min(frame.Y + frame.Height, legendBox.FirstY + line.Ascent));
+            legendBox = legendBox with { ClipY = bottom, ClipHeight = top - bottom,
+                ContentAscent = line.Ascent, ContentDescent = line.Descent };
+        }
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 

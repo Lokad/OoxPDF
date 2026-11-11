@@ -30,6 +30,8 @@
     "DocxContainerTableGridsPreservePortableContentAndPaintedLinks"
   ],
   "pptx-horizontal-polar-frame": [
+      "PptxSideLegendClipsRetainTheActualGlyphInk",
+      "PptxAuthoredSideLegendRetainsItsExplicitViewport",
       "PptxPieHorizontalLegendsUseSelectedPlotMidpoint",
       "PptxUntitledUnreservedPiesUseVerticalMidpoint",
       "PptxSyntheticPieChartManualPlotBoxUsesPolarPath",
