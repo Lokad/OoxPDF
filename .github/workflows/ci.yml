@@ -99,6 +99,7 @@ jobs:
             & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $framework -ExpectedLibrarySha256 $hash @fontArguments
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+          & ./tools/TestPackageInspection.ps1 -PackagePath $package -OutputDirectory artifacts/ci-tests/package-inspection
       - name: Text comparison adversarial checks
         run: |
           pwsh -NoProfile -File tools/TestTextOperationComparison.ps1

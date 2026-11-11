@@ -5,6 +5,8 @@
 # restore cache, and consumer directory so older packages cannot satisfy the test.
 # On hosts without Windows fonts,
 # pass an embeddable TrueType font through -FontPath to exercise a custom resolver.
+# -InspectOnly requires a pinned existing package and performs metadata/docs checks
+# without packing, restoring, loading its assemblies, or running a consumer.
 
 param(
     [string] $Configuration = "Release",
@@ -12,11 +14,13 @@ param(
     [switch] $NoBuild,
     [string] $PackagePath = "",
     [string] $ExpectedLibrarySha256 = "",
+    [switch] $InspectOnly,
     [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0'
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+if ($InspectOnly -and -not $PackagePath) { throw 'InspectOnly requires an existing PackagePath.' }
 if ($PackagePath) {
     $PackagePath = (Resolve-Path -LiteralPath $PackagePath).Path
     if (-not $ExpectedLibrarySha256) { throw 'Reusing a package requires the qualified library hash.' }
@@ -29,26 +33,70 @@ $libraryProject = Join-Path $repoRoot "src/Lokad.OoxPdf/Lokad.OoxPdf.csproj"
 $runId = [Guid]::NewGuid().ToString("N")
 $packDirectory = Join-Path $repoRoot "artifacts/nuget/package-smoke/$runId"
 $scratch = Join-Path $repoRoot "artifacts/package-smoke/$runId"
-New-Item -ItemType Directory -Force -Path $packDirectory, $scratch | Out-Null
-if ($PackagePath) {
-    Copy-Item -LiteralPath $PackagePath -Destination $packDirectory
+New-Item -ItemType Directory -Force -Path $scratch | Out-Null
+if ($InspectOnly) {
+    $packages = @(Get-Item -LiteralPath $PackagePath)
 }
 else {
-    $packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
-    if ($NoBuild) { $packArguments += "--no-build" }
-    & dotnet @packArguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Library packing failed with exit code $LASTEXITCODE."
+    New-Item -ItemType Directory -Force -Path $packDirectory | Out-Null
+    if ($PackagePath) {
+        Copy-Item -LiteralPath $PackagePath -Destination $packDirectory
     }
+    else {
+        $packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
+        if ($NoBuild) { $packArguments += "--no-build" }
+        & dotnet @packArguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "Library packing failed with exit code $LASTEXITCODE."
+        }
+    }
+    $packages = @(Get-ChildItem -LiteralPath $packDirectory -Filter "Lokad.OoxPdf.*.nupkg")
 }
-
-$packages = @(Get-ChildItem -LiteralPath $packDirectory -Filter "Lokad.OoxPdf.*.nupkg")
 if ($packages.Count -ne 1) {
     throw "Expected exactly one freshly packed Lokad.OoxPdf package, found $($packages.Count)."
 }
 $package = $packages[0]
 $version = $package.BaseName.Substring("Lokad.OoxPdf.".Length)
 Write-Host ("Smoking package {0}." -f $package.Name)
+
+function Read-PackedLibraryIdentity($Entry) {
+    $bytes = [IO.MemoryStream]::new()
+    try {
+        $source = $Entry.Open()
+        try { $source.CopyTo($bytes) } finally { $source.Dispose() }
+        $bytes.Position = 0
+        $pe = [System.Reflection.PortableExecutable.PEReader]::new($bytes,
+            [System.Reflection.PortableExecutable.PEStreamOptions]::LeaveOpen)
+        try {
+            $reader = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader($pe)
+            $assembly = $reader.GetAssemblyDefinition()
+            $versions = @{}
+            foreach ($handle in $assembly.GetCustomAttributes()) {
+                $attribute = $reader.GetCustomAttribute($handle)
+                if ($attribute.Constructor.Kind -ne [System.Reflection.Metadata.HandleKind]::MemberReference) { continue }
+                $member = $reader.GetMemberReference([System.Reflection.Metadata.MemberReferenceHandle]::op_Explicit($attribute.Constructor))
+                if ($member.Parent.Kind -ne [System.Reflection.Metadata.HandleKind]::TypeReference) { continue }
+                $type = $reader.GetTypeReference([System.Reflection.Metadata.TypeReferenceHandle]::op_Explicit($member.Parent))
+                $name = $reader.GetString($type.Name)
+                if ($reader.GetString($type.Namespace) -ne 'System.Reflection' -or
+                    $name -notin @('AssemblyFileVersionAttribute','AssemblyInformationalVersionAttribute')) { continue }
+                $value = $reader.GetBlobReader($attribute.Value)
+                if ($value.ReadUInt16() -ne 1) { throw "Invalid packed version metadata: $($Entry.FullName)" }
+                $versions[$name] = $value.ReadSerializedString()
+            }
+            if (!$versions.AssemblyFileVersionAttribute -or !$versions.AssemblyInformationalVersionAttribute) {
+                throw "Packed library version metadata is missing: $($Entry.FullName)"
+            }
+            $bytes.Position = 0
+            [pscustomobject]@{Entry=$Entry.FullName; AssemblyVersion=$assembly.Version.ToString();
+                FileVersion=$versions.AssemblyFileVersionAttribute;
+                InformationalVersion=$versions.AssemblyInformationalVersionAttribute;
+                Sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))}
+        }
+        finally { $pe.Dispose() }
+    }
+    finally { $bytes.Dispose() }
+}
 
 $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
 try {
@@ -72,17 +120,34 @@ try {
             $localDocumentationLinks++
         }
     }
-    $libraryEntry = $archive.GetEntry("lib/$Framework/Lokad.OoxPdf.dll")
-    if ($null -eq $libraryEntry) { throw "Packed library DLL is missing." }
-    $libraryStream = $libraryEntry.Open()
-    try {
-        $librarySha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($libraryStream))
-    }
-    finally { $libraryStream.Dispose() }
+    $libraryIdentities = @(foreach ($entry in $archive.Entries) {
+        if ($entry.FullName -cmatch '^lib/[^/]+/Lokad\.OoxPdf\.dll$') { Read-PackedLibraryIdentity $entry }
+    })
+    $selected = @($libraryIdentities | Where-Object Entry -CEQ "lib/$Framework/Lokad.OoxPdf.dll")
+    if ($selected.Count -ne 1) { throw 'Packed library DLL is missing or duplicated.' }
+    $librarySha256 = $selected[0].Sha256
+    # Declared identities expose mixed checkout builds; qualified hashes still
+    # bind the selected bytes. Matching version metadata alone is not qualification.
+    $first = $libraryIdentities[0]
+    if (@($libraryIdentities | Where-Object {
+        $_.AssemblyVersion -cne $first.AssemblyVersion -or $_.FileVersion -cne $first.FileVersion -or
+        $_.InformationalVersion -cne $first.InformationalVersion
+    }).Count) { throw 'Packed framework library build identities differ.' }
 }
 finally { $archive.Dispose() }
 if ($ExpectedLibrarySha256 -and $librarySha256 -ne $ExpectedLibrarySha256) {
     throw "Packed library differs from the qualified artifact."
+}
+
+if ($InspectOnly) {
+    [ordered]@{InspectionOnly=$true;LibraryRebuilt=$false;ConsumerRan=$false;
+        Framework=$Framework;ExpectedLibrarySha256=$ExpectedLibrarySha256;LibrarySha256=$librarySha256;
+        Package=$package.FullName;PackageSha256=(Get-FileHash -LiteralPath $package.FullName).Hash;
+        FrameworkIdentities=$libraryIdentities;LocalDocumentationLinksChecked=$localDocumentationLinks} |
+        ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $scratch 'summary.json') -Encoding utf8
+    Write-Host 'Package metadata and documentation inspection passed; no build, restore or consumer.'
+    Write-Host ("Evidence: {0}" -f (Join-Path $scratch 'summary.json'))
+    return
 }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-plain-paragraph.docx") -Destination (Join-Path $scratch "input.docx")
@@ -362,6 +427,8 @@ Write-Host "Package smoke test passed through the packed library."
     AdmissionRefusalChecked = $true
     FailurePreservesDestinationChecked = $true
     VersionMetadataChecked = $true
+    FrameworkBuildIdentitiesChecked = $true
+    FrameworkIdentities = $libraryIdentities
     CallerDocumentationChecked = $true
     AsyncOnlyOutputChecked = $true
     ExplicitTemporaryStorageChecked = $true
@@ -376,5 +443,5 @@ Write-Host "Package smoke test passed through the packed library."
     OutputBytes = (Get-Item -LiteralPath $output).Length
     PptxOutputSha256 = (Get-FileHash -LiteralPath ([IO.Path]::ChangeExtension($output, '.pptx.pdf')) -Algorithm SHA256).Hash
     RestorePackages = Join-Path $scratch "packages"
-} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $scratch "summary.json") -Encoding UTF8
+} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $scratch "summary.json") -Encoding UTF8
 Write-Host ("Evidence: {0}" -f (Join-Path $scratch "summary.json"))

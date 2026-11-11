@@ -167,6 +167,17 @@ retention now includes symbols. Remaining rendering, calibration and resource
 gaps stay open; candidate preparation does not complete the broader roadmap or
 authorize publication.
 
+Package preflight now compares the declared assembly, file and informational
+versions of every framework library. A controlled package made from the actual
+stale root outputs passed the old selected-hash check; it is now refused before
+consumer restore. `TestPackageSmoke.ps1 -InspectOnly` performs these metadata and
+caller-documentation checks without loading the DLLs, packing or running a
+consumer. A selected-framework qualified hash is still required; matching declared
+versions do not qualify unverified bytes. Ten focused checks pass on each host,
+and normal Windows/.NET 11 and Ubuntu/.NET 10 package consumers pass. The prepared
+package and symbols remain byte-identical; no library build, broad suite or
+portfolio replay was needed for this tooling repair.
+
 ## Independent content checks and limits
 
 Ink checks bind each native paint span to its **actual embedded font program,

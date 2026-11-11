@@ -112,6 +112,10 @@ without a framework field are net10-only.
 Keep runner TMP/TEMP in its ignored artifact directory. For frozen CLI checks,
 set `OOXPDF_TEST_CLI_ASSEMBLY` to that artifact's CLI. Package checks can use
 `TestPackageSmoke.ps1 -NoBuild -ExpectedLibrarySha256 <qualified hash>`.
+Its `-InspectOnly -PackagePath <nupkg> -ExpectedLibrarySha256 <hash>` mode checks
+all declared framework build identities and package docs without build/restore or
+consumer execution. `tools/TestPackageInspection.ps1` covers coherent, mixed and
+single-framework packages with an existing dual-framework package; never builds.
 Use `-PackagePath <nupkg>` with that hash to consume the same package on another
 platform without rebuilding or repacking the library.
 Unit tests can also be filtered by capability group with `--group`, for example:
