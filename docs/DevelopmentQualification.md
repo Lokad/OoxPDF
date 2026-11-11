@@ -40,8 +40,10 @@ package consumers. The earlier rotation correction also passed its broader gate
 after repairing the note-ownership assertion exposed by CI42949586292.
 CI42968585479 then failed the fixed-picture fallback neighbor on both hosts
 (4,788/2,257 passes, 19/129 skips); terminal logs remain retained. The repaired
-terminal-picture batch awaits its broader platform/framework/package result;
-the preceding green gate is historical. Earlier
+batch at `62391bc43` passed CI42970799951: **4,789 Windows/2,258 Ubuntu passes**,
+19/129 reviewed skips, 69 .NET 10 checks per host and four package consumers.
+Both terminal host logs were fetched once. This status-only documentation update
+reuses that result; production, harness and fixtures are unchanged. Earlier
 CI42929150677 failed the legacy static-image ownership control on both hosts;
 those reports remain retained, and the repair passed broader CI. Consult the
 reports for the revision being consumed. CI builds platform binaries separately;
