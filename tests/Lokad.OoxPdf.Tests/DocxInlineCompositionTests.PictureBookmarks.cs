@@ -9,7 +9,7 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
-    public static void DocxPictureBookmarksWithoutMathUseTheSamePlacedSource()
+    public static void DocxPictureBookmarksWithoutMathRetainSourcePositions()
     {
         foreach (string container in new[] { "body", "cell", "header", "footer" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -24,6 +24,18 @@ internal static partial class DocxInlineCompositionTests
                 anchor.InlineItemIndex is int index && index >= 0 && index < items.Count &&
                 items[index] is DocxInlinePicture picture && ReferenceEquals(picture.Image, target.Images.Single()),
                 "Picture source ownership does not depend on math or a link in the target paragraph.");
+        }
+    }
+
+    public static void DocxPictureBookmarksWithoutMathUseTheSamePlacedSource()
+    {
+        // Ordinary body/cell picture-plus-prose still uses legacy placement.
+        // Static stories admit this source to the shared measured path.
+        foreach (string container in new[] { "header", "footer" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool wrapped in new[] { false, true })
+        {
+            var source = ReadPictureBookmark(container, mode, 18, wrapped, includeMath: false);
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
@@ -139,8 +151,8 @@ internal static partial class DocxInlineCompositionTests
                 : new XElement(w + "r"));
             picture.AddAfterSelf(new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "909")));
             paragraph.Add(new XElement(w + "r", new XElement(w + "t", " PublicSuffix")));
-            // The target paragraph deliberately has no hyperlinks or comments;
-            // navigation from a different paragraph still requires placed source ranges.
+            // Navigation from another paragraph requires placed source ranges
+            // even when the optional prefix link is absent.
             paragraph.AddBeforeSelf(new XElement(w + "p", new XElement(w + "hyperlink", new XAttribute(w + "anchor", "PictureTarget"),
                 new XElement(w + "r", new XElement(w + "t", "Jump to picture")))));
             if (container == "cell") paragraph.ReplaceWith(new XElement(w + "tbl",
