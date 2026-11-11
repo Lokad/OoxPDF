@@ -100,6 +100,30 @@ internal sealed partial class DocxLayoutEngine
         return index.PrefixSums[hi] - index.PrefixSums[lo];
     }
 
+    // Pictures own source boundaries even when no following word causes a width
+    // check. Both wrapping paths use the same admission rule; an object that fits
+    // no line keeps its existing overflow fallback.
+    private static int FindInlineImageWrapBreak(
+        (int[] Offsets, double[] PrefixSums) images, int start, int end,
+        double available, double nextAvailable, Func<int, double> measurePrefix,
+        CancellationToken token = default, bool includeEnd = false)
+    {
+        int first = Array.BinarySearch(images.Offsets, start);
+        if (first < 0) first = ~first;
+        for (int index = first; index < images.Offsets.Length; index++)
+        {
+            token.ThrowIfCancellationRequested();
+            int offset = images.Offsets[index];
+            if (offset <= start) continue;
+            if (offset > end || offset == end && !includeEnd) break;
+            double width = images.PrefixSums[index + 1] - images.PrefixSums[index];
+            double before = measurePrefix(offset) + ImageWidthInRange(images, start, offset);
+            if (FitsLineWidth(before, available) && !FitsLineWidth(before + width, available) &&
+                FitsLineWidth(width, nextAvailable)) return offset;
+        }
+        return -1;
+    }
+
     private static IEnumerable<DocxWrappedTextLine> WrapTextLines(
         IReadOnlyList<DocxTextSpan> spans,
         double firstLineMaxWidth,
@@ -233,7 +257,10 @@ internal sealed partial class DocxLayoutEngine
         // width lookups logarithmic; text measurement and memoization stay untouched.
         var imageWrapIndex = BuildInlineImageWrapIndex(inlineImageWidths);
         int[] imageOffsets = imageWrapIndex.Offsets;
-        double[] imagePrefixSums = imageWrapIndex.PrefixSums;
+        Func<int, double>? measureImagePrefix = imageOffsets.Length == 0 ? null : offset =>
+            MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans,
+                lineStart, offset - lineStart, fontSize, textMeasurer, tabStops, defaultTabStopPoints,
+                preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts);
 
         bool lineHasNonWhitespace = false;
         int lineIndex = 0;
@@ -249,31 +276,9 @@ internal sealed partial class DocxLayoutEngine
                 // RV05: image-driven breaking. A line-owning image that overflows the remainder
                 // breaks onto the next line at its own offset (words stay whole); overwide images
                 // that fit no line keep the overwide-text convention and overflow.
-                int imageBreakOffset = -1;
-                int firstImage = Array.BinarySearch(imageOffsets, lineStart);
-                if (firstImage < 0) firstImage = ~firstImage;
-                for (int imageBreakIndex = firstImage; imageBreakIndex < imageOffsets.Length; imageBreakIndex++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    int imageOffset = imageOffsets[imageBreakIndex];
-                    if (imageOffset <= lineStart)
-                    {
-                        continue;
-                    }
-
-                    if (imageOffset >= lineStart + candidateLength)
-                    {
-                        break;
-                    }
-
-                    double overflowingImageWidth = imagePrefixSums[imageBreakIndex + 1] - imagePrefixSums[imageBreakIndex];
-                    double beforeImageWidth = MeasureWrapSlice(measureMemo, segmentHasHiddenBreaks, segmentHasDynamicFields, spans, lineStart, imageOffset - lineStart, fontSize, textMeasurer, tabStops, defaultTabStopPoints, preserveTerminalSoftHyphen: false, dynamicFieldPageNumber, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, imageOffset);
-                    if (FitsLineWidth(beforeImageWidth, maxWidth(lineIndex)) && !FitsLineWidth(beforeImageWidth + overflowingImageWidth, maxWidth(lineIndex)) && FitsLineWidth(overflowingImageWidth, maxWidth(lineIndex + 1)))
-                    {
-                        imageBreakOffset = imageOffset;
-                        break;
-                    }
-                }
+                int imageBreakOffset = measureImagePrefix is null ? -1 : FindInlineImageWrapBreak(imageWrapIndex,
+                    lineStart, lineStart + candidateLength, maxWidth(lineIndex), maxWidth(lineIndex + 1),
+                    measureImagePrefix, cancellationToken);
 
                 if (imageBreakOffset > lineStart)
                 {
@@ -355,6 +360,19 @@ internal sealed partial class DocxLayoutEngine
 
         if (lineLength > 0)
         {
+            // Finish the source row, including pictures at its final boundary or
+            // followed only by whitespace. No synthetic text marker is needed:
+            // an empty wrapped row can own the picture through SourceTextStart.
+            while (measureImagePrefix is not null)
+            {
+                int imageBreakOffset = FindInlineImageWrapBreak(imageWrapIndex, lineStart, lineStart + lineLength,
+                    maxWidth(lineIndex), maxWidth(lineIndex + 1), measureImagePrefix, cancellationToken, includeEnd: true);
+                if (imageBreakOffset <= lineStart) break;
+                yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
+                lineIndex++;
+                lineLength -= imageBreakOffset - lineStart;
+                lineStart = imageBreakOffset;
+            }
             yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
         }
 

@@ -903,10 +903,10 @@ internal sealed partial class DocxLayoutEngine
         // measures of the same slice shape once.
         var measureMemo = new Dictionary<(int Start, int Length), double>();
         var imageWrapIndex = BuildInlineImageWrapIndex(inlineImageWidths);
-        int[] imageOffsets = imageWrapIndex.Offsets;
-        double[] imagePrefixSums = imageWrapIndex.PrefixSums;
         int lineStart = tokens[0].Start;
         int lineLength = 0;
+        Func<int, double>? measureImagePrefix = imageWrapIndex.Offsets.Length == 0 ? null : offset =>
+            MeasureStaticSlice(measureMemo, spans, lineStart, offset - lineStart, textMeasurer, spanStarts);
         // RV13: maintain whitespace presence incrementally instead of
         // rescanning the whole line per token. Added extents chain
         // contiguously from lineStart, so the running OR equals a fresh scan.
@@ -920,28 +920,8 @@ internal sealed partial class DocxLayoutEngine
                 !token.IsBreakableWhitespace &&
                 MeasureStaticSlice(measureMemo, spans, lineStart, candidateLength, textMeasurer, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + candidateLength) > maxWidth)
             {
-                int imageBreakOffset = -1;
-                for (int imageBreakIndex = 0; imageBreakIndex < imageOffsets.Length; imageBreakIndex++)
-                {
-                    int imageOffset = imageOffsets[imageBreakIndex];
-                    if (imageOffset <= lineStart)
-                    {
-                        continue;
-                    }
-
-                    if (imageOffset >= lineStart + candidateLength)
-                    {
-                        break;
-                    }
-
-                    double overflowingImageWidth = imagePrefixSums[imageBreakIndex + 1] - imagePrefixSums[imageBreakIndex];
-                    double beforeImageWidth = MeasureStaticSlice(measureMemo, spans, lineStart, imageOffset - lineStart, textMeasurer, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, imageOffset);
-                    if (beforeImageWidth <= maxWidth && beforeImageWidth + overflowingImageWidth > maxWidth && overflowingImageWidth <= maxWidth)
-                    {
-                        imageBreakOffset = imageOffset;
-                        break;
-                    }
-                }
+                int imageBreakOffset = measureImagePrefix is null ? -1 : FindInlineImageWrapBreak(imageWrapIndex,
+                    lineStart, lineStart + candidateLength, maxWidth, maxWidth, measureImagePrefix);
 
                 if (imageBreakOffset > lineStart)
                 {
@@ -968,6 +948,15 @@ internal sealed partial class DocxLayoutEngine
 
         if (lineLength > 0)
         {
+            while (measureImagePrefix is not null)
+            {
+                int imageBreakOffset = FindInlineImageWrapBreak(imageWrapIndex, lineStart, lineStart + lineLength,
+                    maxWidth, maxWidth, measureImagePrefix, includeEnd: true);
+                if (imageBreakOffset <= lineStart) break;
+                yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
+                lineLength -= imageBreakOffset - lineStart;
+                lineStart = imageBreakOffset;
+            }
             yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
         }
     }
