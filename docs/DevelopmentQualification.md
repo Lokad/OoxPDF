@@ -24,9 +24,10 @@ Twelve additional revision-setting/view outcomes pass strict mode and match the
 existing Final PDFs exactly. Six source-preserving footer placement outcomes
 retain all five visible formulas and the one intentional omission; actual native
 font-program/GID sequences match controls, and 408 measured glyphs clear clips.
-A separate screen finds no cross-baseline ink-box intersections among the
-portfolio's 56,513 bound glyphs. Same-baseline/rotated text and arbitrary occlusion
-remain outside that screen; new-source Office appearance remains unqualified.
+Separate screens find no cross-baseline or same-baseline cross-paint ink-box
+intersections among the portfolio's 56,513 bound glyphs. Within-paint same-baseline
+collisions, rotated text and arbitrary occlusion remain outside those screens;
+new-source Office appearance remains unqualified.
 
 Windows passes 64 focused checks; Ubuntu passes 56 with eight declared font skips.
 The final Windows selection runs one causal check and 63 neighbors without
@@ -39,8 +40,11 @@ Transfer verifies 24 assets/two exact smoke PDFs without a root build or suite
 replay. All 24 causal PDFs remain byte-identical to the content repair, with only
 two false warnings removed. All sixteen portfolio PDFs/diagnostics remain exact;
 independent paint evidence and two PPTX passes/fourteen DOCX image failures remain.
-The coherent broader Windows/Linux, framework and package milestone is pending.
-The prepared package below remains its parent and lacks these two repairs.
+The coherent milestone passed CI43118101912 on `a228b65dd`: Windows 4,810 passes/
+19 skips, Ubuntu 2,293/130, 69 .NET 10 checks per host and four package consumers.
+Terminal logs are retained once. Four additional .NET 10 revision/equation checks
+pass on each host using the exact CI assembly; two CI-runtime smoke PDFs match.
+The prepared package below contains both repairs.
 Publication, application-view calibration and the broader roadmap remain open.
 
 The independent comment-body follow-up finds no new defect in the report, letter
@@ -323,7 +327,7 @@ expected library hash, preserving the original qualified runtime.
 ## Prepared development package payload
 
 The development package and symbols are prepared directly in `artifacts/nuget/`,
-with checksums and a separate qualification record. CI43101429109 / `f5f0a7999`
+with checksums and a separate qualification record. CI43118101912 / `a228b65dd`
 supplies both framework libraries, portable symbols and the original package ZIP.
 Windows CI consumed those exact archive bytes; its consumer evidence is reused.
 Both Linux framework checks consume the same Windows package. No repack or
@@ -332,7 +336,7 @@ library/root rebuild was needed for preparation.
 The Windows artifact digest and all 48 frozen runtime assets are verified. Both
 framework package entries match those DLL/PDB bytes; assembly/file versions are
 0.3.0.0 and informational versions identify the same committed build. The package
-SHA-256 is `4E4A7902D612DBEF11CFF3B444D694C8F0D5FC7A7FDE868AC0A6CF6844CC5CF1`.
+SHA-256 is `8B0E92B80D4B3822B8B697C9C9E24426BBD9ABBB881A1C276F21BAE43842BCE2`.
 All 76 packaged local links are checked. Documentation retains its immutable CI
 snapshot; later qualification/priority notes in this document and
 CompositionCheckpoint do not cause another repack. Caller/API documents match.
@@ -341,12 +345,14 @@ The source-runtime portfolio/native evidence remains separate from the CI build
 metadata: sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures.
 Production/build inputs match, and two CI-runtime identity smokes reproduce the
 corrected mixed-box composition and six-name legend PDFs. No full portfolio or suite
-replay is claimed for that transfer. Four additional .NET 10 regressions cover box
-content, source indices and fallback guards on both hosts. The previous 8a4d30380
-package is preserved as parent evidence, alongside earlier e7d591999/03ef23fcc/
-f852e431 assets; published 0.2.0 is protected. An evidence join initially retained
-the parent's 75-link count; all consumers and the independent audit resolve 76.
-Only that metadata join was repaired, retaining its original script/log.
+replay is claimed for that transfer. Four additional .NET 10 regressions cover
+visible box revisions, selected note/row sources and malformed equations on both
+hosts. The previous `f5f0a7999` package is preserved as parent evidence, alongside
+earlier development assets; published 0.2.0 is protected. The first extra Linux
+.NET 10 consumer build failed before library loading without compiler details.
+A consumer-only build with build servers disabled and a sequential retry passed.
+The failed attempt is retained; its cause remains unverified. No library source
+or qualified runtime changed, and the successful .NET 11 check was reused.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover
