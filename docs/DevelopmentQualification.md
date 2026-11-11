@@ -16,18 +16,26 @@ eight transformed/control page-raster pairs are exact; this also removes a 2.547
 Review child-baseline difference. Nested content remains unsupported and receives
 the precise `DOCX_UNSUPPORTED_NESTED_INLINE_TEXTBOX` warning.
 
-Windows passes 40 focused checks; Ubuntu passes 34 with six declared font skips.
-One test-only repair adds the bookmark needed to activate lazy source-index
-capture; only that method was rerun per host. Joined reports preserve the original
-failed attempts and verify 21 unchanged runtime assets/3,438 inputs. An earlier
+Windows passes 46 focused checks; Ubuntu passes 39 with seven declared font skips.
+Test-only repairs add the bookmark needed to activate lazy source-index capture
+and update an older staged-path assertion to retain the valid outer frame while
+ignoring nested paint. Explicit-slot/revision guards remain; empty paragraph
+struts remain valid. Only repaired methods were rerun per host; six previously
+omitted neighboring methods join the capability. Reports preserve original failed
+attempts and verify 21 unchanged runtime assets/3,438 inputs. An earlier
 harness repair bound math to its pinned mathematical font; the parent regression
 then fails on the missing first formula. Intermediate production results and the
 initial test-compile failure remain recorded. Final frozen .NET 11 library:
 `AE5B7A3FD66AA41D329FF4EF7257A620C54EBED5F38753F98492456EB5306A31`.
 Transfer verifies 24 assets and two exact smoke PDFs without a root build or suite
 replay. All sixteen portfolio PDFs/diagnostics are unchanged, retaining the two
-PPTX passes/fourteen DOCX image failures. Broader CI/framework/package qualification
-is pending for this production batch; the prepared package below is its parent
+PPTX passes/fourteen DOCX image failures. Additional split-run/bookmark/body-link
+checks in cells and headers retain all eight formulas/links, 584 bound glyphs and
+twelve exact raster pairs without a new build or rendering fix. Broader
+CI43099685261 passed Ubuntu 2,292/130 but Windows failed the older staged-path
+assertion (4,804/one failure/19 skips). Terminal evidence is retained once; the
+repaired harness above awaits a replacement coherent CI/framework/package gate.
+The prepared package below is its parent
 and does not contain this repair. New-source Word geometry/application view remain
 unqualified. No Office action, publication or roadmap completion is claimed.
 
