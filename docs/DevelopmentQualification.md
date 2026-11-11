@@ -396,11 +396,15 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
 - General note-row fragmentation/overflow, body/nested-table origins, floating
   table placement, custom Review canvas, numbering, annotations and typography
   remain open. Unfit fixed-line picture slots keep their clipped fallback.
-- An unspaced picture/word boundary with pinned Sans flags 0.072pt of glyph-box/
-  image overlap at the unchanged 0.01pt screen. Raster occlusion is unmeasured;
-  the spaced portable source passes. Exact combined-source Word geometry and
-  arbitrary paint occlusion remain unqualified. Earlier descent/paint trials
-  failed protected gates and are not consumed.
+- The inherited unspaced picture/word witness belongs to pinned DejaVu Math,
+  correcting its earlier Sans attribution. Its negative A bearing overlaps the
+  later image by 0.072pt in body and cell controls, failing the original 0.01pt
+  screen. Actual embedded outlines match the pinned source font. Image knockout
+  affects ten dark pixels at 1200 DPI and none at 300 DPI; the complete word stays
+  readable. Both spaced Math and Sans controls pass. This small overpaint residual
+  is deferred; no geometry or threshold changed. Source/font/PDF identities and
+  raster controls are retained. Exact Word appearance and arbitrary occlusion
+  remain unqualified; rejected descent/paint trials remain unconsumed.
 - Words following captured ordinary fixed-picture overhangs now wrap without loss.
   Terminal, reconstructed and prepared overhang frames keep their approximate
   fallbacks. Intentional picture clipping and exact new-source Word geometry
