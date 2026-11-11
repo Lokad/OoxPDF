@@ -342,7 +342,7 @@ internal static class DocxInlineContent
             if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion or DocxRevisionKind.RunPropertiesChange)) return false;
             remaining.Add(revision);
         }
-        // A resolved drawing owns its actual insertion references. Validate
+        // A resolved drawing owns its actual visible revision references. Validate
         // before other sources consume a shared wrapper; value-equal or
         // unlisted metadata and other box revision kinds retain their fallback.
         if (inlineTextBoxes is not null)
@@ -350,7 +350,7 @@ internal static class DocxInlineContent
                 foreach (var revision in box.Revisions)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (box.SourceRunIndex < 0 || revision.Kind != DocxRevisionKind.Insertion ||
+                    if (box.SourceRunIndex < 0 || revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) ||
                         !remaining.Contains(revision)) return false;
                 }
         // Resolved text owns its inserted/deleted content and run formatting.

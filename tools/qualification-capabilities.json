@@ -18360,7 +18360,7 @@
     "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
     "StagedPageMemoryRefusalAndCancellationStopBeforeSpillOrOutput"
   ],
-  "docx-inline-box-insertions": [
+  "docx-inline-box-revisions": [
     "DocxOwnedBoxParagraphsRetainSourceOwnershipWithoutParentMath",
     "DocxOwnedBoxParagraphsReuseCompleteChildrenAtEitherScale",
     "DocxOwnedBoxParagraphsRetainExplicitSlotRevisionAndNestedFallbacks",
@@ -18407,8 +18407,8 @@
     "PortableRenderingInlineSiblingFramesKeepContentAcrossContainers",
     "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
     "StagedPageMemoryRefusalAndCancellationStopBeforeSpillOrOutput",
-    "DocxInsertedInlineBoxesRequireTheirActualRevisionOwners",
-    "PortableRenderingInsertedInlineBoxesKeepChildAndSiblingEquations",
+    "DocxRevisedInlineBoxesRequireTheirActualVisibleOwners",
+    "PortableRenderingRevisedInlineBoxesKeepVisibleSourceContent",
     "DocxInlineCompositionTextRevisionOwnershipKeepsNontextFallbacksAndCancellation",
     "DocxInlineCompositionRunPropertyChangesRetainRevisionFormattingOwners",
     "DocxInlineCompositionListLabelsRetainParagraphRevisionOwners",
