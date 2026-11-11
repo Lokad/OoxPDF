@@ -524,8 +524,10 @@ Supported within the following constraints:
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
   including supported crop/flips/rotation and source frames. Ordered pictures
   retain their measured line frame, including beside equations. Rotation preserves
-  the independently qualified source-frame origin, source fit and clipping. Picture-only body
-  paragraphs use occupied height and collapsed spacing. Qualified automatic
+  the independently qualified source-frame origin, source fit and clipping.
+  Ordinary text/picture paragraphs preserve visible source order
+  when equally formatted runs are merged, including multiple drawings in one run.
+  Picture-only body paragraphs use occupied height and collapsed spacing. Qualified automatic
   picture-only paragraphs share their measured row frame across body, cells and
   static stories. Expanded ordinary spacing follows the occupied math/picture
   row once; prepared display equations retain their own spacing owner.
