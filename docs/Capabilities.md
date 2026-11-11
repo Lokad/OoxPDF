@@ -445,6 +445,10 @@ layout and general OpenType shaping. Static fallback diagnostics are listed belo
 
 Bookmarks before inline equations retain their destinations across empty or
 hidden runs; intervening visible text, pictures and text boxes keep their boundaries.
+Bookmarks capture ordered source positions independently of equations or links.
+Qualified static-picture targets follow their measured rows. Ordinary body/cell
+picture-plus-prose paragraphs retain legacy placement; their picture bookmark can
+target following text, and exact placed-picture navigation remains unqualified.
 
 Inline page/column tokens inside cells leave supported paragraph content together,
 including equations, pictures and navigation. Actual paragraph boundaries remain

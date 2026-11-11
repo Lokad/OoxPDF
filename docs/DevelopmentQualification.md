@@ -4,15 +4,16 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-This snapshot pins production and harness
-`794acff1e2dfada5d2418b20560db1f89f3af4be`. The frozen .NET 11 library
-SHA-256 is `62854DC0BF465F502682840A22E64F19EA63CF7DF0314DF4CAFE0AEE791B1973`.
+This snapshot pins production `012d64bf8113ca29c5a04402947462c620bd768a` and
+harness `685210088c6d59bcbf05eff29bfc40e85f5802be`. The frozen .NET 11 library
+SHA-256 is `D228F49AE59943FABFC8CC4A665F8C9932655539C013D62A36D5AC7FB9E8301A`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
+| Static picture bookmarks | Sixteen body links to header/footer picture bookmarks now resolve to their painted rows. The reader captures ordered source positions at each bookmark and removes later backfilling; unrelated math or caption links no longer determine whether the target exists. Painting streams, resource/font programs, image/mask data, glyph origins and image bounds remain identical. The native row-frame gate stays 0.001pt; exact combined-source Office geometry is unqualified. |
 | Direct header/footer pictures | Ordinary mixed pictures bypassed shared wrapping even when their source could be measured. Four Final controls retained only 54.14% of the picture bounds. Dispatch now uses the shared inline path; all sixteen direct/boxed controls retain full pictures and clear source text. The screen binds 1,880 glyphs to actual programs/resources/GIDs with no paper/rectangle-clip cuts or unknown traces. Eight boxed PDFs are identical; all source/page/diagnostic identities remain. Independent static Word anchors retain their gates; new combined-source Word geometry is unqualified. |
 | Fitting pictures in declared rows (prior milestone) | Fixed spacing bypassed wrapping and left a fitting picture's green center missing. Shared measurement now admits pictures contained above the declared baseline and grows minimum rows from their measured content. Twenty-four floating/inline automatic, fixed and minimum controls retain complete pictures. Eight inline outcomes keep every source text bound clear of the picture. The 28-outcome screen measures 4,046 actual-program-bound glyphs without paper/rectangle-clip cuts or unknown traces. Four oversized exact-slot fallbacks remain clipped and unqualified; authored floating `wrapNone` body-overlap residuals remain. New exact combined-source Word geometry is unqualified. |
 | Nested picture/header equation | The preceding milestone restored native header math from 56.5% to 100% black-mark retention by correcting object-only origins. Its sixteen Final/Review probes retain all pictures and 55,880 actual-program-bound glyphs without paper/rectangle-clip cuts or unknown traces. Object-only frames preserve container displacement; text/math keeps independently tested Word anchors. |
@@ -23,14 +24,15 @@ Documentation and harness updates do not rebuild that library.
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
-| Focused checks | 105 exact checks pass on Windows; 81 pass on Ubuntu with 24 reviewed installed-font skips. Both the visible-picture and legacy-ownership regressions fail against their respective parents. The repaired frozen runtime transfers 24 verified assets and two identical smoke PDFs. No root build or local full-DOCX replay. |
+| Focused checks | 86 exact checks pass on Windows; 72 pass on Ubuntu with 14 reviewed installed-font skips. Two source/placement regressions fail against the qualified parent; two neighboring controls pass. Test-only repairs retain authored boundaries before hidden runs and preserve rendered destinations. The 53-outcome batch retains all 29 portfolio/note/legend/unfit PDFs and eight caption-link controls; only the sixteen restored-link PDFs change. The frozen runtime transfers 24 verified assets and two identical smoke PDFs. No root build or local full-DOCX replay. |
 
 The preceding broader checkpoint `48bf80f8d` passed CI42924107847: 4,775 Windows/
 2,242 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
 package consumers. That historical gate is separate from the focused snapshot
 above. The later CI42929150677 failed the legacy static-image ownership control
-on both hosts; its reports remain retained. The focused repair above awaits a
-new broader result. Consult the CI reports for the revision being consumed. CI builds
+on both hosts; its reports remain retained. The ownership repair has separate
+broader CI42932044310, while the new source-boundary snapshot awaits its own
+broader result. Consult the CI reports for the revision being consumed. CI builds
 platform binaries separately;
 source coverage does not imply binary identity across platforms.
 
@@ -55,8 +57,10 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
 
 ## Remaining release gaps
 
-- Body links to static picture bookmarks have no destinations in the sixteen
-  combination probes. Exact Office behavior is unqualified. Two Review run-split
+- Ordinary body/cell picture-plus-prose still uses legacy placement: a picture
+  bookmark can target following text. Its placed-picture destination remains
+  unqualified. Static-picture destinations are repaired in the sixteen combination
+  probes; exact Office behavior is unqualified. Two Review run-split
   controls differ by 0.003479pt and fail the retained 0.001pt origin audit; picture
   and source-content checks pass. This small residual is deferred without tuning.
 - General note-row fragmentation/overflow, body/nested-table origins, floating
