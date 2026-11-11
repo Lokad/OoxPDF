@@ -61,10 +61,14 @@ internal static class DocxRepeatedMixedRowTests
             string caption = "Kept-row-caption-" + fixture;
             string following = "After-kept-row-" + fixture;
             double? originalGap = null;
+            foreach (string? alignment in new string?[] { null, "center", "bottom" })
             foreach (bool deferred in new[] { false, true })
             {
                 var source = ReadMixedTable("Composition/" + fixture, mode, caption, (table, w) =>
                 {
+                    if (alignment is not null)
+                        table.Element(w + "tr")!.Element(w + "tc")!.Element(w + "tcPr")!.Add(
+                            new XElement(w + "vAlign", new XAttribute(w + "val", alignment)));
                     table.Element(w + "tr")!.Element(w + "trPr")!.Add(new XElement(w + "trHeight",
                         new XAttribute(w + "val", "3600"), new XAttribute(w + "hRule", "atLeast")));
                     table.AddAfterSelf(Paragraph(w, following));
@@ -104,7 +108,7 @@ internal static class DocxRepeatedMixedRowTests
                 double gap = captionY - picture.Y - picture.Height;
                 originalGap ??= gap;
                 TestAssert.True(Math.Abs(gap - originalGap.Value) < .01d,
-                    "Page admission preserves the complete cell's relative caption/picture frame.");
+                    "Alignment and page admission preserve the complete cell's relative caption/picture frame.");
 
                 double LabelBaseline(string label)
                 {

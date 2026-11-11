@@ -269,12 +269,18 @@ internal sealed partial class DocxLayoutEngine
         inset = 0d;
         token.ThrowIfCancellationRequested();
         IReadOnlyList<DocxParagraph> paragraphs = GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell.VisualCell));
+        // Alignment translates an already measured inline frame; it does not
+        // change which inset is nominal. Keep legacy-only and nested alignment
+        // on their qualified fallback until their frames have the same ownership.
+        bool measuredAlignment = !hasNestedRows &&
+            cell.VisualCell.VerticalAlignment is DocxTableCellVerticalAlignment.Center or DocxTableCellVerticalAlignment.Bottom &&
+            cell.TextLines.Any(line => line.InlineFrame is not null);
         if (cell.TextLines.Count == 0 && cell.NestedRows.Count == 0 ||
             !HasOrderedInlineObjectOwners(cell, token) || cell.Cell.HasVerticalMerge ||
             hasNestedRows && !DocxMathParagraphPolicy.IsSupportedCellProperties(cell.VisualCell) ||
             paragraphs.Any(paragraph => paragraph.EffectiveProperties.LineSpacingPoints is not null) ||
             !string.IsNullOrEmpty(cell.VisualCell.VerticalAlignmentValue) &&
-            !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase)) return false;
+            !string.Equals(cell.VisualCell.VerticalAlignmentValue, "top", StringComparison.OrdinalIgnoreCase) && !measuredAlignment) return false;
         inset = ResolveTableCellFirstBaselineInset(paragraphs, measurer);
         if (cell.TextLines.Count == 0) return true;
         if (inset == 0d && cell.TextLines[0].InlineFrame?.TextBaselineInset is { } measuredInset)
