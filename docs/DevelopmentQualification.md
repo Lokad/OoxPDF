@@ -4,6 +4,33 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+The nested-inline-box fallback repair (`0bf14111c`) keeps a valid box's own frame
+independent of its unsupported children. Textbox stories measure supported source
+items through the shared ordered path, skipping nested frames at their original
+indices. Previously, a nested box could erase formulas beside the outer box or
+inside it in body, cell and header content. Four public sources/control transforms
+now retain ten previously missing equation paints across sixteen Final/Review
+outcomes. Actual font-program/GID checks measure 1,414 glyphs without clip cuts,
+unknown traces or picture/ink intersections. All eight original control PDFs and
+eight transformed/control page-raster pairs are exact; this also removes a 2.547pt
+Review child-baseline difference. Nested content remains unsupported and receives
+the precise `DOCX_UNSUPPORTED_NESTED_INLINE_TEXTBOX` warning.
+
+Windows passes 40 focused checks; Ubuntu passes 34 with six declared font skips.
+One test-only repair adds the bookmark needed to activate lazy source-index
+capture; only that method was rerun per host. Joined reports preserve the original
+failed attempts and verify 21 unchanged runtime assets/3,438 inputs. An earlier
+harness repair bound math to its pinned mathematical font; the parent regression
+then fails on the missing first formula. Intermediate production results and the
+initial test-compile failure remain recorded. Final frozen .NET 11 library:
+`AE5B7A3FD66AA41D329FF4EF7257A620C54EBED5F38753F98492456EB5306A31`.
+Transfer verifies 24 assets and two exact smoke PDFs without a root build or suite
+replay. All sixteen portfolio PDFs/diagnostics are unchanged, retaining the two
+PPTX passes/fourteen DOCX image failures. Broader CI/framework/package qualification
+is pending for this production batch; the prepared package below is its parent
+and does not contain this repair. New-source Word geometry/application view remain
+unqualified. No Office action, publication or roadmap completion is claimed.
+
 The fitting-note frame repair (`5551aeff6`) applies the existing printed-story map
 to complete fitting normal-story table subtrees and their drawing URI targets.
 Review previously painted a footnote table below the following note and let an
