@@ -1,4 +1,6 @@
 using System.Xml.Linq;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 
@@ -33,6 +35,19 @@ internal static partial class DocxInlineCompositionTests
             var page = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(1, page.Images.Count);
             TestAssert.Contains("0 -1 1 0 ", page.Content);
+            // Check the actual emitted quarter-turn and raster rectangle
+            // against its enclosing line clip, independently of text presence.
+            const string number = @"([-\d.]+)";
+            var draw = Regex.Match(page.Content, number + " " + number + " " + number + " " + number +
+                @" re\s+W\s+n\s+0 -1 1 0 " + number + " " + number + @" cm\s+q\s+" + number +
+                " 0 0 " + number + " " + number + " " + number + @" cm\s+/" + Regex.Escape(page.Images.Single().ResourceName) + @" Do");
+            TestAssert.True(draw.Success, "The rotated raster keeps its explicit measured line clip.");
+            double Value(int index) => double.Parse(draw.Groups[index].Value, CultureInfo.InvariantCulture);
+            double left = Value(10) + Value(5), right = left + Value(8);
+            double top = Value(6) - Value(9), bottom = top - Value(7);
+            TestAssert.True(left >= Value(1) - .001d && right <= Value(1) + Value(3) + .001d &&
+                bottom >= Value(2) - .001d && top <= Value(2) + Value(4) + .001d,
+                "Rotated picture ink must remain inside its declared measured frame in " + container + "/" + mode);
             TestAssert.True(diagnostics.All(d => d.Id is not ("DOCX_UNSUPPORTED_IMAGE_TRANSFORM" or "DOCX_UNSUPPORTED_EQUATION")),
                 "Supported rotation and mathematics share the same placed line frame in " + container + "/" + mode);
             static string Characters(Lokad.OoxPdf.Pdf.PdfPage value) => string.Concat(
