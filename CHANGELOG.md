@@ -2,82 +2,27 @@
 
 ## 0.3.0 — Unreleased
 
-- Targets .NET 10 and .NET 11; the shipped library remains safe managed code
-  without runtime dependencies.
-- Comment diagnostics follow the selected view: Final/Original omission no longer
-  warns as unsupported; requested markup retains its approximation warning.
-- Hosting: asynchronous package, font, staging and output I/O; immutable font
-  leases and host-funded bounded caches; explicit temporary-storage selection
-  for embedded conversions. Custom font resolvers define the complete font
-  universe. An opt-in disposable Windows resolver supports owned discovery and
-  caching. Memory admission covers additional package metadata, font, layout and chart construction;
-  coverage remains partial. See [caller migration](docs/PublicApiChanges.md).
-- DOCX composition: supported equations, pictures and navigation retain source
-  order through table cells, notes, headers/footers, editing boundaries, metadata
-  wrappers and deleted paragraph marks. Bookmarks and links follow placed content
-  and final-line paragraph spacing;
-  supported inline page/column breaks preserve neighboring content.
-  Ordered picture rotation retains measured line frames and qualified source origins.
-  Ordinary pictures preserve visible text order across merged source runs and soft breaks.
-  Fitting terminal and adjacent inline pictures wrap at their shared source boundary.
-  Leading inline pictures share ordered wrapping with prose, keeping following words
-  inside body/cell frames and retaining source-run descent in scaled Review.
-  Ordinary pictures retain their ordered source owners in minimum-spaced paragraphs,
-  preventing neighboring words from being clipped in fitting continuation frames.
-  Contained fixed-line pictures use the same wrapping rule and physical baseline,
-  preserving following words without enlarging the authored line slot.
-  Oversized fixed-line pictures with following prose retain width-fitted paint
-  while the word wraps; unresolved terminal overhangs retain their fallback.
-  Stored field results and resolved formatting history, including paragraph marks,
-  preserve neighboring equations. Bold/italic revision captions share run and
-  paragraph-mark resolution. Tables inside inline header/footer boxes retain
-  their content and navigation in Word-compatible Review.
-- DOCX layout: improves table sizing, merged-cell placement, conditional styles
-  and padding, page-local body origins, paragraph backgrounds and comment frames
-  measured from source and font geometry. Note numbering preserves distinct
-  references within shared runs; natural autofit widths preserve fitting indented labels.
-  qualified PAGE/NUMPAGES and endnote placement use their actual owners.
-  Split field instructions retain complete opcodes and cached results.
-  Comment annotations preserve supported minimum-line placement.
-  Omitted header/footer distances use Word's half-inch default across body margins.
-  Textboxes and nested cells share table-grid anchors; explicit zero indentation
-  retains precedence. Floating-textbox navigation includes the painted content insets.
-  Fixed-line static text and boxed children share measured frames, preserving
-  footer content previously placed off-page in Word-compatible Review.
-  Review print fitting preserves authored size when the page already fits;
-  formatting balloons share occupied footer frames and UI text resources.
-  Minimum-spaced body text retains measured baselines across wrapping, alignment,
-  page breaks and explicit paragraph gaps; connected backgrounds preserve their coverage.
-  Text moving between columns or pages retains the admitted horizontal origin
-  and measured minimum baseline.
-  Plain and supported mixed inline content reflows between unequal column widths;
-  plain-text widow control preserves the final pair of lines.
-  Note-table cells retain on-paper text and pictures below the flow-admission frame.
-  Diagnostics identify omitted story drawings and clipped automatic note rows.
-- PPTX charts: shares parsed source ownership across data, labels, axes, paint,
-  markers and legends. Theme palettes and tint/shade order replace fitted color
-  regimes; point/series overrides and negative inversion remain distinct.
-  Improves composed scales, authored plot frames, numeric formatting, caption
-  wrapping, titles, legends, reversal and supported scatter/bubble geometry.
-  Allocated numeric captions survive later authored inner-plot placement.
-  Empty data-label units no longer paint phantom legend keys or backgrounds.
-  Pie/doughnut horizontal legends wrap into measured rows; automatic pie circles
-  use the space reserved for titles and legends. Qualified authored horizontal
-  legends retain complete names. Rich chart titles inherit paragraph
-  formatting while preserving explicit run overrides.
-  Repeated hidden-column declarations no longer abort chart conversion.
-- PPTX content: preserves cells following horizontal merges and text/link geometry
-  with standard-font fallback. Preset arcs handle extreme numeric guides without
-  stalling conversion.
-- Fonts: bounds GPOS selection storage, improves parsing cancellation, and admits
-  character-map and kerning construction through existing memory ownership.
+- Targets .NET 10 and .NET 11; the library remains safe managed code without
+  runtime dependencies.
+- DOCX: improves mixed text/equation/picture composition, tables, notes, related
+  stories, pagination, fields, review markup and navigation. Corrects visible
+  content lost through wrapping, clipping or off-page frames.
+- PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
+  qualified authored horizontal legends retain every name. Merged-table content,
+  font fallback, text/link geometry and preset arcs also improve.
+- Hosting: awaits package, font, staging and output I/O; introduces immutable font
+  leases, explicit temporary storage and host-funded bounded caches. Shared memory
+  admission remains coarse and partial. Custom resolvers define the complete font
+  universe. See the [caller migration guide](docs/PublicApiChanges.md) for API changes.
+- Comment diagnostics follow the resolved view: intentionally unprinted comments
+  no longer warn as unsupported; requested markup retains approximation warnings.
 
-General note-row fragmentation remains unsupported. Automatic chart scales,
-dense/manual layouts and other unqualified combinations remain approximate.
+General note-row fragmentation remains unsupported. Complex layout, typography,
+automatic/dense chart layout and unqualified combinations remain approximate.
 [Capabilities](docs/Capabilities.md) and
-[qualification results](docs/PreviewQualification.md) distinguish supported content,
-approximations and unresolved visual failures. Office-PDF comparisons do not establish
-calibrated application-view parity.
+[development qualification](docs/DevelopmentQualification.md) record scope and
+remaining visual failures. Office-PDF evidence does not establish calibrated
+application-view parity. Publication remains deferred.
 
 ## 0.2.0 — 2026-10-29
 

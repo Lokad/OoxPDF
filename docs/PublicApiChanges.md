@@ -2,6 +2,17 @@
 
 ## 0.3.0
 
+Review these caller changes when upgrading from 0.2.0; the detailed contracts follow.
+
+| Existing use | Required change |
+|---|---|
+| `MemoryAdmission` / `IOoxPdfMemoryAdmission` | Supply `MemoryBudget` / `IMemoryBudget`; keep the caller-owned root alive through its scopes and reservations. |
+| `IFontProgramSource.GetBytesAsync` | Implement `AcquireAsync(operationBudget, ct)` and return an immutable program lease valid until disposal. |
+| Positional fourth-token `CreateHttpAsync` call | Use `cancellationToken:`; the fourth parameter is now the optional cache budget. |
+| File/font-pack resolver caches | Dispose owned sources/resolvers after use; keep borrowed cache funding alive until outstanding leases finish. |
+| Embedded stream conversion that needs staging beyond its resident window | Supply `TemporaryStorage`; file/CLI convenience conversions select filesystem backing. |
+| A PPTX custom resolver relying on ambient fallback fonts | Provide the complete required font universe through that resolver or a font pack. |
+
 Final and Original no longer emit `DOCX_UNSUPPORTED_COMMENTS` for intentionally
 unprinted comments. Document settings that hide comments do the same, including
 in AllMarkup. Visible SimpleMarkup/AllMarkup comments retain their approximation warning.

@@ -182,4 +182,5 @@ jobs:
             artifacts/ci-candidate-net10/identity.json
             artifacts/ci-candidate-net10/**/bin/Release/net10.0/*
             artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
             artifacts/package-smoke/**/summary.json

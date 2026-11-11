@@ -133,6 +133,14 @@ still to be audited, and publication remains deferred. This batch reused the
 qualified production runtime and closed CI evidence; no new library build, full
 suite, package qualification or Office action was needed.
 
+Candidate packaging must keep both framework assets and their portable symbols
+bound to one committed build. Transferring a single-framework frozen runtime does
+not refresh the other framework's root outputs. Reuse coherent qualified CI assets
+or freeze both targets in an explicit worktree before packing. Verify every packed
+library/PDB identity, current caller documentation and its local links. Cross-platform
+package checks should consume the same selected package with each framework's
+expected library hash, preserving the original qualified runtime.
+
 ## Independent content checks and limits
 
 Ink checks bind each native paint span to its **actual embedded font program,
