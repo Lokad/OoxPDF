@@ -18105,6 +18105,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-fixed-static-frames": [
+    "DocxLayoutStageOwnsStaticHeaderInlineImages",
+    "DocxLayoutStageWrapsStaticHeaderLines",
     "DocxStaticBoxTables",
     "DocxOrdinaryStaticInline",
     "PortableRenderingOrdinaryStaticInlineRetainsSourceContent",
