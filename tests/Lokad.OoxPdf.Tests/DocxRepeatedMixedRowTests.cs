@@ -82,7 +82,8 @@ internal static class DocxRepeatedMixedRowTests
                     mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                         OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
                 var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
-                var painted = pages.Select(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray()).ToArray();
+                var painted = pages.Select(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                    usePageCoordinates: true, includeTextTransforms: true).ToArray()).ToArray();
                 int[] owners = Enumerable.Range(0, pages.Length).Where(index =>
                     string.Concat(painted[index].Select(show => show.Text)).Contains(caption, StringComparison.Ordinal)).ToArray();
                 TestAssert.Equal(1, owners.Length);
@@ -96,7 +97,8 @@ internal static class DocxRepeatedMixedRowTests
                 double followingY = LabelBaseline(following);
                 string cellText = string.Concat(painted[owner].Where(show => show.Y <= captionY && show.Y > followingY)
                     .SelectMany(show => show.Text).Where(character => !char.IsWhiteSpace(character)));
-                TestAssert.Contains("a+b=c", cellText);
+                TestAssert.True(cellText.Normalize(System.Text.NormalizationForm.FormKC).Contains("a+b=c", StringComparison.Ordinal),
+                    $"The kept formula must paint between its caption and following paragraph: {fixture}/{mathFont}/{mode}/{deferred}: {cellText}");
                 var picture = DocxInlineCompositionTests.ReadPictureBounds(pages[owner]).Single().Bounds;
                 TestAssert.True(picture.Y > followingY, "The following paragraph clears the kept picture.");
                 double gap = captionY - picture.Y - picture.Height;
