@@ -641,6 +641,9 @@ Approximate or restricted:
   approximate.
   Tables inside mapped inline header/footer boxes retain their rows, equations,
   links and bookmark targets in the painted frame, including nested tables.
+  A box's declared frame admits surrounding supported content even when its child
+  story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
+  ignored and warned; they do not discard supported outside formulas or pictures.
   Word-compatible Review preserves first-row prose baselines alongside equations
   in qualified body/header/footer boxes. Explicit cell spacing, vertical merges
   and unsupported alignment retain their existing approximations.

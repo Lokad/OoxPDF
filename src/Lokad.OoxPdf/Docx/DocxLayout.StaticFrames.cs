@@ -345,7 +345,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (!paragraph.InlineTextBoxes.All(box => CanUseInlineBoxFrame(box, width, mathEquations, token))) return false;
+        if (!paragraph.InlineTextBoxes.All(box => TryGetInlineBoxFrameWidth(box, width, token, out _))) return false;
         // Legacy box-only models may lack a parsed ordered view. Mixed parsed
         // paragraphs use the same source ownership as body and cell containers.
         if (paragraph.InlineTextBoxes.Count != 0 && paragraph.Equations.Count == 0 &&
@@ -374,21 +374,16 @@ internal sealed partial class DocxLayoutEngine
             DocxInlineContent.HasSupportedSourceOwner(paragraph, hasPageInputs: true, token: token);
     }
 
-    private static bool CanUseInlineBoxFrame(DocxInlineTextBox box, double width,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations, CancellationToken token)
+    // The box owns a resolved frame even when its child story needs the existing
+    // legacy fallback. Child-content support must not veto its prepared siblings.
+    private static bool TryGetInlineBoxFrameWidth(DocxInlineTextBox box, double available,
+        CancellationToken token, out double width)
     {
         token.ThrowIfCancellationRequested();
-        if (box.Revisions.Count != 0 || ReadEmuPoints(box.ExtentCxValue) is not { } boxWidth || boxWidth <= 0d || boxWidth > width ||
+        width = ReadEmuPoints(box.ExtentCxValue) ?? 0d;
+        if (box.Revisions.Count != 0 || !double.IsFinite(width) || width <= 0d || width > available ||
             ReadEmuPoints(box.ExtentCyValue) is not > 0d || box.BodyElements.Count == 0) return false;
-        // Nested boxes retain their existing placement until their own source
-        // frames are supported. Tables inside one independent box may still map.
-        foreach (var paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(box.BodyElements))
-        {
-            token.ThrowIfCancellationRequested();
-            if (paragraph.InlineTextBoxes.Count != 0) return false;
-        }
         ResolveInlineTextBoxContentInsets(box, out double left, out _, out double right, out _);
-        double contentWidth = boxWidth - left - right;
-        return contentWidth > 0d && CanUseStaticBodyFrame(box.BodyElements, contentWidth, mathEquations, token);
+        return width - left - right > 0d;
     }
 }

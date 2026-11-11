@@ -412,8 +412,7 @@ internal sealed partial class DocxLayoutEngine
                     measured.Add(new(item, imageWidth, imageHeight, imageHeight + below, []));
                     break;
                 case DocxInlineBox box:
-                    if (!CanUseInlineBoxFrame(box.Box, double.MaxValue, equations, token) ||
-                        ReadEmuPoints(box.Box.ExtentCxValue) is not { } boxWidth ||
+                    if (!TryGetInlineBoxFrameWidth(box.Box, double.MaxValue, token, out double boxWidth) ||
                         !double.IsFinite(boxWidth * scale)) return false;
                     var boxDependencies = DocxFieldText.GetDependencies(box.Box.BodyElements, token);
                     if (!DocxFieldText.HasInputs(boxDependencies, pageNumber, pageCount)) return false;

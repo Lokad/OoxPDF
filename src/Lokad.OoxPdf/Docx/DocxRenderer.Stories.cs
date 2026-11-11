@@ -447,6 +447,17 @@ internal sealed partial class DocxRenderer
         DocxTableCellClipSnapshot? cellClip = null,
         RgbColor? background = null)
     {
+        if (diagnosticSink is not null)
+            foreach (var element in box.TextBox.BodyElements)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (element is not DocxParagraphElement { Paragraph.InlineTextBoxes.Count: > 0 }) continue;
+                diagnosticSink(new OoxPdfDiagnostic("DOCX_UNSUPPORTED_NESTED_INLINE_TEXTBOX", OoxPdfSeverity.Warning,
+                    "Nested inline text boxes in a text-box paragraph were ignored; surrounding supported content is retained.",
+                    PartName: null, SlideIndex: null, PageIndex: pageNumber - 1,
+                    Feature: "nested-inline-textbox", Fallback: "Ignored"));
+                break;
+            }
         if (box.TextLines.Count == 0 &&
             box.InlineImages.Count == 0 &&
             box.TableRows.Count == 0)

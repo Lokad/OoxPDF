@@ -74,6 +74,9 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_IMAGE_CROP`: the picture source rectangle is malformed, non-finite or empty; the uncropped image is retained.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: unsupported field nesting, malformed markup, or an incomplete result with neither a usable cache nor a dynamic placeholder. A complete stored result may be empty.
 - `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
+- `DOCX_UNSUPPORTED_NESTED_INLINE_TEXTBOX`: a rendered text box contains direct
+  paragraph-owned nested inline boxes that retain their ignored fallback. The
+  warning identifies the physical page; supported surrounding content is retained.
 - `DOCX_APPROXIMATED_EQUATION`: native Office Math was painted with approximate layout; one warning per affected part. This is distinct from omitted unsupported equations.
 - `DOCX_UNSUPPORTED_EXTERNAL_IMAGE`: an externally referenced image was detected and ignored because only packaged parts render; one warning per document, with the owning body/related-story part. Selected headers and footers use their own image relationships.
 - `DOCX_UNSUPPORTED_FLOATING_DRAWING`: floating DrawingML content in the body or a probed related story was malformed or used an unsupported payload such as a chart, SmartArt, external image, or anchor positioning outside the supported image/text-box placement model.

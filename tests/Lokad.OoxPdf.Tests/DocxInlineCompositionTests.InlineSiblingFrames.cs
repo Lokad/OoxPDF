@@ -120,8 +120,13 @@ internal static partial class DocxInlineCompositionTests
         var items = TestAssert.NotNull(source.InlineContent);
         var unsupported = source with { InlineTextBoxes = [nested], InlineContent = items.Select(item =>
             item is DocxInlineBox ? (DocxInlineItem)new DocxInlineBox(nested) : item).ToArray() };
-        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(unsupported, prepared, new SiblingFrameMeasurer(),
-            11d, 10d, 16d, 1d, default, out _), "Nested frames retain the explicit existing fallback.");
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(unsupported, prepared, new SiblingFrameMeasurer(),
+            11d, 10d, 16d, 1d, default, out var atoms), "A declared box keeps its child fallback without discarding prepared siblings.");
+        TestAssert.Equal(1, atoms!.Fragments.Count(fragment => fragment.Math is not null));
+        var frame = TestAssert.NotNull(atoms.Fragments.Single(fragment => fragment.TextBox is not null).TextBox);
+        TestAssert.True(ReferenceEquals(nested, frame.TextBox) && frame.TextLines.Count != 0 &&
+            frame.TextLines.All(line => line.Math is null && line.InlineMath.Count == 0),
+            "The box retains its real source and legacy child text; nested frames gain no fabricated placement.");
     }
 
     public static void DocxInlineSiblingCellMemoRelocatesCompleteFramesWithoutRemeasuringChildren()
