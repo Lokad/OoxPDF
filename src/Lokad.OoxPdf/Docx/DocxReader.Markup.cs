@@ -28,17 +28,28 @@ internal sealed partial class DocxReader
             hasSource = true;
             if (!equation && element.Descendants(MathNamespace + "oMath").Any()) continue;
             bool included = true;
+            bool retainsDeletedStructure = true;
             foreach (XElement ancestor in element.Ancestors())
             {
                 token.ThrowIfCancellationRequested();
-                if (IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, mode) ||
+                if (IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, mode) &&
+                        !(retainsDeletedStructure && RetainsDeletedMathStructure(ancestor, mode)) ||
                     ancestor.Name == WordprocessingNamespace + "tr" && !IsIncludedTableRow(ancestor, mode, token))
                 { included = false; break; }
+                // Deleted math may cross its metadata wrappers, not a paragraph,
+                // drawing run or a second revision boundary. Those owners are
+                // omitted before paragraph-level math reading occurs.
+                retainsDeletedStructure &= ancestor.Name == MathNamespace + "oMathPara" ||
+                    ancestor.Name == WordprocessingNamespace + "sdt" || ancestor.Name == WordprocessingNamespace + "sdtContent" ||
+                    IsInlineMetadataContainer(ancestor);
             }
             if (included) count++;
         }
         return count;
     }
+
+    private static bool RetainsDeletedMathStructure(XElement container, OoxPdfDocxMarkupMode mode) =>
+        mode == OoxPdfDocxMarkupMode.Final && container.Name == WordprocessingNamespace + "del";
 
     private static bool IsIncludedRevisionContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
     {

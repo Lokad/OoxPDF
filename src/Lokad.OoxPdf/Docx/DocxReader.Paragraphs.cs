@@ -177,7 +177,7 @@ internal sealed partial class DocxReader
 
                 // Final suppresses deleted mathematical text while supported
                 // literal argument frames and structural paint remain.
-                if (markupMode == OoxPdfDocxMarkupMode.Final && container.Name == WordprocessingNamespace + "del")
+                if (RetainsDeletedMathStructure(container, markupMode))
                     AddVisibleRunContainer(container, revision: null, removeDeletedText: true);
                 return;
             }

@@ -33,7 +33,7 @@ internal sealed partial class DocxReader
             bool remove = source.RemoveDeletedText;
             if (!IsIncludedRevisionContainer(source.Element, mode))
             {
-                if (mode != OoxPdfDocxMarkupMode.Final || source.Element.Name != WordprocessingNamespace + "del") continue;
+                if (!RetainsDeletedMathStructure(source.Element, mode)) continue;
                 revision = null; remove = true;
             }
             else revision = CreateRevisionInfo(source.Element) ?? revision;

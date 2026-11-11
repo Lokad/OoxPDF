@@ -11,6 +11,7 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (string kind in new[] { "footnote", "endnote" })
         foreach (bool deleted in new[] { false, true })
+        foreach (bool block in new[] { false, true })
         foreach (bool withReaderSink in new[] { false, true })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
         {
@@ -20,21 +21,25 @@ internal static partial class DocxInlineCompositionTests
                 (xml, w, m) =>
                 {
                     int revisionId = 951;
-                    foreach (var equation in xml.Descendants(m + "oMath").ToArray())
+                    var targets = block ? xml.Descendants(w + "p").Where(item => item.Descendants(m + "oMath").Any()).ToArray() :
+                        xml.Descendants(m + "oMath").ToArray();
+                    foreach (var equation in targets)
                     {
                         var wrapper = new XElement(w + (deleted ? "del" : "ins"), new XAttribute(w + "id", revisionId++),
                             new XAttribute(w + "author", "Public Reviewer"));
                         equation.AddBeforeSelf(wrapper); equation.Remove(); wrapper.Add(equation);
                     }
                 }, part, withReaderSink ? readDiagnostics.Add : null);
-            bool hidden = deleted ? mode == OoxPdfDocxMarkupMode.Final : mode == OoxPdfDocxMarkupMode.Original;
+            // Final retains supported structural paint for inline deleted math;
+            // an excluded paragraph block omits the whole equation instead.
+            bool hidden = deleted ? block && mode == OoxPdfDocxMarkupMode.Final : mode == OoxPdfDocxMarkupMode.Original;
             var owner = source.EquationParts.SingleOrDefault(item => item.PartName == "/" + part);
             TestAssert.Equal(hidden ? 0 : 2, owner?.SourceCount ?? 0);
             var diagnostics = RenderEquationViewDiagnostics(source, mode);
             var equations = diagnostics.Where(item => item.PartName == "/" + part &&
                 item.Id is "DOCX_UNSUPPORTED_EQUATION" or "DOCX_APPROXIMATED_EQUATION").ToArray();
             TestAssert.True(hidden ? equations.Length == 0 : equations.Length != 0,
-                $"Selected note diagnostics: {kind}/{mode}/{(deleted ? "del" : "ins")}/readerSink={withReaderSink}, " +
+                $"Selected note diagnostics: {kind}/{mode}/{(deleted ? "del" : "ins")}/block={block}/readerSink={withReaderSink}, " +
                 $"selected={owner?.SourceCount}, emitted={string.Join(',', diagnostics.Select(item => item.Id + ":" + item.PartName))}.");
         }
     }
