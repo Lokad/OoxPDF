@@ -16,9 +16,18 @@ internal static partial class DocxInlineCompositionTests
             var paragraph = NonpaintingBookmarkParagraph(ReadNonpaintingBookmark(context, variation.Gap, mode, hidden: variation.Hidden));
             var anchor = paragraph.BookmarkAnchors.Single(a => a.Name == "PrefixMathTarget");
             var items = TestAssert.NotNull(paragraph.InlineContent);
-            TestAssert.True(anchor.InlineItemIndex is int index && index >= 0 && index < items.Count &&
+            int index = anchor.InlineItemIndex ?? -1;
+            // Source metadata keeps the authored boundary before hidden runs;
+            // the navigation test below checks the first painted destination.
+            if (variation.Hidden)
+            {
+                TestAssert.True(index >= 0 && index < items.Count && items[index] is DocxInlineText { Run.EffectiveProperties.Hidden: true },
+                    "The bookmark retains its boundary before the first hidden source run.");
+                index += variation.Gap;
+            }
+            TestAssert.True(index >= 0 && index < items.Count &&
                 items[index] is DocxInlineEquation math && ReferenceEquals(math.Equation, paragraph.Equations[0]),
-                "The first formula keeps the bookmark's ordered boundary across an ordinary nonpainting run.");
+                "Only the authored hidden runs separate the bookmark's boundary from its first formula.");
             if (variation.Gap != 0) TestAssert.True(paragraph.Equations[0].SourceRunIndex > anchor.SourceRunIndex,
                 "The reader retains the actual raw source gap rather than rewriting source identities.");
         }
@@ -35,10 +44,16 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(prefix == "picture" ? items.OfType<DocxInlinePicture>().Any() : items.OfType<DocxInlineBox>().Any(),
                 "The intervening object is a resolved part of the ordered source.");
             var anchor = paragraph.BookmarkAnchors.Single(a => a.Name == "PrefixMathTarget");
-            if (anchor.InlineItemIndex is int index)
-                TestAssert.True(index >= 0 && index < items.Count &&
-                    (prefix == "picture" ? items[index] is DocxInlinePicture : items[index] is DocxInlineBox),
-                    "A bookmark before an intervening object must not acquire the later equation's placement.");
+            int index = anchor.InlineItemIndex ?? -1;
+            if (variation.Hidden)
+            {
+                TestAssert.True(index >= 0 && index < items.Count && items[index] is DocxInlineText { Run.EffectiveProperties.Hidden: true },
+                    "The bookmark retains its boundary before the first hidden source run.");
+                index += variation.Gap;
+            }
+            TestAssert.True(index >= 0 && index < items.Count &&
+                (prefix == "picture" ? items[index] is DocxInlinePicture : items[index] is DocxInlineBox),
+                "A bookmark before an intervening object must not acquire the later equation's placement.");
             var afterObject = paragraph.BookmarkAnchors.Single(a => a.Name == "MathAfterObject");
             TestAssert.True(afterObject.InlineItemIndex is int next && next >= 0 && next < items.Count &&
                 items[next] is DocxInlineEquation math && ReferenceEquals(math.Equation, paragraph.Equations[0]),
