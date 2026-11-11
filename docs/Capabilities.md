@@ -540,9 +540,11 @@ Supported within the following constraints:
   minimum-spaced rows, including beside an omitted, unsupported equation; its
   diagnostic remains. Captured ordinary pictures in body/cells also use this
   shared wrapping when contained above the fixed row's physical baseline,
-  preserving following words and the authored line advance. Overhanging fixed-line pictures, already prepared math
-  and entirely unsupported paragraphs retain
-  their respective measured-frame or fallback contracts.
+  preserving following words and the authored line advance. Captured ordinary
+  overhangs with measured following text keep width-fitted picture paint while
+  that text wraps. Terminal/reconstructed overhangs, prepared math and entirely
+  unsupported paragraphs retain their measured-frame/fallback contracts.
+  Static placement keeps its declared baseline clip.
   Inline pictures follow
   effective run hiding, including inherited styles and explicit false overrides;
   drawing-level `docPr hidden` alone retains Word's print behavior. Floating pictures/textboxes

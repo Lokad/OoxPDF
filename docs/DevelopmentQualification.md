@@ -31,8 +31,8 @@ Documentation-only updates reuse that frozen library.
 | Nested picture/header equation | The preceding milestone restored native header math from 56.5% to 100% black-mark retention by correcting object-only origins. Its sixteen Final/Review probes retain all pictures and 55,880 actual-program-bound glyphs without paper/rectangle-clip cuts or unknown traces. Object-only frames preserve container displacement; text/math keeps independently tested Word anchors. |
 | Leading blank/equation pages | The preceding milestone restored five complete footer labels (175 hidden glyphs) across three Review probes, including later note-only continuation pages. Static stories use their own measured page frame; standalone equations retain their measured body origin. Its six Final/Review outcomes contain 30,527 glyphs with no paper/rectangle-clip cuts or unknown traces. Portable regressions remain in the broader CI suite. |
 | Note continuation composition | A leading blank page shifts the illustrated long-note report from four to five pages. All original text origins, sizes and bounds, picture/mask streams and link geometry remain unchanged; destinations move exactly one page. All 64 source continuation lines and both pictures survive in each mode. These are source-preserving transformation checks, not a new Word export. |
-| Fixed composed portfolio | Nine sources/sixteen outcomes retain their PDFs. Existing independent comparisons remain two PPTX image passes and fourteen DOCX image failures. The 64-page readability review is reused through PDF identity. Typography/geometry remain approximate; shared report ancestry limits document diversity. |
-| Bounded document review | Twenty bounded pages across four Final/Review portfolio sources were checked against pinned Word PDFs; existing Word rasters were reused. The latest static-cell/linked-note review measures 23,588 actual-program glyphs without clip cuts or unknown traces and retains all 64 continuation lines and pictures. No new serious content omission, clipping or pagination defect was demonstrated in these sources. It does not classify the fourteen failed DOCX image gates as cosmetic or establish arbitrary occlusion/application-view parity. Final intentionally omits printed comments; the legacy comment diagnostic is not evidence that anchor prose disappeared. |
+| Fixed composed portfolio | Nine sources/sixteen outcomes retain their PDFs. Existing independent comparisons remain two PPTX image passes and fourteen DOCX image failures. The bounded DOCX review covers thirty Word/candidate page pairs across all seven DOCX sources, reused through PDF identity. Typography/geometry remain approximate; shared report ancestry limits document diversity. |
+| Bounded document review | Thirty Word/candidate page pairs across all seven DOCX portfolio sources in Final/Review were reviewed. The latest letter/specification/static-SVG review adds ten pairs and reuses 20,755 actual-program glyphs through exact PDF identity, with no measured cuts or unknowns. Six pinned Word rasters and three candidate derivatives were reused; only three existing PDFs required rasterization. Source sections, equations, illustrations, notes, footer SVGs and page transitions remain visible in this bounded review. No new serious omission, clipping or pagination defect was demonstrated. All fourteen DOCX image gates remain failed, with geometry and typography residuals; no blanket cosmetic, arbitrary-occlusion or application-view parity claim. Final intentionally omits printed comments; its legacy unsupported-comment warning remains a diagnostic-reconciliation task. |
 | Fitting mixed notes | Four sources/eight outcomes retain exact PDFs and all 64 continuation lines in their original order/pages. Twenty pictures retain both source colors and complete clips. Independent head/link/picture geometry keeps the original one-point gates. Native PDF/raster files are absent from the selected legacy folders, so no fresh whole-page comparison is claimed. |
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
@@ -69,9 +69,15 @@ Platform binaries qualify source separately from the accepted local frozen artif
 Status-only documentation updates reuse that qualification without local builds,
 conversions or suite replay. The broader roadmap remains open.
 
-Broader qualification of the following-word/overhang change is pending. The local
-causal, affected-test, neighbor and transfer gates qualify the frozen artifact;
-they do not close the broader roadmap.
+The following-word/overhang source passed CI43008622492:
+**4,796 Windows/2,286 Ubuntu passes**, 19/130 skips, 69 .NET 10 checks per host
+and all four package consumers. Terminal host logs were retained once. The
+broader roadmap and publication remain open.
+
+Six additional page-admission probes reuse the frozen artifact: a fitting kept
+cell stays on page one, an unfitting kept cell moves intact to page two, and a
+body picture stays on page one while its following word resumes once on page two.
+All 72 glyphs are clear of measured clips. No new-source Word geometry is claimed.
 
 ## Independent content checks and limits
 
