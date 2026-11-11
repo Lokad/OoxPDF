@@ -147,7 +147,11 @@ internal sealed partial class DocxLayoutEngine
             else if (fragment.Source is DocxInlinePicture picture)
                 images.Add(new(picture.Image, x + offset, top - measured.BaselineInset, fragment.Advance,
                     fragment.OccupiedHeight, pageIndex, sourceBlock, sourceParagraph, story)
-                    { SourceLineIndex = sourceLine });
+                    { SourceLineIndex = sourceLine,
+                        // The placed line owns its full occupied slot. Rotation
+                        // consumes this same frame instead of losing support when
+                        // a picture shares ordered content with mathematics.
+                        LineFrame = new(top - measured.OccupiedHeight, measured.OccupiedHeight) });
             else if (fragment.TextBox is { } frame)
                 boxes.Add(ShiftInlineTextBox(frame, top - measured.BaselineInset + fragment.BaselineInset,
                     x + offset, pageIndex) with
