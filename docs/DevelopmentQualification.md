@@ -5,15 +5,16 @@ candidate.** The published [0.2.0 qualification](PreviewQualification.md) remain
 separate. Development targets .NET 10 and .NET 11.
 
 This snapshot pins production
-`4f6e396f506d057b16d2586bfd62d31eaba2d437` and the same harness revision.
+`f77a2f9191d235042c1bf90c4db0ce64b12af0b3` and the same harness revision.
 The frozen .NET 11 library SHA-256 is
-`7A4592015A50FC52F4255BFB56BEBACC3A5104A8EBA60FD92D51FC19FE5CF275`.
+`37FAA83147392B1AB79D239EEBAFCE99DF66A259F94CBA6F20B6F01E7EB0C8F0`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
+| Autofit paragraph insets | A 72pt first-line indent hid every glyph of a short label while text operations remained present. Natural cell widths now fund the same paragraph offsets used by placement, including positive right insets and measured inline content. Both missing labels recover the controls' 270 raster ink pixels; four control PDFs are unchanged and 30 actual-program glyphs have no measured cuts/unknown traces. Portable checks cover two fonts/presets, split runs, grid hints, left/first/right insets and cancellation; the regression fails on the parent. Two previously absent pictures also regain complete bounds/colors, but two extreme first-line picture controls still clip the following word. No all-content, compressed-width or exact new-source Word/view claim. |
 | Terminal pictures | Fitting terminal/trailing-space pictures escaped width admission: body retained 69.98% of bounds and cells 39.78%. Both wrapping paths now share source-boundary admission, including final rows. Adjacent drawings use their combined advance at a shared offset, correcting a trial that retained only 8.49% of the second cell picture. Eight pictures in six native outputs retain complete bounds and all source colors; 636 actual-program glyphs have no measured clip/unknown traces. Portable regressions cover both presets, two pinned fonts, merged/split runs and adjacent pictures; parent/trial failures are retained. Unfit groups keep their existing fallback; arbitrary group splitting and exact new-source Word/view geometry remain unqualified. |
 | Pictures after soft breaks | Two/three supported soft breaks caused an opaque inline picture to cover part of the following word, although the whole word remained extractable. Picture attachment now reuses wrapped source starts and per-line source offsets, removing duplicate painted-length reconstruction. Four native controls retain all source words/pages with no following-word overpaint; the unchanged no-break PDF is identical. The screen binds 44 glyphs without clip cuts or unknown traces; paired crops confirm restored visible words. Portable checks cover pinned Sans/Math, both presets and separate/merged runs; the regression fails against the parent. No new-source Word/application-view geometry claim. |
 | Pictures inside text runs | Merging equally formatted text/picture/text runs moved PNG/SVG pictures about 35.6pt left and shifted preceding prose behind them by the picture advance. The reader now retains text child boundaries, and shared wrapping/placement uses recorded source run numbers and offsets. Both corrected merged-run PDFs exactly match their original controls. Two portable regressions cover pinned Sans/Math fonts, Final/Review, multiple drawings in one run and cancellation; both fail against the parent. The affected native screen measures 22 glyphs without cuts or unknown traces. No ordinary-layout migration or new layout layer. |
@@ -32,7 +33,7 @@ Documentation and harness updates do not rebuild that library.
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
 | Fixed-picture fallback | Broader CI caught changed placement of an oversized picture in an unmeasured exact-height row. The shared terminal-admission rule now retains that fallback; fitting declared pictures keep ordered measurement. All four fallback PDFs exactly match the preceding accepted outputs and the existing glyph/separation regression passes unchanged. Raw picture bounds alone had suggested NORTH-label overpaint, but native child clips preserve that label; no newly fixed text loss is claimed. The unfit picture remains approximate. |
-| Focused checks | 226 Windows checks pass; Ubuntu passes 185 with 41 understood native-font skips in the same exact set, one invocation per host. Selection includes 23 additional floating/container neighbors; one separate Windows reflection-harness smoke passes. Thirty neighbor PDFs retain exact identities: 17 ordinary outputs including the portfolio/legend, five standalone picture controls and eight original exact-terminal boxed-table outcomes. Eight additional static/page-boundary outcomes remain exact. Twenty-four transferred assets and two smoke PDFs match. Three production trials yield one accepted artifact/shared fixture view. Rejected trials and failed CI remain recorded; no root build/local full-DOCX replay. |
+| Focused checks | 199 Windows passes/two Aptos skips; Ubuntu 168 passes/33 reviewed font-dependent skips in the same exact 201-method set. Four independent Word checks pass on Windows and require fonts unavailable on Ubuntu. The initial strict Windows gate's undeclared skips and Ubuntu's four additional font preconditions remain recorded; only the two Windows prerequisites were reselected, with no full replay. Thirty neighbor PDFs remain exact: 17 ordinary outputs including the portfolio/legend, five standalone pictures and eight static outcomes. Twenty-four transferred assets/two smoke PDFs match. One frozen production build/shared fixture view; no root build/local full-DOCX replay. |
 
 The preceding picture-navigation correction at `b15e10859` passed CI42962826027: 4,787 Windows/
 2,256 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
@@ -42,8 +43,9 @@ CI42968585479 then failed the fixed-picture fallback neighbor on both hosts
 (4,788/2,257 passes, 19/129 skips); terminal logs remain retained. The repaired
 batch at `62391bc43` passed CI42970799951: **4,789 Windows/2,258 Ubuntu passes**,
 19/129 reviewed skips, 69 .NET 10 checks per host and four package consumers.
-Both terminal host logs were fetched once. This status-only documentation update
-reuses that result; production, harness and fixtures are unchanged. Earlier
+Both terminal host logs were fetched once. That result belongs to the preceding
+terminal-picture source; the current autofit-inset batch awaits its own broader
+platform/framework/package gate. Earlier
 CI42929150677 failed the legacy static-image ownership control on both hosts;
 those reports remain retained, and the repair passed broader CI. Consult the
 reports for the revision being consumed. CI builds platform binaries separately;
@@ -84,6 +86,9 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
 - General note-row fragmentation/overflow, body/nested-table origins, floating
   table placement, custom Review canvas, numbering, annotations and typography
   remain open. Unfit fixed-line picture slots keep their clipped fallback.
+- Two extreme first-line picture controls retain complete pictures after the
+  autofit repair, but still clip four glyphs of the following word. This supported
+  composition remains wrong; exact combined-source Word geometry is unqualified.
 - An unfit 300-label note row retains 279 complete labels, six partial and fifteen
   off-paper labels. The pinned Office PDFs also retain 279 complete/six partial,
   but omit the other fifteen paint operations. Both fitting 240-label controls

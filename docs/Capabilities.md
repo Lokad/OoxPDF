@@ -513,6 +513,8 @@ Supported within the following constraints:
   joined grids map spans and leading omitted columns while the first table owns
   the frame and preferred width. Unconstrained automatic tables use measured
   content and cell insets rather than the authored grid as a fixed width.
+  Natural widths fund the paragraph's first-line text offset and positive right
+  inset, preventing fitting indented labels from disappearing beyond the cell clip.
   Supported intersecting spans share measured content columns and project their
   subdivisions onto one placement grid; merged cells can enlarge ordinary columns.
   Explicit preferred widths and fixed layout retain their sizing rules. Leading
