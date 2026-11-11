@@ -12,11 +12,11 @@ internal static partial class DocxInlineCompositionTests
         foreach (string container in new[] { "body", "cell" })
         foreach (bool mathFont in new[] { false, true })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
-        foreach (var (width, pictures) in new[] { (24, 1), (240, 1), (88, 2) })
+        foreach (var (width, pictures, prefixLength) in new[] { (24, 1, 100), (240, 1, 100), (88, 2, 80), (88, 2, 100) })
         foreach (bool trailingSpace in new[] { false, true })
         foreach (bool merge in new[] { false, true })
         {
-            var source = ReadTerminalPicture(container, mode, width, trailingSpace, merge, pictures);
+            var source = ReadTerminalPicture(container, mode, width, trailingSpace, merge, pictures, prefixLength);
             var renderer = PictureRunBoundaryRenderer(mode, mathFont);
             var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             var page = pages.Single(page => page.Images.Count != 0);
@@ -35,7 +35,7 @@ internal static partial class DocxInlineCompositionTests
             }
             string text = string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
             TestAssert.Contains("Before", text);
-            TestAssert.Contains(new string('i', 100), text);
+            TestAssert.Contains(new string('i', prefixLength), text);
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null,
                 cancellation.Token).ToBlockingEnumerable().ToArray());
@@ -63,14 +63,14 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadTerminalPicture(string container, OoxPdfDocxMarkupMode mode,
-        int width, bool trailingSpace, bool merge, int pictures = 1) => ReadMutation("docx-picture-rotated-raster", mode, false, false,
+        int width, bool trailingSpace, bool merge, int pictures = 1, int prefixLength = 100) => ReadMutation("docx-picture-rotated-raster", mode, false, false,
         (xml, w, _) =>
         {
             XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
             XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
             var paragraph = xml.Descendants(w + "p").Single();
             var runs = paragraph.Elements(w + "r").ToArray();
-            runs[0].Element(w + "t")!.Value = "Before " + new string('i', 100) + " ";
+            runs[0].Element(w + "t")!.Value = "Before " + new string('i', prefixLength) + " ";
             var drawing = runs[1].Element(w + "drawing")!;
             drawing.Descendants(a + "xfrm").Single().Attribute("rot")!.Remove();
             foreach (var extent in drawing.Descendants().Where(node => node.Name == a + "ext" || node.Name == wp + "extent"))
