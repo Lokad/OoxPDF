@@ -56,7 +56,20 @@ internal static class CliTests
 
     public static void CliStrictCommentWarningsFollowTheSelectedView()
     {
-        string input = DocxTests.WriteCommentAuthorColorProbeDocx();
+        // Isolate strict exit handling from host font availability. Anchor prose
+        // and comment bodies are covered by the reader/rendering view tests.
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["word/document.xml"] = """
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body><w:p><w:commentRangeStart w:id="1"/>
+                    <w:r><w:commentReference w:id="1"/></w:r><w:commentRangeEnd w:id="1"/>
+                  </w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body>
+                </w:document>
+                """
+        });
         foreach (string mode in new[] { "final", "original", "simple", "all" })
         {
             string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
