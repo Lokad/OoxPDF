@@ -17,8 +17,7 @@ The frozen .NET 11 library SHA-256 is
 `303EC4FF9B7E47E0EACBA376152B0C7AEC27E3C7DC65ED8001F54A0BFDA576F2`.
 CI43062947587 on `e7d591999` is green: Windows 4,800 passes/19 skips, Ubuntu
 2,289/130, 69 .NET 10 checks per host, four package consumers and ten package
-inspections per host. The prepared package below predates this correction and
-remains retained parent evidence until a coherent package refresh.
+inspections per host. The prepared package below now uses that exact CI archive.
 
 Six footer-cell outcomes retain 21,483 bound glyphs, all 24 source PNG paints,
 repeated captions and the correct PAGE/NUMPAGES values without measured cuts or
@@ -196,24 +195,26 @@ expected library hash, preserving the original qualified runtime.
 
 The current development package and symbols are prepared directly in
 `artifacts/nuget/`, with checksums and a separate qualification record. The exact
-new package passes Linux consumers on both frameworks; Windows CI consumer
-coverage is reused through exact runtime-payload identity. All sixteen portfolio
-PDFs/diagnostics and two transfer smokes remain identical, retaining two PPTX
-passes/fourteen DOCX image failures. Package documentation is pinned to `ebe78af09`;
-75 local links are checked. Preparation does not authorize publication.
+same package passes Windows and Linux consumers on both frameworks. Windows CI
+consumed these archive bytes; its consumer results are reused. Both Linux checks
+consume that Windows package. There is no repack or library/root rebuild.
 
-CI43041456284 / `03ef23fcc` supplies the compiled .NET 10/.NET 11 libraries and
-portable symbols for the refreshed 0.3.0 development package. The Windows artifact
+CI43062947587 / `e7d591999` supplies the .NET 10/.NET 11 libraries, portable symbols
+and package. Its documentation remains the immutable CI snapshot; only later
+development qualification notes differ in the current source. All caller/API
+documents match, and 75 local links are checked. Status notes do not cause a repack.
+The Windows artifact
 digest is verified, and all 48 frozen runtime assets match their identities. Both
 framework package entries match those DLL/PDB bytes. Assembly/file versions are
 0.3.0.0; informational versions identify the same committed build.
 
-Package preparation reuses these compiled payloads with current committed caller
-documentation, without rebuilding the library or the root checkout. Assets,
-checksums and the separate preparation record belong directly in `artifacts/nuget/`.
-The record distinguishes runtime hashes, documentation revision and final ZIP
-identity, and binds the consumer/portfolio checks to the consumed payloads.
-The previous f852e431d package remains parent evidence; published 0.2.0 is protected.
+The existing source-runtime portfolio/native evidence remains qualified; its
+sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures. Production/build
+inputs match the CI package, and two CI-runtime identity smokes reproduce the
+corrected deferred cell and six-name legend PDFs. No full portfolio or test-suite
+replay is claimed for this metadata transfer. The preparation record keeps the
+rendering and package runtime identities separate. The previous 03ef23fcc and
+f852e431d packages remain parent evidence; published 0.2.0 is protected.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover
