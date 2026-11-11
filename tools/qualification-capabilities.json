@@ -1,4 +1,23 @@
 {
+  "docx-comment-view-diagnostics": [
+    "DocxUnprintedCommentViewsKeepAnchorsWithoutWarnings",
+    "DocxMarkupDiagnosticsApproximateCommentsInMarkupModes",
+    "DocxMarkupInspectionSnapshotsExposePrivateSafeCommentCounts",
+    "DocxMarkupInspectionClassifiesCommentStoryAnchors",
+    "DocxMarkupInspectionClassifiesDeletedCommentAnchorsByMode",
+    "DocxMarkupRenderingTreatsDeletedCommentAnchorsByMode",
+    "DocxReaderPreservesCommentMetadataAndThreading",
+    "DocxReaderPreservesDocumentSettingsCompatibilityFacts",
+    "DocxWordCompatibleUnusedCommentPartsRetainNominalBodyFrame",
+    "DocxWordCompatibleHiddenBodyCommentsKeepNominalTextPlacement",
+    "DocxWordCompatibleWrappedHeaderCommentPreservesTextWithoutMarkup",
+    "DocxSimpleMarkupRendererDrawsCommentMarkers",
+    "DocxWordCompatibleAllMarkupOmitsReviewLaneForOrphanCommentReference",
+    "CliStrictCommentWarningsFollowTheSelectedView",
+    "CliStrictReturnsThreeWhenWarningsAreEmitted",
+    "DiagnosticCancellationPreservesCallerToken",
+    "DiagnosticCallbacksCanRunNestedConversionsWithoutAffectingRecovery"
+  ],
   "docx-autofit-paragraph-insets": [
     "DocxAutofitParagraphInsetsKeepCompleteLabelInk",
     "DocxTableLayoutStageNaturalAutoWidthUsesLayoutInsetsAndIgnoresGrid",

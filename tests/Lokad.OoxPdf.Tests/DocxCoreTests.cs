@@ -468,7 +468,7 @@ internal static class DocxCoreTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
-                    <w:p><w:r><w:t>Settings</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>Settings</w:t><w:commentReference w:id="1"/></w:r></w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
@@ -477,7 +477,11 @@ internal static class DocxCoreTests
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        DocxDocument document = new DocxReader().Read(package, diagnostics.Add, CancellationToken.None, OoxPdfDocxMarkupMode.AllMarkup);
+
+        TestAssert.True(!diagnostics.Any(diagnostic => diagnostic.Feature == "comments"),
+            "Resolved document settings suppress comment printing and its warning even in an AllMarkup request.");
 
         TestAssert.Equal("doNotCompress", document.Settings.CharacterSpacingControlValue ?? string.Empty);
         TestAssert.Equal("720", document.Settings.DefaultTabStopValue ?? string.Empty);

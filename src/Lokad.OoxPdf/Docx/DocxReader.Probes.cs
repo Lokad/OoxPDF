@@ -135,26 +135,18 @@ internal sealed partial class DocxReader
             }
         }
 
-        if (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
-            document.Descendants(WordprocessingNamespace + "commentReference").Any())
+        // Final/Original intentionally omit printed comments. Only a requested
+        // comment view needs the existing approximation warning.
+        if (markupContext.ApproximatesComments &&
+            (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
+             document.Descendants(WordprocessingNamespace + "commentReference").Any()))
         {
             string diagnosticPartName = ResolveRelatedPartNameOrDefault(package, partName, CommentsRelationshipType, cancellationToken);
-            if (markupContext.ApproximatesComments)
-            {
-                Emit(
-                    "DOCX_APPROXIMATED_COMMENTS",
-                    "comments",
-                    diagnosticPartName,
-                    fallback: "Approximated");
-            }
-            else
-            {
-                Emit(
-                    "DOCX_UNSUPPORTED_COMMENTS",
-                    "comments",
-                    diagnosticPartName,
-                    "Ignored");
-            }
+            Emit(
+                "DOCX_APPROXIMATED_COMMENTS",
+                "comments",
+                diagnosticPartName,
+                fallback: "Approximated");
         }
 
         cancellationToken.ThrowIfCancellationRequested();

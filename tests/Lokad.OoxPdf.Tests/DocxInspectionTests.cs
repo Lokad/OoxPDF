@@ -319,14 +319,40 @@ internal static class DocxInspectionTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            DocxMarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup,
-            DiagnosticSink = diagnostics.Add
-        });
+            diagnostics.Clear();
+            OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+            {
+                DocxMarkupMode = mode,
+                DiagnosticSink = diagnostics.Add
+            });
 
-        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_COMMENTS" && d.Fallback == "Approximated"), "Markup modes should report comments as approximated instead of broadly unsupported.");
-        TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_COMMENTS"), "Markup modes should not emit the broad unsupported comment diagnostic.");
+            TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_COMMENTS" && d.Fallback == "Approximated"), "Requested markup retains its approximation warning even when a comment body is unavailable.");
+            TestAssert.True(!diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_COMMENTS"), "Markup modes should not emit the broad unsupported comment diagnostic.");
+        }
+    }
+
+    public static void DocxUnprintedCommentViewsKeepAnchorsWithoutWarnings()
+    {
+        foreach (bool hasStory in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.Original })
+        {
+            string input = hasStory ? DocxTests.WriteCommentAuthorColorProbeDocx() : DocxTests.WriteCommentMarkerProbeDocx();
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            using FileStream stream = File.OpenRead(input);
+            var document = new DocxReader().Read(OoxPackage.Open(stream, default), diagnostics.Add, default, markupMode: mode);
+            TestAssert.Equal(0, diagnostics.Count);
+            TestAssert.True(document.Paragraphs.Sum(paragraph => paragraph.InlineReferences.Count) > 0,
+                "Selecting an unprinted view preserves source comment anchors for inspection.");
+            var pages = new DocxRenderer(new TestFaceFontResolver(), mode, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            string text = string.Join("\n", pages.Select(DocxPageFootnoteNumberingTests.DecodeText));
+            TestAssert.Contains(hasStory ? "Zebra anchor" : "Commented", text);
+            TestAssert.True(!text.Contains("First body.", StringComparison.Ordinal),
+                "The selected Final/Original view intentionally excludes printed comment bodies.");
+            TestAssert.Equal(0, diagnostics.Count);
+        }
     }
 
     public static void DocxMarkupDiagnosticsApproximateTrackedChangesInMarkupModes()
@@ -925,13 +951,17 @@ internal static class DocxInspectionTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var diagnostics = new List<OoxPdfDiagnostic>();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        {
+            DocxMarkupMode = OoxPdfDocxMarkupMode.AllMarkup,
+            DiagnosticSink = diagnostics.Add
+        });
 
-        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_COMMENTS" && d.PartName == "/word/comments.xml"), "Comments diagnostics should point to comments.xml when the story body exists.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_COMMENTS" && d.PartName == "/word/comments.xml"), "Requested comment diagnostics should point to comments.xml when the story body exists.");
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_FOOTNOTE" && d.PartName == "/word/footnotes.xml" && d.Fallback == "Approximated"), "Footnote diagnostics should point to footnotes.xml and report approximation when the story body exists.");
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_ENDNOTE" && d.PartName == "/word/endnotes.xml" && d.Fallback == "Approximated"), "Endnote diagnostics should point to endnotes.xml and report approximation when the story body exists.");
         TestAssert.True(!diagnostics.Any(d =>
-            (d.Id == "DOCX_UNSUPPORTED_COMMENTS" || d.Id == "DOCX_APPROXIMATED_FOOTNOTE" || d.Id == "DOCX_APPROXIMATED_ENDNOTE") &&
+            (d.Id == "DOCX_APPROXIMATED_COMMENTS" || d.Id == "DOCX_APPROXIMATED_FOOTNOTE" || d.Id == "DOCX_APPROXIMATED_ENDNOTE") &&
             d.PartName == "/word/document.xml"), "Story-body diagnostics should not be flattened to document.xml when the related body part exists.");
 
         using FileStream stream = File.OpenRead(input);

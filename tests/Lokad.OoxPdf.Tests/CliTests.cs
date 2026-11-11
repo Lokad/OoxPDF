@@ -51,7 +51,27 @@ internal static class CliTests
         CliResult result = RunCli("convert", input, output, "--diagnostics", diagnostics, "--strict");
 
         TestAssert.Equal(3, result.ExitCode);
-        TestAssert.Contains("DOCX_UNSUPPORTED_COMMENTS", File.ReadAllText(diagnostics));
+        TestAssert.Contains("DOCX_UNSUPPORTED_OLE_OBJECT", File.ReadAllText(diagnostics));
+    }
+
+    public static void CliStrictCommentWarningsFollowTheSelectedView()
+    {
+        string input = DocxTests.WriteCommentAuthorColorProbeDocx();
+        foreach (string mode in new[] { "final", "original", "simple", "all" })
+        {
+            string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            string diagnostics = Path.ChangeExtension(Path.GetTempFileName(), ".json");
+            CliResult result = RunCli("convert", input, output, "--diagnostics", diagnostics,
+                "--strict", "--docx-markup", mode);
+            bool requested = mode is "simple" or "all";
+            TestAssert.Equal(requested ? 3 : 0, result.ExitCode);
+            TestAssert.True(File.Exists(output) && new FileInfo(output).Length > 0,
+                "Strict mode publishes the converted document even when requested markup is approximated.");
+            string json = File.ReadAllText(diagnostics);
+            TestAssert.True(!json.Contains("DOCX_UNSUPPORTED_COMMENTS", StringComparison.Ordinal),
+                "A selected view does not make supported comment markup an unsupported feature.");
+            TestAssert.Equal(requested, json.Contains("DOCX_APPROXIMATED_COMMENTS", StringComparison.Ordinal));
+        }
     }
 
     public static void CliAcceptsDocxMarkupArgumentForDocxInput()
@@ -426,7 +446,7 @@ internal static class CliTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
-                    <w:p><w:commentRangeStart w:id="1"/><w:r><w:t>Text</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>Text</w:t><w:object/></w:r></w:p>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>

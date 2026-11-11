@@ -57,8 +57,14 @@ These warnings are slide-scoped when a slide index is available. Duplicate occur
 
 DOCX probe messages follow the declared fallback. Approximation wording now
 agrees with `Fallback=Approximated` for notes, style spacing, border styles and
-numbering indents. IDs, severity and part provenance are unchanged; use those
-structured fields for programmatic handling instead of matching message prose.
+numbering indents. Use structured IDs, severity and part provenance for
+programmatic handling instead of matching message prose.
+
+Final and Original intentionally omit printed comments and emit no comment warning.
+The legacy `DOCX_UNSUPPORTED_COMMENTS` ID is no longer emitted in 0.3.0.
+SimpleMarkup/AllMarkup retain `DOCX_APPROXIMATED_COMMENTS` and related-part
+provenance when the resolved view prints comments. Document settings that suppress
+comment printing also suppress its warning. Other unsupported-payload warnings remain.
 
 Unsupported feature warnings:
 
@@ -66,7 +72,6 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_CHART`: a DrawingML chart payload in body or related-story text was detected and ignored, with story provenance; one warning per document.
 - `DOCX_UNSUPPORTED_IMAGE_TRANSFORM`: picture rotation has unusable or unresolved source/line dimensions; unrotated paint is retained, including supported crop/flips.
 - `DOCX_UNSUPPORTED_IMAGE_CROP`: the picture source rectangle is malformed, non-finite or empty; the uncropped image is retained.
-- `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored, usually in compatibility/default Final output when markup printing was not requested. Final intentionally omits printed comments; this legacy ID does not indicate loss of their anchor prose or lack of AllMarkup comment support.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: unsupported field nesting, malformed markup, or an incomplete result with neither a usable cache nor a dynamic placeholder. A complete stored result may be empty.
 - `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
 - `DOCX_APPROXIMATED_EQUATION`: native Office Math was painted with approximate layout; one warning per affected part. This is distinct from omitted unsupported equations.

@@ -4,6 +4,8 @@
 
 - Targets .NET 10 and .NET 11; the shipped library remains safe managed code
   without runtime dependencies.
+- Comment diagnostics follow the selected view: Final/Original omission no longer
+  warns as unsupported; requested markup retains its approximation warning.
 - Hosting: asynchronous package, font, staging and output I/O; immutable font
   leases and host-funded bounded caches; explicit temporary-storage selection
   for embedded conversions. Custom font resolvers define the complete font

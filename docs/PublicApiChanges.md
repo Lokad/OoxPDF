@@ -2,6 +2,14 @@
 
 ## 0.3.0
 
+Final and Original no longer emit `DOCX_UNSUPPORTED_COMMENTS` for intentionally
+unprinted comments. Document settings that hide comments do the same, including
+in AllMarkup. Visible SimpleMarkup/AllMarkup comments retain their approximation warning.
+Do not use the removed diagnostic to infer comment presence; select a markup view
+when printed comments are wanted. CLI `--strict` can now return 0 for a comment-only
+Final/Original conversion when no other warnings occur. Genuine warnings still
+return 3 after the PDF is published; strict-exit handling is unchanged.
+
 Font-subset preparation admits its glyph worklist and CID mapping before
 construction and retains mapping capacity alongside the resulting SFNT program.
 Governed conversions can refuse earlier, including during compound-glyph

@@ -1108,7 +1108,8 @@ internal static class DocxRevisionsTests
         });
 
         string ids = string.Join("|", diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal));
-        TestAssert.Contains("DOCX_UNSUPPORTED_COMMENTS", ids);
+        TestAssert.True(!ids.Contains("DOCX_UNSUPPORTED_COMMENTS", StringComparison.Ordinal),
+            "Intentional Final comment omission is independent of genuine unsupported payload warnings.");
         TestAssert.Contains("DOCX_UNSUPPORTED_COMPLEX_FIELD", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_CHARACTER_UNIT_INDENT", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_CHART", ids);
