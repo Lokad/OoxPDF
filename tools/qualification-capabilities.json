@@ -5,6 +5,14 @@
     "DocxTableLayoutStageNaturalAutoWidthIgnoresEmptyParagraphMarks"
   ],
   "docx-picture-placement": [
+    "DocxLeadingInlinePicturesKeepFollowingWordInk",
+    "DocxReviewPictureOwnerDescentKeepsFollowingParagraphClear",
+    "DocxPictureRotationFitsTheSourceFrameAndPreservesFlowExtent",
+    "DocxPictureRevisionBodyCellFramesMatchIndependentWordDimensions",
+    "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
+    "DocxTableCellFirstLineFitsImageHeight",
+    "DocxTableCellFirstLineKeepsHheaInsetBelowImageHeight",
+    "DocxTableCellMidlineImageBottomSitsAtBaseline",
     "DocxOrderedPictureRotationKeepsMeasuredFramesAcrossContainers",
     "DocxPictureRotationRetainsIndependentOfficeAnchorAcrossFonts",
     "DocxInlineCompositionMixedNoteFramesRequireCompleteMeasuredEquationOwners",

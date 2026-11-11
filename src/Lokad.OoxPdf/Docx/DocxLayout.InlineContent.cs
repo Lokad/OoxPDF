@@ -146,7 +146,9 @@ internal sealed partial class DocxLayoutEngine
             else if (fragment.Math is { } math) equations.Add(new(math, offset));
             else if (fragment.Source is DocxInlinePicture picture)
                 images.Add(new(picture.Image, x + offset, top - measured.BaselineInset, fragment.Advance,
-                    fragment.OccupiedHeight, pageIndex, sourceBlock, sourceParagraph, story)
+                    // Pictures sit on the baseline. Their inset is the painted
+                    // height; occupied descent reserves space without stretching.
+                    fragment.BaselineInset, pageIndex, sourceBlock, sourceParagraph, story)
                     { SourceLineIndex = sourceLine,
                         // The placed line owns its full occupied slot. Rotation
                         // consumes this same frame instead of losing support when
@@ -272,7 +274,8 @@ internal sealed partial class DocxLayoutEngine
         else
         {
             if (!allowStaticFallback && paragraph.InlineTextBoxes.Count == 0 &&
-                !DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
+                !(DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph) ||
+                    paragraph.Images.Count != 0 && paragraph.Images.All(image => image.SourceRunIndex >= 0)) ||
                 !DocxInlineContent.HasSupportedSourceOwner(paragraph, hasActualFieldInputs, token) ||
                 !supportedOrdinaryFlow ||
                 !DocxMathParagraphPolicy.HasSupportedOrderedAlignment(paragraph)) return false;
@@ -313,6 +316,10 @@ internal sealed partial class DocxLayoutEngine
         double automaticSpacing = double.IsFinite(automaticFactor) && automaticFactor > 1d
             ? lineHeight - lineHeight / automaticFactor : 0d;
         lineHeight -= automaticSpacing;
+        var imageMetrics = measurer as IDocxStaticTextMetricsProvider;
+        double imageTextDescender = paragraph.Images.Count == 0 || imageMetrics is null ? 0d :
+            CreateTextSpans(paragraph.Runs, pageNumber, pageCount).Select(span =>
+                imageMetrics.MeasureWindowsDescender(span.StyleRun, span.StyleRun.EffectiveProperties.FontSize)).DefaultIfEmpty(0d).Max();
         var runIndices = new Dictionary<DocxTextRun, int>(ReferenceEqualityComparer.Instance);
         for (int index = 0; index < paragraph.Runs.Count; index++)
         {
@@ -391,7 +398,12 @@ internal sealed partial class DocxLayoutEngine
                     // Fixed rows can wrap a picture contained above their text
                     // baseline. Overhanging pictures keep the existing fallback.
                     if (ordinaryStaticContent && DocxPlainBodyFrame.HasFixedLineFlow(paragraph) && imageHeight > baselineInset) return false;
-                    measured.Add(new(item, imageWidth, imageHeight, imageHeight, []));
+                    // A picture's source run owns its font strut even though it
+                    // paints no glyphs. Reuse the ordinary row's descent growth;
+                    // the picture stays at the baseline while following content
+                    // clears that same occupied height.
+                    double below = ResolveInlineImageExtraBelow(picture.Image, imageTextDescender, imageMetrics);
+                    measured.Add(new(item, imageWidth, imageHeight, imageHeight + below, []));
                     break;
                 case DocxInlineBox box:
                     if (!CanUseInlineBoxFrame(box.Box, double.MaxValue, equations, token) ||
@@ -683,7 +695,7 @@ internal sealed partial class DocxLayoutEngine
                 groupWidth += Atom(offset).Advance;
             }
             double width = output.Count == 0 ? firstWidth : nextWidth;
-            if (groupWidth > Math.Max(firstWidth, nextWidth))
+            if (!FitsLineWidth(groupWidth, Math.Max(firstWidth, nextWidth)))
             {
                 if (Atom(index).Source is not DocxInlineText) return false;
                 if (current.Count != 0)
@@ -741,15 +753,15 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
             double boundary = current.Count == 0 ? 0d : InlineBoundaryAdvance(current[^1], Atom(index));
-            if (current.Count != 0 && advance + boundary + groupWidth > width)
+            if (current.Count != 0 && !FitsLineWidth(advance + boundary + groupWidth, width))
             {
                 if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                 Flush(new(index));
                 if (stopAfterFirstLine) { lines = output; return true; }
             }
-            if (current.Count == 0 && groupWidth > (output.Count == 0 ? firstWidth : nextWidth))
+            if (current.Count == 0 && !FitsLineWidth(groupWidth, output.Count == 0 ? firstWidth : nextWidth))
             {
-                if (output.Count == 0 && groupWidth <= nextWidth)
+                if (output.Count == 0 && FitsLineWidth(groupWidth, nextWidth))
                 {
                     if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                     Flush(new(index));
@@ -924,7 +936,7 @@ internal sealed partial class DocxLayoutEngine
                     below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
                 }
             }
-            double frameAbove = 0d, frameBelow = 0d;
+            double frameAbove = 0d, frameBelow = 0d, imageExtraBelow = 0d;
             bool onlyFrames = current.Count != 0, hasFrame = false, hasText = false, hasMath = false;
             foreach (var fragment in current)
             {
@@ -934,6 +946,8 @@ internal sealed partial class DocxLayoutEngine
                     hasFrame = true;
                     frameAbove = Math.Max(frameAbove, fragment.BaselineInset);
                     frameBelow = Math.Max(frameBelow, fragment.OccupiedHeight - fragment.BaselineInset);
+                    if (fragment.Source is DocxInlinePicture)
+                        imageExtraBelow = Math.Max(imageExtraBelow, fragment.OccupiedHeight - fragment.BaselineInset);
                 }
                 else
                 {
@@ -954,6 +968,12 @@ internal sealed partial class DocxLayoutEngine
             else if (hasFrame && frameAbove >= above && hasText && !hasMath &&
                 physicalTextBaselineInset is { } frameTextInset)
                 below = Math.Max(below, lineHeight - frameTextInset);
+            // Picture owners can grow a mixed row's descent beyond the text
+            // strut. Charge that growth after resolving the container's physical
+            // text inset; taking the maximum against the strut would absorb it.
+            if (hasText && imageExtraBelow > 0d)
+                below = Math.Max(below, Math.Max(0d, lineHeight -
+                    (physicalTextBaselineInset ?? baselineInset)) + imageExtraBelow);
             IReadOnlyList<DocxTextSegmentLayout> labelSegments = [];
             if (cursor.LineIndex == 0 && output.Count == 0 && paragraph.ListLabel is { } label)
             {

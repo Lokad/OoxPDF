@@ -47,17 +47,15 @@ internal static partial class DocxInlineCompositionTests
         var withoutBox = source with { InlineTextBoxes = [], InlineContent = TestAssert.NotNull(source.InlineContent)
             .Where(item => item is not DocxInlineBox).ToArray() };
         // The historical method name describes the old conservative fallback.
-        // Removing a box does not remove this paragraph's prose. Containers now
-        // opt into the shared picture/text path; callers without that contract
-        // keep their existing fallback.
+        // Removing a box does not remove its sibling content or source owners.
+        // Automatic-flow containers share ordinary picture/prose measurement.
         TestAssert.True(withoutBox.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text)),
             "This admission witness contains both prose and a picture.");
         foreach (bool staticFallback in new[] { false, true })
         {
             bool measured = DocxLayoutEngine.TryMeasureOrderedInlineAtoms(withoutBox, null, new SiblingFrameMeasurer(),
                 11d, 10d, 16d, 1d, default, out var atoms, allowStaticFallback: staticFallback);
-            TestAssert.Equal(staticFallback, measured);
-            if (!measured) continue;
+            TestAssert.True(measured, "Owned pictures and prose share the ordered row contract.");
             var fragments = TestAssert.NotNull(atoms).Fragments;
             TestAssert.Equal(1, fragments.Count(fragment => fragment.Source is DocxInlinePicture picture &&
                 ReferenceEquals(picture.Image, withoutBox.Images.Single())));
@@ -66,6 +64,15 @@ internal static partial class DocxInlineCompositionTests
                 .Select(text => text.Run.Text.Substring(text.Start, text.Length)));
             TestAssert.Equal(expected, string.Concat(fragments.SelectMany(fragment => fragment.Text).Select(span => span.Text)));
         }
+        var proseOnly = withoutBox with { Images = [], InlineContent = TestAssert.NotNull(withoutBox.InlineContent)
+            .Where(item => item is not DocxInlinePicture).ToArray() };
+        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(proseOnly, null, new SiblingFrameMeasurer(),
+            11d, 10d, 16d, 1d, default, out _), "Ordinary prose keeps its existing text path.");
+        var unknownImage = withoutBox.Images.Single() with { SourceRunIndex = -1 };
+        var unknownOwner = withoutBox with { Images = [unknownImage], InlineContent = TestAssert.NotNull(withoutBox.InlineContent)
+            .Select(item => item is DocxInlinePicture picture ? picture with { Image = unknownImage } : item).ToArray() };
+        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(unknownOwner, null, new SiblingFrameMeasurer(),
+            11d, 10d, 16d, 1d, default, out _), "Unowned pictures retain their explicit fallback.");
     }
 
     public static void DocxOrdinaryPictureBoxesMatchIndependentWordOrigins()

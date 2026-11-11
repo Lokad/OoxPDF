@@ -689,6 +689,11 @@ internal sealed partial class DocxLayoutEngine
         return (width, image.HeightPoints * width / Math.Max(1d, image.WidthPoints));
     }
 
+    private static double ResolveInlineImageExtraBelow(DocxInlineImage image, double textDescender,
+        IDocxStaticTextMetricsProvider? metrics) =>
+        metrics is not null && image.SourceRunStyle is { } owner
+            ? Math.Max(0d, metrics.MeasureWindowsDescender(owner, owner.EffectiveProperties.FontSize) - textDescender) : 0d;
+
     private sealed record DocxMidLineImage(DocxInlineImage Image, int LineCharOffset, double Width, double Height, double AdvanceBefore, double ExtraBelow);
     private sealed record DocxMidLinePlan(List<DocxMidLineImage>[] ImagesByLine, double[] LineImageWidths, double[] ShiftAboveHeights, double[] SourceShiftAboveHeights, bool[] PlacedMask)
     {
@@ -761,8 +766,7 @@ internal sealed partial class DocxLayoutEngine
             var (width, height) = ResolveInlineImageSize(image, maxWidth, imageScale);
             // Text-prefix measurement excludes pictures. Retain their preceding
             // advance once, so every container places the ordered objects alike.
-            double extraBelow = metrics is not null && image.SourceRunStyle is { } owner
-                ? Math.Max(0d, metrics.MeasureWindowsDescender(owner, owner.EffectiveProperties.FontSize) - textDescender) : 0d;
+            double extraBelow = ResolveInlineImageExtraBelow(image, textDescender, metrics);
             imagesByLine[targetLine].Add(new DocxMidLineImage(image, lineOffset, width, height, lineImageWidths[targetLine], extraBelow));
             lineImageWidths[targetLine] += width;
             // RV05 calibration (Word 16.0): the image top pins to the natural line top,

@@ -303,7 +303,8 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(!fills.Any(fill => fill.Offset > paintOffset &&
                     Math.Min(fill.X + fill.Width, right) - Math.Max(fill.X, left) > .01d &&
                     Math.Min(fill.Y + fill.Height, Math.Max(first, last)) - Math.Max(fill.Y, Math.Min(first, last)) > .01d),
-                    $"A cell background or picture must not cover a source label: {context}/{mode}/{show.Text}.");
+                    $"A cell background or picture must not cover a source label: {context}/{mode}/{show.Text}; " +
+                    $"glyph={character} x=[{left},{right}] y=[{Math.Min(first, last)},{Math.Max(first, last)}].");
             }
         }
         return page;

@@ -18,6 +18,8 @@
   Ordered picture rotation retains measured line frames and qualified source origins.
   Ordinary pictures preserve visible text order across merged source runs and soft breaks.
   Fitting terminal and adjacent inline pictures wrap at their shared source boundary.
+  Leading inline pictures share ordered wrapping with prose, keeping following words
+  inside body/cell frames and retaining source-run descent in scaled Review.
   Stored field results and resolved formatting history, including paragraph marks,
   preserve neighboring equations. Bold/italic revision captions share run and
   paragraph-mark resolution. Tables inside inline header/footer boxes retain
