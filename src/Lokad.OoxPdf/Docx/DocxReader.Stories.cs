@@ -21,16 +21,14 @@ internal sealed partial class DocxReader
     {
         private readonly Dictionary<string, ParsedRelatedStoryPart> parts = new(StringComparer.OrdinalIgnoreCase);
 
-        public IEnumerable<DocxEquationPartSource> EnumerateEquationParts(CancellationToken token)
+        public IEnumerable<DocxEquationPartSource> EnumerateEquationParts(OoxPdfDocxMarkupMode mode, CancellationToken token)
         {
             foreach (var part in parts)
             {
                 token.ThrowIfCancellationRequested();
                 if (part.Value.BodyElements is not { } body || part.Value.Xml is not { } xml) { continue; }
-                int count = 0;
-                foreach (XElement equation in xml.Descendants(MathNamespace + "oMath"))
-                { token.ThrowIfCancellationRequested(); count++; }
-                if (count > 0) { yield return new(part.Key, count, body); }
+                int count = CountSelectedEquationSources(xml, mode, token, out bool hasSource);
+                if (hasSource) { yield return new(part.Key, count, body); }
             }
         }
 
@@ -455,9 +453,7 @@ internal sealed partial class DocxReader
         DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
             ? metadata
             : null;
-        int sourceEquationCount = 0;
-        foreach (XElement equation in story.Descendants(MathNamespace + "oMath"))
-        { cancellationToken.ThrowIfCancellationRequested(); sourceEquationCount++; }
+        int sourceEquationCount = CountSelectedEquationSources(story, markupMode, cancellationToken, out _);
         string? storyId = (string?)story.Attribute(WordprocessingNamespace + "id");
         if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
         {

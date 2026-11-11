@@ -57,11 +57,8 @@ internal static partial class PortableRenderingTests
             int outsideGlyphs = fixture == "inline-sibling-mixed" ? 8 : fixture == "inline-box-body-equation-inline-box-valid" ? 4 : 0;
             TestAssert.Equal(outsideGlyphs, MathShows(page).Length);
             TestAssert.Equal(fixture == "inline-sibling-mixed" ? 1 : 0, page.Images.Count);
-            // The raw hidden-child equation warning is inherited and tracked
-            // separately; this check qualifies visible outside content.
-            if (outsideGlyphs != 0)
-                TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
-                    "A hidden box does not report its painted outside math as ignored.");
+            TestAssert.True(diagnostics.All(item => item.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "A selected hidden box neither reports intentional omission nor its painted outside math as unsupported.");
             PdfContentValidator.ValidatePage(page, 0, default);
         }
 

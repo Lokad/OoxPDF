@@ -36,7 +36,7 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (source.PartName is { } sourcePart && sourcesByPart.TryGetValue(sourcePart, out var part) &&
-                paintedByPart.TryGetValue(sourcePart, out int count) && count == part.SourceCount) { continue; }
+                (part.SourceCount == 0 || paintedByPart.TryGetValue(sourcePart, out int count) && count == part.SourceCount)) { continue; }
             sink(source);
         }
         var paintedParts = new HashSet<string>(paintedByPart.Keys, StringComparer.Ordinal);

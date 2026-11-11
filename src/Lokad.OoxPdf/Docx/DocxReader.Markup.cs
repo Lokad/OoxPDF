@@ -11,6 +11,35 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
+    // Expected visible payloads drive omission diagnostics, not a raw XML census.
+    // Empty display payloads still diagnose; visibility shares the reader's
+    // existing revision and row decisions.
+    private static int CountSelectedEquationSources(XContainer source, OoxPdfDocxMarkupMode mode,
+        CancellationToken token, out bool hasSource)
+    {
+        token.ThrowIfCancellationRequested();
+        int count = 0;
+        hasSource = false;
+        foreach (XElement element in source.Descendants())
+        {
+            token.ThrowIfCancellationRequested();
+            bool equation = element.Name == MathNamespace + "oMath";
+            if (!equation && element.Name != MathNamespace + "oMathPara") continue;
+            hasSource = true;
+            if (!equation && element.Descendants(MathNamespace + "oMath").Any()) continue;
+            bool included = true;
+            foreach (XElement ancestor in element.Ancestors())
+            {
+                token.ThrowIfCancellationRequested();
+                if (IsRevisionContainer(ancestor) && !IsIncludedRevisionContainer(ancestor, mode) ||
+                    ancestor.Name == WordprocessingNamespace + "tr" && !IsIncludedTableRow(ancestor, mode, token))
+                { included = false; break; }
+            }
+            if (included) count++;
+        }
+        return count;
+    }
+
     private static bool IsIncludedRevisionContainer(XElement element, OoxPdfDocxMarkupMode markupMode)
     {
         DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode);

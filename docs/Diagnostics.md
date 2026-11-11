@@ -73,7 +73,9 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_IMAGE_TRANSFORM`: picture rotation has unusable or unresolved source/line dimensions; unrotated paint is retained, including supported crop/flips.
 - `DOCX_UNSUPPORTED_IMAGE_CROP`: the picture source rectangle is malformed, non-finite or empty; the uncropped image is retained.
 - `DOCX_UNSUPPORTED_COMPLEX_FIELD`: unsupported field nesting, malformed markup, or an incomplete result with neither a usable cache nor a dynamic placeholder. A complete stored result may be empty.
-- `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
+- `DOCX_UNSUPPORTED_EQUATION`: selected Office Math content was detected and ignored.
+  Equations in revision containers or table rows hidden by the resolved view do
+  not warn as unsupported. Visible malformed display wrappers retain the warning.
 - `DOCX_UNSUPPORTED_NESTED_INLINE_TEXTBOX`: a rendered text box contains direct
   paragraph-owned nested inline boxes that retain their ignored fallback. The
   warning identifies the physical page; supported surrounding content is retained.

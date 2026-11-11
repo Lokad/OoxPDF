@@ -54,12 +54,7 @@ internal sealed partial class DocxReader
             DocxMarkupContext markupContext = DocxMarkupContext.FromMode(markupMode).ApplyDocumentSettings(documentSettings);
             DocxCommentAnchorInventory commentAnchorInventory = ReadCommentAnchorInventory(document, revisionFilteringMarkupMode);
             var equationDiagnostics = new List<OoxPdfDiagnostic>();
-            int equationSourceCount = 0;
-            foreach (XElement equation in document.Descendants(MathNamespace + "oMath"))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                equationSourceCount++;
-            }
+            int equationSourceCount = CountSelectedEquationSources(document, revisionFilteringMarkupMode, cancellationToken, out _);
             Action<OoxPdfDiagnostic>? featureSink = diagnosticSink;
             if (diagnosticSink is not null || equationSourceCount != 0 || document.Descendants(MathNamespace + "oMathPara").Any())
             {
@@ -116,17 +111,17 @@ internal sealed partial class DocxReader
 
             IReadOnlyList<DocxEquationPartSource> ReadEquationParts()
             {
+                var probedParts = equationDiagnostics.Select(d => d.PartName).ToHashSet(StringComparer.Ordinal);
                 var parts = new[] { new DocxEquationPartSource(documentPart.Name, equationSourceCount, bodyElements) }
-                    .Concat(storyCache.EnumerateEquationParts(cancellationToken))
+                    .Concat(storyCache.EnumerateEquationParts(revisionFilteringMarkupMode, cancellationToken))
                     .Concat(relatedStories.Where(story => story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
                         .GroupBy(story => story.PartName, StringComparer.Ordinal)
-                        .Where(group => group.Any(story => story.SourceEquationCount != 0))
+                        .Where(group => group.Any(story => story.SourceEquationCount != 0) || probedParts.Contains(group.Key))
                         .Select(group => new DocxEquationPartSource(group.Key, group.Sum(story => story.SourceEquationCount),
                             group.Where(story => story.IsNormalStoryType).SelectMany(story => story.BodyElements).ToArray())))
                     .ToArray();
                 // Sink-less readers retain story-only equation warnings from the
                 // already parsed story cache, without enabling unrelated probes.
-                var probedParts = equationDiagnostics.Select(d => d.PartName).ToHashSet(StringComparer.Ordinal);
                 foreach (DocxEquationPartSource part in parts)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
