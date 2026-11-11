@@ -344,6 +344,8 @@
     "DocxInlineBoxPageCountersKeepIndependentWordMathAndFieldOrigins",
     "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
     "DocxStaticStoryInlineImagesShareTheTextBaseline",
+    "DocxLayoutStageOwnsStaticHeaderInlineImages",
+    "DocxLayoutStageWrapsStaticHeaderLines",
     "DocxStaticStoryDeclaredFramesClipInlineImages",
     "DocxDefaultStaticDistances"
   ],

@@ -346,9 +346,12 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
             bool pictureOnly = DocxPlainBodyFrame.IsPlainPictureOnlyParagraph(paragraph);
+            // Legacy unpositioned objects keep their block fallback. Parsed
+            // pictures have source positions for the shared ordered path.
+            bool sourcePictures = paragraph.Images.Count != 0 && paragraph.Images.All(image => image.SourceRunIndex >= 0);
             if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
                 paragraph.InlineTextBoxes.Count != 0 ||
-                paragraph.Images.Count != 0 && (!pictureOnly || unscaledLineMetrics is not null))
+                sourcePictures && (!pictureOnly || unscaledLineMetrics is not null))
             {
                 double size = GetParagraphFontSize(paragraph);
                 var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
