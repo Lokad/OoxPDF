@@ -6,7 +6,8 @@
     "DocxPictureLineFrameTravelsWithImagePlacement",
     "DocxPictureRotationKeepsExplicitUnresolvedFrameFallback",
     "DocxOrdinaryPicturesKeepPaintWhenFormattedRunsAreMerged",
-    "DocxOrdinaryPicturesKeepSourceOrderWithSeveralDrawingsInOneRun"
+    "DocxOrdinaryPicturesKeepSourceOrderWithSeveralDrawingsInOneRun",
+    "DocxOrdinaryPictureSoftBreaksKeepFollowingWordsClearOfPaint"
   ],
   "docx-floating-nested-table": [
     "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
@@ -5702,7 +5703,8 @@
     "DocxBodyHyperlinkUsesExactLineBoxAcrossFontsAndPrintScale",
     "DocxInlineCompositionMixedMathBookmarksRetainOrderedSourceTargets",
     "DocxOrdinaryPicturesKeepPaintWhenFormattedRunsAreMerged",
-    "DocxOrdinaryPicturesKeepSourceOrderWithSeveralDrawingsInOneRun"
+    "DocxOrdinaryPicturesKeepSourceOrderWithSeveralDrawingsInOneRun",
+    "DocxOrdinaryPictureSoftBreaksKeepFollowingWordsClearOfPaint"
   ],
   "docx-structural-metadata-wrappers": [
     "DocxStructuralMetadataWrappers",

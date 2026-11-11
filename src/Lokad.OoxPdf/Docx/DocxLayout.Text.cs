@@ -725,16 +725,6 @@ internal sealed partial class DocxLayoutEngine
         {
             return null;
         }
-        int[] lineCharLengths = new int[lines.Length];
-        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
-        {
-            int length = 0;
-            foreach (DocxTextSpan span in lines[lineIndex].Spans)
-            {
-                length += span.Text.Length;
-            }
-            lineCharLengths[lineIndex] = length;
-        }
         List<DocxMidLineImage>[] imagesByLine = new List<DocxMidLineImage>[lines.Length];
         double[] lineImageWidths = new double[lines.Length];
         double[] shiftAboveHeights = new double[lines.Length];
@@ -754,35 +744,19 @@ internal sealed partial class DocxLayoutEngine
             .ThenBy(item => item.Image.SourceOrderInRun))
         {
             int position = ResolveInlineImageCharOffset(textSpans, image);
-            // RV05: image-driven breaking can start a line exactly at the image offset;
-            // that line wins over the line ending there, so the plan agrees with wrapping.
-            int lineStart = 0;
-            int targetLine = -1;
-            int lineOffset = 0;
-            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            // Wrapping owns source starts, including explicit breaks and hidden
+            // characters omitted from paint. An image at the next start belongs
+            // to that next line. Resolve its visible offset from that line's spans.
+            int targetLine = lines.Length - 1;
+            for (int lineIndex = 0; lineIndex + 1 < lines.Length; lineIndex++)
             {
-                if (lineStart == position)
+                if (position < lines[lineIndex + 1].SourceTextStart)
                 {
                     targetLine = lineIndex;
-                    lineOffset = 0;
                     break;
                 }
-
-                if (position < lineStart + lineCharLengths[lineIndex])
-                {
-                    targetLine = lineIndex;
-                    lineOffset = position - lineStart;
-                    break;
-                }
-
-                lineStart += lineCharLengths[lineIndex];
             }
-
-            if (targetLine < 0)
-            {
-                targetLine = lines.Length - 1;
-                lineOffset = lineCharLengths[targetLine];
-            }
+            int lineOffset = ResolveInlineImageCharOffset(lines[targetLine].Spans, image);
             double maxWidth = targetLine == 0 ? firstLineMaxWidth : continuationLineMaxWidth;
             var (width, height) = ResolveInlineImageSize(image, maxWidth, imageScale);
             // Text-prefix measurement excludes pictures. Retain their preceding
