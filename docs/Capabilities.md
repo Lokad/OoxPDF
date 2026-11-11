@@ -538,8 +538,9 @@ Supported within the following constraints:
   row once; prepared display equations retain their own spacing owner.
   Ordinary textbox/static captions and pictures share wrapping in automatic and
   minimum-spaced rows, including beside an omitted, unsupported equation; its
-  diagnostic remains. Pictures contained above a fixed row's authored baseline
-  use the same wrapping. Overhanging fixed-line pictures, already prepared math
+  diagnostic remains. Captured ordinary pictures in body/cells also use this
+  shared wrapping when contained above the fixed row's physical baseline,
+  preserving following words and the authored line advance. Overhanging fixed-line pictures, already prepared math
   and entirely unsupported paragraphs retain
   their respective measured-frame or fallback contracts.
   Inline pictures follow

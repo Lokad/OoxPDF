@@ -5,15 +5,16 @@ candidate.** The published [0.2.0 qualification](PreviewQualification.md) remain
 separate. Development targets .NET 10 and .NET 11.
 
 This snapshot pins production
-`4e78503a4222259414864273926969b85f03d56a` and the same harness revision.
+`24ac168a6ed3fe94135c33ea0bac7fcd7ad66016` and the same harness revision.
 The frozen .NET 11 library SHA-256 is
-`FE1693111A776ADB3D939DC86D032BFEFC7D5702DAFF28E2FF0AABFCAE0FFDF7`.
+`9AB5C2D619131EA71043E586F8E01F59D9F89A5DDC2C5C376F0EFA673F359582`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
+| Contained fixed-line pictures | Four fitting exact16 picture/prose outcomes hid four letters of After despite complete PDF operations. Captured ordinary rows now reuse shared contained-picture wrapping with the container's physical baseline, preserving fixed advance. All four words and authored picture dimensions are restored; six required outcomes retain 30 glyphs without measured cuts or unknown traces. Both first-frame and oversized fallback PDFs remain identical. The rendered regression fails against the parent. Existing independent exact-frame Word gates passed unchanged; new-source Word geometry remains unqualified. |
 | Minimum-spaced pictures | Changing only automatic spacing to atLeast16/32 left a partial A and hid the other four letters of After in four cell/preset outcomes. The reader now captures ordinary picture source items through the existing publication helper; captured ordinary content shares automatic/minimum measurement. All four words and authored 240x18pt pictures are restored, with all source color bands and 30 glyphs clear of measured clips. Automatic and exact-height control PDFs remain identical. Portable coverage checks two fonts, body/cells, both presets, split runs, declared minimum frames and cancellation. Reconstructed minimum frames keep their qualified fallback; math/box/exact eligibility remains distinct. Two regressions fail against the parent. Exact new-source Word geometry is unqualified. |
 | Leading pictures and following words | Two narrow-first-line cell controls clipped four letters of After despite complete source operations. Owned automatic-flow pictures and prose now share the existing ordered cursor; the word and full-size picture move into the continuation frame. All six causal outcomes retain the word, complete picture bounds and source colors; 30 actual-program glyphs have no clip cuts or unknowns, and the unindented PDF stays exact. Picture paint height stays separate from occupied descent. Three pinned Word controls preserve the original 0.1pt dimension/0.75pt baseline gates. Shared width-roundoff handling also removes an unnecessary cell line without changing the original hhea/image-baseline checks. Fixed/minimum, unowned and unfit fallbacks remain. No exact new-source Word/view or arbitrary overpaint claim. |
 | Autofit paragraph insets | A 72pt first-line indent hid every glyph of a short label while text operations remained present. Natural cell widths now fund the same paragraph offsets used by placement, including positive right insets and measured inline content. Both missing labels recover the controls' 270 raster ink pixels; four control PDFs are unchanged and 30 actual-program glyphs have no measured cuts/unknown traces. Portable checks cover two fonts/presets, split runs, grid hints, left/first/right insets and cancellation; the regression fails on the parent. No all-content, compressed-width or exact new-source Word/view claim. |
@@ -30,13 +31,13 @@ Documentation and harness updates do not rebuild that library.
 | Leading blank/equation pages | The preceding milestone restored five complete footer labels (175 hidden glyphs) across three Review probes, including later note-only continuation pages. Static stories use their own measured page frame; standalone equations retain their measured body origin. Its six Final/Review outcomes contain 30,527 glyphs with no paper/rectangle-clip cuts or unknown traces. Portable regressions remain in the broader CI suite. |
 | Note continuation composition | A leading blank page shifts the illustrated long-note report from four to five pages. All original text origins, sizes and bounds, picture/mask streams and link geometry remain unchanged; destinations move exactly one page. All 64 source continuation lines and both pictures survive in each mode. These are source-preserving transformation checks, not a new Word export. |
 | Fixed composed portfolio | Nine sources/sixteen outcomes retain their PDFs. Existing independent comparisons remain two PPTX image passes and fourteen DOCX image failures. The 64-page readability review is reused through PDF identity. Typography/geometry remain approximate; shared report ancestry limits document diversity. |
-| Bounded document review | Eight report/technical-memo pages across Final/Review were checked against pinned Word PDFs, with existing Word PDFium rasters reused for Review. This review demonstrates no new serious content omission, clipping or pagination defect in those two sources. It does not classify the fourteen failed DOCX image gates as cosmetic or establish arbitrary occlusion/application-view parity. Final intentionally omits printed comments; the legacy comment diagnostic is not evidence that anchor prose disappeared. |
+| Bounded document review | Twenty bounded pages across four Final/Review portfolio sources were checked against pinned Word PDFs; existing Word rasters were reused. The latest static-cell/linked-note review measures 23,588 actual-program glyphs without clip cuts or unknown traces and retains all 64 continuation lines and pictures. No new serious content omission, clipping or pagination defect was demonstrated in these sources. It does not classify the fourteen failed DOCX image gates as cosmetic or establish arbitrary occlusion/application-view parity. Final intentionally omits printed comments; the legacy comment diagnostic is not evidence that anchor prose disappeared. |
 | Fitting mixed notes | Four sources/eight outcomes retain exact PDFs and all 64 continuation lines in their original order/pages. Twenty pictures retain both source colors and complete clips. Independent head/link/picture geometry keeps the original one-point gates. Native PDF/raster files are absent from the selected legacy folders, so no fresh whole-page comparison is claimed. |
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
 | Fixed-picture fallback | Broader CI caught changed placement of an oversized picture in an unmeasured exact-height row. The shared terminal-admission rule now retains that fallback; fitting declared pictures keep ordered measurement. All four fallback PDFs exactly match the preceding accepted outputs and the existing glyph/separation regression passes unchanged. Raw picture bounds alone had suggested NORTH-label overpaint, but native child clips preserve that label; no newly fixed text loss is claimed. The unfit picture remains approximate. |
-| Focused checks | One exact 384-method selection: 382 Windows passes/two Aptos skips; 315 Ubuntu passes/69 font skips, declared beforehand. It includes picture/minimum-frame, page-start, cached-result, navigation and note/mark neighbors. Thirty established neighbor PDFs and eight page/column/soft-break controls remain exact; the fixed portfolio retains two PPTX image passes/fourteen DOCX failures, and native Word picture gates one/four. Twenty-four transferred assets/two smoke PDFs match. One accepted frozen artifact/shared fixture view; no root build/local full-DOCX replay. Failed development trials are excluded. |
+| Focused checks | One exact 348-method selection per host: 346 Windows passes/two declared Aptos skips; 275 Ubuntu passes/73 font skips. Only 37 Linux skips were declared beforehand; the additional 36 were explicitly reviewed at existing OS/Cambria guards before rendering, and all passed on Windows. No replay or retroactive predeclaration. All 42 neighbor PDFs are identical, including the sixteen portfolio outcomes, six-name legend, declared minimum rows and break controls; original image results remain two PPTX passes/fourteen DOCX failures and native Word pictures one/four. Twenty-four transferred assets/two smoke PDFs match. One accepted frozen artifact/shared fixture view; no root build or local full-DOCX replay. |
 
 The preceding autofit batch passed CI42976650266: 4,790 Windows/2,261 Ubuntu
 checks, 19/129 skips, 69 .NET 10 checks per host and four package consumers.
@@ -52,12 +53,17 @@ and four package consumers. Both terminal host logs were retained once. The earl
 failed run remains recorded. CI builds platform binaries separately; source coverage
 does not imply binary identity across platforms.
 
-The minimum-picture source passed 4,793 Windows/2,283 Ubuntu rendering checks and
-69 .NET 10 checks per host in CI42997335304. Its package stage rejected a relative
-CI hyperlink in this shipped guide because it resolved to an absent package file.
-That link is removed; the check remains unchanged. Replacement CI is pending.
-The frozen rendering artifact and its qualification are reused without a local
-build or suite replay.
+The minimum-picture source passed CI42999234040 after a documentation-only
+repair: **4,793 Windows/2,283 Ubuntu passes**, 19/130 skips, 69 .NET 10 checks
+per host and four package consumers. The preceding failed CI42997335304 remains
+recorded: its package preflight rejected a shipped relative CI hyperlink, which
+resolved to an absent package file. The link was removed; the package check stayed
+unchanged. Both terminal host logs were retained once. No local build or suite replay
+was needed for the repair.
+
+Broader qualification of the contained fixed-line picture change is pending.
+The local affected-test, content, neighbor and transfer gates above qualify the
+frozen artifact; they do not close the broader roadmap.
 
 ## Independent content checks and limits
 
@@ -99,10 +105,10 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
   the spaced portable source passes. Exact combined-source Word geometry and
   arbitrary paint occlusion remain unqualified. Earlier descent/paint trials
   failed protected gates and are not consumed.
-- Two exact16 first-line controls still clip four letters of After without a
-  diagnostic. The unfit picture retains its established 117.04x8.778pt fallback.
-  This is an explicit remaining content/diagnostic gap; the minimum-flow fix does
-  not establish fixed-slot correctness or new-source Word geometry.
+- Two oversized exact16 first-line controls still clip four letters of After
+  without a diagnostic. Their established 117.04x8.778pt picture fallback remains
+  identical. Fitting exact-slot pictures now retain complete words; the oversized
+  content/diagnostic gap and new-source Word geometry remain unresolved.
 - An unfit 300-label note row retains 279 complete labels, six partial and fifteen
   off-paper labels. The pinned Office PDFs also retain 279 complete/six partial,
   but omit the other fifteen paint operations. Both fitting 240-label controls
