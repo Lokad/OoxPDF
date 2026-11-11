@@ -528,6 +528,8 @@ Supported within the following constraints:
   Ordinary text/picture paragraphs preserve visible source order
   when equally formatted runs are merged, including multiple drawings in one run.
   Supported soft breaks keep following text beside the inline picture.
+  Picture bookmarks use placed image frames in qualified body/cell containers;
+  ordered static targets retain their measured rows. Unresolved ownership remains limited.
   Picture-only body paragraphs use occupied height and collapsed spacing. Qualified automatic
   picture-only paragraphs share their measured row frame across body, cells and
   static stories. Expanded ordinary spacing follows the occupied math/picture
