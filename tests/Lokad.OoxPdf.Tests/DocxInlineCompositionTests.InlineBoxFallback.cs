@@ -10,7 +10,18 @@ internal static partial class DocxInlineCompositionTests
 {
     public static void DocxIgnoredInlineBoxesKeepMeasuredSiblingSourceIndices()
     {
-        var source = ReadSiblingFrameSource(); var prepared = PrepareSiblingFrameMath(source);
+        // Source indices are deliberately captured only for real annotation ranges.
+        // Put a bookmark after the ignored first box so a compressed index would fail.
+        var document = ReadMutation("InlineBoxMath/inline-sibling-first", OoxPdfDocxMarkupMode.Final, false, false,
+            (xml, w, math) =>
+            {
+                var equation = xml.Descendants(math + "oMath").Single();
+                equation.AddBeforeSelf(new System.Xml.Linq.XElement(w + "bookmarkStart",
+                    new System.Xml.Linq.XAttribute(w + "id", "903"), new System.Xml.Linq.XAttribute(w + "name", "PublicKeptMath")));
+                equation.AddAfterSelf(new System.Xml.Linq.XElement(w + "bookmarkEnd", new System.Xml.Linq.XAttribute(w + "id", "903")));
+            });
+        var source = document.Paragraphs.Single(paragraph => paragraph.InlineTextBoxes.Count != 0);
+        var prepared = PrepareSiblingFrameMath(source);
         TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(source, prepared, new SiblingFrameMeasurer(),
             11d, 10d, 16d, 1d, default, out var atoms, includeInlineTextBoxes: false),
             "A container can measure supported items while retaining its ignored-box policy.");
