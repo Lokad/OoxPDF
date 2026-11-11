@@ -64,7 +64,8 @@ internal static partial class DocxInlineCompositionTests
         var frame = TestAssert.NotNull(TestAssert.NotNull(atoms).Fragments.Single(item => item.TextBox is not null).TextBox);
         TestAssert.True(ReferenceEquals(nested, frame.TextBox), "The measured outer frame retains its source owner.");
         TestAssert.Equal(60d, frame.BoxHeight);
-        TestAssert.Equal(0, frame.TextLines.Count);
+        TestAssert.True(frame.TextLines.All(line => line.Text.Length == 0 && line.InlineMath.Count == 0),
+            "An empty paragraph strut may remain, but the ignored nested frame contributes no text or math.");
         TestAssert.Equal(0, frame.InlineImages.Count);
         TestAssert.Equal(0, frame.TableRows.Count);
         var revised = source with { InlineContent = null };
