@@ -92,8 +92,8 @@ internal static class DocxRepeatedMixedRowTests
                     string.Concat(painted[0].Select(show => show.Text)));
                 DocxInlineCompositionTests.AssertSourceLabelsPaint(pages[owner], mode, [caption, following],
                     $"kept row/{fixture}/{mathFont}/{deferred}");
-                double captionY = painted[owner].Single(show => show.Text.Contains("Kept-row", StringComparison.Ordinal)).Y;
-                double followingY = painted[owner].Single(show => show.Text.Contains("After-kept", StringComparison.Ordinal)).Y;
+                double captionY = LabelBaseline(caption);
+                double followingY = LabelBaseline(following);
                 string cellText = string.Concat(painted[owner].Where(show => show.Y <= captionY && show.Y > followingY)
                     .SelectMany(show => show.Text).Where(character => !char.IsWhiteSpace(character)));
                 TestAssert.Contains("a+b=c", cellText);
@@ -103,6 +103,20 @@ internal static class DocxRepeatedMixedRowTests
                 originalGap ??= gap;
                 TestAssert.True(Math.Abs(gap - originalGap.Value) < .01d,
                     "Page admission preserves the complete cell's relative caption/picture frame.");
+
+                double LabelBaseline(string label)
+                {
+                    string text = string.Concat(painted[owner].Select(show => show.Text));
+                    int start = text.IndexOf(label, StringComparison.Ordinal);
+                    TestAssert.True(start >= 0, "The complete source label must survive split PDF text operations.");
+                    int offset = 0;
+                    foreach (var show in painted[owner])
+                    {
+                        if (start >= offset && start < offset + show.Text.Length) return show.Y;
+                        offset += show.Text.Length;
+                    }
+                    throw new InvalidOperationException("The source label has no painted baseline.");
+                }
             }
         }
     }
