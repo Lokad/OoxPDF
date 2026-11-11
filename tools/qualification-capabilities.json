@@ -18313,6 +18313,7 @@
     "StagedPageMemoryScalesWithRecordsAndSurvivesEmission"
 ],
   "docx-inline-box-fallback": [
+    "DocxIgnoredInlineBoxesKeepMeasuredSiblingSourceIndices",
     "DocxCellTextBoxAfterTextHonorsSpacingExcess",
     "DocxCellTextBoxAfterTextTuckGrowsWithFontSize",
     "DocxCellTextBoxAfterTextTucksToBaseline",

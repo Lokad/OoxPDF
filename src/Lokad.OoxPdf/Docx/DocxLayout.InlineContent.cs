@@ -233,12 +233,14 @@ internal sealed partial class DocxLayoutEngine
         double baselineInset, double lineHeight, double scale, CancellationToken token,
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
         double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints,
-        int? pageNumber = null, int? pageCount = null, bool allowStaticFallback = false)
+        int? pageNumber = null, int? pageCount = null, bool allowStaticFallback = false,
+        bool includeInlineTextBoxes = true)
     {
         lines = null;
         return double.IsFinite(firstWidth) && double.IsFinite(nextWidth) && firstWidth > 0d && nextWidth > 0d &&
             TryMeasureOrderedInlineAtoms(paragraph, equations, measurer, fontSize, baselineInset, lineHeight, scale,
-                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowStaticFallback, physicalTextBaselineInset) &&
+                token, out var atoms, defaultTabStopPoints, pageNumber, pageCount, allowStaticFallback, physicalTextBaselineInset,
+                includeInlineTextBoxes) &&
             TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, token, out lines, physicalTextBaselineInset);
     }
 
@@ -247,7 +249,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxTextMeasurer measurer, double fontSize, double baselineInset, double lineHeight, double scale,
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? atoms,
         double defaultTabStopPoints = WordDefaultTabStopPoints, int? pageNumber = null, int? pageCount = null,
-        bool allowStaticFallback = false, double? physicalTextBaselineInset = null)
+        bool allowStaticFallback = false, double? physicalTextBaselineInset = null, bool includeInlineTextBoxes = true)
     {
         atoms = null;
         bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
@@ -412,6 +414,10 @@ internal sealed partial class DocxLayoutEngine
                     measured.Add(new(item, imageWidth, imageHeight, imageHeight + below, []));
                     break;
                 case DocxInlineBox box:
+                    // Textbox stories retain their ignored nested-frame policy.
+                    // The skipped item owns no fabricated frame; later items
+                    // still carry their original source indices and geometry.
+                    if (!includeInlineTextBoxes) break;
                     if (!TryGetInlineBoxFrameWidth(box.Box, double.MaxValue, token, out double boxWidth) ||
                         !double.IsFinite(boxWidth * scale)) return false;
                     var boxDependencies = DocxFieldText.GetDependencies(box.Box.BodyElements, token);

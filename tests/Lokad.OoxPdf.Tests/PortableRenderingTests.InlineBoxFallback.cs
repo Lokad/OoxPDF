@@ -10,15 +10,19 @@ internal static partial class PortableRenderingTests
 {
     public static void PortableRenderingInlineBoxFallbackKeepsOutsideSiblings()
     {
-        foreach (string fixture in new[] { "inline-box-body-equation-inline-box-valid", "inline-sibling-mixed" })
+        foreach (var (fixture, part) in new (string, string?)[]
+        {
+            ("inline-box-body-equation-inline-box-valid", null), ("inline-sibling-mixed", null),
+            ("inline-box-math-cell", null), ("inline-box-math-header", "word/inline-box-header.xml")
+        })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             // These sources request mathematical italic x/y, absent from pinned Sans.
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                     OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
-            var control = DocxInlineCompositionTests.ReadMutation("InlineBoxMath/" + fixture, mode, false, false);
-            var source = ReadNestedBoxFallback(fixture, mode);
+            var control = DocxInlineCompositionTests.ReadMutation("InlineBoxMath/" + fixture, mode, false, false, partOverride: part);
+            var source = ReadNestedBoxFallback(fixture, mode, part);
             var expected = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().Single();
             var diagnostics = new List<OoxPdfDiagnostic>();
             var page = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
@@ -30,8 +34,10 @@ internal static partial class PortableRenderingTests
                     Math.Abs(actualMath[i].X - expectedMath[i].X) < .001d && Math.Abs(actualMath[i].Y - expectedMath[i].Y) < .001d,
                     "An unsupported box child cannot change a supported outside formula's painted source frame.");
             string text = DocxPageFootnoteNumberingTests.DecodeText(page).Normalize(NormalizationForm.FormKC);
-            foreach (string prose in new[] { "Before inline", "after equation.", "Inline box content.", "After public math table." })
+            foreach (string prose in new[] { "Before inline", "after equation." })
                 TestAssert.Contains(prose, text);
+            if (part is null && fixture != "inline-box-math-cell")
+                TestAssert.Contains("Inline box content.", text);
             TestAssert.True(!text.Contains("Public nested frame.", StringComparison.Ordinal),
                 "Nested inline box content retains its existing ignored fallback.");
             TestAssert.Equal(fixture == "inline-sibling-mixed" ? 1 : 0, page.Images.Count);
@@ -63,7 +69,7 @@ internal static partial class PortableRenderingTests
                     ReferenceEquals(font.Font, show.Font))).ToArray();
     }
 
-    private static DocxDocument ReadNestedBoxFallback(string fixture, OoxPdfDocxMarkupMode mode) =>
+    private static DocxDocument ReadNestedBoxFallback(string fixture, OoxPdfDocxMarkupMode mode, string? part = null) =>
         DocxInlineCompositionTests.ReadMutation("InlineBoxMath/" + fixture, mode, false, false, (xml, w, _) =>
         {
             var outer = xml.Descendants(w + "txbxContent").Single();
@@ -78,5 +84,5 @@ internal static partial class PortableRenderingTests
                 if (node.Attribute("name") is not null) node.SetAttributeValue("name", "PublicNested" + id);
             }
             outer.Elements(w + "p").First().Add(new XElement(w + "r", nested));
-        });
+        }, partOverride: part);
 }

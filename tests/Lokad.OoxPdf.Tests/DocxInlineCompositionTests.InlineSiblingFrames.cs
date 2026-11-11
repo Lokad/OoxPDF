@@ -125,8 +125,10 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal(1, atoms!.Fragments.Count(fragment => fragment.Math is not null));
         var frame = TestAssert.NotNull(atoms.Fragments.Single(fragment => fragment.TextBox is not null).TextBox);
         TestAssert.True(ReferenceEquals(nested, frame.TextBox) && frame.TextLines.Count != 0 &&
-            frame.TextLines.All(line => line.Math is null && line.InlineMath.Count == 0),
-            "The box retains its real source and legacy child text; nested frames gain no fabricated placement.");
+            frame.TextLines.Any(line => line.Math is not null || line.InlineMath.Count != 0),
+            "The box keeps its real source and prepared child formula while the nested frame remains ignored.");
+        TestAssert.True(!string.Concat(frame.TextLines.Select(line => line.Text)).Contains("Inline box content.", StringComparison.Ordinal),
+            "The ignored nested frame cannot acquire a fabricated child-text placement.");
     }
 
     public static void DocxInlineSiblingCellMemoRelocatesCompleteFramesWithoutRemeasuringChildren()
