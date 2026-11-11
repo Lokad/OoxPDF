@@ -85,19 +85,21 @@ internal sealed partial class DocxLayoutEngine
             return 0d;
         }
 
-        int lo = Array.BinarySearch(index.Offsets, rangeStart);
-        if (lo < 0)
-        {
-            lo = ~lo;
-        }
-
-        int hi = Array.BinarySearch(index.Offsets, rangeEnd);
-        if (hi < 0)
-        {
-            hi = ~hi;
-        }
-
+        int lo = FindInlineImageBoundary(index.Offsets, rangeStart);
+        int hi = FindInlineImageBoundary(index.Offsets, rangeEnd);
         return index.PrefixSums[hi] - index.PrefixSums[lo];
+    }
+
+    private static int FindInlineImageBoundary(int[] offsets, int position)
+    {
+        int low = 0, high = offsets.Length;
+        while (low < high)
+        {
+            int middle = low + (high - low) / 2;
+            if (offsets[middle] < position) low = middle + 1;
+            else high = middle;
+        }
+        return low;
     }
 
     // Pictures own source boundaries even when no following word causes a width
@@ -108,15 +110,23 @@ internal sealed partial class DocxLayoutEngine
         double available, double nextAvailable, Func<int, double> measurePrefix,
         CancellationToken token = default, bool includeEnd = false)
     {
-        int first = Array.BinarySearch(images.Offsets, start);
-        if (first < 0) first = ~first;
+        int first = FindInlineImageBoundary(images.Offsets, start);
         for (int index = first; index < images.Offsets.Length; index++)
         {
             token.ThrowIfCancellationRequested();
             int offset = images.Offsets[index];
             if (offset <= start) continue;
             if (offset > end || offset == end && !includeEnd) break;
-            double width = images.PrefixSums[index + 1] - images.PrefixSums[index];
+            // Adjacent drawings can have one text offset. Their shared source
+            // boundary owns the full advance, including range-end lookups.
+            int after = index + 1;
+            while (after < images.Offsets.Length && images.Offsets[after] == offset)
+            {
+                token.ThrowIfCancellationRequested();
+                after++;
+            }
+            double width = images.PrefixSums[after] - images.PrefixSums[index];
+            index = after - 1;
             double before = measurePrefix(offset) + ImageWidthInRange(images, start, offset);
             if (FitsLineWidth(before, available) && !FitsLineWidth(before + width, available) &&
                 FitsLineWidth(width, nextAvailable)) return offset;
