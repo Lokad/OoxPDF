@@ -15,8 +15,20 @@ remain exact. Nested and legacy-only alignment keep their qualified fallbacks.
 New-source Word geometry/application view remain unqualified; no Office action.
 The frozen .NET 11 library SHA-256 is
 `303EC4FF9B7E47E0EACBA376152B0C7AEC27E3C7DC65ED8001F54A0BFDA576F2`.
-Broader qualification is pending for this follow-up. The prepared package below
-predates it and remains retained parent evidence until a coherent package refresh.
+CI43062947587 on `e7d591999` is green: Windows 4,800 passes/19 skips, Ubuntu
+2,289/130, 69 .NET 10 checks per host, four package consumers and ten package
+inspections per host. The prepared package below predates this correction and
+remains retained parent evidence until a coherent package refresh.
+
+Six footer-cell outcomes retain 21,483 bound glyphs, all 24 source PNG paints,
+repeated captions and the correct PAGE/NUMPAGES values without measured cuts or
+picture/ink intersections. Body/note links remain unchanged; these sources do not
+author footer hyperlinks. The new portable check passes both hosts and the parent,
+so no additional footer defect is claimed. One harness-only build reuses the same
+library; two test API compile mistakes and their failed attempts are retained.
+Joined focused coverage is 92 Windows passes and 75 Ubuntu passes/17 declared
+skips, without replaying the preceding 91 checks. This test addition follows the
+broader CI run; no second full CI or new library qualification is claimed.
 
 The preceding rendering slice (`044032aaf`) publishes the existing validated Review
 table frame for complete rows on every page. A long table previously let pictures
