@@ -33,6 +33,21 @@ five hash-pinned fixtures repaired that binding without an assembly rebuild.
 Original setup failures remain recorded. The prepared package contains this
 repair; publication and the broader roadmap remain open.
 
+Further fixed-runtime composition checks retain numbered note captions, resolved
+NUMPAGES fields, both formulas and complete opaque pictures. Sixteen list/field/
+keep outcomes measure 5,800 bound glyphs without cuts, unknown traces or picture
+intersections. Eight literal/field page-raster pairs are exact. Four additional
+body-link outcomes target the correct split/complete note-math page, retain the
+sixteen original links and reproduce twelve source-page rasters exactly. No new
+renderer defect or fix is claimed; exact Word pagination remains unqualified.
+
+Seven existing footnote admission/continuation methods now share the pagination
+partial. Their bodies, shared helpers, assertions and 4,821-method catalogue are
+unchanged. Nine affected/neighbor checks pass on each host under .NET 11. One
+harness-only build reuses all 21 runtime assets/3,438 public inputs; transfer
+verifies 24 assets and two exact smoke PDFs. Production, the portfolio, the prepared
+package and the closed CI qualification remain unchanged; no broader replay.
+
 The aligned-cell follow-up (`f5509b8ab`) keeps the shared printed frame for complete,
 measured centered/bottom-aligned cells. Four Review cases previously let pictures
 cover six caption letters; native picture-knockout checks reveal 512–514 hidden
