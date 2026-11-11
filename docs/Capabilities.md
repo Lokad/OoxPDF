@@ -610,6 +610,9 @@ Supported within the following constraints:
 Approximate or restricted:
 
 - Supported native equations share ordered inline measurement with text/pictures.
+  Fitting terminal inline pictures wrap after prose even without following text.
+  Adjacent drawings share their source boundary's combined width; groups that fit
+  no available row retain the existing unfit fallback.
   Fitting multiple formulas, bookmarks and unchanged-format run splitting preserve
   content in qualified body paragraphs, simple cells and direct headers/footers.
   Resolved paragraph-formatting history and a unique owned paragraph-mark format

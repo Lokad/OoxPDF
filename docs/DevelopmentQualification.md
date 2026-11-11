@@ -4,16 +4,18 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-This snapshot pins production and harness
-`dc0a05f625125046c9c27b70fc2deaf76d61aa49`.
+This snapshot pins production
+`c87fb647fb5fe2b867fc222d22233c34119fbef0` and harness
+`b6230f7bbbb0d2d4c30a573419e8dd663628aaab`.
 The frozen .NET 11 library SHA-256 is
-`96AE8F98088BE520CBFEC09722326E86417761AB78685F9CFAFA09FCE124C6A9`.
+`E0C7FDBBBC6DC797CFCEA93A93C7E8AB64664678B66DBECE8F9F635D114B075A`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
+| Terminal pictures | Fitting terminal/trailing-space pictures escaped width admission: body retained 69.98% of bounds and cells 39.78%. Both wrapping paths now share source-boundary admission, including final rows. Adjacent drawings use their combined advance at a shared offset, correcting a trial that retained only 8.49% of the second cell picture. Eight pictures in six native outputs retain complete bounds and all source colors; 636 actual-program glyphs have no measured clip/unknown traces. Portable regressions cover both presets, two pinned fonts, merged/split runs and adjacent pictures; parent/trial failures are retained. Unfit groups keep their existing fallback; arbitrary group splitting and exact new-source Word/view geometry remain unqualified. |
 | Pictures after soft breaks | Two/three supported soft breaks caused an opaque inline picture to cover part of the following word, although the whole word remained extractable. Picture attachment now reuses wrapped source starts and per-line source offsets, removing duplicate painted-length reconstruction. Four native controls retain all source words/pages with no following-word overpaint; the unchanged no-break PDF is identical. The screen binds 44 glyphs without clip cuts or unknown traces; paired crops confirm restored visible words. Portable checks cover pinned Sans/Math, both presets and separate/merged runs; the regression fails against the parent. No new-source Word/application-view geometry claim. |
 | Pictures inside text runs | Merging equally formatted text/picture/text runs moved PNG/SVG pictures about 35.6pt left and shifted preceding prose behind them by the picture advance. The reader now retains text child boundaries, and shared wrapping/placement uses recorded source run numbers and offsets. Both corrected merged-run PDFs exactly match their original controls. Two portable regressions cover pinned Sans/Math fonts, Final/Review, multiple drawings in one run and cancellation; both fail against the parent. The affected native screen measures 22 glyphs without cuts or unknown traces. No ordinary-layout migration or new layout layer. |
 | Ordered picture rotation | Shared placement publishes the measured line frame, restoring six authored quarter-turns lost beside mathematics in body/header/footer content. Eight controls bind 546 glyphs without cuts or unknown text traces. The global transformed-origin change is reverted: five existing source-pinned Word PDF comparisons exposed ordinary PNG/SVG regressions, including a previously passing anchored picture. All five corrected PDFs are byte-identical to their earlier qualified outputs, restoring one pass and retaining four failures. A portable regression checks the Word anchor within the original 0.001pt gate with two pinned fonts and both modes. Source-fit dimensions, source-centered rotation, clips and invalid-frame fallback remain. |
@@ -30,13 +32,13 @@ Documentation and harness updates do not rebuild that library.
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
-| Focused checks | 201 exact Windows checks pass; Ubuntu passes 161 with 40 understood native-font skips in the same exact set. Thirty neighbor PDFs retain exact identities: 17 ordinary outputs including the portfolio/legend, five standalone picture controls and eight original exact-terminal boxed-table outcomes. Those eight retain complete characters/pages, 1,084 actual-program glyphs without measured cuts or unknown traces, and all original one-point origin gates (maximum error 0.489pt). Twenty-four transferred assets and two smoke PDFs match. One frozen production build/shared fixture view; no root build/local full-DOCX replay. Rejected ordinary-picture migration and global-origin trials remain recorded. |
+| Focused checks | 203 Windows checks pass; Ubuntu passes 163 with 40 understood native-font skips in the same exact set. Windows joins 201 unchanged results with two expanded-harness methods after verifying unchanged production assets/inputs (205 attempts). Thirty neighbor PDFs retain exact identities: 17 ordinary outputs including the portfolio/legend, five standalone picture controls and eight original exact-terminal boxed-table outcomes. Twenty-four transferred assets and two smoke PDFs match. Two production trials yield one accepted artifact; a harness-only build reuses 21 runtime assets/shared fixture view. Rejected trial qualification remains recorded; no root build/local full-DOCX replay. |
 
-The preceding soft-break correction at `fb5a01015` passed CI42959827576: 4,787 Windows/
+The preceding picture-navigation correction at `b15e10859` passed CI42962826027: 4,787 Windows/
 2,256 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
 package consumers. The earlier rotation correction also passed its broader gate
 after repairing the note-ownership assertion exposed by CI42949586292.
-The current picture-navigation batch awaits its own broader platform/framework/package
+The current terminal-picture batch awaits its own broader platform/framework/package
 result; the preceding gate is historical. Earlier
 CI42929150677 failed the legacy static-image ownership control on both hosts;
 those reports remain retained, and the repair passed broader CI. Consult the

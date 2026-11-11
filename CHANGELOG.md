@@ -17,6 +17,7 @@
   supported inline page/column breaks preserve neighboring content.
   Ordered picture rotation retains measured line frames and qualified source origins.
   Ordinary pictures preserve visible text order across merged source runs and soft breaks.
+  Fitting terminal and adjacent inline pictures wrap at their shared source boundary.
   Stored field results and resolved formatting history, including paragraph marks,
   preserve neighboring equations. Bold/italic revision captions share run and
   paragraph-mark resolution. Tables inside inline header/footer boxes retain
