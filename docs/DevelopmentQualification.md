@@ -4,7 +4,21 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-The latest rendering slice (`044032aaf`) publishes the existing validated Review
+The aligned-cell follow-up (`f5509b8ab`) keeps the shared printed frame for complete,
+measured centered/bottom-aligned cells. Four Review cases previously let pictures
+cover six caption letters; native picture-knockout checks reveal 512–514 hidden
+dark pixels per case. All eight Final/Review outcomes now retain complete glyphs
+and pictures without measured intersections. The regression fails on the parent;
+91 Windows checks pass, and Ubuntu passes 74 with 17 declared environment skips.
+All sixteen portfolio PDFs/diagnostics and four existing PNG/SVG alignment controls
+remain exact. Nested and legacy-only alignment keep their qualified fallbacks.
+New-source Word geometry/application view remain unqualified; no Office action.
+The frozen .NET 11 library SHA-256 is
+`303EC4FF9B7E47E0EACBA376152B0C7AEC27E3C7DC65ED8001F54A0BFDA576F2`.
+Broader qualification is pending for this follow-up. The prepared package below
+predates it and remains retained parent evidence until a coherent package refresh.
+
+The preceding rendering slice (`044032aaf`) publishes the existing validated Review
 table frame for complete rows on every page. A long table previously let pictures
 cover caption glyph bottoms although text-count and clipping checks passed. Native
 ink/raster checks now retain 216 body-row paints, twelve mixed headers and all
