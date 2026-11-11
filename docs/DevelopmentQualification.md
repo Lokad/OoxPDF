@@ -5,10 +5,9 @@ candidate.** The published [0.2.0 qualification](PreviewQualification.md) remain
 separate. Development targets .NET 10 and .NET 11.
 
 This snapshot pins production
-`c87fb647fb5fe2b867fc222d22233c34119fbef0` and harness
-`b6230f7bbbb0d2d4c30a573419e8dd663628aaab`.
+`4f6e396f506d057b16d2586bfd62d31eaba2d437` and the same harness revision.
 The frozen .NET 11 library SHA-256 is
-`E0C7FDBBBC6DC797CFCEA93A93C7E8AB64664678B66DBECE8F9F635D114B075A`.
+`7A4592015A50FC52F4255BFB56BEBACC3A5104A8EBA60FD92D51FC19FE5CF275`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
@@ -32,14 +31,17 @@ Documentation and harness updates do not rebuild that library.
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
-| Focused checks | 203 Windows checks pass; Ubuntu passes 163 with 40 understood native-font skips in the same exact set. Windows joins 201 unchanged results with two expanded-harness methods after verifying unchanged production assets/inputs (205 attempts). Thirty neighbor PDFs retain exact identities: 17 ordinary outputs including the portfolio/legend, five standalone picture controls and eight original exact-terminal boxed-table outcomes. Twenty-four transferred assets and two smoke PDFs match. Two production trials yield one accepted artifact; a harness-only build reuses 21 runtime assets/shared fixture view. Rejected trial qualification remains recorded; no root build/local full-DOCX replay. |
+| Fixed-picture fallback | Broader CI caught changed placement of an oversized picture in an unmeasured exact-height row. The shared terminal-admission rule now retains that fallback; fitting declared pictures keep ordered measurement. All four fallback PDFs exactly match the preceding accepted outputs and the existing glyph/separation regression passes unchanged. Raw picture bounds alone had suggested NORTH-label overpaint, but native child clips preserve that label; no newly fixed text loss is claimed. The unfit picture remains approximate. |
+| Focused checks | 226 Windows checks pass; Ubuntu passes 185 with 41 understood native-font skips in the same exact set, one invocation per host. Selection includes 23 additional floating/container neighbors; one separate Windows reflection-harness smoke passes. Thirty neighbor PDFs retain exact identities: 17 ordinary outputs including the portfolio/legend, five standalone picture controls and eight original exact-terminal boxed-table outcomes. Eight additional static/page-boundary outcomes remain exact. Twenty-four transferred assets and two smoke PDFs match. Three production trials yield one accepted artifact/shared fixture view. Rejected trials and failed CI remain recorded; no root build/local full-DOCX replay. |
 
 The preceding picture-navigation correction at `b15e10859` passed CI42962826027: 4,787 Windows/
 2,256 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
 package consumers. The earlier rotation correction also passed its broader gate
 after repairing the note-ownership assertion exposed by CI42949586292.
-The current terminal-picture batch awaits its own broader platform/framework/package
-result; the preceding gate is historical. Earlier
+CI42968585479 then failed the fixed-picture fallback neighbor on both hosts
+(4,788/2,257 passes, 19/129 skips); terminal logs remain retained. The repaired
+terminal-picture batch awaits its broader platform/framework/package result;
+the preceding green gate is historical. Earlier
 CI42929150677 failed the legacy static-image ownership control on both hosts;
 those reports remain retained, and the repair passed broader CI. Consult the
 reports for the revision being consumed. CI builds platform binaries separately;
