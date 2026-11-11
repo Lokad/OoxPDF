@@ -33,11 +33,8 @@ Documentation-only updates reuse that frozen library.
 | Nested picture/header equation | The preceding milestone restored native header math from 56.5% to 100% black-mark retention by correcting object-only origins. Its sixteen Final/Review probes retain all pictures and 55,880 actual-program-bound glyphs without paper/rectangle-clip cuts or unknown traces. Object-only frames preserve container displacement; text/math keeps independently tested Word anchors. |
 | Leading blank/equation pages | The preceding milestone restored five complete footer labels (175 hidden glyphs) across three Review probes, including later note-only continuation pages. Static stories use their own measured page frame; standalone equations retain their measured body origin. Its six Final/Review outcomes contain 30,527 glyphs with no paper/rectangle-clip cuts or unknown traces. Portable regressions remain in the broader CI suite. |
 | Note continuation composition | A leading blank page shifts the illustrated long-note report from four to five pages. All original text origins, sizes and bounds, picture/mask streams and link geometry remain unchanged; destinations move exactly one page. All 64 source continuation lines and both pictures survive in each mode. These are source-preserving transformation checks, not a new Word export. |
-| Fixed composed portfolio | Nine sources/sixteen outcomes retain their PDFs. Existing independent comparisons remain two PPTX image passes and fourteen DOCX image failures. The bounded DOCX review covers thirty Word/candidate page pairs across all seven DOCX sources, reused through PDF identity. Typography/geometry remain approximate; shared report ancestry limits document diversity. |
-| Bounded document review | Thirty Word/candidate page pairs across all seven DOCX portfolio sources in Final/Review were reviewed. The latest letter/specification/static-SVG review adds ten pairs and reuses 20,755 actual-program glyphs through exact PDF identity, with no measured cuts or unknowns. Six pinned Word rasters and three candidate derivatives were reused; only three existing PDFs required rasterization. Source sections, equations, illustrations, notes, footer SVGs and page transitions remain visible in this bounded review. No new serious omission, clipping or pagination defect was demonstrated. All fourteen DOCX image gates remain failed, with geometry and typography residuals; no blanket cosmetic, arbitrary-occlusion or application-view parity claim. Final intentionally omits printed comments; the current batch removes its misleading unsupported-comment warning without changing paint. |
 | Content-preserving transformations | Three held-out composed sources retain all native paint across six Final/Review outcomes after adding 149 paired paragraph bookmarks in body/cell/static/note stories (33,653 glyphs). A separate split of 179 equivalent text runs preserves actual-program/GID sequences, pictures, links, pages, paths/clips and diagnostics in six outcomes. Raw PDF/operation identity fails in all six split-run outcomes and remains recorded; maximum glyph-origin/bounds difference is 0.009308pt. A fresh actual-program ink screen measures 28,741 glyphs without cuts or unknowns. No new omission or pagination defect is demonstrated; no sub-point tuning or threshold change. No builds or Office actions. |
 | Fitting mixed notes | Four sources/eight outcomes retain exact PDFs and all 64 continuation lines in their original order/pages. Twenty pictures retain both source colors and complete clips. Independent head/link/picture geometry keeps the original one-point gates. Native PDF/raster files are absent from the selected legacy folders, so no fresh whole-page comparison is claimed. |
-| Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
 | Fixed-picture fallback | Broader CI caught changed placement of an oversized picture in an unmeasured exact-height row. The shared terminal-admission rule now retains that fallback; fitting declared pictures keep ordered measurement. All four fallback PDFs exactly match the preceding accepted outputs and the existing glyph/separation regression passes unchanged. Raw picture bounds alone had suggested NORTH-label overpaint, but native child clips preserve that label; no newly fixed text loss is claimed. The unfit picture remains approximate. |
@@ -88,6 +85,53 @@ Six additional page-admission probes reuse the frozen artifact: a fitting kept
 cell stays on page one, an unfitting kept cell moves intact to page two, and a
 body picture stays on page one while its following word resumes once on page two.
 All 72 glyphs are clear of measured clips. No new-source Word geometry is claimed.
+
+## Finite document checkpoint
+
+The fixed portfolio contains nine sources and sixteen outcomes: both default
+Final and Word-compatible Review for each DOCX, and one outcome per PPTX. Current
+source, PDF, reference, mode and threshold identities have been reconciled. All
+thirty DOCX Word/candidate page pairs have explicit pins. Four Final pages now
+use pinned PDFium boards in place of less structured legacy thumbnail provenance;
+the cached Word pages and existing candidate PDFs were reused. Shared template
+ancestry limits the diversity of this cohort.
+
+| Document | Final / Review pages | Reviewed content and pagination |
+|---|---|---|
+| Operations report | 2 / 2 | Heading, equations, illustration, table, items 1–3, sections 1–12, conclusion, note and footer retained. Sections 9–12 stay on page two. |
+| Letter | 1 / 1 | Equations, illustration, acceptance items, sections 1–4, conclusion and note retained. |
+| Specification | 2 / 2 | Sections 1–8 stay on page one; 9–20, conclusion and note on page two. |
+| Held-out technical memo | 2 / 2 | Sections 1–8 and the equation table remain on page one; conclusion and note on page two. |
+| Held-out static-cell report | 2 / 2 | Nested-cell/static-story equations, illustration, prose and transitions retained. |
+| Held-out static-SVG report | 2 / 2 | Body illustration, header math and footer SVG retained; sections 9–12 stay on page two. |
+| Held-out linked-footnote report | 4 / 4 | All 64 continuation lines retain order/pages; pictures, math and links remain. |
+| Briefing and held-out decks | One page each | Pinned chart/table/text outcomes retain their two visual passes. |
+
+This checkpoint reuses 56,513 actual-program glyph checks with zero measured cuts
+or unknown traces. The separate authored-legend smoke remains identical to the
+six-name/54-glyph audit. Its six origins still fail the one-point gate
+(11.169/31.387pt), and MAE rose from 0.621337 to 0.713692 when content was restored.
+The earlier whole-page pass had concealed missing names. Both portfolio PPTX
+image gates pass; all fourteen DOCX gates still
+fail, with typography, equation/table geometry and Review placement differences.
+These are not blanket cosmetic classifications or threshold waivers. Two legacy
+PPTX references have empty optional export logs; their source/mode/PDF identities
+remain pinned. Application-view calibration remains unfinished.
+
+Moving the existing mixed picture/equation paragraph into an ordinary table cell
+in three portfolio sources adds six Final/Review controls. Native program/GID and
+character sequences, picture pixels, owning pages, equations and diagnostics are
+preserved; 30,327 glyphs have no measured cuts or unknowns. All eight picture frames
+fit their rectangle clips. The generic screen retains eight alpha-mask abstentions;
+a separate byte-level proof establishes that these unchanged Gray8 masks are fully
+opaque, and all eight paired picture crops were reviewed. This qualifies these
+source pictures without changing general mask handling or visual thresholds.
+
+No new serious omission, clipping or wrong page was demonstrated in this bounded
+review. The broader release gate remains open; candidate packaging/readiness is
+still to be audited, and publication remains deferred. This batch reused the
+qualified production runtime and closed CI evidence; no new library build, full
+suite, package qualification or Office action was needed.
 
 ## Independent content checks and limits
 
