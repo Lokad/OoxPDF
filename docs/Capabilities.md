@@ -68,8 +68,8 @@ Supported within the following constraints:
   Legend keys adorn visible data-label text; a key alone does not create a label
   or its background. Custom point text and enabled value labels keep their keys.
   Horizontal pie/doughnut legends share measured rows and complete entry frames.
-  Automatic side-legend clips include measured font ascent/descent; explicit
-  authored legend viewports retain their clipping.
+  Automatic side-legend clips include nominal metrics and actual resolved-glyph
+  ink at the emitted font size; authored legend viewports retain their clipping.
   Automatic pies reserve measured title/legend space before centering and fitting
   their circle. Rich titles inherit paragraph run defaults; custom labels retain
   their point/container scope and direct run overrides. Authored frames, side
