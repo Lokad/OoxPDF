@@ -523,8 +523,8 @@ Supported within the following constraints:
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
   including supported crop/flips/rotation and source frames. Ordered pictures
-  retain their measured line frame; rotation anchors transformed bounds to the
-  placed frame while preserving source fit and clipping. Picture-only body
+  retain their measured line frame, including beside equations. Rotation preserves
+  the independently qualified source-frame origin, source fit and clipping. Picture-only body
   paragraphs use occupied height and collapsed spacing. Qualified automatic
   picture-only paragraphs share their measured row frame across body, cells and
   static stories. Expanded ordinary spacing follows the occupied math/picture

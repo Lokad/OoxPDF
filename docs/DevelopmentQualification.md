@@ -4,17 +4,17 @@ Updated 2026-11-11. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-This snapshot pins production `c81e768500f81ef363658c92578154d1c0594ab7`
-and harness `9057347ff` (full identities retained with the frozen artifact).
+This snapshot pins production `62f76010459dcfe4e70ce09f3a93247c5dedf5cf`
+and corrective harness `c4f25f218` (full identities retained with the frozen artifact).
 The frozen .NET 11 library SHA-256 is
-`AB1043B080A8DA7169FEA28818447F03F3DEB14F52239727521BBEB2A8BC5DB1`.
+`C71D0249DC41F8C5D93B4E2A997CCB2B7EB238E1DCAF24933047D9341428F8EB`.
 Documentation and harness updates do not rebuild that library.
 
 ## Verified outcomes
 
 | Gate | Result and scope |
 |---|---|
-| Ordered picture rotation | Six authored quarter-turns were lost beside mathematics in body/header/footer content; the cell path rotated but still cut 25% of its picture. Shared placement now publishes the measured line frame and painting anchors transformed bounds to the placed frame. Eight controls remove the 4.5pt top cut while retaining exact glyph origins, font programs, math paths, links and decoded image pixels. The native screen binds 546 glyphs without cuts or unknown traces; image crops were reviewed. Six strict picture-fraction failures remain below 0.001pt from serialization. Source-fit dimensions, clip rules and invalid-frame fallback remain. Exact new-source Office/application-view geometry is unqualified. |
+| Ordered picture rotation | Shared placement publishes the measured line frame, restoring six authored quarter-turns lost beside mathematics in body/header/footer content. Eight controls bind 546 glyphs without cuts or unknown text traces. The global transformed-origin change is reverted: five existing source-pinned Word PDF comparisons exposed ordinary PNG/SVG regressions, including a previously passing anchored picture. All five corrected PDFs are byte-identical to their earlier qualified outputs, restoring one pass and retaining four failures. A portable regression checks the Word anchor within the original 0.001pt gate with two pinned fonts and both modes. Source-fit dimensions, source-centered rotation, clips and invalid-frame fallback remain. |
 | Actual legend ink (prior milestone) | Two caller-supplied pinned Math-font labels retain their full arrow glyphs beyond nominal font metrics. Clipping uses resolved glyph bounds at the existing PDF emission font size; known empty whitespace no longer aborts ink measurement. Text origins, programs, paths and colors stay exact. The two public-API outputs bind 126 filled glyphs with no legend cuts; one unchanged synthetic-bold title stroke per PDF remains unqualified. Bubble legend alignment survives inserting a nonpainting space. No exact new-source Office or application-view claim. |
 | Side-legend ink | Four automatic left/right pie legends emitted all six names but cut 28 glyphs in their bottom labels. Their clips now include measured font ascent/descent within the chart frame; explicit authored viewports retain clipping. Twelve pie controls bind 804 glyphs with no cuts or unknown traces. Four pinned PowerPoint PDFs independently retain the complete labels. Text/key/plot origins, font programs, paths, colors and links remain unchanged. Whole-page pie comparisons remain two passes/ten failures; the four affected MAEs worsen slightly despite restored ink, and those results remain retained. |
 | Static picture bookmarks | Sixteen body links to header/footer picture bookmarks now resolve to their painted rows. The reader captures ordered source positions at each bookmark and removes later backfilling; unrelated math or caption links no longer determine whether the target exists. Painting streams, resource/font programs, image/mask data, glyph origins and image bounds remain identical. The native row-frame gate stays 0.001pt; exact combined-source Office geometry is unqualified. |
@@ -28,12 +28,15 @@ Documentation and harness updates do not rebuild that library.
 | Authored legend | All six names/54 label glyphs remain visible; one focused conversion is byte-identical to the accepted correction. The image gate previously concealed missing names. Native origins, plot geometry and typography remain approximate. |
 | Earlier composition fixes | Table-first static frames, body-column printed-height admission, textbox picture/math neighbors and shared row/cell/box translation retain their bounded controls. Column balancing and general note-row fragmentation remain unsupported and diagnosed. |
 | Static ownership repair | Broader CI exposed an unwanted ordered row for legacy images without source positions. The shared path now requires source ownership and keeps their block fallback. The previously failing ownership control and its wrapping neighbor pass; all 45 document outputs remain byte-identical, reusing their content and reference evidence. |
-| Focused checks | 87 exact Windows checks pass; Ubuntu passes 71 with 16 understood native-font skips, including the portable rotation regression. The new control fails on the qualified parent; the ordinary baseline-pitch control passes. All 17 ordinary PDFs, including the fixed portfolio and six-name legend, remain byte-identical. Twenty-four transferred assets and two smoke PDFs match. No root build/local full-DOCX replay. Rejected ordinary-picture migration and frame-only trials remain recorded; they did not reach portfolio qualification. |
+| Focused checks | 198 exact Windows checks pass; Ubuntu passes 158 with 40 understood native-font skips in the same exact set. The Word-anchor regression fails against the rejected origin change; its frame-translation control passes. The older rotation control fails against the original parent. Note ownership requires zero duplicate image growth rather than a null frame field. All 17 ordinary PDFs, including the fixed portfolio and six-name legend, remain byte-identical. Twenty-four transferred assets and two smoke PDFs match. The harness reuses the frame-only production library; no root build/local full-DOCX replay. Rejected ordinary-picture migration and global-origin trials remain recorded. |
 
 The earlier actual-ink checkpoint `18a6385ca` passed CI42942093610: 4,782 Windows/
 2,249 Ubuntu checks, 19/129 reviewed skips, 69 .NET 10 checks per host and four
-package consumers. The current picture-frame batch awaits its own broader
-platform/framework/package result; that earlier gate is historical. Earlier
+package consumers. CI42949586292 subsequently failed one Windows note-ownership
+assertion after 4,782 passes; Ubuntu passed 2,249 checks and its framework/package
+steps. That assertion is corrected and the portable placement/ownership capability
+now joins Ubuntu's existing selection. The corrective batch awaits its own broader
+platform/framework/package result; earlier gates are historical. Earlier
 CI42929150677 failed the legacy static-image ownership control on both hosts;
 those reports remain retained, and the repair passed broader CI. Consult the
 reports for the revision being consumed. CI builds platform binaries separately;
@@ -66,9 +69,12 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
   probes; exact Office behavior is unqualified. Two Review run-split
   controls differ by 0.003479pt and fail the retained 0.001pt origin audit; picture
   and source-content checks pass. This small residual is deferred without tuning.
-- Six controlled quarter-turn outputs retain strict picture-fraction failures from
-  serialized clip fringes below 0.001pt. The 4.5pt content cut is repaired; these
-  raw sub-point residuals remain deferred without changing the gate.
+- The earlier claim that removing a synthetic 4.5pt/25% rotated-picture cut fixed
+  a proven defect is withdrawn. The source-pinned Word inline-PNG PDF also clips
+  25% of its transformed image; both anchored-PNG PDFs retain the full image.
+  The exact composed-source clip remains unqualified. These supplemental Word
+  PDFs use default Final and do not qualify the public AllMarkup gates or
+  application view. Four original image-threshold failures remain unchanged.
 - General note-row fragmentation/overflow, body/nested-table origins, floating
   table placement, custom Review canvas, numbering, annotations and typography
   remain open. Unfit fixed-line picture slots keep their clipped fallback.
