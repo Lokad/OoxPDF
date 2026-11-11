@@ -35,7 +35,8 @@ internal static partial class PortableRenderingTests
             TestAssert.True(!text.Contains("Public nested frame.", StringComparison.Ordinal),
                 "Nested inline box content retains its existing ignored fallback.");
             TestAssert.Equal(fixture == "inline-sibling-mixed" ? 1 : 0, page.Images.Count);
-            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"));
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "Rendered outside equations must not retain an ignored-equation diagnostic.");
             var warning = diagnostics.Single(d => d.Id == "DOCX_UNSUPPORTED_NESTED_INLINE_TEXTBOX");
             TestAssert.Equal("Ignored", warning.Fallback);
             TestAssert.Equal(0, warning.PageIndex ?? -1);
