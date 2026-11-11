@@ -43,9 +43,10 @@ CI42968585479 then failed the fixed-picture fallback neighbor on both hosts
 (4,788/2,257 passes, 19/129 skips); terminal logs remain retained. The repaired
 batch at `62391bc43` passed CI42970799951: **4,789 Windows/2,258 Ubuntu passes**,
 19/129 reviewed skips, 69 .NET 10 checks per host and four package consumers.
-Both terminal host logs were fetched once. That result belongs to the preceding
-terminal-picture source; the current autofit-inset batch awaits its own broader
-platform/framework/package gate. Earlier
+Both terminal host logs were fetched once. The current autofit-inset batch at
+`b33b55c3e` passed CI42976650266: **4,790 Windows/2,261 Ubuntu passes**,
+19/129 reviewed skips, 69 .NET 10 checks per host and four package consumers.
+This status-only update reuses that unchanged-source result. Earlier
 CI42929150677 failed the legacy static-image ownership control on both hosts;
 those reports remain retained, and the repair passed broader CI. Consult the
 reports for the revision being consumed. CI builds platform binaries separately;
@@ -89,6 +90,8 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
 - Two extreme first-line picture controls retain complete pictures after the
   autofit repair, but still clip four glyphs of the following word. This supported
   composition remains wrong; exact combined-source Word geometry is unqualified.
+  A broader picture-layout trial restored the words but failed an independent
+  0.75pt following-paragraph gate and was rejected; its runtime is not consumed.
 - An unfit 300-label note row retains 279 complete labels, six partial and fifteen
   off-paper labels. The pinned Office PDFs also retain 279 complete/six partial,
   but omit the other fifteen paint operations. Both fitting 240-label controls
