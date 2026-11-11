@@ -5674,6 +5674,9 @@
   "docx-inline-picture-links": [
     "DocxInlinePictureLinks",
     "DocxOrderedPictureRotationKeepsMeasuredFramesAcrossContainers",
+    "DocxPictureRotationKeepsExplicitUnresolvedFrameFallback",
+    "DocxPictureLineFrameTravelsWithImagePlacement",
+    "DocxTablePictureLineFrameCoversTheAuthoredImageTop",
     "PortableRenderingInlinePictureLinksFollowVisibleFrames",
     "DocxOrdinaryPictureBoxesRetainOrderedOwnersAndReuseChildren",
     "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
