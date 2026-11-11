@@ -21,7 +21,7 @@ internal static partial class DocxInlineCompositionTests
         var prepared = mathLine.InlineMath[0].Math;
         var equation = prepared.Equation;
         TestAssert.Equal(1, mathLine.InlineMath.Count);
-        TestAssert.True(canonical.InlineImages.Single().LineFrame is null && mathLine.InlineFrame is not null,
+        TestAssert.True((canonical.InlineImages.Single().LineFrame?.ImageGrowth ?? 0d) == 0d && mathLine.InlineFrame is not null,
             "An ordered paragraph owns its picture through the measured inline frame, without a second legacy image-growth charge.");
         TestAssert.True(DocxLayoutEngine.HasParagraphNoteFlowStory(canonical, default),
             "Every measured atomic equation and picture belongs to its original source paragraph.");

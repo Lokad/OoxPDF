@@ -1,4 +1,11 @@
 {
+  "docx-picture-placement": [
+    "DocxOrderedPictureRotationKeepsMeasuredFramesAcrossContainers",
+    "DocxPictureRotationRetainsIndependentOfficeAnchorAcrossFonts",
+    "DocxInlineCompositionMixedNoteFramesRequireCompleteMeasuredEquationOwners",
+    "DocxPictureLineFrameTravelsWithImagePlacement",
+    "DocxPictureRotationKeepsExplicitUnresolvedFrameFallback"
+  ],
   "docx-floating-nested-table": [
     "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
     "DocxFloatingTableCellInlineBoxLabelsRemainVisibleInFinalAndReview",
@@ -5674,6 +5681,8 @@
   "docx-inline-picture-links": [
     "DocxInlinePictureLinks",
     "DocxOrderedPictureRotationKeepsMeasuredFramesAcrossContainers",
+    "DocxPictureRotationRetainsIndependentOfficeAnchorAcrossFonts",
+    "DocxInlineCompositionMixedNoteFramesRequireCompleteMeasuredEquationOwners",
     "DocxPictureRotationKeepsExplicitUnresolvedFrameFallback",
     "DocxPictureLineFrameTravelsWithImagePlacement",
     "DocxTablePictureLineFrameCoversTheAuthoredImageTop",

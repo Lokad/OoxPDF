@@ -101,16 +101,10 @@ internal sealed partial class DocxRenderer
             (requireLineFrame && lineFrame is not { IsUsable: true })) return false;
         double scale = Math.Min(width / source.Width, height / source.Height);
         double paintWidth = source.Width * scale, paintHeight = source.Height * scale;
-        double radians = -(image.RotationDegrees % 360d) * Math.PI / 180d;
-        double rotatedWidth = Math.Abs(Math.Cos(radians)) * paintWidth + Math.Abs(Math.Sin(radians)) * paintHeight;
-        double rotatedHeight = Math.Abs(Math.Sin(radians)) * paintWidth + Math.Abs(Math.Cos(radians)) * paintHeight;
-        // Placement owns the transformed top-left, rather than the rectangle
-        // before rotation. Keep the existing uniform source fit and line clip.
-        double paintX = x + (rotatedWidth - paintWidth) / 2d;
-        double paintY = y + height - (paintHeight + rotatedHeight) / 2d;
-        if (!double.IsFinite(paintX) || !double.IsFinite(paintY) || !double.IsFinite(paintWidth) ||
+        double paintY = y + height - paintHeight;
+        if (!double.IsFinite(x) || !double.IsFinite(paintY) || !double.IsFinite(paintWidth) ||
             !double.IsFinite(paintHeight) || paintWidth <= 0d || paintHeight <= 0d) return false;
-        frame = new PdfRectangle(paintX, paintY, paintWidth, paintHeight);
+        frame = new PdfRectangle(x, paintY, paintWidth, paintHeight);
         return true;
     }
 
