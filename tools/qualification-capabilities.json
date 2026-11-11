@@ -18313,6 +18313,12 @@
     "StagedPageMemoryScalesWithRecordsAndSurvivesEmission"
 ],
   "docx-inline-box-fallback": [
+    "DocxOwnedBoxParagraphsRetainSourceOwnershipWithoutParentMath",
+    "DocxOwnedBoxParagraphsReuseCompleteChildrenAtEitherScale",
+    "DocxOwnedBoxParagraphsRetainExplicitSlotRevisionAndNestedFallbacks",
+    "DocxOwnedBoxParagraphsShareBodyAndCellAdmission",
+    "DocxOwnedBoxParagraphsMatchIndependentWordFramesAndFollowingText",
+    "PortableRenderingOwnedBoxParagraphsRetainSourceContent",
     "DocxIgnoredInlineBoxesKeepMeasuredSiblingSourceIndices",
     "DocxCellTextBoxAfterTextHonorsSpacingExcess",
     "DocxCellTextBoxAfterTextTuckGrowsWithFontSize",

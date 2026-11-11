@@ -59,8 +59,14 @@ internal static partial class DocxInlineCompositionTests
         var nested = original with { BodyElements = [new DocxParagraphElement(source)] };
         var unsupported = source with { InlineTextBoxes = [nested], InlineContent = TestAssert.NotNull(source.InlineContent)
             .Select(item => item is DocxInlineBox ? (DocxInlineItem)new DocxInlineBox(nested) : item).ToArray() };
-        TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(unsupported, null, new TrackingMeasurer(),
-            11d, 10d, 16d, 1d, default, out _), "Nested frames retain their existing staged path.");
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(unsupported, null, new TrackingMeasurer(),
+            11d, 10d, 16d, 1d, default, out var atoms), "An ignored nested frame does not invalidate its owned outer frame.");
+        var frame = TestAssert.NotNull(TestAssert.NotNull(atoms).Fragments.Single(item => item.TextBox is not null).TextBox);
+        TestAssert.True(ReferenceEquals(nested, frame.TextBox), "The measured outer frame retains its source owner.");
+        TestAssert.Equal(60d, frame.BoxHeight);
+        TestAssert.Equal(0, frame.TextLines.Count);
+        TestAssert.Equal(0, frame.InlineImages.Count);
+        TestAssert.Equal(0, frame.TableRows.Count);
         var revised = source with { InlineContent = null };
         TestAssert.True(!DocxLayoutEngine.TryMeasureOrderedInlineAtoms(revised, null, new TrackingMeasurer(),
             11d, 10d, 16d, 1d, default, out _), "A missing trusted source view cannot silently reconstruct revised owners.");
