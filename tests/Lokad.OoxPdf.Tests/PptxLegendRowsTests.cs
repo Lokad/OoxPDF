@@ -150,8 +150,9 @@ internal static partial class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, int size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null)
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, double size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null)
     {
+        int fontHundredths = (int)Math.Round(size * 100d);
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
             <c:ser><c:idx val="{{i - 1}}"/><c:order val="{{i - 1}}"/><c:tx><c:v>North West Region {{i}}</c:v></c:tx>
               <c:cat><c:strLit><c:pt idx="0"><c:v>Q1</c:v></c:pt><c:pt idx="1"><c:v>Q2</c:v></c:pt></c:strLit></c:cat>
@@ -179,7 +180,7 @@ internal static partial class PptxLegendRowsTests
                 <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}{{(polar ? "" : "<c:axId val=\"1\"/><c:axId val=\"2\"/>")}}</c:{{plot}}>
                 {{axes}}
               </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="{{legendPosition}}"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
-                <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{size * 100}}"/></a:pPr></a:p></c:txPr>
+                <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{fontHundredths}}"/></a:pPr></a:p></c:txPr>
               </c:legend></c:chart>
             </c:chartSpace>
             """;

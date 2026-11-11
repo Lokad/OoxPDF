@@ -212,12 +212,13 @@ internal sealed partial class PptxRenderer
             // Nominal font boxes allocate rows; actual resolved glyphs can
             // extend beyond them. Their ink shares the automatic viewport.
             var line = await textMeasurer.MeasureLineBoxAsync(style).ConfigureAwait(false);
+            ChartTextStyle emissionStyle = style with { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize) };
             double bottom = legendBox.ClipY, top = bottom + legendBox.ClipHeight;
             for (int i = 0; i < admittedEntryCount; i++)
             {
                 double baseline = legendBox.EntryFrames is { } frames ? frames[i].Y : legendBox.FirstY - i * legendBox.LineHeight;
                 double textBottom = baseline - line.Descent, textTop = baseline + line.Ascent;
-                if (await textMeasurer.TryMeasureInkBoundsAsync(entries[i].Name, style).ConfigureAwait(false) is { } ink)
+                if (await textMeasurer.TryMeasureInkBoundsAsync(entries[i].Name, emissionStyle).ConfigureAwait(false) is { } ink)
                 {
                     textBottom = Math.Min(textBottom, baseline + ink.Bottom);
                     textTop = Math.Max(textTop, baseline + ink.Top);

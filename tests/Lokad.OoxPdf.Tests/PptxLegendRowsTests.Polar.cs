@@ -24,7 +24,7 @@ internal static partial class PptxLegendRowsTests
         foreach (bool math in new[] { false, true })
         foreach (string kind in new[] { "pie", "doughnut" })
         foreach (string position in new[] { "l", "r" })
-        foreach (int size in new[] { 12, 18 })
+        foreach (double size in new[] { 11.97d, 12d, 17.97d, 18d })
         foreach (int count in new[] { 2, 6 })
         {
             string[] labels = Enumerable.Range(1, count).Select(i => $"Category {i}").ToArray();
