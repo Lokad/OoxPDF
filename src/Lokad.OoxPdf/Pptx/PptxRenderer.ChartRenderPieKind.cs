@@ -64,12 +64,7 @@ internal sealed partial class PptxRenderer
                     // Factor coordinates offset the automatic placement, including
                     // its measured title/legend space. Authored extents still own
                     // the radius; edge coordinates keep their source rectangle.
-                    var automaticSource = sourceLayout with
-                    {
-                        ManualPlotLayoutApplied = false,
-                        PlotBox = new(frame.X, frame.Y, frame.Width, frame.Height),
-                        PlotAreaBox = new(frame.X, frame.Y, frame.Width, frame.Height)
-                    };
+                    ChartLayout automaticSource = GetAutomaticPolarFrame(sourceLayout);
                     (ChartLayout Layout, ChartLegendBox? LegendBox, bool FitFrame) automaticPrepared = (automaticSource, null, false);
                     if (UsesAutomaticPolarFrame(ChartPolarKind.Pie, automaticSource, sceneChart))
                     {

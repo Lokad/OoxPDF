@@ -132,6 +132,13 @@ internal sealed partial class PptxRenderer
             manual, sceneChart.Title.Text, sceneChart.Title.TextBodyProperties, ReadSceneChartLegendLayout(sceneChart));
     }
 
+    private static ChartLayout GetAutomaticPolarFrame(ChartLayout source) => source with
+    {
+        ManualPlotLayoutApplied = false,
+        PlotBox = new(source.Frame.X, source.Frame.Y, source.Frame.Width, source.Frame.Height),
+        PlotAreaBox = new(source.Frame.X, source.Frame.Y, source.Frame.Width, source.Frame.Height)
+    };
+
     private static bool UsesAutomaticPolarFrame(ChartPolarKind kind, ChartLayout layout, PptxSceneChart chart) =>
         !layout.ManualPlotLayoutApplied && !chart.Title.Layout.HasGeometryValues &&
         !layout.Legend.Layout.HasGeometryValues &&
@@ -162,12 +169,13 @@ internal sealed partial class PptxRenderer
         if (!layout.Legend.Visible) return (layout, null, automatic);
         if (!IsHorizontalLegendPosition(layout.Legend.PositionKind))
         {
-            if (!automatic || kind != ChartPolarKind.Pie || layout.Legend.Overlay || entries.Count == 0)
+            if (kind != ChartPolarKind.Pie || layout.Legend.Overlay || entries.Count == 0 ||
+                !UsesAutomaticPolarFrame(kind, GetAutomaticPolarFrame(source), chart))
                 return (layout, null, automatic);
             var measure = new ChartTextMeasurer(resolver);
             var legend = await MeasureSideLegendFrameAsync(measure, style, entries).ConfigureAwait(false);
             double reserve = (legend?.Width ?? double.NaN) + PptxChartMetricRules.ChartContentFrameInset;
-            if (!double.IsFinite(reserve) || reserve >= layout.PlotBox.Width - 1d)
+            if (!double.IsFinite(reserve) || reserve >= layout.Frame.Width - 1d)
             {
                 context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning,
                     "The side legend cannot be measured within the automatic plot frame; inherited plot placement is retained.",
@@ -175,17 +183,46 @@ internal sealed partial class PptxRenderer
                     Feature: "chart", Fallback: "Approximate"));
                 return (source, null, false);
             }
+            ChartLegendBox box = await PreparePieSideLegendBoxAsync(source, entries, style, measure, context).ConfigureAwait(false);
+            if (!automatic) return (layout, box, false);
             double x = layout.PlotBox.X + (layout.Legend.PositionKind == PptxSceneChartLegendPosition.Left ? reserve : 0d);
             double width = layout.PlotBox.Width - reserve;
             return (layout with
             {
                 PlotBox = layout.PlotBox with { X = x, Width = width },
                 PlotAreaBox = layout.PlotAreaBox with { X = x, Width = width }
-            }, null, true);
+            }, box, true);
         }
         var prepared = await LayoutChartLegendRowsAsync(layout, entries, style, resolver, context,
             layout.Frame.Width, measuredBand: true).ConfigureAwait(false);
         return (prepared.Layout, prepared.Box, automatic);
+    }
+
+    private static async ValueTask<ChartLegendBox> PreparePieSideLegendBoxAsync(ChartLayout source,
+        IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer measure, PptxRenderContext context)
+    {
+        // A default legend belongs to the chart frame, independently of authored
+        // plot geometry. Keys, text and clips consume this one final box.
+        ChartLegendBox box = ResolveChartLegendBox(source.Frame, GetAutomaticPolarFrame(source).PlotBox,
+            entries, source.Legend, style, measure, ChartLegendPlacement.Default);
+        if (source.Legend.PositionKind == PptxSceneChartLegendPosition.Right)
+            box = box with { X = box.X - PptxChartMetricRules.DoughnutRightLegendTail };
+        if (style.Alpha <= 0d) return box;
+        var emission = style with { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize) };
+        double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+        for (int index = 0; index < entries.Count; index++)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(entries[index].Name)) continue;
+            if (await measure.TryMeasureInkBoundsAsync(entries[index].Name, emission).ConfigureAwait(false) is not { } ink)
+                return box; // Unknown ink retains the existing nominal baseline.
+            double baseline = box.FirstY - index * box.LineHeight;
+            bottom = Math.Min(bottom, baseline + ink.Bottom);
+            top = Math.Max(top, baseline + ink.Top);
+        }
+        if (!double.IsFinite(bottom) || !double.IsFinite(top)) return box;
+        double dy = source.Frame.Y + source.Frame.Height / 2d - (bottom + top) / 2d;
+        return box with { FirstY = box.FirstY + dy, ClipY = box.ClipY + dy };
     }
 
     private static ChartPolarLayout ResolvePieFrameLayout(ChartLayout source, ChartLayout prepared,
