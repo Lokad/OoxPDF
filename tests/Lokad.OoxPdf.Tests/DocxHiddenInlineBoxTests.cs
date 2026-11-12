@@ -31,7 +31,7 @@ internal static class DocxHiddenInlineBoxTests
                 "A hidden drawing run must not publish a text box: " + source.Fixture);
             var diagnostics = new List<OoxPdfDiagnostic>();
             AssertPaint(renderer.RenderPagesAsync(removed, null, default).ToBlockingEnumerable().ToArray(),
-                renderer.RenderPagesAsync(hidden, diagnostics.Add, default).ToBlockingEnumerable().ToArray());
+                renderer.RenderPagesAsync(hidden, diagnostics.Add, default).ToBlockingEnumerable().ToArray(), source.Fixture + "/" + mode);
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Intentionally hidden box mathematics is not a visible equation omission.");
         }
@@ -109,12 +109,18 @@ internal static class DocxHiddenInlineBoxTests
                     XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
                     run.Ancestors(w + "p").First().Add(new XElement(m + "oMath", new XElement(m + "future")));
                 }
-                if (removed) run.Remove(); else SetHidden(run, w, true);
+                if (removed)
+                {
+                    // Removing the insertion scope avoids substituting the
+                    // separate empty-revision ownership fallback for this control.
+                    if (variant == "insertion") run.Parent!.Remove(); else run.Remove();
+                }
+                else SetHidden(run, w, true);
             });
             var renderer = Renderer(mode); var diagnostics = new List<OoxPdfDiagnostic>();
             var hidden = Make(false);
             AssertPaint(renderer.RenderPagesAsync(Make(true), null, default).ToBlockingEnumerable().ToArray(),
-                renderer.RenderPagesAsync(hidden, diagnostics.Add, default).ToBlockingEnumerable().ToArray());
+                renderer.RenderPagesAsync(hidden, diagnostics.Add, default).ToBlockingEnumerable().ToArray(), variant + "/" + mode);
             TestAssert.Equal(variant == "unsupported-sibling", diagnostics.Any(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"));
         }
     }
@@ -135,7 +141,8 @@ internal static class DocxHiddenInlineBoxTests
                 mark.Add(new XElement(w + "del", new XAttribute(w + "id", "902"), new XAttribute(w + "author", "Public reviewer")));
                 foreach (var id in second.Descendants().Where(e => e.Name.LocalName == "docPr")) id.SetAttributeValue("id", "902");
             });
-            TestAssert.Equal(2, Paragraphs(document).Sum(p => p.HiddenDrawingEquationSourceCount));
+            TestAssert.Equal(2, document.EquationParts.Single(p => p.PartName == document.MainPartName).SourceCount);
+            TestAssert.True(Paragraphs(document).All(p => p.InlineTextBoxes.Count == 0), "Both source drawings are intentionally hidden.");
             var diagnostics = new List<OoxPdfDiagnostic>();
             _ = Renderer(mode).RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
@@ -182,12 +189,12 @@ internal static class DocxHiddenInlineBoxTests
         return new DocxReader().Read(OoxPackage.Open(input, default), null, default, markupMode: mode);
     }
 
-    private static void AssertPaint(IReadOnlyList<PdfPage> expected, IReadOnlyList<PdfPage> actual)
+    private static void AssertPaint(IReadOnlyList<PdfPage> expected, IReadOnlyList<PdfPage> actual, string context)
     {
         TestAssert.Equal(expected.Count, actual.Count);
         for (int page = 0; page < expected.Count; page++)
         {
-            TestAssert.Equal(expected[page].Content, actual[page].Content);
+            TestAssert.True(expected[page].Content == actual[page].Content, "Visible paint differs: " + context + "/page" + page);
             TestAssert.Equal(expected[page].Fonts.Count, actual[page].Fonts.Count);
             TestAssert.Equal(expected[page].Images.Count, actual[page].Images.Count);
             TestAssert.True(expected[page].Annotations.SequenceEqual(actual[page].Annotations), "Hidden boxes retain sibling navigation.");
