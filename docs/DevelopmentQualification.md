@@ -4,6 +4,24 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+The terminal-bookmark repair (`a180e12f7`, reviewed harness `0a62f09f3`) restores
+two internal annotations lost when an explicit page break leaves the bookmark
+after unpainted trailing whitespace. Destination resolution keeps existing points
+first, then uses the preceding painted text endpoint. It preserves the source
+boundary before the break; transformed-source Word viewport geometry is unqualified.
+Windows and Ubuntu each pass 27 focused checks without skips. One new whitespace
+assertion was corrected after failing on both parent and candidate; original
+exact endpoint checks and Office thresholds remain. Only that method reran on
+Windows, reusing 21 runtime assets/3,438 inputs. The parent still fails the composed
+regression. Four causal outputs retain identical native font-program/GID paints,
+text geometry, paths, picture pixels/alpha and existing links; 14,370 bound glyphs
+have no measured cuts or unknowns. All sixteen portfolio PDFs/diagnostics are
+exact, retaining two PPTX passes/fourteen DOCX image failures. Transfer verifies
+24 assets/two exact PDFs without rebuilding or replaying a suite. Frozen .NET 11
+library: `E1F4DA0726E7E527EA8C4C7BEB0788F81FF63A99E31079099616E10DAB67C0F1`.
+Broader CI/framework/package qualification for this repair is pending; the prepared
+package below belongs to the preceding milestone. Publication remains deferred.
+
 The retained-source ownership repair (`c17da72f8`, runtime from `b3fa46305`) keeps
 an unsupported revised equation from suppressing an independently supported
 neighbor. Four public body/cell/header/footnote roots recover ten fraction paints
