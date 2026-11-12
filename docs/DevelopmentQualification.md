@@ -4,6 +4,30 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+The math-run metadata repair (`4ddb7e1da`) applies the existing nonprinting-marker
+rule consistently during run admission and traversal. A stored pagination marker
+inside a supported mathematical run previously removed the entire formula. Two
+public roots now recover six formula paints across twelve Final/Review outcomes;
+all twelve PDFs and diagnostics match their unmodified controls exactly. Native
+control evidence for 1,143 bound glyphs is reused by PDF identity, with no measured
+cuts, unknowns or picture/ink intersections. Content-bearing, foreign or misplaced
+markers retain the explicit unsupported fallback. The marker's stored-pagination
+role and mathematical-run parent are documented in the
+[Open XML reference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.lastrenderedpagebreak?view=openxml-3.0.1).
+
+Windows and Ubuntu each pass 19 focused checks without skips on one frozen
+.NET 11 runtime. The parent portable test fails its support-diagnostic assertion;
+the independent native probe establishes the actual six omissions despite complete
+prose and unchanged page counts. One production build qualifies library
+`B9C3C339EB9690843A9FDBD977D141898CE2CE523E2CE4DBC8DFB2645D33A140`.
+A capability-formatting cleanup changes no selected methods or runtime inputs.
+Transfer verifies 24 assets and two exact PDFs, including the repaired input and
+six-name legend, without a root build or suite replay. All sixteen portfolio PDFs/
+diagnostics remain exact; two PPTX passes/fourteen DOCX visual failures remain.
+Broader qualification belongs to the next coherent marker-capability milestone.
+The prepared package below remains this repair's parent. Transformed-source Word
+appearance, application-view calibration and the broader roadmap remain open.
+
 The revised-inline-box owner repair (`88ca67f52`) restores fifteen formula paints
 across four public roots/24 Final/Review outcomes in body, cells and headers.
 Visible drawing insertions/deletions now use the existing revision ownership set;
@@ -44,7 +68,8 @@ The coherent milestone passed CI43118101912 on `a228b65dd`: Windows 4,810 passes
 19 skips, Ubuntu 2,293/130, 69 .NET 10 checks per host and four package consumers.
 Terminal logs are retained once. Four additional .NET 10 revision/equation checks
 pass on each host using the exact CI assembly; two CI-runtime smoke PDFs match.
-The prepared package below contains both repairs.
+The prepared package below contains the earlier box-ownership and selected-view
+diagnostic repairs.
 Publication, application-view calibration and the broader roadmap remain open.
 
 The independent comment-body follow-up finds no new defect in the report, letter
