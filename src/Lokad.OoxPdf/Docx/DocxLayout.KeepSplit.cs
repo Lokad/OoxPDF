@@ -10,12 +10,6 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static bool ShouldKeepParagraphBlockTogether(DocxParagraph paragraph)
-    {
-        DocxParagraphKeepRules keepRules = paragraph.EffectiveProperties.KeepRules;
-        return keepRules.KeepLines == true || keepRules.KeepNext == true;
-    }
-
     private static double ResolveLineHeight(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer)
     {
         return ResolveLineHeightProfile(paragraph, fontSize, textMeasurer).LineHeight;
@@ -493,7 +487,7 @@ internal sealed partial class DocxLayoutEngine
         bool allowAutomaticMinimumGridPlacement,
         CancellationToken cancellationToken,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null,
-        bool scaleMinimumBodyAdvances = false)
+        bool scaleMinimumBodyAdvances = false, bool includeFollowingBlocks = true)
     {
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -505,7 +499,7 @@ internal sealed partial class DocxLayoutEngine
         int paragraphCount = 1;
         int firstTableRowCount = 0;
         int nextSearchIndex = elementIndex + 1;
-        while (paragraph.EffectiveProperties.KeepRules.KeepNext == true &&
+        while (includeFollowingBlocks && paragraph.EffectiveProperties.KeepRules.KeepNext == true &&
             TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
         {
             if (next is DocxParagraphElement nextParagraph)
@@ -596,8 +590,10 @@ internal sealed partial class DocxLayoutEngine
     private static bool FitsMathDisplayWidth(DocxParagraph paragraph, DocxPreparedMathParagraph math, double width, double scale) =>
         math.Box.Width * scale <= width - GetParagraphTextStartOffset(paragraph, scale) - GetParagraphRightInset(paragraph, scale);
 
-    internal static List<int> KeepChainBlockIndexes(IReadOnlyList<DocxBodyElement> elements, int elementIndex)
+    internal static List<int> KeepChainBlockIndexes(IReadOnlyList<DocxBodyElement> elements, int elementIndex,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var chain = new List<int> { elementIndex };
         if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
         {
@@ -609,6 +605,7 @@ internal sealed partial class DocxLayoutEngine
         while (paragraph.EffectiveProperties.KeepRules.KeepNext == true &&
             TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             chain.Add(nextIndex);
             if (next is not DocxParagraphElement nextParagraph)
             {

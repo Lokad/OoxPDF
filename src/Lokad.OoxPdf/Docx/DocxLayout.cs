@@ -641,10 +641,10 @@ internal sealed partial class DocxLayoutEngine
         // body reserve. Measured notes are consumed from future lookahead so follower
         // checks on later pages do not re-advance the same chain; in-flight notes live
         // in the body reserve and the checking block itself stays exempt like Register.
-        double KeepChainFootnoteReserve(int sourceBlockIndex)
+        double KeepChainFootnoteReserve(int sourceBlockIndex, IReadOnlyList<int> chainBlocks)
         {
             double reserve = 0d;
-            foreach (int chainBlock in KeepChainBlockIndexes(document.BodyElements, sourceBlockIndex))
+            foreach (int chainBlock in chainBlocks)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (chainBlock == sourceBlockIndex)
@@ -1233,6 +1233,10 @@ internal sealed partial class DocxLayoutEngine
             return false;
         }
 
+        // Admit a source keep-with-next group once, including when it starts on an
+        // empty page. An oversized group may flow across pages; its suffixes must
+        // not each request another fresh page. Keep-lines remains paragraph-owned.
+        int keepChainEndIndex = -1;
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1528,21 +1532,28 @@ internal sealed partial class DocxLayoutEngine
             // Consume its printed height independently; scaling that baseline box again
             // would displace the exact paragraph while fixing its following text.
             double lineHeight = scalesExactBodyAdvance ? baselineLineHeight * paragraphSpacingScale : baselineLineHeight;
-            if (textMeasurer is not null &&
-                HasPageContent() &&
-                ShouldKeepParagraphBlockTogether(paragraph))
+            bool startsKeepChain = elementIndex > keepChainEndIndex;
+            DocxParagraphKeepRules keepRules = paragraph.EffectiveProperties.KeepRules;
+            if (keepRules.KeepLines == true || startsKeepChain && keepRules.KeepNext == true)
             {
-                double keepBottom = Math.Max(CurrentParagraphFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex));
-                DocxKeepBlockEstimate keepEstimate = EstimateKeptParagraphBlock(document.BodyElements, elementIndex,
-                    width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
-                    scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
-                    availableHeight: cursorY - keepBottom, allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
-                    cancellationToken, mathEquations, knownPageCount,
-                    scaleMinimumBodyAdvances: UsesPrintedBodyFrame() && unscaledTextMeasurer is IDocxLineMetricsProvider);
-                if (cursorY - keepEstimate.Height <= keepBottom)
+                IReadOnlyList<int> keepBlocks = startsKeepChain
+                    ? KeepChainBlockIndexes(document.BodyElements, elementIndex, cancellationToken) : [elementIndex];
+                if (keepRules.KeepNext == true && startsKeepChain) keepChainEndIndex = keepBlocks[^1];
+                if (textMeasurer is not null && HasPageContent())
                 {
-                    AdvanceColumnOrPage();
-                    RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                    double keepBottom = Math.Max(CurrentParagraphFrameBottom(), page.MarginBottom + KeepChainFootnoteReserve(elementIndex, keepBlocks));
+                    DocxKeepBlockEstimate keepEstimate = EstimateKeptParagraphBlock(document.BodyElements, elementIndex,
+                        width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
+                        scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
+                        availableHeight: cursorY - keepBottom, allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
+                        cancellationToken, mathEquations, knownPageCount,
+                        scaleMinimumBodyAdvances: UsesPrintedBodyFrame() && unscaledTextMeasurer is IDocxLineMetricsProvider,
+                        includeFollowingBlocks: startsKeepChain);
+                    if (cursorY - keepEstimate.Height < keepBottom)
+                    {
+                        AdvanceColumnOrPage();
+                        RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                    }
                 }
             }
 

@@ -1,4 +1,28 @@
 {
+  "docx-keep-chain-admission": [
+    "DocxKeepNextOverflowAdmitsTheWholeSourceChainOnce",
+    "DocxKeepChainMembersRetainIndependentKeepLinesAndExactFits",
+    "DocxKeepChainsStopAtExplicitPageColumnAndSectionBoundaries",
+    "DocxKeepChainBlockIndexesFollowKeepNext",
+    "DocxSyntheticParagraphKeepLinesStartsBlockOnNextPage",
+    "DocxSyntheticParagraphKeepNextMovesPairToNextPage",
+    "DocxSyntheticParagraphKeepNextChainsAcrossConsecutiveParagraphsToNextPage",
+    "DocxSyntheticPageKeepNextEstimatesIndentedBlockTarget",
+    "DocxLayoutUsesResolvedPageFieldForKeepEstimate",
+    "DocxInlineCompositionKeepNextReservesTheMeasuredMixedFrame",
+    "DocxContextualContributionSpacingKeepsChainEstimatesAligned",
+    "DocxSyntheticParagraphKeepNextEstimateHonorsContextualSpacing",
+    "DocxWordCompatibleAllMarkupScalesKeepNextParagraphEstimate",
+    "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate",
+    "DocxTableLayoutStageEstimatesKeptTableFirstRowWithResolvedPreferredWidth",
+    "DocxExplicitPageStartMatchesWordAcrossModesSizesAndSurroundingContent",
+    "DocxExplicitPageStartPreservesComposedContent",
+    "DocxOrderedInlineParagraphsHonorDefaultAndDisabledWidowControl",
+    "DocxOrderedWidowFragmentsRebindCountersAndRetainPictureNavigation",
+    "DocxCompleteFootnoteReserveReclaimsRowsWithoutMovingNotes",
+    "DocxTableAnchoredFootnoteSharesBodyPages",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-comment-view-diagnostics": [
     "DocxUnprintedCommentViewsKeepAnchorsWithoutWarnings",
     "DocxMarkupDiagnosticsApproximateCommentsInMarkupModes",

@@ -8,7 +8,9 @@
   stories, pagination, fields, review markup and navigation. Corrects visible
   content lost through wrapping, clipping or off-page frames. Computed fields
   remain intact beside pictures; automatic note references retain source order and link ownership,
-  and Review endnote counters retain neighboring equations.
+  and Review endnote counters retain neighboring equations. Oversized keep-with-next
+  groups flow without repeatedly starting new pages; independent keep-lines rules
+  and explicit breaks remain respected.
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
   qualified authored horizontal legends retain every name. Merged-table content,
   font fallback, text/link geometry and preset arcs also improve.
