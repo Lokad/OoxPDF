@@ -40,6 +40,7 @@ internal sealed record PptxRenderContext(
     public IMemoryReservation? PageConstruction { get; init; }
     public long PageConstructionBaseBytes { get; init; }
     public long PageAxisConstructionSites { get; init; }
+    public IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? SvgTextFonts { get; init; }
 
     public PptxTheme Theme => SceneSlide.Theme;
 

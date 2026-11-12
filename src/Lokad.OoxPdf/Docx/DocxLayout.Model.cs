@@ -361,6 +361,7 @@ internal sealed record DocxFontResources(
     IReadOnlyDictionary<DocxTextRun, PdfFallbackFontResource> FallbackFaces,
     IReadOnlyList<PdfFallbackFontResource> FallbackFontResources)
 {
+    public IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? SvgTextFonts { get; init; }
     public IReadOnlyList<DocxEquation> DeferredPageCountEquations { get; init; } = [];
     public IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph> MathEquations { get; init; } =
         new Dictionary<DocxEquation, DocxPreparedMathParagraph>();

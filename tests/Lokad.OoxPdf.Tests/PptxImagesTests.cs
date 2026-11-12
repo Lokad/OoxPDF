@@ -443,7 +443,7 @@ internal static partial class PptxImagesTests
             ["ppt/media/image1.svg"] = TestFixtures.Utf8("""
                 <svg viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg">
                   <path d="M0 0 L20 0 L20 10 L0 10 Z" fill="#112233"/>
-                  <text x="10" y="5">Hello</text>
+                  <text x="10" y="5"><textPath href="#unsupported">Hello</textPath></text>
                   <path d="M0 0 Q10 10 20 0 Z" fill="#778899"/>
                 </svg>
                 """)

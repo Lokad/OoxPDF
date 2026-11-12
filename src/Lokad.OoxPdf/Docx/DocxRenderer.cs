@@ -406,7 +406,14 @@ internal sealed partial class DocxRenderer
         }
         if (diagnostics is not null && messages is not null)
             foreach (var message in messages) { cancellationToken.ThrowIfCancellationRequested(); diagnostics(message); }
-        return first;
+        // SVG labels do not affect paragraph pagination. Prepare their borrowed
+        // outline programs once, after count/note retries, through the same owner.
+        var svgFonts = await PptxRenderer.PrepareSvgTextFontsAsync(
+            DocxBlockTraversal.EnumerateSourceImages(first.Document)
+                .Where(image => image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
+                .Select(image => image.Bytes).OfType<byte[]>(),
+            resolver, (face, token) => LoadFontAsync(face, fontCache, token), diagnostics, cancellationToken).ConfigureAwait(false);
+        return (first.Document, first.FontResources with { SvgTextFonts = svgFonts }, first.Layout);
     }
 
     private static async ValueTask<(DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout)> PrepareNoteAdjustedLayoutAsync(

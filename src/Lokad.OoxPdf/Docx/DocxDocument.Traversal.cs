@@ -19,22 +19,26 @@ internal static class DocxBlockTraversal
 
     private static IEnumerable<DocxParagraph> EnumerateFloatingDrawingTextBoxParagraphs(DocxDocument document)
     {
-        return EnumerateFloatingDrawingTextBoxParagraphs(document.FloatingDrawings)
-            .Concat(document.HeaderFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
-            .Concat(document.FooterFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
-            .Concat(document.PageSettings.HeaderFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
-            .Concat(document.PageSettings.FooterFloatingDrawingsByType.Values.SelectMany(EnumerateFloatingDrawingTextBoxParagraphs))
+        return EnumerateSourceFloatingDrawings(document).SelectMany(drawing => EnumerateBodyParagraphs(drawing.TextBoxBodyElements));
+    }
+
+    public static IEnumerable<DocxInlineImage> EnumerateSourceImages(DocxDocument document) =>
+        EnumerateSourceParagraphs(document).SelectMany(paragraph => paragraph.Images)
+            .Concat(EnumerateSourceFloatingDrawings(document).Select(drawing => drawing.Image).OfType<DocxInlineImage>());
+
+    private static IEnumerable<DocxFloatingDrawing> EnumerateSourceFloatingDrawings(DocxDocument document)
+    {
+        return document.FloatingDrawings
+            .Concat(document.HeaderFloatingDrawingsByType.Values.SelectMany(drawings => drawings))
+            .Concat(document.FooterFloatingDrawingsByType.Values.SelectMany(drawings => drawings))
+            .Concat(document.PageSettings.HeaderFloatingDrawingsByType.Values.SelectMany(drawings => drawings))
+            .Concat(document.PageSettings.FooterFloatingDrawingsByType.Values.SelectMany(drawings => drawings))
             .Concat(document.BodyElements
                 .OfType<DocxSectionBreakElement>()
                 .SelectMany(sectionBreak => sectionBreak.PageSettings.HeaderFloatingDrawingsByType.Values
                     .Concat(sectionBreak.PageSettings.FooterFloatingDrawingsByType.Values)
-                    .SelectMany(EnumerateFloatingDrawingTextBoxParagraphs)))
-            .Concat(document.RelatedStories.SelectMany(story => EnumerateFloatingDrawingTextBoxParagraphs(story.FloatingDrawings)));
-    }
-
-    private static IEnumerable<DocxParagraph> EnumerateFloatingDrawingTextBoxParagraphs(IEnumerable<DocxFloatingDrawing> drawings)
-    {
-        return drawings.SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements));
+                    .SelectMany(drawings => drawings)))
+            .Concat(document.RelatedStories.SelectMany(story => story.FloatingDrawings));
     }
 
     private static IEnumerable<DocxParagraph> EnumerateInlineTextBoxParagraphs(DocxDocument document)

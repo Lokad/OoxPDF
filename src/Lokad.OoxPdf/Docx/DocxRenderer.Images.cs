@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
 
@@ -23,7 +24,8 @@ internal sealed partial class DocxRenderer
     private static void RenderImage(DocxInlineImage image, double x, double y, double width, double height,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,
-        DocxPictureLineFrame? lineFrame = null, bool requireLineFrame = false)
+        DocxPictureLineFrame? lineFrame = null, bool requireLineFrame = false,
+        IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? svgTextFonts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         DocxPictureCrop crop = image.Crop;
@@ -45,7 +47,7 @@ internal sealed partial class DocxRenderer
         if (crop.IsEmpty && !hasFlip && !rotates)
         {
             RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
-                pageIndex, cancellationToken, imageCache, ref imageIndex);
+                pageIndex, cancellationToken, imageCache, ref imageIndex, svgTextFonts);
             return;
         }
         double sourceWidth = paintWidth / (1d - crop.Left - crop.Right);
@@ -62,7 +64,7 @@ internal sealed partial class DocxRenderer
             if (!hasFlip && !rotates)
             {
                 RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
-                    pageIndex, cancellationToken, imageCache, ref imageIndex);
+                    pageIndex, cancellationToken, imageCache, ref imageIndex, svgTextFonts);
                 return;
             }
         }
@@ -87,7 +89,7 @@ internal sealed partial class DocxRenderer
             }
             if (rotates) graphics.ClipRectangle(paintX, paintY, paintWidth, paintHeight);
             RenderImageCore(image, sourceX, sourceY, sourceWidth, sourceHeight, graphics, pageImages,
-                diagnosticSink, pageIndex, cancellationToken, imageCache, ref imageIndex);
+                diagnosticSink, pageIndex, cancellationToken, imageCache, ref imageIndex, svgTextFonts);
         }
         finally { graphics.RestoreState(); }
     }
@@ -110,7 +112,8 @@ internal sealed partial class DocxRenderer
 
     private static void RenderImageCore(DocxInlineImage image, double x, double y, double width, double height,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
-        int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex)
+        int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,
+        IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? svgTextFonts)
     {
         if (image.Bytes is { } bytes && image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
@@ -118,7 +121,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink(image.RasterFallback is not null && diagnostic.Severity == OoxPdfSeverity.Error && diagnostic.Fallback == "Ignored"
                     ? diagnostic with { Severity = OoxPdfSeverity.Warning, Fallback = "RasterImage", Message = diagnostic.Message + " The authored raster preview is used." }
                     : diagnostic);
-            if (PptxRenderer.TryRenderSvgImage(graphics, x, y, width, height, bytes, svgSink, pageIndex, image.PartName, cancellationToken)) return;
+            if (PptxRenderer.TryRenderSvgImage(graphics, x, y, width, height, bytes, svgSink, pageIndex, image.PartName, cancellationToken, svgTextFonts)) return;
             if (image.RasterFallback is not { } preview) return;
             image = preview;
         }

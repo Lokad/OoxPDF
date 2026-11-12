@@ -1,4 +1,5 @@
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -11,19 +12,21 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken,
-        string picturePreset, IReadOnlyDictionary<string, double> pictureAdjustments)
+        string picturePreset, IReadOnlyDictionary<string, double> pictureAdjustments,
+        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - OoxUnits.EmuToPoints(bounds.Y) - height;
-        RenderSvgPictureCore(graphics, x, y, width, height, bounds, bytes, crop, fillRect, diagnosticSink, slideIndex, partName, cancellationToken, picturePreset, pictureAdjustments);
+        RenderSvgPictureCore(graphics, x, y, width, height, bounds, bytes, crop, fillRect, diagnosticSink, slideIndex, partName, cancellationToken, picturePreset, pictureAdjustments, textFonts);
     }
 
     // The vector paint pipeline owns no presentation state. DOCX supplies its
     // already resolved PDF rectangle and maps diagnostics to the document page.
     internal static bool TryRenderSvgImage(PdfGraphicsBuilder graphics, double x, double y, double width, double height,
-        byte[] bytes, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex, string? partName, CancellationToken cancellationToken)
+        byte[] bytes, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex, string? partName, CancellationToken cancellationToken,
+        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts = null)
     {
         Action<OoxPdfDiagnostic>? pageSink = diagnosticSink is null ? null :
             diagnostic => diagnosticSink(diagnostic with { SlideIndex = null, PageIndex = pageIndex });
@@ -32,7 +35,7 @@ internal sealed partial class PptxRenderer
         {
             graphics.ClipRectangle(x, y, width, height);
             return RenderSvgPictureCore(graphics, x, y, width, height, default, bytes, default, default,
-                pageSink, 0, partName, cancellationToken);
+                pageSink, 0, partName, cancellationToken, textFonts: textFonts);
         }
         finally { graphics.RestoreState(); }
     }
@@ -40,7 +43,8 @@ internal sealed partial class PptxRenderer
     private static bool RenderSvgPictureCore(PdfGraphicsBuilder graphics, double x, double y, double width, double height,
         ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex, string? partName, CancellationToken cancellationToken,
-        string picturePreset = "rect", IReadOnlyDictionary<string, double>? pictureAdjustments = null)
+        string picturePreset = "rect", IReadOnlyDictionary<string, double>? pictureAdjustments = null,
+        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // Coarse render-local DOM, gradient/path models and working headroom.
@@ -143,7 +147,8 @@ internal sealed partial class PptxRenderer
 
         var gradients = ReadSvgGradients(svg);
         var radialGradients = ReadSvgRadialGradients(svg);
-        ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName);
+        var paintedText = new HashSet<XElement>();
+        bool hasStylesheet = HasSvgStylesheet(svg);
         var unsupportedCommands = new SortedSet<char>();
         int unreadablePaths = 0;
         var missingGradients = new SortedSet<string>(StringComparer.Ordinal);
@@ -179,7 +184,7 @@ internal sealed partial class PptxRenderer
             graphics = entry.Parent;
             graphics.DrawTransparencyGroup(entry.Child, new PdfRectangle(imageX, imageY, imageWidth, imageHeight), entry.Opacity);
         }
-        foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate)))
+        foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate) || candidate.Name.LocalName == "text"))
         {
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
@@ -202,6 +207,14 @@ internal sealed partial class PptxRenderer
                 isolation.Add((container, graphics, child, ReadNumericSvgContainerOpacity(container)!.Value));
                 admittedContainers.Add(container);
                 graphics = child;
+            }
+            if (element.Name.LocalName == "text")
+            {
+                if (!hasStylesheet && TryReadSvgPathTransform(element, out SvgTransform textTransform) &&
+                    TryPaintSvgText(graphics, element, textFonts, textTransform, sourceMinX, sourceMinY,
+                        imageX, imageY, imageWidth, imageHeight, scaleX, scaleY, AdmitSamples, cancellationToken))
+                    paintedText.Add(element);
+                continue;
             }
             string? data = element.Name.LocalName == "path" ? (string?)element.Attribute("d") : ConvertSvgShapeToPathData(element);
             if (string.IsNullOrWhiteSpace(data))
@@ -470,6 +483,7 @@ internal sealed partial class PptxRenderer
             }
         }
         while (isolation.Count > 0) { CloseGroup(); }
+        ReportUnsupportedSvgElements(svg, diagnosticSink, slideIndex, partName, paintedText);
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
         ReportIgnoredSvgOpacity(svg, usedGradientIds, admittedContainers, admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
 
@@ -481,7 +495,8 @@ internal sealed partial class PptxRenderer
     // vanishing. One diagnostic per element kind (with occurrence count),
     // restricted to paintable content outside definitions (inert definitions
     // are correctly skipped).
-    private static void ReportUnsupportedSvgElements(XDocument svg, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName)
+    private static void ReportUnsupportedSvgElements(XDocument svg, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName,
+        HashSet<XElement> paintedText)
     {
         if (diagnosticSink is null)
         {
@@ -492,7 +507,8 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in svg.Descendants())
         {
             string name = element.Name.LocalName;
-            if (IsSupportedSvgElement(name) || IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element))
+            if (IsSupportedSvgElement(name) || paintedText.Contains(element) || IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) ||
+                element.Ancestors().Any(parent => parent.Name.LocalName == "text" && IsHiddenSvgText(parent)))
             {
                 continue;
             }
@@ -2292,8 +2308,8 @@ internal sealed partial class PptxRenderer
     // RV07: basic shapes convert to path data and paint through the shared
     // path pipeline. Circles, ellipses and rounded corners use the kappa
     // bezier approximation as a platform-independent literal; spec-invalid
-    // geometry returns null and renders nothing like Office. Text stays out
-    // of scope behind the unsupported-element diagnostic.
+    // geometry returns null and renders nothing like Office. Ordinary text
+    // shares this picture's placement and isolated vector paint above.
     private const double SvgCircleKappa = 0.5522847498;
     private static bool IsSvgPaintableElement(XElement element)
     {

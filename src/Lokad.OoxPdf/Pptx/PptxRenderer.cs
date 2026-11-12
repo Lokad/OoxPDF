@@ -64,7 +64,9 @@ internal sealed partial class PptxRenderer
             {
                 PageConstruction = construction,
                 PageConstructionBaseBytes = construction?.Bytes ?? 0L,
-                PageAxisConstructionSites = axisConstructionSites
+                PageAxisConstructionSites = axisConstructionSites,
+                SvgTextFonts = await PrepareSvgTextFontsAsync(EnumerateSvgPictureSources(sceneSlide), fontResolver,
+                    fontResolver.GetOrLoadOpenTypeFontAsync, diagnosticSink, cancellationToken).ConfigureAwait(false)
             };
 
             RenderBackground(context, graphics);
