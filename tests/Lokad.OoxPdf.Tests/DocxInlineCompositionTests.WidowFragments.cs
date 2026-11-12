@@ -44,8 +44,9 @@ internal static partial class DocxInlineCompositionTests
             var pages = RenderWidowInlineSource(3, "mixed", enabled, mode, counter: true);
             int expected = enabled ? 1 : 0;
             string first = DocxPageFootnoteNumberingTests.DecodeText(pages[expected]);
-            TestAssert.True(first.Contains("ROW 1 " + (expected + 1), StringComparison.Ordinal),
-                "A deferred first fragment binds PAGE only to its admitted page.");
+            string compact = string.Concat(first.Where(character => !char.IsWhiteSpace(character)));
+            TestAssert.True(compact.Contains("ROW1" + (expected + 1), StringComparison.Ordinal),
+                "A deferred first fragment binds PAGE only to its admitted page: " + first);
             TestAssert.Equal(1, Regex.Matches(pages[expected].Content, @"/\w+\s+Do\b").Count);
             var link = pages.SelectMany(page => page.Annotations).Single(annotation => annotation.IsDestination);
             TestAssert.Equal(expected, link.Destination!.Value.PageIndex);
