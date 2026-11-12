@@ -56,6 +56,23 @@ internal static partial class PptxLegendRowsTests
         }
     }
 
+    public static void PptxPieFactorOffsetsRetainBoundedSourceAndCompleteLegendContent()
+    {
+        foreach (string offset in new[] { "-1e306", ".1", "1e306" })
+        {
+            string layout = "<c:layout><c:manualLayout><c:xMode val=\"factor\"/><c:yMode val=\"factor\"/>" +
+                "<c:wMode val=\"factor\"/><c:hMode val=\"factor\"/>" +
+                $"<c:x val=\"{offset}\"/><c:y val=\".1\"/><c:w val=\".6\"/><c:h val=\".7\"/></c:manualLayout></c:layout>";
+            var page = Render(576, 12, 6, overlay: false, kind: "pie", categoryLegend: true, plotLayout: layout).Page;
+            string names = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).Select(show => show.Text));
+            TestAssert.Equal(string.Concat(Enumerable.Range(1, 6).Select(index => "Category " + index)), names);
+            double expected = 360d + Math.Clamp(double.Parse(offset, CultureInfo.InvariantCulture), 0d, 1d) * 576d;
+            TestAssert.True(Math.Abs(ReadManualPieCenterX(page, 6) - expected) < .002d,
+                "Factor placement must reuse the existing resolved source bounds before applying the automatic reference.");
+        }
+    }
+
     private static double ReadManualPieCenterX(PdfPage page, int count)
     {
         var centers = Regex.Matches(page.Content, @"(?m)^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) l\r?\nh\r?\nf\*");

@@ -54,18 +54,19 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 bool hasVisiblePieDataLabels = labelOptions.HasVisibleText || pieSlices.Any(slice => ResolveChartDataLabelOptions(labelOptions, slice.Index).HasVisibleText);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: hasVisiblePieDataLabels, hasTitle: !string.IsNullOrWhiteSpace(sceneChart.Title.Text));
-                if (sourceLayout.ManualPlotLayoutApplied && sceneChart.PlotAreaLayout.X is { } factorX &&
+                if (sourceLayout.ManualPlotLayoutApplied && sceneChart.PlotAreaLayout.X is not null &&
                     IsManualLayoutFactorMode(sceneChart.PlotAreaLayout.XModeKind))
                 {
                     // Office's factor offset follows the automatic center even
                     // when an authored width resizes the pie. Edge placement
                     // still belongs to the authored rectangle. Reuse the same
-                    // default geometry; don't infer a new side-legend anchor.
+                    // default geometry and resolved, bounded source offset;
+                    // don't infer a new side-legend anchor.
                     ChartPolarLayout automatic = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie,
                         new ChartPlotBox(frame.X, frame.Y, frame.Width, frame.Height), polarPoints.PointExplosions,
                         legend, hasVisibleDataLabels: hasVisiblePieDataLabels, hasTitle: !string.IsNullOrWhiteSpace(sceneChart.Title.Text));
                     polarLayout = polarLayout with { Geometry = polarLayout.Geometry with
-                        { CenterX = automatic.Geometry.CenterX + factorX * frame.Width } };
+                        { CenterX = automatic.Geometry.CenterX + plotBox.X - frame.X } };
                 }
                 if (UsesAutomaticPolarFrame(sourceLayout, sceneChart))
                     polarLayout = FitPieLayoutToFrame(polarLayout, prepared.Layout.PlotBox, hasVisiblePieDataLabels);
