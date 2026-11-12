@@ -59,20 +59,22 @@ internal static partial class DocxEndnoteCounterPrefixTests
         var count = typeof(DocxLayoutEngine).GetMethod("CountReferenceBoundEndnotes", BindingFlags.Static | BindingFlags.NonPublic)!
             .CreateDelegate<Func<DocxLayoutPage, IReadOnlyList<DocxPlacedRelatedStoryLayout>, DocxRelatedStoryLayout?, double,
                 IReadOnlyList<DocxRelatedStoryLayout>, CancellationToken, double, int>>();
-        TestAssert.Equal(3, count(page, [], separator, 1d, stories, default, page.MarginBottom));
         var unowned = stories.ToArray(); unowned[1] = unowned[1] with { HasResolvedCounterInputs = false };
-        TestAssert.Equal(1, count(page, [], separator, 1d, unowned, default, page.MarginBottom));
         var unfit = stories.ToArray(); unfit[0] = unfit[0] with { ContentHeight = page.Height * 2d };
-        TestAssert.Equal(0, count(page, [], separator, 1d, unfit, default, page.MarginBottom));
         var clipped = stories.ToArray(); var row = clipped[0].TableRows.Single();
         clipped[0] = clipped[0] with { TableRows = [row with { Cells = row.Cells.Select(cell => cell with { Height = .001d }).ToArray() }] };
-        TestAssert.Equal(0, count(page, [], separator, 1d, clipped, default, page.MarginBottom));
-        TestAssert.Equal(0, count(page, [], separator, 1d, stories, default, page.Height - page.MarginTop - 10d));
-        TestAssert.Equal(0, count(page, [], separator, .8d, stories, default, page.MarginBottom));
-        TestAssert.Equal(0, count(page, [], separator, 1d, stories, default, double.NaN));
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
-        TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(() =>
-            count(page, [], separator, 1d, stories, cancellation.Token, page.MarginBottom)).CancellationToken);
+        foreach (double scale in new[] { 1d, .8d })
+        {
+            TestAssert.Equal(3, count(page, [], separator, scale, stories, default, page.MarginBottom));
+            TestAssert.Equal(1, count(page, [], separator, scale, unowned, default, page.MarginBottom));
+            TestAssert.Equal(0, count(page, [], separator, scale, unfit, default, page.MarginBottom));
+            TestAssert.Equal(0, count(page, [], separator, scale, clipped, default, page.MarginBottom));
+            TestAssert.Equal(0, count(page, [], separator, scale, stories, default, page.Height - page.MarginTop - 10d));
+            TestAssert.Equal(0, count(page, [], separator, scale, stories, default, double.NaN));
+            TestAssert.Equal(cancellation.Token, TestAssert.Throws<OperationCanceledException>(() =>
+                count(page, [], separator, scale, stories, cancellation.Token, page.MarginBottom)).CancellationToken);
+        }
     }
 
     private static DocxDocument Read(OoxPdfDocxMarkupMode mode, string position, int reference, string? instruction, string value,

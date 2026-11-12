@@ -58,6 +58,42 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxComposedEndnoteCountersKeepNeighborFractionsInBothViews()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            DocxDocument Source(bool counter) => ReadMutation("Composition/composed-static-cell-report", mode, false, false,
+                (xml, w, _) =>
+                {
+                    var picture = xml.Descendants(w + "r").Single(run => run.Element(w + "drawing") is not null);
+                    var result = new XElement(w + "r");
+                    if (counter) result.Add(new XElement(w + "fldChar", new XAttribute(w + "fldCharType", "begin")),
+                        new XElement(w + "instrText", " PAGE "),
+                        new XElement(w + "fldChar", new XAttribute(w + "fldCharType", "separate")));
+                    result.Add(new XElement(w + "t", counter ? "7" : "2"));
+                    if (counter) result.Add(new XElement(w + "fldChar", new XAttribute(w + "fldCharType", "end")));
+                    picture.AddBeforeSelf(result);
+                }, partOverride: "word/endnotes.xml");
+            var renderer = new DocxRenderer(resolver, mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var literal = renderer.RenderPagesAsync(Source(false), null, default).ToBlockingEnumerable().ToArray();
+            var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+            var actual = renderer.RenderPagesAsync(Source(true), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, literal.Length);
+            TestAssert.Equal(literal.Length, actual.Length);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                "A supported page result beside a note picture must not suppress either existing fraction.");
+            for (int page = 0; page < literal.Length; page++)
+            {
+                string Text(Lokad.OoxPdf.Pdf.PdfPage value) => NormalizeNoteMathFieldText(DocxPageFootnoteNumberingTests.DecodeText(value));
+                TestAssert.Equal(Text(literal[page]), Text(actual[page]));
+                TestAssert.Equal(literal[page].Images.Count, actual[page].Images.Count);
+            }
+        }
+    }
+
     private static DocxDocument ReadFieldPictureBoundary(string kind, string cache, string prefix,
         bool pictureFirst, bool joined, OoxPdfDocxMarkupMode mode) =>
         ReadMutation("Composition/report", mode, false, false, (xml, w, math) =>

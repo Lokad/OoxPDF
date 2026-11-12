@@ -13,7 +13,9 @@ internal sealed partial class DocxLayoutEngine
     {
         token.ThrowIfCancellationRequested();
         if (CanUsePlainDocumentEndnoteFlow(page, separator, printScale, stories, token, out _)) return stories.Count;
-        return printScale == 1d && page.ColumnFrames.Count <= 1
+        // The fitting proof already maps scaled body coordinates back into note
+        // design space. Print scale must not revoke an otherwise complete result.
+        return page.ColumnFrames.Count <= 1
             ? CountCompleteFittingEndnoteBlocks(page, placed, separator, printScale, stories, token, frameBottom) : 0;
     }
 
