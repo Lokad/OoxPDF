@@ -4,6 +4,27 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Computed PAGE/NUMPAGES results now remain atomic beside pictures in the same source
+run (`4da834039`). Four failing Final/Review outputs become byte-identical to their
+unchanged separate-run controls. Windows passes 30 focused checks; Ubuntu passes
+26 with four reviewed font/platform skips. The parent fails the new picture-placement
+regression. CI43179331533 is closed green on both hosts; its Windows main suite
+passes 4,822 checks with 19 skips.
+
+Fitting Review endnotes now bind counters independently of print scale
+(`b7c26a7fc`, harness `1656a5db0`). Two existing fractions reappear in each of two
+composed outputs; the other ten footer-cell/endnote/continued-footnote outputs
+remain exact. All six joined/separate pairs are identical. Actual native programs
+bind 30,887 glyphs with no measured cuts or unknowns. Windows passes 23 focused
+checks; Ubuntu passes 22 with one declared platform skip. One repaired assertion
+reran on Windows, reusing 21 runtime assets and 3,438 public inputs. The parent
+fails on the missing fractions. New mixed-reference PAGE-value and Word-geometry
+parity remain unqualified. All sixteen original portfolio PDFs/diagnostics stay
+exact, preserving two PPTX passes/fourteen DOCX visual failures. Transfer verifies
+24 assets and two exact smoke PDFs without a root build or suite replay. The
+coherent follow-up gate and package identity are recorded separately; application
+view, release acceptance and the broader roadmap remain open.
+
 Computed simple fields now keep a distinct source position (`4a93dce6d`, harness
 `68ee9a07e`). PAGE/NUMPAGES-only hyperlinks retain their click area, and following
 text remains outside the link. Both new regressions fail on the parent. Windows
@@ -440,34 +461,27 @@ expected library hash, preserving the original qualified runtime.
 
 ## Prepared development package payload
 
-The development package and symbols are prepared directly in `artifacts/nuget/`,
-with checksums and a separate qualification record. CI43160881670 / `61b437941`
-supplies both framework libraries, portable symbols and the original package ZIP.
-Its exact package passed consumers on Windows and both Linux frameworks. Later
-caller-documentation corrections reuse those DLL/PDB bytes without a library or
-root rebuild. The companion record distinguishes the compiled revision, updated
-document entries and consumer checks of each package; original CI results remain
-bound to their original archive.
+Development packages, symbols, checksums and qualification records live directly
+in `artifacts/nuget/`. Each coherent CI payload retains its compiled revision,
+framework DLL/PDB identities and consumer results. Documentation-only derivatives
+also identify changed entries; original results stay bound to their original ZIP.
+The preceding CI43160881670 / `61b437941` payload and its caller-guide derivative
+remain preserved as historical qualifications, including the constructor binary
+break and recompilation warning.
 
-The artifact digest and all 48 frozen runtime assets are verified. Framework
-package entries match those DLL/PDB bytes; assembly/file versions are 0.3.0.0 and
-informational versions identify the same committed build. Exact current package,
-symbol and document hashes belong to `SHA256SUMS.0.3.0.txt` and
-`Lokad.OoxPdf.0.3.0.qualification.json` beside the artifacts; this guide does not
-embed its containing package's hash. All 77 packaged local links are checked.
-The caller-guide refresh explicitly documents the optional file-source
-constructor's binary break and recompilation requirement. Other entries retain
-their pinned snapshots. Previous package, symbols and records are preserved
-under source-qualified names; published 0.2.0 remains protected. Subsequent
-qualification notes alone do not require another repack.
+Exact selected package, symbol and document hashes belong to
+`SHA256SUMS.0.3.0.txt` and `Lokad.OoxPdf.0.3.0.qualification.json` beside the
+artifacts; this guide does not embed its containing package's hash. Framework
+entries must match their verified DLL/PDB bytes, with coherent 0.3.0.0 assembly/file
+versions and committed informational versions. Packaged local links are checked.
+Previous assets remain under source-qualified names; published 0.2.0 is protected.
+Later qualification notes alone do not require another repack.
 
-Source-runtime native/portfolio evidence remains separate from CI metadata:
-sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures. Production/build
-inputs match, and two CI-runtime smokes reproduce the corrected field link and
-six-name legend PDFs. No full portfolio or suite replay is claimed for transfer.
-Two additional .NET 10 checks cover computed-field ownership and actual emitted
-click areas on both hosts. Two independently owned public inputs match the CI
-fixture identities. Earlier bookmark-boundary qualification remains separate.
+Source-runtime native/portfolio evidence stays separate from compiled CI identity.
+Source/build equivalence, exact smoke PDFs and focused compatibility checks bridge
+those artifacts without relabeling portfolio PDFs as package-produced. Reports
+name the actual runtime, selected tests, inputs and original visual failures.
+Transfer reuses the frozen artifact; it does not replay the full portfolio or suite.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover

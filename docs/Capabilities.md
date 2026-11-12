@@ -604,6 +604,8 @@ Supported within the following constraints:
   fields and bounded dynamic placeholders. Locked PAGE/NUMPAGES fields preserve
   their stored results, including empty results; nested fields own their locks.
   Complete empty stored results also preserve neighboring supported equations.
+  Computed PAGE/NUMPAGES results remain atomic beside inline pictures, including
+  when they share a formatted source run or have an empty cached result.
   Supported picture-only and equation-only stored results retain their content
   and neighboring equations in body, cell and default header/footer paragraphs. They share the
   existing inline layout; stored fields are not evaluated.
@@ -731,6 +733,9 @@ Approximate or restricted:
   a later overflow cannot revoke an earlier reference context. Counter ownership
   is independent of optional static-story typography corrections; unresolved
   references and unfit note owners retain their fallback.
+  Complete fitting Review endnotes also bind counter inputs before measurement;
+  print scale alone no longer suppresses neighboring equations. New mixed-cell
+  reference PAGE values and Office geometry remain unqualified.
   Complete fitting mixed groups also retain their equations
   and counters alongside complete page-contained automatic header/footer frames,
   including complete simple tables, fully prepared equations, supported inline pictures

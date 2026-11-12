@@ -6,7 +6,8 @@
   runtime dependencies.
 - DOCX: improves mixed text/equation/picture composition, tables, notes, related
   stories, pagination, fields, review markup and navigation. Corrects visible
-  content lost through wrapping, clipping or off-page frames.
+  content lost through wrapping, clipping or off-page frames. Computed fields
+  remain intact beside pictures; Review endnote counters retain neighboring equations.
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
   qualified authored horizontal legends retain every name. Merged-table content,
   font fallback, text/link geometry and preset arcs also improve.
