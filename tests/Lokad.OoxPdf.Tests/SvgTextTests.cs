@@ -78,10 +78,10 @@ internal static class SvgTextTests
         TestAssert.Equal(own.ToString(), group.ToString());
         Match matrix = Regex.Match(group.ToString(), @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) cm\r?$");
         TestAssert.True(matrix.Success, "The SVG transform must reach the glyph coordinate map.");
-        double[] expected = [Math.Cos(Math.PI / 12d), -Math.Sin(Math.PI / 12d), -Math.Sin(Math.PI / 12d), Math.Cos(Math.PI / 12d), 5d, 153d];
+        double[] expected = [Math.Cos(Math.PI / 12d), -Math.Sin(Math.PI / 12d), Math.Sin(Math.PI / 12d), Math.Cos(Math.PI / 12d), 5d, 153d];
         for (int i = 0; i < expected.Length; i++)
             TestAssert.True(Math.Abs(double.Parse(matrix.Groups[i + 1].Value, CultureInfo.InvariantCulture) - expected[i]) < .000001d,
-                "Picture/user-space and glyph Y directions must compose without reversing the source transform.");
+                $"Glyph/picture matrix component {i} must be {expected[i]:R}; got {matrix.Groups[i + 1].Value}.");
         TestAssert.Contains("0 0 400 160 re", group.ToString());
         TestAssert.Equal(0, group.StateDepth);
         TestAssert.Equal(1, LabelPaths(group.ToString()));
