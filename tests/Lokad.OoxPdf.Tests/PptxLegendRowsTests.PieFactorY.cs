@@ -30,7 +30,8 @@ internal static partial class PptxLegendRowsTests
                 var actual = ReadManualPieSectors(page, count)[0];
                 double x = xMode == "factor" ? basis.X + 57.6d : 72d + 57.6d + 576d * width / 2d;
                 TestAssert.True(Math.Abs(actual.X - x) < .002d && Math.Abs(actual.Y - (basis.Y - offset * height)) < .002d,
-                    "Factor offsets follow the same measured automatic frame in both axes; an edge X retains its source owner.");
+                    $"Factor offsets follow the measured automatic frame: {position}/{height}/{size}/{count}/{xMode}/{offset}; " +
+                    $"actual {actual.X},{actual.Y}; expected {x},{basis.Y - offset * height}; basis {basis.X},{basis.Y}.");
                 TestAssert.True(Math.Abs(actual.Radius - Math.Min(576d * width, height * extent) / 2d) < .002d,
                     "Offsets do not replace the authored viewport extent.");
                 string names = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
@@ -55,7 +56,8 @@ internal static partial class PptxLegendRowsTests
                 "Factor Y uses the resolved bounded source offset; it cannot overflow and drop the chart or rewrite edge X.");
             string names = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
                 fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).Select(show => show.Text));
-            foreach (int index in Enumerable.Range(1, 6)) TestAssert.Contains("Category " + index, names);
+            foreach (int index in Enumerable.Range(1, 6)) TestAssert.True(names.Contains("Category " + index, StringComparison.Ordinal),
+                $"Bounded Y {offset} retains Category {index}; decoded legend: {names}.");
         }
     }
 }
