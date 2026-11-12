@@ -178,11 +178,11 @@ internal sealed partial class DocxReader
 
         (int Offset, int Order) GetPosition(XElement target)
         {
-            return (positions ??= ReadRunDrawingPositions(run, cancellationToken))[target];
+            return (positions ??= ReadRunInlinePositions(run, cancellationToken))[target];
         }
     }
 
-    private static Dictionary<XElement, (int Offset, int Order)> ReadRunDrawingPositions(
+    private static Dictionary<XElement, (int Offset, int Order)> ReadRunInlinePositions(
         XElement run, CancellationToken token)
     {
         var positions = new Dictionary<XElement, (int Offset, int Order)>();
@@ -190,6 +190,8 @@ internal sealed partial class DocxReader
         foreach (XElement child in run.Elements())
         {
             token.ThrowIfCancellationRequested();
+            if (child.Name == WordprocessingNamespace + "instrText")
+                positions[child] = (textOffset, order);
             foreach (XElement source in child.DescendantsAndSelf())
             {
                 token.ThrowIfCancellationRequested();
@@ -240,7 +242,7 @@ internal sealed partial class DocxReader
             XElement? textBoxOutline = EnumerateDrawingOwnedElements(inline, DrawingNamespace + "ln", cancellationToken)
                 .FirstOrDefault(element => element.Attribute("w") is not null);
             string? textBoxStrokeWidthEmuValue = (string?)textBoxOutline?.Attribute("w");
-            var position = (positions ??= ReadRunDrawingPositions(run, cancellationToken))[inline];
+            var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[inline];
             textBoxes.Add(new DocxInlineTextBox(
                 (string?)extent?.Attribute("cx"),
                 (string?)extent?.Attribute("cy"),

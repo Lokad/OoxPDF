@@ -776,6 +776,7 @@ internal sealed partial class DocxReader
         {
             int childIndex = 0;
             int textOffset = 0;
+            Dictionary<XElement, (int Offset, int Order)>? positions = null;
             foreach (XElement child in run.Elements())
             {
                 if (child.Name == WordprocessingNamespace + "fldChar")
@@ -784,7 +785,9 @@ internal sealed partial class DocxReader
                 }
                 else if (child.Name == WordprocessingNamespace + "instrText")
                 {
-                    AddComplexFieldInstruction(child, currentSourceRunIndex, resolvedRun, runStyleResolution, revision, revisions, ref currentPageInstructionSeen);
+                    var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
+                    AddComplexFieldInstruction(child, currentSourceRunIndex, position.Offset, position.Order,
+                        resolvedRun, runStyleResolution, revision, revisions, ref currentPageInstructionSeen);
                 }
                 else if (IsInlineReferenceElement(child))
                 {
@@ -918,6 +921,8 @@ internal sealed partial class DocxReader
         void AddComplexFieldInstruction(
             XElement instruction,
             int currentSourceRunIndex,
+            int sourceTextOffset,
+            int sourceDrawingIndex,
             DocxResolvedRunProperties resolvedRun,
             DocxRunStyleResolution runStyleResolution,
             DocxRevisionInfo? revision,
@@ -933,16 +938,19 @@ internal sealed partial class DocxReader
                 string? placeholder = ResolveFieldPlaceholder(instructionText);
                 if (placeholder is not null)
                 {
+                    int firstRun = runs.Count;
                     AddResolvedTextRuns(
                         runs,
                         resolvedRun.AllCaps == true ? placeholder.ToUpperInvariant() : placeholder,
                         resolvedRun,
                         runStyleResolution,
                         currentSourceRunIndex,
-                        sourceTextOffsetInRun: 0,
+                        sourceTextOffset,
                         revision,
                         revisions,
                         ResolveFieldKind(instructionText));
+                    for (int index = firstRun; index < runs.Count; index++)
+                        runs[index] = runs[index] with { SourceDrawingIndexInRun = sourceDrawingIndex };
                     currentPageInstructionSeen = true;
                 }
 
@@ -978,8 +986,8 @@ internal sealed partial class DocxReader
                 else
                 {
                     field.PendingPlaceholder ??= CreateResolvedTextRun(fieldPlaceholder, resolvedRun,
-                        runStyleResolution, false, currentSourceRunIndex, 0, revision, revisions,
-                        ResolveFieldKind(field.Instruction.ToString()));
+                        runStyleResolution, false, currentSourceRunIndex, sourceTextOffset, revision, revisions,
+                        ResolveFieldKind(field.Instruction.ToString())) with { SourceDrawingIndexInRun = sourceDrawingIndex };
                     if (ResolveFieldPlaceholder(field.Instruction.ToString(), field.IsLocked,
                         requireOpcodeTerminator: true) is not null)
                         EmitPendingFieldPlaceholder(field);

@@ -456,6 +456,9 @@ internal sealed record DocxTextRun(
     public DocxRunStyleResolution StyleResolution { get; init; } = DocxRunStyleResolution.Empty;
     public int SourceRunIndex { get; init; } = -1;
     public int SourceTextOffsetInRun { get; init; } = 0;
+    // A computed result is atomic even when its cached text is empty. The next
+    // source drawing index disambiguates drawings at the same text offset.
+    public int SourceDrawingIndexInRun { get; init; }
     public DocxRevisionInfo? Revision { get; init; }
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
 

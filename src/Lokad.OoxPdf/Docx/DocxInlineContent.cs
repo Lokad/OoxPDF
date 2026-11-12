@@ -172,18 +172,36 @@ internal static class DocxInlineContent
         IEnumerable<DocxInlineTextBox>? boxes = null)
     {
         var drawings = images.Select(image => (Item: (DocxInlineItem)new DocxInlinePicture(image),
-                Offset: image.SourceTextOffsetInRun, Order: image.SourceOrderInRun))
+                SourceRun: image.SourceRunIndex, Offset: image.SourceTextOffsetInRun, Order: image.SourceOrderInRun))
             .Concat((boxes ?? []).Select(box => (Item: (DocxInlineItem)new DocxInlineBox(box),
-                Offset: box.SourceTextOffsetInRun, Order: box.SourceOrderInRun)))
-            .OrderBy(item => item.Offset).ThenBy(item => item.Order).ToArray();
+                SourceRun: box.SourceRunIndex, Offset: box.SourceTextOffsetInRun, Order: box.SourceOrderInRun)))
+            .OrderBy(item => item.SourceRun).ThenBy(item => item.Offset).ThenBy(item => item.Order).ToArray();
         int drawing = 0;
         foreach (DocxTextRun run in runs)
         {
             token.ThrowIfCancellationRequested();
-            int start = 0;
-            while (drawing < drawings.Length && drawings[drawing].Offset <= run.SourceTextOffsetInRun + run.Text.Length)
+            if (run.FieldKind is { } kind && kind.IsDynamic())
             {
-                int end = Math.Clamp(drawings[drawing].Offset - run.SourceTextOffsetInRun, start, run.Text.Length);
+                // Placeholder spelling is not a source-text extent. Keep its
+                // whole computed result between the actual surrounding drawings,
+                // including equal offsets from empty caches and pending fields.
+                while (drawing < drawings.Length && (drawings[drawing].SourceRun < run.SourceRunIndex ||
+                    drawings[drawing].SourceRun == run.SourceRunIndex &&
+                    (drawings[drawing].Offset < run.SourceTextOffsetInRun ||
+                     drawings[drawing].Offset == run.SourceTextOffsetInRun && drawings[drawing].Order < run.SourceDrawingIndexInRun)))
+                {
+                    token.ThrowIfCancellationRequested();
+                    items.Add(drawings[drawing++].Item);
+                }
+                items.Add(new DocxInlineText(run, 0, run.Text.Length));
+                continue;
+            }
+            int start = 0;
+            while (drawing < drawings.Length && (drawings[drawing].SourceRun < run.SourceRunIndex ||
+                drawings[drawing].SourceRun == run.SourceRunIndex && drawings[drawing].Offset < run.SourceTextOffsetInRun + run.Text.Length))
+            {
+                int end = drawings[drawing].SourceRun < run.SourceRunIndex ? start :
+                    Math.Clamp(drawings[drawing].Offset - run.SourceTextOffsetInRun, start, run.Text.Length);
                 AppendText(run, start, end);
                 items.Add(drawings[drawing++].Item);
                 start = end;
