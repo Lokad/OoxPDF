@@ -480,6 +480,14 @@ the earlier name-only 112,702-glyph portfolio claim is withdrawn. No corruption 
 library font data was demonstrated. Corrected evidence checks 56,513 unchanged
 portfolio glyphs and 66,612 fitting-note glyphs through verified PDF identities.
 
+Selected paint controls cover two composed roots in Final and Review. Six PNG
+placements retain exactly the isolated source foreground, including the picture
+on the continued footnote page. Four footer SVG instances retain both authored
+shapes; maximum channel difference from isolated shape controls is two units.
+All 64 continuation-note markers remain on Word's pages in each mode. These
+checks reuse frozen PDFs, preserve the failed image gates and do not establish
+arbitrary SVG/effect occlusion or application-view parity.
+
 Painted glyph/picture checks supplement source-text presence, extraction and image
 scores. These bounded checks do not establish arbitrary nonrectangular clipping,
 image occlusion, reading order or application-view parity. Oblique/mask clips,
