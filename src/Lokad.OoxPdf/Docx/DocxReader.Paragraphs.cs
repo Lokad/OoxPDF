@@ -791,13 +791,14 @@ internal sealed partial class DocxReader
                 }
                 else if (IsInlineReferenceElement(child))
                 {
+                    var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
                     AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions,
                         inlineReferences: inlineReferences,
                         commentRanges: commentRanges,
                         openCommentRanges: openCommentRanges,
                         inlineReferenceCounters: inlineReferenceCounters,
                         documentSettings: documentSettings,
-                        runs: runs);
+                        runs: runs, sourceDrawingIndex: position.Order);
                 }
                 else
                 {
@@ -1092,17 +1093,19 @@ internal sealed partial class DocxReader
         {
             int childIndex = 0;
             int textOffset = 0;
+            Dictionary<XElement, (int Offset, int Order)>? positions = null;
             foreach (XElement child in run.Elements())
             {
                 if (IsInlineReferenceElement(child))
                 {
+                    var position = (positions ??= ReadRunInlinePositions(run, cancellationToken))[child];
                     AddInlineReference(child, currentSourceRunIndex, childIndex, textOffset, resolvedRun, runStyleResolution, emitDisplayRun: true, revision, revisions,
                         inlineReferences: inlineReferences,
                         commentRanges: commentRanges,
                         openCommentRanges: openCommentRanges,
                         inlineReferenceCounters: inlineReferenceCounters,
                         documentSettings: documentSettings,
-                        runs: runs);
+                        runs: runs, sourceDrawingIndex: position.Order);
                 }
                 else
                 {
@@ -1447,7 +1450,8 @@ internal sealed partial class DocxReader
         List<DocxCommentRangeStart> openCommentRanges,
         DocxNoteReferenceCounters? inlineReferenceCounters,
         DocxDocumentSettings? documentSettings,
-        List<DocxTextRun> runs)
+        List<DocxTextRun> runs,
+        int sourceDrawingIndex = 0)
     {
         if (ResolveInlineReferenceKind(child) is not { } kind)
         {
@@ -1490,7 +1494,8 @@ internal sealed partial class DocxReader
             AddInlineReferenceDisplayRun(displayText, currentSourceRunIndex, textOffset, resolvedRun, runStyleResolution, revision);
             if (runs.Count == firstRun + 1)
             {
-                runs[firstRun] = runs[firstRun] with { IsAutomaticNoteReferenceMarker = true };
+                runs[firstRun] = runs[firstRun] with
+                { IsAutomaticNoteReferenceMarker = true, SourceDrawingIndexInRun = sourceDrawingIndex };
                 inlineReferences[^1] = inlineReferences[^1] with { DisplayRun = runs[firstRun] };
             }
         }

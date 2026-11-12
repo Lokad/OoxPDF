@@ -180,11 +180,11 @@ internal static class DocxInlineContent
         foreach (DocxTextRun run in runs)
         {
             token.ThrowIfCancellationRequested();
-            if (run.FieldKind is { } kind && kind.IsDynamic())
+            if (run.IsAutomaticNoteReferenceMarker || run.FieldKind is { } kind && kind.IsDynamic())
             {
-                // Placeholder spelling is not a source-text extent. Keep its
-                // whole computed result between the actual surrounding drawings,
-                // including equal offsets from empty caches and pending fields.
+                // Generated text is not a literal source-text extent. Keep
+                // fields and note marks between their surrounding drawings,
+                // including equal offsets from empty caches and note references.
                 while (drawing < drawings.Length && (drawings[drawing].SourceRun < run.SourceRunIndex ||
                     drawings[drawing].SourceRun == run.SourceRunIndex &&
                     (drawings[drawing].Offset < run.SourceTextOffsetInRun ||
