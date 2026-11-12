@@ -444,25 +444,16 @@ internal static partial class DocxFootnotesTests
 
     public static void DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection()
     {
-        DocxDocument UniformMinimum(string kind, int before)
-        {
-            DocxDocument source = ReadTableNoteSpacingFixture(kind, before, 24, variant: "atleast");
-            DocxTable table = source.BodyElements.OfType<DocxTableElement>().Single().Table;
-            DocxTableCell original = table.Rows[0].Cells[0];
-            DocxParagraph[] paragraphs = original.Paragraphs.Select(p => p with
-                { Runs = p.Runs.Select(r => r with { FontFamily = "Calibri", FontSize = 12d }).ToArray() }).ToArray();
-            DocxTableCell cell = original with
-                { Paragraphs = paragraphs, BodyElements = paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray() };
-            DocxTable updated = table with { Rows = [table.Rows[0] with { Cells = [cell] }] };
-            return source with { BodyElements = source.BodyElements.Select(e => e is DocxTableElement
-                ? (DocxBodyElement)new DocxTableElement(updated) : e).ToArray(), FallbackTables = [updated] };
-        }
         foreach (string kind in new[] { "footnote", "endnote" })
         foreach (OoxPdfDocxMarkupGeometryMode geometry in new[]
             { OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup })
         {
-            PdfLinkAnnotation baseline = RenderCustomNoteLinks(UniformMinimum(kind, 0), geometry)[0];
-            PdfLinkAnnotation actual = RenderCustomNoteLinks(UniformMinimum(kind, 12), geometry)[0];
+            var baselineLinks = RenderCustomNoteLinks(ReadTableNoteSpacingFixture(kind, 0, 24, variant: "atleast"), geometry);
+            var actualLinks = RenderCustomNoteLinks(ReadTableNoteSpacingFixture(kind, 12, 24, variant: "atleast"), geometry);
+            TestAssert.Equal(4, baselineLinks.Length);
+            TestAssert.Equal(4, actualLinks.Length);
+            PdfLinkAnnotation baseline = baselineLinks[0];
+            PdfLinkAnnotation actual = actualLinks[0];
             TestAssert.True(Math.Abs(actual.Height - baseline.Height - 6d) < .000001d,
                 "The corrected minimum-height baseline keeps its line slot and gives the first note mark its remaining before contribution.");
             TestAssert.True(Math.Abs(actual.Y + actual.Height - baseline.Y - baseline.Height) < .000001d,
@@ -572,6 +563,18 @@ internal static partial class DocxFootnotesTests
                 new XElement(NoteWord + "tblW", new XAttribute(NoteWord + "w", "9360"), new XAttribute(NoteWord + "type", "dxa"))),
                 new XElement(NoteWord + "tblGrid", new XElement(NoteWord + "gridCol", new XAttribute(NoteWord + "w", "9360"))), new XElement(NoteWord + "tr", cell));
             current.AddBeforeSelf(table); current.Remove(); cell.Add(current);
+            if (variant == "atleast")
+                // Resolve formatting before parsing so generated note owners
+                // and emitted runs describe the same authored source.
+                foreach (XElement sourceRun in cell.Descendants(NoteWord + "r"))
+                {
+                    XElement? runProperties = sourceRun.Element(NoteWord + "rPr");
+                    if (runProperties is null) { runProperties = new XElement(NoteWord + "rPr"); sourceRun.AddFirst(runProperties); }
+                    runProperties.Elements().Where(e => e.Name == NoteWord + "rFonts" || e.Name == NoteWord + "sz" || e.Name == NoteWord + "szCs").Remove();
+                    runProperties.Add(new XElement(NoteWord + "rFonts", new XAttribute(NoteWord + "ascii", "Calibri"),
+                        new XAttribute(NoteWord + "hAnsi", "Calibri"), new XAttribute(NoteWord + "eastAsia", "Calibri"), new XAttribute(NoteWord + "cs", "Calibri")),
+                        new XElement(NoteWord + "sz", new XAttribute(NoteWord + "val", "24")), new XElement(NoteWord + "szCs", new XAttribute(NoteWord + "val", "24")));
+                }
             if (variant == "two-rows") table.Add(new XElement(NoteWord + "tr", new XElement(NoteWord + "tc", new XElement(NoteWord + "p", new XElement(NoteWord + "r", new XElement(NoteWord + "t", "Guard row."))))));
             if (variant.StartsWith("custom", StringComparison.Ordinal))
             {

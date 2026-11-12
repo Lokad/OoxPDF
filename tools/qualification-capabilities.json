@@ -639,6 +639,10 @@
   ],
   "docx-note-reference-identity": [
     "DocxAutomaticNoteReferencesWithEqualLabelsKeepDistinctLinks",
+    "DocxTableMinimumNoteLinksKeepSlotDuringBaselineCorrection",
+    "DocxTableNoteBeforeSpacingMatchesIndependentWordOwnership",
+    "DocxTableNoteBeforeSpacingIncludesCustomAndExactSlots",
+    "DocxTableNoteBeforeSpacingRetainsLaterLineAndComplexFallbacks",
     "DocxAutomaticNotePictureRunBoundariesPreserveVisibleContent",
     "DocxNumericNoteIdsKeepStoriesAndNavigationAcrossAliasSpellings",
     "DocxSectionNoteNumberLinksKeepRepeatedLabelsDistinct",
