@@ -4,6 +4,22 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Computed simple fields now keep a distinct source position (`4a93dce6d`, harness
+`68ee9a07e`). PAGE/NUMPAGES-only hyperlinks retain their click area, and following
+text remains outside the link. Both new regressions fail on the parent. Windows
+passes 42 focused checks; Ubuntu passes 41 with one reviewed Cambria Math
+availability skip. The initial strict skip gate is retained without replay.
+Four causal outcomes restore two annotations. The original composed report now
+covers its page digit as the pinned Word PDF does in both modes. Native glyph
+programs/IDs, text positions, pictures and pagination remain unchanged; 21,531
+freshly bound glyph instances have no measured cuts or unknowns. Fourteen portfolio
+PDFs are exact; the two changed PDFs retain identical visual metrics and thresholds
+(two PPTX passes/fourteen DOCX failures overall). One transformed Review connector
+moves 1.051 points to match the literal-result control; its Word geometry remains
+unqualified. Transfer verifies 24 assets and two exact smoke PDFs without a root
+build. The broader gate for this source is pending; the prepared package below
+contains the preceding terminal-bookmark source. No new Office action was taken.
+
 The terminal-bookmark repair (`a180e12f7`, reviewed harness `0a62f09f3`) restores
 two internal annotations lost when an explicit page break leaves the bookmark
 after unpainted trailing whitespace. Destination resolution keeps existing points
