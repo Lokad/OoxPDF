@@ -2210,6 +2210,23 @@
     "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
     "DocxReaderSplitsNestedVisibleInlineContainerPageBreaks"
   ],
+  "docx-hard-break-visibility": [
+    "DocxHiddenHardBreaksPreserveComposedPagesAndPaint",
+    "DocxHardBreaksUseInheritedVisibilityAndKeepVisibleOverrides",
+    "PortableRenderingPageBreaksKeepMathPicturesAndNavigation",
+    "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",
+    "DocxInlineMetadataWrappersKeepHardBreakBoundaries",
+    "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
+    "DocxReaderSplitsNestedVisibleInlineContainerPageBreaks",
+    "DocxReaderSplitsMoveToFinalViewPageBreaks",
+    "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
+    "DocxCellInlinePagesKeepCompleteParagraphSourcesBeforePreparation",
+    "DocxHiddenPicturesUseInheritedStylesAndExplicitFalse",
+    "DocxParagraphLayoutSuppressesHiddenRunText",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-scatter-edge-width": [
     "PptxScatterEdgeWidth",
     "PptxScatterEquivalentWidthDeclarationsPreserveContent",
@@ -4852,6 +4869,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxHiddenHardBreaksPreserveComposedPagesAndPaint",
+    "DocxHardBreaksUseInheritedVisibilityAndKeepVisibleOverrides",
     "PptxPieSideFramesRetainIndependentOfficeExtentsAndPairedOffsets",
     "PptxPieSideSlotsFollowContentAndRetainCompleteLabels",
     "PptxUnfitPieSideSlotsRetainDiagnosedPlacementFallback",

@@ -389,13 +389,16 @@ internal sealed partial class DocxReader
 
             if (child.Name == WordprocessingNamespace + "p")
             {
+                bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) &&
+                    !IsHiddenRunBreak(source, styles, tableCellStyle);
+                bool VisiblePageBreak(XElement source) => IsPageBreak(source) && VisibleBreak(source);
                 // Inline page/column tokens are transparent inside a cell. Keep
                 // the source paragraph intact before preparation. A standalone
                 // page-break paragraph retains the existing spill/flow handling.
-                if (IsRunBreakOnlyParagraph(child, IsPageOrColumnBreak, markupMode) &&
-                    child.Elements().Any(element => HasVisibleRunBreak(element, IsPageBreak, markupMode)))
+                if (IsRunBreakOnlyParagraph(child, VisibleBreak, markupMode) &&
+                    child.Elements().Any(element => HasVisibleRunBreak(element, VisiblePageBreak, markupMode)))
                 {
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode, isBreak: IsPageBreak))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode, isBreak: VisiblePageBreak))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)

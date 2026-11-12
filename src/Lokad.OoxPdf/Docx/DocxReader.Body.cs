@@ -22,11 +22,6 @@ internal sealed partial class DocxReader
         CancellationToken cancellationToken,
         RelatedStoryPartCache storyCache)
     {
-            bool IsRunPageBreakOnlyParagraph(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
-            {
-                return IsRunBreakOnlyParagraph(paragraph, IsPageBreak, markupMode);
-            }
-
             void AddImplicitTerminalTableParagraph(List<DocxBodyElement> elements)
             {
                 if (elements.Count == 0 ||
@@ -64,6 +59,10 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
+                bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) &&
+                    !IsHiddenRunBreak(source, styles, null);
+                bool VisiblePageBreak(XElement source) => IsPageBreak(source) && VisibleBreak(source);
+                bool VisibleColumnBreak(XElement source) => IsColumnBreak(source) && VisibleBreak(source);
                 XElement? paragraphProperties = element.Element(WordprocessingNamespace + "pPr");
                 DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
                     paragraphProperties,
@@ -79,7 +78,7 @@ internal sealed partial class DocxReader
                         revisions: inheritedRevision is null ? [] : [inheritedRevision]));
                 }
 
-                if (IsRunPageBreakOnlyParagraph(element, markupMode))
+                if (IsRunBreakOnlyParagraph(element, VisiblePageBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                     elements.Add(DocxBodyElementFactory.CreatePageBreak(DocxBreakSourceKind.RunBreak, "page", breakParagraph, null));
@@ -92,7 +91,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (IsRunColumnBreakOnlyParagraph(element, markupMode))
+                if (IsRunBreakOnlyParagraph(element, VisibleColumnBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                     elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph));
@@ -105,9 +104,10 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (element.Elements().Any(child => HasVisibleRunBreak(child, IsPageOrColumnBreak, markupMode)))
+                if (element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode)))
                 {
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode, retainEmptyColumnTail: true))
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
+                        retainEmptyColumnTail: true, isBreak: VisibleBreak))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
@@ -609,9 +609,15 @@ internal sealed partial class DocxReader
     }
 
 
-    private static bool IsRunColumnBreakOnlyParagraph(XElement paragraph, OoxPdfDocxMarkupMode markupMode)
+    private static bool IsHiddenRunBreak(XElement source, DocxStyleSet styles, DocxTableCellStyle? tableStyle)
     {
-        return IsRunBreakOnlyParagraph(paragraph, IsColumnBreak, markupMode);
+        // Structural admission uses the same resolved visibility as literal run
+        // layout, including inherited styles and explicit visible overrides.
+        XElement run = source.Parent!;
+        XElement? properties = run.Ancestors(WordprocessingNamespace + "p").FirstOrDefault()?
+            .Element(WordprocessingNamespace + "pPr");
+        return ResolveRunProperties(run.Element(WordprocessingNamespace + "rPr"),
+            ReadEffectiveParagraphStyleId(properties, styles), ReadCharacterStyleId(run), styles, tableStyle?.Run).Hidden == true;
     }
 
     private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)

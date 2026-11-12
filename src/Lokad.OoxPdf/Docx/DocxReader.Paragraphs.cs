@@ -28,9 +28,7 @@ internal sealed partial class DocxReader
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         string? authoredParagraphStyleId = ReadParagraphStyleId(paragraphProperties);
-        string? paragraphStyleId = authoredParagraphStyleId;
-        if (paragraphProperties?.Element(WordprocessingNamespace + "pStyle") is null)
-            paragraphStyleId ??= styles.DeclaredDefaultParagraphStyleId;
+        string? paragraphStyleId = ReadEffectiveParagraphStyleId(paragraphProperties, styles);
         DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
             paragraphProperties,
             paragraphStyleId,
@@ -1776,5 +1774,9 @@ internal sealed partial class DocxReader
             .Element(WordprocessingNamespace + "pStyle")
             ?.Attribute(WordprocessingNamespace + "val");
     }
+
+    private static string? ReadEffectiveParagraphStyleId(XElement? properties, DocxStyleSet styles) =>
+        properties?.Element(WordprocessingNamespace + "pStyle") is null
+            ? styles.DeclaredDefaultParagraphStyleId : ReadParagraphStyleId(properties);
 }
 
