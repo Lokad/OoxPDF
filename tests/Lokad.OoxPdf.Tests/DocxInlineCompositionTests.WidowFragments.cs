@@ -10,7 +10,7 @@ internal static partial class DocxInlineCompositionTests
 {
     public static void DocxOrderedInlineParagraphsHonorDefaultAndDisabledWidowControl()
     {
-        foreach (int count in new[] { 3, 4 })
+        foreach (int count in new[] { 3, 4, 5 })
         foreach (string content in new[] { "text", "picture", "math", "mixed" })
         foreach (bool? enabled in new bool?[] { null, true, false })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
@@ -19,7 +19,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, pages.Length);
             for (int line = 1; line <= count; line++)
             {
-                int firstPageLines = count == 3 ? enabled != false ? 0 : 1 : enabled != false ? 2 : 3;
+                int firstPageLines = count == 3 ? enabled != false ? 0 : 1 : count == 4 && enabled != false ? 2 : 3;
                 int expected = line <= firstPageLines ? 0 : 1;
                 int actual = Enumerable.Range(0, pages.Length).Single(index =>
                     DocxPageFootnoteNumberingTests.DecodeText(pages[index]).Contains("ROW " + line, StringComparison.Ordinal));

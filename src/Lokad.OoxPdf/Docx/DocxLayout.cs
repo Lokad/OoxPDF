@@ -1628,31 +1628,38 @@ internal sealed partial class DocxLayoutEngine
                         }
                         if (admittedLineCount is null && DocxParagraphFragmentPolicy.HasWidowControl(paragraph))
                         {
-                            // Select a fragment before committing source lines.
-                            // Reuse the initial wrap; changed frames/counters
-                            // rewrap only the still-unplaced source.
-                            IReadOnlyList<DocxMeasuredInlineLine>? remaining = null;
-                            if (index == 0 && width == measuredWidth && ReferenceEquals(bound, atoms))
-                                remaining = measured;
-                            else
-                                TryWrapOrderedInlineAtomsCore(bound,
-                                    Math.Max(1d, width - textInset - rightInset),
-                                    Math.Max(1d, width - nextInset - rightInset), cancellationToken, out remaining,
-                                    baseInset * paragraphSpacingScale, sourceCursor, stopAfterFirstLine: false);
-                            if (remaining is not null)
+                            // Only the fitting fragment and up to two following
+                            // lines can affect head/tail admission. Do not wrap
+                            // the entire remaining paragraph after every frame.
+                            bool initialWrap = index == 0 && width == measuredWidth && ReferenceEquals(bound, atoms);
+                            var previewCursor = sourceCursor;
+                            double bottom = cursorY;
+                            int remaining = 0, fitting = 0;
+                            bool full = false, supportedPreview = true;
+                            while (!previewCursor.IsComplete(atoms))
                             {
-                                double bottom = cursorY;
-                                int fitting = 0;
-                                foreach (var pending in remaining)
+                                cancellationToken.ThrowIfCancellationRequested();
+                                DocxMeasuredInlineLine? pending;
+                                if (initialWrap) pending = measured[remaining];
+                                else if (!TryGetNextOrderedInlineLine(bound, previewCursor,
+                                    Math.Max(1d, width - (previewCursor.LineIndex == 0 ? firstInset : nextInset) - rightInset),
+                                    Math.Max(1d, width - nextInset - rightInset), cancellationToken, out pending,
+                                    physicalTextBaselineInset: baseInset * paragraphSpacingScale))
                                 {
-                                    cancellationToken.ThrowIfCancellationRequested();
-                                    if (bottom - pending.OccupiedHeight < CurrentParagraphFrameBottom(
-                                        pending.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d)) break;
-                                    bottom -= pending.OccupiedHeight;
-                                    fitting++;
+                                    supportedPreview = false;
+                                    break; // An unfit atomic item retains its existing placement fallback.
                                 }
+                                remaining++;
+                                full |= bottom - pending.OccupiedHeight < CurrentParagraphFrameBottom(
+                                    pending.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d);
+                                if (!full) { bottom -= pending.OccupiedHeight; fitting++; }
+                                previewCursor = pending.EndCursor;
+                                if (remaining >= fitting + 2) break;
+                            }
+                            if (supportedPreview)
+                            {
                                 int selected = DocxParagraphFragmentPolicy.ResolveLineCount(paragraph,
-                                    remaining.Count, fitting, deferSingleHead: index == 0 && HasCurrentColumnContent());
+                                    remaining, fitting, deferSingleHead: index == 0 && HasCurrentColumnContent());
                                 // A line that fits no frame retains the existing
                                 // overflow/progress path, including note drainage.
                                 if (selected > 0 || fitting > 0 && HasCurrentColumnContent()) admittedLineCount = selected;
