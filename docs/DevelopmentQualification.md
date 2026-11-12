@@ -17,8 +17,19 @@ PDFs are exact; the two changed PDFs retain identical visual metrics and thresho
 (two PPTX passes/fourteen DOCX failures overall). One transformed Review connector
 moves 1.051 points to match the literal-result control; its Word geometry remains
 unqualified. Transfer verifies 24 assets and two exact smoke PDFs without a root
-build. The broader gate for this source is pending; the prepared package below
-contains the preceding terminal-bookmark source. No new Office action was taken.
+build. CI43160881670 on `61b437941` is green: Windows 4,820 checks/19 skips,
+Ubuntu 2,308/130, 69 .NET 10 checks per host and four CI package consumers. Both
+new methods also pass on each host with the exact CI .NET 10 assembly and two
+owned public inputs. Two CI-runtime smoke PDFs match. Both Linux frameworks
+consume the same Windows package; the prepared payload below contains this fix.
+No new Office action was taken. Release acceptance remains open.
+
+Read-only triage of three existing body/nested-table roots retains both labels
+and the complete fraction in all six Final/Review outputs. Actual font programs
+bind 695 glyphs with no measured cuts or unknowns; inspected cell crops remain
+readable. The horizontal placement failures, including the 7.480-point residual
+and conflicting root-table Word anchors, remain unresolved. No placement rule,
+threshold or production code changed for this triage.
 
 The terminal-bookmark repair (`a180e12f7`, reviewed harness `0a62f09f3`) restores
 two internal annotations lost when an explicit page break leaves the bookmark
@@ -430,7 +441,7 @@ expected library hash, preserving the original qualified runtime.
 ## Prepared development package payload
 
 The development package and symbols are prepared directly in `artifacts/nuget/`,
-with checksums and a separate qualification record. CI43153375365 / `9304d7aa2`
+with checksums and a separate qualification record. CI43160881670 / `61b437941`
 supplies both framework libraries, portable symbols and the original package ZIP.
 Windows CI consumed those exact archive bytes; its consumer evidence is reused.
 Both Linux framework consumers pass against the same Windows package, sequentially
@@ -439,20 +450,20 @@ with build servers disabled. No repack or library/root rebuild was needed.
 The artifact digest and all 48 frozen runtime assets are verified. Framework
 package entries match those DLL/PDB bytes; assembly/file versions are 0.3.0.0 and
 informational versions identify the same committed build. Package SHA-256:
-`92E4DFB4F2288B20D680FFD18ED16E72A566B5D545EE4F6FAB41A5773D4E1137`.
+`49B1683BF0C7FFFBC2656419BDC698E9B09586F910F45EB5D4C5CD7F6DE2472C`.
 All 77 packaged local links are checked. Documentation retains the immutable CI
 snapshot; later qualification and triage notes do not cause a repack. Caller/API
-contracts match. Previous `81eae757b` package, symbols and record are preserved
+contracts match. Previous `9304d7aa2` package, symbols and record are preserved
 under source-qualified names, alongside earlier development assets; published
 0.2.0 is protected. Both current Linux consumers pass on their first attempts.
 
 Source-runtime native/portfolio evidence remains separate from CI metadata:
 sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures. Production/build
-inputs match, and two CI-runtime smokes reproduce the corrected bookmark and
+inputs match, and two CI-runtime smokes reproduce the corrected field link and
 six-name legend PDFs. No full portfolio or suite replay is claimed for transfer.
-Four additional .NET10 checks cover the composed regression, whitespace boundaries,
-wrapped endpoints and missing-target fallback on both hosts. Four independently
-owned public inputs match the CI fixture identities.
+Two additional .NET 10 checks cover computed-field ownership and actual emitted
+click areas on both hosts. Two independently owned public inputs match the CI
+fixture identities. Earlier bookmark-boundary qualification remains separate.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover
