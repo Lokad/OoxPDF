@@ -57,6 +57,13 @@ class PdfInkTests(unittest.TestCase):
         self.assertEqual([], result["UnmeasuredTextTraces"])
         self.assertEqual(2, len(result["Pages"][0]["FontPrograms"]))
         self.assertEqual(2, len(result["Pages"][0]["DisplayNameCollisions"]["SharedFace"]))
+        self.assertNotIn("TraceInkBounds", result)
+        traced = analyze_pdf(self.pdf, include_trace_bounds=True)
+        self.assertEqual(2, len(traced["TraceInkBounds"]))
+        self.assertEqual(set(result["Pages"][0]["FontPrograms"]),
+                         {frame["FontProgramSha256"] for frame in traced["TraceInkBounds"]})
+        self.assertTrue(all(frame["Ink"][2] > frame["Ink"][0] and frame["Ink"][3] > frame["Ink"][1]
+                            for frame in traced["TraceInkBounds"]))
 
     def test_clipped_glyph_retains_its_exact_program_identity(self):
         write_pdf(self.pdf, b"q\n0 0 5 160 re W n\n")

@@ -91,13 +91,15 @@ def rectangle_clip(node):
                      max(p.x for p in points), max(p.y for p in points))
 
 
-def analyze_pdf(path, expected_sha256=None):
+def analyze_pdf(path, expected_sha256=None, include_trace_bounds=False):
     path = Path(path)
     digest = sha256(path.read_bytes())
     if expected_sha256 and digest != expected_sha256.upper():
         raise ValueError("PDF hash differs: " + str(path))
     result = {"PdfSha256": digest, "GlyphsMeasured": 0, "ClippedTextTraces": [],
               "UnmeasuredTextTraces": [], "InklessGlyphs": 0, "Pages": []}
+    if include_trace_bounds:
+        result["TraceInkBounds"] = []
     document = fitz.open(path)
     try:
         for page in document:
@@ -189,6 +191,7 @@ def analyze_pdf(path, expected_sha256=None):
                         units = font["head"].unitsPerEm
                         a, b, c, d = [float(x) for x in span.attrib["trm"].split()]
                         cut = []
+                        trace_ink = None
                         for index, glyph_node in enumerate(span):
                             character = glyph_node.attrib.get("unicode", "")
                             if not character or character.isspace():
@@ -206,10 +209,16 @@ def analyze_pdf(path, expected_sha256=None):
                                                        float(glyph_node.attrib["y"])) * matrix
                             ink = transform_box((glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax),
                                                 glyph_matrix)
+                            if include_trace_bounds:
+                                trace_ink = ink if trace_ink is None else trace_ink | ink
                             if (ink.x0 < clip.x0 - .01 or ink.y0 < clip.y0 - .01 or
                                     ink.x1 > clip.x1 + .01 or ink.y1 > clip.y1 + .01):
                                 cut.append({"Index": index, "Character": character, "GlyphId": glyph_id,
                                             "Ink": list(ink), "FullyHidden": (ink & clip).is_empty})
+                        if include_trace_bounds and trace_ink is not None:
+                            result["TraceInkBounds"].append(
+                                {"Page": page.number + 1, "Paint": event_index,
+                                 "FontProgramSha256": identity, "Clip": list(clip), "Ink": list(trace_ink)})
                         if cut:
                             result["ClippedTextTraces"].append(
                                 {"Page": page.number + 1, "Paint": event_index,
