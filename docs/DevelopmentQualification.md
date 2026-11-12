@@ -4,6 +4,17 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Automatic note references and pictures now retain source order when their runs
+are joined (`df7000b47`). All four previously failing Final/Review outputs match
+their unchanged separate-run controls. The parent fails the new glyph-geometry
+regression. Windows passes 21 focused checks; Ubuntu passes 18 with three declared
+font/platform skips. Actual native font programs bind 14,016 glyphs with no
+measured cuts or unknowns. All sixteen original portfolio PDFs stay byte-identical;
+two PPTX image passes and fourteen DOCX failures remain. New Word geometry is
+unqualified; no Office action or calibrated-view claim. The preceding coherent
+CI43187896735 is closed green; it qualifies the earlier field/endnote fixes,
+not this follow-up runtime. Publication and broader release acceptance stay open.
+
 Computed PAGE/NUMPAGES results now remain atomic beside pictures in the same source
 run (`4da834039`). Four failing Final/Review outputs become byte-identical to their
 unchanged separate-run controls. Windows passes 30 focused checks; Ubuntu passes

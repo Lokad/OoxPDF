@@ -606,6 +606,8 @@ Supported within the following constraints:
   Complete empty stored results also preserve neighboring supported equations.
   Computed PAGE/NUMPAGES results remain atomic beside inline pictures, including
   when they share a formatted source run or have an empty cached result.
+  Automatic footnote/endnote references also keep their source order beside
+  pictures when formatted runs are joined or split.
   Supported picture-only and equation-only stored results retain their content
   and neighboring equations in body, cell and default header/footer paragraphs. They share the
   existing inline layout; stored fields are not evaluated.
