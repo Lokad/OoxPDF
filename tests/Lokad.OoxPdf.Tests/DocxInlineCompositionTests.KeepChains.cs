@@ -76,16 +76,21 @@ internal static partial class DocxInlineCompositionTests
                 if (index == 2 && boundary is not null)
                 {
                     if (boundary == "section") body.Elements(w + "p").Last().Element(w + "pPr")!.Add(
-                        new XElement(w + "sectPr", new XElement(w + "type", new XAttribute(w + "val", "nextPage"))));
+                        Section(nextPage: true));
                     else body.Add(new XElement(w + "p", new XElement(w + "r",
                         new XElement(w + "br", new XAttribute(w + "type", boundary)))));
                 }
                 body.Add(Paragraph((char)('A' + index), index == 1 ? secondLines : 6, keep && index < 3));
             }
-            body.Add(new XElement(w + "sectPr",
-                new XElement(w + "pgSz", new XAttribute(w + "w", 12240), new XAttribute(w + "h", 6960)),
+            body.Add(Section(nextPage: false));
+
+            XElement Section(bool nextPage) => new(w + "sectPr",
+                nextPage ? new XElement(w + "type", new XAttribute(w + "val", "nextPage")) : null,
+                // Break-only paragraphs retain their own mark. Leave room for it;
+                // exact frame admission is exercised separately above.
+                new XElement(w + "pgSz", new XAttribute(w + "w", 12240), new XAttribute(w + "h", boundary is null ? 6960 : 7680)),
                 new XElement(w + "pgMar", new XAttribute(w + "top", 600), new XAttribute(w + "bottom", 600),
-                    new XAttribute(w + "left", 600), new XAttribute(w + "right", 600))));
+                    new XAttribute(w + "left", 600), new XAttribute(w + "right", 600)));
 
             XElement Paragraph(char label, int count, bool kept)
             {
