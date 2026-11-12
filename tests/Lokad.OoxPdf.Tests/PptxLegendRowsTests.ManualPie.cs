@@ -87,7 +87,7 @@ internal static partial class PptxLegendRowsTests
         foreach (int width in new[] { 230, 576 })
         foreach (bool labeled in new[] { false, true })
         {
-            string labels = labeled ? "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>" : "";
+            string labels = labeled ? "<c:dLbls><c:showVal val=\"1\"/><c:showSerName val=\"0\"/><c:showCatName val=\"0\"/><c:showPercent val=\"0\"/></c:dLbls>" : "";
             var ordinary = Render(width, 12, 6, overlay: false, kind: "pie", categoryLegend: true,
                 plotLayout: layout, dataLabels: labels).Page;
             var exploded = Render(width, 12, 6, overlay: false, kind: "pie", categoryLegend: true,
@@ -109,7 +109,8 @@ internal static partial class PptxLegendRowsTests
                 string names = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
                     fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).Select(show => show.Text));
                 foreach (int index in Enumerable.Range(1, 6)) TestAssert.Contains("Category " + index, names);
-                if (labeled) TestAssert.Equal(6, shows.Count(show => show.Text == "4"));
+                if (labeled) TestAssert.True(shows.Count(show => show.Text == "4") == 6,
+                    "All six explicitly requested value labels must survive viewport fitting and explosion.");
             }
         }
     }
