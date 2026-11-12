@@ -443,19 +443,23 @@ expected library hash, preserving the original qualified runtime.
 The development package and symbols are prepared directly in `artifacts/nuget/`,
 with checksums and a separate qualification record. CI43160881670 / `61b437941`
 supplies both framework libraries, portable symbols and the original package ZIP.
-Windows CI consumed those exact archive bytes; its consumer evidence is reused.
-Both Linux framework consumers pass against the same Windows package, sequentially
-with build servers disabled. No repack or library/root rebuild was needed.
+Its exact package passed consumers on Windows and both Linux frameworks. Later
+caller-documentation corrections reuse those DLL/PDB bytes without a library or
+root rebuild. The companion record distinguishes the compiled revision, updated
+document entries and consumer checks of each package; original CI results remain
+bound to their original archive.
 
 The artifact digest and all 48 frozen runtime assets are verified. Framework
 package entries match those DLL/PDB bytes; assembly/file versions are 0.3.0.0 and
-informational versions identify the same committed build. Package SHA-256:
-`49B1683BF0C7FFFBC2656419BDC698E9B09586F910F45EB5D4C5CD7F6DE2472C`.
-All 77 packaged local links are checked. Documentation retains the immutable CI
-snapshot; later qualification and triage notes do not cause a repack. Caller/API
-contracts match. Previous `9304d7aa2` package, symbols and record are preserved
-under source-qualified names, alongside earlier development assets; published
-0.2.0 is protected. Both current Linux consumers pass on their first attempts.
+informational versions identify the same committed build. Exact current package,
+symbol and document hashes belong to `SHA256SUMS.0.3.0.txt` and
+`Lokad.OoxPdf.0.3.0.qualification.json` beside the artifacts; this guide does not
+embed its containing package's hash. All 77 packaged local links are checked.
+The caller-guide refresh explicitly documents the optional file-source
+constructor's binary break and recompilation requirement. Other entries retain
+their pinned snapshots. Previous package, symbols and records are preserved
+under source-qualified names; published 0.2.0 remains protected. Subsequent
+qualification notes alone do not require another repack.
 
 Source-runtime native/portfolio evidence remains separate from CI metadata:
 sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures. Production/build
