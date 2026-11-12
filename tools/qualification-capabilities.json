@@ -109,6 +109,9 @@
     "DocxContainerTableGridsPreservePortableContentAndPaintedLinks"
   ],
   "pptx-horizontal-polar-frame": [
+      "PptxPieSideFramesRetainIndependentOfficeExtentsAndPairedOffsets",
+      "PptxPieSideSlotsFollowContentAndRetainCompleteLabels",
+      "PptxUnfitPieSideSlotsRetainDiagnosedPlacementFallback",
       "PptxPieFactorOffsetsFollowMeasuredAutomaticFramesInBothAxes",
       "PptxPieFactorYReusesBoundedOffsetsAndRetainsEdgeX",
       "PptxSideLegendClipsRetainInkBeyondNominalFontMetrics",
@@ -4849,6 +4852,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxPieSideFramesRetainIndependentOfficeExtentsAndPairedOffsets",
+    "PptxPieSideSlotsFollowContentAndRetainCompleteLabels",
+    "PptxUnfitPieSideSlotsRetainDiagnosedPlacementFallback",
     "PptxPieFactorOffsetsFollowMeasuredAutomaticFramesInBothAxes",
     "PptxPieFactorYReusesBoundedOffsetsAndRetainsEdgeX",
     "PptxPolarLabelRowsKeepCompleteLabelUnitsApart",
@@ -17791,6 +17797,9 @@
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
   "pptx-data-label-content": [
+    "PptxPieSideFramesRetainIndependentOfficeExtentsAndPairedOffsets",
+    "PptxPieSideSlotsFollowContentAndRetainCompleteLabels",
+    "PptxUnfitPieSideSlotsRetainDiagnosedPlacementFallback",
     "PptxPieFactorOffsetsFollowMeasuredAutomaticFramesInBothAxes",
     "PptxPieFactorYReusesBoundedOffsetsAndRetainsEdgeX",
     "PptxPolarLabelRowsKeepCompleteLabelUnitsApart",

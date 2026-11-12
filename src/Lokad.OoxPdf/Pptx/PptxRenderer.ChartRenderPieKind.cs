@@ -49,12 +49,12 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartLegendEntry> legendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette,
                     piePlot, pieChart, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: pieSlices.Count);
                 ChartTextStyle legendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
-                var prepared = await PreparePolarChartLayoutAsync(sourceLayout, theme, sceneChart,
+                var prepared = await PreparePolarChartLayoutAsync(ChartPolarKind.Pie, sourceLayout, theme, sceneChart,
                     legendEntries, legendStyle, fontResolver, context).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 bool hasVisiblePieDataLabels = labelOptions.HasVisibleText || pieSlices.Any(slice => ResolveChartDataLabelOptions(labelOptions, slice.Index).HasVisibleText);
                 ChartPolarLayout polarLayout = ResolvePieFrameLayout(sourceLayout, prepared.Layout,
-                    sceneChart, polarPoints.PointExplosions, hasVisiblePieDataLabels);
+                    sceneChart, polarPoints.PointExplosions, hasVisiblePieDataLabels, prepared.FitFrame);
                 bool factorX = sceneChart.PlotAreaLayout.X is not null &&
                     IsManualLayoutFactorMode(sceneChart.PlotAreaLayout.XModeKind);
                 bool factorY = sceneChart.PlotAreaLayout.Y is not null &&
@@ -70,17 +70,17 @@ internal sealed partial class PptxRenderer
                         PlotBox = new(frame.X, frame.Y, frame.Width, frame.Height),
                         PlotAreaBox = new(frame.X, frame.Y, frame.Width, frame.Height)
                     };
-                    ChartLayout automaticPrepared = automaticSource;
-                    if (UsesAutomaticPolarFrame(automaticSource, sceneChart))
+                    (ChartLayout Layout, ChartLegendBox? LegendBox, bool FitFrame) automaticPrepared = (automaticSource, null, false);
+                    if (UsesAutomaticPolarFrame(ChartPolarKind.Pie, automaticSource, sceneChart))
                     {
                         // This frame is a coordinate reference, not another painted
                         // legend. Only the actual legend owns overflow diagnostics.
-                        automaticPrepared = (await PreparePolarChartLayoutAsync(automaticSource, theme, sceneChart,
+                        automaticPrepared = await PreparePolarChartLayoutAsync(ChartPolarKind.Pie, automaticSource, theme, sceneChart,
                             legendEntries, legendStyle, fontResolver, context with { DiagnosticSink = null })
-                            .ConfigureAwait(false)).Layout;
+                            .ConfigureAwait(false);
                     }
-                    ChartPolarLayout automatic = ResolvePieFrameLayout(automaticSource, automaticPrepared,
-                        sceneChart, polarPoints.PointExplosions, hasVisiblePieDataLabels);
+                    ChartPolarLayout automatic = ResolvePieFrameLayout(automaticSource, automaticPrepared.Layout,
+                        sceneChart, polarPoints.PointExplosions, hasVisiblePieDataLabels, automaticPrepared.FitFrame);
                     double topOffset = frame.Y + frame.Height - plotBox.Y - plotBox.Height;
                     polarLayout = polarLayout with { Geometry = polarLayout.Geometry with
                     {
@@ -137,7 +137,7 @@ internal sealed partial class PptxRenderer
                 ChartPolarPointOptions polarPoints = doughnutOptions.PolarPoints;
                 IReadOnlyList<ChartLegendEntry> doughnutLegendEntries = BuildCategoryFillLegendEntries(theme, colorMap, chartPalette, doughnutPlot, doughnutChart, polarPoints.PointFills, workbook, plotVisibleOnly, valuePointCount: doughnutSlices.Count);
                 ChartTextStyle doughnutLegendStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
-                var prepared = await PreparePolarChartLayoutAsync(sourceLayout, theme, sceneChart,
+                var prepared = await PreparePolarChartLayoutAsync(ChartPolarKind.Doughnut, sourceLayout, theme, sceneChart,
                     doughnutLegendEntries, doughnutLegendStyle, fontResolver, context).ConfigureAwait(false);
                 ChartPlotBox doughnutGeometryPlotBox = plotBox;
                 // Exploded charts keep the full-frame plot only while the legend fits the slack:

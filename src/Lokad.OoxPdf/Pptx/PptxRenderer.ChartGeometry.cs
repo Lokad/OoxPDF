@@ -132,18 +132,21 @@ internal sealed partial class PptxRenderer
             manual, sceneChart.Title.Text, sceneChart.Title.TextBodyProperties, ReadSceneChartLegendLayout(sceneChart));
     }
 
-    private static bool UsesAutomaticPolarFrame(ChartLayout layout, PptxSceneChart chart) =>
+    private static bool UsesAutomaticPolarFrame(ChartPolarKind kind, ChartLayout layout, PptxSceneChart chart) =>
         !layout.ManualPlotLayoutApplied && !chart.Title.Layout.HasGeometryValues &&
         !layout.Legend.Layout.HasGeometryValues &&
-        (!layout.Legend.Visible || layout.Legend.Overlay || IsHorizontalLegendPosition(layout.Legend.PositionKind));
+        (!layout.Legend.Visible || layout.Legend.Overlay || IsHorizontalLegendPosition(layout.Legend.PositionKind) ||
+            kind == ChartPolarKind.Pie && layout.Legend.PositionKind is PptxSceneChartLegendPosition.Left or PptxSceneChartLegendPosition.Right);
 
-    private static async ValueTask<(ChartLayout Layout, ChartLegendBox? LegendBox)> PreparePolarChartLayoutAsync(
-        ChartLayout layout, PptxTheme theme, PptxSceneChart chart, IReadOnlyList<ChartLegendEntry> entries,
+    private static async ValueTask<(ChartLayout Layout, ChartLegendBox? LegendBox, bool FitFrame)> PreparePolarChartLayoutAsync(
+        ChartPolarKind kind, ChartLayout layout, PptxTheme theme, PptxSceneChart chart, IReadOnlyList<ChartLegendEntry> entries,
         ChartTextStyle style, PresentationFontResolver resolver, PptxRenderContext context)
     {
+        ChartLayout source = layout;
+        bool automatic = UsesAutomaticPolarFrame(kind, layout, chart);
         // Source geometry remains the coordinate reference for authored labels.
         // The automatic placement frame owns measured title and legend space.
-        if (UsesAutomaticPolarFrame(layout, chart) && !string.IsNullOrWhiteSpace(layout.Title) && chart.Title.Overlay != true)
+        if (automatic && !string.IsNullOrWhiteSpace(layout.Title) && chart.Title.Overlay != true)
         {
             var title = await MeasureChartTitleLineAsync(theme, chart, resolver).ConfigureAwait(false);
             double reserve = Math.Min(Math.Max(0d, layout.PlotBox.Height - 1d),
@@ -156,20 +159,43 @@ internal sealed partial class PptxRenderer
         }
         // The supplied container owns entry wrapping even when its coordinates
         // are authored. Keep that coordinate fallback separate from row layout.
-        if (!layout.Legend.Visible || !IsHorizontalLegendPosition(layout.Legend.PositionKind)) return (layout, null);
+        if (!layout.Legend.Visible) return (layout, null, automatic);
+        if (!IsHorizontalLegendPosition(layout.Legend.PositionKind))
+        {
+            if (!automatic || kind != ChartPolarKind.Pie || layout.Legend.Overlay || entries.Count == 0)
+                return (layout, null, automatic);
+            var measure = new ChartTextMeasurer(resolver);
+            var legend = await MeasureSideLegendFrameAsync(measure, style, entries).ConfigureAwait(false);
+            double reserve = (legend?.Width ?? double.NaN) + PptxChartMetricRules.ChartContentFrameInset;
+            if (!double.IsFinite(reserve) || reserve >= layout.PlotBox.Width - 1d)
+            {
+                context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic("PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning,
+                    "The side legend cannot be measured within the automatic plot frame; inherited plot placement is retained.",
+                    PartName: context.SlidePartName, SlideIndex: context.SlideNumber,
+                    Feature: "chart", Fallback: "Approximate"));
+                return (source, null, false);
+            }
+            double x = layout.PlotBox.X + (layout.Legend.PositionKind == PptxSceneChartLegendPosition.Left ? reserve : 0d);
+            double width = layout.PlotBox.Width - reserve;
+            return (layout with
+            {
+                PlotBox = layout.PlotBox with { X = x, Width = width },
+                PlotAreaBox = layout.PlotAreaBox with { X = x, Width = width }
+            }, null, true);
+        }
         var prepared = await LayoutChartLegendRowsAsync(layout, entries, style, resolver, context,
             layout.Frame.Width, measuredBand: true).ConfigureAwait(false);
-        return (prepared.Layout, prepared.Box);
+        return (prepared.Layout, prepared.Box, automatic);
     }
 
     private static ChartPolarLayout ResolvePieFrameLayout(ChartLayout source, ChartLayout prepared,
-        PptxSceneChart chart, IReadOnlyDictionary<int, double> explosions, bool hasVisibleDataLabels)
+        PptxSceneChart chart, IReadOnlyDictionary<int, double> explosions, bool hasVisibleDataLabels, bool fitAutomaticFrame)
     {
         ChartPolarLayout result = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, source.PlotBox,
             explosions, source.Legend, hasVisibleDataLabels, hasTitle: !string.IsNullOrWhiteSpace(chart.Title.Text));
         if (source.ManualPlotLayoutApplied)
             return FitPieLayoutToFrame(result, source.PlotBox, hasVisibleDataLabels, authoredFrame: true);
-        return UsesAutomaticPolarFrame(source, chart)
+        return fitAutomaticFrame
             ? FitPieLayoutToFrame(result, prepared.PlotBox, hasVisibleDataLabels) : result;
     }
 

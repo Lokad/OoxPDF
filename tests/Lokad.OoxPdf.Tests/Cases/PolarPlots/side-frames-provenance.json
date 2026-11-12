@@ -1,0 +1,33 @@
+{
+  "Scope": "Public synthetic pie side-frame controls; independent existing Office exports,not a calibrated application view",
+  "Rows": [
+    {
+      "Id": "left",
+      "InputSha256": "197D1BDB00A2508951DE8CD3DE631E1AB3D96918BC16BA383C9EB7CB04D63942",
+      "OfficePdfSha256": "1B140BE33CC261F8014E9755AE7099F5C62DB54887C9EABDA89BB96BCB7B3A52",
+      "ReferenceKind": "Office PDF bootstrap",
+      "ApplicationViewCalibrated": false
+    },
+    {
+      "Id": "right",
+      "InputSha256": "0A6285925E3F41E2E4ADCDA173A3C381101CE9759CC6E9A97839CF3274FAA6DB",
+      "OfficePdfSha256": "548A37A14A9727461CB6737BA8724FC327A7B0C5A2AC9FE17FB2B76C0D17F905",
+      "ReferenceKind": "Office PDF bootstrap",
+      "ApplicationViewCalibrated": false
+    },
+    {
+      "Id": "left-manual",
+      "InputSha256": "758419CDDF4802976BD7F35BF7E0423E5CD564E5D0D141F3E96287A7942CEDD6",
+      "OfficePdfSha256": "D1FC9C8403F060522C315C95716F1468766D86E5C81B9340D67CA37185CE8716",
+      "ReferenceKind": "Office PDF bootstrap",
+      "ApplicationViewCalibrated": false
+    },
+    {
+      "Id": "right-manual",
+      "InputSha256": "E203AEAE0B96EC101439ED3BCB9ACF623DB22DB2370820EC7D2B788C1744A007",
+      "OfficePdfSha256": "F18C111A09D36CC909892BA85364DA9CF49A22EB9C715475D8341269DCC45B8E",
+      "ReferenceKind": "Office PDF bootstrap",
+      "ApplicationViewCalibrated": false
+    }
+  ]
+}
