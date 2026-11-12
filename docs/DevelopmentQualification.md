@@ -6,8 +6,8 @@ separate. Development targets .NET 10 and .NET 11.
 
 The retained-source ownership repair (`c17da72f8`, runtime from `b3fa46305`) keeps
 an unsupported revised equation from suppressing an independently supported
-neighbor. Two public body/cell roots recover four fraction paints and sixteen
-native mathematical glyphs. The added accent remains diagnosed and omitted;
+neighbor. Four public body/cell/header/footnote roots recover ten fraction paints
+and 56 native mathematical glyphs. The added accent remains diagnosed and omitted;
 copied owners, missing source positions and empty-only literals retain fallback.
 Source ownership and control discovery share an iterative retained-source walk,
 while paint eligibility remains separate.
@@ -16,16 +16,22 @@ Windows and Ubuntu each pass 29 unique focused checks without skips. A repaired
 test distinguishes authored revision bars from unchanged supported paint; its
 single-method rerun joins 28 earlier passes using 21 identical runtime assets and
 3,438 public inputs. The discarded bar-policy trial and failed attempts remain
-recorded; the existing rendering policy is preserved. Native checks bind 2,032
-glyph instances with no measured cuts or unknowns. Fifteen of sixteen control
-PDFs are exact; the remaining Review PDF adds only the existing 0.72pt revision
-bar, outside glyph boxes. Actual font-program/GID sequences, text geometry and
-image paints match its control. The parent fails on missing mathematical text.
+recorded; the existing rendering policy is preserved. Native checks bind 3,056
+glyph instances across 24 outcomes with no measured cuts or unknowns. Twenty-one
+control PDFs are exact; three Review outputs retain existing revision bands and,
+in the footnote case, first-seen author-palette changes. Actual font-program/GID
+sequences, text geometry and image paints match controls. The parent fails on
+missing mathematical text. The related-story extension reuses the frozen runtime.
 All sixteen portfolio PDFs/diagnostics remain exact, preserving the two PPTX
 passes/fourteen DOCX image failures. Transfer verifies 24 assets/two exact smoke
-PDFs without rebuilding or replaying a suite. Related-story extensions and one
-coherent broader gate remain pending. The prepared package below is this repair's
+PDFs without rebuilding or replaying a suite. One coherent broader gate remains
+pending. The prepared package below is this repair's
 parent; no new package, Office appearance, calibration or release claim is made.
+
+A recolored existing wash overlaps eight denominator font boxes. A selected exact
+fill knockout recovers no dark pixels at 300 DPI, and the inspected words remain
+readable. This does not demonstrate a visible defect or establish arbitrary ink
+occlusion safety; no painting order, geometry or threshold was changed.
 
 The coherent math-run repair (`f8bde8a1d`, including `4ddb7e1da`) shares readable
 run and nonprinting-marker rules between revision admission and leaf parsing.
