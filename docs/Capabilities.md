@@ -77,7 +77,10 @@ Supported within the following constraints:
   Automatic pies reserve measured title/legend space before centering and fitting
   their circle. Rich titles inherit paragraph run defaults; custom labels retain
   their point/container scope and direct run overrides. Authored frames, side
-  furniture, label clearance and manual-factor mapping remain approximate.
+  furniture, label clearance and manual-factor mapping remain approximate. Pie
+  factor-X offsets keep the automatic horizontal center when an authored width
+  resizes the plot; edge-X positions retain their authored rectangle. This does
+  not qualify manual Y/radius, side anchors or authored legend coordinates.
   Axes/data labels share number formatting, including dates, numeric sections,
   scaling, fractions and supported accounting/currency forms. Unsupported syntax,
   formula-only data without cached values and unsupported chart kinds are diagnosed.
