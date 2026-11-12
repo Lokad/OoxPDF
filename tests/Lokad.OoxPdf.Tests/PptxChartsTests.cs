@@ -11,6 +11,7 @@ using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
+using TextAlignment = Lokad.OoxPdf.Pptx.PptxRenderer.TextAlignment;
 
 namespace Lokad.OoxPdf.Tests;
 
