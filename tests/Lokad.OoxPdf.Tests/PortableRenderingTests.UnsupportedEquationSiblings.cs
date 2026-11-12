@@ -1,6 +1,7 @@
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Pdf;
+using System.Text.RegularExpressions;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -30,8 +31,14 @@ internal static partial class PortableRenderingTests
                 string expected = Math(before[page]), actual = Math(after[page]);
                 string context = $"{fixture}/{mode}/{kind}/page{page + 1}";
                 TestAssert.True(expected == actual, $"{context}: expected mathematical text '{expected}', got '{actual}'.");
-                TestAssert.True(before[page].Content == after[page].Content,
-                    context + ": an omitted equation does not change independently painted content or revision bands.");
+                string TextPaint(PdfPage value) => string.Join("\n", Regex.Matches(value.Content,
+                    @"(?ms)^BT\r?\n.*?^ET\r?$").Select(match => match.Value));
+                TestAssert.True(TextPaint(before[page]) == TextPaint(after[page]),
+                    context + ": supported text retains its exact paint, positions, fonts and spacing.");
+                if (mode is OoxPdfDocxMarkupMode.Final or OoxPdfDocxMarkupMode.Original)
+                    TestAssert.True(before[page].Content == after[page].Content,
+                        context + ": an omitted equation cannot change unmarked page paint.");
+                TestAssert.Equal(before[page].Fonts.Count, after[page].Fonts.Count);
                 TestAssert.Equal(before[page].Images.Count, after[page].Images.Count);
                 TestAssert.Equal(before[page].Annotations.Count, after[page].Annotations.Count);
                 PdfContentValidator.ValidatePage(after[page], page, default);

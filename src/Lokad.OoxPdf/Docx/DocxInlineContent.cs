@@ -243,13 +243,12 @@ internal static class DocxInlineContent
         foreach (var equation in paragraph.Equations)
         {
             token.ThrowIfCancellationRequested();
-            // Structural paint retains authored ink. Only painted revised literals
-            // contribute a visible band; an unsupported equation is omitted. Its
-            // retained ownership is still verified below.
+            // Structural paint retains authored ink. Only actual revised literal
+            // sources can make this equation contribute a visible revision band.
             if ((equation.Revision is not null || equation.HasRunRevisions) &&
-                DocxMathLayout.TryGetRuns(equation, token, out var runs) &&
+                (!DocxMathLayout.TryGetRuns(equation, token, out var runs) ||
                  runs.Any(source => source.Run.Text.Text.Length != 0 &&
-                    (source.Run.Text.Revision is not null || source.Run.Text.Revisions.Count != 0))) return false;
+                    (source.Run.Text.Revision is not null || source.Run.Text.Revisions.Count != 0)))) return false;
         }
         return HasSupportedRunRevisionOwners(source, [], token, nonRenderingRunOwners: paragraph.NonRenderingRunOwners,
             equations: paragraph.Equations);
