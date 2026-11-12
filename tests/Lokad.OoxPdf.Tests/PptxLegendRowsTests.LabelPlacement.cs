@@ -1,6 +1,6 @@
 using System.Globalization;
 using Lokad.OoxPdf.Pdf;
-using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
