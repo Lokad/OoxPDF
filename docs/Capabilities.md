@@ -532,9 +532,9 @@ Supported within the following constraints:
   Complex implicit borders,
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
-  including supported crop/flips/rotation and source frames. Ordered pictures
-  share the ordinary outlined SVG-label support described above. They
-  retain their measured line frame, including beside equations. Rotation preserves
+  including supported crop/flips/rotation, source frames and the ordinary outlined
+  SVG-label support described above. Ordered pictures retain their measured line
+  frame, including beside equations. Rotation preserves
   the independently qualified source-frame origin, source fit and clipping.
   Ordinary text/picture paragraphs preserve visible source order
   when equally formatted runs are merged, including multiple drawings in one run.
@@ -799,6 +799,7 @@ Approximate or restricted:
   transparency. Broader SVG composition, transformed picture-link combinations
   and some alpha/color effects retain restrictions and explicit residuals.
   SVG labels require available TrueType outlines; substituted faces/styles warn.
+  Harmless id/class attributes and descriptive metadata preserve visible label paint.
   Nested text/tspan/textPath, positioning lists, viewport-relative text positions,
   complex shaping, stylesheet-driven text and text gradients/strokes retain explicit
   partial diagnostics. Transforms reuse the existing path mapping; compound-list

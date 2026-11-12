@@ -14,17 +14,26 @@ also visually reviewed. These are outlined picture labels, not embedded PDF text
 source GIDs are known, but no PDF font/GID metadata or pointwise contour proof is
 claimed. No new Office geometry or application-view qualification is implied.
 
-Windows and Ubuntu each pass 28 exact checks with no skips. Failed attempts remain:
-Windows operator assertions initially assumed LF, and the transform assertion had
-an incorrect glyph-Y sign. Test-only repairs reran five methods and then only the
-remaining method; 21 runtime assets and 3,438 public inputs stayed unchanged.
-An explicit affine matrix now isolates the axis contract, with group/element
-equivalence retained for the existing compound-list mapping. Its Office ordering
-remains unqualified. The actual parent fails the missing-label assertion.
-All sixteen composed portfolio PDFs and diagnostics stay byte-identical, preserving
-their independent content evidence and two PPTX passes/fourteen DOCX image failures.
-Broader CI/framework/package qualification for this slice is pending; the previously
-qualified package remains identified below. Publication and broader acceptance stay open.
+Harmless class/id attributes and descriptive metadata also preserve the labels
+(`b50b8eaab`). An initially over-broad guard dropped text when a class or title was
+added; three omissions now match the exact visible control PDF. Actual stylesheets
+remain distinct and explicitly unsupported. Metadata never becomes visible text
+or shapes. The original parent fails the missing-label assertion, and the preceding
+SVG runtime fails the metadata regression.
+
+Windows and Ubuntu each pass 29 exact checks with no skips in one invocation per
+host on the final production runtime. Earlier assertion failures and repairs remain
+recorded separately: platform line endings, numeric matrix isolation and an incorrect
+expected glyph-Y sign. Compound-list Office ordering stays unqualified.
+A composed report in Final/Review and a held-out table deck retain 39 new label
+glyphs while all pre-existing glyph traces, positions, page counts and diagram frames
+match their parent outputs. Source-font bounds match within 0.000615pt and final-paint
+crops show complete labels. All sixteen original portfolio PDFs and diagnostics stay
+exact, retaining independent evidence and two PPTX passes/fourteen DOCX image failures.
+Transfer verifies 24 assets and two exact smokes without a root build or suite replay.
+Preceding CI43235373217/sourcec43b0a2c0 is closed green; its intermediate payload is
+not selected while this repair is active. Current framework/package closure belongs
+to the selected artifact's qualification record. Publication and broader acceptance stay open.
 
 Automatic note references and pictures now retain source order when their runs
 are joined (`df7000b47`). Four previously failing Final/Review outputs match their
