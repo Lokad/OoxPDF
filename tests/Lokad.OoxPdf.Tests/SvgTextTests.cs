@@ -121,6 +121,34 @@ internal static class SvgTextTests
         }
     }
 
+    public static void SvgLabelsKeepHarmlessAttributesAndNonRenderingMetadata()
+    {
+        string text = "<text x=\"20\" y=\"80\" fill=\"#112233\">" + Label + "</text>";
+        string plain = Paint(Svg(text)).ToString();
+        foreach (string changed in new[] {
+            Svg(text.Replace("<text ", "<text class=\"source-label\" id=\"caption\" data-source=\"public\" ", StringComparison.Ordinal)),
+            Svg("<g class=\"diagram\">" + text + "</g>"),
+            Svg(text).Replace("<svg ", "<svg class=\"diagram\" ", StringComparison.Ordinal),
+            Svg(text.Replace("</text>", "<title>NOT A LABEL</title><desc>NOT A LABEL</desc><metadata><style>.unused{fill:red}</style><rect width=\"400\" height=\"160\"/></metadata></text>", StringComparison.Ordinal)) })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var graphics = Paint(changed, diagnostics);
+            TestAssert.True(plain == graphics.ToString(), "Non-painting SVG metadata must preserve every visible label path.");
+            TestAssert.Equal(13, LabelPaths(graphics.ToString()));
+            TestAssert.Equal(0, diagnostics.Count);
+        }
+        foreach (string stylesheet in new[] {
+            Svg("<style>.source-label{fill:red}</style>" + text),
+            "<?xml-stylesheet href=\"unavailable.css\" type=\"text/css\"?>" + Svg(text) })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var graphics = Paint(stylesheet, diagnostics);
+            TestAssert.True(diagnostics.Any(d => d.Fallback == "Partial" && d.Message.Contains("text", StringComparison.Ordinal)),
+                "An actual unsupported stylesheet remains distinct from harmless class metadata.");
+            TestAssert.True(!graphics.ToString().Contains(LabelColor, StringComparison.Ordinal), "Do not claim stylesheet-driven glyph paint without implementing its styles.");
+        }
+    }
+
     public static void SvgLabelsRejectUnsupportedPositioningAndNonFinitePaintWithoutLosingShapes()
     {
         var diagnostics = new List<OoxPdfDiagnostic>();

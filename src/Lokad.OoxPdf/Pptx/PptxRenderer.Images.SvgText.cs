@@ -66,7 +66,12 @@ internal sealed partial class PptxRenderer
         string Anchor, RgbColor? Color, double Opacity, bool Kerning);
 
     private static bool HasSvgStylesheet(XDocument svg) =>
-        svg.Descendants().Any(e => e.Name.LocalName == "style" && !string.IsNullOrWhiteSpace(e.Value));
+        svg.DescendantNodes().OfType<XProcessingInstruction>().Any(p => p.Target == "xml-stylesheet" && !p.Ancestors().Any(IsSvgMetadataElement)) ||
+        svg.Descendants().Any(e => e.Name.LocalName == "style" && !string.IsNullOrWhiteSpace(e.Value) &&
+            !e.Ancestors().Any(IsSvgMetadataElement));
+
+    private static bool IsSvgMetadataElement(XElement element) =>
+        element.Name.LocalName is "title" or "desc" or "metadata";
 
     private static bool IsHiddenSvgText(XElement element)
     {
@@ -79,7 +84,7 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgText(XElement element, [NotNullWhen(true)] out SvgTextLabel? label)
     {
         label = null;
-        if (element.HasElements || element.AncestorsAndSelf().Any(e => e.Attribute("class") is not null) ||
+        if (element.Elements().Any(child => !IsSvgMetadataElement(child)) ||
             element.AncestorsAndSelf().Any(e => ReadSvgStyleDeclarations(e).ContainsKey("font")) ||
             element.Attributes().Any(a => a.Name.LocalName is "rotate" or "textLength" or "lengthAdjust")) return false;
         var style = ReadSvgStyleDeclarations(element);
@@ -128,7 +133,7 @@ internal sealed partial class PptxRenderer
             if (!RgbColor.TryParseCssColor(fill ?? "black", out RgbColor parsed)) return false;
             color = parsed;
         }
-        string valueText = element.Value;
+        string valueText = string.Concat(element.Nodes().OfType<XText>().Select(node => node.Value));
         bool preserve = element.AncestorsAndSelf().Select(e => (string?)e.Attribute(XNamespace.Xml + "space"))
             .FirstOrDefault(v => v is not null) == "preserve";
         valueText = preserve ? valueText.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ') :

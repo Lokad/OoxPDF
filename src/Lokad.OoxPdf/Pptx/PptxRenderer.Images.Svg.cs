@@ -662,7 +662,7 @@ internal sealed partial class PptxRenderer
         for (XElement? parent = element.Parent; parent is not null; parent = parent.Parent)
         {
             string name = parent.Name.LocalName;
-            if (name is "defs" or "linearGradient" or "radialGradient" or "style")
+            if (name is "defs" or "linearGradient" or "radialGradient" or "style" || IsSvgMetadataElement(parent))
             {
                 return true;
             }

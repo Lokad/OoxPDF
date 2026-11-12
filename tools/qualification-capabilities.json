@@ -18694,6 +18694,7 @@
     "SvgLabelTransformsUseThePictureCoordinateSystem",
     "SvgLabelOpacityGroupsRemainVectorOnlyAndKeepUnsupportedSiblingsExplicit",
     "SvgLabelsPreserveWhitespaceAndDoNotRevealHiddenText",
+    "SvgLabelsKeepHarmlessAttributesAndNonRenderingMetadata",
     "SvgLabelsRejectUnsupportedPositioningAndNonFinitePaintWithoutLosingShapes",
     "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
     "SvgLabelPreparationFailurePreservesDestinationAndCleansTemporaryFiles",
