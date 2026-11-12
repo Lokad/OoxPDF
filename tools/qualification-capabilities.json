@@ -4847,6 +4847,13 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxPieFactorOffsetsKeepTheIndependentOfficeHorizontalReference",
+    "PptxPieFactorAndEdgePlacementKeepTheirOwnersAcrossViewportWidths",
+    "PptxPieFactorOffsetsRetainBoundedSourceAndCompleteLegendContent",
+    "DocxKeepNextOverflowAdmitsTheWholeSourceChainOnce",
+    "DocxKeepChainMembersRetainIndependentKeepLinesAndExactFits",
+    "DocxKeepChainsStopAtExplicitPageColumnAndSectionBoundaries",
+    "DocxSyntheticPageKeepNextEstimatesIndentedBlockTarget",
     "PptxHorizontalLegend",
     "PptxHorizontalFrame",
     "PptxBuiltinPalettesMatchIndependentOfficeAcrossThemesAndPlotKinds",
