@@ -2,12 +2,15 @@
 
 ## 0.3.0
 
-Review these caller changes when upgrading from 0.2.0; the detailed contracts follow.
+0.3.0 includes binary-breaking API changes. Recompile callers, including separately
+built components that reference the library. Review the source changes below;
+the detailed ownership contracts follow.
 
 | Existing use | Required change |
 |---|---|
 | `MemoryAdmission` / `IOoxPdfMemoryAdmission` | Supply `MemoryBudget` / `IMemoryBudget`; keep the caller-owned root alive through its scopes and reservations. |
-| `IFontProgramSource.GetBytesAsync` | Implement `AcquireAsync(operationBudget, ct)` and return an immutable program lease valid until disposal. |
+| `GetBytesAsync` on `IFontProgramSource`, `FileFontProgramSource` or `MemoryFontProgramSource` | Use `AcquireAsync(operationBudget, ct)` and keep the immutable program lease alive until its bytes are no longer used; custom sources implement the lease contract. |
+| Precompiled `new FileFontProgramSource(path)` calls | Recompile: the constructor now has an optional cache-budget parameter. The one-argument source expression remains valid; the binary signature changes. |
 | Positional fourth-token `CreateHttpAsync` call | Use `cancellationToken:`; the fourth parameter is now the optional cache budget. |
 | File/font-pack resolver caches | Dispose owned sources/resolvers after use; keep borrowed cache funding alive until outstanding leases finish. |
 | Embedded stream conversion that needs staging beyond its resident window | Supply `TemporaryStorage`; file/CLI convenience conversions select filesystem backing. |

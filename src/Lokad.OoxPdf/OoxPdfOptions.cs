@@ -39,13 +39,12 @@ public sealed class OoxPdfOptions
     public OoxConversionLimits? ConversionLimits { get; init; }
 
     /// <summary>
-    /// Optional caller-owned shared capacity. Producers reserve covered storage
-    /// before allocation and release it after its users finish. Null leaves memory
-    /// ungoverned; independent format/output bounds still apply. Package byte
-    /// storage, PDF content staging, private SFNT/subset buffers, raster decoded
-    /// planes, crop/shadow/glow rasters and image/font compression buffers are
-    /// covered. Models, font source/cache and parsed maps, and other PDF resources
-    /// are being migrated. This is not a complete heap limit.
+    /// Optional caller-owned shared capacity for coarse package/model storage,
+    /// page construction and selected PDF/font/image/vector resources. Producers
+    /// reserve covered capacity before acquisition and refund it after final use.
+    /// Coverage is partial, not a whole-heap limit. Longer-lived font caches use
+    /// separately supplied cache budgets. Null leaves memory ungoverned;
+    /// independent format/output bounds still apply.
     /// </summary>
     public IMemoryBudget? MemoryBudget { get; init; }
 
