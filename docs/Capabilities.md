@@ -82,9 +82,12 @@ Supported within the following constraints:
   title/legend space; edge coordinates retain their existing authored placement. Manual
   2D-pie radii fit the smaller authored viewport dimension, preserving explosion
   reservation and label clearance. Eight cached unlabeled/unexploded controls
-  qualify that extent; six factor-Y controls also pass their position/image gates.
-  Other heights/labels/explosion geometry, edge Y, side anchors and authored legend
-  coordinates remain approximate. Extreme out-of-frame plot offsets can retain a
+  qualify that extent. Ten automatic/manual plot controls now pass their position,
+  extent and image gates. Default side legends keep their chart-frame owner across
+  authored plot changes; measured ink centers their rows, with shared frame spacing.
+  Four side origin/key controls pass 1pt. Horizontal row origins and authored legend
+  coordinates still fail independent geometry gates despite passing images.
+  Other heights/labels/explosion and edge-Y geometry remain approximate. Extreme out-of-frame plot offsets can retain a
   diagnosed unfit legend with omitted names.
   Whole and split rich data labels admit their measured horizontal paint extent;
   automatic polar labels move complete text/key/background/link units into measured

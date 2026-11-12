@@ -4,28 +4,35 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-Manual pie factor offsets now reference the same automatic frame in both axes,
-including measured title and legend space. Six independent cached controls reduce
-Y error from 30.186pt to 0.003pt at the unchanged 1pt gate; six formerly failing
-image comparisons now pass. Both side cases still fail, with Y error reduced from
-43.416pt to 15.12pt. All 48 legend names and 536 measured glyphs remain complete;
-X, radius, text and other paint stay unchanged. Four compound-label controls retain
-832 uncut glyphs without measured label collisions. Two final paints were viewed.
-Windows and Ubuntu each pass 67 focused checks, joining two test-only repairs
-without replaying the other 65 checks. The parent fails the measured-Y regression;
-all original failures are retained. Seven neighboring PDFs, including four portfolio
-outcomes, remain exact. An extreme out-of-frame Y still omits six legend names with
-an existing overflow warning in both parent and candidate; this is an explicit
-unfit fallback, not content-completeness evidence. No new Office action or view
-calibration occurred. The broader gate for this Y correction is pending.
+Side-pie plots and default legends now share measured chart-frame ownership.
+Existing side-legend allocation and pie fitting replace inherited plot ratios;
+default legend keys, text and clips consume one final box even when the plot is
+authored. Ten cached plot controls pass the unchanged 1pt position/extent gates;
+four side legends also pass their origin/key gates (maximum 0.171pt X, 0.524pt Y,
+0.473pt keys). All 60 names and 670 native-program glyphs are complete and uncut.
+All ten whole-page comparisons pass. This is not a blanket geometry pass: the six
+horizontal legends still fail their separate 1pt origin gate by up to 13.514pt.
+The authored-legend and wrapping residuals also remain open.
 
-Automatic polar labels also place complete measured text/key/background/link units
-in separate rows when needed, retaining authored/unfit fallbacks. The preceding
-admission source passed Windows/Linux CI, both frameworks and four consumers of
-the same package. The selected 6E96 development package belongs to that source,
-before the Y correction. Publication and broader acceptance remain deferred.
-A fixed .19-width wrapping prediction matched only 10 of 18 cached Office label
-groups and was rejected as a universal rule; wrapping remains approximate.
+The geometry-only candidate initially passed 70 checks per host and every image
+gate, while a separate origin screen retained side-legend errors up to 55.136pt.
+The strengthened regression fails that candidate's frame ownership. The final
+runtime passes all 70 focused checks on each host in one invocation; both earlier
+geometry and ownership failures remain recorded. It uses existing measured ink
+and frame spacing, with explicit unfit/unknown fallbacks and no new fitted constants.
+Four pinned public inputs preserve the independent Office source pairs. Seven
+neighboring PDFs (four portfolio outcomes) and four compound-label PDFs remain
+exact, reusing the latter's 832-glyph ink/paint proof. Two final side paints were
+viewed. No new Office action or application-view calibration occurred.
+
+The preceding factor-Y correction reduced six errors from 30.186pt to 0.003pt and
+passed Windows/Linux CI, both frameworks and package checks. Its intermediate
+payload is skipped while this coherent side-frame batch is qualified. The selected
+6E96 package still predates both corrections. An extreme out-of-frame Y retains
+a diagnosed legend omission in the earlier bottom-legend path; it is not content
+completeness evidence. The current broader gate and publication remain deferred.
+A fixed .19-width wrapping prediction matched only 10 of 18 Office label groups
+and was rejected as a universal rule; wrapping remains approximate.
 
 Manual 2D-pie radii now follow the smaller authored viewport dimension through
 shared fitting. Eight pinned cached Office controls improve from up to 16.633pt
