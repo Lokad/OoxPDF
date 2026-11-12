@@ -14,33 +14,36 @@ internal sealed partial class DocxRenderer
         var painted = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
         foreach (DocxEquation equation in placed)
         { token.ThrowIfCancellationRequested(); painted.Add(equation); }
-        var paintedByPart = new Dictionary<string, int>(StringComparer.Ordinal);
+        var countsByPart = new Dictionary<string, (int Painted, int Hidden)>(StringComparer.Ordinal);
         foreach (DocxEquationPartSource part in document.EquationParts)
         {
             token.ThrowIfCancellationRequested();
             var seen = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
+            int hidden = 0;
             foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(part.BodyElements)
                 .SelectMany(paragraph => new[] { paragraph }.Concat(DocxBlockTraversal.EnumerateInlineTextBoxParagraphs(paragraph))))
             {
                 token.ThrowIfCancellationRequested();
+                hidden += paragraph.HiddenDrawingEquationSourceCount;
                 foreach (DocxEquation equation in paragraph.Equations)
                 {
                     token.ThrowIfCancellationRequested();
                     if (painted.Contains(equation)) { seen.Add(equation); }
                 }
             }
-            if (seen.Count > 0) { paintedByPart[part.PartName] = seen.Count; }
+            if (seen.Count > 0 || hidden > 0) { countsByPart[part.PartName] = (seen.Count, hidden); }
         }
         var sourcesByPart = document.EquationParts.ToDictionary(part => part.PartName, StringComparer.Ordinal);
         foreach (OoxPdfDiagnostic source in document.EquationDiagnostics)
         {
             token.ThrowIfCancellationRequested();
             if (source.PartName is { } sourcePart && sourcesByPart.TryGetValue(sourcePart, out var part) &&
-                (part.SourceCount == 0 || paintedByPart.TryGetValue(sourcePart, out int count) && count == part.SourceCount)) { continue; }
+                (part.SourceCount == 0 || countsByPart.TryGetValue(sourcePart, out var count) &&
+                    count.Painted + count.Hidden == part.SourceCount)) { continue; }
             sink(source);
         }
-        var paintedParts = new HashSet<string>(paintedByPart.Keys, StringComparer.Ordinal);
-        if (paintedByPart.Values.Sum() < painted.Count) { paintedParts.Add(document.MainPartName); }
+        var paintedParts = new HashSet<string>(countsByPart.Where(part => part.Value.Painted > 0).Select(part => part.Key), StringComparer.Ordinal);
+        if (countsByPart.Values.Sum(part => part.Painted) < painted.Count) { paintedParts.Add(document.MainPartName); }
         foreach (string part in paintedParts)
         {
             token.ThrowIfCancellationRequested();

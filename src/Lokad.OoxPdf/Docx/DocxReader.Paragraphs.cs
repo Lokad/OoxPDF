@@ -46,6 +46,7 @@ internal sealed partial class DocxReader
         var equations = new List<DocxEquation>();
         List<DocxInlineItem>? inlineItems = null;
         var inlineTextBoxes = new List<DocxInlineTextBox>();
+        int hiddenDrawingEquationSourceCount = 0;
         var inlineReferences = new List<DocxInlineReference>();
         var commentRanges = new List<DocxCommentRange>();
         var openCommentRanges = new List<DocxCommentRangeStart>();
@@ -321,6 +322,7 @@ internal sealed partial class DocxReader
             ContextualSpacingDefaultStyleId = paragraphProperties?.Element(WordprocessingNamespace + "pStyle") is null
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
+            HiddenDrawingEquationSourceCount = hiddenDrawingEquationSourceCount,
             Equations = equations,
             // Page fields retain their canonical source placeholders. Layout
             // eligibility separately requires the actual page inputs.
@@ -598,8 +600,17 @@ internal sealed partial class DocxReader
             int firstImage = images.Count;
             int currentSourceRunIndex = sourceRunIndex;
             int firstBox = inlineTextBoxes.Count;
-            var runBoxes = ReadInlineTextBoxes(run, styles, numbering, package, relationships,
+            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
+            string? characterStyleId = ReadCharacterStyleId(run);
+            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
+                runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run);
+            IReadOnlyList<DocxInlineTextBox> runBoxes = resolvedRun.Hidden == true ? [] : ReadInlineTextBoxes(run, styles, numbering, package, relationships,
                 markupMode, revision, cancellationToken, currentSourceRunIndex);
+            if (resolvedRun.Hidden == true)
+            {
+                foreach (var inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
+                    hiddenDrawingEquationSourceCount += CountSelectedEquationSources(inline, markupMode, cancellationToken, out _);
+            }
             if (runBoxes.Count != 0) EnsureInlineContent();
             sourceRunIndex++;
             inlineTextBoxes.AddRange(runBoxes);
@@ -612,14 +623,6 @@ internal sealed partial class DocxReader
             DocxFieldKind? placeholderKind = placeholder is null ? null : ResolveFieldKind(fieldInstruction);
             int fieldTextRunIndex = runs.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
-            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
-            string? characterStyleId = ReadCharacterStyleId(run);
-            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
-                runProperties,
-                paragraphStyleId,
-                characterStyleId,
-                styles,
-                tableCellStyle?.Run);
             DocxRunStyleResolution runStyleResolution = CreateRunStyleResolution(
                 runProperties,
                 paragraphStyleId,
@@ -632,12 +635,12 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
-            // A page/column token in a cell is nonpainting like an empty text run;
-            // retain its actual revision owner without admitting unknown objects.
-            if (effectiveRevisions.Count != 0 && text.Length == 0 && run.Elements().All(child =>
+            // Hidden runs and cell flow tokens keep their actual revision owners
+            // even when their resolved source contributes no painted objects.
+            if (effectiveRevisions.Count != 0 && text.Length == 0 && (resolvedRun.Hidden == true || run.Elements().All(child =>
                 child.Name == WordprocessingNamespace + "rPr" ||
                 (child.Name == WordprocessingNamespace + "t" || child.Name == WordprocessingNamespace + "delText") && child.Value.Length == 0 ||
-                tableCellStyle is not null && child.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(child)))
+                tableCellStyle is not null && child.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(child))))
             {
                 (nonRenderingRunOwners ??= []).Add(new(currentSourceRunIndex, effectiveRevisions));
             }
