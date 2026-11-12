@@ -5,15 +5,23 @@ candidate.** The published [0.2.0 qualification](PreviewQualification.md) remain
 separate. Development targets .NET 10 and .NET 11.
 
 Automatic note references and pictures now retain source order when their runs
-are joined (`df7000b47`). All four previously failing Final/Review outputs match
-their unchanged separate-run controls. The parent fails the new glyph-geometry
-regression. Windows passes 21 focused checks; Ubuntu passes 18 with three declared
-font/platform skips. Actual native font programs bind 14,016 glyphs with no
-measured cuts or unknowns. All sixteen original portfolio PDFs stay byte-identical;
-two PPTX image passes and fourteen DOCX failures remain. New Word geometry is
-unqualified; no Office action or calibrated-view claim. The preceding coherent
-CI43187896735 is closed green; it qualifies the earlier field/endnote fixes,
-not this follow-up runtime. Publication and broader release acceptance stay open.
+are joined (`df7000b47`). Four previously failing Final/Review outputs match their
+unchanged separate-run controls; the parent fails the glyph-geometry regression.
+Windows passes 21 focused checks; Ubuntu passes 18 with three declared font/platform
+skips. Native programs bind 14,016 glyphs without measured cuts or unknowns.
+CI43195810829/source2127c65f6 is closed green: Windows4,825/19skips,
+Ubuntu2,317/133skips,zero failures; each host also passes69 net10 checks.
+
+Distinct note references with equal labels also retain their own links within one
+run (`9312cddfe`). Two outputs lose the erroneous overlapping links while retaining
+exact page paint streams, native font programs and pictures; six controls stay
+byte-identical. All four joined/separate pairs match. The parent fails the link
+regression. Windows and Ubuntu each pass16 focused checks with no skips. Native
+programs bind13,802 glyphs without measured cuts/unknowns. All sixteen original
+portfolio PDFs stay exact; two PPTX passes/fourteen DOCX failures remain. New Word
+geometry is unqualified; no new Office action or calibrated-view claim. The prior
+green CI above does not cover this follow-up runtime. Publication, release
+acceptance and the broader roadmap stay open.
 
 Computed PAGE/NUMPAGES results now remain atomic beside pictures in the same source
 run (`4da834039`). Four failing Final/Review outputs become byte-identical to their

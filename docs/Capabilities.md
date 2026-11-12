@@ -608,6 +608,7 @@ Supported within the following constraints:
   when they share a formatted source run or have an empty cached result.
   Automatic footnote/endnote references also keep their source order beside
   pictures when formatted runs are joined or split.
+  Distinct notes with equal labels retain separate link owners within one run.
   Supported picture-only and equation-only stored results retain their content
   and neighboring equations in body, cell and default header/footer paragraphs. They share the
   existing inline layout; stored fields are not evaluated.
