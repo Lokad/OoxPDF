@@ -162,6 +162,17 @@ internal sealed partial class PptxRenderer
         return (prepared.Layout, prepared.Box);
     }
 
+    private static ChartPolarLayout ResolvePieFrameLayout(ChartLayout source, ChartLayout prepared,
+        PptxSceneChart chart, IReadOnlyDictionary<int, double> explosions, bool hasVisibleDataLabels)
+    {
+        ChartPolarLayout result = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, source.PlotBox,
+            explosions, source.Legend, hasVisibleDataLabels, hasTitle: !string.IsNullOrWhiteSpace(chart.Title.Text));
+        if (source.ManualPlotLayoutApplied)
+            return FitPieLayoutToFrame(result, source.PlotBox, hasVisibleDataLabels, authoredFrame: true);
+        return UsesAutomaticPolarFrame(source, chart)
+            ? FitPieLayoutToFrame(result, prepared.PlotBox, hasVisibleDataLabels) : result;
+    }
+
     private static ChartPolarLayout FitPieLayoutToFrame(ChartPolarLayout layout, ChartPlotBox frame, bool hasVisibleDataLabels, bool authoredFrame = false)
     {
         // Authored viewports own the circle's extent. Automatic placement also

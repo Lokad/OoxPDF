@@ -109,6 +109,8 @@
     "DocxContainerTableGridsPreservePortableContentAndPaintedLinks"
   ],
   "pptx-horizontal-polar-frame": [
+      "PptxPieFactorOffsetsFollowMeasuredAutomaticFramesInBothAxes",
+      "PptxPieFactorYReusesBoundedOffsetsAndRetainsEdgeX",
       "PptxSideLegendClipsRetainInkBeyondNominalFontMetrics",
       "PptxSideLegendClipsRetainTheActualGlyphInk",
       "PptxAuthoredSideLegendRetainsItsExplicitViewport",
@@ -4847,6 +4849,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxPieFactorOffsetsFollowMeasuredAutomaticFramesInBothAxes",
+    "PptxPieFactorYReusesBoundedOffsetsAndRetainsEdgeX",
     "PptxPolarLabelRowsKeepCompleteLabelUnitsApart",
     "PptxPolarLabelAdmissionRetainsAuthoredAndUnfitArrangements",
     "PptxPolarDataLabelsRetainWholeAndRichTextInk",
@@ -17787,6 +17791,8 @@
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
   "pptx-data-label-content": [
+    "PptxPieFactorOffsetsFollowMeasuredAutomaticFramesInBothAxes",
+    "PptxPieFactorYReusesBoundedOffsetsAndRetainsEdgeX",
     "PptxPolarLabelRowsKeepCompleteLabelUnitsApart",
     "PptxPolarLabelAdmissionRetainsAuthoredAndUnfitArrangements",
       "PptxPolarDataLabelsRetainWholeAndRichTextInk",

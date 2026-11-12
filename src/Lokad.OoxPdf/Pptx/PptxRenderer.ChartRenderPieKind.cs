@@ -53,25 +53,41 @@ internal sealed partial class PptxRenderer
                     legendEntries, legendStyle, fontResolver, context).ConfigureAwait(false);
                 RenderChartAreaStyle(graphics, document, bounds, sceneChart);
                 bool hasVisiblePieDataLabels = labelOptions.HasVisibleText || pieSlices.Any(slice => ResolveChartDataLabelOptions(labelOptions, slice.Index).HasVisibleText);
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend, hasVisibleDataLabels: hasVisiblePieDataLabels, hasTitle: !string.IsNullOrWhiteSpace(sceneChart.Title.Text));
-                if (sourceLayout.ManualPlotLayoutApplied && sceneChart.PlotAreaLayout.X is not null &&
-                    IsManualLayoutFactorMode(sceneChart.PlotAreaLayout.XModeKind))
+                ChartPolarLayout polarLayout = ResolvePieFrameLayout(sourceLayout, prepared.Layout,
+                    sceneChart, polarPoints.PointExplosions, hasVisiblePieDataLabels);
+                bool factorX = sceneChart.PlotAreaLayout.X is not null &&
+                    IsManualLayoutFactorMode(sceneChart.PlotAreaLayout.XModeKind);
+                bool factorY = sceneChart.PlotAreaLayout.Y is not null &&
+                    IsManualLayoutFactorMode(sceneChart.PlotAreaLayout.YModeKind);
+                if (sourceLayout.ManualPlotLayoutApplied && (factorX || factorY))
                 {
-                    // Office's factor offset follows the automatic center even
-                    // when an authored width resizes the pie. Edge placement
-                    // still belongs to the authored rectangle. Reuse the same
-                    // default geometry and resolved, bounded source offset;
-                    // don't infer a new side-legend anchor.
-                    ChartPolarLayout automatic = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie,
-                        new ChartPlotBox(frame.X, frame.Y, frame.Width, frame.Height), polarPoints.PointExplosions,
-                        legend, hasVisibleDataLabels: hasVisiblePieDataLabels, hasTitle: !string.IsNullOrWhiteSpace(sceneChart.Title.Text));
+                    // Factor coordinates offset the automatic placement, including
+                    // its measured title/legend space. Authored extents still own
+                    // the radius; edge coordinates keep their source rectangle.
+                    var automaticSource = sourceLayout with
+                    {
+                        ManualPlotLayoutApplied = false,
+                        PlotBox = new(frame.X, frame.Y, frame.Width, frame.Height),
+                        PlotAreaBox = new(frame.X, frame.Y, frame.Width, frame.Height)
+                    };
+                    ChartLayout automaticPrepared = automaticSource;
+                    if (UsesAutomaticPolarFrame(automaticSource, sceneChart))
+                    {
+                        // This frame is a coordinate reference, not another painted
+                        // legend. Only the actual legend owns overflow diagnostics.
+                        automaticPrepared = (await PreparePolarChartLayoutAsync(automaticSource, theme, sceneChart,
+                            legendEntries, legendStyle, fontResolver, context with { DiagnosticSink = null })
+                            .ConfigureAwait(false)).Layout;
+                    }
+                    ChartPolarLayout automatic = ResolvePieFrameLayout(automaticSource, automaticPrepared,
+                        sceneChart, polarPoints.PointExplosions, hasVisiblePieDataLabels);
+                    double topOffset = frame.Y + frame.Height - plotBox.Y - plotBox.Height;
                     polarLayout = polarLayout with { Geometry = polarLayout.Geometry with
-                        { CenterX = automatic.Geometry.CenterX + plotBox.X - frame.X } };
+                    {
+                        CenterX = factorX ? automatic.Geometry.CenterX + plotBox.X - frame.X : polarLayout.Geometry.CenterX,
+                        CenterY = factorY ? automatic.Geometry.CenterY - topOffset : polarLayout.Geometry.CenterY
+                    } };
                 }
-                if (sourceLayout.ManualPlotLayoutApplied)
-                    polarLayout = FitPieLayoutToFrame(polarLayout, plotBox, hasVisiblePieDataLabels, authoredFrame: true);
-                else if (UsesAutomaticPolarFrame(sourceLayout, sceneChart))
-                    polarLayout = FitPieLayoutToFrame(polarLayout, prepared.Layout.PlotBox, hasVisiblePieDataLabels);
                 RenderPieChart(graphics, theme, colorMap, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, polarPoints.FirstSliceAngle);
                 await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, prepared.Layout.PlotBox, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, polarPoints.FirstSliceAngle, pieSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
                 await RenderChartLegendAsync(graphics, frame, plotBox, legendEntries, legend, legendStyle,
