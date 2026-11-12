@@ -18,7 +18,6 @@ internal static partial class DocxInlineCompositionTests
         foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
             string role = row.GetProperty("Role").GetString()!;
-            if (role is "FlowingControl" or "NestedResidual") continue;
             var source = cases.RootElement.EnumerateArray().Single(item => item.GetProperty("Id").GetString() == row.GetProperty("Id").GetString());
             TestAssert.Equal(source.GetProperty("Sha256").GetString(), row.GetProperty("InputSha256").GetString());
             var mode = row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
@@ -29,8 +28,11 @@ internal static partial class DocxInlineCompositionTests
             foreach (var expected in row.GetProperty("TextOrigins").EnumerateArray())
             {
                 var actual = shows.Single(show => show.Text.Trim() == expected.GetProperty("Text").GetString());
-                TestAssert.True(Math.Abs(actual.X - actualOrigin - expected.GetProperty("X").GetDouble() + wordOrigin) < 1d,
-                    "The table owns its independently measured horizontal frame: " + source.GetProperty("Id").GetString() + "/" + mode);
+                TestAssert.True(Math.Abs(actual.X - expected.GetProperty("X").GetDouble()) < 1d,
+                    "The table retains its independently measured absolute origin: " + source.GetProperty("Id").GetString() + "/" + mode);
+                if (role == "NestedRelative")
+                    TestAssert.True(Math.Abs(actual.X - actualOrigin - expected.GetProperty("X").GetDouble() + wordOrigin) < 1d,
+                        "The table owns its independently measured relative frame: " + source.GetProperty("Id").GetString() + "/" + mode);
             }
             var math = shows.Where(show => show.Text.Trim().Length != 0 && page.Fonts.Any(font =>
                 font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))).ToArray();
@@ -39,8 +41,11 @@ internal static partial class DocxInlineCompositionTests
             for (int i = 0; i < math.Length; i++)
             {
                 TestAssert.Equal(native[i].GetProperty("Text").GetString(), math[i].Text.Normalize(NormalizationForm.FormKC));
-                TestAssert.True(Math.Abs(math[i].X - actualOrigin - native[i].GetProperty("X").GetDouble() + wordOrigin) < 1d,
-                    "Mathematics follows the same container origin as prose.");
+                TestAssert.True(Math.Abs(math[i].X - native[i].GetProperty("X").GetDouble()) < 1d,
+                    "Mathematics retains the table's independently measured absolute origin.");
+                if (role == "NestedRelative")
+                    TestAssert.True(Math.Abs(math[i].X - actualOrigin - native[i].GetProperty("X").GetDouble() + wordOrigin) < 1d,
+                        "Mathematics follows the same relative container origin as prose.");
             }
         }
     }

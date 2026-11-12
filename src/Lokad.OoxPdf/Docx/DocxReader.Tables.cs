@@ -49,7 +49,8 @@ internal sealed partial class DocxReader
             : styles.DefaultTableStyle;
         DocxTableStyle tableStyle = resolvedStyle ?? DocxTableStyle.Empty;
         bool isCustomStyle = resolvedStyle is { HasCompleteInheritance: true, UsesTableNormal: false };
-        bool anchorsStyleGrid = isCustomStyle && tableIndent is null && tableStyle.Table.IndentValue is null;
+        bool hasAuthoredIndent = tableIndent is not null || tableStyle.Table.IndentValue is not null;
+        bool anchorsStyleGrid = isCustomStyle && !hasAuthoredIndent;
         // Office A/B (m13/ladder compat15 probes): a present compatibilityMode pins the
         // table grid at margin/indent plus the outer border half (legacy outer-edge
         // alignment); without it the grid sits at the origin (modern) or pins text via
@@ -182,7 +183,13 @@ internal sealed partial class DocxReader
                     // cell's effective padding. Table, row and cell declarations replace
                     // style padding for both that grid anchor and the content offset.
                     bool pinTextToMargin = !isCustomStyle && !useLegacyTableGrid && (resolvedTableIndentPoints ?? 0d) == 0d && (styleMargins.LeftPoints ?? 0d) > 0d;
-                    DocxTableCellMargins? gridAnchorMargins = anchorsStyleGrid
+                    // Cell-local padding owns its content inset, not an inherited
+                    // table text anchor. With neither inherited left margin nor
+                    // authored indentation, retain the containing grid origin.
+                    // Explicit zero indentation keeps its existing text anchor.
+                    bool anchorsCellGrid = !hasAuthoredIndent &&
+                        inheritedMargins.LeftPoints is null && inheritedMargins.LeftValue is null;
+                    DocxTableCellMargins? gridAnchorMargins = anchorsStyleGrid || anchorsCellGrid
                         ? DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d }
                         : pinTextToMargin ? margins : null;
                     int sourceSpan = ReadGridSpan(cellProperties);
