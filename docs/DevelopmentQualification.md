@@ -4,6 +4,15 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Whole and split rich chart labels now share a clip derived from their measured
+paint extent, preserving their existing placement. Four causal controls remove 75
+cut glyphs; all 832 measured glyphs have known, unclipped bounds. Both hosts pass
+37 focused checks. Seven neighbor PDFs (four portfolio outcomes) and four cached
+Office controls match their immediate parent exactly; two Office image gates pass
+and two retain unchanged failures. Two pre-existing compound-label collisions remain
+visible: restored endings do not establish complete readability or Office/view
+parity. The broader gate for this runtime is pending; publication remains deferred.
+
 Manual 2D-pie radii now follow the smaller authored viewport dimension through
 shared fitting. Eight pinned cached Office controls improve from up to 16.633pt
 radius error to at most 0.004pt at the unchanged 1pt gate. All 48 legend names and
@@ -15,7 +24,8 @@ gates still fail: six MAEs improve and two worsen with unresolved center errors.
 Manual height/label/explosion Office geometry, Y/side/legend anchors and application
 view remain unqualified. The prior factor-X correction and bounded-offset repair
 remain covered. Broader framework/package results still belong to their exact
-artifacts; the selected package precedes this local slice. Publication is deferred.
+artifacts; the radius batch passed Windows/Linux CI, while the selected package
+precedes both recent local slices. Publication is deferred.
 
 DOCX keep-with-next groups now admit once per source group (`7c94a3470`). Two
 oversized plain/mixed chains and one exact-fitting keep-lines control previously
