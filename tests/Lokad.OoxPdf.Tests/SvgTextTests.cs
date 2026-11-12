@@ -69,7 +69,9 @@ internal static class SvgTextTests
 
     public static void SvgLabelTransformsUseThePictureCoordinateSystem()
     {
-        const string transform = "translate(5 7) rotate(15)";
+        // An explicit matrix isolates glyph/picture axes from the existing
+        // path painter's separately unqualified compound-list ordering.
+        const string transform = "matrix(0.965925826 0.258819045 -0.258819045 0.965925826 5 7)";
         string text = "<text x=\"20\" y=\"80\" font-size=\"24\" fill=\"#112233\">I</text>";
         var group = Paint(Svg("<g transform=\"" + transform + "\">" + text + "</g>"));
         var own = Paint(Svg(text.Replace("<text ", "<text transform=\"" + transform + "\" ", StringComparison.Ordinal)));
@@ -83,6 +85,9 @@ internal static class SvgTextTests
         TestAssert.Contains("0 0 400 160 re", group.ToString());
         TestAssert.Equal(0, group.StateDepth);
         TestAssert.Equal(1, LabelPaths(group.ToString()));
+        const string compound = "translate(5 7) rotate(15)";
+        TestAssert.Equal(Paint(Svg("<g transform=\"" + compound + "\">" + text + "</g>")).ToString(),
+            Paint(Svg(text.Replace("<text ", "<text transform=\"" + compound + "\" ", StringComparison.Ordinal))).ToString());
     }
 
     public static void SvgLabelOpacityGroupsRemainVectorOnlyAndKeepUnsupportedSiblingsExplicit()
