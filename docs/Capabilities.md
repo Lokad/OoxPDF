@@ -78,12 +78,14 @@ Supported within the following constraints:
   their circle. Rich titles inherit paragraph run defaults; custom labels retain
   their point/container scope and direct run overrides. Authored frames, side
   furniture, label clearance and manual-factor mapping remain approximate. Pie
-  factor-X offsets keep the automatic horizontal center when an authored width
-  resizes the plot; edge-X positions retain their authored rectangle. Manual
+  factor offsets reference the automatic center in both axes, including measured
+  title/legend space; edge coordinates retain their existing authored placement. Manual
   2D-pie radii fit the smaller authored viewport dimension, preserving explosion
   reservation and label clearance. Eight cached unlabeled/unexploded controls
-  qualify that extent; other heights/labels/explosion geometry, manual Y, side
-  anchors and authored legend coordinates remain approximate.
+  qualify that extent; six factor-Y controls also pass their position/image gates.
+  Other heights/labels/explosion geometry, edge Y, side anchors and authored legend
+  coordinates remain approximate. Extreme out-of-frame plot offsets can retain a
+  diagnosed unfit legend with omitted names.
   Whole and split rich data labels admit their measured horizontal paint extent;
   automatic polar labels move complete text/key/background/link units into measured
   rows when they fit. Authored coordinates remain fixed; conflicting or unfit rows

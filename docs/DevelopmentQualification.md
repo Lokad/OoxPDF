@@ -4,22 +4,28 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-Automatic polar labels now place complete measured units in separate rows when
-needed. In two causal controls, two labels move about 8.74pt and both overlapping
-pairs disappear; all 832 measured glyphs remain unclipped, with text/GIDs/X/styles
-and non-label paint unchanged. Backgrounds, keys, clips and rich-text links follow
-the same placement. Authored coordinates remain fixed; unfit arrangements retain
-source placement with a warning. Both hosts pass 39 focused checks; the parent fails
-the actual ink-overlap assertion. Eight cached controls and seven neighbor PDFs
-(four portfolio outcomes) remain exact. Existing Office thresholds and failures
-are retained; this does not establish general wrapping or application-view parity.
-The broader gate for this local runtime is pending. Publication remains deferred.
+Manual pie factor offsets now reference the same automatic frame in both axes,
+including measured title and legend space. Six independent cached controls reduce
+Y error from 30.186pt to 0.003pt at the unchanged 1pt gate; six formerly failing
+image comparisons now pass. Both side cases still fail, with Y error reduced from
+43.416pt to 15.12pt. All 48 legend names and 536 measured glyphs remain complete;
+X, radius, text and other paint stay unchanged. Four compound-label controls retain
+832 uncut glyphs without measured label collisions. Two final paints were viewed.
+Windows and Ubuntu each pass 67 focused checks, joining two test-only repairs
+without replaying the other 65 checks. The parent fails the measured-Y regression;
+all original failures are retained. Seven neighboring PDFs, including four portfolio
+outcomes, remain exact. An extreme out-of-frame Y still omits six legend names with
+an existing overflow warning in both parent and candidate; this is an explicit
+unfit fallback, not content-completeness evidence. No new Office action or view
+calibration occurred. The broader gate for this Y correction is pending.
 
-The preceding shared clipping correction removed 75 cut glyphs. Its coherent CI
-and same-package Windows/Linux, net10/net11 consumer gate passed; the selected
-B22 development package still belongs to that preceding source. A fixed .19-width
-wrapping prediction matched only 10 of 18 cached Office label groups and was rejected
-as a universal rule. Those references/baselines remain available for future work.
+Automatic polar labels also place complete measured text/key/background/link units
+in separate rows when needed, retaining authored/unfit fallbacks. The preceding
+admission source passed Windows/Linux CI, both frameworks and four consumers of
+the same package. The selected 6E96 development package belongs to that source,
+before the Y correction. Publication and broader acceptance remain deferred.
+A fixed .19-width wrapping prediction matched only 10 of 18 cached Office label
+groups and was rejected as a universal rule; wrapping remains approximate.
 
 Manual 2D-pie radii now follow the smaller authored viewport dimension through
 shared fitting. Eight pinned cached Office controls improve from up to 16.633pt
@@ -27,9 +33,9 @@ radius error to at most 0.004pt at the unchanged 1pt gate. All 48 legend names a
 536 measured glyphs remain complete and unclipped; centers, text and colors stay
 exact. Both hosts pass 23 focused checks, joining one explicit-label fixture repair
 without replaying the other 22. The parent fails the real radius assertion. Seven
-neighbor PDFs, including four portfolio outcomes, remain exact. All eight image
-gates still fail: six MAEs improve and two worsen with unresolved center errors.
-Manual height/label/explosion Office geometry, Y/side/legend anchors and application
+neighbor PDFs, including four portfolio outcomes, remain exact. Before the factor-offset correction above, all eight image
+gates still failed: six MAEs improved and two worsened with unresolved centers.
+Manual height/label/explosion Office geometry, edge-Y/side/legend anchors and application
 view remain unqualified. The prior factor-X correction and bounded-offset repair
 remain covered. Broader framework/package results still belong to their exact
 artifacts; the radius batch passed Windows/Linux CI, while the selected package

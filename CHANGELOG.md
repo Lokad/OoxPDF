@@ -13,7 +13,7 @@
   and explicit breaks remain respected.
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
   qualified authored horizontal legends retain every name; manual pie viewports
-  own their radius and horizontal factor reference. Whole and rich chart labels
+  own their radius and use the measured automatic frame for factor offsets in both axes. Whole and rich chart labels
   share measured clipping; automatic polar labels avoid measured collisions while
   preserving authored/unfit fallbacks. Dense wrapping remains approximate. Merged-table content,
   font fallback, text/link geometry and preset arcs also improve.
