@@ -103,6 +103,12 @@ deletion strikes to revised literals; structural symbols retain qualified author
 ink. Unowned metadata, move ranges, unknown/deeper/multiple/nested revision wrappers
 retain fallbacks. This does not establish arbitrary revised-equation support.
 
+An unsupported equation with valid retained revision owners does not suppress
+independently supported neighboring content. Its actual literal/control sources
+establish ownership separately from paint eligibility. The unknown equation stays
+diagnosed and omitted; empty-only, copied or unresolved owners keep their fallback.
+Authored change bars retain their existing markup-mode behavior.
+
 Readable empty mathematical runs beside actual revised content preserve the same
 revision owner, including runs containing only known properties or nonprinting
 markers. Empty-only revision wrappers do not establish an owner. Unknown empty
