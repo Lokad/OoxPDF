@@ -39,29 +39,23 @@ internal static class DocxFieldsTests
         foreach (int cachedRuns in new[] { 0, 1, 2 })
         {
             var document = ReadComputedFieldLink(kind, cachedRuns, mode);
-            var paragraph = document.Paragraphs.Single(value => value.Hyperlinks.Count != 0);
-            var field = paragraph.FieldReferences.Single();
-            var outside = paragraph.Runs.Single(value => value.Text.Contains("outside", StringComparison.Ordinal));
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
                     : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
-            TestAssert.Contains("2 outside.", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[1], true)
-                .Select(show => show.Text)));
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[1], true).ToArray();
+            TestAssert.Contains("2 outside.", string.Concat(shows.Select(show => show.Text)));
             var annotation = pages[1].Annotations.Single();
             TestAssert.Equal(0, annotation.Destination!.Value.PageIndex);
-            var line = renderer.InspectTextEmission(document).Lines.Single(value =>
-                value.PageIndex == 1 && value.ContainerStoryKind == "Body");
-            var result = line.Segments.Single(value => !value.IsTerminalLineSpace &&
-                value.SourceTextRunIndex == field.SourceRunIndex);
-            var following = line.Segments.Single(value => !value.IsTerminalLineSpace &&
-                value.SourceTextRunIndex == outside.SourceRunIndex);
-            TestAssert.True(annotation.X <= result.X + result.Width/2 &&
-                annotation.X + annotation.Width >= result.X + result.Width/2 &&
-                annotation.Y <= result.BaselineY && annotation.Y + annotation.Height >= result.BaselineY,
+            var following = shows.Single(show => show.Text.Contains("outside", StringComparison.Ordinal));
+            var result = shows.Single(show => show.Text == "2" && Math.Abs(show.Y - following.Y) < 0.01d);
+            double resultCenter = (result.X + following.X) / 2;
+            TestAssert.True(annotation.X <= resultCenter && annotation.X + annotation.Width >= resultCenter &&
+                annotation.Y <= result.Y && annotation.Y + annotation.Height >= result.Y,
                 "The actual resolved field glyph must remain clickable.");
-            TestAssert.True(annotation.X + annotation.Width < following.X + following.Width/2,
+            TestAssert.True(annotation.X + annotation.Width < following.X +
+                following.Font.MeasureTextPoints(following.Text, following.Size) / 2,
                 "The following authored text must not become part of the computed field's link.");
         }
     }
