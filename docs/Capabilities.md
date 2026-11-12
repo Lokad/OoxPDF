@@ -476,6 +476,9 @@ Supported within the following constraints:
 - Body paragraphs/runs, common run/paragraph/document defaults and styles,
   margins/page sizes, paragraph spacing/line-height inheritance and basic page
   breaking. Qualified section/page/column breaks retain their explicit limits.
+  Ordinary text and ordered picture/math paragraphs share widow/orphan admission;
+  authored opt-out remains effective. This does not qualify column balancing or
+  arbitrary Word pagination.
   Authored point-based spacing at explicit page starts follows local paragraph/run
   break ownership in unscaled layouts.
 - Latin font resolution through explicit families, themes and font-table alternates.

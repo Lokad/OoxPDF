@@ -61,7 +61,8 @@ manifest pass, PDF structural pass or matching page count is not an Office parit
 claim. Record unresolved extraction/field flags and raw annotation mismatches
 separately from source-backed visible bounds.
 
-Current results and evidence identities live in [PreviewQualification.md](PreviewQualification.md).
+Current results and evidence identities live in
+[0.3.0 development qualification](DevelopmentQualification.md).
 The dated RV06/RV21 inventories and obsolete per-case totals remain in
-[Git history](https://github.com/Lokad/OoxPDF/blob/78e7589ef3f0ddc9b1fbc38c94fa6743fd7fde16/docs/DocxMarkupFidelityTriage.md)
+Git history (commit `78e7589ef3f0ddc9b1fbc38c94fa6743fd7fde16`)
 and the explicit [composition history](CompositionCheckpoint.md).

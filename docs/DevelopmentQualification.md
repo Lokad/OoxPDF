@@ -577,6 +577,14 @@ All 64 continuation-note markers remain on Word's pages in each mode. These
 checks reuse frozen PDFs, preserve the failed image gates and do not establish
 arbitrary SVG/effect occlusion or application-view parity.
 
+The complete fixed-portfolio PNG screen binds all 22 image paints to exact source
+pixels, reusing six prior controls and adding sixteen final-paint controls.
+Twenty retain the complete isolated-source foreground. Two page-two footer/cell
+instances retain three/two pixels above the unchanged 16-channel-unit threshold
+at 288 DPI; both source bindings and page bounds pass. These residuals remain
+open. No missing picture was demonstrated; this does not prove arbitrary image
+occlusion or replace the fourteen failed DOCX image comparisons.
+
 Painted glyph/picture checks supplement source-text presence, extraction and image
 scores. These bounded checks do not establish arbitrary nonrectangular clipping,
 image occlusion, reading order or application-view parity. Oblique/mask clips,
@@ -610,9 +618,11 @@ the original 0.01pt ink gate still fails. This cosmetic residual is deferred.
   The exact composed-source clip remains unqualified. These supplemental Word
   PDFs use default Final and do not qualify the public AllMarkup gates or
   application view. Four original image-threshold failures remain unchanged.
-- General note-row fragmentation/overflow, body/nested-table origins, floating
+- Pinned body/nested-table origins now pass all 32 strengthened container outcomes
+  at the original 1pt threshold. Conflicting historical Word anchors and unmeasured
+  combinations remain open. General note-row fragmentation/overflow, floating
   table placement, custom Review canvas, numbering, annotations and typography
-  remain open. Unfit fixed-line picture slots keep their clipped fallback.
+  retain their stated limits. Unfit fixed-line picture slots keep their clipped fallback.
 - The inherited unspaced picture/word witness belongs to pinned DejaVu Math,
   correcting its earlier Sans attribution. Its negative A bearing overlaps the
   later image by 0.072pt in body and cell controls, failing the original 0.01pt
