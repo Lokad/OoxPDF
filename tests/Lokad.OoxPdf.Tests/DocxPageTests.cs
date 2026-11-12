@@ -1909,9 +1909,7 @@ internal static class DocxPageTests
             .ToArray();
         var document = new DocxDocument(
             160d,
-            // Leave 29pt: the 10pt keeper plus the indented, two-line row do not
-            // fit. Exact-fitting frames are now correctly admitted separately.
-            79d,
+            80d,
             10d,
             10d,
             10d,
@@ -1955,7 +1953,9 @@ internal static class DocxPageTests
             .ToArray();
         var document = new DocxDocument(
             160d,
-            80d,
+            // Leave 29pt: the 10pt keeper plus the indented, two-line row do not
+            // fit. Exact-fitting frames are now correctly admitted separately.
+            79d,
             10d,
             10d,
             10d,
