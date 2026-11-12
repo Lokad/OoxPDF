@@ -12,6 +12,7 @@ internal static partial class PptxLegendRowsTests
         // wide frames. X uses measured fonts, so portable assertions check the
         // opposite slots and paired source offsets instead of assuming Aptos.
         var geometry = new Dictionary<string, (double X, double Y, double Radius)>();
+        var legends = new Dictionary<string, (string Text, double X, double Y)[]>();
         foreach (var (id, hash, manual) in new[]
         {
             ("left", "197D1BDB00A2508951DE8CD3DE631E1AB3D96918BC16BA383C9EB7CB04D63942", false),
@@ -33,13 +34,24 @@ internal static partial class PptxLegendRowsTests
                 $"{id}: the source-paired Office Y and extent must survive font-dependent side allocation.");
             string names = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false).Select(show => show.Text));
             foreach (int index in Enumerable.Range(1, 6)) TestAssert.Contains("Category " + index, names);
+            legends.Add(id, DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false)
+                .Where(show => show.Text.StartsWith("Category ", StringComparison.Ordinal))
+                .Select(show => (show.Text, show.X, show.Y)).ToArray());
         }
         TestAssert.True(geometry["left"].X > 360d && geometry["right"].X < 360d &&
             Math.Abs(geometry["left"].X + geometry["right"].X - 720d) < .002d,
             "Equal left/right legend content reserves opposite slots around the same frame.");
         foreach (string side in new[] { "left", "right" })
+        {
             TestAssert.True(Math.Abs(geometry[side + "-manual"].X - geometry[side].X - 57.6d) < .002d,
                 "Manual factor offsets retain the measured automatic side-frame owner.");
+            TestAssert.Equal(6, legends[side].Length);
+            TestAssert.Equal(6, legends[side + "-manual"].Length);
+            foreach (var (automatic, manual) in legends[side].Zip(legends[side + "-manual"]))
+                TestAssert.True(automatic.Text == manual.Text && Math.Abs(automatic.X - manual.X) < .002d &&
+                    Math.Abs(automatic.Y - manual.Y) < .002d,
+                    "Default side legends keep their chart-frame owner when only plot geometry changes.");
+        }
     }
 
     public static void PptxPieSideSlotsFollowContentAndRetainCompleteLabels()
