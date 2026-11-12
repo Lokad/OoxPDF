@@ -637,6 +637,24 @@
     "DocxNoteMathFieldsStaticTablesPreserveCompleteMixedContent",
     "DocxNoteMathFieldsStaticTablesRetainExactClippedAndUnsupportedFallbacks"
   ],
+  "docx-note-reference-identity": [
+    "DocxAutomaticNoteReferencesWithEqualLabelsKeepDistinctLinks",
+    "DocxAutomaticNotePictureRunBoundariesPreserveVisibleContent",
+    "DocxNumericNoteIdsKeepStoriesAndNavigationAcrossAliasSpellings",
+    "DocxSectionNoteNumberLinksKeepRepeatedLabelsDistinct",
+    "DocxElevenPointInheritedFontKeepsCompleteNoteAndLinkOwners",
+    "DocxCustomNoteMarksHonorExplicitFalseFlags",
+    "DocxCustomNoteMarksLinkOnlyTheirFirstVisibleCharacter",
+    "DocxCustomNoteMarksRequireOwnedVisibleSourceAndTarget",
+    "DocxCustomNoteMarksKeepRepeatedMarksAndDestinationsDistinct",
+    "DocxCustomNoteMarksOwnOffsetsWithinSharedSourceRuns",
+    "DocxInlineCompositionCellPageNotesPublishOneOwnedParagraphAcrossViews",
+    "DocxInlineCompositionCellPageNotesRejectMissingAmbiguousAndClippedGlyphs",
+    "DocxInlineCompositionCellPageNotesRetainCustomSourceAndTargetIdentities",
+    "DocxInlineCompositionCustomNotesRetainExactSourceOwnersAndFallbacks",
+    "PortableRenderingCustomNotesPreserveMathContentAndFirstGlyphLinks",
+    "DocxMarkupNoteLinksFieldsFixturePreservesPlacedNoteLinksAndFields"
+  ],
   "docx-note-picture-order": [
     "DocxAutomaticNoteReferencesKeepDrawingSourceOrder",
     "DocxAutomaticNotePictureRunBoundariesPreserveVisibleContent",

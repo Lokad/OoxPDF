@@ -77,7 +77,11 @@ internal sealed partial class DocxRenderer
                     DocxTextEmissionSegment marker = segment;
                     if (reference.DisplayText is { } automatic)
                     {
-                        if (reference.DisplayRun is not null && !segment.StyleRun.IsAutomaticNoteReferenceMarker) continue;
+                        // Equal labels in one run can share the same text offset.
+                        // Their captured generated runs remain distinct owners.
+                        if (reference.DisplayRun is not null &&
+                            (!segment.StyleRun.IsAutomaticNoteReferenceMarker ||
+                             !ReferenceEquals(reference.DisplayRun, segment.StyleRun))) continue;
                         if (segment.Text != automatic) continue;
                     }
                     else if (reference.CustomMarkText is { } custom && segment.Text.StartsWith(custom, StringComparison.Ordinal) &&
