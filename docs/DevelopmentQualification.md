@@ -16,12 +16,31 @@ Distinct note references with equal labels also retain their own links within on
 run (`9312cddfe`). Two outputs lose the erroneous overlapping links while retaining
 exact page paint streams, native font programs and pictures; six controls stay
 byte-identical. All four joined/separate pairs match. The parent fails the link
-regression. Windows and Ubuntu each pass16 focused checks with no skips. Native
-programs bind13,802 glyphs without measured cuts/unknowns. All sixteen original
-portfolio PDFs stay exact; two PPTX passes/fourteen DOCX failures remain. New Word
-geometry is unqualified; no new Office action or calibrated-view claim. The prior
-green CI above does not cover this follow-up runtime. Publication, release
-acceptance and the broader roadmap stay open.
+regression. Windows and Ubuntu each pass 20 focused checks with no skips after a
+test-only fixture repair; only the repaired fixture and three neighbors reran.
+Native programs bind 13,802 glyphs without measured cuts/unknowns. CI43201992628/
+source98b8de174 is closed green: Windows 4,826/19 skips, Ubuntu 2,324/133 skips, zero
+failures and 69 net10 checks per host. The preceding failed CI remains recorded;
+its fixture now authors formatting before parsing instead of invalidating parsed
+note owners. The original geometry thresholds remain unchanged.
+
+Cell-local padding now keeps the containing table grid instead of creating an
+inherited text anchor (`505ac9c89`). Body and nested tables share the existing grid
+metadata; explicit zero/nonzero indentation, table/row/style margins and legacy
+controls retain their earlier rules. Eight focused horizontal failures become
+zero at the unchanged 1pt Word threshold (maximum residual 0.264pt). The strengthened
+test covers all 32 independent container outcomes, including previously excluded
+body/nested origins; the parent fails its actual absolute-origin assertion.
+Windows passes 26 focused checks; Ubuntu passes 15 with 11 reviewed Windows-font
+skips. The initial incomplete skip declaration remains recorded without rerunning
+tests. Ten outputs retain every native character/GID and picture; 1,060 bound
+glyphs have no measured cuts or unknowns. Four protected control PDFs and all
+sixteen original portfolio PDFs/diagnostics stay exact. Two PPTX passes/fourteen
+DOCX image failures remain. A shared-scale before/after/Word crop was reviewed;
+new Office actions remain prohibited and application-view calibration unfinished.
+Historical conflicting Word anchors remain unresolved. The table follow-up still
+needs its coherent CI/framework/package gate; publication, release acceptance and
+the broader roadmap stay open.
 
 Computed PAGE/NUMPAGES results now remain atomic beside pictures in the same source
 run (`4da834039`). Four failing Final/Review outputs become byte-identical to their

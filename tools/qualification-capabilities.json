@@ -650,6 +650,7 @@
     "DocxStaticTableAuthoredMarginsKeepContainerGrid",
     "DocxStaticTableOriginKeepsIndentStyleAndCompatibilityFallbacks",
     "DocxCustomTableMarginsMatchIndependentWordContentOrigins",
+    "DocxCustomTableMarginsKeepIncompleteInheritanceFallbacks",
     "DocxStyleMarginsPinTextAtMarginWithoutCompat",
     "DocxDirectMarginsReplaceStyleMarginsForTextOffset",
     "DocxIndentedTablePinsTextAtIndentOrigin",

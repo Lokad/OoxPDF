@@ -34,6 +34,12 @@ offsets; neither accepts unresolved whole-body offsets. Portable checks use the
 same source files and cover painted links. Thirteen native-font checks declare
 their Windows precondition; Ubuntu runs the other 27 on the same frozen runtime.
 
+`docx-cell-margin-grid-ownership` selects 26 methods for cell-local versus inherited
+padding, explicit indentation, style/row/compatibility fallbacks, nested/static
+placement and memo replay at changed origins. Absolute Word origins cover all 32
+container outcomes at 1pt; relative checks additionally protect nested placement.
+Windows runs all 26; Ubuntu runs 15 and declares 11 Windows-font skips.
+
 `docx-fixed-static-frames` selects 45 methods covering declared-line measurement,
 static placement, boxed children, navigation, cancellation and clipping fallbacks.
 Its thirteen public sources include fixed/minimum flow, empty/visible paragraphs,
