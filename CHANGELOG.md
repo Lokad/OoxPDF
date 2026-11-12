@@ -12,6 +12,8 @@
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
   qualified authored horizontal legends retain every name. Merged-table content,
   font fallback, text/link geometry and preset arcs also improve.
+- SVG pictures: ordinary text labels now remain visible in DOCX and PPTX as managed
+  glyph outlines; unsupported text features retain explicit diagnostics.
 - Hosting: awaits package, font, staging and output I/O; introduces immutable font
   leases, explicit temporary storage and host-funded bounded caches. Shared memory
   admission remains coarse and partial. Custom resolvers define the complete font

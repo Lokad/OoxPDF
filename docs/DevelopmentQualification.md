@@ -4,6 +4,28 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Ordinary SVG labels now paint through the common DOCX/PPTX image path
+(`06bbe1379`, font-owner integration `fa2184024`). The two synthetic inputs that
+previously painted only a blue rectangle now retain all 13 non-space glyph paints
+per label, inside their diagram viewports, without SVG warnings. Both strict CLI
+conversions succeed and match their default PDFs. Independent Arial source-program
+glyph bounds/advances match all 26 path paints within 0.000382pt; the labels were
+also visually reviewed. These are outlined picture labels, not embedded PDF text:
+source GIDs are known, but no PDF font/GID metadata or pointwise contour proof is
+claimed. No new Office geometry or application-view qualification is implied.
+
+Windows and Ubuntu each pass 28 exact checks with no skips. Failed attempts remain:
+Windows operator assertions initially assumed LF, and the transform assertion had
+an incorrect glyph-Y sign. Test-only repairs reran five methods and then only the
+remaining method; 21 runtime assets and 3,438 public inputs stayed unchanged.
+An explicit affine matrix now isolates the axis contract, with group/element
+equivalence retained for the existing compound-list mapping. Its Office ordering
+remains unqualified. The actual parent fails the missing-label assertion.
+All sixteen composed portfolio PDFs and diagnostics stay byte-identical, preserving
+their independent content evidence and two PPTX passes/fourteen DOCX image failures.
+Broader CI/framework/package qualification for this slice is pending; the previously
+qualified package remains identified below. Publication and broader acceptance stay open.
+
 Automatic note references and pictures now retain source order when their runs
 are joined (`df7000b47`). Four previously failing Final/Review outputs match their
 unchanged separate-run controls; the parent fails the glyph-geometry regression.

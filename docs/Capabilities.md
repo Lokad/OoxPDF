@@ -54,6 +54,10 @@ Supported within the following constraints:
   transforms and supported rectangle/ellipse/rounded/polygon picture masks share
   paint geometry. Unsupported masks retain diagnosed rectangular frames; bounded
   supported shadows/blur retain their qualified fallbacks.
+  Ordinary horizontal SVG labels paint as managed TrueType glyph outlines, sharing
+  font resolution and picture transforms with DOCX. Scalar positions, inherited
+  font size/color and start/middle/end anchors are supported; outlined picture text
+  is not promised to be searchable or selectable. See the SVG limits below.
 - Fixed-grid tables with fills, explicit borders, merged continuations/row spans,
   text and calibrated built-in styles. Cells following horizontal/rectangular
   merges retain their source columns, text, styles and links. Vertical anchoring
@@ -529,6 +533,7 @@ Supported within the following constraints:
   vertical merges and nested/fragmented layout retain qualified restrictions.
 - Inline raster/SVG pictures in qualified body/cell/header/footer containers,
   including supported crop/flips/rotation and source frames. Ordered pictures
+  share the ordinary outlined SVG-label support described above. They
   retain their measured line frame, including beside equations. Rotation preserves
   the independently qualified source-frame origin, source fit and clipping.
   Ordinary text/picture paragraphs preserve visible source order
@@ -793,6 +798,11 @@ Approximate or restricted:
 - SVG gradients follow Office-visible centered focal geometry and smooth preview
   transparency. Broader SVG composition, transformed picture-link combinations
   and some alpha/color effects retain restrictions and explicit residuals.
+  SVG labels require available TrueType outlines; substituted faces/styles warn.
+  Nested text/tspan/textPath, positioning lists, viewport-relative text positions,
+  complex shaping, stylesheet-driven text and text gradients/strokes retain explicit
+  partial diagnostics. Transforms reuse the existing path mapping; compound-list
+  ordering and new source/Office text geometry remain unqualified.
 
 Unsupported: full Word balloon/collision pagination, floating charts, SmartArt,
 live OLE/macros, unrestricted section/column balancing, arbitrary nested/floating
