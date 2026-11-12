@@ -46,10 +46,14 @@ The deletion-only and comment/author controls are raster-identical between modes
 ## Current residuals and scope
 
 The fixed portfolio retains fourteen DOCX strict visual failures, including
-significant geometry/typography differences. The local balloon-wrap regression
-check also fails identically against the preceding qualified DLL (12.61pt versus
-a required second row); its cause remains unresolved. Preserve its assertion and
-existing Office-qualified guards. Do not add another document-shape exception.
+significant geometry/typography differences. The current balloon-wrap check uses
+an explicitly declared Aptos fixture and passes on both current and preceding
+qualified 0.3.0 runtimes, above the unchanged 16pt Office-derived threshold.
+The published 0.2.0 failure used an undeclared-font input. That original input
+still produces one row under the library's fallback font; its Word-default parity
+remains unqualified. These are different source contracts, not a new rendering
+fix. Keep the historical failure, threshold and Office-qualified guards; do not
+add a document-shape exception.
 
 Prioritize missing content, serious clipping/overlap and pagination defects within
 supported scope. Then assess geometry/typography and cosmetic differences. A

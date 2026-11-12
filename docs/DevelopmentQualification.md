@@ -24,9 +24,13 @@ sequences, text geometry and image paints match controls. The parent fails on
 missing mathematical text. The related-story extension reuses the frozen runtime.
 All sixteen portfolio PDFs/diagnostics remain exact, preserving the two PPTX
 passes/fourteen DOCX image failures. Transfer verifies 24 assets/two exact smoke
-PDFs without rebuilding or replaying a suite. One coherent broader gate remains
-pending. The prepared package below is this repair's
-parent; no new package, Office appearance, calibration or release claim is made.
+PDFs without rebuilding or replaying a suite. The coherent gate CI43136688558 on
+`81eae757b` passes: Windows 4,816 checks/19 skips, Ubuntu 2,296/130, 69 .NET 10
+checks per host and four package consumers. Four additional ownership/control/
+cancellation checks pass on each host using the exact CI .NET 10 assembly. Both
+CI-runtime smoke PDFs match, and both Linux frameworks consume the same Windows
+package successfully. The prepared package below contains this repair; Office
+appearance, calibration and release acceptance remain open.
 
 A recolored existing wash overlaps eight denominator font boxes. A selected exact
 fill knockout recovers no dark pixels at 300 DPI, and the inspected words remain
@@ -388,30 +392,29 @@ expected library hash, preserving the original qualified runtime.
 ## Prepared development package payload
 
 The development package and symbols are prepared directly in `artifacts/nuget/`,
-with checksums and a separate qualification record. CI43130020058 / `55c5b06e3`
+with checksums and a separate qualification record. CI43136688558 / `81eae757b`
 supplies both framework libraries, portable symbols and the original package ZIP.
 Windows CI consumed those exact archive bytes; its consumer evidence is reused.
 Both Linux framework consumers pass against the same Windows package, sequentially
 with build servers disabled. No repack or library/root rebuild was needed.
 
-The Windows artifact digest and all 48 frozen runtime assets are verified. Both
-framework package entries match those DLL/PDB bytes; assembly/file versions are
-0.3.0.0 and informational versions identify the same committed build. The package
-SHA-256 is `A8D100730F366AB146C67A8D103848D6379FA4E55311EBD0B67E876575AEE276`.
-All 76 packaged local links are checked. Documentation retains its immutable CI
-snapshot; later qualification notes do not cause another repack. Caller/API docs
-match. The previous `a228b65dd` package, symbols and record are preserved under
-source-qualified names, alongside earlier development assets; published 0.2.0
-is protected. Its earlier Linux consumer-build failure/retry remain historical
-evidence; the current two consumers pass on their first attempts.
+The artifact digest and all 48 frozen runtime assets are verified. Framework
+package entries match those DLL/PDB bytes; assembly/file versions are 0.3.0.0 and
+informational versions identify the same committed build. Package SHA-256:
+`0821E357A0CCD6BC14EBB168EB7B075A6851E180A976F4A0FBFEE304BFE2B911`.
+All 76 packaged local links are checked. Documentation retains the immutable CI
+snapshot; later qualification and triage notes do not cause a repack. Caller/API
+contracts match. Previous `55c5b06e3` package, symbols and record are preserved
+under source-qualified names, alongside earlier development assets; published
+0.2.0 is protected. Both current Linux consumers pass on their first attempts.
 
-Source-runtime portfolio/native evidence remains separate from CI build metadata:
+Source-runtime native/portfolio evidence remains separate from CI metadata:
 sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures. Production/build
-inputs match, and two CI-runtime smokes reproduce the corrected empty-revision
-composition and six-name legend PDFs. No full portfolio or suite replay is claimed
-for transfer. Four additional .NET 10 regressions cover stored pagination markers,
-readable empty revised runs, actual content and unsupported fallbacks on both hosts.
-Seven independently owned public inputs are bound to the CI fixture identities.
+inputs match, and two CI-runtime smokes reproduce the corrected retained-owner
+cell composition and six-name legend PDFs. No full portfolio or suite replay is
+claimed for transfer. Four additional .NET 10 regressions cover retained revision
+owners, neighboring paint, control roles and iterative traversal/cancellation on
+both hosts. Six independently owned public inputs match the CI fixture identities.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover
@@ -433,6 +436,15 @@ scores. These bounded checks do not establish arbitrary nonrectangular clipping,
 image occlusion, reading order or application-view parity. Oblique/mask clips,
 stroked text and unavailable/unsupported font programs remain unqualified. Native
 Python validation runs on Windows; Linux library checks are separate.
+
+The current `DocxWordCompatibleBalloonBodyWrapsLikeOfficeTitles` check passes
+without skips on both the current and preceding qualified 0.3.0 runtimes. Its
+explicit-Aptos fixture reaches 20.999pt above the unchanged 16pt Office threshold,
+with twelve primary font resolutions and no fallback. The original undeclared-
+font input still uses twelve fallback runs and a 12.262pt second balloon. The
+published 0.2.0 failure remains historical evidence; differing source font
+contracts do not prove an original-input rendering fix or Word-default parity.
+No renderer, assertion or font policy changed during this residual check.
 
 A custom resolver mapping all text to pinned DejaVu Math exposes a small clipped
 initial footnote A: 0.066pt in Final/0.050pt in Review. The same bearing overhang

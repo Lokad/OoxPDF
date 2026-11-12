@@ -19,10 +19,12 @@ includes all nine pinned sources. Default measurement and content-audit commands
 use it; the older seven-source checkpoint manifest has been retired.
 
 Independent Office references and thresholds remain fixed. Two PPTX strict gates
-pass; fourteen DOCX strict gates retain typography/geometry failures. The inherited
-balloon second-row assertion, SVG Review Y 1.436035pt against 1pt, raw Word
+pass; fourteen DOCX strict gates retain typography/geometry failures. The published
+0.2.0 balloon second-row failure, SVG Review Y 1.436035pt against 1pt, raw Word
 footnote annotation mismatch and two field/extraction flags remain explicit in
-[current qualification](PreviewQualification.md). Correct PDF structure and
+[published qualification](PreviewQualification.md). The current explicit-Aptos
+balloon check passes; the original undeclared-font comparison remains unqualified.
+See [development qualification](DevelopmentQualification.md). Correct PDF structure and
 manifest validity are separate from Office fidelity.
 
 Those are retained historical results: sixteen original Office reference PDFs
