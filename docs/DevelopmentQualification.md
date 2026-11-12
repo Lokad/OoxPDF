@@ -1,8 +1,20 @@
 # 0.3.0 development qualification
 
-Updated 2026-11-12. **0.3.0 is not published and is not a completed release
+Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
+
+Hidden run page/column breaks now use the same resolved visibility as text before
+structural admission. An inserted hidden page break previously moved the public
+letter's remainder to page two in both Final and Review; both corrected PDFs now
+exactly match the original one-page letter. Visible-break controls remain exact.
+Fifteen focused checks pass on each host, including inherited styles, explicit
+visible overrides, composed math/pictures/navigation and existing break fallbacks.
+Both regressions fail against the parent. All fourteen DOCX portfolio PDFs remain
+byte-identical, preserving their content/ink evidence and fourteen image failures.
+One frozen Release build supplies both hosts and the transfer of 24 assets plus
+two exact smokes. No new Word export or transformed-input pagination parity claim.
+Broader/framework/package qualification for this slice remains pending.
 
 Side-pie plots and default legends now share measured chart-frame ownership.
 Existing side-legend allocation and pie fitting replace inherited plot ratios;
@@ -26,11 +38,13 @@ exact, reusing the latter's 832-glyph ink/paint proof. Two final side paints wer
 viewed. No new Office action or application-view calibration occurred.
 
 The preceding factor-Y correction reduced six errors from 30.186pt to 0.003pt and
-passed Windows/Linux CI, both frameworks and package checks. Its intermediate
-payload is skipped while this coherent side-frame batch is qualified. The selected
-6E96 package still predates both corrections. An extreme out-of-frame Y retains
+passed Windows/Linux CI, both frameworks and package checks. The subsequent
+side-frame gate also closed green: Windows 4,852 and Ubuntu 2,364 passing tests,
+85 .NET 10 checks per host and four same-package consumers. The selected AE5A
+package includes both polar corrections and predates the hidden-break slice above.
+An extreme out-of-frame Y retains
 a diagnosed legend omission in the earlier bottom-legend path; it is not content
-completeness evidence. The current broader gate and publication remain deferred.
+completeness evidence. Broader acceptance and publication remain deferred.
 A fixed .19-width wrapping prediction matched only 10 of 18 Office label groups
 and was rejected as a universal rule; wrapping remains approximate.
 
@@ -45,8 +59,8 @@ gates still failed: six MAEs improved and two worsened with unresolved centers.
 Manual height/label/explosion Office geometry, edge-Y/side/legend anchors and application
 view remain unqualified. The prior factor-X correction and bounded-offset repair
 remain covered. Broader framework/package results still belong to their exact
-artifacts; the radius batch passed Windows/Linux CI, while the selected package
-precedes both recent local slices. Publication is deferred.
+artifacts; the later AE5A package includes these polar corrections. Publication
+is deferred.
 
 DOCX keep-with-next groups now admit once per source group (`7c94a3470`). Two
 oversized plain/mixed chains and one exact-fitting keep-lines control previously

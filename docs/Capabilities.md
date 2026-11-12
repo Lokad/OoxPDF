@@ -691,7 +691,8 @@ Approximate or restricted:
   group. Local declarations override the retained document math default.
   Ordinary source text, including spaces and hidden text, links and pictures
   retain inline math without discarding neighboring formulas. Hidden text is
-  unpainted; hidden manual-break geometry remains approximate.
+  unpainted. Body page/column breaks and standalone cell page breaks honor resolved
+  run visibility, including inherited styles and explicit visible overrides.
   Authored body page breaks retain supported formulas, prose, pictures and note
   references in source order. Links can span the resulting pages; bookmarks target
   the first placed source content. This content-preservation coverage does not
