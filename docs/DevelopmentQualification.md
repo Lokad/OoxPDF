@@ -38,9 +38,31 @@ glyphs have no measured cuts or unknowns. Four protected control PDFs and all
 sixteen original portfolio PDFs/diagnostics stay exact. Two PPTX passes/fourteen
 DOCX image failures remain. A shared-scale before/after/Word crop was reviewed;
 new Office actions remain prohibited and application-view calibration unfinished.
-Historical conflicting Word anchors remain unresolved. The table follow-up still
-needs its coherent CI/framework/package gate; publication, release acceptance and
-the broader roadmap stay open.
+Historical conflicting Word anchors remain unresolved. Combined CI43206178920/
+source358d5c907
+is now closed green: Windows 4,826/19 skips, Ubuntu 2,325/133 skips, zero failures.
+Each host passes 69 net10 checks plus 5 Windows/4 Ubuntu exact supplements. Both
+Linux frameworks consume the same Windows package. Publication, release acceptance
+and the broader roadmap stay open.
+
+Ordered body paragraphs now share widow/orphan fragment selection with ordinary
+text and continued notes (`3abcf3afc`, harness `d31bd3d3c`). Adding a 6pt inline
+picture to an authored 20pt line had left the first line of a three-line paragraph
+on the preceding page despite default widow control. Two Final/Review outputs now
+keep the paragraph together; six control PDFs, including explicit opt-out, stay
+exact. Head/tail tests also cover equations, pictures, both, text-only controls,
+PAGE rebinding and bookmark destinations. The actual parent pagination assertion
+fails. Windows passes 21 focused checks; Ubuntu passes 16 with five declared Windows
+Arial skips. One new assertion assumed a whitespace separator between PDF text
+operations; only that method reran per host after a test-only repair, retaining
+the original attempts and expected digit/picture/destination checks. Twenty-one
+runtime assets and 3,438 inputs remain identical. Eight native screens bind 296
+glyphs with no measured cuts or unknowns; a before/after page crop was reviewed.
+All sixteen portfolio PDFs/diagnostics remain exact, preserving two PPTX passes
+and fourteen DOCX image failures. New source/Word pagination and application-view
+calibration remain unqualified. Runtime, framework and package closure is recorded
+separately beside the selected payload; these local results retain their producing
+identity. No Office action or root rebuild occurred.
 
 Computed PAGE/NUMPAGES results now remain atomic beside pictures in the same source
 run (`4da834039`). Four failing Final/Review outputs become byte-identical to their

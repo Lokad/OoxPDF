@@ -77,6 +77,12 @@ Plain labels, automatic labels and legend-key units use actual bar centers.
 
 DOCX layout is flow-based. The renderer converts twips to points, computes the content rectangle from page size and margins, performs simple greedy Latin line breaking, handles keep rules, split table rows with repeated headers, floating-drawing exclusion geometry, and markup balloon contexts, advances a page cursor, and creates new pages when content crosses the bottom margin. Headers and footers are drawn on each produced page.
 
+Ordinary text, ordered inline body content and continued notes select paragraph
+fragments through the same widow/orphan rule. Ordered placement admits a fragment
+before consuming source lines, retaining counter rebinding at the next page and
+progress for content that cannot fit an empty frame. Frame width or counter changes
+rewrap only the unplaced source; explicit widow-control opt-out remains effective.
+
 Cell-local table padding offsets content within its containing grid. An inherited
 table/row/style left margin or authored indentation can separately own the text
 anchor, including explicit zero indentation. Reader resolution records this
