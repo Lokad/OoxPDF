@@ -196,7 +196,8 @@ internal static partial class DocxMathParser
     private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
     private static bool IsRevisionContent(XElement element) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
-            element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
+            (element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0) ||
+             IsReadableRun(element) && HasSupportedRunProperties(element)));
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
@@ -283,11 +284,22 @@ internal static partial class DocxMathParser
         return new(value, false);
     }
 
+    // Revision admission and leaf parsing share the same zero-content run shape.
+    // Visible unknown payloads retain their former deferred fallback; an empty
+    // unknown payload cannot become a supported revision owner.
+    private static bool IsReadableRun(XElement element) =>
+        element.Name == MathNamespace + "r" && element.Elements().All(child =>
+            child.Name == MathNamespace + "t" || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
+            IsNonPrintingMarker(child));
+
+    private static bool HasSupportedRunProperties(XElement element) =>
+        element.Element(MathNamespace + "rPr")?.Elements().Any(property =>
+            property.Name != MathNamespace + "sty" && property.Name != MathNamespace + "scr" &&
+            property.Name != MathNamespace + "nor") != true && HasSupportedNormalTextProperty(element);
+
     private static DocxMathNode ReadLeaf(XElement element, Func<XElement, string, DocxTextRun> readRun)
     {
-        if (element.Name == MathNamespace + "r" && element.Elements().All(child =>
-            child.Name == MathNamespace + "t" || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
-            IsNonPrintingMarker(child)))
+        if (IsReadableRun(element))
         {
             return new DocxMathRun(
                 readRun(element, string.Concat(element.Elements(MathNamespace + "t").Select(text => text.Value))),
@@ -298,9 +310,7 @@ internal static partial class DocxMathParser
                     ? Lokad.OoxPdf.Ooxml.OoxBoolean.ParseElement(authoredNormal, false, valueAttributeName: MathNamespace + "val") : null,
                 ExplicitFontFamily = (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "ascii")
                     ?? (string?)element.Element(WordprocessingNamespace + "rPr")?.Element(WordprocessingNamespace + "rFonts")?.Attribute(WordprocessingNamespace + "hAnsi"),
-                HasUnsupportedProperties = element.Element(MathNamespace + "rPr")?.Elements().Any(property =>
-                    property.Name != MathNamespace + "sty" && property.Name != MathNamespace + "scr" &&
-                    property.Name != MathNamespace + "nor") == true || !HasSupportedNormalTextProperty(element)
+                HasUnsupportedProperties = !HasSupportedRunProperties(element)
             };
         }
         return Unsupported(element);

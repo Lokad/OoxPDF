@@ -18499,8 +18499,10 @@
     "DocxMathMatrixMalformedAndOrphanRowsRetainTraversedSource",
     "DocxMathNormalTextPropertiesRetainTypedDefaultsAndMalformedFallback",
     "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
+    "DocxMathRevisionAdmissionSharesReadableEmptyRunRules",
     "DocxMathRevisionBoundariesPreservePaintAndFiltering",
     "DocxMathRunNonPrintingMarkersRetainTextAndFallbacks",
+    "PortableRenderingEmptyRevisedMathRunsKeepFractions",
     "PortableRenderingMathRunPaginationHintsKeepComposedContent",
     "PortableRenderingRevisedInlineBoxesKeepVisibleSourceContent"
   ]
