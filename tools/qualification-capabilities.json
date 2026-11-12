@@ -18505,5 +18505,15 @@
     "PortableRenderingEmptyRevisedMathRunsKeepFractions",
     "PortableRenderingMathRunPaginationHintsKeepComposedContent",
     "PortableRenderingRevisedInlineBoxesKeepVisibleSourceContent"
+  ],
+  "docx-unsupported-equation-siblings": [
+    "DocxUnsupportedEquationRevisionsRetainActualOwners",
+    "PortableRenderingUnsupportedRevisedEquationsKeepSupportedSiblings",
+    "DocxInlineCompositionControlRevisionsRetainActualOwnersAndRoleFallbacks",
+    "DocxInlineCompositionStructuralFragmentsKeepActualOwnersAndDeletionFrames",
+    "DocxInlineCompositionStructuralFragmentsKeepUnknownDeeperAndNestedFallbacks",
+    "PortableRenderingControlRevisionsKeepContentAndInk",
+    "PortableRenderingStructuralFragmentsKeepContentAndSourceInk",
+    "DocxMathMatrixDeepTraversalAndCancellationRemainIterative"
   ]
 }

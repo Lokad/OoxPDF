@@ -23,12 +23,24 @@ internal static partial class DocxMathLayout
         // actual roles in source order; painted runs cannot stand in for an
         // empty child's metric owner. Hidden operator roles remain unvisited.
         var controls = new List<IDocxMathControl>();
+        foreach (var node in EnumerateRetainedSources(equation.Content, token))
+        {
+            if (node is DocxMathUnsupported or DocxMathMatrixRow) return [];
+            if (node is IDocxMathControl control) controls.Add(control);
+        }
+        return controls;
+    }
+
+    // Retained parsed sources are also meaningful when the whole equation cannot
+    // be painted. Ownership uses the same roles without admitting its grammar.
+    internal static IEnumerable<DocxMathNode> EnumerateRetainedSources(DocxMathNode root, CancellationToken token)
+    {
         var pending = new Stack<DocxMathNode>();
-        pending.Push(equation.Content);
+        pending.Push(root);
         while (pending.TryPop(out var node))
         {
             token.ThrowIfCancellationRequested();
-            if (node is IDocxMathControl control) controls.Add(control);
+            yield return node;
             switch (node)
             {
                 case DocxMathRow row:
@@ -61,11 +73,14 @@ internal static partial class DocxMathLayout
                     for (int r = matrix.Rows.Count - 1; r >= 0; r--)
                         for (int c = matrix.Rows[r].Cells.Count - 1; c >= 0; c--) pending.Push(matrix.Rows[r].Cells[c]);
                     break;
-                case DocxMathRun: break;
-                default: return [];
+                case DocxMathMatrixRow matrixRow:
+                    for (int c = matrixRow.Cells.Count - 1; c >= 0; c--) pending.Push(matrixRow.Cells[c]);
+                    break;
+                case DocxMathUnsupported unsupported:
+                    for (int i = unsupported.Children.Count - 1; i >= 0; i--) pending.Push(unsupported.Children[i].Content);
+                    break;
             }
         }
-        return controls;
     }
 
     internal static IReadOnlyList<IDocxMathControl> GetMetricOnlyControls(DocxEquation equation,

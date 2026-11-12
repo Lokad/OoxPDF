@@ -261,7 +261,7 @@ internal static class DocxInlineContent
                 ? paragraph.ParagraphMarkRun : null, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
             paragraph.ConsumedParagraphMarks, paragraph.PropertyRevision, paragraph.InlineTextBoxes);
 
-    // Reference identity and measured source position establish actual owners.
+    // Reference identity and captured source position establish actual owners.
     // The hint avoids rediscovering unchanged math; it cannot invent ownership.
     internal static bool TryGetEquationRevisionOwners(DocxEquation equation, CancellationToken token,
         out IReadOnlyList<DocxRevisionInfo> owners)
@@ -269,28 +269,53 @@ internal static class DocxInlineContent
         owners = [];
         token.ThrowIfCancellationRequested();
         if (equation.Revision is null && !equation.HasRunRevisions) return true;
-        if (equation.SourceRunIndex < 0 || !DocxMathLayout.TryGetRuns(equation, token, out var runs)) return false;
+        if (equation.SourceRunIndex < 0) return false;
         var actual = new List<DocxRevisionInfo>();
         var seen = new HashSet<DocxRevisionInfo>(ReferenceEqualityComparer.Instance);
-        var controls = DocxMathLayout.GetControlSources(equation, token);
-        if (runs.Count == 0 && controls.Count == 0) return false;
-        foreach (var control in controls)
+        if (DocxMathLayout.TryGetRuns(equation, token, out var runs))
         {
-            token.ThrowIfCancellationRequested();
-            if (control.ControlText is { } source)
-            { if (!AddOwner(source)) return false; }
-            else if (runs.Count == 0) return false;
+            var controls = DocxMathLayout.GetControlSources(equation, token);
+            if (runs.Count == 0 && controls.Count == 0) return false;
+            foreach (var control in controls)
+            {
+                token.ThrowIfCancellationRequested();
+                if (control.ControlText is { } source)
+                { if (!AddOwner(source)) return false; }
+                else if (runs.Count == 0) return false;
+            }
+            foreach (var source in runs)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!AddOwner(source.Run.Text)) return false;
+            }
         }
-        foreach (var source in runs)
+        else
         {
-            token.ThrowIfCancellationRequested();
-            if (!AddOwner(source.Run.Text)) return false;
+            // An omitted equation must not invalidate independently supported
+            // siblings. Validate its actual retained sources without painting it;
+            // an empty literal alone still cannot establish revision ownership.
+            bool hasActualSource = false;
+            foreach (var node in DocxMathLayout.EnumerateRetainedSources(equation.Content, token))
+            {
+                if (node is DocxMathRun literal)
+                {
+                    bool hasText = literal.Text.Text.Length != 0;
+                    if (!AddOwner(literal.Text, hasText)) return false;
+                    hasActualSource |= hasText;
+                }
+                else if (node is IDocxMathControl { ControlText: { } source })
+                {
+                    if (!AddOwner(source)) return false;
+                    hasActualSource = true;
+                }
+            }
+            if (!hasActualSource) return false;
         }
         if (equation.Revision is { } primary && !seen.Contains(primary)) return false;
         owners = actual;
         return true;
 
-        bool AddOwner(DocxTextRun run)
+        bool AddOwner(DocxTextRun run, bool countsAsOwner = true)
         {
             token.ThrowIfCancellationRequested();
             if (run.SourceRunIndex != equation.SourceRunIndex ||
@@ -298,7 +323,7 @@ internal static class DocxInlineContent
             if (run.Revision is not { } revision) return run.Revisions.Count == 0;
             if (revision.Kind is not (DocxRevisionKind.Insertion or DocxRevisionKind.Deletion) ||
                 run.Revisions.Count == 0 || run.Revisions.Any(owner => !ReferenceEquals(owner, revision))) return false;
-            if (seen.Add(revision)) actual.Add(revision);
+            if (countsAsOwner && seen.Add(revision)) actual.Add(revision);
             return true;
         }
     }

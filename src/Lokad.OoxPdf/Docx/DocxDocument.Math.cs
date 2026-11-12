@@ -17,7 +17,7 @@ internal sealed record DocxEquation(
     string? PropertiesXml,
     DocxRevisionInfo? Revision)
 {
-    // Discovery hint only; eligibility still verifies actual measured run owners.
+    // Discovery hint only; eligibility still verifies actual retained source owners.
     public bool HasRunRevisions { get; init; }
     public double? ParentFontSize { get; init; }
     public bool Cramped { get; init; }
