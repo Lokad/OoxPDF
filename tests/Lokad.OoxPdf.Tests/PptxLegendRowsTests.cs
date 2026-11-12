@@ -150,7 +150,7 @@ internal static partial class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, double size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null)
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, double size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null, string seriesOptions = "", string dataLabels = "")
     {
         int fontHundredths = (int)Math.Round(size * 100d);
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
@@ -164,7 +164,7 @@ internal static partial class PptxLegendRowsTests
                 $"<c:pt idx=\"{i}\"><c:v>{System.Security.SecurityElement.Escape(categoryNames?[i] ?? $"Category {i + 1}")}</c:v></c:pt>"));
             string values = string.Concat(Enumerable.Range(0, count).Select(i =>
                 $"<c:pt idx=\"{i}\"><c:v>4</c:v></c:pt>"));
-            series = $"<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:cat><c:strLit><c:ptCount val=\"{count}\"/>{categories}</c:strLit></c:cat><c:val><c:numLit><c:ptCount val=\"{count}\"/>{values}</c:numLit></c:val></c:ser>";
+            series = $"<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/>{seriesOptions}<c:cat><c:strLit><c:ptCount val=\"{count}\"/>{categories}</c:strLit></c:cat><c:val><c:numLit><c:ptCount val=\"{count}\"/>{values}</c:numLit></c:val></c:ser>";
         }
         bool polar = kind is "pie" or "doughnut";
         bool bar = !polar && kind != "line";
@@ -177,7 +177,7 @@ internal static partial class PptxLegendRowsTests
         string chart = $$"""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{plotLayout}}<c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}{{(polar ? "" : "<c:grouping val=\"" + (bar ? "clustered" : "standard") + "\"/>")}}
-                <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}{{(polar ? "" : "<c:axId val=\"1\"/><c:axId val=\"2\"/>")}}</c:{{plot}}>
+                <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}{{dataLabels}}{{(polar ? "" : "<c:axId val=\"1\"/><c:axId val=\"2\"/>")}}</c:{{plot}}>
                 {{axes}}
               </c:plotArea><c:legend>{{legendMetadata}}<c:legendPos val="{{legendPosition}}"/><c:overlay val="{{(overlay ? 1 : 0)}}"/>
                 <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="{{fontHundredths}}"/></a:pPr></a:p></c:txPr>

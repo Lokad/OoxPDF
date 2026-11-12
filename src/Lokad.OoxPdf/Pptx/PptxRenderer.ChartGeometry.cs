@@ -162,14 +162,19 @@ internal sealed partial class PptxRenderer
         return (prepared.Layout, prepared.Box);
     }
 
-    private static ChartPolarLayout FitPieLayoutToFrame(ChartPolarLayout layout, ChartPlotBox frame, bool hasVisibleDataLabels)
+    private static ChartPolarLayout FitPieLayoutToFrame(ChartPolarLayout layout, ChartPlotBox frame, bool hasVisibleDataLabels, bool authoredFrame = false)
     {
-        double radius = Math.Max(1d, Math.Min(frame.Width, frame.Height) / 2d - PptxChartMetricRules.PolarPlotSideMargin)
-            / (1d + layout.ExplosionReserve);
+        // Authored viewports own the circle's extent. Automatic placement also
+        // reserves the shared side margin and supplies the center.
+        double radius = Math.Min(frame.Width, frame.Height) / 2d;
+        if (!authoredFrame) radius = Math.Max(1d, radius - PptxChartMetricRules.PolarPlotSideMargin);
+        radius /= 1d + layout.ExplosionReserve;
         // Keep independently qualified label clearance while the placement frame
         // bounds the circle. The source plot remains the authored-label reference.
         if (hasVisibleDataLabels) radius = Math.Min(radius, layout.Geometry.Radius);
-        return layout with { Geometry = new ChartPolarGeometry(frame.X + frame.Width / 2d, frame.Y + frame.Height / 2d, radius) };
+        ChartPolarGeometry geometry = authoredFrame ? layout.Geometry :
+            new ChartPolarGeometry(frame.X + frame.Width / 2d, frame.Y + frame.Height / 2d, radius);
+        return layout with { Geometry = geometry with { Radius = radius } };
     }
 
     private static bool IsHorizontalLegendPosition(PptxSceneChartLegendPosition position)

@@ -4847,9 +4847,10 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
-    "PptxPieFactorOffsetsKeepTheIndependentOfficeHorizontalReference",
+    "PptxManualPiesKeepIndependentOfficeCentersAndRadii",
     "PptxPieFactorAndEdgePlacementKeepTheirOwnersAcrossViewportWidths",
     "PptxPieFactorOffsetsRetainBoundedSourceAndCompleteLegendContent",
+    "PptxManualPieViewportsRetainLabelsAndExplosionClearance",
     "DocxKeepNextOverflowAdmitsTheWholeSourceChainOnce",
     "DocxKeepChainMembersRetainIndependentKeepLinesAndExactFits",
     "DocxKeepChainsStopAtExplicitPageColumnAndSectionBoundaries",
@@ -17783,9 +17784,10 @@
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
   "pptx-pie-factor-placement": [
-    "PptxPieFactorOffsetsKeepTheIndependentOfficeHorizontalReference",
+    "PptxManualPiesKeepIndependentOfficeCentersAndRadii",
     "PptxPieFactorAndEdgePlacementKeepTheirOwnersAcrossViewportWidths",
     "PptxPieFactorOffsetsRetainBoundedSourceAndCompleteLegendContent",
+    "PptxManualPieViewportsRetainLabelsAndExplosionClearance",
     "PptxPieHorizontalLegendsUseSelectedPlotMidpoint",
     "PptxUntitledUnreservedPiesUseVerticalMidpoint",
     "PptxAuthoredPolarLegendKeepsEveryCompleteNameInsideItsClip",

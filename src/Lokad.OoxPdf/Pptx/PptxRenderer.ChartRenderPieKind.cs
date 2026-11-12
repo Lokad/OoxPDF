@@ -68,7 +68,9 @@ internal sealed partial class PptxRenderer
                     polarLayout = polarLayout with { Geometry = polarLayout.Geometry with
                         { CenterX = automatic.Geometry.CenterX + plotBox.X - frame.X } };
                 }
-                if (UsesAutomaticPolarFrame(sourceLayout, sceneChart))
+                if (sourceLayout.ManualPlotLayoutApplied)
+                    polarLayout = FitPieLayoutToFrame(polarLayout, plotBox, hasVisiblePieDataLabels, authoredFrame: true);
+                else if (UsesAutomaticPolarFrame(sourceLayout, sceneChart))
                     polarLayout = FitPieLayoutToFrame(polarLayout, prepared.Layout.PlotBox, hasVisiblePieDataLabels);
                 RenderPieChart(graphics, theme, colorMap, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, polarPoints.FirstSliceAngle);
                 await RenderPieDataLabelsAsync(theme, colorMap, graphics, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, polarPoints.FirstSliceAngle, pieSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames, fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
