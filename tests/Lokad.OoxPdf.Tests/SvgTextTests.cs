@@ -56,7 +56,7 @@ internal static class SvgTextTests
             var graphics = Paint(inherited);
             TestAssert.Equal(Paint(Svg("<text x=\"200\" y=\"80\" font-size=\"15\" fill=\"#112233\" text-anchor=\"" +
                 anchor + "\">I</text>")).ToString(), graphics.ToString());
-            Match move = Regex.Match(graphics.ToString(), @"(?m)^([-\d.]+) [-\d.]+ m$");
+            Match move = Regex.Match(graphics.ToString(), @"(?m)^([-\d.]+) [-\d.]+ m\r?$");
             TestAssert.True(move.Success, "The label must contain a visible glyph contour.");
             positions[index++] = double.Parse(move.Groups[1].Value, CultureInfo.InvariantCulture);
         }
@@ -74,7 +74,7 @@ internal static class SvgTextTests
         var group = Paint(Svg("<g transform=\"" + transform + "\">" + text + "</g>"));
         var own = Paint(Svg(text.Replace("<text ", "<text transform=\"" + transform + "\" ", StringComparison.Ordinal)));
         TestAssert.Equal(own.ToString(), group.ToString());
-        Match matrix = Regex.Match(group.ToString(), @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) cm$");
+        Match matrix = Regex.Match(group.ToString(), @"(?m)^([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) cm\r?$");
         TestAssert.True(matrix.Success, "The SVG transform must reach the glyph coordinate map.");
         double[] expected = [Math.Cos(Math.PI / 12d), -Math.Sin(Math.PI / 12d), -Math.Sin(Math.PI / 12d), Math.Cos(Math.PI / 12d), 5d, 153d];
         for (int i = 0; i < expected.Length; i++)
@@ -111,7 +111,7 @@ internal static class SvgTextTests
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             var graphics = Paint(Svg("<g " + hidden + "><text><tspan>HIDDEN</tspan></text></g>"), diagnostics);
-            TestAssert.Equal(0, Regex.Matches(graphics.ToString(), @"(?m)^f$").Count);
+            TestAssert.Equal(0, Regex.Matches(graphics.ToString(), @"(?m)^f\r?$").Count);
             TestAssert.Equal(0, diagnostics.Count);
         }
     }
@@ -208,7 +208,7 @@ internal static class SvgTextTests
         int start = content.IndexOf(LabelColor, StringComparison.Ordinal);
         TestAssert.True(start >= 0, "The authored label color must reach visible paths.");
         int end = content.IndexOf("\nQ", start, StringComparison.Ordinal);
-        return Regex.Matches(content[start..(end < 0 ? content.Length : end)], @"(?m)^f$").Count;
+        return Regex.Matches(content[start..(end < 0 ? content.Length : end)], @"(?m)^f\r?$").Count;
     }
 
     private static PdfPage Page(PdfGraphicsBuilder graphics) => new(400, 160, graphics.ToString(), [], [],
