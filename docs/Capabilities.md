@@ -680,7 +680,9 @@ Approximate or restricted:
   emits DOCX_APPROXIMATED_EQUATION; omitted unsupported math is diagnosed separately.
 - Bounded literal/fraction/script/root/delimiter/n-ary/function/matrix/cases forms,
   supported revisions, empty arguments and ready-made matrix fences retain
-  individual metric/paint ownership. Unknown/deeper structures, continuation or
+  individual metric/paint ownership. Nonprinting run metadata and readable empty
+  siblings beside actual revised content preserve supported formulas; empty-only
+  revision owners retain their fallback. Unknown/deeper structures, continuation or
   unresolved merge owners, unfit objects and arbitrary fragmentation keep fallbacks.
   See [native equations](docx-equations.md) for the authoritative construct and
   placement limits; support for one construct does not imply unrestricted nesting.

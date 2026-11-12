@@ -4,29 +4,33 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-The math-run metadata repair (`4ddb7e1da`) applies the existing nonprinting-marker
-rule consistently during run admission and traversal. A stored pagination marker
-inside a supported mathematical run previously removed the entire formula. Two
-public roots now recover six formula paints across twelve Final/Review outcomes;
-all twelve PDFs and diagnostics match their unmodified controls exactly. Native
-control evidence for 1,143 bound glyphs is reused by PDF identity, with no measured
-cuts, unknowns or picture/ink intersections. Content-bearing, foreign or misplaced
-markers retain the explicit unsupported fallback. The marker's stored-pagination
-role and mathematical-run parent are documented in the
+The coherent math-run repair (`f8bde8a1d`, including `4ddb7e1da`) shares readable
+run and nonprinting-marker rules between revision admission and leaf parsing.
+A stored pagination marker previously removed a supported formula; an empty run
+beside actual revised text could separately remove its fraction. Four public
+roots now recover six formula paints and eight additional fraction paints
+(26 mathematical glyphs). All 26 control/negative outcomes retain exact PDFs and
+diagnostics, including four empty-only revision owners that remain unsupported.
+Native checks bind 3,652 glyph instances with zero measured clip cuts or unknowns.
+Content-bearing, foreign or misplaced markers and unknown empty-run structures
+retain their fallbacks. The marker's stored-pagination role and mathematical-run
+parent are documented in the
 [Open XML reference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.lastrenderedpagebreak?view=openxml-3.0.1).
 
-Windows and Ubuntu each pass 19 focused checks without skips on one frozen
-.NET 11 runtime. The parent portable test fails its support-diagnostic assertion;
-the independent native probe establishes the actual six omissions despite complete
-prose and unchanged page counts. One production build qualifies library
-`B9C3C339EB9690843A9FDBD977D141898CE2CE523E2CE4DBC8DFB2645D33A140`.
-A capability-formatting cleanup changes no selected methods or runtime inputs.
-Transfer verifies 24 assets and two exact PDFs, including the repaired input and
-six-name legend, without a root build or suite replay. All sixteen portfolio PDFs/
-diagnostics remain exact; two PPTX passes/fourteen DOCX visual failures remain.
-Broader qualification belongs to the next coherent marker-capability milestone.
-The prepared package below remains this repair's parent. Transformed-source Word
-appearance, application-view calibration and the broader roadmap remain open.
+Windows and Ubuntu each pass 21 focused checks without skips in one invocation
+on the final frozen .NET 11 library
+`9978749BC9396F8E2A7F11EE775A456AFFF34B6A86DC9045B17C559485F428E5`.
+The parent fails the actual mathematical-content assertion. An initial proposal
+incorrectly admitted empty-only revision owners; the existing ownership guard
+caught this, and its failed attempts remain recorded. The corrected shared rule
+requires actual revision content while permitting readable empty siblings.
+Transfer verifies 24 assets/two exact PDFs, including the repaired input and
+six-name legend, without a root build or suite replay. All sixteen portfolio
+PDFs/diagnostics remain exact; two PPTX passes/fourteen DOCX visual failures remain.
+The first-half gate CI43124489487 passed on `b0061652e`; the coherent final
+Windows/Linux, framework and package gate is pending. The prepared package below
+remains the repair's parent. Transformed-source Word appearance, application-view
+calibration and the broader roadmap remain open.
 
 The revised-inline-box owner repair (`88ca67f52`) restores fifteen formula paints
 across four public roots/24 Final/Review outcomes in body, cells and headers.

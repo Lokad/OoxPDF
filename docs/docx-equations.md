@@ -37,6 +37,9 @@ Empty proofing and permission boundaries inside mathematical rows and arguments
 preserve supported formula content. Permission boundaries can retain sub-point
 Office geometry differences. Bookmark/comment navigation and revision ownership
 remain separate from these editing markers.
+An empty stored pagination marker (`w:lastRenderedPageBreak`) inside a supported
+mathematical run is also nonprinting. Foreign, misplaced or content-bearing
+markers retain their diagnosed fallback; cached pagination does not add a break.
 Adjacent display containers combine in source order; the later container supplies
 its justification, including the default when omitted. Bare formulas add content
 without replacing the container's properties. The first effective display row
@@ -99,6 +102,12 @@ qualified structural frames. Word-compatible Review applies actual author ink an
 deletion strikes to revised literals; structural symbols retain qualified authored
 ink. Unowned metadata, move ranges, unknown/deeper/multiple/nested revision wrappers
 retain fallbacks. This does not establish arbitrary revised-equation support.
+
+Readable empty mathematical runs beside actual revised content preserve the same
+revision owner, including runs containing only known properties or nonprinting
+markers. Empty-only revision wrappers do not establish an owner. Unknown empty
+structures or properties retain their fallback; excluded deleted text stays
+filtered.
 
 A unique parsed paragraph-property change retains supported equations in its
 resolved body, cell or direct header/footer paragraph. Duplicate or unowned
