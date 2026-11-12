@@ -150,7 +150,7 @@ internal static partial class PptxLegendRowsTests
         return baselines.Count;
     }
 
-    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, double size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null, string seriesOptions = "", string dataLabels = "")
+    private static (PdfPage Page, List<OoxPdfDiagnostic> Diagnostics) Render(int width, double size, int count, bool overlay, string legendMetadata = "", string kind = "line", int height = 360, bool categoryLegend = false, string[]? categoryNames = null, string plotLayout = "", string legendPosition = "b", IFontResolver? resolver = null, string seriesOptions = "", string dataLabels = "", string? chartRelationships = null)
     {
         int fontHundredths = (int)Math.Round(size * 100d);
         string series = string.Concat(Enumerable.Range(1, count).Select(i => $$"""
@@ -175,7 +175,7 @@ internal static partial class PptxLegendRowsTests
                 <c:valAx><c:axId val="2"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="{{(horizontal ? "b" : "l")}}"/><c:crossAx val="1"/><c:majorGridlines/></c:valAx>
             """;
         string chart = $$"""
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
               <c:chart><c:autoTitleDeleted val="1"/><c:plotArea>{{plotLayout}}<c:{{plot}}>{{(bar ? "<c:barDir val=\"" + (horizontal ? "bar" : "col") + "\"/>" : "")}}{{(polar ? "" : "<c:grouping val=\"" + (bar ? "clustered" : "standard") + "\"/>")}}
                 <c:varyColors val="{{(categoryLegend ? 1 : 0)}}"/>{{series}}{{dataLabels}}{{(polar ? "" : "<c:axId val=\"1\"/><c:axId val=\"2\"/>")}}</c:{{plot}}>
                 {{axes}}
@@ -189,8 +189,9 @@ internal static partial class PptxLegendRowsTests
               <p:cSld><p:spTree><p:graphicFrame><p:xfrm><a:off x="914400" y="1371600"/><a:ext cx="{{width * 12700}}" cy="{{height * 12700}}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>
             </p:sld>
             """;
-        using var stream = PptxTests.CreateSingleChartPackageStream(chart,
-            new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) });
+        var extra = new Dictionary<string, byte[]> { ["ppt/slides/slide1.xml"] = TestFixtures.Utf8(slide) };
+        if (chartRelationships is not null) extra["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8(chartRelationships);
+        using var stream = PptxTests.CreateSingleChartPackageStream(chart, extra);
         using var package = OoxPackage.Open(stream, default);
         var document = new PptxReader().Read(package, default);
         var diagnostics = new List<OoxPdfDiagnostic>();

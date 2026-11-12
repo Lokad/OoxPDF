@@ -28,6 +28,7 @@ Unsupported feature warnings:
 - `PPTX_UNSUPPORTED_SMARTART`: SmartArt or DrawingML diagram content was detected and ignored.
 - `PPTX_UNSUPPORTED_TRANSITION`: slide transition content was detected and ignored.
 - `PPTX_UNSUPPORTED_VIDEO`: video content was detected and ignored.
+- `PPTX_CHART_LABEL_OVERLAP`: automatic polar labels cannot fit separate rows within their container while preserving authored coordinates; source placement is retained.
 - `PPTX_CHART_MISSING_CACHED_DATA`: a supported chart referenced formula-only data without chart-side cached numeric values; workbook provenance is preserved but not used for layout.
 - `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`: a chart axis title with manual positioning that cannot be honored (default-placement titles render natively).
 - `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION`: a default-placement chart axis title has an unsupported or missing axis kind/position.

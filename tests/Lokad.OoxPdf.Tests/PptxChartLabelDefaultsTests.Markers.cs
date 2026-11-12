@@ -117,7 +117,7 @@ internal static partial class PptxChartLabelDefaultsTests
     private static string MarkerLegendText(PdfPage page) => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
         fontResourceFilter: resource => resource.StartsWith("CL", StringComparison.Ordinal) && !resource.StartsWith("CLD", StringComparison.Ordinal)).Select(s => s.Text));
 
-    private static (double X, double Y, double Width, double Height)[] MarkerRectangles(PdfPage page, RgbColor paint)
+    internal static (double X, double Y, double Width, double Height)[] MarkerRectangles(PdfPage page, RgbColor paint)
     {
         var paths = new List<string>();
         var colors = PptxChartPaletteTests.ReadColoredPaints(page.Content, paths.Add).ToArray();

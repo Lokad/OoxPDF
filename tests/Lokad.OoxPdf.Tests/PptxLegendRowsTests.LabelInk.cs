@@ -37,7 +37,7 @@ internal static partial class PptxLegendRowsTests
         }
     }
 
-    private static int AssertPolarLabelGlyphInk(PdfPage page, string context)
+    private static int AssertPolarLabelGlyphInk(PdfPage page, string context, List<(string Text, PdfRectangle Ink)>? output = null)
     {
         int measured = 0;
         foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
@@ -49,6 +49,7 @@ internal static partial class PptxLegendRowsTests
             var show = shows[0];
             var font = show.Font.Font;
             double cursor = show.X;
+            PdfRectangle? inkBox = null;
             Match operation = Regex.Match(block, @"(?s)(?:\[.*?\] TJ|<[0-9A-F]+> Tj)");
             TestAssert.True(operation.Success, "The generated label uses a supported native glyph text operation.");
             Match spacing = Regex.Match(block, @"([-+\d.]+) Tc");
@@ -75,11 +76,20 @@ internal static partial class PptxLegendRowsTests
                         TestAssert.True(Math.Min(first.X, last.X) >= clip.X - .02d && Math.Max(first.X, last.X) <= clip.X + clip.Width + .02d &&
                             Math.Min(first.Y, last.Y) >= clip.Y - .02d && Math.Max(first.Y, last.Y) <= clip.Y + clip.Height + .02d,
                             $"Complete data-label glyph ink must survive its actual clip: {context}/{show.Text}/{(char)codePoint}.");
+                        double x0 = Math.Min(first.X, last.X), y0 = Math.Min(first.Y, last.Y);
+                        double x1 = Math.Max(first.X, last.X), y1 = Math.Max(first.Y, last.Y);
+                        if (inkBox is { } prior)
+                        {
+                            x0 = Math.Min(x0, prior.X); y0 = Math.Min(y0, prior.Y);
+                            x1 = Math.Max(x1, prior.X + prior.Width); y1 = Math.Max(y1, prior.Y + prior.Height);
+                        }
+                        inkBox = new PdfRectangle(x0, y0, x1 - x0, y1 - y0);
                         measured++;
                     }
                     cursor += Math.Round(font.GetAdvanceWidth(glyph) * 1000d / font.UnitsPerEm) * show.Size / 1000d + characterSpacing;
                 }
             }
+            if (inkBox is { } bounds) output?.Add((show.Text, bounds));
         }
         return measured;
     }

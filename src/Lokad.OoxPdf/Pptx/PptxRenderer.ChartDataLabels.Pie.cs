@@ -25,7 +25,7 @@ internal sealed partial class PptxRenderer
         return startAngleRadians - sliceValue / total * Math.PI;
     }
 
-    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, ChartPlotBox placementBox, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (!labelOptions.HasVisibleText || slices.Count == 0)
         {
@@ -43,6 +43,7 @@ internal sealed partial class PptxRenderer
         double labelRadius = geometry.Radius * (holeSize > 0d ? Math.Max(PptxChartMetricRules.PieDataLabelRadiusRatio, (1d + holeSize) / 2d) : PptxChartMetricRules.PieAutoDataLabelRadiusRatio);
         double labelWidth = Math.Max(PptxChartMetricRules.PieDataLabelMinimumWidth, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(slices.Count);
+        var paints = new List<PolarLabelPaint>(slices.Count);
         List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
         double angle = GetPieDataLabelStartAngle(firstSliceAngle);
@@ -191,11 +192,11 @@ internal sealed partial class PptxRenderer
                 // and mixed manual/auto interplay is unobserved.
                 bool pieDrawLeader = pieIsFactorManual
                     && ShouldDrawPieManualLeaderLabel(labelBox.X + labelBox.Width / 2d, geometry.CenterX, Math.Cos(mid), pieUnwrappedWidth, plotBox.Width * PptxChartMetricRules.PieDataLabelWrapWidthFactor, plotBox.Width, plotBox.Height);
-                if (pieDrawLeader)
-                {
-                    RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions, fontSize, pieManualLineCount, pieManualBottomAnchor);
-                }
-                RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
+                Action? leader = pieDrawLeader
+                    ? () => RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions, fontSize, pieManualLineCount, pieManualBottomAnchor)
+                    : null;
+                ChartLayoutBox? keyBox = null;
+                ChartSeriesFill? keyFill = null;
                 double textX = labelBox.X;
                 double textWidth = labelBox.Width;
                 TextAlignment alignment = TextAlignment.Center;
@@ -207,12 +208,14 @@ internal sealed partial class PptxRenderer
                     ChartSeriesFill fill = pointFills.TryGetValue(slice.Index, out ChartSeriesFill explicitFill)
                         ? explicitFill
                         : new ChartSeriesFill(ChartPalette(chartPalette, theme, colorMap, slice.Index, slices.Count), 1d, null, null);
-                    FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, fill);
+                    keyBox = new ChartLayoutBox(labelBox.X, swatchY, swatchSize, swatchSize);
+                    keyFill = fill;
                     textX += swatchSize + swatchGap;
                     textWidth = Math.Max(1d, textWidth - swatchSize - swatchGap);
                     alignment = TextAlignment.Left;
                 }
 
+                int runStart = runs.Count, linkStart = labelLinks?.Count ?? 0;
                 if (!string.IsNullOrEmpty(label))
                 {
                 double pieManualTextX = textX;
@@ -222,8 +225,31 @@ internal sealed partial class PptxRenderer
                 }
                     await AddPolarChartLabelRunsAsync(labelParts, label, effectiveOptions, pieManualTextX, labelBox.Y, textWidth, labelBox.Height, style, alignment, pieWrapLines, pieWrapLongest, pieManualBottomAnchor).ConfigureAwait(false);
                 }
+                paints.Add(new PolarLabelPaint(labelBox, effectiveOptions.ShapeStyle, keyBox, keyFill,
+                    effectiveOptions.Layout.HasGeometryValues, runStart, runs.Count - runStart,
+                    linkStart, (labelLinks?.Count ?? 0) - linkStart, leader));
             }
             angle += sweep;
+        }
+        double[] offsets = await PlacePolarLabelRowsAsync(paints, runs, placementBox, fontResolver, context).ConfigureAwait(false);
+        for (int index = 0; index < paints.Count; index++)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            PolarLabelPaint paint = paints[index];
+            double dy = offsets[index];
+            paint.Leader?.Invoke(); // Authored leader geometry is never moved.
+            RenderChartShapeStyle(graphics, paint.Box.X, paint.Box.Y + dy, paint.Box.Width, paint.Box.Height, paint.Shape);
+            if (paint.KeyBox is { } key && paint.KeyFill is { } fill)
+                FillChartRectangle(graphics, key.X, key.Y + dy, key.Width, key.Height, fill);
+            if (dy == 0d) continue;
+            for (int runIndex = paint.RunStart; runIndex < paint.RunStart + paint.RunCount; runIndex++)
+                runs[runIndex] = runs[runIndex] with { Y = runs[runIndex].Y + dy, ClipY = runs[runIndex].ClipY + dy };
+            if (labelLinks is not null)
+                for (int linkIndex = paint.LinkStart; linkIndex < paint.LinkStart + paint.LinkCount; linkIndex++)
+                {
+                    ChartTextRunLink link = labelLinks[linkIndex];
+                    labelLinks[linkIndex] = link with { Run = link.Run with { Y = link.Run.Y + dy, ClipY = link.Run.ClipY + dy } };
+                }
         }
         RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink).ConfigureAwait(false));
         AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);

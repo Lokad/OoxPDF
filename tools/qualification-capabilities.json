@@ -4847,6 +4847,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PptxPolarLabelRowsKeepCompleteLabelUnitsApart",
+    "PptxPolarLabelAdmissionRetainsAuthoredAndUnfitArrangements",
     "PptxPolarDataLabelsRetainWholeAndRichTextInk",
     "PptxManualPiesKeepIndependentOfficeCentersAndRadii",
     "PptxPieFactorAndEdgePlacementKeepTheirOwnersAcrossViewportWidths",
@@ -17785,6 +17787,8 @@
       "PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition"
   ],
   "pptx-data-label-content": [
+    "PptxPolarLabelRowsKeepCompleteLabelUnitsApart",
+    "PptxPolarLabelAdmissionRetainsAuthoredAndUnfitArrangements",
       "PptxPolarDataLabelsRetainWholeAndRichTextInk",
       "PptxSyntheticPieLabelClipExpandsForOverflow",
       "PptxAutomaticLabelTextOwnsItsClippingRegion",
