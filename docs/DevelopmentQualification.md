@@ -4,17 +4,18 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-Pie factor-X offsets now retain the automatic horizontal reference when an authored
-width resizes the plot. Five independent cached Office controls improve from
-57.6–172.8pt errors to the same horizontal centers; the edge control stays exact.
-All 402 measured glyphs, text positions, colors and relative sector paths survive.
-A final bounds probe caught and repaired an introduced raw-offset error that could
-drop the chart and its six legend names while conversion succeeded. Both hosts pass
-22 focused checks on the repaired frozen runtime. Original failures and the parent
-regressions are retained. Thirteen ordinary PDFs remain exact across the repair,
-including four portfolio outcomes. All six selected image gates still fail;
-the 30.186pt Y error, radius/side/legend geometry and application view remain open.
-Framework and package results remain specific to each artifact's qualification.
+Manual 2D-pie radii now follow the smaller authored viewport dimension through
+shared fitting. Eight pinned cached Office controls improve from up to 16.633pt
+radius error to at most 0.004pt at the unchanged 1pt gate. All 48 legend names and
+536 measured glyphs remain complete and unclipped; centers, text and colors stay
+exact. Both hosts pass 23 focused checks, joining one explicit-label fixture repair
+without replaying the other 22. The parent fails the real radius assertion. Seven
+neighbor PDFs, including four portfolio outcomes, remain exact. All eight image
+gates still fail: six MAEs improve and two worsen with unresolved center errors.
+Manual height/label/explosion Office geometry, Y/side/legend anchors and application
+view remain unqualified. The prior factor-X correction and bounded-offset repair
+remain covered. Broader framework/package results still belong to their exact
+artifacts; the selected package precedes this local slice. Publication is deferred.
 
 DOCX keep-with-next groups now admit once per source group (`7c94a3470`). Two
 oversized plain/mixed chains and one exact-fitting keep-lines control previously

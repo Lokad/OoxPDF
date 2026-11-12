@@ -79,8 +79,11 @@ Supported within the following constraints:
   their point/container scope and direct run overrides. Authored frames, side
   furniture, label clearance and manual-factor mapping remain approximate. Pie
   factor-X offsets keep the automatic horizontal center when an authored width
-  resizes the plot; edge-X positions retain their authored rectangle. This does
-  not qualify manual Y/radius, side anchors or authored legend coordinates.
+  resizes the plot; edge-X positions retain their authored rectangle. Manual
+  2D-pie radii fit the smaller authored viewport dimension, preserving explosion
+  reservation and label clearance. Eight cached unlabeled/unexploded controls
+  qualify that extent; other heights/labels/explosion geometry, manual Y, side
+  anchors and authored legend coordinates remain approximate.
   Axes/data labels share number formatting, including dates, numeric sections,
   scaling, fractions and supported accounting/currency forms. Unsupported syntax,
   formula-only data without cached values and unsupported chart kinds are diagnosed.

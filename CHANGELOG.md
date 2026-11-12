@@ -12,7 +12,8 @@
   groups flow without repeatedly starting new pages; independent keep-lines rules
   and explicit breaks remain respected.
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
-  qualified authored horizontal legends retain every name. Merged-table content,
+  qualified authored horizontal legends retain every name; manual pie viewports
+  own their radius and horizontal factor reference. Merged-table content,
   font fallback, text/link geometry and preset arcs also improve.
 - SVG pictures: ordinary text labels now remain visible in DOCX and PPTX as managed
   glyph outlines; unsupported text features retain explicit diagnostics.
