@@ -41,7 +41,7 @@ container outcomes at 1pt; relative checks additionally protect nested placement
 Windows runs all 26; Ubuntu runs 15 and declares 11 Windows-font skips.
 
 `docx-ordered-widow-fragments` selects 21 methods for orphaned heads, single-line
-tails, default/on/off controls, pictures/equations, PAGE values, bookmarks, keeps,
+and longer tails, default/on/off controls, pictures/equations, PAGE values, bookmarks, keeps,
 note continuations, changed column widths and cancellation. Pinned fonts cover
 the new source-composition controls. Windows runs all 21; Ubuntu runs 16 with five
 declared Windows Arial skips. Source-page/content checks remain separate from

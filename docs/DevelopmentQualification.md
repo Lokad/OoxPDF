@@ -45,24 +45,35 @@ Each host passes 69 net10 checks plus 5 Windows/4 Ubuntu exact supplements. Both
 Linux frameworks consume the same Windows package. Publication, release acceptance
 and the broader roadmap stay open.
 
-Ordered body paragraphs now share widow/orphan fragment selection with ordinary
-text and continued notes (`3abcf3afc`, harness `d31bd3d3c`). Adding a 6pt inline
-picture to an authored 20pt line had left the first line of a three-line paragraph
-on the preceding page despite default widow control. Two Final/Review outputs now
-keep the paragraph together; six control PDFs, including explicit opt-out, stay
-exact. Head/tail tests also cover equations, pictures, both, text-only controls,
-PAGE rebinding and bookmark destinations. The actual parent pagination assertion
-fails. Windows passes 21 focused checks; Ubuntu passes 16 with five declared Windows
-Arial skips. One new assertion assumed a whitespace separator between PDF text
-operations; only that method reran per host after a test-only repair, retaining
-the original attempts and expected digit/picture/destination checks. Twenty-one
-runtime assets and 3,438 inputs remain identical. Eight native screens bind 296
-glyphs with no measured cuts or unknowns; a before/after page crop was reviewed.
-All sixteen portfolio PDFs/diagnostics remain exact, preserving two PPTX passes
-and fourteen DOCX image failures. New source/Word pagination and application-view
-calibration remain unqualified. Runtime, framework and package closure is recorded
-separately beside the selected payload; these local results retain their producing
-identity. No Office action or root rebuild occurred.
+Ordered body paragraphs share widow/orphan fragment selection with ordinary text
+and continued notes (`3abcf3afc`, bounded preview `5c3decdf7`). A small inline
+picture had left the first line of a three-line paragraph on the preceding page
+despite default widow control. The shared rule retains default/on/off behavior,
+single-line and longer tails, text/picture/math content, PAGE rebinding and bookmark
+destinations. The actual B7 parent fails the new row-page assertion.
+
+Admission previews the fitting fragment and at most two following lines. This
+removes an introduced per-frame rewrap of the whole remaining paragraph. One cold
+257-page check falls from 4.69s to 1.77s, including startup; all three workload PDFs
+remain exact. This is a bounded regression check, not a general throughput claim.
+An initial timing overlapped tests and is retained separately from the serial run.
+
+Windows passes 21 focused methods; Ubuntu passes 16 with five declared Windows Arial
+skips. The matrix covers three/four/five-line heads and tails. An earlier new
+assertion assumed whitespace separators between PDF text operations; its failed
+attempts and single-method repairs remain recorded. The changed production runtime
+runs the complete exact set once per host. Forty PDFs stay byte-identical to the
+qualified widow outcomes, including all sixteen portfolio PDFs. Native/source-page
+checks, reviewed crops and independent Office comparisons are reused by identity;
+two PPTX passes/fourteen DOCX image failures remain. Transfer verifies 24 assets and
+two exact smoke PDFs without a root build or suite replay.
+
+The preceding widow gate CI43211571221/source58bb78292 is closed green: Windows
+4,828/19 skips, Ubuntu 2,333/133 skips, zero failures and 69 net10 checks per host.
+Its intermediate package was not downloaded while this repair was active. Current
+runtime/framework/package closure is recorded separately beside the selected
+payload. New source/Word pagination and application-view calibration remain
+unqualified; publication and release acceptance stay open. No Office action.
 
 Computed PAGE/NUMPAGES results now remain atomic beside pictures in the same source
 run (`4da834039`). Four failing Final/Review outputs become byte-identical to their
