@@ -98,6 +98,32 @@ internal static class DocxSectionNavigationTests
         }, path => CheckFinalTextDestination(path, mode, expectMultiplePages: false));
     }
 
+    public static void DocxParagraphEndBookmarksResolveUnpaintedTrailingWhitespace()
+    {
+        foreach (var mode in Modes)
+        foreach (bool separateRun in new[] { false, true })
+        foreach (bool wrapped in new[] { false, true })
+        WithMutation("bookmark-after", (_, xml) => {
+            var anchor = xml.Descendants(W+"bookmarkStart").Single();
+            var text = anchor.Parent!.Descendants(W+"t").Single();
+            if (wrapped)
+            {
+                text.Value = string.Join(" ", Enumerable.Repeat("TARGET PARAGRAPH", 90));
+                var size = xml.Descendants(W+"sectPr").Single().Element(W+"pgSz")!;
+                size.SetAttributeValue(W+"h", "6000");
+                size.SetAttributeValue(W+"w", "6000");
+            }
+            if (separateRun)
+                anchor.AddBeforeSelf(new XElement(W+"r", new XElement(W+"t",
+                    new XAttribute(XNamespace.Xml+"space", "preserve"), "   ")));
+            else
+            {
+                text.SetAttributeValue(XNamespace.Xml+"space", "preserve");
+                text.Value += "   ";
+            }
+        }, path => CheckFinalTextDestination(path, mode, expectMultiplePages: wrapped));
+    }
+
     public static void DocxParagraphEndBookmarksPreserveMissingTargetFallback()
     {
         WithMutation("bookmark-after", (_, xml) => xml.Descendants(W+"bookmarkStart").Remove(), path => {

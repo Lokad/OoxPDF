@@ -1926,6 +1926,7 @@ internal sealed partial class DocxRenderer
         targetX = 0d;
         int sourceRunIndex = bookmark.SourceRunIndex;
         int sourceOffset = Math.Max(0, bookmark.TextOffset);
+        bool terminalTextBoundary = false;
         // A bookmark after the final item has no following source run. Bind a
         // trailing text boundary to its retained source endpoint instead; hidden
         // neighbors do not own a painted destination. Other terminal object kinds
@@ -1939,6 +1940,7 @@ internal sealed partial class DocxRenderer
                     DocxInlineBreak { Run.EffectiveProperties.Hidden: true }) continue;
                 if (items[index] is DocxInlineText text)
                 {
+                    terminalTextBoundary = true;
                     sourceRunIndex = text.Run.SourceRunIndex;
                     sourceOffset = text.Run.SourceTextOffsetInRun + text.Start + text.Length;
                 }
@@ -1953,10 +1955,53 @@ internal sealed partial class DocxRenderer
             DocxTextRun? last = paragraph.Runs.LastOrDefault(run => !run.EffectiveProperties.Hidden && run.Text.Length != 0);
             if (last is not null)
             {
+                terminalTextBoundary = true;
                 sourceRunIndex = last.SourceRunIndex;
                 sourceOffset = last.SourceTextOffsetInRun + last.Text.Length;
             }
         }
+        if (TryResolveBookmarkTextBoundary(segments, sourceRunIndex, sourceOffset, out target, out targetX))
+            return true;
+        if (!terminalTextBoundary) return false;
+
+        // Wrapping can omit trailing source whitespace. Resolve its boundary
+        // through the last painted text endpoint, preserving existing targets
+        // and the source offset that keeps earlier wrapped lines ineligible.
+        if (paragraph.InlineContent is { } terminalItems)
+        {
+            for (int index = terminalItems.Count - 1; index >= 0; index--)
+            {
+                if (terminalItems[index] is DocxInlineText { Run.EffectiveProperties.Hidden: true } or
+                    DocxInlineTab { Run.EffectiveProperties.Hidden: true } or
+                    DocxInlineBreak { Run.EffectiveProperties.Hidden: true }) continue;
+                if (terminalItems[index] is not DocxInlineText text) return false;
+                int length = text.Run.Text.AsSpan(text.Start, text.Length).TrimEnd().Length;
+                if (length == 0) continue;
+                return TryResolveBookmarkTextBoundary(segments, text.Run.SourceRunIndex,
+                    text.Run.SourceTextOffsetInRun + text.Start + length, out target, out targetX);
+            }
+        }
+        else
+        {
+            for (int index = paragraph.Runs.Count - 1; index >= 0; index--)
+            {
+                DocxTextRun run = paragraph.Runs[index];
+                if (run.EffectiveProperties.Hidden) continue;
+                int length = run.Text.AsSpan().TrimEnd().Length;
+                if (length == 0) continue;
+                return TryResolveBookmarkTextBoundary(segments, run.SourceRunIndex,
+                    run.SourceTextOffsetInRun + length, out target, out targetX);
+            }
+        }
+        return false;
+    }
+
+    private static bool TryResolveBookmarkTextBoundary(
+        IReadOnlyList<DocxTextEmissionSegment> segments, int sourceRunIndex, int sourceOffset,
+        [NotNullWhen(true)] out DocxTextEmissionSegment? target, out double targetX)
+    {
+        target = null;
+        targetX = 0d;
         foreach (DocxTextEmissionSegment segment in segments)
         {
             if (segment.SourceTextRunIndex != sourceRunIndex)

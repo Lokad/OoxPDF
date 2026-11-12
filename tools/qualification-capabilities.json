@@ -5824,6 +5824,12 @@
     "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
   ],
   "docx-bookmark-ownership": [
+    "DocxTerminalBookmarksSurviveUnpaintedWhitespaceBeforePageBreak",
+    "DocxParagraphEndBookmarks",
+    "DocxReaderPromotesInlineRunPageBreakInsideParagraph",
+    "DocxReaderPromotesHyperlinkRunPageBreakInsideParagraph",
+    "DocxStaticStoryRendererEmitsInternalHyperlinkDestinations",
+    "DocxRendererEmitsTableCellInternalHyperlinkDestinations",
     "DocxPictureBookmarksWithoutMathRetainSourcePositions",
     "DocxPictureBookmarksWithoutMathUseTheSamePlacedSource",
     "DocxInlineBoxBookmarksPreservePlacedLinksAndSiblingContent",
