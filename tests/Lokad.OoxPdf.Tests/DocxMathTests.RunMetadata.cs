@@ -24,6 +24,13 @@ internal static partial class DocxMathTests
             TestAssert.Equal(included ? 2 : 0, revision!.Children.Count);
             if (included) TestAssert.Equal("a", RowText(revision));
             TestAssert.Equal("c", RowText(fraction.Denominator));
+
+            var emptyOnly = EditingMarkerFraction();
+            emptyOnly.Descendants(MathNamespace + "r").First().ReplaceWith(
+                new XElement(WordprocessingNamespace + kind, new XElement(empty)));
+            var unsupported = DocxMathParser.Read(emptyOnly, (_, text) => PlainRun(text), default, _ => included);
+            TestAssert.True(((DocxMathFraction)unsupported.Children.Single()).Numerator.Children[0] is DocxMathUnsupported,
+                "Empty-only wrappers retain the existing requirement for an actual revision payload.");
         }
 
         foreach (string kind in new[] { "ins", "del" })

@@ -30,7 +30,10 @@ internal static partial class DocxMathParser
             bool revisionSource = !item.InsideRevision && includeRevision is not null && element.Name.Namespace == WordprocessingNamespace &&
                 name is "ins" or "del";
             XElement[]? revisionChildren = revisionSource ? ReadRevisionChildren(element, cancellationToken).ToArray() : null;
-            bool revisionRow = revisionChildren is { Length: > 0 } && revisionChildren.All(IsRevisionContent);
+            // A revision still needs an actual operand or structural control.
+            // Readable zero-content siblings do not invalidate that owner.
+            bool revisionRow = revisionChildren is { Length: > 0 } && revisionChildren.Any(IsRevisionContent) &&
+                revisionChildren.All(child => IsRevisionContent(child) || IsReadableRun(child) && HasSupportedRunProperties(child));
             bool included = !revisionRow || includeRevision!(element);
             bool retainDeletedFrame = revisionRow && preserveDeletedStructure && name == "del" && !included &&
                 revisionChildren!.Any(child => IsControl(child.Name.LocalName));
@@ -196,8 +199,7 @@ internal static partial class DocxMathParser
     private static bool IsControl(string name) => name is "f" or "sSub" or "sSup" or "sSubSup" or "rad" or "d" or "nary" or "func" or "m";
     private static bool IsRevisionContent(XElement element) => element.Name.Namespace == MathNamespace &&
         (IsControl(element.Name.LocalName) || element.Name.LocalName == "r" &&
-            (element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0) ||
-             IsReadableRun(element) && HasSupportedRunProperties(element)));
+            element.Elements(MathNamespace + "t").Any(text => text.Value.Length != 0));
     // Revision admission and structural retention see the same stored content
     // through metadata containers; role nodes still need their actual parent.
     private static IEnumerable<XElement> ReadRevisionChildren(XElement source, CancellationToken token)
