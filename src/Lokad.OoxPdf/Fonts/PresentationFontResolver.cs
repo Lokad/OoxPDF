@@ -2,7 +2,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Fonts;
 
-internal sealed class PresentationFontResolver
+internal sealed class PresentationFontResolver : IFontResolver
 {
     private readonly IFontResolver primary;
     private readonly IFontCatalog? fontCatalog;
