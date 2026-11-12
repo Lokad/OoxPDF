@@ -1135,17 +1135,11 @@ internal sealed partial class DocxLayoutEngine
     {
         (int takeCount, double takeHeight) = TakeStoryLines(lineBoxes, startLineIndex, remainingLineCount,
             capacityHeight, lineAfterSpacings, forceProgress: !hasPageContent);
-        if (takeCount > 1 && DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, remainingLineCount, takeCount))
-        {
-            takeCount--;
-            takeHeight -= lineBoxes[startLineIndex + takeCount];
-        }
-        if (hasPageContent && isFreshHead &&
-            DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, remainingLineCount, takeCount))
-        {
-            return (0, 0d);
-        }
-        return (takeCount, takeHeight);
+        int selected = DocxParagraphFragmentPolicy.ResolveLineCount(paragraph, remainingLineCount,
+            takeCount, deferSingleHead: hasPageContent && isFreshHead);
+        if (selected == 0) return (0, 0d);
+        if (selected < takeCount) takeHeight -= lineBoxes[startLineIndex + selected];
+        return (selected, takeHeight);
     }
 
     // RV06 continuation probes (Word 16.0, footlong/endlong): continued notes open

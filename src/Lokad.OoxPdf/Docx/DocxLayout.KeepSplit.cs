@@ -378,9 +378,9 @@ internal sealed partial class DocxLayoutEngine
             remaining -= height;
             fittingLineCount++;
         }
-        return DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, lines.Count, fittingLineCount) ||
-            DocxParagraphFragmentPolicy.HasOneLineTail(paragraph, lines.Count, fittingLineCount) &&
-            (!canSplitTail || DocxParagraphFragmentPolicy.HasOneLineHead(paragraph, lines.Count, fittingLineCount - 1));
+        int takeCount = DocxParagraphFragmentPolicy.ResolveLineCount(paragraph, lines.Count,
+            fittingLineCount, deferSingleHead: true);
+        return fittingLineCount > 0 && takeCount == 0 || !canSplitTail && takeCount < fittingLineCount;
     }
 
     private static string NormalizeContextualSpacingStyleId(string? styleId)

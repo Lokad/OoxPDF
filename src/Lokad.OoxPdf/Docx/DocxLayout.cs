@@ -1602,9 +1602,18 @@ internal sealed partial class DocxLayoutEngine
                     var bound = atoms;
                     int boundPage = pages.Count + 1;
                     int referenceLine = 0;
+                    double measuredWidth = width;
+                    int? admittedLineCount = null;
                     while (!sourceCursor.IsComplete(atoms))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+                        if (admittedLineCount == 0)
+                        {
+                            AdvanceColumnOrPage();
+                            RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                            admittedLineCount = null;
+                            continue;
+                        }
                         int index = sourceCursor.LineIndex;
                         double textInset = index == 0 ? firstInset : nextInset;
                         // Preparation admitted only fields whose inputs are
@@ -1617,6 +1626,39 @@ internal sealed partial class DocxLayoutEngine
                             bound = rebound;
                             boundPage = pages.Count + 1;
                         }
+                        if (admittedLineCount is null && DocxParagraphFragmentPolicy.HasWidowControl(paragraph))
+                        {
+                            // Select a fragment before committing source lines.
+                            // Reuse the initial wrap; changed frames/counters
+                            // rewrap only the still-unplaced source.
+                            IReadOnlyList<DocxMeasuredInlineLine>? remaining = null;
+                            if (index == 0 && width == measuredWidth && ReferenceEquals(bound, atoms))
+                                remaining = measured;
+                            else
+                                TryWrapOrderedInlineAtomsCore(bound,
+                                    Math.Max(1d, width - textInset - rightInset),
+                                    Math.Max(1d, width - nextInset - rightInset), cancellationToken, out remaining,
+                                    baseInset * paragraphSpacingScale, sourceCursor, stopAfterFirstLine: false);
+                            if (remaining is not null)
+                            {
+                                double bottom = cursorY;
+                                int fitting = 0;
+                                foreach (var pending in remaining)
+                                {
+                                    cancellationToken.ThrowIfCancellationRequested();
+                                    if (bottom - pending.OccupiedHeight < CurrentParagraphFrameBottom(
+                                        pending.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d)) break;
+                                    bottom -= pending.OccupiedHeight;
+                                    fitting++;
+                                }
+                                int selected = DocxParagraphFragmentPolicy.ResolveLineCount(paragraph,
+                                    remaining.Count, fitting, deferSingleHead: index == 0 && HasCurrentColumnContent());
+                                // A line that fits no frame retains the existing
+                                // overflow/progress path, including note drainage.
+                                if (selected > 0 || fitting > 0 && HasCurrentColumnContent()) admittedLineCount = selected;
+                                if (admittedLineCount == 0) continue;
+                            }
+                        }
                         bool hasLine = TryGetNextOrderedInlineLine(bound, sourceCursor,
                             Math.Max(1d, width - textInset - rightInset), Math.Max(1d, width - nextInset - rightInset),
                             cancellationToken, out var line, physicalTextBaselineInset: baseInset * paragraphSpacingScale);
@@ -1627,6 +1669,7 @@ internal sealed partial class DocxLayoutEngine
                             // Keep its source unconsumed and seek the next frame.
                             AdvanceColumnOrPage();
                             RegisterInFlightFootnotesForSourceBlock(elementIndex);
+                            admittedLineCount = null;
                             continue;
                         }
                         if (line.DisplayAlignment == DocxMathDisplayAlignment.CenterGroup)
@@ -1662,6 +1705,7 @@ internal sealed partial class DocxLayoutEngine
                         {
                             AdvanceForOverflowingItem(line.OccupiedHeight, elementIndex, () => CurrentParagraphFrameBottom(
                                 line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d));
+                            admittedLineCount = null;
                             continue; // Admission did not consume any source or bind its counters.
                         }
                         double inset = index == 0 ? firstInset : nextInset;
@@ -1694,6 +1738,7 @@ internal sealed partial class DocxLayoutEngine
                         currentItems.AddRange(placed.Images);
                         currentItems.AddRange(placed.TextBoxes);
                         sourceCursor = line.EndCursor;
+                        if (admittedLineCount is int admitted) admittedLineCount = admitted - 1;
                         cursorY -= line.OccupiedHeight;
                         activeColumnHasContent = true;
                     }
