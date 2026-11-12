@@ -19,8 +19,12 @@ have no measured cuts or unknowns. All sixteen portfolio PDFs/diagnostics are
 exact, retaining two PPTX passes/fourteen DOCX image failures. Transfer verifies
 24 assets/two exact PDFs without rebuilding or replaying a suite. Frozen .NET 11
 library: `E1F4DA0726E7E527EA8C4C7BEB0788F81FF63A99E31079099616E10DAB67C0F1`.
-Broader CI/framework/package qualification for this repair is pending; the prepared
-package below belongs to the preceding milestone. Publication remains deferred.
+The coherent gate CI43153375365 on `9304d7aa2` is green: Windows4,818 checks/
+19 skips, Ubuntu2,301/130, 69 .NET10 checks per host and four CI consumers.
+Four additional affected .NET10 checks pass per host on the exact CI assembly.
+Both CI-runtime smokes match, and both Linux frameworks consume the same Windows
+package. The prepared package below contains this repair. Calibration, release
+acceptance and the broader roadmap remain open; publication remains deferred.
 
 The retained-source ownership repair (`c17da72f8`, runtime from `b3fa46305`) keeps
 an unsupported revised equation from suppressing an independently supported
@@ -410,7 +414,7 @@ expected library hash, preserving the original qualified runtime.
 ## Prepared development package payload
 
 The development package and symbols are prepared directly in `artifacts/nuget/`,
-with checksums and a separate qualification record. CI43136688558 / `81eae757b`
+with checksums and a separate qualification record. CI43153375365 / `9304d7aa2`
 supplies both framework libraries, portable symbols and the original package ZIP.
 Windows CI consumed those exact archive bytes; its consumer evidence is reused.
 Both Linux framework consumers pass against the same Windows package, sequentially
@@ -419,20 +423,20 @@ with build servers disabled. No repack or library/root rebuild was needed.
 The artifact digest and all 48 frozen runtime assets are verified. Framework
 package entries match those DLL/PDB bytes; assembly/file versions are 0.3.0.0 and
 informational versions identify the same committed build. Package SHA-256:
-`0821E357A0CCD6BC14EBB168EB7B075A6851E180A976F4A0FBFEE304BFE2B911`.
-All 76 packaged local links are checked. Documentation retains the immutable CI
+`92E4DFB4F2288B20D680FFD18ED16E72A566B5D545EE4F6FAB41A5773D4E1137`.
+All 77 packaged local links are checked. Documentation retains the immutable CI
 snapshot; later qualification and triage notes do not cause a repack. Caller/API
-contracts match. Previous `55c5b06e3` package, symbols and record are preserved
+contracts match. Previous `81eae757b` package, symbols and record are preserved
 under source-qualified names, alongside earlier development assets; published
 0.2.0 is protected. Both current Linux consumers pass on their first attempts.
 
 Source-runtime native/portfolio evidence remains separate from CI metadata:
 sixteen PDFs retain two PPTX passes/fourteen DOCX visual failures. Production/build
-inputs match, and two CI-runtime smokes reproduce the corrected retained-owner
-cell composition and six-name legend PDFs. No full portfolio or suite replay is
-claimed for transfer. Four additional .NET 10 regressions cover retained revision
-owners, neighboring paint, control roles and iterative traversal/cancellation on
-both hosts. Six independently owned public inputs match the CI fixture identities.
+inputs match, and two CI-runtime smokes reproduce the corrected bookmark and
+six-name legend PDFs. No full portfolio or suite replay is claimed for transfer.
+Four additional .NET10 checks cover the composed regression, whitespace boundaries,
+wrapped endpoints and missing-target fallback on both hosts. Four independently
+owned public inputs match the CI fixture identities.
 
 `TestPackageSmoke.ps1 -InspectOnly` checks all framework build identities and caller
 links without packing, restoring or loading assemblies. Consumer checks cover
