@@ -27,8 +27,11 @@ internal static partial class PortableRenderingTests
                 string Math(PdfPage value) => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(value, true)
                     .Where(show => value.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
                         ReferenceEquals(font.Font, show.Font))).Select(show => show.Text));
-                TestAssert.Equal(Math(before[page]), Math(after[page]));
-                TestAssert.Equal(before[page].Content, after[page].Content);
+                string expected = Math(before[page]), actual = Math(after[page]);
+                string context = $"{fixture}/{mode}/{kind}/page{page + 1}";
+                TestAssert.True(expected == actual, $"{context}: expected mathematical text '{expected}', got '{actual}'.");
+                TestAssert.True(before[page].Content == after[page].Content,
+                    context + ": an omitted equation does not change independently painted content or revision bands.");
                 TestAssert.Equal(before[page].Images.Count, after[page].Images.Count);
                 TestAssert.Equal(before[page].Annotations.Count, after[page].Annotations.Count);
                 PdfContentValidator.ValidatePage(after[page], page, default);
