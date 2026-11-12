@@ -1800,16 +1800,24 @@ internal static partial class PptxChartsTests
     {
         var renderer = typeof(PptxRenderer);
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-        var method = renderer.GetMethod("ExpandPieLabelClipToText", flags);
-        TestAssert.True(method is not null, "Expected pie clip helper to remain inspectable by the Office evidence guard.");
+        var method = renderer.GetMethod("ExpandChartLabelClipToText", flags);
+        TestAssert.True(method is not null, "Expected shared label clip helper to remain inspectable by the Office evidence guard.");
         var boxType = renderer.GetNestedType("ChartLayoutBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected layout box.");
         object box = System.Activator.CreateInstance(boxType, [136d, 100d, 80d, 24d])!;
-        object fitting = method!.Invoke(null, [box, 136d, 80d, 62d])!;
+        object fitting = method!.Invoke(null, [box, 136d, 80d, 62d, TextAlignment.Center])!;
         (double fx, double fy) = ReadLayoutBoxXY(fitting);
         TestAssert.True(Math.Abs(fx - 136d) < 0.0001d, "Fitting text should keep the clip. Got " + fx);
-        object wide = method.Invoke(null, [box, 136d, 80d, 100d])!;
+        object wide = method.Invoke(null, [box, 136d, 80d, 100d, TextAlignment.Center])!;
         (double wx, double wy) = ReadLayoutBoxXY(wide);
         TestAssert.True(Math.Abs(wx - 126d) < 0.0001d, "Overflowing text should expand the clip symmetrically. Got " + wx);
+        foreach (var (alignment, expectedX) in new[] { (TextAlignment.Left, 136d), (TextAlignment.Right, 116d) })
+        {
+            object aligned = method.Invoke(null, [box, 136d, 80d, 100d, alignment])!;
+            (double ax, _) = ReadLayoutBoxXY(aligned);
+            double width = (double)boxType.GetProperty("Width")!.GetValue(aligned)!;
+            TestAssert.True(Math.Abs(ax - expectedX) < .0001d && Math.Abs(width - 100d) < .0001d,
+                "Overflow admission follows the actual alignment without moving the text.");
+        }
     }
 
     public static void PptxSyntheticPieLabelWordWrapPacksWords()

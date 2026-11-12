@@ -307,10 +307,9 @@ internal sealed partial class PptxRenderer
 
             double separatorWidth = (await textMeasurer.MeasureAsync(GetChartDataLabelSeparator(options), style).ConfigureAwait(false));
             double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
-            clipBox = ExpandPieLabelClipToText(clipBox, x, width, totalWidth);
+            clipBox = ExpandChartLabelClipToText(clipBox, x, width, totalWidth, alignment);
             if (wrapLines is not null && wrapLines.Count > 1)
             {
-                clipBox = ExpandPieLabelClipToText(clipBox, x, width, totalWidth);
                 double lineY = y;
                 foreach (ChartTextRunLayout[] wrapLine in wrapLines)
                 {
@@ -352,21 +351,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    // Centered clip expansion for overflowing pie label text: single-line text wider
-    // than its box (Office wraps instead, still open) would otherwise lose glyphs at
-    // the box clip. Fitting text returns the clip unchanged; all alignments stay inside
-    // the centered expansion.
-    private static ChartLayoutBox ExpandPieLabelClipToText(ChartLayoutBox clip, double x, double width, double textWidth)
-    {
-        if (textWidth <= width)
-        {
-            return clip;
-        }
-        double left = x + (width - textWidth) / 2d;
-        double right = Math.Max(clip.X + clip.Width, left + textWidth);
-        double newLeft = Math.Min(clip.X, left);
-        return new ChartLayoutBox(newLeft, clip.Y, Math.Max(1d, right - newLeft), clip.Height);
-    }
     // Greedy pie label word wrap: pack words into lines within maxWidth, counting each
     // part's following separator (zero inside mid-word fragments); overlong single words
     // ride whole on their own line here and are pre-split by the caller when needed.
