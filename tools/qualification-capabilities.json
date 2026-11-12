@@ -610,6 +610,10 @@
   ],
   "docx-scaled-endnote-counter-content": [
     "DocxComposedEndnoteCountersKeepNeighborFractionsInBothViews",
+    "DocxContinuedPlainEndnoteCountersPreserveLiteralPagesAndGeometry",
+    "DocxFittingEndnotePageFieldsPreserveLiteralFramesAndWrapping",
+    "DocxFittingEndnotePageMeasurementUsesTwoDigitReferencePage",
+    "DocxEndnotePageBindingRetainsUnfitAndUnsupportedOwners",
     "DocxComputedFieldsKeepAtomicOrderBesideRunDrawings",
     "DocxComputedFieldPictureRunBoundariesPreserveVisibleContent",
     "DocxEndnoteCounterPrefixPreservesReferenceValueAndLiteralGeometry",
