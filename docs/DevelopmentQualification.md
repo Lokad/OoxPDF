@@ -4,6 +4,20 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+DOCX keep-with-next groups now admit once per source group (`7c94a3470`). Two
+oversized plain/mixed chains and one exact-fitting keep-lines control previously
+created an unnecessary third page; all three now use two pages and match their
+independent free-flow control PDFs exactly. All 120 source labels, 272 measured
+glyphs and eight picture paints remain present, with no measured cuts or unknown
+text traces. Independent keep-lines and explicit page/column/section barriers stay
+covered. Windows passes 22 focused checks; Linux passes 19 with three declared
+Windows-font skips. Two test-only repairs preserve their original failures and
+reuse the runtime; only repaired methods reran. All fourteen DOCX portfolio PDFs
+and diagnostics remain exact, preserving their existing visual failures. Existing
+Word-backed spacing/page controls pass; the new inputs have no calibrated Word
+view/geometry reference. The selected SVG development package predates this fix;
+framework/package qualification belongs to the next coherent gate.
+
 Ordinary SVG labels now paint through the common DOCX/PPTX image path
 (`06bbe1379`, font-owner integration `fa2184024`). The two synthetic inputs that
 previously painted only a blue rectangle now retain all 13 non-space glyph paints
