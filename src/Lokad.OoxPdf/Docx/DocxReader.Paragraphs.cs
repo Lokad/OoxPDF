@@ -489,6 +489,9 @@ internal sealed partial class DocxReader
                 XElement formattingRun = firstRun is null || UsesDefaultDynamicFieldFormatting(instruction, kind)
                     ? new XElement(WordprocessingNamespace + "r") : firstRun;
                 AddFieldPlaceholderRun(formattingRun, placeholder, fieldSourceRunIndex, revision, kind);
+                // The computed result replaces its cached runs and owns one
+                // source position, including when there is no stored result.
+                sourceRunIndex++;
                 if (firstRun is not null && ResolveRunProperties(firstRun.Element(WordprocessingNamespace + "rPr"),
                     paragraphStyleId, ReadCharacterStyleId(firstRun), styles, tableCellStyle?.Run).Hidden != true)
                     foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex, cancellationToken))

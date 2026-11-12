@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
@@ -12,6 +13,78 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxFieldsTests
 {
+    public static void DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership()
+    {
+        foreach (string kind in new[] { "PAGE", "NUMPAGES" })
+        foreach (int cachedRuns in new[] { 0, 1, 2 })
+        {
+            var document = ReadComputedFieldLink(kind, cachedRuns, OoxPdfDocxMarkupMode.Final);
+            var paragraph = document.Paragraphs.Single(value => value.Hyperlinks.Count != 0);
+            var link = paragraph.Hyperlinks.Single();
+            var field = paragraph.FieldReferences.Single();
+            var outside = paragraph.Runs.Single(value => value.Text.Contains("outside", StringComparison.Ordinal));
+            TestAssert.True(field.UsesPlaceholder && link.SourceRunStartIndex <= field.SourceRunIndex &&
+                field.SourceRunIndex < link.SourceRunStartIndex + link.SourceRunCount,
+                "A computed field result must own a source position within its hyperlink, regardless of cached runs.");
+            TestAssert.True(outside.SourceRunIndex > field.SourceRunIndex &&
+                outside.SourceRunIndex >= link.SourceRunStartIndex + link.SourceRunCount,
+                "Following authored text must retain an independent source position outside the link.");
+        }
+    }
+
+    public static void DocxComputedSimpleFieldLinksCoverOnlyTheirResolvedResult()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string kind in new[] { "PAGE", "NUMPAGES" })
+        foreach (int cachedRuns in new[] { 0, 1, 2 })
+        {
+            var document = ReadComputedFieldLink(kind, cachedRuns, mode);
+            var paragraph = document.Paragraphs.Single(value => value.Hyperlinks.Count != 0);
+            var field = paragraph.FieldReferences.Single();
+            var outside = paragraph.Runs.Single(value => value.Text.Contains("outside", StringComparison.Ordinal));
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup
+                    : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var pages = renderer.RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Contains("2 outside.", string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[1], true)
+                .Select(show => show.Text)));
+            var annotation = pages[1].Annotations.Single();
+            TestAssert.Equal(0, annotation.Destination!.Value.PageIndex);
+            var line = renderer.InspectTextEmission(document).Lines.Single(value =>
+                value.PageIndex == 1 && value.ContainerStoryKind == "Body");
+            var result = line.Segments.Single(value => !value.IsTerminalLineSpace &&
+                value.SourceTextRunIndex == field.SourceRunIndex);
+            var following = line.Segments.Single(value => !value.IsTerminalLineSpace &&
+                value.SourceTextRunIndex == outside.SourceRunIndex);
+            TestAssert.True(annotation.X <= result.X + result.Width/2 &&
+                annotation.X + annotation.Width >= result.X + result.Width/2 &&
+                annotation.Y <= result.BaselineY && annotation.Y + annotation.Height >= result.BaselineY,
+                "The actual resolved field glyph must remain clickable.");
+            TestAssert.True(annotation.X + annotation.Width < following.X + following.Width/2,
+                "The following authored text must not become part of the computed field's link.");
+        }
+    }
+
+    private static DocxDocument ReadComputedFieldLink(string kind, int cachedRuns, OoxPdfDocxMarkupMode mode) =>
+        DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false, (xml, w, _) =>
+        {
+            var body = xml.Root!.Element(w + "body")!;
+            var section = body.Element(w + "sectPr")!;
+            body.RemoveNodes();
+            var field = new XElement(w + "fldSimple", new XAttribute(w + "instr", " " + kind + " "));
+            for (int index = 0; index < cachedRuns; index++)
+                field.Add(new XElement(w + "r", new XElement(w + "t", "7")));
+            body.Add(new XElement(w + "p",
+                    new XElement(w + "bookmarkStart", new XAttribute(w + "id", "42"), new XAttribute(w + "name", "CounterTarget")),
+                    new XElement(w + "r", new XElement(w + "t", "Counter target")),
+                    new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "42"))),
+                new XElement(w + "p", new XElement(w + "r", new XElement(w + "br", new XAttribute(w + "type", "page")))),
+                new XElement(w + "p", new XElement(w + "hyperlink", new XAttribute(w + "anchor", "CounterTarget"), field),
+                    new XElement(w + "r", new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), " outside."))),
+                section);
+        });
+
     public static void DocxReaderPreservesFieldReferencesStructurally()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

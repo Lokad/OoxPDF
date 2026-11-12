@@ -5824,6 +5824,15 @@
     "PortableRenderingComposedInlineFrameReportRetainsRepeatedStaticOwners"
   ],
   "docx-bookmark-ownership": [
+    "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",
+    "DocxComputedSimpleFieldLinksCoverOnlyTheirResolvedResult",
+    "DocxReaderPreservesFieldReferencesStructurally",
+    "DocxReaderPreservesDynamicFieldReferencesInsideNoteStories",
+    "DocxReaderSizesRunlessFieldPlaceholderThroughStyleCascade",
+    "DocxLiteralFieldLikeTextSurvivesWhileActualFieldsResolve",
+    "DocxCrossReferenceComplexFieldCachedResultInsideHyperlinkDoesNotEmitUnsupportedDiagnostic",
+    "DocxLockedFields",
+    "DocxEmptyStoredResults",
     "DocxTerminalBookmarksSurviveUnpaintedWhitespaceBeforePageBreak",
     "DocxParagraphEndBookmarks",
     "DocxReaderPromotesInlineRunPageBreakInsideParagraph",
