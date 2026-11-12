@@ -307,23 +307,26 @@ internal sealed partial class PptxRenderer
 
             double separatorWidth = (await textMeasurer.MeasureAsync(GetChartDataLabelSeparator(options), style).ConfigureAwait(false));
             double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
-            clipBox = ExpandChartLabelClipToText(clipBox, x, width, totalWidth, alignment);
             if (wrapLines is not null && wrapLines.Count > 1)
             {
-                double lineY = y;
-                foreach (ChartTextRunLayout[] wrapLine in wrapLines)
+                var lines = wrapLines.Select(wrapLine =>
                 {
-                    double lineWidth = separatorWidth * Math.Max(0, wrapLine.Length - 1);
-                    foreach (ChartTextRunLayout wrapRun in wrapLine)
+                    double lineWidth = separatorWidth * Math.Max(0, wrapLine.Length - 1) + wrapLine.Sum(run => run.Width);
+                    double lineX = alignment switch
                     {
-                        lineWidth += wrapRun.Width;
-                    }
-                    double lineCursor = alignment switch
-                    {
-                        TextAlignment.Right => x + Math.Max(1d, wrapLongest) - lineWidth,
+                        TextAlignment.Right => x + Math.Max(1d, width) - lineWidth,
                         TextAlignment.Center => x + (Math.Max(1d, wrapLongest) - lineWidth) / 2d,
                         _ => x
                     };
+                    return (Runs: wrapLine, Width: lineWidth, X: lineX);
+                }).ToArray();
+                foreach (var line in lines)
+                    clipBox = ExpandChartLabelClipToText(clipBox, line.X, line.Width);
+                double lineY = y;
+                foreach (var line in lines)
+                {
+                    ChartTextRunLayout[] wrapLine = line.Runs;
+                    double lineCursor = line.X;
                     for (int wrapPosition = 0; wrapPosition < wrapLine.Length; wrapPosition++)
                     {
                         ChartTextRunLayout wrapRun = wrapLine[wrapPosition];
@@ -342,6 +345,7 @@ internal sealed partial class PptxRenderer
                 _ => x
             };
 
+            clipBox = ExpandChartLabelClipToText(clipBox, cursor, totalWidth);
             foreach (ChartTextRunLayout run in labelRuns)
             {
                 double runWidth = Math.Max(0.1d, run.Width);

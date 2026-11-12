@@ -275,20 +275,14 @@ internal sealed partial class PptxRenderer
         return new ChartLayoutBox(left, top, Math.Max(1d, right - left), Math.Max(1d, bottom - top));
     }
 
-    // Data labels admit their measured text independently of the nominal box.
-    // Keep placement fixed and expand the existing clip in the painted direction.
-    private static ChartLayoutBox ExpandChartLabelClipToText(ChartLayoutBox clip, double x, double width, double textWidth, TextAlignment alignment)
+    // Admit the actual measured paint extent. Whole and split text have distinct
+    // existing overflow alignment; placement supplies its resolved origin here.
+    private static ChartLayoutBox ExpandChartLabelClipToText(ChartLayoutBox clip, double textX, double textWidth)
     {
-        if (textWidth <= width) return clip;
-        double left = alignment switch
-        {
-            TextAlignment.Right => x + width - textWidth,
-            TextAlignment.Center => x + (width - textWidth) / 2d,
-            _ => x
-        };
-        double right = Math.Max(clip.X + clip.Width, left + textWidth);
-        double newLeft = Math.Min(clip.X, left);
-        return new ChartLayoutBox(newLeft, clip.Y, Math.Max(1d, right - newLeft), clip.Height);
+        double left = Math.Min(clip.X, textX);
+        double right = Math.Max(clip.X + clip.Width, textX + textWidth);
+        if (left == clip.X && right == clip.X + clip.Width) return clip;
+        return new ChartLayoutBox(left, clip.Y, Math.Max(1d, right - left), clip.Height);
     }
 
     private static async ValueTask AddChartRichTextRunsAsync(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? links = null, bool admitTextOverflow = false)
@@ -310,7 +304,17 @@ internal sealed partial class PptxRenderer
         {
             if (richRuns.Length == 0)
                 totalWidth = await textMeasurer.MeasureAsync(fallbackText, style).ConfigureAwait(false);
-            ChartLayoutBox clip = ExpandChartLabelClipToText(new(clipX, clipY, clipWidth, clipHeight), x, width, totalWidth, alignment);
+            // Whole text emission clamps negative alignment space; split runs
+            // retain their existing centered/right-aligned source origin.
+            double free = Math.Max(1d, width) - totalWidth;
+            if (richRuns.Length == 0) free = Math.Max(0d, free);
+            double textX = alignment switch
+            {
+                TextAlignment.Center => x + free / 2d,
+                TextAlignment.Right => x + free,
+                _ => x
+            };
+            ChartLayoutBox clip = ExpandChartLabelClipToText(new(clipX, clipY, clipWidth, clipHeight), textX, totalWidth);
             (clipX, clipY, clipWidth, clipHeight) = (clip.X, clip.Y, clip.Width, clip.Height);
         }
         if (richRuns.Length == 0)
