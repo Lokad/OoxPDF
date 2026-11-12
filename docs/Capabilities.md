@@ -85,7 +85,10 @@ Supported within the following constraints:
   qualify that extent; other heights/labels/explosion geometry, manual Y, side
   anchors and authored legend coordinates remain approximate.
   Whole and split rich data labels admit their measured horizontal paint extent;
-  dense label overlap and wrapping remain approximate.
+  automatic polar labels move complete text/key/background/link units into measured
+  rows when they fit. Authored coordinates remain fixed; conflicting or unfit rows
+  retain source placement with a diagnostic. Unmeasurable paint retains placement.
+  Dense wrapping and exact Office geometry remain approximate.
   Axes/data labels share number formatting, including dates, numeric sections,
   scaling, fractions and supported accounting/currency forms. Unsupported syntax,
   formula-only data without cached values and unsupported chart kinds are diagnosed.

@@ -14,7 +14,8 @@
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
   qualified authored horizontal legends retain every name; manual pie viewports
   own their radius and horizontal factor reference. Whole and rich chart labels
-  share measured text clipping; dense overlap remains approximate. Merged-table content,
+  share measured clipping; automatic polar labels avoid measured collisions while
+  preserving authored/unfit fallbacks. Dense wrapping remains approximate. Merged-table content,
   font fallback, text/link geometry and preset arcs also improve.
 - SVG pictures: ordinary text labels now remain visible in DOCX and PPTX as managed
   glyph outlines; unsupported text features retain explicit diagnostics.

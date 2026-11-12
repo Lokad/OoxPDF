@@ -4,14 +4,22 @@ Updated 2026-11-12. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-Whole and split rich chart labels now share a clip derived from their measured
-paint extent, preserving their existing placement. Four causal controls remove 75
-cut glyphs; all 832 measured glyphs have known, unclipped bounds. Both hosts pass
-37 focused checks. Seven neighbor PDFs (four portfolio outcomes) and four cached
-Office controls match their immediate parent exactly; two Office image gates pass
-and two retain unchanged failures. Two pre-existing compound-label collisions remain
-visible: restored endings do not establish complete readability or Office/view
-parity. The broader gate for this runtime is pending; publication remains deferred.
+Automatic polar labels now place complete measured units in separate rows when
+needed. In two causal controls, two labels move about 8.74pt and both overlapping
+pairs disappear; all 832 measured glyphs remain unclipped, with text/GIDs/X/styles
+and non-label paint unchanged. Backgrounds, keys, clips and rich-text links follow
+the same placement. Authored coordinates remain fixed; unfit arrangements retain
+source placement with a warning. Both hosts pass 39 focused checks; the parent fails
+the actual ink-overlap assertion. Eight cached controls and seven neighbor PDFs
+(four portfolio outcomes) remain exact. Existing Office thresholds and failures
+are retained; this does not establish general wrapping or application-view parity.
+The broader gate for this local runtime is pending. Publication remains deferred.
+
+The preceding shared clipping correction removed 75 cut glyphs. Its coherent CI
+and same-package Windows/Linux, net10/net11 consumer gate passed; the selected
+B22 development package still belongs to that preceding source. A fixed .19-width
+wrapping prediction matched only 10 of 18 cached Office label groups and was rejected
+as a universal rule. Those references/baselines remain available for future work.
 
 Manual 2D-pie radii now follow the smaller authored viewport dimension through
 shared fitting. Eight pinned cached Office controls improve from up to 16.633pt
