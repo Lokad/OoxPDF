@@ -15,8 +15,20 @@ Windows-font skips. Two test-only repairs preserve their original failures and
 reuse the runtime; only repaired methods reran. All fourteen DOCX portfolio PDFs
 and diagnostics remain exact, preserving their existing visual failures. Existing
 Word-backed spacing/page controls pass; the new inputs have no calibrated Word
-view/geometry reference. The selected SVG development package predates this fix;
-framework/package qualification belongs to the next coherent gate.
+view/geometry reference. Framework and package results belong to each immutable
+artifact's qualification record; local rendering checks alone do not close those
+gates. Publication and broader acceptance remain open.
+
+A separate paint-order review of the sixteen retained portfolio outcomes binds
+56,513 glyphs to their actual font programs. No later paint among the 218 opaque
+rectangles and 22 axis-aligned opaque pictures examined intersects those glyph ink
+bounds. Eleven other
+fills also have bounds disjoint from earlier glyph ink. Five controlled PDFs check
+erasure, paint order, transparency, clipping and opaque image masks, including
+independent final-pixel checks. This bounded
+screen adds no Office-view or arbitrary occlusion claim: strokes, shading, text
+over text and annotation appearances remain unqualified. Existing visual failures
+and thresholds are unchanged.
 
 Ordinary SVG labels now paint through the common DOCX/PPTX image path
 (`06bbe1379`, font-owner integration `fa2184024`). The two synthetic inputs that
@@ -45,8 +57,8 @@ match their parent outputs. Source-font bounds match within 0.000615pt and final
 crops show complete labels. All sixteen original portfolio PDFs and diagnostics stay
 exact, retaining independent evidence and two PPTX passes/fourteen DOCX image failures.
 Transfer verifies 24 assets and two exact smokes without a root build or suite replay.
-Preceding CI43235373217/sourcec43b0a2c0 is closed green; its intermediate payload is
-not selected while this repair is active. Current framework/package closure belongs
+Preceding CI43235373217/sourcec43b0a2c0 is closed green; its intermediate payload was
+superseded by the metadata repair. Current framework/package closure belongs
 to the selected artifact's qualification record. Publication and broader acceptance stay open.
 
 Automatic note references and pictures now retain source order when their runs
