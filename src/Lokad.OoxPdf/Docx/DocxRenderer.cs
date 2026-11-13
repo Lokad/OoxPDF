@@ -413,7 +413,8 @@ internal sealed partial class DocxRenderer
                 .Where(image => image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
                 .Select(image => image.Bytes).OfType<byte[]>(),
             resolver, (face, token) => LoadFontAsync(face, fontCache, token), diagnostics, cancellationToken).ConfigureAwait(false);
-        return (first.Document, first.FontResources with { SvgTextFonts = svgFonts }, first.Layout);
+        return (first.Document, first.FontResources with { SvgTextFonts = svgFonts },
+            ReframeFloatingParagraphTops(first.Layout, context, cancellationToken));
     }
 
     private static async ValueTask<(DocxDocument Document, DocxFontResources FontResources, DocxLayout Layout)> PrepareNoteAdjustedLayoutAsync(

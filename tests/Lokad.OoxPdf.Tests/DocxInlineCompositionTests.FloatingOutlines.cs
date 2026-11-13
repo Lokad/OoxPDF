@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Pdf;
@@ -100,6 +101,39 @@ internal static partial class DocxInlineCompositionTests
                 Math.Abs((bounds[1] + bounds[3] - reviewLabel.Y) -
                     (original[1] + original[3] - finalLabel.Y) * scale) < .02d,
                 "The outline and its child baseline retain the same inset and printed scale. Absolute Review anchor residuals remain separate.");
+        }
+    }
+
+    public static void DocxFloatingBoxParagraphTopMatchesItsPrintedParagraphBackground()
+    {
+        foreach (string fixture in new[] { "floating-table-ordered", "floating-cell-inline-box" })
+        foreach (int offset in new[] { 0, 18, -6 })
+        {
+            var source = ReadMutation("TableGridOrigins/Containers/" + fixture, OoxPdfDocxMarkupMode.AllMarkup,
+                false, false, (xml, w, _) =>
+                {
+                    XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+                    var anchor = xml.Descendants(wp + "anchor").Single();
+                    anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.Value =
+                        (offset * 12700).ToString(CultureInfo.InvariantCulture);
+                    var paragraph = anchor.Ancestors(w + "p").First();
+                    var properties = paragraph.Element(w + "pPr")!;
+                    properties.Element(w + "shd")?.Remove();
+                    properties.Add(new XElement(w + "shd", new XAttribute(w + "val", "clear"), new XAttribute(w + "fill", "DDEECC")));
+                });
+            var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            var fill = Regex.Matches(page.Content, @"0\.867 0\.933 0\.8 rg\s+(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[\d.]+) (?<h>[\d.]+) re f").Single();
+            double top = double.Parse(fill.Groups["y"].Value, CultureInfo.InvariantCulture) +
+                double.Parse(fill.Groups["h"].Value, CultureInfo.InvariantCulture);
+            var label = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page)
+                .First(show => show.Text.Contains("BOX TABLE NORTH", StringComparison.Ordinal));
+            double scale = label.Size / 10d; // The authored table caption is10pt.
+            double height = fixture == "floating-table-ordered" ? 60d : 120d;
+            var outline = ReadFloatingOutline(page, height * scale, 216d * scale, .02d).Single().Bounds;
+            TestAssert.True(Math.Abs(outline[1] + outline[3] - (top - offset * scale)) < .003d,
+                "A paragraph-relative floating frame retains the authored offset from its printed paragraph background.");
         }
     }
 

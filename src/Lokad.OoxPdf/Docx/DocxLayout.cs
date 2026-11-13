@@ -91,7 +91,11 @@ internal sealed record DocxFloatingDrawingLayout(
     double? WrapExclusionWidth,
     double? WrapExclusionHeight,
     DocxStoryId? Story,
-    DocxRelatedStoryLayout? TextBoxLayout);
+    DocxRelatedStoryLayout? TextBoxLayout)
+{
+    // The measured body line owning a paragraph-top reference, when resolved.
+    public DocxTextLineLayout? AnchorTextLine { get; init; }
+}
 
 internal sealed record DocxWrapExclusionFrame(
     double X,

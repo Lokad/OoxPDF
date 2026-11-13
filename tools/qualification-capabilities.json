@@ -79,6 +79,7 @@
     "DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback"
   ],
   "docx-floating-nested-table": [
+    "DocxFloatingBoxParagraphTopMatchesItsPrintedParagraphBackground",
     "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",
     "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
@@ -4921,6 +4922,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxFloatingBoxParagraphTopMatchesItsPrintedParagraphBackground",
     "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",
     "DocxComputedFieldBoxes",

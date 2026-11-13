@@ -2,6 +2,49 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private static DocxLayout ReframeFloatingParagraphTops(DocxLayout layout, DocxMarkupContext context,
+        CancellationToken cancellationToken)
+    {
+        if (layout.FloatingDrawings.Count == 0 || layout.Pages.Count == 0 ||
+            !FloatingTextBoxEmissionMap.TryCreate(context, layout.Pages[0].Height, out _)) return layout;
+        DocxFloatingDrawingLayout[]? changed = null;
+        bool separateHeaders = CanSeparatePlainHeaderOrigins(layout);
+        int contextPage = -1;
+        var pageContext = context;
+        for (int index = 0; index < layout.FloatingDrawings.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var drawing = layout.FloatingDrawings[index];
+            // Top-offset anchors follow the measured printed paragraph, not a
+            // second scaling of its already spaced body coordinates. Wrapped,
+            // fragmented, non-body and unmeasured owners retain their fallback.
+            if (drawing.Story is not null || drawing.TextBoxLayout is null || drawing.WrapExclusionTop is not null ||
+                drawing.PageStartIndex != drawing.PageEndIndex ||
+                !string.Equals(drawing.Drawing.VerticalRelativeFromValue, "paragraph", StringComparison.OrdinalIgnoreCase) ||
+                drawing.VerticalPlacementSource != DocxAnchorPlacementSource.Offset ||
+                drawing.AnchorTextLine is not { BodyLineBoxBaselineInsetPoints: double printedInset } line ||
+                drawing.AnchorPageIndex is not int pageIndex || drawing.VerticalReferenceTop is not double oldTop ||
+                drawing.AnchorBlockVerticalBottom is not double blockBottom || drawing.PlacedTop is not double placedTop)
+                continue;
+            if (contextPage != pageIndex)
+            {
+                pageContext = WithPageTextEmissionOffsets(context, layout, pageIndex, separateHeaders);
+                contextPage = pageIndex;
+            }
+            var frame = new DocxPrintedPageFrame(layout.Pages[pageIndex].Height, pageContext.WordCompatiblePrintScale);
+            double top = frame.UnmapY(line.BaselineY - pageContext.WordCompatibleTextYOffset + printedInset);
+            double bottom = frame.UnmapY(blockBottom - pageContext.WordCompatibleTextYOffset);
+            if (top == oldTop && bottom == drawing.VerticalReferenceBottom) continue;
+            changed ??= layout.FloatingDrawings.ToArray();
+            changed[index] = drawing with
+            {
+                VerticalReferenceTop = top, VerticalReferenceBottom = bottom,
+                PlacedTop = placedTop + top - oldTop
+            };
+        }
+        return changed is null ? layout : layout with { FloatingDrawings = changed };
+    }
+
     // Floating placement stays in design coordinates. On scaled Word-compatible
     // pages, the frame and its content map uniformly to emission space (X about
     // the page origin, Y about the page center), as in retained Word PDF controls.

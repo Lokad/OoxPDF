@@ -579,8 +579,9 @@ Supported within the following constraints:
   have bounded positioning, clipping, z-order and first-pass wrap exclusions.
   Floating textbox frames paint outside their inset child clip; scaled Review
   frames, strokes and children share the printed-page map. Nested drawings retain
-  separate frame properties. Absolute Review anchor placement remains approximate;
-  the qualified floating control retains a roughly2.3pt Y residual against Word PDF.
+  separate frame properties. Unwrapped paragraph-top offsets with measured body
+  line boxes follow the printed paragraph frame. Fragmented, wrapped and unresolved
+  anchor geometry retains its existing approximation.
   arbitrary Word reflow around floating content is unsupported.
 - Custom footnote/endnote marks support a nonwhitespace BMP character immediately
   after the reference in the same XML run. Each retains its own link alongside

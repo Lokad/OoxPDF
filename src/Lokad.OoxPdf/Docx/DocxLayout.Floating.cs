@@ -798,7 +798,7 @@ internal sealed partial class DocxLayoutEngine
             wrapExclusion?.Width,
             wrapExclusion?.Height,
             story,
-            textBoxLayout);
+            textBoxLayout) { AnchorTextLine = sourceBlock?.AnchorTextLine };
 
         DocxRelatedStoryLayout? CreateFloatingTextBoxLayout(int? pageNumber)
         {
@@ -1005,7 +1005,10 @@ internal sealed partial class DocxLayoutEngine
                 bounds = bounds with
                 {
                     VerticalTop = Math.Max(bounds.VerticalTop, y + height),
-                    VerticalBottom = Math.Min(bounds.VerticalBottom, y)
+                    VerticalBottom = Math.Min(bounds.VerticalBottom, y),
+                    AnchorTextLine = y + height > bounds.VerticalTop
+                        ? item is DocxTextLineLayout { IsFirstParagraphLine: true } firstLine ? firstLine : null
+                        : bounds.AnchorTextLine
                 };
                 index[sourceBlockIndex] = bounds;
             }
@@ -1062,7 +1065,10 @@ internal sealed partial class DocxLayoutEngine
         int? FirstColumnIndex,
         int? LastColumnIndex,
         double VerticalTop,
-        double VerticalBottom);
+        double VerticalBottom)
+    {
+        public DocxTextLineLayout? AnchorTextLine { get; init; }
+    }
 
     private sealed record DocxAnchorReferenceFrame(double Start, double End)
     {
