@@ -670,6 +670,7 @@ internal sealed partial class DocxLayoutEngine
                 imagePlan = CreateMidLinePlan(paragraph, textSpans, lines, firstParagraphWidth, continuationParagraphWidth,
                     DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, profile.LineHeight, hasExplicitLineSpacing: false),
                     fixedScale, textMeasurer);
+            if (lines.Length != 0) height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
             for (int index = 0; index < lines.Length; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();

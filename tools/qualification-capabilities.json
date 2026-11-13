@@ -1,5 +1,7 @@
 {
   "docx-keep-chain-admission": [
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxKeptListLabelCountersFollowTheAdmittedFrame",
     "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
     "DocxKeptFallbackPicturesBindCountersAfterOccupiedAdmission",
     "DocxKeptFallbackBoxesKeepHeadingsWithCompleteFrames",
@@ -4935,6 +4937,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxKeptListLabelCountersFollowTheAdmittedFrame",
     "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
     "DocxKeptFallbackPicturesBindCountersAfterOccupiedAdmission",
     "DocxKeptFallbackBoxesKeepHeadingsWithCompleteFrames",
@@ -8103,6 +8107,8 @@
     "DocxUnsupportedEquationInFooterIsDiagnosed"
   ],
   "docx-list-font-style": [
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxKeptListLabelCountersFollowTheAdmittedFrame",
     "DocxInlineCompositionListLabelStyles",
     "PortableRenderingListLabelStyles",
     "PortableRenderingStaticMissingMath",
