@@ -4,6 +4,17 @@ Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Hyperlink containers now propagate their parsed children's source ownership.
+Four further missing-fraction outcomes are restored when an insertion contains
+an empty or bookmark-only hyperlink. All eight causal PDFs exactly match the
+no-scope control, including actual font-program/GID paint, geometry and paths;
+73 unique glyphs are uncut/known and the before/after paint was reviewed. Windows
+and Ubuntu each pass 15 focused checks without skips in one invocation. Both new
+regressions fail against the parent; actual and unknown owners retain their guards.
+All sixteen portfolio PDFs remain byte-identical, reusing source/ink/picture proof
+and unchanged Office comparisons. This follow-up uses one frozen Release runtime;
+its broader framework/CI/package checks are deferred to the next coherent milestone.
+
 Annotation-only revision scopes no longer suppress neighboring mathematics. The
 source parser reports payload ownership while retaining its annotation handling
 and conservative treatment of unknown content. Five missing fractions are restored
@@ -15,8 +26,14 @@ hidden boxes and cancellation remain covered. One frozen Release runtime supplie
 all checks, 24 transferred assets and two exact integration smokes; no root rebuild.
 All sixteen portfolio PDFs and eight box neighbors remain byte-identical, reusing
 their native/source/picture evidence and unchanged Office comparisons. Two PPTX
-image passes and fourteen DOCX failures remain. Broader CI/framework/package
-qualification is pending for this coherent batch; publication stays deferred.
+image passes and fourteen DOCX failures remain. Its coherent gate closed green:
+Windows 4,861 passes/19 skips, Ubuntu 2,373 passes/133 skips and the same 94 unique
+.NET 10 checks per host without skips. The SAME Windows-produced package passes
+four consumers across both hosts/frameworks, including cancellation, memory refusal,
+leases, temporary cleanup and destination preservation. Package/PDB/source identity,
+24 caller documents/77 links and two exact CI runtime smokes pass without a root
+rebuild/repack. Selected package 2E72DD61/source e135 includes that visibility batch;
+the hyperlink follow-up above awaits the next gate. Publication stays deferred.
 
 Hidden inline text boxes now follow their drawing run's resolved visibility.
 Four Final/Review outcomes no longer paint an intentionally hidden box's prose
@@ -26,9 +43,9 @@ measured cuts or unknown traces; two bounded before/after paint views were revie
 Windows passes 25 focused checks; Ubuntu passes 24 with one declared installed-font
 skip. Four regressions fail against the parent. One harness-only repair retains
 the failed comparator and reruns its two changed methods; the library stays exact.
-The coherent portfolio result is included above; framework/package qualification
-is batched for the visibility corrections. The separate empty-scope omission is
-now repaired above. New-source Word geometry remains unqualified.
+The coherent portfolio and broader visibility-batch gate are included above.
+The separate empty-scope omission is repaired above. New-source Word geometry
+remains unqualified, and application-view calibration is unfinished.
 
 Hidden run page/column breaks now use the same resolved visibility as text before
 structural admission. An inserted hidden page break previously moved the public
@@ -42,8 +59,8 @@ One frozen Release build supplies both hosts and the transfer of 24 assets plus
 two exact smokes. No new Word export or transformed-input pagination parity claim.
 Its CI closed green: Windows 4,854 passes/19 skips, Ubuntu 2,366 passes/133 skips,
 87 .NET 10 checks per host and four package consumers. The intermediate payload
-is skipped while the visibility batch continues; the selected AE5A package remains
-the earlier polar-frame candidate. Publication and broader acceptance stay deferred.
+was skipped; the corrections are now included in the selected visibility-batch
+package above. Publication and broader acceptance stay deferred.
 
 Side-pie plots and default legends now share measured chart-frame ownership.
 Existing side-legend allocation and pie fitting replace inherited plot ratios;
