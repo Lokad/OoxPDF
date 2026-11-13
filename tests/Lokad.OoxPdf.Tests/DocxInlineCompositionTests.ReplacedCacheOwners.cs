@@ -69,8 +69,22 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(expected.Length, actual.Length);
                 TestAssert.Equal(MathText(expected), MathText(actual));
                 TestAssert.Equal(1, actual.Sum(page => page.Images.Count));
-                TestAssert.True(expected.SelectMany(page => page.Annotations).SequenceEqual(actual.SelectMany(page => page.Annotations)),
-                    "Formatting history preserves navigation for the same source shape: " + story + "/" + instruction + "/" + shape + "/" + mode);
+                // Adding a real formatting revision can open the Review lane,
+                // changing physical rectangles and hyperlink line fragments.
+                // Check retained targets and valid placement independently of
+                // the existing source-pinned Office geometry assertions.
+                var expectedLinks = expected.SelectMany(page => page.Annotations).ToArray();
+                var links = actual.SelectMany(page => page.Annotations).ToArray();
+                TestAssert.True(expectedLinks.Where(link => link.IsUri).Select(link => link.Uri).Distinct()
+                    .Order().SequenceEqual(links.Where(link => link.IsUri).Select(link => link.Uri).Distinct().Order()),
+                    "Every source URI target survives cache replacement.");
+                TestAssert.True(links.Count(link => link.IsDestination) >= expectedLinks.Count(link => link.IsDestination),
+                    "Source bookmark links retain their painted fragments.");
+                TestAssert.True(links.All(link => double.IsFinite(link.X + link.Y + link.Width + link.Height) &&
+                    link.Width > 0d && link.Height > 0d && (link.Destination is not { } target ||
+                        target.PageIndex >= 0 && target.PageIndex < actual.Length &&
+                        double.IsFinite(target.Left ?? 0d) && double.IsFinite(target.Top ?? 0d))),
+                    "Retained navigation has finite geometry and admitted destination pages.");
                 using var cancellation = new CancellationTokenSource();
                 cancellation.Cancel();
                 TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null,
