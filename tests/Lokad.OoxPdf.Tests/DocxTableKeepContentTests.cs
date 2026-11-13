@@ -48,12 +48,13 @@ internal static class DocxTableKeepContentTests
     public static void DocxDeclaredKeptRowsRetainTheirAtomicFallback()
     {
         foreach (var mode in Modes)
-        foreach (string rule in new[] { "exact", "atLeast" })
+        foreach (string rule in new[] { "exact", "atLeast", "header" })
         {
             var source = Document([Paragraph(52, keep: true)], prefix: false, declaredRule: rule);
             var layout = Layout(source, mode);
             var row = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).Single();
-            TestAssert.Equal(600d, row.Height);
+            if (rule == "header") TestAssert.True(row.IsHeader && row.Height > 180d, "An oversized repeating header retains its existing atomic fallback.");
+            else TestAssert.Equal(600d, row.Height);
             TestAssert.Equal(1, row.FragmentCount);
         }
     }
@@ -96,7 +97,8 @@ internal static class DocxTableKeepContentTests
         var rows = new List<DocxTableRow>();
         if (prefix) rows.Add(new([new DocxTableCell("Prefix", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 90d)
             { HeightRuleValue = "exact", CantSplit = true });
-        rows.Add(new([cells], declaredRule is null ? null : 600d) { HeightRuleValue = declaredRule });
+        rows.Add(new([cells], declaredRule is null or "header" ? null : 600d)
+            { HeightRuleValue = declaredRule == "header" ? null : declaredRule, IsHeader = declaredRule == "header" });
         var table = new DocxTable("fixed", [160d], rows);
         return DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
     }

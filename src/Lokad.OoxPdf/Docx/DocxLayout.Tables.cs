@@ -749,7 +749,7 @@ internal sealed partial class DocxLayoutEngine
             bool MustKeepLines(DocxParagraphKeepRules rules, IEnumerable<DocxTextLineLayout> lines)
             {
                 if (rules.KeepLines != true) return false;
-                if (!HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) return true;
+                if (row.IsHeader || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) return true;
                 double lower = double.PositiveInfinity, upper = double.NegativeInfinity;
                 foreach (var line in lines)
                 {

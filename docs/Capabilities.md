@@ -519,9 +519,9 @@ Supported within the following constraints:
   a nested table keeps its source anchors without adding occupied height;
   its bookmarks use the placed insertion frame. Ordinary text and references
   keep their frames. Scaled Review tables share
-  printed body capacity for authored and nested rows. Natural-height rows flow a
+  printed body capacity for authored and nested rows. Natural-height body rows flow a
   keep-lines paragraph whose measured frame exceeds even an empty body frame;
-  fitting kept paragraphs remain together. Declared row heights, keep-next and
+  fitting kept paragraphs remain together. Repeating headers, declared row heights, keep-next and
   unresolved rich frames retain their existing fallbacks. Arbitrary rich-row
   fragmentation remains approximate.
   Conditional bands, columns,
