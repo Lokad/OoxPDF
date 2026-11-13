@@ -138,11 +138,17 @@ internal static partial class DocxInlineCompositionTests
         {
             var document = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2,
                 hidden, locked, revision);
-            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).Single(p => p.FieldReferences.Count > 0 || p.Equations.Count > 0);
+            var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(document).ToArray();
             bool included = revision == "none" || (revision == "ins" ? mode != OoxPdfDocxMarkupMode.Original :
                 mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup);
-            TestAssert.Equal(included ? hidden ? 1 : 2 : 0, paragraph.Images.Count);
-            if (!included) continue;
+            TestAssert.Equal(included ? hidden ? 1 : 2 : 0, paragraphs.Sum(p => p.Images.Count));
+            if (!included)
+            {
+                TestAssert.True(paragraphs.All(p => p.FieldReferences.Count == 0),
+                    "An excluded revision cannot publish cached pictures or field metadata.");
+                continue;
+            }
+            var paragraph = paragraphs.Single(p => p.FieldReferences.Count > 0);
             var field = paragraph.FieldReferences.Single();
             TestAssert.Equal(!locked, field.UsesPlaceholder);
             TestAssert.Equal(locked, field.RendersCachedResult);
