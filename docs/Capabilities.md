@@ -688,6 +688,9 @@ Approximate or restricted:
   approximate.
   Tables inside mapped inline header/footer boxes retain their rows, equations,
   links and bookmark targets in the painted frame, including nested tables.
+  Inline-box child text retains its source font in section-specific static stories,
+  including earlier sections replaced by a different final header/footer. New
+  multi-section Word geometry remains unqualified.
   A box's declared frame admits surrounding supported content even when its child
   story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
   ignored and warned; they do not discard supported outside formulas or pictures.

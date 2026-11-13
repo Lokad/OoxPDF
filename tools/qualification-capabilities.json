@@ -422,6 +422,8 @@
     "DocxInlineBoxBookmarksPreservePlacedLinksAndSiblingContent"
   ],
   "docx-static-box-table-placement": [
+    "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
+    "DocxSectionScopedInlineBoxesKeepVisibleLabelsInBothViews",
     "DocxStaticBoxTables",
     "DocxOrdinaryStaticInline",
     "PortableRenderingOrdinaryStaticInlineRetainsSourceContent",
@@ -4922,6 +4924,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
+    "DocxSectionScopedInlineBoxesKeepVisibleLabelsInBothViews",
     "DocxFloatingBoxParagraphTopMatchesItsPrintedParagraphBackground",
     "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",

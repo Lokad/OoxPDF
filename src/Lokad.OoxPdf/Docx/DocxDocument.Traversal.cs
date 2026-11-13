@@ -4,6 +4,13 @@ internal static class DocxBlockTraversal
 {
     // Preserve the established source order shared by font purposes and review ownership.
     public static IEnumerable<DocxParagraph> EnumerateSourceParagraphs(DocxDocument document)
+        => EnumerateStoryParagraphs(document)
+            .Concat(EnumerateStoryParagraphs(document).SelectMany(EnumerateInlineTextBoxParagraphs));
+
+    // Section settings can own distinct static stories even when the document's
+    // final header/footer has the same variant key. Child boxes follow the same
+    // story owners as their enclosing paragraphs.
+    private static IEnumerable<DocxParagraph> EnumerateStoryParagraphs(DocxDocument document)
     {
         return DocxBlockTraversal.EnumerateBodyParagraphs(document)
             .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
@@ -13,8 +20,7 @@ internal static class DocxBlockTraversal
                 .OfType<DocxSectionBreakElement>()
                 .SelectMany(sectionBreak => DocxBlockTraversal.EnumerateStaticStoryParagraphs(sectionBreak.PageSettings)))
             .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
-            .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document))
-            .Concat(EnumerateInlineTextBoxParagraphs(document));
+            .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document));
     }
 
     private static IEnumerable<DocxParagraph> EnumerateFloatingDrawingTextBoxParagraphs(DocxDocument document)
@@ -39,17 +45,6 @@ internal static class DocxBlockTraversal
                     .Concat(sectionBreak.PageSettings.FooterFloatingDrawingsByType.Values)
                     .SelectMany(drawings => drawings)))
             .Concat(document.RelatedStories.SelectMany(story => story.FloatingDrawings));
-    }
-
-    private static IEnumerable<DocxParagraph> EnumerateInlineTextBoxParagraphs(DocxDocument document)
-    {
-        return DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs))
-            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
-            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
-            .Concat(document.RelatedStories.SelectMany(DocxBlockTraversal.EnumerateBodyParagraphs))
-            .Concat(EnumerateFloatingDrawingTextBoxParagraphs(document))
-            .SelectMany(EnumerateInlineTextBoxParagraphs);
     }
 
     public static IEnumerable<DocxParagraph> EnumerateInlineTextBoxParagraphs(DocxParagraph paragraph)
