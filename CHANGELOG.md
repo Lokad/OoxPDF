@@ -6,7 +6,9 @@
   runtime dependencies.
 - DOCX: improves mixed text/equation/picture composition, tables, notes, related
   stories, pagination, fields, review markup and navigation. Corrects visible
-  content lost through wrapping, clipping or off-page frames. Computed fields
+  content lost through wrapping, clipping or off-page frames. Floating textbox
+  outlines retain their full stroke outside the child content clip in unscaled views.
+  Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field
   runs or wrapped in supported content controls and metadata containers;
   complex counter fields replace stale cached text consistently across run splits

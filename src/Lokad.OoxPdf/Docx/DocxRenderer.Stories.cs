@@ -351,6 +351,15 @@ internal sealed partial class DocxRenderer
         // other mode keeps the translated layout coordinates (FloatingTextBoxEmissionMap).
         bool uniformMap = FloatingTextBoxEmissionMap.TryCreate(markupContext, pageHeight, out FloatingTextBoxEmissionMap map);
         graphics.SaveState();
+        // The frame owns its outer stroke; only its children acquire the inset
+        // content clip, as for inline text boxes. Clipping first hides the frame.
+        // Scaled Word-compatible outlines remain unqualified.
+        if (!uniformMap && TryResolveTextBoxStroke(drawing.Drawing, width, height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue))
+        {
+            graphics.SetStrokeRgb(strokeRed, strokeGreen, strokeBlue);
+            graphics.SetLineWidth(strokeWidth);
+            graphics.StrokeRectangle(placedX, placedTop - height, width, height);
+        }
         if (uniformMap)
         {
             (double clipX, double clipY, double clipWidth, double clipHeight) = map.MapClipRectangle(contentX, contentTop, contentWidth, contentHeight);
@@ -360,16 +369,6 @@ internal sealed partial class DocxRenderer
         {
             graphics.ClipRectangle(contentX, contentTop - contentHeight, contentWidth, contentHeight);
         }
-        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked frames paint
-        // their outline under the text. Uniform-map pages keep legacy borderless output
-        // until scaled stroking is probed.
-        if (!uniformMap && TryResolveTextBoxStroke(drawing.Drawing, width, height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue))
-        {
-            graphics.SetStrokeRgb(strokeRed, strokeGreen, strokeBlue);
-            graphics.SetLineWidth(strokeWidth);
-            graphics.StrokeRectangle(placedX, placedTop - height, width, height);
-        }
-
         IReadOnlyList<DocxLayoutItem> items = textBoxLayout.TextLines
             .Select(line => uniformMap
                 ? map.PrecompensateLine(line, contentX, contentTop)

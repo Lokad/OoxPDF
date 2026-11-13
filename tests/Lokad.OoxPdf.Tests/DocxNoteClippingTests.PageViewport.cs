@@ -65,14 +65,14 @@ internal static partial class DocxNoteClippingTests
             ReadPhysicalPaintFrames(new PdfPage(100d, 100d, oblique, [])).ToArray());
     }
 
-    // Read only generated q/Q, rectangle clips, matrices and text/image paints for these
+    // Read only generated q/Q, rectangle clips/strokes, matrices and text/image paints for these
     // fixtures. CID decoding stays in the existing glyph-show reader; standard
     // affine matrices map clips and glyph ink into physical page coordinates.
     internal static IEnumerable<(string Block, PdfRectangle Clip, Matrix3x2 Transform)> ReadPhysicalPaintFrames(PdfPage page)
     {
         const string number = @"[-+\d.eE]+";
         string rectangle = number + @"(?: " + number + @"){3}";
-        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<text>BT)|(?<image>/[A-Za-z0-9_]+ Do))\r?$";
+        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<text>BT)|(?<image>/[A-Za-z0-9_]+ Do)|(?<stroke>" + rectangle + @" re S))\r?$";
         var saved = new Stack<(PdfRectangle Clip, Matrix3x2 Transform)>();
         var clip = new PdfRectangle(0d, 0d, page.Width, page.Height);
         var transform = Matrix3x2.Identity;
