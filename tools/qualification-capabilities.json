@@ -1,5 +1,7 @@
 {
   "docx-keep-chain-admission": [
+    "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
+    "DocxKeptFallbackPicturesBindCountersAfterOccupiedAdmission",
     "DocxKeptFallbackBoxesKeepHeadingsWithCompleteFrames",
     "DocxKeptFallbackBoxesBindPageAndTotalFieldsAfterAdmission",
     "DocxKeepNextOverflowAdmitsTheWholeSourceChainOnce",
@@ -4933,6 +4935,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
+    "DocxKeptFallbackPicturesBindCountersAfterOccupiedAdmission",
     "DocxKeptFallbackBoxesKeepHeadingsWithCompleteFrames",
     "DocxKeptFallbackBoxesBindPageAndTotalFieldsAfterAdmission",
     "DocxFallbackCellBoxesReserveCompleteChildFrames",
@@ -9106,6 +9110,8 @@
     "PortableRenderingInlineLiteralOperatorBreakPreservesContent"
   ],
   "docx-picture-revision-indicators": [
+    "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
+    "DocxKeptFallbackPicturesBindCountersAfterOccupiedAdmission",
     "DocxPictureRevision",
     "PortableRenderingPictureRevision",
     "DocxReviewRevisionInk",
@@ -9164,6 +9170,8 @@
     "DocxMixedFootnoteFrameClearsOverflowingFooterWithoutChangingTypographyOwner"
   ],
   "docx-body-cell-picture-frames": [
+    "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
+    "DocxKeptFallbackPicturesBindCountersAfterOccupiedAdmission",
     "DocxPictureRevision",
     "PortableRenderingPictureRevision",
     "DocxReviewRevisionInk",

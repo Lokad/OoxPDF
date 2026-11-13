@@ -654,18 +654,29 @@ internal sealed partial class DocxLayoutEngine
         double lineHeight = scaleExactBodyAdvances && ShouldScaleExactBodyAdvance(paragraph, profile, fontSize)
             ? profile.LineHeight * fixedScale : profile.LineHeight;
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
+        DocxMidLinePlan? imagePlan = null;
         if (textSpans.Count != 0)
         {
             bool useLineMetrics = UsesBodyTextLineMetrics(paragraph, profile, textMeasurer);
             double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, fixedScale, defaultTabStopPoints);
             double firstParagraphWidth = Math.Max(1d, availableWidth - textStartOffset - GetParagraphRightInset(paragraph, fixedScale));
             double continuationParagraphWidth = Math.Max(1d, availableWidth - GetParagraphTextStartOffset(paragraph, fixedScale) - GetParagraphRightInset(paragraph, fixedScale));
-            foreach (var line in WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, cancellationToken: cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale), sourceParagraph: paragraph))
+            var lines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, fixedScale), defaultTabStopPoints * fixedScale, allowOverwideTokenBreaks: ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: pageNumber, cancellationToken: cancellationToken, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, fixedScale), sourceParagraph: paragraph).ToArray();
+            // Keep admission consumes the same occupied picture lines as body
+            // placement, including the maximum expansion of adjacent pictures.
+            // Exact fallback overhangs retain their conservative admission until
+            // their picture/line contract has independent qualification.
+            if (lines.Length != 0 && !IsExactLineSpacing(paragraph.EffectiveProperties))
+                imagePlan = CreateMidLinePlan(paragraph, textSpans, lines, firstParagraphWidth, continuationParagraphWidth,
+                    DocxLineMetrics.ResolveBodyBaselineOffset(fontSize, profile.LineHeight, hasExplicitLineSpacing: false),
+                    fixedScale, textMeasurer);
+            for (int index = 0; index < lines.Length; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;
+                DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, lines[index]) : paragraph;
                 height += ReferenceEquals(metrics, paragraph) ? lineHeight :
                     ResolveLineHeightProfile(metrics, GetParagraphFontSize(metrics), textMeasurer).LineHeight;
+                height += (imagePlan?.ShiftAboveHeights[index] ?? 0d) + (imagePlan?.ExtraBelow(index) ?? 0d);
             }
         }
         else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
@@ -673,8 +684,10 @@ internal sealed partial class DocxLayoutEngine
             height += lineHeight;
         }
 
-        foreach (DocxInlineImage image in paragraph.Images)
+        for (int index = 0; index < paragraph.Images.Count; index++)
         {
+            if (imagePlan?.PlacedMask[index] == true) continue;
+            DocxInlineImage image = paragraph.Images[index];
             var (imageWidth, imageHeight) = ResolveInlineImageSize(image, availableWidth, fixedScale);
 
             height += imageHeight;
