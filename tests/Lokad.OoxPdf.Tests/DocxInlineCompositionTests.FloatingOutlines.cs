@@ -117,7 +117,8 @@ internal static partial class DocxInlineCompositionTests
                     anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.Value =
                         (offset * 12700).ToString(CultureInfo.InvariantCulture);
                     var paragraph = anchor.Ancestors(w + "p").First();
-                    var properties = paragraph.Element(w + "pPr")!;
+                    var properties = paragraph.Element(w + "pPr") ?? new XElement(w + "pPr");
+                    if (properties.Parent is null) paragraph.AddFirst(properties);
                     properties.Element(w + "shd")?.Remove();
                     properties.Add(new XElement(w + "shd", new XAttribute(w + "val", "clear"), new XAttribute(w + "fill", "DDEECC")));
                 });
