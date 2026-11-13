@@ -1135,6 +1135,8 @@
       "StagedPageMemory"
   ],
   "docx-oversized-kept-cell-content": [
+      "DocxOversizedCellKeepNext",
+      "DocxFittingCellKeepNextPreservesTargetAndPageAdmission",
       "DocxOversizedCellKeepLines",
       "DocxDeclaredKeptRowsRetainTheirAtomicFallback",
       "DocxTableLayoutStageKeepsCellKeepLinesParagraphWholeAtPageBoundary",
@@ -4969,6 +4971,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxOversizedCellKeepNext",
+    "DocxFittingCellKeepNextPreservesTargetAndPageAdmission",
     "DocxOversizedCellKeepLines",
     "DocxDeclaredKeptRowsRetainTheirAtomicFallback",
     "DocxTableHeaderGroup",

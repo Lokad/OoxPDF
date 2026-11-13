@@ -27,8 +27,8 @@
   field codes and pagination hints;
   automatic note references retain source order and link ownership,
   and Review endnote counters retain neighboring equations. Oversized keep-with-next
-  groups flow without repeatedly starting new pages. Natural-height table rows
-  also flow an oversized keep-lines paragraph; fitting keep-lines rules
+  groups flow without repeatedly starting new pages. Natural-height table body rows
+  also flow paragraphs with a keep constraint that cannot fit on one page; fitting paragraph keeps
   and explicit breaks remain respected. Hidden run breaks and inline text boxes
   honor inherited visibility; annotation-only revision scopes retain neighboring
   equations, including scopes containing hyperlinks, complete empty stored fields

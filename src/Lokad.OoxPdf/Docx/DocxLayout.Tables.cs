@@ -630,7 +630,7 @@ internal sealed partial class DocxLayoutEngine
                         int continuationCount = group.Count(line => line.BaselineY < fragmentBottomY);
                         if (firstCount != 0 && continuationCount != 0)
                         {
-                            if (keepRules.KeepNext == true || MustKeepLines(keepRules, group)) return false;
+                            if (RequiresAtomicParagraphKeep(keepRules, group)) return false;
                             bool widow = keepRules.WidowControl ?? (reviewFragmentScale == 1d);
                             if (widow && firstCount == 1) return false;
                             if (widow && continuationCount == 1)
@@ -736,7 +736,7 @@ internal sealed partial class DocxLayoutEngine
                     var rules = paragraphs[index].EffectiveProperties.KeepRules;
                     int before = group.Count(item => item.Index >= first && item.Index < end);
                     int after = group.Count(item => item.Index >= end);
-                    if (before != 0 && after != 0 && (rules.KeepNext == true || MustKeepLines(rules, group.Select(item => item.Line)) ||
+                    if (before != 0 && after != 0 && (RequiresAtomicParagraphKeep(rules, group.Select(item => item.Line)) ||
                         (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || after == 1))) return false;
                     if (before != 0 && after == 0 && rules.KeepNext == true &&
                         lines.Any(line => line.SourceParagraphIndex == index + 1) &&
@@ -746,9 +746,9 @@ internal sealed partial class DocxLayoutEngine
                 return true;
             }
 
-            bool MustKeepLines(DocxParagraphKeepRules rules, IEnumerable<DocxTextLineLayout> lines)
+            bool RequiresAtomicParagraphKeep(DocxParagraphKeepRules rules, IEnumerable<DocxTextLineLayout> lines)
             {
-                if (rules.KeepLines != true) return false;
+                if (rules.KeepLines != true && rules.KeepNext != true) return false;
                 if (row.IsHeader || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) return true;
                 double lower = double.PositiveInfinity, upper = double.NegativeInfinity;
                 foreach (var line in lines)

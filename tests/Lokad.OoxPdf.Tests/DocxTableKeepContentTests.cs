@@ -49,8 +49,11 @@ internal static class DocxTableKeepContentTests
     {
         foreach (var mode in Modes)
         foreach (string rule in new[] { "exact", "atLeast", "header" })
+        foreach (bool nextOnly in new[] { false, true })
         {
-            var source = Document([Paragraph(52, keep: true)], prefix: false, declaredRule: rule);
+            var paragraph = Paragraph(52, keep: !nextOnly);
+            if (nextOnly) paragraph = paragraph with { KeepRules = paragraph.KeepRules with { KeepNext = true } };
+            var source = Document([paragraph], prefix: false, declaredRule: rule);
             var layout = Layout(source, mode);
             var row = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).Single();
             if (rule == "header") TestAssert.True(row.IsHeader && row.Height > 180d, "An oversized repeating header retains its existing atomic fallback.");
@@ -59,12 +62,45 @@ internal static class DocxTableKeepContentTests
         }
     }
 
-    private static void AssertLines(DocxLayout layout, DocxParagraph paragraph, int count)
+    public static void DocxOversizedCellKeepNextPreservesSourceFrames()
+    {
+        foreach (var mode in Modes)
+        foreach (bool prefix in new[] { false, true })
+        foreach (bool following in new[] { false, true })
+        foreach (bool keepLines in new[] { false, true })
+        {
+            var paragraph = Paragraph(52, keepLines);
+            paragraph = paragraph with { KeepRules = paragraph.KeepRules with { KeepNext = true } };
+            var target = Paragraph(4, keep: false, label: "F");
+            var source = Document(following ? [paragraph, target] : [paragraph], prefix);
+            var layout = Layout(source, mode);
+            AssertLines(layout, paragraph, 52);
+            if (following) AssertLines(layout, target, 4, "F");
+        }
+    }
+
+    public static void DocxFittingCellKeepNextPreservesTargetAndPageAdmission()
+    {
+        foreach (var mode in Modes)
+        {
+            var paragraph = Paragraph(12, keep: false);
+            paragraph = paragraph with { KeepRules = paragraph.KeepRules with { KeepNext = true } };
+            var target = Paragraph(4, keep: true, label: "F");
+            var layout = Layout(Document([paragraph, target], prefix: true), mode);
+            var rows = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).Where(row => row.RowIndex == 1).ToArray();
+            TestAssert.Equal(1, rows.Length);
+            TestAssert.True(layout.Pages[1].Items.Contains(rows[0]), "A fitting keep group is admitted together after the page boundary.");
+            AssertLines(layout, paragraph, 12);
+            AssertLines(layout, target, 4, "F");
+        }
+    }
+
+    private static void AssertLines(DocxLayout layout, DocxParagraph paragraph, int count, string label = "L")
     {
         var lines = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>())
             .SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines)
             .Where(line => ReferenceEquals(line.SourceParagraph, paragraph)).ToArray();
-        TestAssert.True(lines.Select(line => line.Text.Trim()).SequenceEqual(Enumerable.Range(0, count).Select(index => "L" + index.ToString("000"))),
+        TestAssert.True(lines.Select(line => line.Text.Trim()).SequenceEqual(Enumerable.Range(0, count).Select(index => label + index.ToString("000"))),
             "Each original line retains its owner and paints exactly once in source order.");
         foreach (var line in lines)
         {
