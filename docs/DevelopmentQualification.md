@@ -4,23 +4,30 @@ Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-Complex counter fields now replace cached text by source ownership, instead of
-recognizing only digits. Previously a stale PAGE cache such as `stale` painted
-`1stale` and suppressed its neighboring fraction. Four Final/Review omissions
-and stale-cache outcomes are restored; all eight causal PDFs exactly match the
-complete simple/numeric controls. Actual-program/GID ink binds74 glyphs without
-measured cuts or unknowns; restored paint was reviewed. Normal, field-aware and
-ordered picture-run text share one emission path, removing82 production lines.
-Locks, stored/nested results, opcode splitting, literal following numbers, math,
-pictures and navigation are covered. This does not add general field formats.
+Formatting history on a separate computed PAGE cache run previously omitted its
+neighboring `a+b=c` in both Final and Review of the composed report. Replaced cache
+text now retains its actual revision owner through the existing nonpainting-run
+mechanism. Both formulas are restored; all mathematical origins match complete
+controls exactly. Final is byte-identical to its complete control; changed Review
+paint binds3,631 native font-program/GID glyphs without measured cuts or unknowns.
+Stored/locked results retain their existing painted owners. This adds no field
+formats, font/count eligibility rules or replacement ownership framework.
 
-The final frozen Release runtime passes43 focused Windows methods and39 Ubuntu
-methods with four declared font skips. All three parent regressions fail. The
-first implementation missed the duplicated ordered-run emitter; its failed
-checks/runtime remain recorded. The corrected production runtime was qualified
-once per host and transferred as24 assets plus two exact smokes. A temporary-path
-preflight failure produced no conversions. No root build or suite replay.
-The next coherent broader gate for this shared text/field change is pending.
+One frozen Release runtime passes58 affected Windows methods and48 Ubuntu methods
+with ten declared font skips. Two actual parent regressions fail. Two test-only
+repairs correct source selection and Review navigation assumptions; only changed
+methods rerun, with21 runtime assets/3,449 inputs unchanged. Original failures and
+preflight-only attempts remain retained. All24 transferred assets and two exact
+smokes match; no root build or suite replay. The next coherent broader gate is
+pending. Exact new-source Word geometry and application-view calibration remain
+unqualified.
+
+The preceding counter-cache consolidation replaced digit-shaped suppression with
+shared source ownership, restoring four stale-word/missing-fraction outcomes and
+removing82 production lines. Eight causal PDFs exactly match complete controls;
+its independent glyph/ink proof and failed initial production attempt remain
+recorded. Opcode/run splits, literal following numbers, pictures and navigation
+retain their qualifications.
 
 The preceding ownership batch preserves equations beside complete empty stored
 fields, nonprinting editing metadata and reader-proven empty move ranges. Each
@@ -37,13 +44,13 @@ finds no measured prose page/wrap mismatch; other content and geometry limits
 remain. Office application-view calibration and transformed-source Word geometry
 remain unqualified.
 
-The preceding field/range batch closed green: Windows4,875 passes/19 skips,
-Ubuntu2,387/133 and the same108 .NET10 checks per host without skips. One
+The preceding counter batch closed green: Windows4,878 passes/19 skips,
+Ubuntu2,390/133 and the same111 .NET10 checks per host without skips. One
 Windows-produced package passed all four host/framework consumers, including
 cancellation, memory refusal, leases, cleanup and destination preservation.
 Package/PDB/source identities, 24 caller documents/77 links and two exact CI smoke
-PDFs pass. Flat packageE8BF4D49/source2c3a90c47 contains that batch; it excludes
-the new complex-cache follow-up. Publication/tagging remain deferred.
+PDFs pass. Flat package971DECBF/source3a292ef47 contains that batch; it excludes
+the new replaced-cache revision follow-up. Publication/tagging remain deferred.
 
 Computed simple fields retain pictures across direct cached-run splits; hyperlinks
 propagate their parsed children's ownership. Two silent picture omissions and

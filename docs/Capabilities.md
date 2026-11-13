@@ -636,6 +636,8 @@ Supported within the following constraints:
   Complex counters replace their cached text regardless of its spelling or run
   boundaries; stale words do not paint or suppress neighboring equations. Locked
   and stored results keep their owners, and text after the field remains literal.
+  Formatting history on replaced cached text retains its actual nonpainting run
+  owner, preserving neighboring equations in body, cell and header/footer content.
   Pictures in direct cached runs of a computed simple field retain source order
   and each run's resolved visibility when those runs are split.
   Automatic footnote/endnote references also keep their source order beside
