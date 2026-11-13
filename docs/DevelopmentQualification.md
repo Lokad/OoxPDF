@@ -4,6 +4,23 @@ Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Computed simple fields now retain pictures from every direct cached run, using
+each run's resolved visibility and one ordered computed-result owner. Splitting
+the picture into a second run previously omitted it silently in Final and Review.
+Both outcomes are restored; all eight causal PDFs exactly match complete
+source-equivalent controls. Source RGB programs/native image paints and 166 bound
+glyph instances are retained through PDF identity; the restored picture was viewed.
+The coherent picture/hyperlink batch passes 28 checks on Windows and 27 on Ubuntu
+with one declared independent-Word font skip. A fixture selected several equation
+paragraphs; its failed attempt remains, only that method reran, and the runtime's
+21 assets/3,449 inputs stayed identical. Both corrected regressions fail meaningfully
+on the parent. All sixteen portfolio/eight hyperlink PDFs remain exact, preserving
+their independent content/ink/picture proof and unchanged visual thresholds.
+Twenty-four assets and two exact integration smokes transfer without a root build
+or suite replay. Broader CI/framework/package qualification is pending for this
+coherent batch. Nested/unknown computed-cache owners and object-before-result
+geometry remain unqualified; this is not a general field rewrite or Word-view claim.
+
 Hyperlink containers now propagate their parsed children's source ownership.
 Four further missing-fraction outcomes are restored when an insertion contains
 an empty or bookmark-only hyperlink. All eight causal PDFs exactly match the
@@ -13,7 +30,7 @@ and Ubuntu each pass 15 focused checks without skips in one invocation. Both new
 regressions fail against the parent; actual and unknown owners retain their guards.
 All sixteen portfolio PDFs remain byte-identical, reusing source/ink/picture proof
 and unchanged Office comparisons. This follow-up uses one frozen Release runtime;
-its broader framework/CI/package checks are deferred to the next coherent milestone.
+its broader framework/CI/package checks are included in the pending batch above.
 
 Annotation-only revision scopes no longer suppress neighboring mathematics. The
 source parser reports payload ownership while retaining its annotation handling
