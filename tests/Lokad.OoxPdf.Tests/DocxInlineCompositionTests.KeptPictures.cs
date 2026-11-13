@@ -36,7 +36,10 @@ internal static partial class DocxInlineCompositionTests
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(1, pages.Length);
-            TestAssert.Contains("PAGE 1", DocxPageFootnoteNumberingTests.DecodeText(pages[0]));
+            string painted = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], usePageCoordinates: true)
+                .SelectMany(show => show.Text).Where(character => !char.IsWhiteSpace(character)));
+            TestAssert.True(painted.Contains("PAGE1", StringComparison.Ordinal) && !painted.Contains('9'),
+                "The painted PAGE value follows the admitted first page, without the stale cached result.");
             TestAssert.Equal(2, pages[0].Images.Count);
             TestAssert.Equal(1, diagnostics.Count(d => d.Id == "DOCX_UNSUPPORTED_EQUATION"));
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
