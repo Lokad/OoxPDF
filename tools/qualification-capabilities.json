@@ -1,5 +1,7 @@
 {
   "docx-keep-chain-admission": [
+    "DocxKeptFallbackBoxesKeepHeadingsWithCompleteFrames",
+    "DocxKeptFallbackBoxesBindPageAndTotalFieldsAfterAdmission",
     "DocxKeepNextOverflowAdmitsTheWholeSourceChainOnce",
     "DocxKeepChainMembersRetainIndependentKeepLinesAndExactFits",
     "DocxKeepChainsStopAtExplicitPageColumnAndSectionBoundaries",
@@ -422,6 +424,8 @@
     "DocxInlineBoxBookmarksPreservePlacedLinksAndSiblingContent"
   ],
   "docx-static-box-table-placement": [
+    "DocxKeptFallbackBoxesKeepHeadingsWithCompleteFrames",
+    "DocxKeptFallbackBoxesBindPageAndTotalFieldsAfterAdmission",
     "DocxFallbackCellBoxesReserveCompleteChildFrames",
     "DocxFallbackInlineBoxesAdmitCompleteFramesBesideUnsupportedMath",
     "DocxFallbackInlineBoxPageCountersFollowTheAdmittedFrame",
@@ -4929,6 +4933,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxKeptFallbackBoxesKeepHeadingsWithCompleteFrames",
+    "DocxKeptFallbackBoxesBindPageAndTotalFieldsAfterAdmission",
     "DocxFallbackCellBoxesReserveCompleteChildFrames",
     "DocxFallbackInlineBoxesAdmitCompleteFramesBesideUnsupportedMath",
     "DocxFallbackInlineBoxPageCountersFollowTheAdmittedFrame",

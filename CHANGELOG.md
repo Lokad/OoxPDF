@@ -15,7 +15,8 @@
   Growing inline text boxes include vertical insets in their occupied frame,
   preserving their final child lines and following clearance. Fallback placement
   and table-cell sizing use their measured frame; page fields rebind after a page
-  or column move.
+  or column move. Keep-with-next uses the same complete frame, so headings follow
+  growing boxes onto the next page.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field
   runs or wrapped in supported content controls and metadata containers;

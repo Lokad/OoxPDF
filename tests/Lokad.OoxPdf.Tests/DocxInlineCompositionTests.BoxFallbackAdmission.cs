@@ -62,7 +62,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadFallbackGrowingBox(OoxPdfDocxMarkupMode mode, bool boundary, bool roomy, bool counter,
-        string story = "body") => ReadGrowingInlineBox(story, mode, 20d, 15d, (xml, w, m) =>
+        string story = "body", Action<XDocument, XNamespace, XNamespace>? mutate = null) => ReadGrowingInlineBox(story, mode, 20d, 15d, (xml, w, m) =>
         {
             var content = xml.Descendants(w + "txbxContent").Single();
             var owner = content.Ancestors(w + "p").First();
@@ -83,5 +83,6 @@ internal static partial class DocxInlineCompositionTests
                 paragraph.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", " PAGE "),
                     new XElement(w + "r", new XElement(paragraph.Element(w + "r")!.Element(w + "rPr")!), new XElement(w + "t", "9"))));
             }
+            mutate?.Invoke(xml, w, m);
         });
 }

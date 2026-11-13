@@ -651,11 +651,6 @@ internal sealed partial class DocxLayoutEngine
     // scale with the layout spacing scale like every other fixed design length (W6-a1).
     // Content measures with the ambient (scaled on WC pages) measurer; no raw threading
     // and no emission map apply: coordinates are absolute flow space from birth.
-    internal static double EstimateInlineTextBoxHeight(DocxInlineTextBox textBox, double paragraphSpacingScale)
-    {
-        return (ReadEmuPoints(textBox.ExtentCyValue) ?? 0d) * paragraphSpacingScale;
-    }
-
     internal static DocxInlineTextBoxLayout? CreateInlineTextBoxLayout(
         DocxInlineTextBox textBox,
         int? sourceBlockIndex,

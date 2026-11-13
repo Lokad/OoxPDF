@@ -547,7 +547,8 @@ internal sealed partial class DocxLayoutEngine
                     return measured.Sum(line => line.OccupiedHeight);
             }
             double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber,
-                paragraphSpacingScale, scaleExactBodyAdvances, scaleMinimumBodyAdvances, cancellationToken);
+                paragraphSpacingScale, scaleExactBodyAdvances, scaleMinimumBodyAdvances, cancellationToken,
+                mathEquations: mathEquations, pageCount: pageCount);
             if (!TryGetSinglePreparedMath(value, mathEquations, out DocxPreparedMathParagraph? math)) { return regular; }
             if (DocxMathParagraphPolicy.GetStandaloneRow(value) is not null)
                 return FitsMathDisplayWidth(value, math, availableWidth, paragraphSpacingScale) ? math.LineHeight * paragraphSpacingScale : regular;
@@ -642,7 +643,8 @@ internal sealed partial class DocxLayoutEngine
     }
 
     private static double EstimateParagraphContentHeight(DocxParagraph paragraph, double availableWidth, IDocxTextMeasurer textMeasurer, double defaultTabStopPoints, int? pageNumber, double fixedScale, bool scaleExactBodyAdvances,
-        bool scaleMinimumBodyAdvances = false, CancellationToken cancellationToken = default)
+        bool scaleMinimumBodyAdvances = false, CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null)
     {
         double height = 0d;
         double fontSize = GetParagraphFontSize(paragraph);
@@ -651,7 +653,7 @@ internal sealed partial class DocxLayoutEngine
         DocxLineHeightProfile profile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer, minimumScale: minimumScale);
         double lineHeight = scaleExactBodyAdvances && ShouldScaleExactBodyAdvance(paragraph, profile, fontSize)
             ? profile.LineHeight * fixedScale : profile.LineHeight;
-        IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, null);
+        IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
         if (textSpans.Count != 0)
         {
             bool useLineMetrics = UsesBodyTextLineMetrics(paragraph, profile, textMeasurer);
@@ -680,7 +682,13 @@ internal sealed partial class DocxLayoutEngine
 
         foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
         {
-            height += EstimateInlineTextBoxHeight(textBox, fixedScale);
+            // Keep admission owns the same complete frame that body placement paints.
+            DocxInlineTextBoxLayout? measuredBox = CreateInlineTextBoxLayout(
+                textBox, sourceBlockIndex: null, 0d, availableWidth, 0d,
+                paragraph.EffectiveProperties.Alignment, textMeasurer, defaultTabStopPoints,
+                fixedScale, pageNumber ?? 1, cancellationToken,
+                mathEquations: mathEquations, pageCount: pageCount);
+            height += measuredBox?.BoxHeight ?? 0d;
         }
 
         return height;

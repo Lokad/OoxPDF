@@ -698,6 +698,8 @@ Approximate or restricted:
   the admitted page/column; unsupported neighboring equations remain diagnosed.
   Cell fallback reserves that same measured height rather than clipping grown
   children to the declared extent.
+  Keep-with-next also measures that complete frame, retaining authored heading/box
+  page relationships and known page/count inputs under fallback.
   A box's declared frame admits surrounding supported content even when its child
   story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
   ignored and warned; they do not discard supported outside formulas or pictures.
