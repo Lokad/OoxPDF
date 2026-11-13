@@ -1136,6 +1136,10 @@
   ],
   "docx-table-header-group-admission": [
       "DocxTableHeaderGroup",
+      "DocxTableLayoutStageSplitsRowsAtCellPageBreakElements",
+      "DocxTableLayoutStageMovesCellPageBreakSplitToNextPageWhenFirstFragmentDoesNotFit",
+      "DocxTableLayoutStageSplitsOversizedCellPageBreakFragmentAcrossFreshPages",
+      "DocxTableLayoutStageUsesEarliestCellPageBreakAsRowBoundary",
       "DocxRepeatedTableHeader",
       "DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak",
       "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
@@ -4951,6 +4955,8 @@
   ],
   "framework-compatibility": [
     "DocxTableHeaderGroup",
+    "DocxTableLayoutStageSplitsRowsAtCellPageBreakElements",
+    "DocxTableLayoutStageMovesCellPageBreakSplitToNextPageWhenFirstFragmentDoesNotFit",
     "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
     "DocxKeptListLabelCountersFollowTheAdmittedFrame",
     "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
