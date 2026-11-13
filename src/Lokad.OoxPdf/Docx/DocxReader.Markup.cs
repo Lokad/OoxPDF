@@ -40,8 +40,7 @@ internal sealed partial class DocxReader
                 // drawing run or a second revision boundary. Those owners are
                 // omitted before paragraph-level math reading occurs.
                 retainsDeletedStructure &= ancestor.Name == MathNamespace + "oMathPara" ||
-                    ancestor.Name == WordprocessingNamespace + "sdt" || ancestor.Name == WordprocessingNamespace + "sdtContent" ||
-                    IsInlineMetadataContainer(ancestor);
+                    DocxSourceXml.IsTransparentInlineContainer(ancestor);
             }
             if (included) count++;
         }

@@ -7,9 +7,13 @@ internal static class DocxSourceXml
 {
     // These wrappers contribute stored content without changing inline formatting.
     // Revisions, fields, links and directional/unknown owners need their own rules.
+    public static bool IsInlineMetadataContainer(XElement element) =>
+        element.Name == WordprocessingNamespace + "customXml" ||
+        element.Name == WordprocessingNamespace + "smartTag";
+
     public static bool IsTransparentInlineContainer(XElement element) =>
-        element.Name.Namespace == WordprocessingNamespace &&
-        element.Name.LocalName is "sdt" or "sdtContent" or "customXml" or "smartTag";
+        IsInlineMetadataContainer(element) || element.Name == WordprocessingNamespace + "sdt" ||
+        element.Name == WordprocessingNamespace + "sdtContent";
 
     public static IEnumerable<XElement> StoredRuns(XElement source, CancellationToken token)
     {

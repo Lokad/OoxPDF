@@ -740,7 +740,7 @@ internal sealed partial class DocxReader
             element?.Name == WordprocessingNamespace + "del" ||
             element?.Name == WordprocessingNamespace + "moveFrom" ||
             element?.Name == WordprocessingNamespace + "sdtContent" ||
-            element is not null && IsInlineMetadataContainer(element);
+            element is not null && DocxSourceXml.IsInlineMetadataContainer(element);
     }
 
 
