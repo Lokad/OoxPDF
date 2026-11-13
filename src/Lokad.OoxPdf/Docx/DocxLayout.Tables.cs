@@ -457,8 +457,11 @@ internal sealed partial class DocxLayoutEngine
             // fragment baseline projection must not scale it a second time.
             double flowBottom = marginBottom;
             double remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
-            if (rowIndex == 0 && headerRows.Count != 0 && hasPageContent() &&
-                ResolveInitialTableRowGroupHeight(table, rowHeights, continuationContentHeight, cancellationToken) > remainingPageHeight)
+            double initialGroupHeight = rowIndex == 0 && hasPageContent()
+                ? ResolveInitialTableRowGroupHeight(table, rowHeights, continuationContentHeight, cancellationToken) : rowHeight;
+            // Only the additional header extent needs group admission. Ordinary
+            // rows and explicit first fragments keep their admission below.
+            if (initialGroupHeight > rowHeight && initialGroupHeight > remainingPageHeight)
             {
                 finishPage();
                 frame = resolveFrame();
