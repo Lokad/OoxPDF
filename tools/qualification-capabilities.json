@@ -524,6 +524,7 @@
     "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons"
   ],
   "docx-empty-field-results": [
+    "DocxNontextRunRevisions",
     "DocxFieldCodeRevisions",
     "DocxReplacedCacheRevisions",
     "DocxComputedFieldCachesUseResultOwnershipAcrossRunBoundaries",
@@ -539,6 +540,7 @@
     "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks"
   ],
   "docx-cached-picture-results": [
+    "DocxNontextRunRevisions",
     "DocxFieldCodeRevisions",
     "DocxReplacedCacheRevisions",
     "DocxComputedComplexCachesKeepPicturesMathAndNavigationAcrossStories",
@@ -4912,6 +4914,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxNontextRunRevisions",
     "DocxFieldCodeRevisions",
     "DocxReplacedCacheRevisions",
     "DocxComputedFieldCachesUseResultOwnershipAcrossRunBoundaries",

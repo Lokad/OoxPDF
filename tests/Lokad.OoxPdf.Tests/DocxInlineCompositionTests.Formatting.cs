@@ -138,7 +138,7 @@ internal static partial class DocxInlineCompositionTests
         }
         var empty = paragraph.Runs.Select(run => run with { Text = string.Empty }).ToArray();
         TestAssert.True(!DocxInlineContent.HasSupportedRunRevisionOwners([change], empty, default),
-            "Empty/nontext owners cannot qualify a revision.");
+            "Emptying resolved text cannot invent an actual nonpainting source owner.");
         TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(paragraph with {
             Equations = paragraph.Equations.Select(e => e with { Revision = change }).ToArray() }).Count);
         using var canceled = new CancellationTokenSource(); canceled.Cancel();

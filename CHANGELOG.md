@@ -10,8 +10,9 @@
   remain intact beside pictures, including pictures split across cached simple-field
   runs or wrapped in supported content controls and metadata containers;
   complex counter fields replace stale cached text consistently across run splits
-  and mixed picture runs. Cached results and nonpainting field codes retain their
-  formatting-revision owners without suppressing neighboring equations;
+  and mixed picture runs. Cached results and runs without emitted text retain
+  formatting-revision ownership beside equations, including picture-only runs,
+  field codes and pagination hints;
   automatic note references retain source order and link ownership,
   and Review endnote counters retain neighboring equations. Oversized keep-with-next
   groups flow without repeatedly starting new pages; independent keep-lines rules
