@@ -96,8 +96,7 @@ internal sealed partial class DocxReader
                 AddEquation(child, revision, removeDeletedText);
                 return true;
             }
-            else if (child.Name == WordprocessingNamespace + "sdt" ||
-                child.Name == WordprocessingNamespace + "sdtContent" || IsInlineMetadataContainer(child))
+            else if (DocxSourceXml.IsTransparentInlineContainer(child))
             {
                 return AddVisibleRunContainer(child, revision, removeDeletedText);
             }
@@ -495,7 +494,7 @@ internal sealed partial class DocxReader
             bool hasCachedResult = FieldHasCachedResultContent(field);
             if (placeholder is not null)
             {
-                XElement? firstRun = field.Elements(WordprocessingNamespace + "r").FirstOrDefault();
+                XElement? firstRun = DocxSourceXml.StoredRuns(field, cancellationToken).FirstOrDefault();
                 // Bare computed values inherit their instruction's paragraph-style
                 // formatting, rather than stale cached-result formatting. Explicit
                 // MERGEFORMAT and unqualified switches keep the cached-style fallback.
@@ -508,7 +507,7 @@ internal sealed partial class DocxReader
                 // The computed value owns one source position. Cached pictures
                 // keep their order across run splits, using each run's visibility.
                 int resultTextOffset = 0, resultDrawingOrder = 0;
-                foreach (XElement resultRun in field.Elements(WordprocessingNamespace + "r"))
+                foreach (XElement resultRun in DocxSourceXml.StoredRuns(field, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
@@ -1794,11 +1793,6 @@ internal sealed partial class DocxReader
     }
 
     private static bool IsXmlWhitespace(char value) => value is ' ' or '\t' or '\r' or '\n';
-
-    // These inline annotations add metadata, not formatting or a new source
-    // owner. Do not flatten unknown or directional containers through this path.
-    private static bool IsInlineMetadataContainer(XElement element) =>
-        element.Name == WordprocessingNamespace + "customXml" || element.Name == WordprocessingNamespace + "smartTag";
 
     private static string? ReadParagraphStyleId(XElement? paragraphProperties)
     {

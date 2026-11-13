@@ -165,9 +165,71 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxComputedFieldCacheContainersPreservePicturesAcrossStories()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (string story in new[] { "body", "cell", "header", "footer" })
+        foreach (string kind in new[] { "PAGE", "NUMPAGES", "PAGE \\* MERGEFORMAT" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            var control = renderer.RenderPagesAsync(ReadComputedSimpleFieldPictures(story, kind, mode, true, 2),
+                null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, control.Sum(page => page.Images.Count));
+            foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested" })
+            {
+                var wrapped = renderer.RenderPagesAsync(ReadComputedSimpleFieldPictures(story, kind, mode, true, 2,
+                    container: container), null, default).ToBlockingEnumerable().ToArray();
+                TestAssert.Equal(2, wrapped.Sum(page => page.Images.Count));
+                TestAssert.Equal(control.Length, wrapped.Length);
+                for (int index = 0; index < control.Length; index++)
+                {
+                    TestAssert.Equal(control[index].Content, wrapped[index].Content);
+                    TestAssert.Equal(control[index].Fonts.Count, wrapped[index].Fonts.Count);
+                    TestAssert.True(control[index].Annotations.SequenceEqual(wrapped[index].Annotations),
+                        "Transparent cache wrappers preserve the existing equation and navigation owners.");
+                }
+            }
+        }
+    }
+
+    public static void DocxComputedFieldCacheContainersKeepVisibilityAndOwnerBoundaries()
+    {
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string revision in new[] { "none", "ins", "del" })
+        foreach (bool hidden in new[] { false, true })
+        foreach (bool locked in new[] { false, true })
+        foreach (string container in new[] { "customXml", "smartTag", "sdt", "nested" })
+        {
+            var control = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision);
+            var wrapped = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision, container);
+            var expected = DocxBlockTraversal.EnumerateBodyParagraphs(control).Single(p => p.Equations.Count != 0);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(wrapped).Single(p => p.Equations.Count != 0);
+            TestAssert.Equal(expected.Images.Count, paragraph.Images.Count);
+            TestAssert.Equal(expected.FieldReferences.Count, paragraph.FieldReferences.Count);
+            TestAssert.True(paragraph.Images.Select(image => image.SourceTextOffsetInRun)
+                .SequenceEqual(expected.Images.Select(image => image.SourceTextOffsetInRun)));
+            TestAssert.True(paragraph.Images.Select(image => image.SourceOrderInRun)
+                .SequenceEqual(expected.Images.Select(image => image.SourceOrderInRun)));
+            TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+        }
+        foreach (string container in new[] { "unknown", "foreign", "nested-field", "directional", "misplaced-property" })
+        {
+            var document = ReadComputedSimpleFieldPictures("body", "PAGE", OoxPdfDocxMarkupMode.Final, true, 2,
+                container: container);
+            TestAssert.Equal(0, DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(paragraph => paragraph.Images.Count));
+        }
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var w = (XNamespace)"http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        var source = new XElement(w + "fldSimple", new XElement(w + "sdt", new XElement(w + "sdtContent",
+            new XElement(w + "r", new XElement(w + "drawing")))));
+        TestAssert.Throws<OperationCanceledException>(() => DocxSourceXml.StoredRuns(source, cancellation.Token).ToArray());
+    }
+
     private static DocxDocument ReadComputedSimpleFieldPictures(string story, string kind,
         OoxPdfDocxMarkupMode mode, bool split, int count, bool hiddenLast = false,
-        bool locked = false, string revision = "none") =>
+        bool locked = false, string revision = "none", string container = "none") =>
         ReadMutation("CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-" + story),
             mode, true, true, (xml, w, _) =>
             {
@@ -188,6 +250,23 @@ internal static partial class DocxInlineCompositionTests
                             hiddenLast && index == count - 1 ? new XElement(w + "rPr", new XElement(w + "vanish")) : null,
                             picture));
                     else value.Add(picture);
+                }
+                if (container != "none")
+                {
+                    var children = field.Elements().Select(child => new XElement(child)).ToArray();
+                    XElement Wrap(string name, params object[] content) => name == "sdt"
+                        ? new XElement(w + name, new XElement(w + "sdtPr"), new XElement(w + "sdtContent", content))
+                        : new XElement(w + name, new XElement(w + (name + "Pr")), content);
+                    XElement wrapper = container switch
+                    {
+                        "nested" => Wrap("sdt", Wrap("customXml", Wrap("smartTag", children))),
+                        "foreign" => new XElement(XNamespace.Get("urn:ooxpdf:unknown") + "customXml", children),
+                        "nested-field" => new XElement(w + "fldSimple", new XAttribute(w + "instr", "REF OtherOwner"), children),
+                        "directional" => new XElement(w + "dir", new XAttribute(w + "val", "rtl"), children),
+                        "misplaced-property" => new XElement(w + "customXmlPr", children),
+                        _ => Wrap(container, children)
+                    };
+                    field.ReplaceNodes(wrapper);
                 }
                 source.ReplaceWith(revision == "none" ? field : new XElement(w + revision,
                     new XAttribute(w + "id", "907"), new XAttribute(w + "author", "Public reviewer"), field));

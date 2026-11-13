@@ -5,6 +5,23 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxSourceXml
 {
+    // These wrappers contribute stored content without changing inline formatting.
+    // Revisions, fields, links and directional/unknown owners need their own rules.
+    public static bool IsTransparentInlineContainer(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace &&
+        element.Name.LocalName is "sdt" or "sdtContent" or "customXml" or "smartTag";
+
+    public static IEnumerable<XElement> StoredRuns(XElement source, CancellationToken token)
+    {
+        foreach (XElement child in StoredChildren(source))
+        {
+            token.ThrowIfCancellationRequested();
+            if (child.Name == WordprocessingNamespace + "r") yield return child;
+            else if (IsTransparentInlineContainer(child))
+                foreach (XElement run in StoredRuns(child, token)) yield return run;
+        }
+    }
+
     // Editing boundaries and stored math pagination positions have no payload.
     // Content-bearing, unknown and misplaced children retain their source owner.
     public static bool IsNonPrintingMarker(XElement element) =>
