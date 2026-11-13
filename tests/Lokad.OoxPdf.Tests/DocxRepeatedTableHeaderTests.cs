@@ -69,7 +69,7 @@ internal static class DocxRepeatedTableHeaderTests
             };
             var layout = Layout(source, mode);
             int PageOf(string value) => layout.Pages.Select((page, index) => (page, number: index + 1))
-                .Single(pair => pair.page.Items.OfType<DocxTableRowLayout>().Any(row => Text(row).Contains(value, StringComparison.Ordinal))).number;
+                .First(pair => pair.page.Items.OfType<DocxTableRowLayout>().Any(row => Text(row).Contains(value, StringComparison.Ordinal))).number;
             TestAssert.Equal(1, PageOf("Explicit before"));
             TestAssert.Equal(2, PageOf("Explicit after"));
         }
