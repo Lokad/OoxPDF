@@ -51,6 +51,31 @@ internal static class DocxRepeatedTableHeaderTests
         }
     }
 
+    public static void DocxTableHeaderGroupsRetainExplicitCellBreakAdmission()
+    {
+        foreach (var mode in Modes)
+        {
+            var source = HeaderGroupDocument(2, 30d, boundary: true, keep: false, heading: false);
+            var table = source.Tables[^1];
+            var before = DocxTests.CreateDocxLayoutParagraph("Explicit before", 10d, 10d);
+            var after = DocxTests.CreateDocxLayoutParagraph("Explicit after", 10d, 10d);
+            var cell = table.Rows[0].Cells[0] with { Paragraphs = [], BodyElements = [new DocxParagraphElement(before),
+                new DocxPageBreakElement(DocxBreakSourceKind.PageBreakBefore, "1", null), new DocxParagraphElement(after)] };
+            var changed = table with { Rows = [table.Rows[0] with { Cells = [cell], CantSplit = false }, .. table.Rows.Skip(1)] };
+            source = source with
+            {
+                BodyElements = source.BodyElements.Select(block => block is DocxTableElement entry && ReferenceEquals(entry.Table, table)
+                    ? new DocxTableElement(changed) : block).ToArray(),
+                Tables = [source.Tables[0], changed]
+            };
+            var layout = Layout(source, mode);
+            int PageOf(string value) => layout.Pages.Select((page, index) => (page, number: index + 1))
+                .Single(pair => pair.page.Items.OfType<DocxTableRowLayout>().Any(row => Text(row).Contains(value, StringComparison.Ordinal))).number;
+            TestAssert.Equal(1, PageOf("Explicit before"));
+            TestAssert.Equal(2, PageOf("Explicit after"));
+        }
+    }
+
     private static DocxDocument HeaderGroupDocument(int headers, double headerHeight, bool boundary,
         bool keep, bool heading, int precedingPages = 0)
     {
