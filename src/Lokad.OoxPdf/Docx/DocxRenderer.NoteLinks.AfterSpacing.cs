@@ -84,7 +84,7 @@ internal sealed partial class DocxRenderer
                 paragraph.Spacing.AfterLinesValue is null && paragraph.Spacing.BeforeAutoSpacingValue is null &&
                 paragraph.Spacing.BeforeLinesValue is null && paragraph.Images.Count == 0 &&
                 paragraph.InlineTextBoxes.Count == 0 && paragraph.FieldReferences.Count == 0 &&
-                paragraph.CommentRanges.Count == 0 && paragraph.Revisions.Count == 0 && paragraph.RevisionRanges.Count == 0 &&
+                paragraph.CommentRanges.Count == 0 && paragraph.Revisions.Count == 0 && !DocxInlineContent.HasContentRevisionRanges(paragraph) &&
                 paragraph.ListLabel is null && paragraph.Hyperlinks.Count == 0 &&
                 paragraph.Runs.All(r => !r.Text.Contains('\n') && !r.Text.Contains('\r') && !r.Text.Contains('\t')))
             {
@@ -111,7 +111,7 @@ internal sealed partial class DocxRenderer
                  previous.Spacing.BeforeAutoSpacingValue is not null || previous.Spacing.BeforeLinesValue is not null ||
                  previous.Spacing.AfterAutoSpacingValue is not null || previous.Spacing.AfterLinesValue is not null ||
                  previous.Images.Count != 0 || previous.InlineTextBoxes.Count != 0 || previous.FieldReferences.Count != 0 ||
-                 previous.CommentRanges.Count != 0 || previous.Revisions.Count != 0 || previous.RevisionRanges.Count != 0 ||
+                 previous.CommentRanges.Count != 0 || previous.Revisions.Count != 0 || DocxInlineContent.HasContentRevisionRanges(previous) ||
                  previous.ListLabel is not null || previous.Hyperlinks.Count != 0 ||
                  previous.Runs.Any(r => r.Text.Contains('\n') || r.Text.Contains('\r') || r.Text.Contains('\t'))))
             {

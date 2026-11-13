@@ -198,7 +198,7 @@ internal static class DocxPlainBodyFrame
     private static bool HasPlainTextProperties(DocxParagraph p, bool allowImages = false) =>
         (allowImages || p.Images.Count == 0) && p.InlineTextBoxes.Count == 0 && p.Equations.Count == 0 &&
         DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(p, p.Revisions) &&
-        p.RevisionRanges.Count == 0 && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
+        !DocxInlineContent.HasContentRevisionRanges(p) && !p.HasDeletedParagraphMark && p.DeletedText.Length == 0 &&
         p.ListLabel is null &&
         p.Runs.All(r => r.Revision is null && r.Revisions.Count == 0 &&
             DocxScriptClassifier.IsSimpleLineText(r.Text));

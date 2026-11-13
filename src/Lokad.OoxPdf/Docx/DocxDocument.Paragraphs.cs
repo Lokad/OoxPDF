@@ -189,7 +189,12 @@ internal sealed record DocxRevisionRange(
     int? StartSourceRunIndex,
     int? StartTextOffset,
     int? EndSourceRunIndex,
-    int? EndTextOffset);
+    int? EndTextOffset)
+{
+    // Only the reader can prove a closed range contains no source payload.
+    // Legacy/synthetic ranges remain conservative, even at equal text offsets.
+    public bool HasContentSource { get; init; } = true;
+}
 
 internal sealed record DocxFieldReference(
     DocxFieldKind Kind,

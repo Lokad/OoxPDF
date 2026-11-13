@@ -43,7 +43,10 @@ internal static class DocxInlineContent
         HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs, token) &&
         (hasPageInputs ? HasSourceFieldResults(paragraph.FieldReferences, paragraph.Runs)
             : HasMaterializedFieldResults(paragraph.FieldReferences, paragraph.Runs)) &&
-        paragraph.RevisionRanges.Count == 0;
+        !HasContentRevisionRanges(paragraph);
+
+    public static bool HasContentRevisionRanges(DocxParagraph paragraph) =>
+        paragraph.RevisionRanges.Any(range => range.HasContentSource);
 
     public static bool RequiresMeasuredSourceRanges(DocxParagraph paragraph) =>
         paragraph.CommentRanges.Count != 0 || paragraph.Hyperlinks.Count != 0 || paragraph.BookmarkAnchors.Count != 0;
@@ -252,7 +255,7 @@ internal static class DocxInlineContent
         token.ThrowIfCancellationRequested();
         var source = revisions ?? paragraph.Revisions;
         if (source.Count == 0) return true;
-        if (paragraph.RevisionRanges.Count != 0 ||
+        if (HasContentRevisionRanges(paragraph) ||
             paragraph.HasDeletedParagraphMark ||
             paragraph.Runs.Any(run => run.Revision is not null || run.Revisions.Count != 0) ||
             paragraph.Images.Any(image => image.Revisions.Count != 0) ||

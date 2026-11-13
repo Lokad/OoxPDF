@@ -78,10 +78,16 @@ internal sealed partial class DocxReader
         bool pageInstructionSeen = false;
         var complexFieldStack = new List<DocxComplexFieldState>();
         int sourceRunIndex = 0;
+        long contentSourcePosition = 0;
+        HashSet<DocxRevisionInfo>? nonPrintingRangeMarkers = null;
         foreach (XElement child in paragraph.Elements())
         {
             AddInlineContainerChild(child, inheritedRevision);
         }
+        // Normalize only after traversal: an endpoint can close a range outside
+        // its immediate revision wrapper. Keep that wrapper's source indices stable.
+        if (nonPrintingRangeMarkers is not null)
+            paragraphRevisions.RemoveAll(nonPrintingRangeMarkers.Contains);
 
         bool AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
             => AddSourceContainerChild(child, revision, removeDeletedText: false);
@@ -89,6 +95,16 @@ internal sealed partial class DocxReader
         // Source ranges do not own revised payload. Unknown children retain a
         // conservative owner so they cannot silently relax layout eligibility.
         bool AddSourceContainerChild(XElement child, DocxRevisionInfo? revision, bool removeDeletedText)
+        {
+            long before = contentSourcePosition;
+            bool hasSource = ParseSourceContainerChild(child, revision, removeDeletedText);
+            // A container does not count its already visited children twice.
+            // Excluded or unknown owners can still claim source without text runs.
+            if (hasSource && contentSourcePosition == before) contentSourcePosition++;
+            return hasSource;
+        }
+
+        bool ParseSourceContainerChild(XElement child, DocxRevisionInfo? revision, bool removeDeletedText)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
@@ -150,7 +166,9 @@ internal sealed partial class DocxReader
             }
             else if (IsRevisionMarkerElement(child))
             {
-                AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges, sourceRunIndex, runs);
+                AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges,
+                    sourceRunIndex, runs, contentSourcePosition, ref nonPrintingRangeMarkers);
+                if (!child.HasElements && string.IsNullOrWhiteSpace(child.Value)) return false;
             }
             return true;
         }
@@ -1299,9 +1317,12 @@ internal sealed partial class DocxReader
         List<DocxRevisionRangeStart> openRevisionRanges,
         List<DocxRevisionRange> revisionRanges,
         int sourceRunIndex,
-        List<DocxTextRun> runs)
+        List<DocxTextRun> runs,
+        long contentSourcePosition,
+        ref HashSet<DocxRevisionInfo>? nonPrintingRangeMarkers)
     {
-        AddRevision(paragraphRevisions, CreateRevisionInfo(marker));
+        DocxRevisionInfo? markerRevision = CreateRevisionInfo(marker);
+        AddRevision(paragraphRevisions, markerRevision);
         if (!TryResolveRevisionRangeMarker(marker, out DocxRevisionKind? resolvedKind, out bool isStart) ||
             resolvedKind is not { } kind)
         {
@@ -1317,7 +1338,12 @@ internal sealed partial class DocxReader
                 (string?)marker.Attribute(WordprocessingNamespace + "author"),
                 (string?)marker.Attribute(WordprocessingNamespace + "date"),
                 sourceRunIndex,
-                runs.Sum(run => run.Text.Length)));
+                runs.Sum(run => run.Text.Length))
+            {
+                ContentSourcePosition = contentSourcePosition,
+                IsNonPrintingBoundary = IsNonPrintingBoundary(marker),
+                MarkerRevision = markerRevision
+            });
             return;
         }
 
@@ -1331,6 +1357,10 @@ internal sealed partial class DocxReader
             openRevisionRanges.RemoveAt(startIndex);
         }
 
+        int textOffset = runs.Sum(run => run.Text.Length);
+        bool empty = startRange is { IsNonPrintingBoundary: true } && IsNonPrintingBoundary(marker) &&
+            startRange.SourceRunIndex == sourceRunIndex && startRange.TextOffset == textOffset &&
+            startRange.ContentSourcePosition == contentSourcePosition;
         revisionRanges.Add(new DocxRevisionRange(
             kind,
             id,
@@ -1340,7 +1370,20 @@ internal sealed partial class DocxReader
             startRange?.SourceRunIndex,
             startRange?.TextOffset,
             sourceRunIndex,
-            runs.Sum(run => run.Text.Length)));
+            textOffset) { HasContentSource = !empty });
+        if (empty)
+        {
+            var markers = nonPrintingRangeMarkers ??= new(ReferenceEqualityComparer.Instance);
+            if (startRange!.MarkerRevision is { } startRevision) markers.Add(startRevision);
+            if (markerRevision is not null) markers.Add(markerRevision);
+        }
+
+        static bool IsNonPrintingBoundary(XElement element) =>
+            !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
+            !string.IsNullOrWhiteSpace((string?)element.Attribute(WordprocessingNamespace + "id")) &&
+            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration ||
+                attribute.Name.Namespace == WordprocessingNamespace &&
+                attribute.Name.LocalName is "id" or "name" or "author" or "date");
     }
 
     private static void AddFieldReference(

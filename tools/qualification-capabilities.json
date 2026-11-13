@@ -1270,6 +1270,8 @@
     "PortableRenderingExactCommentFramesKeepAuthoredBoundsAndNeutralSourceTransforms"
   ],
   "docx-math-revision-boundaries": [
+    "DocxEmptyMoveRangesPreserveMixedContentAcrossStories",
+    "DocxMoveRangesRetainUnknownContentOpenAndLegacyFallbacks",
     "DocxInlineCompositionControlRevisions",
     "DocxInlineCompositionEmptyScripts",
     "DocxInlineCompositionEmptyFractionRevisionsKeepActualNeutralOwners",
@@ -4902,6 +4904,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxEmptyMoveRangesPreserveMixedContentAcrossStories",
+    "DocxMoveRangesRetainUnknownContentOpenAndLegacyFallbacks",
     "DocxEmptyFieldRevisionScopesPreserveMixedContentAcrossStories",
     "DocxEmptyFieldRevisionScopesRetainActualComputedAndUnknownOwners",
     "DocxComputedFieldCacheContainersPreservePicturesAcrossStories",
@@ -9165,6 +9169,8 @@
     "DocxTablePictureRotationSharesTheAlignedCellContentClip"
   ],
   "docx-empty-revision-scopes": [
+    "DocxEmptyMoveRangesPreserveMixedContentAcrossStories",
+    "DocxMoveRangesRetainUnknownContentOpenAndLegacyFallbacks",
     "DocxEmptyFieldRevisionScopesPreserveMixedContentAcrossStories",
     "DocxEmptyFieldRevisionScopesRetainActualComputedAndUnknownOwners",
     "DocxNonprintingRevisionMarkers",

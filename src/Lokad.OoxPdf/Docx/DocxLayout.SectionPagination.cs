@@ -25,7 +25,7 @@ internal sealed partial class DocxLayoutEngine
     private static bool IsSimpleSectionParagraph(DocxParagraph paragraph) =>
         paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0 &&
         paragraph.FieldReferences.Count == 0 && paragraph.CommentRanges.Count == 0 &&
-        paragraph.Revisions.Count == 0 && paragraph.RevisionRanges.Count == 0 &&
+        paragraph.Revisions.Count == 0 && !DocxInlineContent.HasContentRevisionRanges(paragraph) &&
         !paragraph.HasDeletedParagraphMark && paragraph.DeletedText.Length == 0 && paragraph.ListLabel is null;
 
     private static bool HasStaticSectionContent(DocxPageSettings settings) =>

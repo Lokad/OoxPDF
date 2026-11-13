@@ -5,7 +5,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxEmptyRevisionScopeTests
+internal static partial class DocxEmptyRevisionScopeTests
 {
     private static readonly (string Fixture, string Part)[] Cases =
     [

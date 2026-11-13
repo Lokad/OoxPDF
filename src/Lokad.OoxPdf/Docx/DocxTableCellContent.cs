@@ -14,7 +14,7 @@ internal static class DocxTableCellContent
             p.ListLabel is not null || p.Images.Count != 0 || p.Equations.Count != 0 ||
             p.InlineTextBoxes.Count != 0 || p.InlineReferences.Count != 0 || p.FieldReferences.Count != 0 ||
             p.Hyperlinks.Count != 0 || p.CommentRanges.Count != 0 || p.Shading is not null ||
-            p.Revisions.Count != 0 || p.RevisionRanges.Count != 0 || p.HasDeletedParagraphMark)
+            p.Revisions.Count != 0 || DocxInlineContent.HasContentRevisionRanges(p) || p.HasDeletedParagraphMark)
             return false;
         foreach (var run in p.Runs)
         {

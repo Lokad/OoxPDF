@@ -56,7 +56,7 @@ internal sealed partial class DocxRenderer
                 reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                 reference.Id is not null && (!string.IsNullOrEmpty(reference.DisplayText) ||
                     reference.CustomMarkText is not null && paragraph.Revisions.Count == 0 &&
-                    paragraph.RevisionRanges.Count == 0 && paragraph.FieldReferences.Count == 0 && paragraph.CommentRanges.Count == 0)).ToArray();
+                    !DocxInlineContent.HasContentRevisionRanges(paragraph) && paragraph.FieldReferences.Count == 0 && paragraph.CommentRanges.Count == 0)).ToArray();
             if (references.Length == 0) continue;
             IReadOnlyList<DocxTextEmissionSegment> segments = CreateTextEmissionSegments(line, fontResources,
                 pageNumber, pageCount, scale, yOffset, xOffset,

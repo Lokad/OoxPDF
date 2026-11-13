@@ -411,7 +411,7 @@ internal sealed partial class DocxLayoutEngine
                 double.IsFinite(i.HeightPoints) && i.HeightPoints > 0d)) &&
         paragraph.InlineTextBoxes.Count == 0 &&
         DocxInlineContent.HasCounterFieldResults(paragraph.FieldReferences, paragraph.Runs) &&
-        paragraph.CommentRanges.Count == 0 && paragraph.Revisions.Count == 0 && paragraph.RevisionRanges.Count == 0 &&
+        paragraph.CommentRanges.Count == 0 && paragraph.Revisions.Count == 0 && !DocxInlineContent.HasContentRevisionRanges(paragraph) &&
         paragraph.ListLabel is null &&
         paragraph.Runs.All(r => !r.Text.Contains('\n') && !r.Text.Contains('\r') && !r.Text.Contains('\t'));
 
