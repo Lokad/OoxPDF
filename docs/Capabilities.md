@@ -687,8 +687,11 @@ Approximate or restricted:
   not count as unsupported visible omissions; unsupported visible equations still warn.
   Empty and source-range-only revision scopes, including their hyperlink
   containers, retain annotations without governing neighboring equations.
-  Actual text, fields, drawings and unknown
-  children retain their source ownership and existing eligibility guards.
+  Complete empty stored-field results and reader-proven closed empty move ranges
+  follow the same source-ownership rule; their metadata remains inspectable.
+  Actual text, computed values, drawings and unknown children retain their source
+  ownership and existing eligibility guards. Open, malformed and unproven ranges
+  keep their fallbacks; general move-range rendering remains partial.
   Word-compatible Review preserves first-row prose baselines alongside equations
   in qualified body/header/footer boxes. Explicit cell spacing, vertical merges
   and unsupported alignment retain their existing approximations.

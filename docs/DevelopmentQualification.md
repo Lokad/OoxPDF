@@ -4,43 +4,55 @@ Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-Computed simple-field caches now use the paragraph reader's shared transparent
-container rules. Previously, a picture inside a content control, custom-XML or
-smart-tag wrapper silently disappeared in Final and Review. Six omitted-picture
-outcomes are restored; all eight causal PDFs exactly match complete direct-run
-controls. The restored paint was viewed; 166 actual-program/GID glyphs and source
-image paints retain their independent proof without measured cuts or unknowns.
-Body, cell, header/footer, PAGE/NUMPAGES, nested transparent containers, visibility,
-locks and revision ownership are covered. Unknown, directional and nested-field
-owners retain their fallbacks. Windows passes 22 focused checks; Ubuntu passes21
-with one declared installed-font skip. Both actual parent regressions fail on
-missing pictures. One fixture-paragraph assertion was repaired; only that method
-reran per host, preserving21 runtime assets and3,449 public inputs. Initial build,
-wrapper-preflight and test failures remain recorded. One final frozen Release
-runtime supplies both hosts and a24-asset/two-smoke transfer without a root build.
+Complete empty stored-field results and reader-proven empty move ranges now use
+parsed source ownership instead of suppressing adjacent equations. Each fix
+restores four Final/Review fraction outcomes. Eight field controls and six
+supported range controls match complete PDFs exactly; two malformed range
+negatives retain their fallback. Actual-program/GID ink evidence binds73 supported
+glyphs without measured cuts or unknowns; restored paint was reviewed. Raw field
+and range metadata remains inspectable. Content-bearing, computed, moving,
+unknown, open and legacy owners retain their guards. No new Word geometry claim.
+
+Field checks pass18 methods on Windows and17 on Ubuntu with one declared font
+skip. Range checks pass28 on Windows and26 on Ubuntu with two declared font skips,
+including six stories and shared table/note/pagination neighbors. Both parent
+regressions fail for each fix. One range comparator was repaired to hold its
+stored-field carrier constant; only that method reran per host on the unchanged
+runtime, with21 assets and3,449 inputs verified. Failed builds and initial tests
+remain recorded. These local follow-ups await the next coherent broader gate.
+
+The preceding cached-picture fix shares the paragraph reader's transparent
+container rules. Six picture omissions are restored across content controls,
+custom XML and smart tags; eight causal PDFs match complete direct-run controls,
+with166 native glyphs and source image paints checked. Its focused result is22
+Windows passes and21 Ubuntu passes plus one declared font skip. Both actual
+parent regressions fail on missing pictures; a one-method harness repair retained
+the initial failure and unchanged runtime identity.
 
 Paragraph and math parsing also share nonprinting editing-marker ownership.
 Proofing and permission boundaries in otherwise empty inserted scopes no longer
 suppress adjacent fractions: four omissions restored, six supported controls
 exact, two malformed-source negatives unchanged,73 supported glyphs without cuts
 or unknowns. Twenty-two focused checks pass per host; both parent regressions fail.
-The preceding shared stored-child fix for container properties is included in the
-closed broader gate below. Actual, moving and unknown owners remain guarded.
+These editing-marker, cached-picture and shared container-property fixes are
+included in the closed broader gate below. Actual, moving and unknown owners
+remain guarded.
 
 All sixteen portfolio PDFs remain exact across these follow-ups, reusing source,
 ink, picture and Office comparison evidence: **two PPTX image passes and fourteen
 DOCX failures**, thresholds unchanged. Independent prose/simple-math/title triage
 finds no measured prose page/wrap mismatch; other content and geometry limits
 remain. Application-view calibration and transformed-source Word geometry remain
-unqualified. The next coherent broader gate for these local follow-ups is pending.
+unqualified. The next coherent broader gate for the empty-field/range follow-ups
+is pending.
 
-The preceding metadata batch closed green: Windows4,867 passes/19 skips,
-Ubuntu2,379/133 and the same100 .NET10 checks per host without skips. One
+The preceding metadata/cache batch closed green: Windows4,871 passes/19 skips,
+Ubuntu2,383/133 and the same104 .NET10 checks per host without skips. One
 Windows-produced package passes all four host/framework consumers, including
 cancellation, memory refusal, leases, cleanup and destination preservation.
 Package/PDB/source identities, 24 caller documents/77 links and two exact CI smoke
-PDFs pass. Flat package04EEE7CB/source5a00 contains that batch; it excludes the
-editing-marker and transparent-cache follow-ups. Publication/tagging remain deferred.
+PDFs pass. Flat package026CF1AA/source2dd6d9945 contains that batch; it excludes
+the empty-field/range follow-ups. Publication/tagging remain deferred.
 
 Computed simple fields retain pictures across direct cached-run splits; hyperlinks
 propagate their parsed children's ownership. Two silent picture omissions and
