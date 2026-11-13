@@ -682,10 +682,10 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
-            // Hidden runs and cell flow tokens keep their actual revision owners
-            // even when their resolved source contributes no painted objects.
+            // Empty/hidden runs, field codes and cell flow tokens retain their
+            // actual revision owners independently of painted result content.
             if (effectiveRevisions.Count != 0 && text.Length == 0 && (resolvedRun.Hidden == true || run.Elements().All(child =>
-                child.Name == WordprocessingNamespace + "rPr" ||
+                child.Name == WordprocessingNamespace + "rPr" || IsComplexFieldMarkupElement(child) ||
                 (child.Name == WordprocessingNamespace + "t" || child.Name == WordprocessingNamespace + "delText") && child.Value.Length == 0 ||
                 tableCellStyle is not null && child.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(child))))
             {
