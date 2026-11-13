@@ -10,7 +10,8 @@
   remain intact beside pictures; automatic note references retain source order and link ownership,
   and Review endnote counters retain neighboring equations. Oversized keep-with-next
   groups flow without repeatedly starting new pages; independent keep-lines rules
-  and explicit breaks remain respected. Hidden run breaks honor inherited visibility.
+  and explicit breaks remain respected. Hidden run breaks and inline text boxes
+  honor inherited visibility.
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
   qualified authored horizontal legends retain every name; manual pie viewports
   own their radius and use the measured automatic frame for factor offsets in both axes.

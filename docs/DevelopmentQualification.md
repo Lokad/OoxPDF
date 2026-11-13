@@ -4,6 +4,19 @@ Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Hidden inline text boxes now follow their drawing run's resolved visibility.
+Four Final/Review outcomes no longer paint an intentionally hidden box's prose
+or fraction; they exactly match independent removed-source controls. Four visible
+controls retain their preceding paint. Six unique PDFs bind 520 glyphs without
+measured cuts or unknown traces; two bounded before/after paint views were reviewed.
+Windows passes 25 focused checks; Ubuntu passes 24 with one declared installed-font
+skip. Four regressions fail against the parent. One harness-only repair retains
+the failed comparator and reruns its two changed methods; the library stays exact.
+Portfolio, framework and package qualification are batched with the next source
+ownership correction. An empty or bookmark-only revision scope still suppresses
+neighboring supported mathematics in five of eight native controls; that content
+defect is the next priority. New-source Word geometry remains unqualified.
+
 Hidden run page/column breaks now use the same resolved visibility as text before
 structural admission. An inserted hidden page break previously moved the public
 letter's remainder to page two in both Final and Review; both corrected PDFs now
@@ -14,7 +27,10 @@ Both regressions fail against the parent. All fourteen DOCX portfolio PDFs remai
 byte-identical, preserving their content/ink evidence and fourteen image failures.
 One frozen Release build supplies both hosts and the transfer of 24 assets plus
 two exact smokes. No new Word export or transformed-input pagination parity claim.
-Broader/framework/package qualification for this slice remains pending.
+Its CI closed green: Windows 4,854 passes/19 skips, Ubuntu 2,366 passes/133 skips,
+87 .NET 10 checks per host and four package consumers. The intermediate payload
+is skipped while the visibility batch continues; the selected AE5A package remains
+the earlier polar-frame candidate. Publication and broader acceptance stay deferred.
 
 Side-pie plots and default legends now share measured chart-frame ownership.
 Existing side-legend allocation and pie fitting replace inherited plot ratios;

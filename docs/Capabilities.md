@@ -680,6 +680,9 @@ Approximate or restricted:
   Parsed visible box insertions/deletions retain actual source revision owners,
   preserving supported child and sibling equations. Unowned/other revision kinds keep their
   fallbacks; new revision markup appearance and Word geometry remain unqualified.
+  Inline boxes honor the drawing run's resolved hidden state, including inherited
+  styles and explicit visible overrides. Intentionally hidden child equations do
+  not count as unsupported visible omissions; unsupported visible equations still warn.
   Word-compatible Review preserves first-row prose baselines alongside equations
   in qualified body/header/footer boxes. Explicit cell spacing, vertical merges
   and unsupported alignment retain their existing approximations.
