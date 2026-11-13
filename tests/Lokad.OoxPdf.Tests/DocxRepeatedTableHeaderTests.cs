@@ -54,6 +54,7 @@ internal static class DocxRepeatedTableHeaderTests
     public static void DocxTableHeaderGroupsRetainExplicitCellBreakAdmission()
     {
         foreach (var mode in Modes)
+        foreach (double rowHeight in new[] { 30d, 100d })
         {
             var source = HeaderGroupDocument(2, 30d, boundary: true, keep: false, heading: false);
             var table = source.Tables[^1];
@@ -61,7 +62,8 @@ internal static class DocxRepeatedTableHeaderTests
             var after = DocxTests.CreateDocxLayoutParagraph("Explicit after", 10d, 10d);
             var cell = table.Rows[0].Cells[0] with { Paragraphs = [], BodyElements = [new DocxParagraphElement(before),
                 new DocxPageBreakElement(DocxBreakSourceKind.PageBreakBefore, "1", null), new DocxParagraphElement(after)] };
-            var changed = table with { Rows = [table.Rows[0] with { Cells = [cell], CantSplit = false }, .. table.Rows.Skip(1)] };
+            // The first fragment fits even when the complete source row does not.
+            var changed = table with { Rows = [table.Rows[0] with { Cells = [cell], CantSplit = false, HeightPoints = rowHeight }, .. table.Rows.Skip(1)] };
             source = source with
             {
                 BodyElements = source.BodyElements.Select(block => block is DocxTableElement entry && ReferenceEquals(entry.Table, table)
