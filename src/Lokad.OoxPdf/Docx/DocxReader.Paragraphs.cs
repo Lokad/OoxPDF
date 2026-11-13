@@ -682,10 +682,13 @@ internal sealed partial class DocxReader
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
-            // A parsed run owns its revision metadata even without emitted text.
-            // Pictures, boxes and bookkeeping tokens keep their own content paths;
-            // their child kinds do not determine this run's source ownership.
-            if (text.Length == 0)
+            // Content revisions need a painted or known nonprinting source.
+            // Unknown objects cannot discharge an insertion through an empty run.
+            // Run-formatting metadata is retained independently at publication.
+            if (revision is not null && text.Length == 0 && (resolvedRun.Hidden == true || run.Elements().All(child =>
+                child.Name == WordprocessingNamespace + "rPr" || IsComplexFieldMarkupElement(child) ||
+                (child.Name == WordprocessingNamespace + "t" || child.Name == WordprocessingNamespace + "delText") && child.Value.Length == 0 ||
+                tableCellStyle is not null && child.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(child))))
             {
                 RetainNonRenderingRunOwner(currentSourceRunIndex, effectiveRevisions);
             }
@@ -700,8 +703,7 @@ internal sealed partial class DocxReader
                     revision,
                     effectiveRevisions,
                     ref currentPageInstructionSeen);
-                AddRunImages();
-                PublishInlineRunItems(firstRun, firstImage, firstBox);
+                PublishRun();
                 return;
             }
 
@@ -749,25 +751,36 @@ internal sealed partial class DocxReader
                     runs: runs);
             }
 
-            AddRunImages();
-            PublishInlineRunItems(firstRun, firstImage, firstBox);
+            PublishRun();
 
-            void AddRunImages()
+            void PublishRun()
             {
                 // Pictures share their source run's resolved visibility. Keep
                 // the paragraph/source index even when that run paints nothing.
-                if (resolvedRun.Hidden == true) return;
-                var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken);
-                if (parsed.Count == 0) return;
-                RecordComplexFieldResult();
-                if (revision?.Kind != DocxRevisionKind.Insertion) { images.AddRange(parsed); return; }
-                var style = runs.Count > firstRun ? runs[firstRun] : CreateResolvedTextRun(string.Empty,
-                    resolvedRun, runStyleResolution, false, currentSourceRunIndex, 0, revision, effectiveRevisions);
-                foreach (var image in parsed)
+                if (resolvedRun.Hidden != true)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    images.Add(image with { SourceRunStyle = style });
+                    var parsed = ReadInlineImages(run, package, relationships, revision, currentSourceRunIndex, cancellationToken);
+                    if (parsed.Count != 0)
+                    {
+                        RecordComplexFieldResult();
+                        if (revision?.Kind != DocxRevisionKind.Insertion) images.AddRange(parsed);
+                        else
+                        {
+                            var style = runs.Count > firstRun ? runs[firstRun] : CreateResolvedTextRun(string.Empty,
+                                resolvedRun, runStyleResolution, false, currentSourceRunIndex, 0, revision, effectiveRevisions);
+                            foreach (var image in parsed)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                images.Add(image with { SourceRunStyle = style });
+                            }
+                        }
+                    }
                 }
+                // Formatting belongs to the parsed run regardless of its payload.
+                // Retain it after cached-result handling, which may already own
+                // the complete revision set for this same source run.
+                if (text.Length == 0) RetainNonRenderingRunOwner(currentSourceRunIndex, runRevisions);
+                PublishInlineRunItems(firstRun, firstImage, firstBox);
             }
         }
 

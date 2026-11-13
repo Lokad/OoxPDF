@@ -524,6 +524,8 @@
     "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons"
   ],
   "docx-empty-field-results": [
+    "DocxPictureRevisionEligibilityRequiresActualImageOwnership",
+    "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
     "DocxNontextRunRevisions",
     "DocxFieldCodeRevisions",
     "DocxReplacedCacheRevisions",
@@ -540,6 +542,8 @@
     "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks"
   ],
   "docx-cached-picture-results": [
+    "DocxPictureRevisionEligibilityRequiresActualImageOwnership",
+    "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
     "DocxNontextRunRevisions",
     "DocxFieldCodeRevisions",
     "DocxReplacedCacheRevisions",
@@ -4914,6 +4918,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxPictureRevisionEligibilityRequiresActualImageOwnership",
+    "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
     "DocxNontextRunRevisions",
     "DocxFieldCodeRevisions",
     "DocxReplacedCacheRevisions",

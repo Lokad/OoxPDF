@@ -31,6 +31,17 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(missing, default),
                     "Unowned, unknown-position and value-equal histories retain their fallback.");
         }
+        var inserted = ReadRevisedNontextRun("body", "picture", OoxPdfDocxMarkupMode.Final, revised: true, inserted: true);
+        var pictureOwner = DocxBlockTraversal.EnumerateSourceParagraphs(inserted)
+            .First(source => source.Revisions.Any(revision => revision.Id == "923"));
+        TestAssert.True(pictureOwner.NonRenderingRunOwners.SelectMany(owner => owner.Revisions)
+            .All(revision => revision.Kind == DocxRevisionKind.RunPropertiesChange),
+            "Formatting metadata cannot substitute for an inserted picture's content owner.");
+        TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(pictureOwner), "Actual image and formatting owners compose.");
+        TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(pictureOwner with
+        {
+            Images = pictureOwner.Images.Select(image => image with { SourceRunStyle = null }).ToArray()
+        }, default), "Retained formatting history cannot qualify an image whose actual insertion owner is missing.");
     }
 
     public static void DocxNontextRunRevisionsKeepMathPicturesAndBoxesAcrossStories()
@@ -76,7 +87,7 @@ internal static partial class DocxInlineCompositionTests
             font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))))
         .Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
 
-    private static DocxDocument ReadRevisedNontextRun(string story, string kind, OoxPdfDocxMarkupMode mode, bool revised)
+    private static DocxDocument ReadRevisedNontextRun(string story, string kind, OoxPdfDocxMarkupMode mode, bool revised, bool inserted = false)
     {
         bool box = kind == "box";
         string fixture = box ? "InlineBoxMath/" + (story == "body" ? "inline-box-body-equation-inline-box-valid" : "inline-box-math-" + story)
@@ -98,15 +109,24 @@ internal static partial class DocxInlineCompositionTests
                 source.AddBeforeSelf(inserted);
                 source = inserted;
             }
-            if (!revised) return;
-            var properties = source.Element(w + "rPr");
-            if (properties is null) { properties = new XElement(w + "rPr"); source.AddFirst(properties); }
-            TestAssert.True(properties.Element(w + "rPrChange") is null && properties.Element(w + "b") is null,
-                "The source control owns no existing formatting history or explicit bold.");
-            var historical = new XElement(properties);
-            historical.Add(new XElement(w + "b"));
-            properties.Add(new XElement(w + "rPrChange", new XAttribute(w + "id", "923"),
-                new XAttribute(w + "author", "Public formatter"), new XAttribute(w + "date", "2026-01-01T00:00:00Z"), historical));
+            if (revised)
+            {
+                var properties = source.Element(w + "rPr");
+                if (properties is null) { properties = new XElement(w + "rPr"); source.AddFirst(properties); }
+                TestAssert.True(properties.Element(w + "rPrChange") is null && properties.Element(w + "b") is null,
+                    "The source control owns no existing formatting history or explicit bold.");
+                var historical = new XElement(properties);
+                historical.Add(new XElement(w + "b"));
+                properties.Add(new XElement(w + "rPrChange", new XAttribute(w + "id", "923"),
+                    new XAttribute(w + "author", "Public formatter"), new XAttribute(w + "date", "2026-01-01T00:00:00Z"), historical));
+            }
+            if (inserted)
+            {
+                var wrapper = new XElement(w + "ins", new XAttribute(w + "id", "924"),
+                    new XAttribute(w + "author", "Public reviewer"), new XAttribute(w + "date", "2026-01-01T00:00:00Z"));
+                source.ReplaceWith(wrapper);
+                wrapper.Add(source);
+            }
         }, partOverride: part);
     }
 }

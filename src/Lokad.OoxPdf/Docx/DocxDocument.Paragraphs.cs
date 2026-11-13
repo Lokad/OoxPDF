@@ -61,8 +61,8 @@ internal sealed record DocxParagraph(
     // The unique parsed pPr change owns already-resolved paragraph properties.
     // Keep it distinct from inherited, run, mark and range revision metadata.
     public DocxRevisionInfo? PropertyRevision { get; init; }
-    // Parsed runs without emitted text retain actual review metadata. Their
-    // pictures/boxes keep separate content owners and contribute their own metrics.
+    // Actual nonprinting sources and run-formatting metadata own revision refs.
+    // Visible content revisions retain their specific text/picture/box owners.
     public IReadOnlyList<DocxNonRenderingRunOwner> NonRenderingRunOwners { get; init; } = [];
     public bool HasDeletedParagraphMark { get; init; }
     // Final/Simple paragraph joins consume actual source marks. Their revision
