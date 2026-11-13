@@ -154,8 +154,11 @@ internal static class DocxEmptyRevisionScopeTests
             bool unknownProperties = carrier is "customXml-misplaced-properties" or "customXml-foreign-properties";
             bool hasOwner = included && (unknownProperties || payload is not ("empty" or "bookmark"));
             TestAssert.Equal(hasOwner ? 1 : 0, paragraph.Revisions.Count);
-            bool supported = !hasOwner || !unknownProperties && (kind is "ins" or "del") && payload != "unknown";
-            TestAssert.Equal(supported, DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+            // Unknown properties retain an unclaimed owner, but cannot replace
+            // or invalidate a known run's actual revision owner.
+            bool supported = !hasOwner || (kind is "ins" or "del") && payload is "literal" or "empty-run";
+            TestAssert.True(supported == DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default),
+                "Revision ownership changed: " + mode + "/" + kind + "/" + carrier + "/" + payload);
             TestAssert.Equal(supported ? paragraph.Equations.Count : 0,
                 DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
             TestAssert.Equal(included && payload == "bookmark",
