@@ -39,7 +39,8 @@ internal static partial class DocxInlineCompositionTests
         {
             var source = ReadFloatingOutlineSource("floating-cell-inline-box", OoxPdfDocxMarkupMode.Final,
                 explicitInsets: true, omitOutline);
-            var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver())
+            var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
             AssertSourceLabelsPaint(page, OoxPdfDocxMarkupMode.Final,
                 ["BOX TABLE NORTH", "BOX TABLE SOUTH", "INNER BOX LABEL"], "outline=" + !omitOutline);
