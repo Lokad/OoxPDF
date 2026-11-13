@@ -397,10 +397,11 @@ internal sealed partial class DocxReader
 
         void PublishInlineRunItems(int firstRun, int firstImage, int? firstBox = null)
         {
-            // Pictures retain the same ordered ownership as math and boxes.
+            // Drawings retain the same ordered ownership as math and text.
             // Capture the preceding source once, then append this run's text,
             // pictures and boxes together without duplicating current items.
-            if (inlineItems is null && images.Count > firstImage)
+            if (inlineItems is null && (images.Count > firstImage ||
+                firstBox is int boxStart && inlineTextBoxes.Count > boxStart))
                 inlineItems = DocxInlineContent.FromPrefix(runs.Take(firstRun).ToArray(), images.Take(firstImage).ToArray(), cancellationToken,
                     inlineTextBoxes.Take(firstBox ?? inlineTextBoxes.Count).ToArray());
             if (inlineItems is not null)
@@ -507,6 +508,7 @@ internal sealed partial class DocxReader
             int fieldSourceRunIndex = sourceRunIndex;
             int fieldTextRunIndex = runs.Count;
             int fieldImageIndex = images.Count;
+            int fieldBoxIndex = inlineTextBoxes.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
             bool hasCachedResult = FieldHasCachedResultContent(field);
             if (placeholder is not null)
@@ -521,23 +523,39 @@ internal sealed partial class DocxReader
                 // The computed result replaces its cached runs and owns one
                 // source position, including when there is no stored result.
                 sourceRunIndex++;
-                // The computed value owns one source position. Cached pictures
+                // The computed value owns one source position. Cached drawings
                 // keep their order across run splits, using each run's visibility.
                 int resultTextOffset = 0, resultDrawingOrder = 0;
                 foreach (XElement resultRun in DocxSourceXml.StoredRuns(field, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
-                        paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run).Hidden != true)
-                        foreach (var image in ReadInlineImages(resultRun, package, relationships, revision,
-                            fieldSourceRunIndex, cancellationToken).OrderBy(image => image.SourceOrderInRun))
-                            images.Add(image with
-                            {
-                                SourceTextOffsetInRun = resultTextOffset + image.SourceTextOffsetInRun,
-                                SourceOrderInRun = resultDrawingOrder++,
-                                SourceRunStyle = revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
-                                    ? runs[fieldTextRunIndex] : image.SourceRunStyle
-                            });
+                    bool hidden = ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
+                        paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run).Hidden == true;
+                    var boxes = ReadRunTextBoxes(resultRun, fieldSourceRunIndex, hidden, revision);
+                    if (!hidden)
+                    {
+                        var drawings = new List<DocxInlineItem>();
+                        DocxInlineContent.AppendRun(drawings, [], ReadInlineImages(resultRun, package, relationships,
+                            revision, fieldSourceRunIndex, cancellationToken), cancellationToken, boxes);
+                        foreach (var drawing in drawings)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (drawing is DocxInlinePicture picture)
+                                images.Add(picture.Image with
+                                {
+                                    SourceTextOffsetInRun = resultTextOffset + picture.Image.SourceTextOffsetInRun,
+                                    SourceOrderInRun = resultDrawingOrder++,
+                                    SourceRunStyle = revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
+                                        ? runs[fieldTextRunIndex] : picture.Image.SourceRunStyle
+                                });
+                            else if (drawing is DocxInlineBox box)
+                                inlineTextBoxes.Add(box.Box with
+                                {
+                                    SourceTextOffsetInRun = resultTextOffset + box.Box.SourceTextOffsetInRun,
+                                    SourceOrderInRun = resultDrawingOrder++
+                                });
+                        }
+                    }
                     resultTextOffset += ReadRunText(resultRun).Length;
                 }
                 AddFieldReference(
@@ -553,7 +571,7 @@ internal sealed partial class DocxReader
                     usesPlaceholder: true, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
                     fieldReferences: fieldReferences,
                     runs: runs);
-                PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex);
+                PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex, fieldBoxIndex);
                 return true;
             }
 
@@ -651,13 +669,7 @@ internal sealed partial class DocxReader
             string? characterStyleId = ReadCharacterStyleId(run);
             DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
                 runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run);
-            IReadOnlyList<DocxInlineTextBox> runBoxes = resolvedRun.Hidden == true ? [] : ReadInlineTextBoxes(run, styles, numbering, package, relationships,
-                markupMode, revision, cancellationToken, currentSourceRunIndex);
-            if (resolvedRun.Hidden == true)
-            {
-                foreach (var inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
-                    hiddenDrawingEquationSourceCount += CountSelectedEquationSources(inline, markupMode, cancellationToken, out _);
-            }
+            IReadOnlyList<DocxInlineTextBox> runBoxes = ReadRunTextBoxes(run, currentSourceRunIndex, resolvedRun.Hidden == true, revision);
             if (runBoxes.Count != 0) EnsureInlineContent();
             sourceRunIndex++;
             inlineTextBoxes.AddRange(runBoxes);
@@ -782,6 +794,15 @@ internal sealed partial class DocxReader
                 if (text.Length == 0) RetainNonRenderingRunOwner(currentSourceRunIndex, runRevisions);
                 PublishInlineRunItems(firstRun, firstImage, firstBox);
             }
+        }
+
+        IReadOnlyList<DocxInlineTextBox> ReadRunTextBoxes(XElement run, int index, bool hidden, DocxRevisionInfo? revision)
+        {
+            if (!hidden) return ReadInlineTextBoxes(run, styles, numbering, package, relationships,
+                markupMode, revision, cancellationToken, index);
+            foreach (var inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
+                hiddenDrawingEquationSourceCount += CountSelectedEquationSources(inline, markupMode, cancellationToken, out _);
+            return [];
         }
 
         void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions, DocxFieldKind? fieldKind = null)

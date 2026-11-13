@@ -542,6 +542,7 @@
     "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks"
   ],
   "docx-cached-picture-results": [
+    "DocxComputedFieldBoxes",
     "DocxPictureRevisionEligibilityRequiresActualImageOwnership",
     "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
     "DocxNontextRunRevisions",
@@ -4918,6 +4919,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxComputedFieldBoxes",
     "DocxPictureRevisionEligibilityRequiresActualImageOwnership",
     "DocxCellColumnsRetainParagraphMarksAndRealPageBreaks",
     "DocxNontextRunRevisions",
@@ -14875,6 +14877,7 @@
     "PortableRenderingTableGridOriginsPreserveMixedInlineContent"
   ],
   "docx-inline-box-math": [
+    "DocxComputedFieldBoxes",
     "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
     "DocxCellTextBoxAfterTextHonorsSpacingExcess",
     "DocxCellTextBoxAfterTextTuckGrowsWithFontSize",

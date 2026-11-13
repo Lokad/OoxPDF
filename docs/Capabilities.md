@@ -638,8 +638,10 @@ Supported within the following constraints:
   and stored results keep their owners, and text after the field remains literal.
   Formatting history on replaced cached text retains its actual nonpainting run
   owner, preserving neighboring equations in body, cell and header/footer content.
-  Pictures in direct cached runs of a computed simple field retain source order
-  and each run's resolved visibility when those runs are split.
+  Pictures and supported inline text boxes in cached computed simple-field runs
+  retain source order and each run's resolved visibility across run splits and
+  supported content controls. Cached text is replaced; drawing-owned child
+  content remains. Exact new-source Word geometry remains unqualified.
   Automatic footnote/endnote references also keep their source order beside
   pictures when formatted runs are joined or split.
   Distinct notes with equal labels retain separate link owners within one run.

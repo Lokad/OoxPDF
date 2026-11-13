@@ -7,7 +7,7 @@
 - DOCX: improves mixed text/equation/picture composition, tables, notes, related
   stories, pagination, fields, review markup and navigation. Corrects visible
   content lost through wrapping, clipping or off-page frames. Computed fields
-  remain intact beside pictures, including pictures split across cached simple-field
+  remain intact beside pictures and inline text boxes, including drawings split across cached simple-field
   runs or wrapped in supported content controls and metadata containers;
   complex counter fields replace stale cached text consistently across run splits
   and mixed picture runs. Cached results and runs without emitted text retain
