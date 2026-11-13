@@ -633,6 +633,9 @@ Supported within the following constraints:
   Complete empty stored results also preserve neighboring supported equations.
   Computed PAGE/NUMPAGES results remain atomic beside inline pictures, including
   when they share a formatted source run or have an empty cached result.
+  Complex counters replace their cached text regardless of its spelling or run
+  boundaries; stale words do not paint or suppress neighboring equations. Locked
+  and stored results keep their owners, and text after the field remains literal.
   Pictures in direct cached runs of a computed simple field retain source order
   and each run's resolved visibility when those runs are split.
   Automatic footnote/endnote references also keep their source order beside
