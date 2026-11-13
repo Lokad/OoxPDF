@@ -4,6 +4,20 @@ Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
+Annotation-only revision scopes no longer suppress neighboring mathematics. The
+source parser reports payload ownership while retaining its annotation handling
+and conservative treatment of unknown content. Five missing fractions are restored
+in eight causal outcomes; every PDF exactly matches the no-scope control, including
+font programs/GIDs, geometry and paths. The actual parent fails both regressions.
+Windows passes 37 focused checks; Ubuntu passes 35 with two declared installed-font
+skips. Actual empty-run ownership, author order, moving/unknown fallbacks, fields,
+hidden boxes and cancellation remain covered. One frozen Release runtime supplies
+all checks, 24 transferred assets and two exact integration smokes; no root rebuild.
+All sixteen portfolio PDFs and eight box neighbors remain byte-identical, reusing
+their native/source/picture evidence and unchanged Office comparisons. Two PPTX
+image passes and fourteen DOCX failures remain. Broader CI/framework/package
+qualification is pending for this coherent batch; publication stays deferred.
+
 Hidden inline text boxes now follow their drawing run's resolved visibility.
 Four Final/Review outcomes no longer paint an intentionally hidden box's prose
 or fraction; they exactly match independent removed-source controls. Four visible
@@ -12,10 +26,9 @@ measured cuts or unknown traces; two bounded before/after paint views were revie
 Windows passes 25 focused checks; Ubuntu passes 24 with one declared installed-font
 skip. Four regressions fail against the parent. One harness-only repair retains
 the failed comparator and reruns its two changed methods; the library stays exact.
-Portfolio, framework and package qualification are batched with the next source
-ownership correction. An empty or bookmark-only revision scope still suppresses
-neighboring supported mathematics in five of eight native controls; that content
-defect is the next priority. New-source Word geometry remains unqualified.
+The coherent portfolio result is included above; framework/package qualification
+is batched for the visibility corrections. The separate empty-scope omission is
+now repaired above. New-source Word geometry remains unqualified.
 
 Hidden run page/column breaks now use the same resolved visibility as text before
 structural admission. An inserted hidden page break previously moved the public

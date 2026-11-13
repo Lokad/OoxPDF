@@ -678,11 +678,14 @@ Approximate or restricted:
   story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
   ignored and warned; they do not discard supported outside formulas or pictures.
   Parsed visible box insertions/deletions retain actual source revision owners,
-  preserving supported child and sibling equations. Unowned/other revision kinds keep their
+  preserving supported child and sibling equations. Unknown payloads and unsupported revision kinds keep their
   fallbacks; new revision markup appearance and Word geometry remain unqualified.
   Inline boxes honor the drawing run's resolved hidden state, including inherited
   styles and explicit visible overrides. Intentionally hidden child equations do
   not count as unsupported visible omissions; unsupported visible equations still warn.
+  Empty and source-range-only revision scopes retain their annotations without
+  governing neighboring equations. Actual text, fields, drawings and unknown
+  children retain their source ownership and existing eligibility guards.
   Word-compatible Review preserves first-row prose baselines alongside equations
   in qualified body/header/footer boxes. Explicit cell spacing, vertical merges
   and unsupported alignment retain their existing approximations.
