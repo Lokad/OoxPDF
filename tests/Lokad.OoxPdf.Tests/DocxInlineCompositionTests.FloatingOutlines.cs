@@ -39,6 +39,11 @@ internal static partial class DocxInlineCompositionTests
         {
             var source = ReadFloatingOutlineSource("floating-cell-inline-box", OoxPdfDocxMarkupMode.Final,
                 explicitInsets: true, omitOutline);
+            var drawing = source.FloatingDrawings.Single();
+            TestAssert.Equal("152400", drawing.TextBoxInsetLeftValue ?? string.Empty);
+            TestAssert.Equal("38100", drawing.TextBoxInsetTopValue ?? string.Empty);
+            TestAssert.Equal(omitOutline ? string.Empty : "6350", drawing.TextBoxStrokeWidthEmuValue ?? string.Empty);
+            TestAssert.Equal(omitOutline ? string.Empty : "000000", drawing.TextBoxStrokeColorHex ?? string.Empty);
             var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final,
                 OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
                 .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();

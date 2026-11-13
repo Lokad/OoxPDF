@@ -577,9 +577,9 @@ Supported within the following constraints:
   effective run hiding, including inherited styles and explicit false overrides;
   drawing-level `docPr hidden` alone retains Word's print behavior. Floating pictures/textboxes
   have bounded positioning, clipping, z-order and first-pass wrap exclusions.
-  Unscaled floating textbox frames paint outside their inset child clip;
-  scaled Word-compatible Review outlines remain unsupported. Their child content
-  retains its mapped clipping;
+  Unscaled floating textbox frames paint outside their inset child clip.
+  Nested drawings retain separate frame properties. Scaled Word-compatible
+  Review outlines remain unsupported; their child content retains its mapped clipping.
   arbitrary Word reflow around floating content is unsupported.
 - Custom footnote/endnote marks support a nonwhitespace BMP character immediately
   after the reference in the same XML run. Each retains its own link alongside

@@ -431,14 +431,12 @@ internal sealed partial class DocxReader
             element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
         string? relationshipId = ReadDrawingImageRelationshipId(anchor, cancellationToken);
         DocxInlineImage? image = ReadDrawingImage(anchor, package, relationships, revision, cancellationToken);
-        XElement? textBoxBodyProperties = anchor
-            .Descendants(WordprocessingShapeNamespace + "bodyPr")
+        XElement? textBoxBodyProperties = EnumerateDrawingOwnedElements(anchor, WordprocessingShapeNamespace + "bodyPr", cancellationToken)
             .FirstOrDefault();
         // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox
         // content starts inside the border, so the outline width joins the insets.
-        // First outlined a:ln wins; un-outlined shapes keep legacy insets.
-        XElement? textBoxOutline = anchor
-            .Descendants(DrawingNamespace + "ln")
+        // Nested drawings own their own properties, as for inline text boxes.
+        XElement? textBoxOutline = EnumerateDrawingOwnedElements(anchor, DrawingNamespace + "ln", cancellationToken)
             .FirstOrDefault(element => element.Attribute("w") is not null);
         string? textBoxStrokeWidthEmuValue = (string?)textBoxOutline?.Attribute("w");
         string? textBoxStrokeColorHex = ResolveTextBoxOutlineColorHex(textBoxOutline);
@@ -524,8 +522,7 @@ internal sealed partial class DocxReader
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken)
     {
-        XElement? textBoxContent = anchor
-            .Descendants(WordprocessingNamespace + "txbxContent")
+        XElement? textBoxContent = EnumerateDrawingOwnedElements(anchor, WordprocessingNamespace + "txbxContent", cancellationToken)
             .FirstOrDefault();
         if (textBoxContent is null)
         {
