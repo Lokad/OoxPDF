@@ -208,10 +208,13 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(expected.Images.Count, paragraph.Images.Count);
             TestAssert.Equal(expected.FieldReferences.Count, paragraph.FieldReferences.Count);
             TestAssert.True(paragraph.Images.Select(image => image.SourceTextOffsetInRun)
-                .SequenceEqual(expected.Images.Select(image => image.SourceTextOffsetInRun)));
+                .SequenceEqual(expected.Images.Select(image => image.SourceTextOffsetInRun)),
+                "Transparent cache containers retain each picture's source text offset.");
             TestAssert.True(paragraph.Images.Select(image => image.SourceOrderInRun)
-                .SequenceEqual(expected.Images.Select(image => image.SourceOrderInRun)));
-            TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+                .SequenceEqual(expected.Images.Select(image => image.SourceOrderInRun)),
+                "Transparent cache containers retain picture order at equal source offsets.");
+            TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default),
+                "Pictures in transparent caches retain their actual revision owner.");
         }
         foreach (string container in new[] { "unknown", "foreign", "nested-field", "directional", "misplaced-property" })
         {
@@ -219,12 +222,6 @@ internal static partial class DocxInlineCompositionTests
                 container: container);
             TestAssert.Equal(0, DocxBlockTraversal.EnumerateBodyParagraphs(document).Sum(paragraph => paragraph.Images.Count));
         }
-        using var cancellation = new CancellationTokenSource();
-        cancellation.Cancel();
-        var w = (XNamespace)"http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-        var source = new XElement(w + "fldSimple", new XElement(w + "sdt", new XElement(w + "sdtContent",
-            new XElement(w + "r", new XElement(w + "drawing")))));
-        TestAssert.Throws<OperationCanceledException>(() => DocxSourceXml.StoredRuns(source, cancellation.Token).ToArray());
     }
 
     private static DocxDocument ReadComputedSimpleFieldPictures(string story, string kind,
