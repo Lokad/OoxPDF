@@ -519,8 +519,11 @@ Supported within the following constraints:
   a nested table keeps its source anchors without adding occupied height;
   its bookmarks use the placed insertion frame. Ordinary text and references
   keep their frames. Scaled Review tables share
-  printed body capacity for authored and nested rows. Oversized kept rows retain
-  atomic overflow; arbitrary rich-row fragmentation remains approximate.
+  printed body capacity for authored and nested rows. Natural-height rows flow a
+  keep-lines paragraph whose measured frame exceeds even an empty body frame;
+  fitting kept paragraphs remain together. Declared row heights, keep-next and
+  unresolved rich frames retain their existing fallbacks. Arbitrary rich-row
+  fragmentation remains approximate.
   Conditional bands, columns,
   rows and corners share one style cascade; direct formatting remains above styles.
   Table-look bitmasks apply when no explicit flags are present; an explicit

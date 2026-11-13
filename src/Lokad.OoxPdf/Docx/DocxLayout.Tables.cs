@@ -422,6 +422,7 @@ internal sealed partial class DocxLayoutEngine
         DocxTable table,
         double marginBottom,
         double continuationContentHeight,
+        double maximumPageContentHeight,
         IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         Func<int> getPageNumber,
@@ -629,7 +630,7 @@ internal sealed partial class DocxLayoutEngine
                         int continuationCount = group.Count(line => line.BaselineY < fragmentBottomY);
                         if (firstCount != 0 && continuationCount != 0)
                         {
-                            if (keepRules.KeepNext == true || keepRules.KeepLines == true) return false;
+                            if (keepRules.KeepNext == true || MustKeepLines(keepRules, group)) return false;
                             bool widow = keepRules.WidowControl ?? (reviewFragmentScale == 1d);
                             if (widow && firstCount == 1) return false;
                             if (widow && continuationCount == 1)
@@ -735,7 +736,7 @@ internal sealed partial class DocxLayoutEngine
                     var rules = paragraphs[index].EffectiveProperties.KeepRules;
                     int before = group.Count(item => item.Index >= first && item.Index < end);
                     int after = group.Count(item => item.Index >= end);
-                    if (before != 0 && after != 0 && (rules.KeepNext == true || rules.KeepLines == true ||
+                    if (before != 0 && after != 0 && (rules.KeepNext == true || MustKeepLines(rules, group.Select(item => item.Line)) ||
                         (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || after == 1))) return false;
                     if (before != 0 && after == 0 && rules.KeepNext == true &&
                         lines.Any(line => line.SourceParagraphIndex == index + 1) &&
@@ -743,6 +744,24 @@ internal sealed partial class DocxLayoutEngine
                             .Where(item => item.Line.SourceParagraphIndex == index + 1).All(item => item.Position >= end)) return false;
                 }
                 return true;
+            }
+
+            bool MustKeepLines(DocxParagraphKeepRules rules, IEnumerable<DocxTextLineLayout> lines)
+            {
+                if (rules.KeepLines != true) return false;
+                if (!HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) return true;
+                double lower = double.PositiveInfinity, upper = double.NegativeInfinity;
+                foreach (var line in lines)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top)) return true;
+                    lower = Math.Min(lower, bottom); upper = Math.Max(upper, top);
+                }
+                // A paragraph too tall for even an empty body frame cannot be
+                // kept on one page. Reuse ordinary row flow instead of painting
+                // its remaining source below the page. Fitting/unknown frames
+                // and authored row heights retain their existing keep policy.
+                return !double.IsFinite(upper - lower) || upper - lower <= maximumPageContentHeight + .001d;
             }
 
             // Cells consume natural source frames independently. Exposed solid

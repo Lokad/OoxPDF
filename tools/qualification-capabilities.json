@@ -1134,6 +1134,21 @@
       "DocxNoteMathFieldsStaticTablesRetainExactClippedAndUnsupportedFallbacks",
       "StagedPageMemory"
   ],
+  "docx-oversized-kept-cell-content": [
+      "DocxOversizedCellKeepLines",
+      "DocxDeclaredKeptRowsRetainTheirAtomicFallback",
+      "DocxTableLayoutStageKeepsCellKeepLinesParagraphWholeAtPageBoundary",
+      "DocxTableLayoutStageKeepsCellKeepNextParagraphWithFollowingParagraphAtPageBoundary",
+      "DocxTableLayoutStageKeepsCellWidowControlledParagraphWholeAtPageBoundary",
+      "DocxTableHeaderGroup",
+      "DocxRepeatedTableHeader",
+      "DocxTableLayoutStageSplitsRowsAtCellPageBreakElements",
+      "DocxTableLayoutStageMovesCellPageBreakSplitToNextPageWhenFirstFragmentDoesNotFit",
+      "DocxTableLayoutStageSplitsOversizedCellPageBreakFragmentAcrossFreshPages",
+      "DocxTableLayoutStageUsesEarliestCellPageBreakAsRowBoundary",
+      "DocxTableCellTextLinesMemoSharesSplitCells",
+      "DocxTableMathInlineUnfitBoxesPreserveOrdinaryRowSplitting"
+  ],
   "docx-table-header-group-admission": [
       "DocxTableHeaderGroup",
       "DocxTableLayoutStageSplitsRowsAtCellPageBreakElements",
@@ -4954,6 +4969,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxOversizedCellKeepLines",
+    "DocxDeclaredKeptRowsRetainTheirAtomicFallback",
     "DocxTableHeaderGroup",
     "DocxTableLayoutStageSplitsRowsAtCellPageBreakElements",
     "DocxTableLayoutStageMovesCellPageBreakSplitToNextPageWhenFirstFragmentDoesNotFit",
