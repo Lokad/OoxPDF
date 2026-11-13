@@ -4,37 +4,50 @@ Updated 2026-11-13. **0.3.0 is not published and is not a completed release
 candidate.** The published [0.2.0 qualification](PreviewQualification.md) remains
 separate. Development targets .NET 10 and .NET 11.
 
-Paragraph and math parsing now share stored-child selection for known source
-containers. Properties in an otherwise annotation-only custom-XML or smart-tag
-revision previously suppressed adjacent fractions in Final and Review. Four
-omissions are restored; all six causal PDFs exactly match the complete control,
-retaining 73 actual-program/GID glyphs without measured cuts or unknown traces.
-The restored paint was viewed. Body, cell, header and footer checks pass: 42 on
-Windows and 37 on Ubuntu with five reviewed installed-font skips. Both regressions
-fail on the parent. One overstated ownership assertion was repaired; only that
-method reran per host, preserving 21 runtime assets and 3,449 public inputs.
-Twenty-four assets and two exact integration smokes transfer without a root build.
-All sixteen portfolio PDFs remain exact, reusing independent content/ink/picture
-proof and unchanged comparisons: two PPTX image passes and fourteen DOCX failures.
-This follow-up uses one frozen Release runtime; broader framework/package checks
-remain batched for the next coherent milestone. Actual, moving and unclaimed
-unknown owners retain their existing policy; no general unsupported-XML contract
-or application-view geometry claim is added.
+Computed simple-field caches now use the paragraph reader's shared transparent
+container rules. Previously, a picture inside a content control, custom-XML or
+smart-tag wrapper silently disappeared in Final and Review. Six omitted-picture
+outcomes are restored; all eight causal PDFs exactly match complete direct-run
+controls. The restored paint was viewed; 166 actual-program/GID glyphs and source
+image paints retain their independent proof without measured cuts or unknowns.
+Body, cell, header/footer, PAGE/NUMPAGES, nested transparent containers, visibility,
+locks and revision ownership are covered. Unknown, directional and nested-field
+owners retain their fallbacks. Windows passes 22 focused checks; Ubuntu passes21
+with one declared installed-font skip. Both actual parent regressions fail on
+missing pictures. One fixture-paragraph assertion was repaired; only that method
+reran per host, preserving21 runtime assets and3,449 public inputs. Initial build,
+wrapper-preflight and test failures remain recorded. One final frozen Release
+runtime supplies both hosts and a24-asset/two-smoke transfer without a root build.
 
-The preceding picture/hyperlink batch closed green: Windows 4,865 passes/19 skips,
-Ubuntu 2,375/133 and the same 98 .NET 10 checks per host without skips. One
+Paragraph and math parsing also share nonprinting editing-marker ownership.
+Proofing and permission boundaries in otherwise empty inserted scopes no longer
+suppress adjacent fractions: four omissions restored, six supported controls
+exact, two malformed-source negatives unchanged,73 supported glyphs without cuts
+or unknowns. Twenty-two focused checks pass per host; both parent regressions fail.
+The preceding shared stored-child fix for container properties is included in the
+closed broader gate below. Actual, moving and unknown owners remain guarded.
+
+All sixteen portfolio PDFs remain exact across these follow-ups, reusing source,
+ink, picture and Office comparison evidence: **two PPTX image passes and fourteen
+DOCX failures**, thresholds unchanged. Independent prose/simple-math/title triage
+finds no measured prose page/wrap mismatch; other content and geometry limits
+remain. Application-view calibration and transformed-source Word geometry remain
+unqualified. The next coherent broader gate for these local follow-ups is pending.
+
+The preceding metadata batch closed green: Windows4,867 passes/19 skips,
+Ubuntu2,379/133 and the same100 .NET10 checks per host without skips. One
 Windows-produced package passes all four host/framework consumers, including
 cancellation, memory refusal, leases, cleanup and destination preservation.
 Package/PDB/source identities, 24 caller documents/77 links and two exact CI smoke
-PDFs pass. Flat package ABC9BCA4/source c680 contains that batch; it does not yet
-contain the metadata follow-up above. Publication and tagging remain deferred.
+PDFs pass. Flat package04EEE7CB/source5a00 contains that batch; it excludes the
+editing-marker and transparent-cache follow-ups. Publication/tagging remain deferred.
 
 Computed simple fields retain pictures across direct cached-run splits; hyperlinks
 propagate their parsed children's ownership. Two silent picture omissions and
 four missing-fraction outcomes were restored. Empty and annotation-only revisions
 also preserve neighboring math without inventing payload owners. Their complete
 controls, actual font/image programs, geometry and reviewed paint remain pinned.
-Nested/unknown computed-cache scopes and object-before-result Word geometry stay
+Revised, linked or unknown computed-cache scopes and object-before-result Word geometry stay
 unqualified; these bounded fixes do not establish a general field rewrite.
 
 Hidden inline text boxes now follow their drawing run's resolved visibility.

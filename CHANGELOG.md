@@ -8,7 +8,8 @@
   stories, pagination, fields, review markup and navigation. Corrects visible
   content lost through wrapping, clipping or off-page frames. Computed fields
   remain intact beside pictures, including pictures split across cached simple-field
-  runs; automatic note references retain source order and link ownership,
+  runs or wrapped in supported content controls and metadata containers;
+  automatic note references retain source order and link ownership,
   and Review endnote counters retain neighboring equations. Oversized keep-with-next
   groups flow without repeatedly starting new pages; independent keep-lines rules
   and explicit breaks remain respected. Hidden run breaks and inline text boxes
