@@ -4896,6 +4896,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxHyperlinkScopesShareParsedSourceOwnership",
+    "DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards",
     "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
     "DocxEmptyRevisionScopesKeepSourceRangesThroughTransparentContainers",
     "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
@@ -9147,6 +9149,8 @@
     "DocxTablePictureRotationSharesTheAlignedCellContentClip"
   ],
   "docx-empty-revision-scopes": [
+    "DocxHyperlinkScopesShareParsedSourceOwnership",
+    "DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards",
     "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
     "DocxEmptyRevisionScopesKeepSourceRangesThroughTransparentContainers",
     "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
@@ -9166,6 +9170,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-empty-revision-owners": [
+    "DocxHyperlinkScopesShareParsedSourceOwnership",
+    "DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards",
     "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
     "DocxEmptyRevisionScopesKeepSourceRangesThroughTransparentContainers",
     "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
@@ -9190,6 +9196,23 @@
     "DocxCoveredRunsSkipFallbackProgramLoads",
     "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement",
     "PortableRenderingInlineLiteralOperatorBreakPreservesContent"
+  ],
+  "docx-hyperlink-source-owners": [
+    "DocxHyperlinkScopesShareParsedSourceOwnership",
+    "DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards",
+    "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
+    "DocxEmptyRevisionScopesKeepSourceRangesThroughTransparentContainers",
+    "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
+    "DocxMathHyperlinksPreservePaintAndOwnedTargetsAcrossContainersAndViews",
+    "DocxMathHyperlinksKeepActualRevisionsAndExcludeDeletedNavigation",
+    "DocxMathHyperlinksFollowWrappedPaintAndKeepMissingTargetFallback",
+    "DocxMathHyperlinksIncludeStructuralPaintWithoutAbsorbingOtherRanges",
+    "DocxMathContentControlsRetainOrphanUnknownAndNestedRevisionFallbacks",
+    "DocxMathCustomXmlKeepsStoredContentAnnotationsFallbacksAndCancellation",
+    "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ],
   "docx-revision-neutrality": [
     "DocxRevisionNeutrality",

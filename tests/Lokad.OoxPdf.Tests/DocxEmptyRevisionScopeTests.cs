@@ -71,6 +71,51 @@ internal static class DocxEmptyRevisionScopeTests
         }
     }
 
+    public static void DocxHyperlinkScopesShareParsedSourceOwnership()
+    {
+        foreach (var source in Cases)
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                    OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = renderer.RenderPagesAsync(Read(source, mode, null), null, default).ToBlockingEnumerable().ToArray();
+            foreach (string kind in new[] { "ins", "del" })
+            foreach (string payload in new[] { "empty", "bookmark" })
+            {
+                var document = Read(source, mode, kind, payload, "hyperlink");
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                AssertPaint(expected, actual, source.Fixture + "/hyperlink/" + kind + "/" + payload + "/" + mode);
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "A hyperlink with only source annotations cannot suppress neighboring mathematics.");
+            }
+        }
+    }
+
+    public static void DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards()
+    {
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string kind in new[] { "ins", "del", "moveFrom", "moveTo" })
+        foreach (string payload in new[] { "empty", "bookmark", "literal", "empty-run", "unknown" })
+        {
+            var document = Read(Cases[0], mode, kind, payload, "hyperlink");
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).First(p => p.Equations.Count > 0);
+            bool included = kind is "ins" or "moveTo" ? mode != OoxPdfDocxMarkupMode.Original :
+                mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup;
+            bool hasOwner = included && payload is not ("empty" or "bookmark");
+            TestAssert.Equal(hasOwner ? 1 : 0, paragraph.Revisions.Count);
+            bool supported = !hasOwner || (kind is "ins" or "del") && payload != "unknown";
+            TestAssert.Equal(supported, DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+            TestAssert.Equal(supported ? paragraph.Equations.Count : 0,
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.Equal(included && payload == "bookmark",
+                paragraph.BookmarkAnchors.Any(a => a.Name == "EmptyRevisionScope"));
+            TestAssert.True(DocxInlineContent.HasValidHyperlinkSourceRanges(paragraph, default),
+                "Source ownership propagation retains captured hyperlink ranges.");
+        }
+    }
+
     private static DocxDocument Read((string Fixture, string Part) source, OoxPdfDocxMarkupMode mode,
         string? kind, string payload = "empty", string carrier = "direct") =>
         DocxInlineCompositionTests.ReadMutation(source.Fixture, mode, false, false, (xml, w, m) =>
@@ -91,7 +136,8 @@ internal static class DocxEmptyRevisionScopeTests
                 "unknown" => [new XElement(w + "future")],
                 _ => Array.Empty<XElement>()
             };
-            if (carrier == "sdt") scope.Add(new XElement(w + "sdt", new XElement(w + "sdtContent", children)));
+            if (carrier == "hyperlink") scope.Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "EmptyRevisionScope"), children));
+            else if (carrier == "sdt") scope.Add(new XElement(w + "sdt", new XElement(w + "sdtContent", children)));
             else if (carrier == "customXml") scope.Add(new XElement(w + "customXml", children));
             else scope.Add(children);
             equation.AddAfterSelf(scope);

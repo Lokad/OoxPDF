@@ -83,7 +83,7 @@ internal sealed partial class DocxReader
             AddInlineContainerChild(child, inheritedRevision);
         }
 
-        void AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
+        bool AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
             => AddSourceContainerChild(child, revision, removeDeletedText: false);
 
         // Source ranges do not own revised payload. Unknown children retain a
@@ -135,8 +135,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
-                AddHyperlinkContainer(child, revision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
-                return true;
+                return AddHyperlinkContainer(child, revision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
@@ -1412,10 +1411,10 @@ internal sealed partial class DocxReader
         return span;
     }
 
-    private static void AddHyperlinkContainer(
+    private static bool AddHyperlinkContainer(
         XElement hyperlink,
         DocxRevisionInfo? revision,
-        Action<XElement, DocxRevisionInfo?> addInlineChild,
+        Func<XElement, DocxRevisionInfo?, bool> addInlineChild,
         Func<int> getInlineItemCount,
         ref int sourceRunIndex,
         List<DocxTextRun> runs,
@@ -1426,9 +1425,10 @@ internal sealed partial class DocxReader
         int textRunStartIndex = runs.Count;
         int textLengthStart = runs.Sum(run => run.Text.Length);
         int inlineStart = getInlineItemCount();
+        bool hasSource = false;
         foreach (XElement hyperlinkChild in hyperlink.Elements())
         {
-            addInlineChild(hyperlinkChild, revision);
+            hasSource |= addInlineChild(hyperlinkChild, revision);
         }
 
         AddHyperlinkSpan(
@@ -1442,6 +1442,7 @@ internal sealed partial class DocxReader
             getInlineItemCount(),
             hyperlinkSpans,
             relationships);
+        return hasSource;
     }
 
     private static DocxRelatedStoryKind? ResolveInlineReferenceKind(XElement element)

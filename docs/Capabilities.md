@@ -683,8 +683,9 @@ Approximate or restricted:
   Inline boxes honor the drawing run's resolved hidden state, including inherited
   styles and explicit visible overrides. Intentionally hidden child equations do
   not count as unsupported visible omissions; unsupported visible equations still warn.
-  Empty and source-range-only revision scopes retain their annotations without
-  governing neighboring equations. Actual text, fields, drawings and unknown
+  Empty and source-range-only revision scopes, including their hyperlink
+  containers, retain annotations without governing neighboring equations.
+  Actual text, fields, drawings and unknown
   children retain their source ownership and existing eligibility guards.
   Word-compatible Review preserves first-row prose baselines alongside equations
   in qualified body/header/footer boxes. Explicit cell spacing, vertical merges
