@@ -16,7 +16,8 @@ internal static partial class DocxInlineCompositionTests
         foreach (string shape in new[] { "plain", "ordered", "field" })
         {
             var document = ReadRevisedComputedCache("body", instruction, mode, shape, revised: true, locked);
-            var paragraph = CachedMathParagraph(document);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document)
+                .Single(source => source.FieldReferences.Any(field => field.Instruction!.Trim() == instruction));
             bool replaced = !locked && instruction != "REF StoredValue";
             var revision = paragraph.Revisions.Single(item => item.Id == "713");
             TestAssert.Equal(replaced ? 1 : 0, paragraph.NonRenderingRunOwners.Count);
@@ -50,16 +51,16 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
-            var expected = renderer.RenderPagesAsync(ReadRevisedComputedCache(story, instruction, mode, "plain", revised: false),
-                null, default).ToBlockingEnumerable().ToArray();
             string MathText(IEnumerable<PdfPage> pages) => string.Concat(pages.SelectMany(page =>
                 DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true).Where(show => page.Fonts.Any(font =>
                     font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) && ReferenceEquals(font.Font, show.Font))))
                 .Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
-            TestAssert.True(MathText(expected).Length > 0 && expected.Sum(page => page.Images.Count) == 1,
-                "The unformatted control contains its supported formulas and picture.");
             foreach (string shape in new[] { "plain", "ordered", "field" })
             {
+                var expected = renderer.RenderPagesAsync(ReadRevisedComputedCache(story, instruction, mode, shape, revised: false),
+                    null, default).ToBlockingEnumerable().ToArray();
+                TestAssert.True(MathText(expected).Length > 0 && expected.Sum(page => page.Images.Count) == 1,
+                    "The matching source-shape control contains its supported formulas and picture.");
                 var document = ReadRevisedComputedCache(story, instruction, mode, shape, revised: true);
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
@@ -69,7 +70,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(MathText(expected), MathText(actual));
                 TestAssert.Equal(1, actual.Sum(page => page.Images.Count));
                 TestAssert.True(expected.SelectMany(page => page.Annotations).SequenceEqual(actual.SelectMany(page => page.Annotations)),
-                    "Source navigation remains attached to the supported content.");
+                    "Formatting history preserves navigation for the same source shape: " + story + "/" + instruction + "/" + shape + "/" + mode);
                 using var cancellation = new CancellationTokenSource();
                 cancellation.Cancel();
                 TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, null,
