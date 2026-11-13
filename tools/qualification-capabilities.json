@@ -79,6 +79,7 @@
     "DocxFloatingChildUnpreparedMathPreservesFixedPictureFallback"
   ],
   "docx-floating-nested-table": [
+    "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",
     "DocxFloatingNestedTableLabelsStayWithinTheirPaintedClips",
     "DocxFloatingTableCellInlineBoxLabelsRemainVisibleInFinalAndReview",
@@ -4920,6 +4921,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren",
     "DocxFloatingBoxOutlines",
     "DocxComputedFieldBoxes",
     "DocxPictureRevisionEligibilityRequiresActualImageOwnership",

@@ -7,7 +7,7 @@
 - DOCX: improves mixed text/equation/picture composition, tables, notes, related
   stories, pagination, fields, review markup and navigation. Corrects visible
   content lost through wrapping, clipping or off-page frames. Floating textbox
-  outlines retain their full stroke outside the child content clip in unscaled views.
+  outlines retain their full stroke outside the child content clip, including scaled Review views.
   Floating frames retain their own insets and outline when they contain another drawing.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field

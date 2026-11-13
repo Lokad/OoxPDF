@@ -2,9 +2,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    // Office A/B (tbxrev probe, Word-COM rendered): on scaled Word-compatible pages the
-    // floating-textbox frame stays unscaled page geometry while its design-space content
-    // maps uniformly to emission space (X about the page origin, Y about the page center).
+    // Floating placement stays in design coordinates. On scaled Word-compatible
+    // pages, the frame and its content map uniformly to emission space (X about
+    // the page origin, Y about the page center), as in retained Word PDF controls.
     // Body text instead keeps the first-pin shift, which strands textbox content ~18pt low
     // and below its own content-box clip (invisible). Pre-compensating design coordinates
     // into body-layout space lets every existing offset consumer (render, balloon anchors,
@@ -160,17 +160,15 @@ internal sealed partial class DocxRenderer
             };
         }
 
-        public (double X, double Y, double Width, double Height) MapClipRectangle(
-            double contentX,
-            double contentTop,
-            double contentWidth,
-            double contentHeight)
+        public (double X, double Y, double Width, double Height) MapRectangle(
+            double x,
+            double top,
+            double width,
+            double height)
         {
-            // The clip feeds graphics directly (no body offsets apply), so it maps to
-            // emission space, not pre-compensated space.
-            double top = MapEmissionY(contentTop);
-            double height = ScaleExtent(contentHeight);
-            return (MapEmissionX(contentX), top - height, ScaleExtent(contentWidth), height);
+            // Graphics consumes physical coordinates without body text offsets.
+            double physicalHeight = ScaleExtent(height);
+            return (MapEmissionX(x), MapEmissionY(top) - physicalHeight, ScaleExtent(width), physicalHeight);
         }
     }
 }

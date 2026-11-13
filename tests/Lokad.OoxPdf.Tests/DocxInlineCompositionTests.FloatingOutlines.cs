@@ -61,6 +61,48 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxFloatingBoxReviewOutlinesShareThePrintedFrameWithTheirChildren()
+    {
+        foreach (string fixture in new[] { "floating-table-ordered", "floating-cell-inline-box" })
+        foreach (bool omitOutline in new[] { false, true })
+        {
+            var finalSource = ReadFloatingOutlineSource(fixture, OoxPdfDocxMarkupMode.Final, false, omitOutline);
+            var reviewSource = ReadFloatingOutlineSource(fixture, OoxPdfDocxMarkupMode.AllMarkup, false, omitOutline);
+            var final = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final,
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderPagesAsync(finalSource, null, default).ToBlockingEnumerable().Single();
+            var review = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.AllMarkup,
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderPagesAsync(reviewSource, null, default).ToBlockingEnumerable().Single();
+            AssertSourceLabelsPaint(review, OoxPdfDocxMarkupMode.AllMarkup,
+                ["BOX TABLE NORTH", "BOX TABLE SOUTH"], fixture + "/review outline");
+            var finalLabel = DocxCommentsTests.ReadEmbeddedGlyphTextShows(final)
+                .First(show => show.Text.Contains("BOX TABLE NORTH", StringComparison.Ordinal));
+            var reviewLabel = DocxCommentsTests.ReadEmbeddedGlyphTextShows(review)
+                .First(show => show.Text.Contains("BOX TABLE NORTH", StringComparison.Ordinal));
+            double scale = reviewLabel.Size / finalLabel.Size;
+            TestAssert.True(scale > 0d && scale < 1d, "The real comment requires scaled Review painting.");
+            double height = fixture == "floating-table-ordered" ? 60d : 120d;
+            // Text size and graphics numbers round independently to .001pt.
+            // This .02pt numerical envelope is not an Office visual threshold.
+            var frames = ReadFloatingOutline(review, height * scale, 216d * scale, .02d).ToArray();
+            TestAssert.Equal(omitOutline ? 0 : 1, frames.Length);
+            if (omitOutline) continue;
+            var (bounds, clip) = frames[0];
+            double halfStroke = .25d * scale;
+            TestAssert.True(bounds[0] - halfStroke >= clip.X - .001d &&
+                bounds[1] - halfStroke >= clip.Y - .001d &&
+                bounds[0] + bounds[2] + halfStroke <= clip.X + clip.Width + .001d &&
+                bounds[1] + bounds[3] + halfStroke <= clip.Y + clip.Height + .001d,
+                "All four scaled frame strokes survive independently of the child content clip.");
+            var original = ReadFloatingOutline(final, height).Single().Bounds;
+            TestAssert.True(Math.Abs((reviewLabel.X - bounds[0]) - (finalLabel.X - original[0]) * scale) < .02d &&
+                Math.Abs((bounds[1] + bounds[3] - reviewLabel.Y) -
+                    (original[1] + original[3] - finalLabel.Y) * scale) < .02d,
+                "The outline and its child baseline retain the same inset and printed scale. Absolute Review anchor residuals remain separate.");
+        }
+    }
+
     private static DocxDocument ReadFloatingOutlineSource(string fixture, OoxPdfDocxMarkupMode mode,
         bool explicitInsets, bool omitOutline) =>
         ReadMutation("TableGridOrigins/Containers/" + fixture, mode, false, false, (xml, _, _) =>
@@ -77,13 +119,14 @@ internal static partial class DocxInlineCompositionTests
             if (omitOutline) shape.Element(wps + "spPr")!.Element(a + "ln")!.Remove();
         });
 
-    private static IEnumerable<(double[] Bounds, PdfRectangle Clip)> ReadFloatingOutline(PdfPage page, double height)
+    private static IEnumerable<(double[] Bounds, PdfRectangle Clip)> ReadFloatingOutline(PdfPage page, double height,
+        double width = 216d, double tolerance = .001d)
     {
         foreach (var frame in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
         {
             if (!frame.Block.EndsWith(" re S", StringComparison.Ordinal)) continue;
             var bounds = frame.Block.Split(' ').Take(4).Select(v => double.Parse(v, CultureInfo.InvariantCulture)).ToArray();
-            if (Math.Abs(bounds[2] - 216d) > .001d || Math.Abs(bounds[3] - height) > .001d) continue;
+            if (Math.Abs(bounds[2] - width) > tolerance || Math.Abs(bounds[3] - height) > tolerance) continue;
             TestAssert.Equal(Matrix3x2.Identity, frame.Transform);
             yield return (bounds, frame.Clip);
         }

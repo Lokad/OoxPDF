@@ -24,7 +24,7 @@ internal sealed partial class DocxRenderer
         PdfRectangle clip;
         if (mapped)
         {
-            var (x, y, width, height) = map.MapClipRectangle(story.X, story.TopY, story.Width, story.Height);
+            var (x, y, width, height) = map.MapRectangle(story.X, story.TopY, story.Width, story.Height);
             clip = new PdfRectangle(x, y, width, height);
         }
         else clip = new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
@@ -353,16 +353,17 @@ internal sealed partial class DocxRenderer
         graphics.SaveState();
         // The frame owns its outer stroke; only its children acquire the inset
         // content clip, as for inline text boxes. Clipping first hides the frame.
-        // Scaled Word-compatible outlines remain unqualified.
-        if (!uniformMap && TryResolveTextBoxStroke(drawing.Drawing, width, height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue))
+        if (TryResolveTextBoxStroke(drawing.Drawing, width, height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue))
         {
+            var frame = uniformMap ? map.MapRectangle(placedX, placedTop, width, height)
+                : (X: placedX, Y: placedTop - height, Width: width, Height: height);
             graphics.SetStrokeRgb(strokeRed, strokeGreen, strokeBlue);
-            graphics.SetLineWidth(strokeWidth);
-            graphics.StrokeRectangle(placedX, placedTop - height, width, height);
+            graphics.SetLineWidth(uniformMap ? map.ScaleExtent(strokeWidth) : strokeWidth);
+            graphics.StrokeRectangle(frame.X, frame.Y, frame.Width, frame.Height);
         }
         if (uniformMap)
         {
-            (double clipX, double clipY, double clipWidth, double clipHeight) = map.MapClipRectangle(contentX, contentTop, contentWidth, contentHeight);
+            (double clipX, double clipY, double clipWidth, double clipHeight) = map.MapRectangle(contentX, contentTop, contentWidth, contentHeight);
             graphics.ClipRectangle(clipX, clipY, clipWidth, clipHeight);
         }
         else
