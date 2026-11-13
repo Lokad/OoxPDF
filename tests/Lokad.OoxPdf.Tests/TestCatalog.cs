@@ -27,6 +27,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxCellColumnBreakTests)),
         .. FromType("rendering-portable", typeof(DocxHardBreakVisibilityTests)),
         .. FromType("rendering-portable", typeof(DocxHiddenInlineBoxTests)),
+        .. FromType("rendering-portable", typeof(DocxEmptyRevisionScopeTests)),
         .. FromType("rendering-portable", typeof(DocxFieldInstructionTests)),
         .. FromType(name => name == nameof(DocxMinimumCommentTests.DocxMinimumCommentsMatchIndependentWordFinalOrigins)
             ? "docx-text" : "rendering-portable", typeof(DocxMinimumCommentTests)),

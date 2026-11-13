@@ -4896,6 +4896,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
+    "DocxEmptyRevisionScopesKeepSourceRangesThroughTransparentContainers",
+    "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
     "DocxHiddenInlineBoxesPreserveSiblingPaintAcrossContainers",
     "DocxInlineBoxesUseInheritedVisibilityAndVisibleOverrides",
     "DocxHiddenInlineBoxesRetainRevisionFieldAndOmissionOwnership",
@@ -9143,7 +9146,29 @@
     "DocxTableLayoutStagePlacesCellBlockImageBelowBreakSpillRow",
     "DocxTablePictureRotationSharesTheAlignedCellContentClip"
   ],
+  "docx-empty-revision-scopes": [
+    "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
+    "DocxEmptyRevisionScopesKeepSourceRangesThroughTransparentContainers",
+    "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
+    "DocxReviewEmptyRunOwnersKeepActualSourceMetadata",
+    "DocxReviewEmptyRunOwnersComposeWithMathematics",
+    "PortableRenderingEmptyRunOwnersKeepMathAndAuthorOrder",
+    "DocxMathRevisionBoundariesPreservePaintAndFiltering",
+    "DocxMathRevisionBoundariesKeepUnknownAndContentBearingFallbacks",
+    "DocxMathContentControlsRetainOrphanUnknownAndNestedRevisionFallbacks",
+    "DocxMathCustomXmlKeepsStoredContentAnnotationsFallbacksAndCancellation",
+    "DocxInlineCompositionTableMathMetadataKeepsChildOwnersAndMovingFallback",
+    "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
+    "DocxHiddenHardBreaksPreserveComposedPagesAndPaint",
+    "DocxHiddenInlineBoxesRetainRevisionFieldAndOmissionOwnership",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "docx-empty-revision-owners": [
+    "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
+    "DocxEmptyRevisionScopesKeepSourceRangesThroughTransparentContainers",
+    "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
     "DocxReviewEmptyRunOwners",
     "PortableRenderingEmptyRunOwners",
     "DocxReviewNonTextAuthors",

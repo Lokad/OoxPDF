@@ -86,80 +86,98 @@ internal sealed partial class DocxReader
         void AddInlineContainerChild(XElement child, DocxRevisionInfo? revision)
             => AddSourceContainerChild(child, revision, removeDeletedText: false);
 
-        void AddSourceContainerChild(XElement child, DocxRevisionInfo? revision, bool removeDeletedText)
+        // Source ranges do not own revised payload. Unknown children retain a
+        // conservative owner so they cannot silently relax layout eligibility.
+        bool AddSourceContainerChild(XElement child, DocxRevisionInfo? revision, bool removeDeletedText)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (child.Name == MathNamespace + "oMath" || child.Name == MathNamespace + "oMathPara")
             {
                 AddEquation(child, revision, removeDeletedText);
+                return true;
             }
             else if (child.Name == WordprocessingNamespace + "sdt")
             {
-                AddContentControl(child, revision, removeDeletedText);
+                return AddContentControl(child, revision, removeDeletedText);
             }
             else if (child.Name == WordprocessingNamespace + "sdtContent" || IsInlineMetadataContainer(child))
             {
-                AddVisibleRunContainer(child, revision, removeDeletedText);
+                return AddVisibleRunContainer(child, revision, removeDeletedText);
             }
             // An excluded deletion retains only supported math structure.
             // Metadata does not change that owner or restore its other content.
             else if (removeDeletedText)
             {
-                return;
+                return false;
             }
             else if (child.Name == WordprocessingNamespace + "r")
             {
                 AddParagraphRun(child, ref pageInstructionSeen, revision);
+                return true;
             }
             else if (child.Name == WordprocessingNamespace + "bookmarkStart")
             {
                 AddBookmarkAnchor(child, bookmarkAnchors, sourceRunIndex, runs, GetInlineItemCount());
+                return false;
+            }
+            else if (child.Name == WordprocessingNamespace + "bookmarkEnd")
+            {
+                return false;
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
                 AddSimpleField(child, revision);
+                return true;
             }
             else if (IsRevisionContainer(child))
             {
-                AddRevisionRunContainer(child, inheritedRevision: revision);
+                return AddRevisionRunContainer(child, inheritedRevision: revision);
             }
             else if (child.Name == WordprocessingNamespace + "hyperlink")
             {
                 AddHyperlinkContainer(child, revision, AddInlineContainerChild, GetInlineItemCount, ref sourceRunIndex, runs, hyperlinkSpans, relationships);
+                return true;
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeStart")
             {
                 EnsureInlineContent();
                 AddCommentRangeStart(child, openCommentRanges, sourceRunIndex, runs, inlineItems!.Count);
+                return false;
             }
             else if (child.Name == WordprocessingNamespace + "commentRangeEnd")
             {
                 EnsureInlineContent();
                 AddCommentRangeEnd(child, openCommentRanges, commentRanges, sourceRunIndex, runs, inlineItems!.Count);
+                return false;
             }
             else if (IsRevisionMarkerElement(child))
             {
                 AddRevisionMarker(child, paragraphRevisions, openRevisionRanges, revisionRanges, sourceRunIndex, runs);
             }
+            return true;
         }
 
-        void AddVisibleRunContainer(XElement container, DocxRevisionInfo? revision, bool removeDeletedText = false)
+        bool AddVisibleRunContainer(XElement container, DocxRevisionInfo? revision, bool removeDeletedText = false)
         {
+            bool hasSource = false;
             foreach (XElement containerChild in container.Elements())
             {
-                AddSourceContainerChild(containerChild, revision, removeDeletedText);
+                hasSource |= AddSourceContainerChild(containerChild, revision, removeDeletedText);
             }
+            return hasSource;
         }
 
-        void AddContentControl(XElement contentControl, DocxRevisionInfo? revision, bool removeDeletedText)
+        bool AddContentControl(XElement contentControl, DocxRevisionInfo? revision, bool removeDeletedText)
         {
+            bool hasSource = false;
             foreach (XElement content in contentControl.Elements(WordprocessingNamespace + "sdtContent"))
             {
-                AddVisibleRunContainer(content, revision, removeDeletedText);
+                hasSource |= AddVisibleRunContainer(content, revision, removeDeletedText);
             }
+            return hasSource;
         }
 
-        void AddRevisionRunContainer(XElement container, DocxRevisionInfo? inheritedRevision)
+        bool AddRevisionRunContainer(XElement container, DocxRevisionInfo? inheritedRevision)
         {
             if (!IsIncludedRevisionContainer(container, markupMode))
             {
@@ -178,16 +196,21 @@ internal sealed partial class DocxReader
                 // literal argument frames and structural paint remain.
                 if (RetainsDeletedMathStructure(container, markupMode))
                     AddVisibleRunContainer(container, revision: null, removeDeletedText: true);
-                return;
+                return container.HasElements;
             }
 
             DocxRevisionInfo? revision = CreateRevisionInfo(container) ?? inheritedRevision;
+            int revisionIndex = paragraphRevisions.Count;
             if (revision is not null)
             {
                 paragraphRevisions.Add(revision);
             }
 
-            AddVisibleRunContainer(container, revision);
+            bool hasSource = AddVisibleRunContainer(container, revision);
+            // Preserve source-order aggregation for actual owners. Annotation-
+            // only scopes keep their anchors without governing neighboring ink.
+            if (!hasSource && revision is not null) paragraphRevisions.RemoveAt(revisionIndex);
+            return hasSource;
         }
 
         FinalizeOpenComplexFields();
