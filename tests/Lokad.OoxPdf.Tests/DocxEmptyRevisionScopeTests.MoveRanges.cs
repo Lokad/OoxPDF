@@ -19,17 +19,22 @@ internal static partial class DocxEmptyRevisionScopeTests
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
                     OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var expected = renderer.RenderPagesAsync(Read(source, mode, null), null, default).ToBlockingEnumerable().ToArray();
-            foreach (string kind in new[] { "moveFrom", "moveTo" })
-            foreach (string payload in new[] { "empty", "bookmark" })
             foreach (string carrier in new[] { "direct", "hyperlink", "sdt", "customXml", "field", "split-revision" })
+            foreach (string payload in new[] { "empty", "bookmark" })
             {
-                var document = ReadMoveRange(source, mode, kind, payload, carrier);
-                var diagnostics = new List<OoxPdfDiagnostic>();
-                var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
-                AssertPaint(expected, actual, source.Fixture + "/" + kind + "/" + payload + "/" + carrier + "/" + mode);
-                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
-                    "An independently closed payload-free range cannot suppress supported neighboring mathematics.");
+                // Hold the carrier and its metadata constant: adding a stored
+                // field can itself select an existing story-layout fallback.
+                var control = ReadMoveRange(source, mode, "moveFrom", payload, carrier, includeRange: false);
+                var expected = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
+                foreach (string kind in new[] { "moveFrom", "moveTo" })
+                {
+                    var document = ReadMoveRange(source, mode, kind, payload, carrier);
+                    var diagnostics = new List<OoxPdfDiagnostic>();
+                    var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                    AssertPaint(expected, actual, source.Fixture + "/" + kind + "/" + payload + "/" + carrier + "/" + mode);
+                    TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                        "An independently closed payload-free range cannot suppress supported neighboring mathematics.");
+                }
             }
         }
     }
@@ -78,7 +83,7 @@ internal static partial class DocxEmptyRevisionScopeTests
     }
 
     private static DocxDocument ReadMoveRange((string Fixture, string Part) source, OoxPdfDocxMarkupMode mode,
-        string kind, string payload, string carrier = "direct") =>
+        string kind, string payload, string carrier = "direct", bool includeRange = true) =>
         DocxInlineCompositionTests.ReadMutation(source.Fixture, mode, false, false, (xml, w, math) =>
         {
             var equation = xml.Descendants(math + "oMath").First();
@@ -108,16 +113,17 @@ internal static partial class DocxEmptyRevisionScopeTests
             if (payload == "missing-id") { start.Attribute(w + "id")!.Remove(); end.Attribute(w + "id")!.Remove(); }
             if (payload == "mismatched-id") end.SetAttributeValue(w + "id", "999");
             var children = new List<XElement>();
-            if (payload != "orphan") children.Add(start);
+            if (includeRange && payload != "orphan") children.Add(start);
             children.AddRange(content);
-            if (payload != "unclosed") children.Add(end);
+            if (includeRange && payload != "unclosed") children.Add(end);
             object result = carrier switch
             {
                 "hyperlink" => new XElement(w + "hyperlink", new XAttribute(w + "anchor", "EmptyMoveAnchor"), children),
                 "sdt" => new XElement(w + "sdt", new XElement(w + "sdtContent", children)),
                 "customXml" => new XElement(w + "customXml", children),
                 "field" => new XElement(w + "fldSimple", new XAttribute(w + "instr", "REF EmptyMoveField"), children),
-                "split-revision" => new object[] { start, new XElement(w + "ins", new XAttribute(w + "id", "963"), content, end) },
+                "split-revision" => new object?[] { includeRange ? start : null,
+                    new XElement(w + "ins", new XAttribute(w + "id", "963"), content, includeRange ? end : null) },
                 _ => children
             };
             equation.AddAfterSelf(result);
