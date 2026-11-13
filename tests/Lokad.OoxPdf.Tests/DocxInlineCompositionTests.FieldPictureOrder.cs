@@ -103,6 +103,90 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (string story in new[] { "body", "cell", "header", "footer" })
+        foreach (string kind in new[] { "PAGE", "NUMPAGES" })
+        foreach (int pictures in new[] { 1, 2 })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            var before = renderer.RenderPagesAsync(ReadComputedSimpleFieldPictures(story, kind, mode, false, pictures),
+                null, default).ToBlockingEnumerable().ToArray();
+            var after = renderer.RenderPagesAsync(ReadComputedSimpleFieldPictures(story, kind, mode, true, pictures),
+                null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(pictures, before.Sum(page => page.Images.Count));
+            TestAssert.Equal(pictures, after.Sum(page => page.Images.Count));
+            TestAssert.Equal(before.Length, after.Length);
+            for (int index = 0; index < before.Length; index++)
+            {
+                TestAssert.Equal(before[index].Content, after[index].Content);
+                TestAssert.Equal(before[index].Fonts.Count, after[index].Fonts.Count);
+                TestAssert.True(before[index].Annotations.SequenceEqual(after[index].Annotations),
+                    "Splitting a cached picture run preserves equation and navigation ownership.");
+            }
+        }
+    }
+
+    public static void DocxComputedSimpleFieldPicturesKeepVisibilityLocksAndRevisionOwners()
+    {
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string revision in new[] { "none", "ins", "del" })
+        foreach (bool hidden in new[] { false, true })
+        foreach (bool locked in new[] { false, true })
+        {
+            var document = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2,
+                hidden, locked, revision);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).Single(p => p.FieldReferences.Count > 0 || p.Equations.Count > 0);
+            bool included = revision == "none" || (revision == "ins" ? mode != OoxPdfDocxMarkupMode.Original :
+                mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup);
+            TestAssert.Equal(included ? hidden ? 1 : 2 : 0, paragraph.Images.Count);
+            if (!included) continue;
+            var field = paragraph.FieldReferences.Single();
+            TestAssert.Equal(!locked, field.UsesPlaceholder);
+            TestAssert.Equal(locked, field.RendersCachedResult);
+            var items = TestAssert.NotNull(paragraph.InlineContent);
+            TestAssert.Equal(paragraph.Images.Count, items.OfType<DocxInlinePicture>().Count());
+            TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default),
+                "Every retained cached picture keeps the computed result's actual revision owner.");
+            if (!locked)
+            {
+                var result = paragraph.Runs.Single(run => run.FieldKind == DocxFieldKind.Page);
+                TestAssert.True(paragraph.Images.All(image => image.SourceRunIndex == result.SourceRunIndex),
+                    "Cache run count does not invent extra computed field source positions.");
+            }
+        }
+    }
+
+    private static DocxDocument ReadComputedSimpleFieldPictures(string story, string kind,
+        OoxPdfDocxMarkupMode mode, bool split, int count, bool hiddenLast = false,
+        bool locked = false, string revision = "none") =>
+        ReadMutation("CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-" + story),
+            mode, true, true, (xml, w, _) =>
+            {
+                var drawing = xml.Descendants(w + "drawing").Single();
+                var source = drawing.Parent!;
+                var field = new XElement(w + "fldSimple", new XAttribute(w + "instr", " " + kind + " "),
+                    locked ? new XAttribute(w + "fldLock", "true") : null);
+                var value = new XElement(w + "r", new XElement(w + "t", "77"));
+                field.Add(value);
+                for (int index = 0; index < count; index++)
+                {
+                    var picture = new XElement(drawing);
+                    if (index > 0)
+                        foreach (var extent in picture.Descendants().Where(element => element.Attribute("cx") is not null))
+                            extent.SetAttributeValue("cx", (long)extent.Attribute("cx")! / 2);
+                    if (split)
+                        field.Add(new XElement(w + "r",
+                            hiddenLast && index == count - 1 ? new XElement(w + "rPr", new XElement(w + "vanish")) : null,
+                            picture));
+                    else value.Add(picture);
+                }
+                source.ReplaceWith(revision == "none" ? field : new XElement(w + revision,
+                    new XAttribute(w + "id", "907"), new XAttribute(w + "author", "Public reviewer"), field));
+            }, partOverride: story is "header" or "footer" ? "word/" + story + "1.xml" : null);
+
     private static DocxDocument ReadFieldPictureBoundary(string kind, string cache, string prefix,
         bool pictureFirst, bool joined, OoxPdfDocxMarkupMode mode) =>
         ReadMutation("Composition/report", mode, false, false, (xml, w, math) =>

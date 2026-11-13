@@ -4896,6 +4896,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories",
+    "DocxComputedSimpleFieldPicturesKeepVisibilityLocksAndRevisionOwners",
     "DocxHyperlinkScopesShareParsedSourceOwnership",
     "DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards",
     "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",
@@ -9196,6 +9198,24 @@
     "DocxCoveredRunsSkipFallbackProgramLoads",
     "PortableRenderingBrokenLiteralsSurviveCellAndStaticPlacement",
     "PortableRenderingInlineLiteralOperatorBreakPreservesContent"
+  ],
+  "docx-computed-cache-pictures": [
+    "DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories",
+    "DocxComputedSimpleFieldPicturesKeepVisibilityLocksAndRevisionOwners",
+    "DocxComputedFieldsKeepAtomicOrderBesideRunDrawings",
+    "DocxComputedFieldPictureRunBoundariesPreserveVisibleContent",
+    "DocxComputedSimpleFieldLinksCoverOnlyTheirResolvedResult",
+    "DocxCachedPictureResultsKeepSourceAcrossPlacementsAndFormats",
+    "DocxCachedPictureResultsPreservePaintAndNavigation",
+    "DocxCachedPictureResultsKeepNestedComputedAndEmptyOwners",
+    "DocxCachedPictureResultsMatchIndependentWordContentAndOrigins",
+    "DocxHiddenPicturesKeepComputedFieldAndSourceRunAdmission",
+    "DocxHiddenPicturesUseInheritedStylesAndExplicitFalse",
+    "DocxDynamicFieldFormatUsesSourceOwnersAcrossSimpleComplexAndPreservedResults",
+    "PortableRenderingDynamicFieldFormatsRetainValuesAndGlyphSizes",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ],
   "docx-hyperlink-source-owners": [
     "DocxHyperlinkScopesShareParsedSourceOwnership",

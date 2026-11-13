@@ -514,11 +514,25 @@ internal sealed partial class DocxReader
                 // The computed result replaces its cached runs and owns one
                 // source position, including when there is no stored result.
                 sourceRunIndex++;
-                if (firstRun is not null && ResolveRunProperties(firstRun.Element(WordprocessingNamespace + "rPr"),
-                    paragraphStyleId, ReadCharacterStyleId(firstRun), styles, tableCellStyle?.Run).Hidden != true)
-                    foreach (var image in ReadInlineImages(firstRun, package, relationships, revision, fieldSourceRunIndex, cancellationToken))
-                        images.Add(revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
-                            ? image with { SourceRunStyle = runs[fieldTextRunIndex] } : image);
+                // The computed value owns one source position. Cached pictures
+                // keep their order across run splits, using each run's visibility.
+                int resultTextOffset = 0, resultDrawingOrder = 0;
+                foreach (XElement resultRun in field.Elements(WordprocessingNamespace + "r"))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
+                        paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run).Hidden != true)
+                        foreach (var image in ReadInlineImages(resultRun, package, relationships, revision,
+                            fieldSourceRunIndex, cancellationToken).OrderBy(image => image.SourceOrderInRun))
+                            images.Add(image with
+                            {
+                                SourceTextOffsetInRun = resultTextOffset + image.SourceTextOffsetInRun,
+                                SourceOrderInRun = resultDrawingOrder++,
+                                SourceRunStyle = revision?.Kind == DocxRevisionKind.Insertion && runs.Count > fieldTextRunIndex
+                                    ? runs[fieldTextRunIndex] : image.SourceRunStyle
+                            });
+                    resultTextOffset += ReadRunText(resultRun).Length;
+                }
                 AddFieldReference(
                     kind,
                     DocxFieldSourceKind.Simple,
