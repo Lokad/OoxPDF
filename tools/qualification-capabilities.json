@@ -532,6 +532,8 @@
     "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks"
   ],
   "docx-cached-picture-results": [
+    "DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories",
+    "DocxComputedSimpleFieldPicturesKeepVisibilityLocksAndRevisionOwners",
     "DocxCachedPictureResults",
     "DocxCachedMathResults",
     "DocxSyntheticVmlInlinePngRendersImageXObject",
@@ -4896,6 +4898,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxMetadataPropertiesKeepRevisionScopedContentAcrossStories",
+    "DocxMetadataPropertiesRetainActualUnknownAndMovingOwnerGuards",
     "DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories",
     "DocxComputedSimpleFieldPicturesKeepVisibilityLocksAndRevisionOwners",
     "DocxHyperlinkScopesShareParsedSourceOwnership",
@@ -9151,6 +9155,7 @@
     "DocxTablePictureRotationSharesTheAlignedCellContentClip"
   ],
   "docx-empty-revision-scopes": [
+    "DocxMetadataProperties",
     "DocxHyperlinkScopesShareParsedSourceOwnership",
     "DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards",
     "DocxEmptyRevisionScopesKeepMixedContentAcrossStories",

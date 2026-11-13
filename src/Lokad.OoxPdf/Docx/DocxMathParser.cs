@@ -158,7 +158,7 @@ internal static partial class DocxMathParser
             {
                 List<DocxMathBookmarkBoundary>? bookmarks = null;
                 int childIndex = 0;
-                foreach (var child in SourceChildren(element))
+                foreach (var child in DocxSourceXml.StoredChildren(element))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (IsBookmarkMarker(child))
@@ -219,14 +219,6 @@ internal static partial class DocxMathParser
         element?.Name == WordprocessingNamespace + "hyperlink" ||
         element?.Name == WordprocessingNamespace + "customXml" || element?.Name == WordprocessingNamespace + "sdt" ||
         element?.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt";
-    // Match paragraph reading: control/custom-XML properties describe metadata;
-    // only stored child content supplies mathematical operands.
-    private static IEnumerable<XElement> SourceChildren(XElement element) =>
-        element.Name == WordprocessingNamespace + "sdt"
-            ? element.Elements(WordprocessingNamespace + "sdtContent")
-            : element.Name == WordprocessingNamespace + "customXml"
-                ? element.Elements().Where(child => child.Name != WordprocessingNamespace + "customXmlPr")
-                : element.Elements();
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
     // Editing boundaries and stored pagination positions have no operand or ink.
@@ -246,9 +238,9 @@ internal static partial class DocxMathParser
         element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
     private static IEnumerable<XElement> TraversalChildren(XElement element) =>
-        SourceChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingMarker(child) && !IsBookmarkMarker(child));
+        DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingMarker(child) && !IsBookmarkMarker(child));
     private static IEnumerable<XElement> NonMarkerChildren(XElement element) =>
-        SourceChildren(element).Where(child => !IsNonPrintingMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
+        DocxSourceXml.StoredChildren(element).Where(child => !IsNonPrintingMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
         NonMarkerChildren(element).Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
@@ -258,7 +250,7 @@ internal static partial class DocxMathParser
     }
     private static string? PropertyValue(XElement element, string property, string value) =>
         (string?)element.Element(MathNamespace + property)?.Element(MathNamespace + value)?.Attribute(MathNamespace + "val");
-    private static string[] ReadProperties(XElement element) => SourceChildren(element).Where(IsProperty)
+    private static string[] ReadProperties(XElement element) => DocxSourceXml.StoredChildren(element).Where(IsProperty)
         .Select(child => child.ToString(SaveOptions.DisableFormatting)).ToArray();
 
     private static DocxMathArgumentProperties? ReadArgumentProperties(XElement element)

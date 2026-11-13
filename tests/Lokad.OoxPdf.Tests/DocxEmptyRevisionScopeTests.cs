@@ -116,6 +116,53 @@ internal static class DocxEmptyRevisionScopeTests
         }
     }
 
+    public static void DocxMetadataPropertiesKeepRevisionScopedContentAcrossStories()
+    {
+        foreach (var source in Cases)
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                    OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = renderer.RenderPagesAsync(Read(source, mode, null), null, default).ToBlockingEnumerable().ToArray();
+            foreach (string kind in new[] { "ins", "del" })
+            foreach (string carrier in new[] { "customXml-properties", "smartTag-properties" })
+            foreach (string payload in new[] { "empty", "bookmark" })
+            {
+                var document = Read(source, mode, kind, payload, carrier);
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                AssertPaint(expected, actual, source.Fixture + "/" + kind + "/" + carrier + "/" + payload + "/" + mode);
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "Owned metadata properties cannot turn an annotation-only scope into revised payload.");
+            }
+        }
+    }
+
+    public static void DocxMetadataPropertiesRetainActualUnknownAndMovingOwnerGuards()
+    {
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string kind in new[] { "ins", "del", "moveFrom", "moveTo" })
+        foreach (string carrier in new[] { "customXml-properties", "smartTag-properties",
+            "customXml-misplaced-properties", "customXml-foreign-properties" })
+        foreach (string payload in new[] { "empty", "bookmark", "literal", "empty-run", "unknown" })
+        {
+            var document = Read(Cases[0], mode, kind, payload, carrier);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).First(p => p.Equations.Count > 0);
+            bool included = kind is "ins" or "moveTo" ? mode != OoxPdfDocxMarkupMode.Original :
+                mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup;
+            bool unknownProperties = carrier is "customXml-misplaced-properties" or "customXml-foreign-properties";
+            bool hasOwner = included && (unknownProperties || payload is not ("empty" or "bookmark"));
+            TestAssert.Equal(hasOwner ? 1 : 0, paragraph.Revisions.Count);
+            bool supported = !hasOwner || !unknownProperties && (kind is "ins" or "del") && payload != "unknown";
+            TestAssert.Equal(supported, DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+            TestAssert.Equal(supported ? paragraph.Equations.Count : 0,
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.Equal(included && payload == "bookmark",
+                paragraph.BookmarkAnchors.Any(a => a.Name == "EmptyRevisionScope"));
+        }
+    }
+
     private static DocxDocument Read((string Fixture, string Part) source, OoxPdfDocxMarkupMode mode,
         string? kind, string payload = "empty", string carrier = "direct") =>
         DocxInlineCompositionTests.ReadMutation(source.Fixture, mode, false, false, (xml, w, m) =>
@@ -139,6 +186,16 @@ internal static class DocxEmptyRevisionScopeTests
             if (carrier == "hyperlink") scope.Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "EmptyRevisionScope"), children));
             else if (carrier == "sdt") scope.Add(new XElement(w + "sdt", new XElement(w + "sdtContent", children)));
             else if (carrier == "customXml") scope.Add(new XElement(w + "customXml", children));
+            else if (carrier.EndsWith("-properties", StringComparison.Ordinal))
+            {
+                string owner = carrier.StartsWith("smartTag", StringComparison.Ordinal) ? "smartTag" : "customXml";
+                XName property = carrier == "customXml-foreign-properties" ? XName.Get("customXmlPr", "urn:future") :
+                    w + (carrier == "customXml-misplaced-properties" ? "smartTagPr" : owner + "Pr");
+                scope.Add(new XElement(w + owner, new XAttribute(w + "uri", "urn:public:metadata"),
+                    new XAttribute(w + "element", "calculation"),
+                    new XElement(property, new XElement(w + "attr", new XAttribute(w + "name", "public-property"),
+                        new XAttribute(w + "val", "metadata-value"))), children));
+            }
             else scope.Add(children);
             equation.AddAfterSelf(scope);
         }, partOverride: source.Part);

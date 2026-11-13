@@ -96,11 +96,8 @@ internal sealed partial class DocxReader
                 AddEquation(child, revision, removeDeletedText);
                 return true;
             }
-            else if (child.Name == WordprocessingNamespace + "sdt")
-            {
-                return AddContentControl(child, revision, removeDeletedText);
-            }
-            else if (child.Name == WordprocessingNamespace + "sdtContent" || IsInlineMetadataContainer(child))
+            else if (child.Name == WordprocessingNamespace + "sdt" ||
+                child.Name == WordprocessingNamespace + "sdtContent" || IsInlineMetadataContainer(child))
             {
                 return AddVisibleRunContainer(child, revision, removeDeletedText);
             }
@@ -159,19 +156,9 @@ internal sealed partial class DocxReader
         bool AddVisibleRunContainer(XElement container, DocxRevisionInfo? revision, bool removeDeletedText = false)
         {
             bool hasSource = false;
-            foreach (XElement containerChild in container.Elements())
+            foreach (XElement containerChild in DocxSourceXml.StoredChildren(container))
             {
                 hasSource |= AddSourceContainerChild(containerChild, revision, removeDeletedText);
-            }
-            return hasSource;
-        }
-
-        bool AddContentControl(XElement contentControl, DocxRevisionInfo? revision, bool removeDeletedText)
-        {
-            bool hasSource = false;
-            foreach (XElement content in contentControl.Elements(WordprocessingNamespace + "sdtContent"))
-            {
-                hasSource |= AddVisibleRunContainer(content, revision, removeDeletedText);
             }
             return hasSource;
         }
