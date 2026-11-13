@@ -684,7 +684,7 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        ResolveInlineTextBoxContentInsets(textBox, out double insetLeft, out double insetTop, out double insetRight, out _);
+        ResolveInlineTextBoxContentInsets(textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
         double boxWidth = Math.Min(width, fileWidth * paragraphSpacingScale);
         double contentWidth = Math.Max(1d, boxWidth - (insetLeft + insetRight) * paragraphSpacingScale);
         var story = new DocxRelatedStory(
@@ -713,9 +713,11 @@ internal sealed partial class DocxLayoutEngine
         };
         double contentX = boxX + insetLeft * paragraphSpacingScale;
         double contentTop = boxTop - insetTop * paragraphSpacingScale;
-        // Autofit-grow: the block grows when content exceeds the declared extent (Word
-        // default); shrinking behavior stays queued under autofit W6-b.
-        double boxHeight = Math.Max(fileHeight * paragraphSpacingScale, storyLayout.ContentHeight);
+        // The existing growth path keeps the declared extent as a floor.
+        // Children start below the top inset; their outer frame also owns the
+        // bottom inset, rather than clipping its final source rows.
+        double boxHeight = Math.Max(fileHeight * paragraphSpacingScale,
+            storyLayout.ContentHeight + (insetTop + insetBottom) * paragraphSpacingScale);
         return new DocxInlineTextBoxLayout(
             textBox,
             boxX,

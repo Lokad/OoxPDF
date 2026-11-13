@@ -691,6 +691,9 @@ Approximate or restricted:
   Inline-box child text retains its source font in section-specific static stories,
   including earlier sections replaced by a different final header/footer. New
   multi-section Word geometry remains unqualified.
+  The existing inline-box growth path includes both vertical insets in the outer
+  frame, preserving child ink and container advance. New growing-source Word
+  geometry remains unqualified; arbitrary autofit and fragmentation stay limited.
   A box's declared frame admits surrounding supported content even when its child
   story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
   ignored and warned; they do not discard supported outside formulas or pictures.
