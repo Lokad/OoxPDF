@@ -203,18 +203,24 @@ internal static partial class DocxInlineCompositionTests
         {
             var control = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision);
             var wrapped = ReadComputedSimpleFieldPictures("body", "PAGE", mode, true, 2, hidden, locked, revision, container);
-            var expected = DocxBlockTraversal.EnumerateBodyParagraphs(control).Single(p => p.Equations.Count != 0);
-            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(wrapped).Single(p => p.Equations.Count != 0);
-            TestAssert.Equal(expected.Images.Count, paragraph.Images.Count);
-            TestAssert.Equal(expected.FieldReferences.Count, paragraph.FieldReferences.Count);
-            TestAssert.True(paragraph.Images.Select(image => image.SourceTextOffsetInRun)
-                .SequenceEqual(expected.Images.Select(image => image.SourceTextOffsetInRun)),
-                "Transparent cache containers retain each picture's source text offset.");
-            TestAssert.True(paragraph.Images.Select(image => image.SourceOrderInRun)
-                .SequenceEqual(expected.Images.Select(image => image.SourceOrderInRun)),
-                "Transparent cache containers retain picture order at equal source offsets.");
-            TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default),
-                "Pictures in transparent caches retain their actual revision owner.");
+            var expectedParagraphs = DocxBlockTraversal.EnumerateBodyParagraphs(control).ToArray();
+            var paragraphs = DocxBlockTraversal.EnumerateBodyParagraphs(wrapped).ToArray();
+            TestAssert.Equal(expectedParagraphs.Length, paragraphs.Length);
+            for (int index = 0; index < paragraphs.Length; index++)
+            {
+                var expected = expectedParagraphs[index];
+                var paragraph = paragraphs[index];
+                TestAssert.Equal(expected.Images.Count, paragraph.Images.Count);
+                TestAssert.Equal(expected.FieldReferences.Count, paragraph.FieldReferences.Count);
+                TestAssert.True(paragraph.Images.Select(image => image.SourceTextOffsetInRun)
+                    .SequenceEqual(expected.Images.Select(image => image.SourceTextOffsetInRun)),
+                    "Transparent cache containers retain each picture's source text offset.");
+                TestAssert.True(paragraph.Images.Select(image => image.SourceOrderInRun)
+                    .SequenceEqual(expected.Images.Select(image => image.SourceOrderInRun)),
+                    "Transparent cache containers retain picture order at equal source offsets.");
+                TestAssert.Equal(DocxInlineContent.HasSupportedParagraphRevisionOwners(expected, default),
+                    DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+            }
         }
         foreach (string container in new[] { "unknown", "foreign", "nested-field", "directional", "misplaced-property" })
         {
