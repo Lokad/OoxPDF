@@ -112,6 +112,7 @@ internal static class TestCatalog
         .. FromType("fonts", typeof(DocxMathMatrixLayoutTests)),
         .. FromType("fonts", typeof(MathScriptStyleTests)),
         .. FromType("docx-numbering", typeof(DocxNumberingTests)),
+        .. FromType("docx-numbering", typeof(DocxListKeepLeadingTests)),
         .. FromType("docx-text", typeof(DocxTextTests)),
         .. FromType("docx-text", typeof(DocxTextWrapTests)),
         .. FromType("docx-text", typeof(DocxTextSpacingTests)),
