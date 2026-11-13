@@ -47,8 +47,22 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static DocxDocument ReadFallbackGrowingBox(OoxPdfDocxMarkupMode mode, bool boundary, bool roomy, bool counter) =>
-        ReadGrowingInlineBox("body", mode, 20d, 15d, (xml, w, m) =>
+    public static void DocxFallbackCellBoxesReserveCompleteChildFrames()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool roomy in new[] { false, true })
+        {
+            var source = ReadFallbackGrowingBox(mode, boundary: false, roomy, counter: false, story: "cell");
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var page = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, CachedMathGeometry(mode))
+                .RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            AssertSourceLabelsPaint(page, mode, GrowthLabels(), "fallback cell box");
+            TestAssert.Equal(1, diagnostics.Count(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"));
+        }
+    }
+
+    private static DocxDocument ReadFallbackGrowingBox(OoxPdfDocxMarkupMode mode, bool boundary, bool roomy, bool counter,
+        string story = "body") => ReadGrowingInlineBox(story, mode, 20d, 15d, (xml, w, m) =>
         {
             var content = xml.Descendants(w + "txbxContent").Single();
             var owner = content.Ancestors(w + "p").First();

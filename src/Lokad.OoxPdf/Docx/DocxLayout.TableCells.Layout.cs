@@ -259,7 +259,17 @@ internal sealed partial class DocxLayoutEngine
             bool tuckApplied = false;
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
-                double boxContribution = EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale);
+                double boxParagraphWidth = Math.Max(1d, textWidth - GetParagraphStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                DocxInlineTextBoxLayout? measuredBox = CreateInlineTextBoxLayout(
+                    textBox, sourceBlockIndex: null, 0d, boxParagraphWidth, 0d,
+                    paragraph.EffectiveProperties.Alignment, textMeasurer, defaultTabStopPoints,
+                    paragraphSpacingScale, pageNumber ?? 1, cancellationToken,
+                    mathEquations: mathEquations, pageCount: pageCount);
+                if (measuredBox is null)
+                {
+                    continue;
+                }
+                double boxContribution = measuredBox.BoxHeight;
                 if (!tuckApplied &&
                     previousParagraphHasText &&
                     paragraph.Images.Count == 0 &&

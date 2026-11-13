@@ -696,6 +696,8 @@ Approximate or restricted:
   geometry remains unqualified; arbitrary autofit and fragmentation stay limited.
   Body fallback also admits the measured outer frame, rebinding its children to
   the admitted page/column; unsupported neighboring equations remain diagnosed.
+  Cell fallback reserves that same measured height rather than clipping grown
+  children to the declared extent.
   A box's declared frame admits surrounding supported content even when its child
   story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
   ignored and warned; they do not discard supported outside formulas or pictures.
