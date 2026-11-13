@@ -689,7 +689,7 @@ internal sealed partial class DocxReader
                 (child.Name == WordprocessingNamespace + "t" || child.Name == WordprocessingNamespace + "delText") && child.Value.Length == 0 ||
                 tableCellStyle is not null && child.Name == WordprocessingNamespace + "br" && IsPageOrColumnBreak(child))))
             {
-                (nonRenderingRunOwners ??= []).Add(new(currentSourceRunIndex, effectiveRevisions));
+                RetainNonRenderingRunOwner(currentSourceRunIndex, effectiveRevisions);
             }
 
             if (run.Elements().Any(IsComplexFieldMarkupElement))
@@ -796,8 +796,14 @@ internal sealed partial class DocxReader
             // A computed result replaces its cached text, regardless of its
             // spelling or run boundaries. Pictures keep their separate source
             // ownership. An orphan instruction retains the legacy digit fallback.
-            if (resultFields.Any(field => field.PlaceholderEmitted) ||
-                resultFields.Length == 0 && pageInstructionSeen && displayText.Trim().All(char.IsDigit))
+            if (resultFields.Any(field => field.PlaceholderEmitted))
+            {
+                // Replacing cache text does not discard its actual revision
+                // owner or make unrelated paragraph content unsupported.
+                RetainNonRenderingRunOwner(currentSourceRunIndex, effectiveRevisions);
+                return;
+            }
+            if (resultFields.Length == 0 && pageInstructionSeen && displayText.Trim().All(char.IsDigit))
                 return;
 
             int runsBefore = runs.Count;
@@ -808,6 +814,13 @@ internal sealed partial class DocxReader
                 field.RendersCachedResult = true;
                 field.ResultRunCount += addedRuns;
             }
+        }
+
+        void RetainNonRenderingRunOwner(int index, IReadOnlyList<DocxRevisionInfo> revisions)
+        {
+            if (revisions.Count == 0 || nonRenderingRunOwners is { Count: > 0 } &&
+                nonRenderingRunOwners[^1].SourceRunIndex == index) return;
+            (nonRenderingRunOwners ??= []).Add(new(index, revisions));
         }
 
         void AddComplexFieldAwareRun(
