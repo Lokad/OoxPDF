@@ -112,8 +112,10 @@ internal static partial class DocxInlineCompositionTests
             XElement? picture = null;
             if (mixedPicture)
             {
-                picture = new XElement(w + "r", new XElement(run.Descendants(w + "drawing")
-                    .First(drawing => !drawing.Descendants(w + "txbxContent").Any())));
+                var sourcePicture = xml.Descendants(w + "drawing")
+                    .First(drawing => !drawing.Descendants(w + "txbxContent").Any());
+                picture = new XElement(w + "r", new XElement(sourcePicture));
+                sourcePicture.Remove();
                 if (pictureFirst) content.Add(picture);
             }
             if (shape != "removed") content.Add(box);
