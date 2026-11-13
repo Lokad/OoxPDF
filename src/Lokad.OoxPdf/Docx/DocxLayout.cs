@@ -1549,7 +1549,8 @@ internal sealed partial class DocxLayoutEngine
                     DocxKeepBlockEstimate keepEstimate = EstimateKeptParagraphBlock(document.BodyElements, elementIndex,
                         width, textMeasurer, defaultTabStopPoints, pages.Count + 1, paragraphSpacingScale,
                         scaleBaselineOffsetTransitions && page.ColumnFrames.Count <= 1,
-                        availableHeight: cursorY - keepBottom, allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
+                        availableHeight: cursorY - keepBottom, pageContentHeight: page.Height - page.MarginTop - keepBottom,
+                        allowAutomaticMinimumGridPlacement: page.ColumnFrames.Count <= 1,
                         cancellationToken, mathEquations, knownPageCount,
                         scaleMinimumBodyAdvances: UsesPrintedBodyFrame() && unscaledTextMeasurer is IDocxLineMetricsProvider,
                         includeFollowingBlocks: startsKeepChain);

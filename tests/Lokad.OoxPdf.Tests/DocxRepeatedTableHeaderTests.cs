@@ -5,6 +5,82 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxRepeatedTableHeaderTests
 {
+    public static void DocxTableHeaderGroupsAreAdmittedWithTheirKeptHeading()
+    {
+        foreach (var mode in Modes)
+        foreach (int headers in new[] { 2, 3 })
+        foreach (double height in new[] { 20d, 30d })
+        foreach (bool keep in new[] { false, true })
+        foreach (bool boundary in new[] { false, true })
+        {
+            var source = HeaderGroupDocument(headers, height, boundary, keep, heading: true);
+            var layout = Layout(source, mode);
+            int sourcePage = boundary ? 2 : 1;
+            var tablePages = layout.Pages.Select((page, index) => (page, number: index + 1))
+                .Where(pair => pair.page.Items.OfType<DocxTableRowLayout>().Any(row => row.IsHeader)).ToArray();
+            TestAssert.Equal(sourcePage, tablePages[0].number);
+            foreach (var (page, number) in tablePages)
+            {
+                var rows = page.Items.OfType<DocxTableRowLayout>().ToArray();
+                TestAssert.Equal(headers, rows.Count(row => row.IsHeader));
+                TestAssert.True(rows.Take(headers).Select(row => row.RowIndex).SequenceEqual(Enumerable.Range(0, headers)),
+                    "Every admitted table page starts with the complete ordered header group.");
+                TestAssert.True(rows.Where(row => row.IsHeader).All(row => Text(row) == "H" + row.RowIndex + "=" + sourcePage),
+                    "Repeated fields retain the page where the complete source group was admitted.");
+            }
+            int headingPage = layout.Pages.Select((page, index) => (page, number: index + 1))
+                .Single(pair => pair.page.Items.OfType<DocxTextLineLayout>().Any(line => line.Text == "Kept heading")).number;
+            TestAssert.Equal(boundary && keep ? 2 : 1, headingPage);
+        }
+    }
+
+    public static void DocxTableHeaderGroupCountersBindAfterCompleteAdmission()
+    {
+        foreach (var mode in Modes)
+        foreach (int headers in new[] { 2, 3 })
+        foreach (int precedingPages in new[] { 0, 8 })
+        {
+            var source = HeaderGroupDocument(headers, 20d, boundary: true, keep: false, heading: false, precedingPages);
+            var layout = Layout(source, mode);
+            int sourcePage = precedingPages + 2;
+            foreach (var (page, index) in layout.Pages.Select((page, index) => (page, index)))
+            foreach (var row in page.Items.OfType<DocxTableRowLayout>().Where(row => row.Cells[0].Cell.Text != "Filler"))
+                TestAssert.Equal(row.IsHeader ? "H" + row.RowIndex + "=" + sourcePage : "B=" + (index + 1), Text(row));
+            using var canceled = new CancellationTokenSource(); canceled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => new DocxLayoutEngine(mode).Create(source, new Measurer(), canceled.Token));
+        }
+    }
+
+    private static DocxDocument HeaderGroupDocument(int headers, double headerHeight, bool boundary,
+        bool keep, bool heading, int precedingPages = 0)
+    {
+        var rows = new List<DocxTableRow>();
+        for (int index = 0; index < headers + 8; index++)
+        {
+            var paragraph = DocxTests.CreateDocxLayoutParagraph(index < headers ? "H" + index + "={PAGE}" : "B={PAGE}", 10d, 10d);
+            rows.Add(new([Cell(paragraph)], index < headers ? headerHeight : 40d)
+                { IsHeader = index < headers, CantSplit = true, HeightRuleValue = "exact" });
+        }
+        var table = new DocxTable("fixed", [80d], rows);
+        var blocks = new List<DocxBodyElement>();
+        for (int index = 0; index < precedingPages; index++)
+        {
+            blocks.Add(new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Before", 10d, 10d)));
+            blocks.Add(new DocxPageBreakElement(DocxBreakSourceKind.RunBreak, "page", null));
+        }
+        if (boundary)
+        {
+            var filler = new DocxTable("fixed", [80d], [new DocxTableRow(
+                [Cell(DocxTests.CreateDocxLayoutParagraph("Filler", 10d, 10d))], 190d - headers * headerHeight)
+                { HeightRuleValue = "exact", CantSplit = true }]);
+            blocks.Add(new DocxTableElement(filler));
+        }
+        if (heading) blocks.Add(new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("Kept heading", 10d, 10d) with
+            { KeepRules = DocxParagraphKeepRules.Empty with { KeepNext = keep } }));
+        blocks.Add(new DocxTableElement(table));
+        return DocxTests.CreateLayoutTestDocument(blocks, blocks.OfType<DocxTableElement>().Select(block => block.Table).ToArray());
+    }
+
     public static void DocxRepeatedTableHeaderFieldsRetainSourcePagesAndBodyPlacement()
     {
         foreach (var mode in Modes)

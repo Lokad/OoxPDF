@@ -395,6 +395,29 @@ internal sealed partial class DocxLayoutEngine
         return true;
     }
 
+    private static double ResolveInitialTableRowGroupHeight(DocxTable table,
+        IReadOnlyList<double> rowHeights, double pageContentHeight, CancellationToken token)
+    {
+        if (table.Rows.Count == 0) return 0d;
+        double first = rowHeights[0], group = 0d;
+        for (int index = 0; index < table.Rows.Count && table.Rows[index].IsHeader; index++)
+        {
+            token.ThrowIfCancellationRequested();
+            // Authored cell breaks retain their existing fragmentation path.
+            // Run breaks do not turn pages in that path either.
+            foreach (var cell in table.Rows[index].Cells)
+            foreach (var element in DocxTableCellContent.GetBodyElements(cell))
+            {
+                token.ThrowIfCancellationRequested();
+                if (element is DocxPageBreakElement { SourceKind: not DocxBreakSourceKind.RunBreak }) return first;
+            }
+            group += rowHeights[index];
+        }
+        // A fitting contiguous header is one repeated source group. An unfit
+        // group keeps row-by-row admission instead of inventing fragmentation.
+        return group > 0d && group <= pageContentHeight ? group : first;
+    }
+
     private static void LayoutTable(
         DocxTable table,
         double marginBottom,
@@ -434,6 +457,15 @@ internal sealed partial class DocxLayoutEngine
             // fragment baseline projection must not scale it a second time.
             double flowBottom = marginBottom;
             double remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
+            if (rowIndex == 0 && headerRows.Count != 0 && hasPageContent() &&
+                ResolveInitialTableRowGroupHeight(table, rowHeights, continuationContentHeight, cancellationToken) > remainingPageHeight)
+            {
+                finishPage();
+                frame = resolveFrame();
+                rowHeights = frame.RowHeights;
+                rowHeight = rowHeights[0];
+                remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
+            }
             if (!row.CantSplit && !nestedMath &&
                 TryResolveExplicitTableCellPageBreakBoundaries(row, frame.EffectiveColumns, frame.Scale, rowHeight, textMeasurer, defaultTabStopPoints, getPageNumber(), pageCount: frame.Context.PageCount, out IReadOnlyList<double> explicitBreakBoundaries, paragraphSpacingScale: paragraphSpacingScale))
             {

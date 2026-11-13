@@ -1134,7 +1134,20 @@
       "DocxNoteMathFieldsStaticTablesRetainExactClippedAndUnsupportedFallbacks",
       "StagedPageMemory"
   ],
+  "docx-table-header-group-admission": [
+      "DocxTableHeaderGroup",
+      "DocxRepeatedTableHeader",
+      "DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak",
+      "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",
+      "DocxTableLayoutStageCarriesVerticalMergeOwnerAfterRepeatedHeader",
+      "DocxTableLayoutStageKeepsManualPageBreakBoundary",
+      "DocxWordCompatibleAllMarkupScalesKeepNextTableEstimate",
+      "DocxSyntheticParagraphKeepNextMovesPairToNextPage",
+      "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+      "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement"
+  ],
   "docx-repeated-header-fields": [
+      "DocxTableHeaderGroup",
       "DocxRepeatedTableHeader",
       "DocxTableLayoutStageRepeatsHeaderRowsAfterPageBreak",
       "DocxTableLayoutStageRepeatsHeaderRowsBeforeSplitRowContinuations",

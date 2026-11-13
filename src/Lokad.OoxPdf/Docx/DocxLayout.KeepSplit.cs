@@ -484,6 +484,7 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         bool scaleExactBodyAdvances,
         double availableHeight,
+        double pageContentHeight,
         bool allowAutomaticMinimumGridPlacement,
         CancellationToken cancellationToken,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null,
@@ -520,7 +521,7 @@ internal sealed partial class DocxLayoutEngine
             if (next is DocxTableElement nextTable)
             {
                 height += paragraph.EffectiveProperties.SpacingAfterPoints * paragraphSpacingScale;
-                height += EstimateFirstTableRowHeight(nextTable.Table, availableHeight - height);
+                height += EstimateFirstTableRowHeight(nextTable.Table, availableHeight - height, pageContentHeight - height);
                 firstTableRowCount++;
             }
 
@@ -567,7 +568,7 @@ internal sealed partial class DocxLayoutEngine
             return regular + (lines.Length - proseLineCount) * lineHeight + expansion.Above + expansion.Below;
         }
 
-        double EstimateFirstTableRowHeight(DocxTable table, double remainingHeight)
+        double EstimateFirstTableRowHeight(DocxTable table, double remainingHeight, double freshHeight)
         {
             DocxTableRow? row = table.Rows.FirstOrDefault();
             if (row is null)
@@ -584,7 +585,7 @@ internal sealed partial class DocxLayoutEngine
                 adjustAlignedMinimumMargins: true, alignedMinimumAvailableHeight: Math.Max(0d, remainingHeight),
                 allowAutomaticMinimumGridPlacement: allowAutomaticMinimumGridPlacement,
                 mathEquations: mathEquations);
-            return frame.RowHeights[0];
+            return ResolveInitialTableRowGroupHeight(table, frame.RowHeights, freshHeight, cancellationToken);
         }
     }
 
