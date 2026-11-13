@@ -107,6 +107,10 @@ internal sealed partial class DocxReader
             {
                 return false;
             }
+            else if (DocxSourceXml.IsNonPrintingMarker(child))
+            {
+                return false;
+            }
             else if (child.Name == WordprocessingNamespace + "r")
             {
                 AddParagraphRun(child, ref pageInstructionSeen, revision);

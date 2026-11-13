@@ -5,6 +5,15 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxSourceXml
 {
+    // Editing boundaries and stored math pagination positions have no payload.
+    // Content-bearing, unknown and misplaced children retain their source owner.
+    public static bool IsNonPrintingMarker(XElement element) =>
+        element.Name.Namespace == WordprocessingNamespace &&
+        !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
+        (element.Name.LocalName is "proofErr" or "permStart" or "permEnd" ||
+            element.Name.LocalName == "lastRenderedPageBreak" && element.Parent?.Name == MathNamespace + "r" &&
+            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration));
+
     // Container properties describe the source, not stored inline payload.
     // Ignore only the property's actual owner; unknown/misplaced children stay.
     public static IEnumerable<XElement> StoredChildren(XElement element) =>

@@ -166,6 +166,53 @@ internal static class DocxEmptyRevisionScopeTests
         }
     }
 
+    public static void DocxNonprintingRevisionMarkersPreserveMixedContentAcrossStories()
+    {
+        foreach (var source in Cases)
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                    OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = renderer.RenderPagesAsync(Read(source, mode, null), null, default).ToBlockingEnumerable().ToArray();
+            foreach (string kind in new[] { "ins", "del" })
+            foreach (string carrier in new[] { "direct", "hyperlink", "customXml-properties" })
+            foreach (string payload in new[] { "proofing", "permissions" })
+            {
+                var document = Read(source, mode, kind, payload, carrier);
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                AssertPaint(expected, actual, source.Fixture + "/" + kind + "/" + carrier + "/" + payload + "/" + mode);
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "Nonprinting editing boundaries cannot suppress supported neighboring mathematics.");
+            }
+        }
+    }
+
+    public static void DocxNonprintingRevisionMarkersRetainActualAndUnknownOwners()
+    {
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string kind in new[] { "ins", "del", "moveFrom", "moveTo" })
+        foreach (string carrier in new[] { "direct", "hyperlink", "customXml-properties" })
+        foreach (string payload in new[] { "proofing", "permissions", "proofing-literal", "permissions-empty-run",
+            "marker-unknown", "marker-text", "marker-foreign", "marker-misplaced-page" })
+        {
+            var document = Read(Cases[0], mode, kind, payload, carrier);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).First(p => p.Equations.Count > 0);
+            bool included = kind is "ins" or "moveTo" ? mode != OoxPdfDocxMarkupMode.Original :
+                mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup;
+            bool hasOwner = included && payload is not ("proofing" or "permissions");
+            TestAssert.Equal(hasOwner ? 1 : 0, paragraph.Revisions.Count);
+            bool supported = !hasOwner || (kind is "ins" or "del") && payload is "proofing-literal" or "permissions-empty-run";
+            TestAssert.True(supported == DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default),
+                "Editing markers changed actual source ownership: " + mode + "/" + kind + "/" + carrier + "/" + payload);
+            TestAssert.Equal(supported ? paragraph.Equations.Count : 0,
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.True(DocxInlineContent.HasValidHyperlinkSourceRanges(paragraph, default),
+                "Marker filtering cannot change captured source ranges.");
+        }
+    }
+
     private static DocxDocument Read((string Fixture, string Part) source, OoxPdfDocxMarkupMode mode,
         string? kind, string payload = "empty", string carrier = "direct") =>
         DocxInlineCompositionTests.ReadMutation(source.Fixture, mode, false, false, (xml, w, m) =>
@@ -184,8 +231,19 @@ internal static class DocxEmptyRevisionScopeTests
                 "literal" => [new XElement(w + "r", new XElement(w + "t", "Revised source"))],
                 "empty-run" => [new XElement(w + "r")],
                 "unknown" => [new XElement(w + "future")],
+                "proofing" => [ProofingMarker("spellStart"), ProofingMarker("spellEnd")],
+                "permissions" => [PermissionMarker("permStart"), PermissionMarker("permEnd")],
+                "proofing-literal" => [ProofingMarker("spellStart"),
+                    new XElement(w + "r", new XElement(w + "t", "Revised source")), ProofingMarker("spellEnd")],
+                "permissions-empty-run" => [PermissionMarker("permStart"), new XElement(w + "r"), PermissionMarker("permEnd")],
+                "marker-unknown" => [new XElement(w + "proofErr", new XElement(w + "future"))],
+                "marker-text" => [new XElement(w + "proofErr", "Visible")],
+                "marker-foreign" => [new XElement(XName.Get("proofErr", "urn:future"))],
+                "marker-misplaced-page" => [new XElement(w + "lastRenderedPageBreak")],
                 _ => Array.Empty<XElement>()
             };
+            XElement ProofingMarker(string type) => new(w + "proofErr", new XAttribute(w + "type", type));
+            XElement PermissionMarker(string name) => new(w + name, new XAttribute(w + "id", "910"));
             if (carrier == "hyperlink") scope.Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "EmptyRevisionScope"), children));
             else if (carrier == "sdt") scope.Add(new XElement(w + "sdt", new XElement(w + "sdtContent", children)));
             else if (carrier == "customXml") scope.Add(new XElement(w + "customXml", children));

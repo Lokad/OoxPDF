@@ -4898,6 +4898,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxNonprintingRevisionMarkersPreserveMixedContentAcrossStories",
+    "DocxNonprintingRevisionMarkersRetainActualAndUnknownOwners",
     "DocxMetadataPropertiesKeepRevisionScopedContentAcrossStories",
     "DocxMetadataPropertiesRetainActualUnknownAndMovingOwnerGuards",
     "DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories",
@@ -9155,6 +9157,7 @@
     "DocxTablePictureRotationSharesTheAlignedCellContentClip"
   ],
   "docx-empty-revision-scopes": [
+    "DocxNonprintingRevisionMarkers",
     "DocxMetadataProperties",
     "DocxHyperlinkScopesShareParsedSourceOwnership",
     "DocxHyperlinkScopesRetainActualAndUnknownOwnerGuards",
@@ -18893,6 +18896,22 @@
     "DocxUnsupportedEquationInFooterIsDiagnosed",
     "DocxDeletedMathMetadataKeepsModeFilteringAndSourceOwners",
     "DocxMathRevisionBoundariesPreservePaintAndFiltering"
+  ],
+  "docx-editing-marker-owners": [
+    "DocxNonprintingRevisionMarkers",
+    "DocxMetadataProperties",
+    "DocxHyperlinkScopes",
+    "DocxEmptyRevisionScopes",
+    "DocxRevisionScopesRetainActualUnknownAndMovingOwnerGuards",
+    "DocxMathRevisionBoundaries",
+    "DocxMathEditingMarkers",
+    "DocxMathRunNonPrintingMarkersRetainTextAndFallbacks",
+    "PortableRenderingMathRunPaginationHintsKeepComposedContent",
+    "DocxMathParserUsesIterativeTraversalAndObservesCancellation",
+    "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
   ],
   "docx-math-run-metadata": [
     "DocxDeletedMathMetadataDoesNotReviveOtherDeletedContent",

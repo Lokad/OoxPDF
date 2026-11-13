@@ -171,7 +171,7 @@ internal static partial class DocxMathParser
                             readBookmark?.Invoke(bookmark);
                         }
                     }
-                    else if (!IsProperty(child) && !IsNonPrintingMarker(child) && !IsCommentBoundary(child)) childIndex++;
+                    else if (!IsProperty(child) && !DocxSourceXml.IsNonPrintingMarker(child) && !IsCommentBoundary(child)) childIndex++;
                 }
                 if (bookmarks is not null) node = sourceRow with { Bookmarks = bookmarks };
             }
@@ -221,14 +221,6 @@ internal static partial class DocxMathParser
         element?.Name == WordprocessingNamespace + "sdtContent" && element.Parent?.Name == WordprocessingNamespace + "sdt";
     private static bool IsContainer(string name) => IsRow(name) || IsControl(name) || name == "mr";
     private static bool IsProperty(XElement element) => element.Name.Namespace == MathNamespace && element.Name.LocalName.EndsWith("Pr", StringComparison.Ordinal);
-    // Editing boundaries and stored pagination positions have no operand or ink.
-    // Keep content-bearing, unknown and misplaced payloads on the unsupported path.
-    private static bool IsNonPrintingMarker(XElement element) =>
-        element.Name.Namespace == WordprocessingNamespace &&
-        !element.HasElements && string.IsNullOrWhiteSpace(element.Value) &&
-        (element.Name.LocalName is "proofErr" or "permStart" or "permEnd" ||
-            element.Name.LocalName == "lastRenderedPageBreak" && element.Parent?.Name == MathNamespace + "r" &&
-            element.Attributes().All(attribute => attribute.IsNamespaceDeclaration));
     private static bool IsBookmarkMarker(XElement element) =>
         element.Name.Namespace == WordprocessingNamespace &&
         element.Name.LocalName is "bookmarkStart" or "bookmarkEnd" &&
@@ -238,9 +230,9 @@ internal static partial class DocxMathParser
         element.Name.LocalName is "commentRangeStart" or "commentRangeEnd" &&
         !element.HasElements && string.IsNullOrWhiteSpace(element.Value);
     private static IEnumerable<XElement> TraversalChildren(XElement element) =>
-        DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !IsNonPrintingMarker(child) && !IsBookmarkMarker(child));
+        DocxSourceXml.StoredChildren(element).Where(child => !IsProperty(child) && !DocxSourceXml.IsNonPrintingMarker(child) && !IsBookmarkMarker(child));
     private static IEnumerable<XElement> NonMarkerChildren(XElement element) =>
-        DocxSourceXml.StoredChildren(element).Where(child => !IsNonPrintingMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
+        DocxSourceXml.StoredChildren(element).Where(child => !DocxSourceXml.IsNonPrintingMarker(child) && !IsBookmarkMarker(child) && !IsCommentBoundary(child));
     private static IEnumerable<XElement> ContentChildren(XElement element) =>
         NonMarkerChildren(element).Where(child => !IsProperty(child));
     private static bool HasOnlyRoles(XElement element, params string[] roles)
@@ -284,7 +276,7 @@ internal static partial class DocxMathParser
     private static bool IsReadableRun(XElement element) =>
         element.Name == MathNamespace + "r" && element.Elements().All(child =>
             child.Name == MathNamespace + "t" || child.Name == MathNamespace + "rPr" || child.Name == WordprocessingNamespace + "rPr" ||
-            IsNonPrintingMarker(child));
+            DocxSourceXml.IsNonPrintingMarker(child));
 
     private static bool HasSupportedRunProperties(XElement element) =>
         element.Element(MathNamespace + "rPr")?.Elements().Any(property =>
