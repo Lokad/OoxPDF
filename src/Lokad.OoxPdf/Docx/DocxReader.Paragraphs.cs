@@ -1103,35 +1103,10 @@ internal sealed partial class DocxReader
                     string childText = ReadRunTextChild(child);
                     if (childText.Length != 0)
                     {
-                        DocxComplexFieldState[] resultFields = ActiveComplexResultFields();
-                        if (resultFields.Length != 0)
-                        {
-                            int fieldTextRunIndex = runs.Count;
-                            int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
-                            foreach (DocxComplexFieldState field in resultFields)
-                            {
-                                field.HasCachedResult = true;
-                                field.EnsureTextSpan(fieldTextRunIndex, fieldTextLengthStart);
-                            }
-                        }
-
                         int runsBefore = runs.Count;
-                        AddResolvedTextRuns(
-                            runs,
-                            resolvedRun.AllCaps == true ? childText.ToUpperInvariant() : childText,
-                            resolvedRun,
-                            runStyleResolution,
-                            currentSourceRunIndex,
-                            textOffset,
-                            revision,
-                            revisions);
+                        AddParagraphDisplayText(childText, currentSourceRunIndex, textOffset,
+                            resolvedRun, runStyleResolution, revision, revisions);
                         RetainAutomaticNoteStoryMarker(child, runsBefore);
-                        int addedRuns = runs.Count - runsBefore;
-                        foreach (DocxComplexFieldState field in resultFields)
-                        {
-                            field.RendersCachedResult = true;
-                            field.ResultRunCount += addedRuns;
-                        }
                     }
 
                     textOffset += childText.Length;

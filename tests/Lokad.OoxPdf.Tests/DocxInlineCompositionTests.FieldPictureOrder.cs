@@ -36,7 +36,8 @@ internal static partial class DocxInlineCompositionTests
                 var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
                 var actual = renderer.RenderPagesAsync(Source(cache, shape), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
-                    "Cached counter spelling and run boundaries cannot discard neighboring math.");
+                    "Cached counter spelling and run boundaries cannot discard neighboring math: " +
+                    story + "/" + kind + "/" + cache + "/" + shape + "/" + mode);
                 TestAssert.Equal(expected.Length, actual.Length);
                 for (int page = 0; page < expected.Length; page++)
                 {
