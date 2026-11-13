@@ -126,8 +126,7 @@ internal sealed partial class DocxReader
             }
             else if (child.Name == WordprocessingNamespace + "fldSimple")
             {
-                AddSimpleField(child, revision);
-                return true;
+                return AddSimpleField(child, revision);
             }
             else if (IsRevisionContainer(child))
             {
@@ -481,7 +480,7 @@ internal sealed partial class DocxReader
             }
         }
 
-        void AddSimpleField(XElement field, DocxRevisionInfo? revision)
+        bool AddSimpleField(XElement field, DocxRevisionInfo? revision)
         {
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
             DocxFieldKind kind = ResolveFieldKind(instruction);
@@ -537,12 +536,13 @@ internal sealed partial class DocxReader
                     fieldReferences: fieldReferences,
                     runs: runs);
                 PublishInlineRunItems(fieldTextRunIndex, fieldImageIndex);
-                return;
+                return true;
             }
 
+            bool hasSource = false;
             foreach (XElement fieldChild in field.Elements())
             {
-                AddInlineContainerChild(fieldChild, revision);
+                hasSource |= AddInlineContainerChild(fieldChild, revision);
             }
 
             AddFieldReference(
@@ -557,6 +557,9 @@ internal sealed partial class DocxReader
                 rendersCachedResult: hasCachedResult, usesPlaceholder: false, hasSeparate: false, nestingDepth: 0, instructionRunCount: 0, resultRunCount: 0,
                 fieldReferences: fieldReferences,
                 runs: runs);
+            // Stored results own their parsed children. Empty/annotation-only
+            // results keep field metadata without claiming neighboring ink.
+            return hasSource;
         }
 
         DocxListLabel? ResolveParagraphListLabel()

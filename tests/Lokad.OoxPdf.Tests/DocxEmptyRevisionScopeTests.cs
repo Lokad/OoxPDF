@@ -213,8 +213,76 @@ internal static class DocxEmptyRevisionScopeTests
         }
     }
 
+    public static void DocxEmptyFieldRevisionScopesPreserveMixedContentAcrossStories()
+    {
+        foreach (var source in Cases)
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                mode == OoxPdfDocxMarkupMode.AllMarkup ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup :
+                    OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var expected = renderer.RenderPagesAsync(Read(source, mode, null), null, default).ToBlockingEnumerable().ToArray();
+            foreach (string kind in new[] { "ins", "del" })
+            foreach (string payload in new[] { "empty", "bookmark" })
+            foreach (string carrier in new[] { "field", "field-hyperlink", "field-sdt", "field-customXml" })
+            {
+                var document = Read(source, mode, kind, payload, carrier);
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var actual = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                AssertPaint(expected, actual, source.Fixture + "/" + kind + "/" + carrier + "/" + payload + "/" + mode);
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "A complete empty stored field does not invent payload ownership for an annotation-only revision.");
+            }
+        }
+    }
+
+    public static void DocxEmptyFieldRevisionScopesRetainActualComputedAndUnknownOwners()
+    {
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string kind in new[] { "ins", "del", "moveFrom", "moveTo" })
+        foreach (string payload in new[] { "empty", "bookmark", "literal", "empty-run", "unknown" })
+        foreach (string carrier in new[] { "field", "field-hyperlink", "field-sdt", "field-customXml" })
+        {
+            var document = Read(Cases[0], mode, kind, payload, carrier);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).First(p => p.Equations.Count > 0);
+            bool included = kind is "ins" or "moveTo" ? mode != OoxPdfDocxMarkupMode.Original :
+                mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup;
+            bool hasOwner = included && payload is not ("empty" or "bookmark");
+            bool supported = !hasOwner || (kind is "ins" or "del") && payload != "unknown";
+            TestAssert.Equal(hasOwner ? 1 : 0, paragraph.Revisions.Count);
+            TestAssert.Equal(supported, DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+            TestAssert.Equal(supported ? paragraph.Equations.Count : 0,
+                DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
+            TestAssert.Equal(included && payload == "bookmark",
+                paragraph.BookmarkAnchors.Any(anchor => anchor.Name == "EmptyRevisionScope"));
+            if (included && (payload is "empty" or "bookmark"))
+            {
+                var field = paragraph.FieldReferences.Single();
+                TestAssert.True(!field.HasCachedResult && !field.RendersCachedResult && !field.UsesPlaceholder &&
+                    field.TextRunCount == 0 && field.TextLength == 0,
+                    "Stored empty fields keep their original empty result metadata.");
+            }
+        }
+        foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (string kind in new[] { "ins", "del", "moveFrom", "moveTo" })
+        foreach (string instruction in new[] { "PAGE", "NUMPAGES" })
+        foreach (bool locked in new[] { false, true })
+        {
+            var document = Read(Cases[0], mode, kind, "empty", "field", instruction, locked);
+            var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).First(p => p.Equations.Count > 0);
+            bool included = kind is "ins" or "moveTo" ? mode != OoxPdfDocxMarkupMode.Original :
+                mode is OoxPdfDocxMarkupMode.Original or OoxPdfDocxMarkupMode.AllMarkup;
+            bool hasOwner = included && !locked;
+            TestAssert.Equal(hasOwner ? 1 : 0, paragraph.Revisions.Count);
+            TestAssert.Equal(!hasOwner || kind is "ins" or "del",
+                DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, default));
+            if (included) TestAssert.Equal(!locked, paragraph.FieldReferences.Single().UsesPlaceholder);
+        }
+    }
+
     private static DocxDocument Read((string Fixture, string Part) source, OoxPdfDocxMarkupMode mode,
-        string? kind, string payload = "empty", string carrier = "direct") =>
+        string? kind, string payload = "empty", string carrier = "direct",
+        string fieldInstruction = "REF EmptyStoredResult", bool fieldLocked = false) =>
         DocxInlineCompositionTests.ReadMutation(source.Fixture, mode, false, false, (xml, w, m) =>
         {
             if (kind is null) return;
@@ -244,7 +312,19 @@ internal static class DocxEmptyRevisionScopeTests
             };
             XElement ProofingMarker(string type) => new(w + "proofErr", new XAttribute(w + "type", type));
             XElement PermissionMarker(string name) => new(w + name, new XAttribute(w + "id", "910"));
-            if (carrier == "hyperlink") scope.Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "EmptyRevisionScope"), children));
+            if (carrier.StartsWith("field", StringComparison.Ordinal))
+            {
+                object content = carrier switch
+                {
+                    "field-hyperlink" => new XElement(w + "hyperlink", new XAttribute(w + "anchor", "EmptyRevisionScope"), children),
+                    "field-sdt" => new XElement(w + "sdt", new XElement(w + "sdtContent", children)),
+                    "field-customXml" => new XElement(w + "customXml", children),
+                    _ => children
+                };
+                scope.Add(new XElement(w + "fldSimple", new XAttribute(w + "instr", " " + fieldInstruction + " "),
+                    fieldLocked ? new XAttribute(w + "fldLock", "true") : null, content));
+            }
+            else if (carrier == "hyperlink") scope.Add(new XElement(w + "hyperlink", new XAttribute(w + "anchor", "EmptyRevisionScope"), children));
             else if (carrier == "sdt") scope.Add(new XElement(w + "sdt", new XElement(w + "sdtContent", children)));
             else if (carrier == "customXml") scope.Add(new XElement(w + "customXml", children));
             else if (carrier.EndsWith("-properties", StringComparison.Ordinal))
