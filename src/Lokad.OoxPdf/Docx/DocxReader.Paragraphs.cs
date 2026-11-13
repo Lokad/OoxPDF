@@ -712,16 +712,6 @@ internal sealed partial class DocxReader
                 text = placeholder;
                 currentPageInstructionSeen = true;
             }
-            else if (currentPageInstructionSeen && text.Trim().All(char.IsDigit))
-            {
-                foreach (DocxComplexFieldState field in ActiveComplexResultFields())
-                {
-                    field.HasCachedResult = true;
-                }
-
-                text = string.Empty;
-            }
-
             if (placeholder is null &&
                 fieldInstruction is null &&
                 // Nontext children delimit the text before and after their
@@ -803,6 +793,13 @@ internal sealed partial class DocxReader
                 }
             }
 
+            // A computed result replaces its cached text, regardless of its
+            // spelling or run boundaries. Pictures keep their separate source
+            // ownership. An orphan instruction retains the legacy digit fallback.
+            if (resultFields.Any(field => field.PlaceholderEmitted) ||
+                resultFields.Length == 0 && pageInstructionSeen && displayText.Trim().All(char.IsDigit))
+                return;
+
             int runsBefore = runs.Count;
             AddResolvedTextRuns(runs, displayText, resolvedRun, runStyleResolution, currentSourceRunIndex, sourceTextOffset, revision, effectiveRevisions, fieldKind);
             int addedRuns = runs.Count - runsBefore;
@@ -854,15 +851,14 @@ internal sealed partial class DocxReader
                     if (childText.Length != 0)
                     {
                         int markerRunsBefore = runs.Count;
-                        AddComplexFieldText(
+                        AddParagraphDisplayText(
                             childText,
                             currentSourceRunIndex,
                             textOffset,
                             resolvedRun,
                             runStyleResolution,
                             revision,
-                            revisions,
-                            ref currentPageInstructionSeen);
+                            revisions);
                         RetainAutomaticNoteStoryMarker(child, markerRunsBefore);
                     }
                 }
@@ -1053,59 +1049,6 @@ internal sealed partial class DocxReader
             field.ResultRunCount++;
             field.PlaceholderEmitted = true;
             pageInstructionSeen = true;
-        }
-
-        void AddComplexFieldText(
-            string text,
-            int currentSourceRunIndex,
-            int sourceTextOffset,
-            DocxResolvedRunProperties resolvedRun,
-            DocxRunStyleResolution runStyleResolution,
-            DocxRevisionInfo? revision,
-            IReadOnlyList<DocxRevisionInfo> revisions,
-            ref bool currentPageInstructionSeen)
-        {
-            DocxComplexFieldState[] resultFields = complexFieldStack
-                .Where(field => field.InResult)
-                .ToArray();
-            foreach (DocxComplexFieldState field in resultFields)
-            {
-                field.HasCachedResult = true;
-            }
-
-            string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
-            bool suppressPageNumberCache = currentPageInstructionSeen && displayText.Trim().All(char.IsDigit);
-            if (suppressPageNumberCache)
-            {
-                return;
-            }
-
-            if (resultFields.Length != 0)
-            {
-                int fieldTextRunIndex = runs.Count;
-                int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
-                foreach (DocxComplexFieldState field in resultFields)
-                {
-                    field.EnsureTextSpan(fieldTextRunIndex, fieldTextLengthStart);
-                }
-            }
-
-            int runsBefore = runs.Count;
-            AddResolvedTextRuns(
-                runs,
-                displayText,
-                resolvedRun,
-                runStyleResolution,
-                currentSourceRunIndex,
-                sourceTextOffset,
-                revision,
-                revisions);
-            int addedRuns = runs.Count - runsBefore;
-            foreach (DocxComplexFieldState field in resultFields)
-            {
-                field.RendersCachedResult = true;
-                field.ResultRunCount += addedRuns;
-            }
         }
 
         void RecordComplexFieldResult()

@@ -6,6 +6,49 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxComputedComplexCachesKeepPicturesMathAndNavigationAcrossStories()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (string story in new[] { "body", "cell", "header", "footer" })
+        foreach (string kind in new[] { "PAGE", "NUMPAGES" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            DocxDocument Source(string cache, string shape) => ReadMutation(
+                "CompositionProbes/math-composition-unnumbered" + (story == "body" ? "" : "-" + story),
+                mode, true, true, (xml, w, _) =>
+                {
+                    var drawing = xml.Descendants(w + "drawing").Single();
+                    var value = new XElement(w + "r", new XElement(w + "t", cache));
+                    object result = shape == "joined" ? new XElement(w + "r", new XElement(w + "t", cache), new XElement(drawing))
+                        : new[] { value, new XElement(w + "r", new XElement(drawing)) };
+                    var field = CachedMathField(w, result, complex: true, instruction: kind, locked: false);
+                    drawing.Parent!.ReplaceWith(shape == "packed"
+                        ? new XElement(w + "r", field.SelectMany(node => node.Name == w + "r" ? new[] { node } : node.Elements(w + "r"))
+                            .SelectMany(run => run.Elements()).Select(child => new XElement(child)))
+                        : field);
+                }, partOverride: story is "header" or "footer" ? "word/" + story + "1.xml" : null);
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            var expected = renderer.RenderPagesAsync(Source("7", "separate"), null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(1, expected.Sum(page => page.Images.Count));
+            foreach (string cache in new[] { "stale", "7stale", "7", "Ⅶ", "" })
+            foreach (string shape in new[] { "separate", "joined", "packed" })
+            {
+                var diagnostics = new List<Lokad.OoxPdf.Diagnostics.OoxPdfDiagnostic>();
+                var actual = renderer.RenderPagesAsync(Source(cache, shape), diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
+                    "Cached counter spelling and run boundaries cannot discard neighboring math.");
+                TestAssert.Equal(expected.Length, actual.Length);
+                for (int page = 0; page < expected.Length; page++)
+                {
+                    TestAssert.Equal(expected[page].Content, actual[page].Content);
+                    TestAssert.Equal(expected[page].Images.Count, actual[page].Images.Count);
+                    TestAssert.True(expected[page].Annotations.SequenceEqual(actual[page].Annotations),
+                        "Computed cache replacement retains picture and navigation source ownership.");
+                }
+            }
+        }
+    }
+
     public static void DocxComputedFieldsKeepAtomicOrderBesideRunDrawings()
     {
         foreach (string kind in new[] { "PAGE", "NUMPAGES" })

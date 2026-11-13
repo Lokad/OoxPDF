@@ -9,6 +9,63 @@ internal static class DocxFieldInstructionTests
     private static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static readonly XNamespace M = "http://schemas.openxmlformats.org/officeDocument/2006/math";
 
+    public static void DocxComputedFieldCachesUseResultOwnershipAcrossRunBoundaries()
+    {
+        foreach (var mode in Modes)
+        foreach (string opcode in new[] { "PAGE", "NUMPAGES" })
+        foreach (string cache in new[] { "stale", "7stale", "7", "Ⅶ", "1,234", "" })
+        foreach (string shape in new[] { "separate", "split-cache", "packed" })
+        {
+            var nodes = Field([opcode], shape == "split-cache" ? null : cache).ToList();
+            if (shape == "split-cache") nodes.InsertRange(nodes.Count - 1, cache.Select(c => Run(c.ToString())));
+            nodes.Add(Run(" 42"));
+            XElement[] source = shape == "packed"
+                ? [new XElement(W + "r", nodes.SelectMany(run => run.Elements()).Select(child => new XElement(child)))]
+                : nodes.ToArray();
+            var paragraph = Read([.. source, new XElement(M + "oMath", new XElement(M + "r", new XElement(M + "t", "x")))], mode)
+                .Paragraphs.Single();
+            TestAssert.Equal("{" + opcode + "} 42", string.Concat(paragraph.Runs.Select(run => run.Text)));
+            var field = paragraph.FieldReferences.Single();
+            TestAssert.True(field.UsesPlaceholder && !field.RendersCachedResult && field.HasSeparate &&
+                field.HasCachedResult == (cache.Length != 0), "Computed values replace their own cache, not following authored numbers.");
+            TestAssert.True(paragraph.InlineContent is not null, "Stale spelling cannot invalidate an ordered paragraph's source.");
+            TestAssert.Equal(1, DocxMathParagraphPolicy.GetPreparationEquations(paragraph, hasPageInputs: true).Count);
+        }
+    }
+
+    public static void DocxComputedFieldCacheOwnersKeepStoredLocksAndNestedResults()
+    {
+        foreach (var mode in Modes)
+        {
+            foreach (string opcode in new[] { "PAGE", "NUMPAGES", "REF Target" })
+            foreach (bool packed in new[] { false, true })
+            {
+                var nodes = Field([opcode], "stored7").ToList();
+                nodes[0].Element(W + "fldChar")!.SetAttributeValue(W + "fldLock", "true");
+                nodes.Add(Run(" 42"));
+                XElement[] source = packed
+                    ? [new XElement(W + "r", nodes.SelectMany(run => run.Elements()).Select(child => new XElement(child)))]
+                    : nodes.ToArray();
+                var paragraph = Read(source, mode).Paragraphs.Single();
+                TestAssert.Equal("stored7 42", string.Concat(paragraph.Runs.Select(run => run.Text)));
+                TestAssert.True(paragraph.FieldReferences.Single() is { HasCachedResult: true, RendersCachedResult: true, UsesPlaceholder: false },
+                    "A lock retains its stored result and does not inherit another counter's replacement policy.");
+            }
+            var outer = Field(["REF Outer"], null, end: false).ToList();
+            outer.Add(Run("Outer "));
+            outer.AddRange(Field(["PAGE"], "stale7"));
+            outer.Add(Run(" end"));
+            outer.Add(new XElement(W + "r", new XElement(W + "fldChar", new XAttribute(W + "fldCharType", "end"))));
+            outer.Add(Run(" 42"));
+            var nested = Read(outer.ToArray(), mode).Paragraphs.Single();
+            TestAssert.Equal("Outer {PAGE} end 42", string.Concat(nested.Runs.Select(run => run.Text)));
+            TestAssert.True(nested.FieldReferences.Single(f => f.Kind == DocxFieldKind.Page) is { UsesPlaceholder: true, RendersCachedResult: false },
+                "A nested computed result discards only its own cached text.");
+            TestAssert.True(nested.FieldReferences.Single(f => f.Kind == DocxFieldKind.Other) is { HasCachedResult: true, RendersCachedResult: true },
+                "The enclosing stored field keeps its visible source result.");
+        }
+    }
+
     public static void DocxFieldInstructionSplittingPreservesCompleteOpcodesAndCachedValues()
     {
         foreach (var mode in Modes)

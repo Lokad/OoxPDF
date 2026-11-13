@@ -524,6 +524,9 @@
     "DocxWordCompatibleAllMarkupSkipsVoidPropertyChangeBalloons"
   ],
   "docx-empty-field-results": [
+    "DocxComputedFieldCachesUseResultOwnershipAcrossRunBoundaries",
+    "DocxComputedFieldCacheOwnersKeepStoredLocksAndNestedResults",
+    "DocxComputedComplexCachesKeepPicturesMathAndNavigationAcrossStories",
     "DocxEmptyFieldRevisionScopesPreserveMixedContentAcrossStories",
     "DocxEmptyFieldRevisionScopesRetainActualComputedAndUnknownOwners",
     "DocxEmptyStoredResults",
@@ -534,6 +537,7 @@
     "DocxNoteMathFieldsRetainUnsupportedAndCachedFallbacks"
   ],
   "docx-cached-picture-results": [
+    "DocxComputedComplexCachesKeepPicturesMathAndNavigationAcrossStories",
     "DocxComputedFieldCacheContainersPreservePicturesAcrossStories",
     "DocxComputedFieldCacheContainersKeepVisibilityAndOwnerBoundaries",
     "DocxComputedSimpleFieldPicturesSurviveCacheRunSplitsAcrossStories",
@@ -4904,6 +4908,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxComputedFieldCachesUseResultOwnershipAcrossRunBoundaries",
+    "DocxComputedFieldCacheOwnersKeepStoredLocksAndNestedResults",
+    "DocxComputedComplexCachesKeepPicturesMathAndNavigationAcrossStories",
     "DocxEmptyMoveRangesPreserveMixedContentAcrossStories",
     "DocxMoveRangesRetainUnknownContentOpenAndLegacyFallbacks",
     "DocxEmptyFieldRevisionScopesPreserveMixedContentAcrossStories",
