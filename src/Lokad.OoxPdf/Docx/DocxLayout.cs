@@ -2301,12 +2301,7 @@ internal sealed partial class DocxLayoutEngine
             foreach (DocxInlineTextBox textBox in paragraph.InlineTextBoxes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (cursorY - EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale) < CurrentFrameBottom() && (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
-                {
-                    AdvanceForOverflowingItem(EstimateInlineTextBoxHeight(textBox, paragraphSpacingScale), elementIndex);
-                }
-
-                DocxInlineTextBoxLayout? textBoxLayout = CreateInlineTextBoxLayout(
+                DocxInlineTextBoxLayout? PlaceTextBox() => CreateInlineTextBoxLayout(
                     textBox,
                     elementIndex,
                     x,
@@ -2319,6 +2314,14 @@ internal sealed partial class DocxLayoutEngine
                     pages.Count + 1,
                     cancellationToken,
                     mathEquations: mathEquations, pageCount: knownPageCount);
+                DocxInlineTextBoxLayout? textBoxLayout = PlaceTextBox();
+                while (textBoxLayout is not null && cursorY - textBoxLayout.BoxHeight < CurrentFrameBottom() &&
+                    (HasCurrentColumnContent() || CanDrainFootnoteReserve()))
+                {
+                    AdvanceForOverflowingItem(textBoxLayout.BoxHeight, elementIndex);
+                    // The admitted column/page owns width, origin and PAGE fields.
+                    textBoxLayout = PlaceTextBox();
+                }
                 if (textBoxLayout is null)
                 {
                     continue;

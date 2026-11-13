@@ -13,7 +13,8 @@
   Section-specific header/footer inline boxes retain their child text and fonts
   when a later section supplies a different story.
   Growing inline text boxes include vertical insets in their occupied frame,
-  preserving their final child lines and following clearance.
+  preserving their final child lines and following clearance. Fallback placement
+  admits their measured frame and rebinds page fields after a page or column move.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field
   runs or wrapped in supported content controls and metadata containers;

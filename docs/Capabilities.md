@@ -694,6 +694,8 @@ Approximate or restricted:
   The existing inline-box growth path includes both vertical insets in the outer
   frame, preserving child ink and container advance. New growing-source Word
   geometry remains unqualified; arbitrary autofit and fragmentation stay limited.
+  Body fallback also admits the measured outer frame, rebinding its children to
+  the admitted page/column; unsupported neighboring equations remain diagnosed.
   A box's declared frame admits surrounding supported content even when its child
   story uses a legacy fallback. Direct paragraph-owned nested inline boxes remain
   ignored and warned; they do not discard supported outside formulas or pictures.

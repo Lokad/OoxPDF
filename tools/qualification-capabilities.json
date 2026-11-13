@@ -422,6 +422,8 @@
     "DocxInlineBoxBookmarksPreservePlacedLinksAndSiblingContent"
   ],
   "docx-static-box-table-placement": [
+    "DocxFallbackInlineBoxesAdmitCompleteFramesBesideUnsupportedMath",
+    "DocxFallbackInlineBoxPageCountersFollowTheAdmittedFrame",
     "DocxGrowingInlineBoxesRetainCompleteChildInkAcrossContainers",
     "DocxGrowingInlineBoxFrameOwnsBothVerticalInsets",
     "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
@@ -4926,6 +4928,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxFallbackInlineBoxesAdmitCompleteFramesBesideUnsupportedMath",
+    "DocxFallbackInlineBoxPageCountersFollowTheAdmittedFrame",
     "DocxGrowingInlineBoxesRetainCompleteChildInkAcrossContainers",
     "DocxGrowingInlineBoxFrameOwnsBothVerticalInsets",
     "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",

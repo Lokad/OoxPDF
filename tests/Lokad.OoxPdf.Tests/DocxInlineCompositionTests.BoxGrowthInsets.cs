@@ -42,7 +42,8 @@ internal static partial class DocxInlineCompositionTests
 
     private static string[] GrowthLabels() => Enumerable.Range(1, 6).Select(index => "GROWTH LINE " + index + " pyg").ToArray();
 
-    private static DocxDocument ReadGrowingInlineBox(string story, OoxPdfDocxMarkupMode mode, double top, double bottom)
+    private static DocxDocument ReadGrowingInlineBox(string story, OoxPdfDocxMarkupMode mode, double top, double bottom,
+        Action<XDocument, XNamespace, XNamespace>? mutate = null)
     {
         string fixture = story == "body" ? "inline-box-body-equation-inline-box-valid" : "inline-box-math-" + story;
         return ReadMutation("InlineBoxMath/" + fixture, mode, false, false, (xml, w, m) =>
@@ -65,6 +66,7 @@ internal static partial class DocxInlineCompositionTests
             xml.Descendants().Where(element => element.Name == m + "oMath" || element.Name == m + "oMathPara").Remove();
             foreach (var extent in xml.Descendants().Where(element => (element.Name == wp + "extent" || element.Name == a + "ext") && element.Attribute("cy") is not null))
                 extent.SetAttributeValue("cy", 18 * 12700);
+            mutate?.Invoke(xml, w, m);
         }, partOverride: story is "header" or "footer" ? "word/inline-box-" + story + ".xml" : null);
     }
 }
