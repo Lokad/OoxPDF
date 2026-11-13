@@ -521,8 +521,11 @@ Supported within the following constraints:
   keep their frames. Scaled Review tables share
   printed body capacity for authored and nested rows. Natural-height body rows flow
   keep-lines or keep-next paragraphs whose measured frame exceeds even an empty
-  body frame; fitting paragraph keeps and existing next-target boundaries remain
-  effective. Repeating headers, declared row heights and unresolved rich frames
+  body frame. Measured cell flow selects complete kept-paragraph boundaries and
+  retries on a fresh page when its first kept group cannot fit the remainder;
+  fitting paragraph keeps and existing next-target boundaries remain effective.
+  Unfit keep-next chains across otherwise fitting cell paragraphs remain
+  unqualified and can still overflow. Repeating headers, declared row heights and unresolved rich frames
   retain their existing fallbacks. Arbitrary rich-row
   fragmentation remains approximate.
   Conditional bands, columns,

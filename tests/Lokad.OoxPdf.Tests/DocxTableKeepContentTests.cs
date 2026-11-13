@@ -95,6 +95,64 @@ internal static class DocxTableKeepContentTests
         }
     }
 
+    public static void DocxFittingKeptCellParagraphsUseCompleteSourceBoundaries()
+    {
+        foreach (var mode in Modes)
+        foreach (bool prefix in new[] { false, true })
+        {
+            var paragraphs = new[] { Paragraph(16, true, "A"), Paragraph(16, true, "B"), Paragraph(16, true, "C") };
+            var layout = Layout(Document(paragraphs, prefix), mode);
+            TestAssert.Equal(prefix ? 4 : 3, layout.Pages.Count);
+            for (int index = 0; index < paragraphs.Length; index++)
+            {
+                var paragraph = paragraphs[index];
+                AssertLines(layout, paragraph, 16, "ABC"[index].ToString());
+                TestAssert.Equal(1, layout.Pages.Count(page => page.Items.OfType<DocxTableRowLayout>()
+                    .SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines)
+                    .Any(line => ReferenceEquals(line.SourceParagraph, paragraph))));
+            }
+        }
+    }
+
+    public static void DocxFittingKeptCellParagraphsPreserveFollowingGroups()
+    {
+        foreach (var mode in Modes)
+        foreach (bool prefix in new[] { false, true })
+        {
+            var heading = Paragraph(8, true, "H");
+            heading = heading with { KeepRules = heading.KeepRules with { KeepNext = true } };
+            var target = Paragraph(8, true, "T");
+            var following = Paragraph(16, true, "F");
+            var layout = Layout(Document([heading, target, following], prefix), mode);
+            TestAssert.Equal(prefix ? 3 : 2, layout.Pages.Count);
+            AssertLines(layout, heading, 8, "H");
+            AssertLines(layout, target, 8, "T");
+            AssertLines(layout, following, 16, "F");
+            var first = layout.Pages[prefix ? 1 : 0].Items.OfType<DocxTableRowLayout>()
+                .SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines).ToArray();
+            TestAssert.True(first.Any(line => ReferenceEquals(line.SourceParagraph, heading)) &&
+                first.Any(line => ReferenceEquals(line.SourceParagraph, target)) &&
+                !first.Any(line => ReferenceEquals(line.SourceParagraph, following)),
+                "A fitting next-target group remains together while its following paragraph starts on another page.");
+        }
+    }
+
+    public static void DocxFittingKeptCellParagraphsRetainUnqualifiedAtomicFallbacks()
+    {
+        foreach (var mode in Modes)
+        foreach (string rule in new[] { "exact", "atLeast", "header", "unfit-chain" })
+        {
+            var paragraphs = Enumerable.Range(0, 3).Select(index => Paragraph(16, true, index.ToString())).ToArray();
+            if (rule == "unfit-chain")
+                for (int index = 0; index < 2; index++)
+                    paragraphs[index] = paragraphs[index] with { KeepRules = paragraphs[index].KeepRules with { KeepNext = true } };
+            var layout = Layout(Document(paragraphs, false, rule == "unfit-chain" ? null : rule), mode);
+            var row = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).Single();
+            TestAssert.Equal(1, row.FragmentCount);
+            TestAssert.True(row.Height > 180d, "Unqualified header, declared-height and unfit next-chain fallbacks remain explicit; this does not claim visible completeness.");
+        }
+    }
+
     private static void AssertLines(DocxLayout layout, DocxParagraph paragraph, int count, string label = "L")
     {
         var lines = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>())

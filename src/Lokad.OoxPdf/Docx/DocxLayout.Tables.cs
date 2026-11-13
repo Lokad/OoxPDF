@@ -506,30 +506,37 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
 
-            if (!row.CantSplit && !nestedMath &&
-                rowHeight > remainingPageHeight &&
-                remainingPageHeight > 0.001d &&
-                CanSplitTableRowAtPageBoundary(row, frame, rowHeight, remainingPageHeight, isTerminalSourceRow: rowIndex == table.Rows.Count - 1, out double splitPitch,
-                    out IReadOnlyList<double> fragmentBoundaries, out var cellFragments))
+            bool fragmented = false, triedFreshPage = false;
+            while (rowHeight > remainingPageHeight)
             {
-                // Complete measured frames own explicit cuts; unknown geometry keeps
-                // the qualified median-pitch capacity and fragmentation fallback.
-                AddSplitTableRowLayout(table, row, rowIndex, headerRows, headerSourcePages, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, fragmentBoundaries, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, continuationContentHeight, cellMemo, cellFragments);
-                markBoundaryContent();
-                continue;
-            }
-
-            if (rowHeight > remainingPageHeight && hasPageContent())
-            {
+                if (!row.CantSplit && !nestedMath && remainingPageHeight > 0.001d &&
+                    CanSplitTableRowAtPageBoundary(row, frame, rowHeight, remainingPageHeight,
+                        isTerminalSourceRow: rowIndex == table.Rows.Count - 1, out double splitPitch,
+                        out IReadOnlyList<double> fragmentBoundaries, out var cellFragments))
+                {
+                    // Complete measured frames own explicit cuts; unknown geometry keeps
+                    // the qualified median-pitch capacity and fragmentation fallback.
+                    AddSplitTableRowLayout(table, row, rowIndex, headerRows, headerSourcePages, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, resolveFrame, fragmentBoundaries, "PageBoundary", finishPage, paragraphSpacingScale, splitPitch, continuationContentHeight, cellMemo, cellFragments);
+                    markBoundaryContent();
+                    fragmented = true;
+                    break;
+                }
+                if (triedFreshPage || !hasPageContent()) break;
+                // A fitting first paragraph may require a fresh page before the
+                // rest of its row can flow. Reconsider the same source there.
                 finishPage();
+                triedFreshPage = true;
+                frame = resolveFrame();
+                rowHeights = frame.RowHeights;
                 if (!row.IsHeader)
                 {
-                    frame = resolveFrame();
-                    rowHeights = frame.RowHeights;
                     AddRepeatedTableHeaderRows(table, frame.Context, rowHeights, headerRows, headerSourcePages, frame.EffectiveColumns, frame.Scale, textMeasurer, defaultTabStopPoints, getPageNumber, ref currentItems, ref cursorY, paragraphSpacingScale);
                     markBoundaryContent();
                 }
+                rowHeight = rowHeights[rowIndex];
+                remainingPageHeight = Math.Max(0d, cursorY - flowBottom);
             }
+            if (fragmented) continue;
 
             frame = resolveFrame();
             rowHeights = frame.RowHeights;
@@ -609,6 +616,11 @@ internal sealed partial class DocxLayoutEngine
             // capacity the execution packs, not the raw remainder. A boundary landing
             // below the last baseline but above the row bottom still keeps whole lines.
             splitPitch = ResolveTableRowSplitPitch(splitLineBaselines);
+            if (!row.IsHeader && TryResolveOwnedRowFragments(firstFragmentHeight, out cellFragments))
+            {
+                splitPitch = 0d;
+                return true;
+            }
             double flooredFirstFragmentHeight = FloorTableRowFragmentHeightToPitch(firstFragmentHeight, splitPitch);
             // One earlier boundary can leave two continuation lines. Recheck
             // every cell after choosing it; otherwise retain the whole-row fallback.
@@ -671,29 +683,8 @@ internal sealed partial class DocxLayoutEngine
                         Math.Max(1d, pageCapacity - headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]));
                     double firstCapacity = flooredFirstFragmentHeight + firstFragmentHeight -
                         FloorTableRowFragmentHeightToPitch(firstFragmentHeight, splitPitch);
-                    if (TryResolveCellOwnedFragments(firstCapacity, continuationHeight, out var owned))
+                    if (TryResolveOwnedRowFragments(firstCapacity, out cellFragments))
                     {
-                        // One source-owner refinement can reclaim future-head
-                        // reserve. Confirm the same owners and fragment count before
-                        // publishing; otherwise retain the conservative source plan.
-                        if (!row.IsHeader && resolveNoteFragments is not null)
-                        {
-                            var plan = resolveNoteFragments(row, ProjectLines(owned));
-                            double headerHeight = headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]);
-                            if (plan is not null && TryResolveCellOwnedFragments(plan.FirstHeight, continuationHeight,
-                                out var refined, plan.PageHeights.Select(height => Math.Max(1d, height - headerHeight)).ToArray()) &&
-                                refined.Count == owned.Count)
-                            {
-                                var confirmation = resolveNoteFragments(row, ProjectLines(refined));
-                                if (confirmation is not null && plan.Owners.Count == confirmation.Owners.Count &&
-                                    plan.Owners.All(pair => confirmation.Owners.TryGetValue(pair.Key, out int owner) && owner == pair.Value))
-                                    owned = refined.Select((fragment, index) => fragment with {
-                                        FootnoteReservations = plan.Owners.Where(pair => pair.Value == index)
-                                            .Select(pair => new DocxFootnoteHeadReservation(pair.Key, plan.SeparatorHeights[index])).ToArray()
-                                    }).ToArray();
-                            }
-                        }
-                        cellFragments = owned;
                         splitPitch = 0d;
                         return true;
                     }
@@ -707,6 +698,35 @@ internal sealed partial class DocxLayoutEngine
             }
 
             return false;
+
+            bool TryResolveOwnedRowFragments(double firstCapacity, out IReadOnlyList<DocxCellOwnedRowFragment>? fragments)
+            {
+                fragments = null;
+                double pageCapacity = Math.Min(frame.PageContentHeight, continuationContentHeight);
+                double headerHeight = headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]);
+                double continuationHeight = row.IsHeader ? pageCapacity : Math.Max(1d, pageCapacity - headerHeight);
+                if (!TryResolveCellOwnedFragments(firstCapacity, continuationHeight, out var owned)) return false;
+                // One source-owner refinement can reclaim future-head reserve.
+                // Confirm the same owners and fragment count before publishing.
+                if (!row.IsHeader && resolveNoteFragments is not null)
+                {
+                    var plan = resolveNoteFragments(row, ProjectLines(owned));
+                    if (plan is not null && TryResolveCellOwnedFragments(plan.FirstHeight, continuationHeight,
+                        out var refined, plan.PageHeights.Select(height => Math.Max(1d, height - headerHeight)).ToArray()) &&
+                        refined.Count == owned.Count)
+                    {
+                        var confirmation = resolveNoteFragments(row, ProjectLines(refined));
+                        if (confirmation is not null && plan.Owners.Count == confirmation.Owners.Count &&
+                            plan.Owners.All(pair => confirmation.Owners.TryGetValue(pair.Key, out int owner) && owner == pair.Value))
+                            owned = refined.Select((fragment, index) => fragment with {
+                                FootnoteReservations = plan.Owners.Where(pair => pair.Value == index)
+                                    .Select(pair => new DocxFootnoteHeadReservation(pair.Key, plan.SeparatorHeights[index])).ToArray()
+                            }).ToArray();
+                    }
+                }
+                fragments = owned;
+                return true;
+            }
 
             IReadOnlyList<IReadOnlyList<DocxTextLineLayout>> ProjectLines(IReadOnlyList<DocxCellOwnedRowFragment> fragments)
             {
@@ -726,24 +746,36 @@ internal sealed partial class DocxLayoutEngine
                 return result;
             }
 
-            bool HasValidKeepBoundary(IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> lines,
+            int ResolveKeepBoundary(IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> lines,
                 int first, int end)
             {
-                foreach (var group in lines.Select((line, index) => (Line: line, Index: index)).GroupBy(item => item.Line.SourceParagraphIndex))
+                // Work backwards so moving a target also reconsiders its kept
+                // predecessor. Stop at a legal source boundary, not a partial
+                // paragraph that forces the whole row into an overflowing fallback.
+                foreach (var group in lines.Select((line, index) => (Line: line, Index: index))
+                    .GroupBy(item => item.Line.SourceParagraphIndex).Reverse())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (group.Key is not { } index || index < 0 || index >= paragraphs.Count) continue;
                     var rules = paragraphs[index].EffectiveProperties.KeepRules;
                     int before = group.Count(item => item.Index >= first && item.Index < end);
                     int after = group.Count(item => item.Index >= end);
-                    if (before != 0 && after != 0 && (RequiresAtomicParagraphKeep(rules, group.Select(item => item.Line)) ||
-                        (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || after == 1))) return false;
+                    if (before == 0) continue;
+                    if (after != 0)
+                    {
+                        if (RequiresAtomicParagraphKeep(rules, group.Select(item => item.Line)) ||
+                            (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || before == 2 && after == 1))
+                            end = Math.Max(first, group.First().Index);
+                        else if ((rules.WidowControl ?? (reviewFragmentScale == 1d)) && after == 1)
+                            end = group.Last().Index - 1;
+                    }
                     if (before != 0 && after == 0 && rules.KeepNext == true &&
                         lines.Any(line => line.SourceParagraphIndex == index + 1) &&
                         lines.Select((line, position) => (Line: line, Position: position))
-                            .Where(item => item.Line.SourceParagraphIndex == index + 1).All(item => item.Position >= end)) return false;
+                            .Where(item => item.Line.SourceParagraphIndex == index + 1).All(item => item.Position >= end))
+                        end = Math.Max(first, group.First().Index);
                 }
-                return true;
+                return end;
             }
 
             bool RequiresAtomicParagraphKeep(DocxParagraphKeepRules rules, IEnumerable<DocxTextLineLayout> lines)
@@ -843,9 +875,11 @@ internal sealed partial class DocxLayoutEngine
                             cancellationToken.ThrowIfCancellationRequested();
                             end++;
                         }
+                        int keptEnd = ResolveKeepBoundary(cell.Paragraphs, cell.TextLines, first, end);
+                        if (row.IsHeader && keptEnd != end) return false;
+                        end = keptEnd;
                         if (end == first) return false;
                         double cut = end == cell.TextLines.Count ? cell.UsedHeight + topInsets[cellIndex] : bounds[cellIndex][end].Top - topInsets[cellIndex];
-                        if (!HasValidKeepBoundary(cell.Paragraphs, cell.TextLines, first, end)) return false;
                         double contentHeight = (end == cell.TextLines.Count ? cell.UsedHeight + topInsets[cellIndex] : bounds[cellIndex][end - 1].Bottom) - starts[cellIndex];
                         double occupied = contentHeight + rowBottomPadding;
                         if (!double.IsFinite(occupied) || occupied <= 0d || occupied > capacity + .001d) return false;
@@ -919,7 +953,7 @@ internal sealed partial class DocxLayoutEngine
                         while (first < lines.Count && lines[first].BaselineY >= start + .001d) first++;
                         end = first;
                         while (end < lines.Count && lines[end].BaselineY >= bottom) end++;
-                        if (!HasValidKeepBoundary(paragraphs, lines, first, end)) return false;
+                        if (ResolveKeepBoundary(paragraphs, lines, first, end) != end) return false;
                     }
                     if (!hasEarlier || !hasLater) return false;
                     cuts.Add(cut);

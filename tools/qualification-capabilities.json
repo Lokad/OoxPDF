@@ -1135,6 +1135,13 @@
       "StagedPageMemory"
   ],
   "docx-oversized-kept-cell-content": [
+      "DocxFittingKeptCellParagraphs",
+      "DocxNaturalRowFragmentsKeepIndependentWordBorderCoverage",
+      "DocxTrailingRowsPreserveIndependentWordSpanningInk",
+      "DocxInlineCompositionTableNoteReferencesKeepIndependentWordPages",
+      "DocxInlineCompositionImplicitFootnoteSeparatorKeepsIndependentWordFrames",
+      "DocxReviewAuthoredRowsStayInsideTheirPrintedPages",
+      "DocxReviewNestedHeaderAndContinuationSharePrintedCapacity",
       "DocxOversizedCellKeepNext",
       "DocxFittingCellKeepNextPreservesTargetAndPageAdmission",
       "DocxOversizedCellKeepLines",
@@ -4971,6 +4978,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxFittingKeptCellParagraphs",
     "DocxOversizedCellKeepNext",
     "DocxFittingCellKeepNextPreservesTargetAndPageAdmission",
     "DocxOversizedCellKeepLines",
