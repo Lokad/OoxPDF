@@ -71,7 +71,7 @@ internal static class DocxListKeepLeadingTests
         return DocxTests.CreateLayoutTestDocument(paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p)).ToArray(), []) with
         {
             PageWidthPoints = 612d, PageHeightPoints = 792d, MarginTopPoints = 72d, MarginBottomPoints = 72d,
-            MarginLeftPoints = 72d, MarginRightPoints = 72d, Paragraphs = paragraphs, MarkupMode = mode
+            MarginLeftPoints = 72d, MarginRightPoints = 72d, MarkupMode = mode
         };
     }
 }
