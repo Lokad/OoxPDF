@@ -65,8 +65,7 @@ internal static class DocxRepeatedTableHeaderTests
             source = source with
             {
                 BodyElements = source.BodyElements.Select(block => block is DocxTableElement entry && ReferenceEquals(entry.Table, table)
-                    ? new DocxTableElement(changed) : block).ToArray(),
-                Tables = [source.Tables[0], changed]
+                    ? new DocxTableElement(changed) : block).ToArray()
             };
             var layout = Layout(source, mode);
             int PageOf(string value) => layout.Pages.Select((page, index) => (page, number: index + 1))
