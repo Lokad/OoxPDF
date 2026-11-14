@@ -320,14 +320,15 @@ internal sealed partial class DocxLayoutEngine
 
     // Ordinary automatic body text takes its metrics from the runs on this
     // wrapped line. The original paragraph still owns source ranges and layout.
-    // Declared slots, lists, inline objects and unmeasured content keep their
+    // List spacing remains paragraph-owned; the label has separate first-line
+    // leading. Declared slots, inline objects and unmeasured content keep their
     // existing metric contracts.
     private static bool UsesBodyTextLineMetrics(DocxParagraph paragraph,
         DocxLineHeightProfile profile, IDocxTextMeasurer textMeasurer) =>
         profile.Source == DocxLineHeightSource.BodySingleLineAuto &&
         textMeasurer is IDocxLineMetricsProvider &&
         !paragraph.InlineReferences.Any(reference => reference.Kind != DocxRelatedStoryKind.Comment) &&
-        DocxPlainBodyFrame.HasPlainTextContent(paragraph);
+        DocxPlainBodyFrame.HasPlainTextContent(paragraph.ListLabel is null ? paragraph : paragraph with { ListLabel = null });
 
     private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, DocxWrappedTextLine line)
         => GetBodyTextLineMetricParagraph(paragraph, line.Spans);

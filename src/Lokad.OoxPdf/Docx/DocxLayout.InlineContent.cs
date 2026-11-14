@@ -82,11 +82,14 @@ internal sealed partial class DocxLayoutEngine
             IDocxTextMeasurer measurer, double scale, double paragraphInset)
     {
         double size = GetParagraphFontSize(paragraph);
-        if (line.Fragments.Count != 0 && line.Fragments.All(fragment => fragment.Source is DocxInlineText))
+        if (line.ListLabelSegments.Count == 0 && line.Fragments.Count != 0 &&
+            line.Fragments.All(fragment => fragment.Source is DocxInlineText))
         {
             // This row owns only text, even when another row of its source
             // paragraph owns a picture or equation. Reuse ordinary body metrics
             // with the actual wrapped runs; this projection never replaces source.
+            // A painted label keeps its first-row frame; continuations still
+            // inherit paragraph-wide list spacing when resolving their profile.
             var metricParagraph = GetBodyTextLineMetricParagraph(paragraph,
                 line.Fragments.SelectMany(fragment => fragment.Text).ToArray()) with
             {

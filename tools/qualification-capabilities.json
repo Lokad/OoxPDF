@@ -1,4 +1,30 @@
 {
+  "docx-numbered-text-row-metrics": [
+    "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
+    "DocxNumberedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
+    "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
+    "DocxOrderedTextRowsShareKeepAndWidowAdmission",
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxKeptListLabelCountersFollowTheAdmittedFrame",
+    "DocxLayoutReservesListLabelFirstLineExtraLeading",
+    "DocxLayoutSnapshotReportsListLabelLineHeightMetricCandidates",
+    "DocxLayoutSnapshotReportsLineHeightProfileFacts",
+    "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
+    "DocxInlineCompositionListLabelOwnsOnlyTheFirstAuthoredMathRow",
+    "DocxInlineCompositionNumberedDisplayRowsPreserveSourceAndMetadata",
+    "DocxKeepNextOverflowAdmitsTheWholeSourceChainOnce",
+    "DocxKeepChainMembersRetainIndependentKeepLinesAndExactFits",
+    "DocxInlineCompositionKeepNextReservesTheMeasuredMixedFrame",
+    "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow",
+    "DocxInlineCompositionAutomaticSpacingSurvivesResumedWrapping",
+    "DocxOrderedInlineParagraphsHonorDefaultAndDisabledWidowControl",
+    "DocxOrderedWidowFragmentsRebindCountersAndRetainPictureNavigation",
+    "DocxMinimumPictureRowsKeepDeclaredLineFrames",
+    "DocxCachedPictureResultsPreservePaintAndNavigation",
+    "DocxInlineCompositionSourceAdvancesMatchIndependentWord",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-hidden-text-metrics": [
     "DocxHiddenTextMetricsShareBodyAndCellAscenderOwnership",
     "DocxHiddenTextMetricsPreserveComposedPaginationAndPaint",
@@ -542,6 +568,9 @@
     "DocxColumnAdmissionKeepsRunSplitsAndNavigation"
   ],
   "docx-keep-chain-admission": [
+    "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
+    "DocxNumberedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
     "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
     "DocxOrderedTextRowsShareKeepAndWidowAdmission",
     "DocxHiddenTextMetricsShareBodyAndCellAscenderOwnership",
@@ -5628,6 +5657,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
+    "DocxNumberedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
     "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
     "DocxOrderedTextRowsShareKeepAndWidowAdmission",
     "DocxHiddenTextMetricsShareBodyAndCellAscenderOwnership",
