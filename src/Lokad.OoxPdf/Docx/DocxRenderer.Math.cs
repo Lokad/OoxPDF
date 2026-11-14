@@ -8,16 +8,33 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private static void ReportEquationDiagnostics(DocxDocument document, IEnumerable<DocxEquation> placed,
-        Action<OoxPdfDiagnostic>? sink, CancellationToken token)
+        Action<OoxPdfDiagnostic>? sink, CancellationToken token, DocxLayout? layout = null)
     {
         if (sink is null) { return; }
         var painted = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
         foreach (DocxEquation equation in placed)
         { token.ThrowIfCancellationRequested(); painted.Add(equation); }
+        // The reader shares each cached static part's nonempty body list with
+        // its equation metadata. A selection on any page keeps the part active.
+        // Empty or multiply bound lists cannot establish an unprinted owner.
+        var staticSelections = new Dictionary<IReadOnlyList<DocxBodyElement>, (bool Selected, int PartBindings)>(ReferenceEqualityComparer.Instance);
+        if (layout is not null)
+        {
+            for (int index = 0; index < layout.Pages.Count; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                var page = layout.Pages[index];
+                string variant = DocxLayoutEngine.GetStaticStoryVariant(page.PageSettings, index + 1, page.SectionFirstPageNumber);
+                RecordVariants(page.PageSettings.HeaderBodyElementsByType, variant);
+                RecordVariants(page.PageSettings.FooterBodyElementsByType, variant);
+            }
+        }
         var countsByPart = new Dictionary<string, (int Painted, int Hidden)>(StringComparer.Ordinal);
         foreach (DocxEquationPartSource part in document.EquationParts)
         {
             token.ThrowIfCancellationRequested();
+            if (staticSelections.TryGetValue(part.BodyElements, out var binding))
+                staticSelections[part.BodyElements] = (binding.Selected, binding.PartBindings + 1);
             var seen = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
             int hidden = 0;
             foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(part.BodyElements)
@@ -38,7 +55,10 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             if (source.PartName is { } sourcePart && sourcesByPart.TryGetValue(sourcePart, out var part) &&
-                (part.SourceCount == 0 || countsByPart.TryGetValue(sourcePart, out var count) &&
+                (part.SourceCount == 0 ||
+                    sourcePart != document.MainPartName && staticSelections.TryGetValue(part.BodyElements, out var selection) &&
+                    !selection.Selected && selection.PartBindings == 1 ||
+                    countsByPart.TryGetValue(sourcePart, out var count) &&
                     count.Painted + count.Hidden == part.SourceCount)) { continue; }
             sink(source);
         }
@@ -50,6 +70,18 @@ internal sealed partial class DocxRenderer
             sink(new OoxPdfDiagnostic("DOCX_APPROXIMATED_EQUATION", OoxPdfSeverity.Warning,
                 "Native DOCX equations were rendered with approximate mathematical layout.", part,
                 SlideIndex: null, PageIndex: null, Feature: "equation", Fallback: "Approximated"));
+        }
+
+        void RecordVariants(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodies, string variant)
+        {
+            bodies.TryGetValue(variant, out var selected);
+            foreach (var body in bodies.Values)
+            {
+                token.ThrowIfCancellationRequested();
+                if (body.Count == 0) continue;
+                staticSelections.TryGetValue(body, out var previous);
+                staticSelections[body] = (previous.Selected || ReferenceEquals(body, selected), previous.PartBindings);
+            }
         }
     }
 

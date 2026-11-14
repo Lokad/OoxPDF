@@ -1,4 +1,20 @@
 {
+  "docx-static-equation-diagnostics": [
+    "DocxEquationWarningsOmitUnselectedStaticParts",
+    "DocxEquationWarningsKeepActiveSharedStaticPartsAcrossPages",
+    "DocxEquationWarningsRetainUnresolvedStaticBindings",
+    "DocxStaticEquationDiagnosticsPreserveObserverFailuresAndCancellation",
+    "DocxEquationWarningsFollowSelectedNoteRevisionSources",
+    "DocxEquationWarningsRetainVisibleEmptyAndPartialPayloads",
+    "DocxEquationWarningsFollowSelectedTableRows",
+    "DocxDisabledStaticPropertyOwnersKeepTheBodyPrintScale",
+    "DocxDisabledStaticPropertyHistoryKeepsBodyPaintInBothViews",
+    "DocxEnabledStaticPropertyOwnersKeepVisibleCaptionsAndMath",
+    "DocxInheritedFirstStoryActivationKeepsItsRevisionLane",
+    "DocxSectionNavigationDoesNotBackfillAnUndefinedFirstHeader",
+    "PortableRenderingInlineBoxFallbackKeepsOutsideSiblings",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-static-variant-ownership": [
     "DocxDisabledStaticPropertyOwnersKeepTheBodyPrintScale",
     "DocxDisabledStaticPropertyHistoryKeepsBodyPaintInBothViews",
@@ -19184,6 +19200,14 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-fixed-static-frames": [
+    "DocxDisabledStaticPropertyOwnersKeepTheBodyPrintScale",
+    "DocxDisabledStaticPropertyHistoryKeepsBodyPaintInBothViews",
+    "DocxEnabledStaticPropertyOwnersKeepVisibleCaptionsAndMath",
+    "DocxInheritedFirstStoryActivationKeepsItsRevisionLane",
+    "DocxEquationWarningsOmitUnselectedStaticParts",
+    "DocxEquationWarningsKeepActiveSharedStaticPartsAcrossPages",
+    "DocxEquationWarningsRetainUnresolvedStaticBindings",
+    "DocxStaticEquationDiagnosticsPreserveObserverFailuresAndCancellation",
     "DocxLayoutStageOwnsStaticHeaderInlineImages",
     "DocxLayoutStageWrapsStaticHeaderLines",
     "DocxStaticBoxTables",

@@ -64,8 +64,9 @@
   leases, explicit temporary storage and host-funded bounded caches. Shared memory
   admission remains coarse and partial. Custom resolvers define the complete font
   universe. See the [caller migration guide](docs/PublicApiChanges.md) for API changes.
-- Comment diagnostics follow the resolved view: intentionally unprinted comments
-  no longer warn as unsupported; requested markup retains approximation warnings.
+- Diagnostics omit warnings for known unprinted comments and header/footer
+  equations; active unsupported equations, unresolved owners and requested markup
+  retain their warnings.
 
 General note-row fragmentation remains unsupported. Complex layout, typography,
 automatic/dense chart layout and unqualified combinations remain approximate.
