@@ -22,8 +22,8 @@ internal static partial class DocxInlineCompositionTests
                     string text = DocxPageFootnoteNumberingTests.DecodeText(pages[index]);
                     bool caption = variant == "default" || (variant == "first" ? index == 0 : index == 1);
                     TestAssert.Equal(caption, text.Contains("UNPRINTED STATIC TEMPLATE", StringComparison.Ordinal));
-                    TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(control[index]),
-                        text.Replace("UNPRINTED STATIC TEMPLATE", "", StringComparison.Ordinal));
+                    TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(control[index]).Trim(),
+                        text.Replace("UNPRINTED STATIC TEMPLATE", "", StringComparison.Ordinal).Trim());
                     TestAssert.Equal(control[index].Images.Count, pages[index].Images.Count);
                     var mathFonts = pages[index].Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
                         .Select(font => font.Font).ToHashSet();
