@@ -3021,7 +3021,7 @@ internal static partial class DocxInlineCompositionTests
 
     internal static DocxDocument ReadMutation(string fixture, OoxPdfDocxMarkupMode mode, bool bookmark, bool split,
         Action<XDocument, XNamespace, XNamespace>? change = null, string? partOverride = null,
-        Action<OoxPdfDiagnostic>? diagnosticSink = null)
+        Action<OoxPdfDiagnostic>? diagnosticSink = null, Action<ZipArchive>? packageChange = null)
     {
         string source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", fixture + ".docx"));
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".docx");
@@ -3063,6 +3063,7 @@ internal static partial class DocxInlineCompositionTests
                 change?.Invoke(document, w, m);
                 entry.Delete();
                 using (var output = zip.CreateEntry(part).Open()) document.Save(output);
+                packageChange?.Invoke(zip);
             }
             using var packageStream = File.OpenRead(path);
             return new DocxReader().Read(OoxPackage.Open(packageStream, default), diagnosticSink, default, markupMode: mode);

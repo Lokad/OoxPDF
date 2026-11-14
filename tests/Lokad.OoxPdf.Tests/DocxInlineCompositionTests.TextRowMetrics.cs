@@ -74,7 +74,15 @@ internal static partial class DocxInlineCompositionTests
 
     private static PdfPage[] RenderTextRowMetrics(string content, string admission, OoxPdfDocxMarkupMode mode)
     {
-        var document = ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
+        var document = ReadTextRowMetrics(content, admission, mode);
+        return RenderTextRowMetricDocument(document, mode);
+    }
+
+    private static DocxDocument ReadTextRowMetrics(string content, string admission, OoxPdfDocxMarkupMode mode,
+        Action<XDocument, XNamespace, XNamespace>? change = null,
+        Action<System.IO.Compression.ZipArchive>? packageChange = null)
+    {
+        return ReadMutation("Composition/report", mode, false, false, (xml, w, m) =>
         {
             var drawing = new XElement(xml.Descendants(w + "drawing").First());
             foreach (var extent in drawing.Descendants().Where(node => node.Name.LocalName is "extent" or "ext"))
@@ -102,10 +110,13 @@ internal static partial class DocxInlineCompositionTests
                 new XElement(w + "pgMar", new XAttribute(w + "top", "400"), new XAttribute(w + "bottom", "400"),
                     new XAttribute(w + "left", "400"), new XAttribute(w + "right", "400"), new XAttribute(w + "header", "0"),
                     new XAttribute(w + "footer", "0"), new XAttribute(w + "gutter", "0"))));
-        });
-        return new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+            change?.Invoke(xml, w, m);
+        }, packageChange: packageChange);
+    }
+
+    private static PdfPage[] RenderTextRowMetricDocument(DocxDocument document, OoxPdfDocxMarkupMode mode) =>
+        new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
             mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
                 OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
             .RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
-    }
 }

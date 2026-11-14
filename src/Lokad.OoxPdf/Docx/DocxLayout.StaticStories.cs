@@ -355,7 +355,7 @@ internal sealed partial class DocxLayoutEngine
             {
                 double size = GetParagraphFontSize(paragraph);
                 var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
-                var metricRun = paragraph.Runs.FirstOrDefault() ?? (pictureOnly ? paragraph.ParagraphMarkRun : null);
+                var metricRun = DocxLineMetrics.GetMetricRuns(paragraph).FirstOrDefault() ?? (pictureOnly ? paragraph.ParagraphMarkRun : null);
                 double sourceHeight = unscaledLineMetrics?.MeasureSingleLineHeight(metricRun, size)
                     ?? profile.SingleLineHeight ?? profile.LineHeight;
                 double factor = ResolveAutoLineSpacingFactor(paragraph, out _);
@@ -463,7 +463,7 @@ internal sealed partial class DocxLayoutEngine
                         // bare-11 bump (w39 header inset 10.44 vs body-bare 10.46, locked
                         // explicit-100 header2 inset 9.36 vs 9.40); exact/atLeast statics
                         // keep legacy behavior (unprobed).
-                        double rawSingleLineHeight = unscaledLineMetrics.MeasureSingleLineHeight(paragraph.Runs.FirstOrDefault(), staticFontSize);
+                        double rawSingleLineHeight = unscaledLineMetrics.MeasureSingleLineHeight(DocxLineMetrics.GetMetricRuns(paragraph).FirstOrDefault(), staticFontSize);
                         double staticAutoFactor = ResolveAutoLineSpacingFactor(paragraph, out _);
                         double staticDesignLineHeight = rawSingleLineHeight * staticAutoFactor;
                         staticSingleLineHeight = rawSingleLineHeight;
@@ -750,7 +750,7 @@ internal sealed partial class DocxLayoutEngine
             double maxDisplacement = 0d;
             if (planUnscaledMetrics is not null && useSingleHeight)
             {
-                double rawSingle = planUnscaledMetrics.MeasureSingleLineHeight(planParagraph.Runs.FirstOrDefault(), planFontSize);
+                double rawSingle = planUnscaledMetrics.MeasureSingleLineHeight(DocxLineMetrics.GetMetricRuns(planParagraph).FirstOrDefault(), planFontSize);
                 double autoFactor = ResolveAutoLineSpacingFactor(planParagraph, out _);
                 maxHeight = rawSingle * autoFactor * planScale;
                 maxDisplacement = DocxLineMetrics.ResolveBodyBaselineOffset(planFontSize, rawSingle * autoFactor, hasExplicitLineSpacing: false);

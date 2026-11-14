@@ -47,9 +47,8 @@ internal sealed partial class DocxLayoutEngine
     private static double GetParagraphFontSize(DocxParagraph paragraph)
     {
         // Object-only and empty paragraphs still have an authored metric owner.
-        return paragraph.Runs.Count == 0
-            ? paragraph.ParagraphMarkFontSize ?? DocxDefaults.FontSizePoints
-            : paragraph.Runs.Max(run => run.EffectiveProperties.FontSize);
+        return DocxLineMetrics.GetMetricRuns(paragraph).Select(run => run.EffectiveProperties.FontSize)
+            .DefaultIfEmpty(paragraph.ParagraphMarkFontSize ?? DocxDefaults.FontSizePoints).Max();
     }
 
     // W6-e: tab-stop positions join scaled space (Office: margin-relative design offsets

@@ -31,7 +31,7 @@ internal sealed partial class DocxLayoutEngine
                 Source: DocxLineHeightSource.ExactLineSpacing);
         }
 
-        DocxTextRun? bodyRun = paragraph.Runs.FirstOrDefault();
+        DocxTextRun? bodyRun = DocxLineMetrics.GetMetricRuns(paragraph).FirstOrDefault();
         DocxTextRun? listLabelRun = paragraph.ListLabel is null
             ? null
             : CreateListLabelRun(paragraph.ListLabel, bodyRun, fontSize);
@@ -123,7 +123,7 @@ internal sealed partial class DocxLayoutEngine
             textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics ||
             textMeasurer is not IDocxTypographicMetricsProvider)
             return profile;
-        double hhea = ResolveProfileHheaLineHeight(paragraph, fontSize, metrics, paragraph.Runs.FirstOrDefault(),
+        double hhea = ResolveProfileHheaLineHeight(paragraph, fontSize, metrics, DocxLineMetrics.GetMetricRuns(paragraph).FirstOrDefault(),
             singleLineHeight, selectMaxAcrossRuns: true);
         (double box, double deficit, double? ascender) = ResolveRelatedStoryBoxAndDeficit(paragraph, singleLineHeight, hhea, metrics, staticMetrics);
         double natural = Math.Max(singleLineHeight, box + deficit);
@@ -145,9 +145,9 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double maxHeight = 0d;
-        foreach (DocxTextRun run in paragraph.Runs)
+        foreach (DocxTextRun run in DocxLineMetrics.GetMetricRuns(paragraph))
         {
-            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            if (string.IsNullOrWhiteSpace(run.Text))
             {
                 continue;
             }
@@ -175,9 +175,9 @@ internal sealed partial class DocxLayoutEngine
         }
 
         double maxHeight = 0d;
-        foreach (DocxTextRun run in paragraph.Runs)
+        foreach (DocxTextRun run in DocxLineMetrics.GetMetricRuns(paragraph))
         {
-            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            if (string.IsNullOrWhiteSpace(run.Text))
             {
                 continue;
             }
@@ -212,9 +212,9 @@ internal sealed partial class DocxLayoutEngine
         double maxAscOwnBox = legacyBase;
         double maxAscOwnDesc = 0d;
         double maxDescPoints = 0d;
-        foreach (DocxTextRun run in paragraph.Runs)
+        foreach (DocxTextRun run in DocxLineMetrics.GetMetricRuns(paragraph))
         {
-            if (string.IsNullOrWhiteSpace(run.Text) || run.EffectiveProperties.Hidden)
+            if (string.IsNullOrWhiteSpace(run.Text))
             {
                 continue;
             }
@@ -472,8 +472,8 @@ internal sealed partial class DocxLayoutEngine
             paragraph.Images.Count != 0 || paragraph.InlineTextBoxes.Count != 0) return false;
         // Use the font size actually painted by the shared script metrics.
         // A superscript's unscaled base size must not change paragraph capacity.
-        double renderedFontSize = paragraph.Runs.Count == 0 ? fontSize : paragraph.Runs.Max(run =>
-            DocxVerticalAlignMetrics.ResolveFontSize(run.EffectiveProperties.FontSize, run));
+        double renderedFontSize = DocxLineMetrics.GetMetricRuns(paragraph).Select(run =>
+            DocxVerticalAlignMetrics.ResolveFontSize(run.EffectiveProperties.FontSize, run)).DefaultIfEmpty(fontSize).Max();
         return profile.LineHeight > renderedFontSize;
     }
 

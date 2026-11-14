@@ -1,4 +1,21 @@
 {
+  "docx-hidden-text-metrics": [
+    "DocxHiddenTextMetricsShareBodyAndCellAscenderOwnership",
+    "DocxHiddenTextMetricsPreserveComposedPaginationAndPaint",
+    "DocxHiddenTextMetricsRespectInheritedAndExplicitVisibility",
+    "DocxHiddenTextMetricsKeepParagraphMarksAndDeclaredSlots",
+    "DocxParagraphLayoutSuppressesHiddenRunText",
+    "DocxHiddenPicturesPreserveOfficeVisibilityAndParagraphs",
+    "DocxHiddenPicturesUseInheritedStylesAndExplicitFalse",
+    "DocxHiddenInlineBoxesPreserveSiblingPaintAcrossContainers",
+    "DocxParagraphMarkFormattingRetainsResolvedSourceAcrossViews",
+    "DocxParagraphMarkFormattingPreservesComposedPaintAndNavigation",
+    "DocxParagraphMarkFormattingMatchesIndependentWordOrigins",
+    "DocxLayoutStageEmitsEmptyParagraphMarkSpaceLine",
+    "DocxInlineCompositionHiddenSourceMathMatchesIndependentWord",
+    "DocxHiddenPicturesAndMasterThemesCancelBeforePublication",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-ordered-text-row-metrics": [
     "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
     "DocxOrderedTextRowsShareKeepAndWidowAdmission",
@@ -525,6 +542,12 @@
     "DocxColumnAdmissionKeepsRunSplitsAndNavigation"
   ],
   "docx-keep-chain-admission": [
+    "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
+    "DocxOrderedTextRowsShareKeepAndWidowAdmission",
+    "DocxHiddenTextMetricsShareBodyAndCellAscenderOwnership",
+    "DocxHiddenTextMetricsPreserveComposedPaginationAndPaint",
+    "DocxHiddenTextMetricsRespectInheritedAndExplicitVisibility",
+    "DocxHiddenTextMetricsKeepParagraphMarksAndDeclaredSlots",
     "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
     "DocxKeptListLabelCountersFollowTheAdmittedFrame",
     "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",

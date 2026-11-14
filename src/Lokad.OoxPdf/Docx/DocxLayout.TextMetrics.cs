@@ -134,6 +134,12 @@ internal static class DocxTextSpacing
 
 internal static class DocxLineMetrics
 {
+    // Hidden source remains available for annotations and revision inspection,
+    // but cannot supply metrics for the text that is actually painted. Visible
+    // empty runs retain their existing metric role; paragraph marks are separate.
+    internal static IEnumerable<DocxTextRun> GetMetricRuns(DocxParagraph paragraph) =>
+        paragraph.Runs.Where(run => !run.EffectiveProperties.Hidden);
+
     private const double WordSingleLineMinimumEm = 1.15d;
     internal const double WordAutoLineBaselineOffsetEm = 0.94d;
     private const double WordExactLineFirstBaselineRatio = 0.8d;
@@ -176,10 +182,10 @@ internal static class DocxLineMetrics
             return null;
         }
         DocxTextRun? first = null;
-        foreach (DocxTextRun run in paragraph.Runs)
+        foreach (DocxTextRun run in GetMetricRuns(paragraph))
         {
             DocxEffectiveRunProperties properties = run.EffectiveProperties;
-            if (properties.Hidden || string.IsNullOrWhiteSpace(run.Text))
+            if (string.IsNullOrWhiteSpace(run.Text))
             {
                 continue;
             }
@@ -264,7 +270,7 @@ internal static class DocxLineMetrics
         double? size = null;
         foreach (DocxParagraph paragraph in cellParagraphs)
         {
-            foreach (DocxTextRun run in paragraph.Runs)
+            foreach (DocxTextRun run in GetMetricRuns(paragraph))
             {
                 double runSize = run.EffectiveProperties.FontSize;
                 if (size is null)
@@ -294,7 +300,7 @@ internal static class DocxLineMetrics
         }
 
         double? firstBaseline = null;
-        foreach (DocxTextRun run in paragraph.Runs)
+        foreach (DocxTextRun run in GetMetricRuns(paragraph))
         {
             if (measurer is IDocxTypographicMetricsProvider cellTypographic && cellTypographic.UseTypographicMetrics(run))
             {
@@ -347,7 +353,7 @@ internal static class DocxLineMetrics
             // (edge-fnmix3 tahfirst/calfirst: 85.46 both), which neither max-hhea nor
             // widest-run tie-breaking reproduces. Mixed-size takes stay a separate probe.
             double? minAscender = null;
-            foreach (DocxTextRun run in paragraph.Runs)
+            foreach (DocxTextRun run in GetMetricRuns(paragraph))
             {
                 double ascender = provider.MeasureHheaAscender(run, run.EffectiveProperties.FontSize);
                 if (minAscender is null || ascender < minAscender.Value)
@@ -360,7 +366,7 @@ internal static class DocxLineMetrics
         }
 
         double? maxAscender = null;
-        foreach (DocxTextRun run in paragraph.Runs)
+        foreach (DocxTextRun run in GetMetricRuns(paragraph))
         {
             double ascender = provider.MeasureHheaAscender(run, run.EffectiveProperties.FontSize);
             if (maxAscender is null || ascender > maxAscender.Value)
@@ -389,7 +395,7 @@ internal static class DocxLineMetrics
         }
 
         double? maxTier = null;
-        foreach (DocxTextRun run in paragraph.Runs)
+        foreach (DocxTextRun run in GetMetricRuns(paragraph))
         {
             double size = run.EffectiveProperties.FontSize;
             // Gap-less faces keep the legacy max-hhea path: synthetic and zero-gap families resolve
@@ -439,13 +445,14 @@ internal static class DocxLineMetrics
         // Word 16.0 cell-inset probes (Calibri/Tahoma single cells 710.50 vs 710.02 at
         // 10pt): the rule is max(hheaAscender, 0.94em) (Tahoma gap 0.48 matches hheaAsc
         // 1.0005 over Calibri 0.9521). Opt-in measurer; null keeps legacy.
-        double maxSize = firstMetricParagraph.Runs.Max(run => run.EffectiveProperties.FontSize);
+        double maxSize = GetMetricRuns(firstMetricParagraph).Select(run => run.EffectiveProperties.FontSize)
+            .DefaultIfEmpty(firstMetricParagraph.ParagraphMarkFontSize ?? DocxDefaults.FontSizePoints).Max();
         double? hheaAscender = null;
         if (measurer is IDocxLineMetricsProvider provider)
         {
             DocxTextRun? widest = null;
             double widestSize = -1d;
-            foreach (DocxTextRun run in firstMetricParagraph.Runs)
+            foreach (DocxTextRun run in GetMetricRuns(firstMetricParagraph))
             {
                 double size = run.EffectiveProperties.FontSize;
                 if (size > widestSize)
