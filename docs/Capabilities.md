@@ -510,9 +510,11 @@ Supported within the following constraints:
   diagnosed; no general shaping or font-independent Office parity is promised.
 - Simple decimal/bullet numbering and twip-based indents/tabs. Numbering font
   selection follows numbering-level values and the paragraph mark/style/defaults,
-  independently of first-run styling. Supported inserted marks preserve adjacent
-  text/equations; old/new review renumbering and marker revision decoration remain
-  incomplete. Deleted/unnumbered marks keep their existing fallbacks.
+  independently of first-run styling. Actual inserted paragraph marks preserve
+  adjacent text/equations independently of numbering, including one owned format
+  snapshot. Duplicate/unowned formatting and unconsumed deleted marks retain their
+  fallbacks. Review renumbering and marker decoration remain incomplete;
+  combined-role captions and geometry remain approximate.
 - Fixed-grid tables with fills, common collapsed border styles/conflicts,
   nil/none suppression, repeated headers, split rows and cell content. Actual page
   occupancy controls following-prose admission. An empty terminal paragraph after
