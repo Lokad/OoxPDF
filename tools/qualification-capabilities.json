@@ -19,7 +19,8 @@
     "DocxPageFootnoteNumbersUseSectionRequestDespiteDocumentRestartMetadata",
     "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
     "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
-    "ConvertObservesCancellationAfterWorkBegins"
+    "ConvertObservesCancellationAfterWorkBegins",
+    "DocxInactiveNoteTemplatesKeepEnabledStoryAndSectionFallbacks"
   ],
   "docx-static-inheritance": [
     "DocxInheritedStaticPicturesKeepContentInBothViews",
@@ -19318,7 +19319,8 @@
     "DocxInactiveStaticTemplatesKeepFinalEndnotePageFrames",
     "DocxSelectableStaticOwnersRetainNoteFrameFallbacks",
     "DocxStaticNoteEligibilityKeepsInheritedOwnersAndCancellation",
-    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories"
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxInactiveNoteTemplatesKeepEnabledStoryAndSectionFallbacks"
   ],
   "docx-column-admission": [
     "DocxColumnAdmission",

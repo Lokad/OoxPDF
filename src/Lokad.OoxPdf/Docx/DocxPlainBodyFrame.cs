@@ -140,14 +140,27 @@ internal static class DocxPlainBodyFrame
 
     internal static bool HasNoSelectableStaticStories(DocxDocument document, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
+        static bool NeedsStaticFrame(DocxPageSettings settings, string variant) =>
+            DocxLayoutEngine.IsStaticStoryVariantEnabled(settings, variant) ||
+            !string.Equals(variant, "first", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(variant, "even", StringComparison.OrdinalIgnoreCase);
+
+        // Legacy roots may describe a binding not represented by the effective
+        // section dictionaries. Its absence is unproven, so keep the existing
+        // conservative frame admission rather than silently discarding it.
+        if (document.HeaderParagraphs.Count != 0 || document.FooterParagraphs.Count != 0 ||
+            document.HeaderParagraphsByType.Keys.Concat(document.FooterParagraphsByType.Keys)
+                .Concat(document.HeaderBodyElementsByType.Keys).Concat(document.FooterBodyElementsByType.Keys)
+                .Concat(document.HeaderFloatingDrawingsByType.Keys).Concat(document.FooterFloatingDrawingsByType.Keys)
+                .Any(variant => NeedsStaticFrame(document.PageSettings, variant))) return false;
+
         // Before pagination, exclude only known disabled templates. Effective
         // sections preserve both earlier and later inherited owners. Unknown
         // variants and explicit empty active references retain their fallback.
         foreach (var story in DocxBlockTraversal.EnumerateStaticStorySources(document, token))
         {
-            if (DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant) ||
-                !string.Equals(story.Variant, "first", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(story.Variant, "even", StringComparison.OrdinalIgnoreCase)) return false;
+            if (NeedsStaticFrame(story.Settings, story.Variant)) return false;
         }
         return true;
     }
