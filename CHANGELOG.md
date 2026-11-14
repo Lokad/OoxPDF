@@ -20,7 +20,7 @@
   fields bind to the admitted source page.
   Text-only rows beside picture or equation rows use their own font metrics for
   body pagination, including keep and widow admission.
-  Numbered continuation rows retain their own text metrics and paragraph list spacing.
+  Numbered and tabbed continuation rows retain their own text metrics and paragraph list spacing.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field

@@ -331,18 +331,19 @@ internal sealed partial class DocxLayoutEngine
         DocxPlainBodyFrame.HasPlainTextContent(paragraph.ListLabel is null ? paragraph : paragraph with { ListLabel = null });
 
     private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, DocxWrappedTextLine line)
-        => GetBodyTextLineMetricParagraph(paragraph, line.Spans);
+        => GetBodyTextLineMetricParagraph(paragraph, line.Spans.Select(span => span.StyleRun));
 
-    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, IReadOnlyList<DocxTextSpan> spans)
+    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, IEnumerable<DocxTextRun> sourceRuns)
     {
-        if (spans.Count == 0) return paragraph;
+        var runs = sourceRuns.ToArray();
+        if (runs.Length == 0) return paragraph;
 
-        bool sameRuns = spans.Count == paragraph.Runs.Count;
-        for (int index = 0; sameRuns && index < spans.Count; index++)
-            sameRuns = ReferenceEquals(spans[index].StyleRun, paragraph.Runs[index]);
+        bool sameRuns = runs.Length == paragraph.Runs.Count;
+        for (int index = 0; sameRuns && index < runs.Length; index++)
+            sameRuns = ReferenceEquals(runs[index], paragraph.Runs[index]);
         if (sameRuns) return paragraph;
 
-        return paragraph with { Runs = spans.Select(span => span.StyleRun).ToArray() };
+        return paragraph with { Runs = runs };
     }
 
     private static bool ShouldMoveParagraphForWidowControl(

@@ -14,7 +14,8 @@ internal static class DocxScriptClassifier
     {
         foreach (char ch in text)
         {
-            if (ch is >= ' ' and <= '~' or '\r' or '\n') continue;
+            // A supported horizontal tab supplies spacing, not a new script.
+            if (ch is >= ' ' and <= '~' or '\r' or '\n' or '\t') continue;
             if (ch is not (>= '\u00c0' and <= '\u024f' or
                 >= '\u0370' and <= '\u052f' or >= '\u1e00' and <= '\u1fff') ||
                 !char.IsLetter(ch)) return false;

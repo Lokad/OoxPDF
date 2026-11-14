@@ -1,4 +1,34 @@
 {
+  "docx-tab-text-row-metrics": [
+    "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
+    "DocxTabbedTextRowsShareKeepAndWidowAdmission",
+    "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",
+    "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
+    "DocxNumberedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
+    "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
+    "DocxOrderedTextRowsShareKeepAndWidowAdmission",
+    "DocxInlineCompositionUnusedTabMetadataKeepsIndependentFieldOffsets",
+    "DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts",
+    "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
+    "DocxInlineCompositionAlignedTabsMeasureCompleteFieldsAndKeepFallbacks",
+    "DocxInlineCompositionAlignedTabsMatchIndependentWordAndSourceTransforms",
+    "PortableRenderingLeftTabsPreserveMixedMathAcrossContainers",
+    "DocxParagraphLayoutPreservesTabsAsTabAdvances",
+    "DocxParagraphLayoutUsesAuthoredLeftTabStopsBeforeDefaultGrid",
+    "DocxParagraphLayoutUsesAuthoredRightTabStops",
+    "DocxParagraphLayoutUsesAuthoredCenterTabStops",
+    "DocxParagraphLayoutUsesAuthoredDecimalTabStops",
+    "DocxParagraphLayoutRightAlignsDecimalTabsWithoutDecimalSeparator",
+    "DocxParagraphLayoutDoesNotUseBarOrClearTabsAsPositioningStops",
+    "DocxWordCompatibleAllMarkupScalesTabStopPositions",
+    "DocxInlineCompositionSourceCursorRetainsBreakTabsAndFirstLineLabel",
+    "DocxInlineCompositionExactLineSlotSeparatesInkFromAdvanceAndKeepsFallbacks",
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxCachedPictureResultsPreservePaintAndNavigation",
+    "DocxInlineCompositionSourceAdvancesMatchIndependentWord",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-numbered-text-row-metrics": [
     "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
     "DocxNumberedTextRowsShareKeepAndWidowAdmission",
@@ -568,6 +598,9 @@
     "DocxColumnAdmissionKeepsRunSplitsAndNavigation"
   ],
   "docx-keep-chain-admission": [
+    "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
+    "DocxTabbedTextRowsShareKeepAndWidowAdmission",
+    "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",
     "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
     "DocxNumberedTextRowsShareKeepAndWidowAdmission",
     "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
@@ -5657,6 +5690,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
+    "DocxTabbedTextRowsShareKeepAndWidowAdmission",
+    "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",
     "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
     "DocxNumberedTextRowsShareKeepAndWidowAdmission",
     "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
