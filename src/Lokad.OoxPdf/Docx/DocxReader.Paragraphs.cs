@@ -23,7 +23,8 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
-        bool retainBalloonParagraphMark = false)
+        bool retainBalloonParagraphMark = false,
+        bool isContinuationFragment = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -262,7 +263,9 @@ internal sealed partial class DocxReader
         double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ??
             (styles.HasParagraphDefaultOwner ? 1d : WordImplicitNormalAutoLineSpacingFactor);
         double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * lineSpacingFactor;
-        DocxListLabel? listLabel = ResolveParagraphListLabel();
+        // A page/column split creates placement fragments, not additional list
+        // items. Only the first parsed fragment advances either numbering timeline.
+        DocxListLabel? listLabel = isContinuationFragment ? null : ResolveParagraphListLabel();
 
         DocxTextRun? firstCommentRun = retainBalloonParagraphMark
             ? runs.FirstOrDefault(run => !string.IsNullOrWhiteSpace(run.Text)) : null;

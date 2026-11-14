@@ -108,6 +108,7 @@ internal sealed partial class DocxReader
 
                 if (element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode)))
                 {
+                    bool isContinuationFragment = false;
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
                         retainEmptyColumnTail: true, isBreak: VisibleBreak))
                     {
@@ -131,10 +132,12 @@ internal sealed partial class DocxReader
                             continue;
                         }
 
-                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
+                        DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
+                            isContinuationFragment: isContinuationFragment);
                         if (splitParagraph is not null)
                         {
                             elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part)));
+                            isContinuationFragment = true;
                         }
                     }
 

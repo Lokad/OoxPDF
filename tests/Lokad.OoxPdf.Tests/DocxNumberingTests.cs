@@ -10,7 +10,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxNumberingTests
+internal static partial class DocxNumberingTests
 {
     public static void DocxNumericNumberingIdsResolveAliasesAndKeepDistinctSequences()
     {

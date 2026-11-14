@@ -1,4 +1,20 @@
 {
+  "docx-numbered-run-breaks": [
+    "DocxNumberedRunBreaksConsumeOneSourceCounterEvent",
+    "DocxNumberedRunBreaksPaintConsecutiveLabels",
+    "DocxNumericNumberingIdsResolveAliasesAndKeepDistinctSequences",
+    "DocxReaderNumberingStartOverrideRestartsList",
+    "DocxReaderNumberingLevelOverrideReplacesAbstractLevel",
+    "DocxReaderNumberingResolvesMultilevelLabels",
+    "DocxInlineCompositionNumberingCountersRetainSourceTimelines",
+    "DocxInlineCompositionNumberingContinuationRetainsDefinitionAndTimelineOwners",
+    "DocxInlineCompositionListLabelOwnsOnlyTheFirstAuthoredMathRow",
+    "DocxHiddenHardBreaksPreserveComposedPagesAndPaint",
+    "DocxExplicitPageBreaksRetainEventsAndSingleMarkAdmission",
+    "PortableRenderingPageBreaksKeepMathPicturesAndNavigation",
+    "DocxColumnAdmissionSharesLocalPlacementAcrossSpacingAndAlignment",
+    "DocxColumnAdmissionKeepsRunSplitsAndNavigation"
+  ],
   "docx-keep-chain-admission": [
     "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
     "DocxKeptListLabelCountersFollowTheAdmittedFrame",
