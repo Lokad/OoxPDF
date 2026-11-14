@@ -94,7 +94,8 @@ internal sealed partial class DocxReader
                 if (IsRunBreakOnlyParagraph(element, VisibleColumnBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
-                    elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph));
+                    int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
+                    elements.Add(DocxBodyElementFactory.CreateManualBreak(DocxBreakSourceKind.RunBreak, "column", breakParagraph, breakCount));
                     XElement? breakParagraphSectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
                     if (breakParagraphSectionProperties is not null)
                     {
@@ -637,14 +638,18 @@ internal sealed partial class DocxReader
     }
 
     private static bool HasVisibleRunBreak(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
+        => EnumerateVisibleRunBreaks(element, isBreak, markupMode).Any();
+
+    private static IEnumerable<XElement> EnumerateVisibleRunBreaks(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
     {
         if (element.Name == WordprocessingNamespace + "r")
         {
-            return element.Elements(WordprocessingNamespace + "br").Any(isBreak);
+            return element.Elements(WordprocessingNamespace + "br").Where(isBreak);
         }
 
-        return IsVisibleRunContainer(element, markupMode) &&
-            DocxSourceXml.StoredChildren(element).Any(child => HasVisibleRunBreak(child, isBreak, markupMode));
+        return IsVisibleRunContainer(element, markupMode)
+            ? DocxSourceXml.StoredChildren(element).SelectMany(child => EnumerateVisibleRunBreaks(child, isBreak, markupMode))
+            : [];
     }
 
     private static bool IsBreakOnlyInlineElement(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)

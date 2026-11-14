@@ -69,7 +69,11 @@ internal sealed record DocxImplicitParagraphElement(DocxBreakSourceKind SourceKi
 
 internal sealed record DocxPageBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
 
-internal sealed record DocxManualBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
+internal sealed record DocxManualBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement
+{
+    // A break-only paragraph can cross several columns while owning one mark.
+    public int BreakCount { get; init; } = 1;
+}
 
 internal sealed record DocxSectionColumn(
     string? WidthValue,
@@ -113,11 +117,12 @@ internal static class DocxBodyElementFactory
         };
     }
 
-    public static DocxManualBreakElement CreateManualBreak(DocxBreakSourceKind sourceKind, string? value, DocxParagraph? breakParagraph)
+    public static DocxManualBreakElement CreateManualBreak(DocxBreakSourceKind sourceKind, string? value, DocxParagraph? breakParagraph, int breakCount = 1)
     {
         return new DocxManualBreakElement(sourceKind, value, breakParagraph)
         {
-            Revisions = breakParagraph?.Revisions ?? []
+            Revisions = breakParagraph?.Revisions ?? [],
+            BreakCount = breakCount
         };
     }
 }

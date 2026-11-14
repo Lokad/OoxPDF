@@ -1280,7 +1280,11 @@ internal sealed partial class DocxLayoutEngine
                     DocxParagraph? breakParagraph = manualBreak.BreakParagraph;
                     DocxParagraphSpacingProfile? breakSpacing = breakParagraph is null ? null
                         : ResolveParagraphSpacingProfile(previousParagraph, breakParagraph, pendingSpacingAfter, paragraphSpacingScale);
-                    AdvanceColumnOrPage();
+                    for (int breakIndex = 0; breakIndex < manualBreak.BreakCount; breakIndex++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        AdvanceColumnOrPage();
+                    }
                     if (breakParagraph is not null && breakSpacing is not null)
                     {
                         // Word 16 column controls: the paragraph mark resumes in the

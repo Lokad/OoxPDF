@@ -1146,7 +1146,47 @@ internal static class DocxPageTests
         }
     }
 
-    private static DocxDocument ReadBreakMetadataDocument(string content, OoxPdfDocxMarkupMode mode)
+    public static void DocxRepeatedColumnBreaksKeepEventsAndOneParagraphMark()
+    {
+        foreach (int columns in new[] { 1, 2, 3 })
+        foreach (OoxPdfDocxMarkupMode mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in Enum.GetValues<OoxPdfDocxMarkupGeometryMode>())
+        {
+            var engine = new DocxLayoutEngine(geometry);
+            var measurer = new DocxTests.FamilyWidthTextMeasurer();
+            var single = engine.Create(ReadBreakMetadataDocument(Breaks(1, false), mode, columns), measurer, default);
+            double markBaseline = TextLines(single).Single(line => line.Text == "AFTER BREAK").BaselineY;
+            foreach (int count in new[] { 1, 2, 3, 4 })
+            foreach (string carrier in new[] { "direct", "runs", "permissions", "metadata" })
+            {
+                string content = Breaks(count, carrier == "runs");
+                if (carrier == "permissions") content = "<w:permStart w:id=\"28\"/>" + content + "<w:permEnd w:id=\"28\"/>";
+                if (carrier == "metadata") content = "<w:sdt><w:sdtPr/><w:sdtContent><w:smartTag><w:smartTagPr/>" + content + "</w:smartTag></w:sdtContent></w:sdt>";
+                DocxDocument document = ReadBreakMetadataDocument(content, mode, columns);
+                var boundary = document.BodyElements.OfType<DocxManualBreakElement>().Single();
+                TestAssert.Equal(count, boundary.BreakCount);
+                TestAssert.True(boundary.BreakParagraph is not null, "The whole source sequence owns one authored paragraph mark.");
+                TestAssert.Equal(3, document.BodyElements.Count);
+                DocxLayout layout = engine.Create(document, measurer, default);
+                int targetPage = count / columns;
+                int targetColumn = count % columns;
+                TestAssert.Equal(targetPage + 1, layout.Pages.Count);
+                var target = layout.Pages[targetPage].Items.OfType<DocxTextLineLayout>().Single(line => line.Text == "AFTER BREAK");
+                TestAssert.Equal(layout.Pages[targetPage].ColumnFrames[targetColumn].X, target.X);
+                TestAssert.True(Math.Abs(markBaseline - target.BaselineY) < 0.000001d,
+                    "Only the final continuation frame consumes the source paragraph's resolved mark pitch, regardless of the number of crossed columns.");
+                TestAssert.Equal("BEFOREBREAKAFTERBREAK", string.Concat(TextLines(layout).Select(line => line.Text)).Replace(" ", string.Empty));
+            }
+        }
+
+        static string Breaks(int count, bool splitRuns) => splitRuns
+            ? string.Concat(Enumerable.Repeat("<w:r><w:br w:type=\"column\"/></w:r>", count))
+            : "<w:r>" + string.Concat(Enumerable.Repeat("<w:br w:type=\"column\"/>", count)) + "</w:r>";
+        static IEnumerable<DocxTextLineLayout> TextLines(DocxLayout layout) => layout.Pages
+            .SelectMany(page => page.Items.OfType<DocxTextLineLayout>()).Where(line => !string.IsNullOrWhiteSpace(line.Text));
+    }
+
+    private static DocxDocument ReadBreakMetadataDocument(string content, OoxPdfDocxMarkupMode mode, int columns = 1)
     {
         using MemoryStream stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
@@ -1167,7 +1207,7 @@ internal static class DocxPageTests
                   <w:p><w:r><w:t>BEFORE BREAK</w:t></w:r></w:p>
                   <w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240"/></w:pPr>{{content}}</w:p>
                   <w:p><w:r><w:t>AFTER BREAK</w:t></w:r></w:p>
-                  <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:left="1440" w:right="1440" w:top="1440" w:bottom="1440"/></w:sectPr>
+                  <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:left="1440" w:right="1440" w:top="1440" w:bottom="1440"/><w:cols w:num="{{columns}}"/></w:sectPr>
                 </w:body></w:document>
                 """
         });
