@@ -12,11 +12,12 @@ internal static class DocxDeletedParagraphMarkTests
     public static void DocxDeletedParagraphMarksRetainCompleteOrderedSources()
     {
         foreach (bool chained in new[] { false, true })
+        foreach (bool formatted in new[] { false, true })
         foreach (string container in new[] { "body", "cell", "header" })
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.SimpleMarkup,
             OoxPdfDocxMarkupMode.Original, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var document = Read(chained, mode, container);
+            var document = Read(chained, mode, container, formatted);
             var paragraphs = container == "header" ? document.HeaderParagraphs :
                 DocxBlockTraversal.EnumerateBodyParagraphs(document).Where(p => p.Equations.Count != 0 || p.Images.Count != 0 ||
                     p.Runs.Any(run => run.Text.Length != 0)).ToArray();
@@ -35,7 +36,7 @@ internal static class DocxDeletedParagraphMarkTests
             var paragraph = paragraphs.Single();
             var items = TestAssert.NotNull(paragraph.InlineContent);
             TestAssert.Equal(chained ? 2 : 1, paragraph.ConsumedParagraphMarks.Count);
-            TestAssert.True(!paragraph.HasDeletedParagraphMark && paragraph.Revisions.Count == paragraph.ConsumedParagraphMarks.Count,
+            TestAssert.True(!paragraph.HasDeletedParagraphMark && paragraph.Revisions.Count == paragraph.ConsumedParagraphMarks.Count * (formatted ? 2 : 1),
                 "Consume the marks while retaining their actual revision metadata.");
             TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph), "Merged inline content has complete source owners.");
             TestAssert.True(items.OfType<DocxInlineEquation>().Select(item => item.Equation)
@@ -105,13 +106,13 @@ internal static class DocxDeletedParagraphMarkTests
         }
     }
 
-    private static DocxDocument Read(bool chained, OoxPdfDocxMarkupMode mode, string container = "body")
+    private static DocxDocument Read(bool chained, OoxPdfDocxMarkupMode mode, string container = "body", bool formatted = false)
     {
-        using var input = Input(chained, container); using var package = OoxPackage.Open(input, default);
+        using var input = Input(chained, container, formatted); using var package = OoxPackage.Open(input, default);
         return new DocxReader().Read(package, null, default, mode);
     }
 
-    private static MemoryStream Input(bool chained, string container = "body")
+    private static MemoryStream Input(bool chained, string container = "body", bool formatted = false)
     {
         string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "CompositionProbes/body.docx"));
         using var source = ZipFile.OpenRead(path);
@@ -140,8 +141,14 @@ internal static class DocxDeletedParagraphMarkTests
             new XElement(w + "bookmarkEnd", new XAttribute(w + "id", "99")));
         groups.Last().Add(Text(" PublicSuffix"));
         for (int index = 0; index < groups.Count - 1; index++)
-            groups[index].AddFirst(new XElement(w + "pPr", new XElement(w + "rPr", new XElement(w + "del",
-                new XAttribute(w + "id", index + 1), new XAttribute(w + "author", "Public reviewer")))));
+        {
+            var mark = new XElement(w + "rPr", new XElement(w + "del",
+                new XAttribute(w + "id", index + 1), new XAttribute(w + "author", "Public reviewer")));
+            if (formatted)
+                mark.Add(new XElement(w + "b"), new XElement(w + "rPrChange", new XAttribute(w + "id", 990 + index),
+                    new XAttribute(w + "author", "Public reviewer"), new XElement(w + "rPr", new XElement(w + "b", new XAttribute(w + "val", "0")))));
+            groups[index].AddFirst(new XElement(w + "pPr", mark));
+        }
         if (container == "cell")
             paragraph.ReplaceWith(new XElement(w + "tbl", new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "8640"))),
                 new XElement(w + "tr", new XElement(w + "tc", groups))));
