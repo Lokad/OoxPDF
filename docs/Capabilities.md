@@ -516,7 +516,9 @@ Supported within the following constraints:
   snapshot. Actual deleted marks also retain inline content in unjoined views;
   duplicate/unowned formatting retains fallback. Supported inserted-mark Review
   timelines retain old/current list numbers alongside one mark-format snapshot,
-  including history on preceding/following paragraphs. Other Review renumbering
+  including history on preceding/following paragraphs. Formatting history alone
+  does not give numbering the first text run's hyperlink colour or underline.
+  Other Review renumbering
   and marker decoration remain incomplete;
   combined-role captions and geometry remain approximate.
 - Fixed-grid tables with fills, common collapsed border styles/conflicts,

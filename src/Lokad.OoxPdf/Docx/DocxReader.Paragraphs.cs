@@ -609,7 +609,7 @@ internal sealed partial class DocxReader
             // paragraph color, not the first text run's authored or review ink.
             // Word inherits underline only from the numbering level. Keep the
             // separately qualified marker-revision path and other decorations.
-            if (label is null || runs.Count == 0 || inheritedRevision is not null || paragraphMarkRevisions.Count != 0 ||
+            if (label is null || runs.Count == 0 || !knownNumberingMark || numberingMarkInsertion is not null ||
                 (unmarkedListTextStyle is { } captured && captured.SourceRunIndex != runs[0].SourceRunIndex)) return label;
             return label with
             {

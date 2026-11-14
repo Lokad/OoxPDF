@@ -1,5 +1,6 @@
 {
   "docx-mark-numbering-composition": [
+    "DocxMarkFormattingKeepsNumberingDecorationSource",
     "DocxMarkFormattingPreservesNumberingTimelines",
     "DocxMarkFormattingPreservesNumberingPaintAndSourceContent",
     "DocxInlineCompositionNumberingCountersRetainSourceTimelines",

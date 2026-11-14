@@ -31,12 +31,14 @@ internal static partial class DocxInlineCompositionTests
                 ReferenceEquals(insertion, p.ListLabel!.NumberingChange!.SourceMark)),
                 "Formatting does not replace the actual inserted mark as the counter trigger.");
             var revisions = actual[index].ParagraphMarkRun!.Revisions;
-            TestAssert.True(DocxInlineContent.TryGetParagraphMarkFormattingRevision(revisions, default, out var formatting) &&
-                formatting is not null && revisions.Any(r => ReferenceEquals(r, formatting)),
+            var formatting = revisions.Single(r => r.Kind == DocxRevisionKind.RunPropertiesChange);
+            TestAssert.True(formatting.SourceElement == "rPrChange" && formatting.PropertyChangeFamily == DocxRevisionPropertyFamily.Run &&
+                actual[index].Revisions.Any(r => ReferenceEquals(r, formatting)) &&
+                DocxInlineContent.HasSupportedParagraphRevisionOwners(actual[index], default),
                 "The one retained formatting snapshot has its actual source identity.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() =>
-                DocxInlineContent.TryGetParagraphMarkFormattingRevision(revisions, canceled.Token, out _));
+                DocxInlineContent.HasSupportedParagraphRevisionOwners(actual[index], canceled.Token));
             if (mode != OoxPdfDocxMarkupMode.AllMarkup) continue;
             var duplicate = NumberedCounterParagraphs(ReadNumberingFormatting(id, mode, index, duplicate: true));
             TestAssert.Equal(string.Join('|', baseline.Take(index).Select(p => p.ListLabel!.DisplayText)),
@@ -85,6 +87,24 @@ internal static partial class DocxInlineCompositionTests
                     "Preserving counter history cannot discard supported mathematics.");
                 Lokad.OoxPdf.Pdf.PdfContentValidator.ValidatePage(actual, 0, default);
             }
+        }
+    }
+
+    public static void DocxMarkFormattingKeepsNumberingDecorationSource()
+    {
+        foreach (string id in NumberingFormattingCases.Concat(new[] {
+            "numbering-mark-decoration-mark-red-double", "numbering-mark-decoration-level-green-none",
+            "numbering-mark-decoration-level-green-double" }))
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (int index in new[] { 0, 1, 2 })
+        {
+            var control = NumberedCounterParagraphs(ReadNumberingFormatting(id, mode))[index];
+            var actual = NumberedCounterParagraphs(ReadNumberingFormatting(id, mode, index))[index];
+            static DocxTextRun LabelRun(DocxParagraph p) => DocxLayoutEngine.CreateListLabelRun(
+                p.ListLabel!, p.Runs.First(), p.Runs.First().EffectiveProperties.FontSize);
+            TestAssert.Equal(LabelRun(control).EffectiveProperties, LabelRun(actual).EffectiveProperties);
+            TestAssert.True(actual.ListLabel!.DecorationSource is not null,
+                "A known formatting snapshot cannot switch numbering to the first text run's hyperlink ink.");
         }
     }
 
