@@ -330,7 +330,7 @@ internal static class OoxMissingFontTests
         return (File.ReadAllText(output, Encoding.Latin1), diagnostics);
     }
 
-    private static string ExtractWinAnsiText(string pdf)
+    internal static string ExtractWinAnsiText(string pdf)
     {
         // The diagnosed fallback emits WinAnsi bytes in plain Tj operators, so
         // Latin-1 decoding recovers the preserved text deterministically.

@@ -405,7 +405,9 @@ internal sealed partial class DocxRenderer
             }
         }
         if (diagnostics is not null && messages is not null)
-            foreach (var message in messages) { cancellationToken.ThrowIfCancellationRequested(); diagnostics(message); }
+            // Bounded font/layout retries may repeat the same preparation
+            // warning. Preserve distinct source/page diagnostics in first order.
+            foreach (var message in messages.Distinct()) { cancellationToken.ThrowIfCancellationRequested(); diagnostics(message); }
         // SVG labels do not affect paragraph pagination. Prepare their borrowed
         // outline programs once, after count/note retries, through the same owner.
         var svgFonts = await PptxRenderer.PrepareSvgTextFontsAsync(
@@ -481,7 +483,7 @@ internal sealed partial class DocxRenderer
         var numberingPolicy = context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup &&
             context.WordCompatiblePrintScale == 1d ? DocxWrappedCalibriPolicy.NormalizedThresholds :
             DocxWrappedCalibriPolicy.NormalizedNominal;
-        if (fonts.TextMeasurer is null || fonts.FallbackFaces.Count != 0 ||
+        if (fonts.TextMeasurer is null ||
             !DocxPageFootnoteNumbering.TryCreateDocument(document, first, out var numbered, out var pages,
                 allowWrappedBody: context.WordCompatiblePrintScale == 1d,
                 calibriPolicy: numberingPolicy, ownerScope: DocxFootnoteOwnerScope.AllSourceReferences, cancellationToken: cancellationToken))

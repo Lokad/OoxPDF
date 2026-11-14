@@ -1,4 +1,16 @@
 {
+  "docx-fallback-page-counters": [
+    "DocxBuiltInFallbackKeepsPageLocalNotePaintsAndWarnings",
+    "MissingFontsPreserveDocxPagesAndText",
+    "InvalidFontBytesPreserveDocxPagesAndText",
+    "UnsupportedOutlineFontsPreserveDocxPagesAndText",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxPageFootnoteNumbersRejectMovedOrPartialNotes",
+    "DocxStaticPageCountersRequireCompleteStableOwners",
+    "DocxActiveMarginStoriesKeepPageLocalNotePaints",
+    "DocxInlineCompositionCellPageNotesRejectMissingAmbiguousAndClippedGlyphs",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-static-page-counters": [
     "DocxActiveMarginStoriesKeepPageLocalNotePaints",
     "DocxStaticPageCountersRequireCompleteStableOwners",
@@ -19286,6 +19298,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-fixed-static-frames": [
+    "DocxBuiltInFallbackKeepsPageLocalNotePaintsAndWarnings",
     "DocxActiveMarginStoriesKeepPageLocalNotePaints",
     "DocxStaticPageCountersRequireCompleteStableOwners",
     "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",

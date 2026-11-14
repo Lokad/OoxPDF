@@ -26,7 +26,9 @@
   formatting-revision ownership beside equations, including picture-only runs,
   field codes and pagination hints;
   Page-local note counters follow complete measured marker/note ownership beside
-  visible headers and footers, preserving the separate typography fallback.
+  visible headers and footers and with diagnosed built-in font fallback, preserving
+  the separate typography fallback. Font/layout retries report identical preparation
+  warnings once.
   automatic note references retain source order and link ownership,
   and Review endnote counters retain neighboring equations. Oversized body keep-with-next
   groups flow without repeatedly starting new pages. Natural-height table body rows
