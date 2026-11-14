@@ -51,11 +51,13 @@ internal static class DocxNoteContinuationPaintTests
                         properties.Add(new XElement(w + name + "Change", new XAttribute(w + "id", "6901"),
                             new XAttribute(w + "author", "Property Reviewer"), new XElement(w + name)));
                     }, partOverride: "word/endnotes.xml");
-                var settings = source.PageSettings with { HeightValue = "12000" };
-                source = source with { PageHeightPoints = 600d, PageSettings = settings,
+                // Keep the original468pt body while leaving an authored lane.
+                // This remains a unit-scale continuation-origin regression.
+                var settings = source.PageSettings with { HeightValue = "12000", WidthValue = "16840", MarginRightValue = "6040" };
+                source = source with { PageHeightPoints = 600d, PageWidthPoints = 842d, MarginRightPoints = 302d, PageSettings = settings,
                     FinalSectionBreak = source.FinalSectionBreak is { } final ? final with { PageSettings = settings } : null,
                     BodyElements = source.BodyElements.Select(element => element is DocxSectionBreakElement section
-                        ? section with { PageSettings = section.PageSettings with { HeightValue = "12000" } } : element).ToArray() };
+                        ? section with { PageSettings = section.PageSettings with { HeightValue = "12000", WidthValue = "16840", MarginRightValue = "6040" } } : element).ToArray() };
                 return new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                     mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
                         : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)

@@ -615,7 +615,7 @@ Supported within the following constraints:
   Fitting math rows also share automatic-height admission when only unpainted
   trailing spacing crosses the page edge; tighter frames and cantSplit retain
   their existing placement.
-  Complete unscaled endnote rows that fit a fresh note frame move intact to
+  Complete measured endnote rows that fit a fresh note frame move intact to
   the next page, including one known row/cell property-history snapshot. Ambiguous
   history and content/structural revisions retain their existing admission fallback.
   Source-affined picture-only paragraphs share this admission when

@@ -34,6 +34,8 @@
   keep-next groups flow while fitting paragraphs and groups remain together.
   Endnote row/cell formatting history retains complete content, page admission
   and visible continuation text in unscaled Review views.
+  Printed revision balloons share lane fitting across stories; complete endnote
+  rows retain their design frames when the Review page scales.
   Explicit automatic row heights share the same printed Review frames as omitted heights.
   They also retain fitting equation rows on their source page when only trailing spacing overflows.
   Nonprinting editing metadata around page/column breaks preserves paragraph spacing.

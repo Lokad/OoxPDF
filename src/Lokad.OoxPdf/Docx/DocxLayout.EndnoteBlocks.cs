@@ -11,10 +11,12 @@ internal sealed partial class DocxLayoutEngine
         Func<DocxLayoutPage, int, int, double>? frameBottom, CancellationToken token)
     {
         if (story.Story.Kind != DocxRelatedStoryKind.Endnote || !story.Story.IsNormalStoryType ||
-            story.TableRows.Count == 0 || printScale != 1d ||
+            story.TableRows.Count == 0 || !double.IsFinite(printScale) || printScale <= 0d || printScale > 1d ||
             story.ContentHeight <= top - (frameBottom?.Invoke(page, pageIndex + 1, outputPages.Count) ?? page.MarginBottom) ||
             !HasCompleteMeasuredNoteBlocks(story, token)) return false;
 
+        // Note blocks and their admitted frames already use design coordinates;
+        // painting maps both through the same printed page frame.
         double continuationCharge = 0d;
         if (continuation is { TextLines.Count: > 0 })
         {

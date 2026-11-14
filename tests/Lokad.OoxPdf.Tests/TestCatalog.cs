@@ -14,6 +14,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(SvgTextTests)),
         .. FromType("rendering-portable", typeof(DocxMathCenterGroupTests)),
         .. FromType("rendering-portable", typeof(DocxNoteContinuationPaintTests)),
+        .. FromType("rendering-portable", typeof(DocxNoteRevisionLaneTests)),
         .. FromType("rendering-portable", typeof(DocxUnitPrintOriginTests)),
         .. FromType("rendering-portable", typeof(DocxFooterRevisionFrameTests)),
         .. FromType("rendering-portable", typeof(DocxWrappedMinimumLeadingTests)),

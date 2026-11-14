@@ -652,7 +652,7 @@ internal sealed partial class DocxRenderer
             return true;
         }
 
-        return markupContext.RendersRevisionBalloons && HasPageRevisionBalloon(document);
+        return markupContext.RendersRevisionBalloons && HasAnyRevisionBalloon(document);
     }
 
     // Independent Word references omit header/footer/note comments, including
@@ -703,65 +703,11 @@ internal sealed partial class DocxRenderer
         return false;
     }
 
-    private static bool HasPageRevisionBalloon(DocxDocument document)
+    private static bool HasMainStoryRevisionBalloon(DocxDocument document)
     {
-        // Mixed-view Word controls reserve and fit the same page lane for
-        // revision balloons anchored in body or direct header/footer text.
-        // Hidden static comments remain governed by their separate visibility rule.
-        if (DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType)
-            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
-            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
-            .Any(paragraph => HasRevisionBalloon(paragraph.Revisions, isMainStory: false))) return true;
-        // A printed revision balloon owns the same page lane when its source
-        // is a static table, row or cell. Reuse the revision-owner traversal
-        // already used to select the fitted anchor.
-        if (StaticStoryTables(document.HeaderBodyElementsByType)
-            .Concat(StaticStoryTables(document.FooterBodyElementsByType))
-            .Concat(StaticStoryTables(document.PageSettings.HeaderBodyElementsByType))
-            .Concat(StaticStoryTables(document.PageSettings.FooterBodyElementsByType))
-            .Any(table => TableSubtreeHasRevisionBalloon(table, isMainStory: false))) return true;
-
-        foreach (DocxParagraph paragraph in document.Paragraphs)
-        {
-            if (HasRevisionBalloon(paragraph.Revisions))
-            {
-                return true;
-            }
-        }
-
-        foreach (DocxTable table in document.Tables)
-        {
-            if (HasRevisionBalloon(table.Revisions))
-            {
-                return true;
-            }
-
-            foreach (DocxTableRow row in table.Rows)
-            {
-                if (HasRevisionBalloon(row.Revisions))
-                {
-                    return true;
-                }
-
-                foreach (DocxTableCell cell in row.Cells)
-                {
-                    if (HasRevisionBalloon(cell.Revisions))
-                    {
-                        return true;
-                    }
-
-                    foreach (DocxParagraph paragraph in cell.Paragraphs)
-                    {
-                        if (HasRevisionBalloon(paragraph.Revisions))
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        return false;
+        // Cell insertion/deletion captions belong only to the main story.
+        return document.Paragraphs.Any(paragraph => HasRevisionBalloon(paragraph.Revisions)) ||
+            document.Tables.Any(table => TableSubtreeHasRevisionBalloon(table));
     }
 
     private static bool HasRevisionBalloon(IReadOnlyList<DocxRevisionInfo> revisions, bool isMainStory = true)
@@ -769,17 +715,24 @@ internal sealed partial class DocxRenderer
         return revisions.Any(revision => IsWordCompatibleBalloonRevision(revision, isMainStory));
     }
 
-    // Anchor-gating only: supported revision balloons print from any story (body, static,
-    // placed, floating text boxes), so any of them sustains the fitted anchor. The
-    // lane-fit scale trigger covers body and static paragraph/table owners;
-    // other story/effect combinations retain their qualified scale behavior.
-    // Section-break revisions never anchor balloons (no anchor line) and stay excluded.
+    // Page fitting and painting use the same revision owners. A note part cannot
+    // claim the page lane without a main-story reference; comments and separator
+    // stories do not independently place revision captions.
     private static bool HasAnyRevisionBalloon(DocxDocument document)
     {
-        if (HasPageRevisionBalloon(document))
+        if (HasMainStoryRevisionBalloon(document))
         {
             return true;
         }
+
+        var references = DocxBlockTraversal.EnumerateBodyParagraphs(document)
+            .SelectMany(paragraph => paragraph.InlineReferences)
+            .Where(reference => reference.Id is not null &&
+                reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+            .Select(reference => (reference.Kind, reference.Id))
+            .ToHashSet();
+        var notes = document.RelatedStories.Where(story => story.IsNormalStoryType &&
+            references.Contains((story.Kind, story.Id))).ToArray();
 
         foreach (DocxParagraph paragraph in ParaEnumerations())
         {
@@ -816,7 +769,7 @@ internal sealed partial class DocxRenderer
                 yield return paragraph;
             }
 
-            foreach (DocxRelatedStory story in document.RelatedStories)
+            foreach (DocxRelatedStory story in notes)
             {
                 foreach (DocxParagraph paragraph in story.Paragraphs)
                 {
@@ -868,11 +821,6 @@ internal sealed partial class DocxRenderer
 
         IEnumerable<DocxTable> TableEnumerations()
         {
-            foreach (DocxTable table in document.Tables)
-            {
-                yield return table;
-            }
-
             foreach (DocxTable table in StaticStoryTables(document.HeaderBodyElementsByType))
             {
                 yield return table;
@@ -893,7 +841,7 @@ internal sealed partial class DocxRenderer
                 yield return table;
             }
 
-            foreach (DocxRelatedStory story in document.RelatedStories)
+            foreach (DocxRelatedStory story in notes)
             {
                 foreach (DocxTable table in story.Tables)
                 {
