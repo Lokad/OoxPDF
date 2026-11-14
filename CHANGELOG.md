@@ -28,7 +28,8 @@
   Page-local note counters follow complete measured marker/note ownership beside
   visible headers and footers and with diagnosed built-in font fallback, preserving
   the separate typography fallback. Font/layout retries report identical preparation
-  warnings once.
+  warnings once. Built-in fallback letters use declared-face advances shared by DOCX
+  and PPTX measurement and painting, correcting wide-letter overlap.
   automatic note references retain source order and link ownership,
   and Review endnote counters retain neighboring equations. Oversized body keep-with-next
   groups flow without repeatedly starting new pages. Natural-height table body rows

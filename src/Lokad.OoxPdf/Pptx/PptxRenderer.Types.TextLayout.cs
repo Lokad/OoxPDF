@@ -284,7 +284,7 @@ internal sealed partial class PptxRenderer
                 ResolvedGlyphFont? resolved = ResolveGlyphFont(familyName, bold, italic, rune.Value);
                 if (resolved is null)
                 {
-                    points += PptxTextMetricRules.FallbackAdvanceWidth(rune.Utf16SequenceLength, 1, fontSize, 0d);
+                    points += MeasureFallbackAdvance(rune, fontSize, familyName, bold, italic);
                     previousFont = null;
                     previousGlyph = 0;
                     continue;
@@ -313,6 +313,16 @@ internal sealed partial class PptxRenderer
             }
 
             return Math.Max(0d, points + Math.Max(0, runeCount - 1) * characterSpacing);
+        }
+
+        public double MeasureFallbackAdvance(Rune rune, double fontSize, string? familyName, bool bold, bool italic)
+        {
+            // Preparation paints an available primary TrueType face with its
+            // diagnosed missing-glyph substitution. Keep that separate legacy
+            // estimate; an unavailable face paints the declared standard font.
+            return ResolveOpenTypeFont(familyName, bold, italic) is not null
+                ? PptxTextMetricRules.FallbackAdvanceWidth(rune.Utf16SequenceLength, 1, fontSize, 0d)
+                : PdfFallbackFont.ForStyle(bold, italic).MeasureAdvanceEm(rune) * fontSize / PdfFallbackFont.UnitsPerEm;
         }
 
         public double MeasureBoundaryAdvance(int previousCodePoint, int nextCodePoint, double fontSize, string? familyName, bool bold, bool italic, double characterSpacing, bool kerningEnabled)

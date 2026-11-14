@@ -411,7 +411,7 @@ internal static class DocxTextEmissionPlanner
             foreach (Rune rune in text.EnumerateRunes())
             {
                 glyphCount++;
-                fallbackPointsWidth += PdfFallbackFont.MeasureAdvanceEm(rune) * plan.PdfFontSize / PdfFallbackFont.UnitsPerEm;
+                fallbackPointsWidth += fallback.MeasureAdvanceEm(rune) * plan.PdfFontSize / PdfFallbackFont.UnitsPerEm;
             }
         }
 
@@ -482,7 +482,7 @@ internal static class DocxTextEmissionPlanner
             {
                 PdfFallbackFont.TryEncodeWinAnsi(rune.Value, out byte code);
                 ushort glyph = code;
-                int advance = (int)PdfFallbackFont.MeasureAdvanceEm(rune.Value);
+                int advance = (int)fallback.MeasureAdvanceEm(rune.Value);
                 if (previousGlyph != 0)
                 {
                     glyphPairCount++;

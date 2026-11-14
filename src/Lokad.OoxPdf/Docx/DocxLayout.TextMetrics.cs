@@ -524,9 +524,10 @@ internal sealed class DocxFallbackTextMeasurer : IDocxTextMeasurer, IDocxLineMet
     public double MeasureText(DocxTextRun? run, string text, double fontSize)
     {
         double units = 0d;
+        var face = PdfFallbackFont.ForStyle(run?.EffectiveProperties.Bold ?? false, run?.EffectiveProperties.Italic ?? false);
         foreach (Rune rune in text.EnumerateRunes())
         {
-            units += PdfFallbackFont.MeasureAdvanceEm(rune);
+            units += face.MeasureAdvanceEm(rune);
         }
 
         return DocxTextSpacing.AddCharacterSpacing(units * fontSize / PdfFallbackFont.UnitsPerEm, run, text);

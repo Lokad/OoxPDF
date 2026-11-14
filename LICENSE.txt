@@ -19,3 +19,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+Adobe Core 14 font metric data
+
+Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated.  All Rights Reserved.
+Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated.  All Rights Reserved.Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.
+
+Derived data in PdfFallbackFont.Metrics.cs maps the original glyph widths to
+WinAnsi bytes; the original AFM files are not modified. Regular/oblique and
+bold/bold-oblique faces share their respective advance tables.
+Source: Apache PDFBox revision 1767d7773f948399fe051f55f025189b9ca25228.
+
+Adobe Font Metrics (AFM) for PDF Core 14 Fonts
+
+   This file and the 14 PostScript(R) AFM files it accompanies may be used,
+   copied, and distributed for any purpose and without charge, with or without
+   modification, provided that all copyright notices are retained; that the
+   AFM files are not distributed without this file; that all modifications
+   to this file or any of the AFM files are prominently noted in the modified
+   file(s); and that this paragraph is not modified. Adobe Systems has no
+   responsibility or obligation to support the use of the AFM files.

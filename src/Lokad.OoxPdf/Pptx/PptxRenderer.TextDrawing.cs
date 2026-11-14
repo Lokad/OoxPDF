@@ -36,7 +36,7 @@ internal sealed partial class PptxRenderer
         runs = await SplitRunsByResolvedTypefaceAsync(runs, fontResolver, diagnosticSink, cancellationToken).ConfigureAwait(false);
 
         RenderedFonts renderedFonts = await CreateRenderedFontsAsync(runs, fontResolver, resourcePrefix, cancellationToken, diagnosticSink, chartFonts).ConfigureAwait(false);
-        DrawTextRunsWithFonts(runs, graphics, renderedFonts.Fonts);
+        DrawTextRunsWithFonts(runs, graphics, renderedFonts.Fonts, cancellationToken);
         chartFonts.AddRange(renderedFonts.Resources);
         return renderedFonts;
     }
@@ -579,7 +579,7 @@ internal sealed partial class PptxRenderer
         return substituted;
     }
 
-    private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<FontRequest, RenderedFont> fonts)
+    private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<FontRequest, RenderedFont> fonts, CancellationToken cancellationToken)
     {
         DrawHighlightRunsWithFonts();
         textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
@@ -662,9 +662,8 @@ internal sealed partial class PptxRenderer
 
             (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
             graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
-            Rune[] runes = [.. run.Text.EnumerateRunes()];
             double baselineY = run.Y + run.BaselineOffset;
-            if (runes.Length != 0 && BaselineIntersectsClip(run, baselineY))
+            if (run.Text.Length != 0 && BaselineIntersectsClip(run, baselineY))
             {
                 bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
                     (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
@@ -675,18 +674,8 @@ internal sealed partial class PptxRenderer
                 }
 
                 double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
-                var glyphs = new List<PdfFallbackGlyph>(runes.Length);
-                double slot = run.Width / runes.Length;
-                for (int i = 0; i < runes.Length; i++)
-                {
-                    if (PdfFallbackFont.IsNonRenderedControl(runes[i]))
-                    {
-                        continue;
-                    }
-
-                    PdfFallbackFont.TryEncodeWinAnsi(runes[i].Value, out byte code);
-                    glyphs.Add(new PdfFallbackGlyph(run.X + i * slot, baselineY, code));
-                }
+                var glyphs = fallback.Font.PositionGlyphs(run.Text, run.X, baselineY, run.FontSize,
+                    run.CharacterSpacing, run.Width, cancellationToken);
 
                 graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
                 if (run.Underline || run.Strike)
@@ -768,7 +757,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<FontRequest, RenderedFont> fonts, PptxTextHyperlinkScope? hyperlinkScope = null)
+    private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<FontRequest, RenderedFont> fonts, PptxTextHyperlinkScope? hyperlinkScope, CancellationToken cancellationToken)
     {
         DrawHighlightSpansWithFonts();
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
@@ -810,9 +799,8 @@ internal sealed partial class PptxRenderer
 
             (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
             graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
-            Rune[] runes = [.. run.Text.EnumerateRunes()];
             double baselineY = run.Y + run.BaselineOffset;
-            if (runes.Length != 0 && BaselineIntersectsClip(run, baselineY))
+            if (run.Text.Length != 0 && BaselineIntersectsClip(run, baselineY))
             {
                 bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
                     (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
@@ -823,28 +811,8 @@ internal sealed partial class PptxRenderer
                 }
 
                 double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
-                int totalUnits = 0;
-                foreach (Rune rune in runes)
-                {
-                    totalUnits += rune.Utf16SequenceLength;
-                }
-
-                double gaps = Math.Max(0, runes.Length - 1) * run.CharacterSpacing;
-                double unit = totalUnits == 0 ? 0d : Math.Max(0d, run.Width - gaps) / totalUnits;
-                var glyphs = new List<PdfFallbackGlyph>(runes.Length);
-                int usedUnits = 0;
-                int gapCount = 0;
-                foreach (Rune rune in runes)
-                {
-                    if (!PdfFallbackFont.IsNonRenderedControl(rune))
-                    {
-                        PdfFallbackFont.TryEncodeWinAnsi(rune.Value, out byte code);
-                        glyphs.Add(new PdfFallbackGlyph(run.X + usedUnits * unit + gapCount * run.CharacterSpacing, baselineY, code));
-                    }
-
-                    usedUnits += rune.Utf16SequenceLength;
-                    gapCount++;
-                }
+                var glyphs = fallback.Font.PositionGlyphs(run.Text, run.X, baselineY, run.FontSize,
+                    run.CharacterSpacing, run.Width, cancellationToken);
 
                 graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
                 if (run.Underline || run.Strike)

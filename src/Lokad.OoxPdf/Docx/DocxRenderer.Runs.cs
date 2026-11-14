@@ -399,11 +399,8 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    // RV01: fallback glyph emission positions every rune absolutely with the fallback
-    // advances measured from the original runes, so positions match fallback layout
-    // measurement even for substituted markers. Unencodable runes become question
-    // mark (diagnosed at preparation for embedded faces, covered by the
-    // FONT_NO_USABLE_FACE message on the fallback path).
+    // The declared fallback face owns measurement and absolute glyph advances;
+    // unencodable runes use the diagnosed question-mark advance too.
     private static void DrawFallbackRunGlyphText(
         PdfGraphicsBuilder graphics,
         PdfFallbackFontResource fallback,
@@ -414,30 +411,7 @@ internal sealed partial class DocxRenderer
         double fontSize,
         double characterSpacing)
     {
-        Rune[] runes = [.. text.EnumerateRunes()];
-        if (runes.Length == 0)
-        {
-            return;
-        }
-
-        var glyphs = new List<PdfFallbackGlyph>(runes.Length);
-        double cursorX = x;
-        for (int i = 0; i < runes.Length; i++)
-        {
-            // Layout constructs advance (zero) without emitting, exactly matching
-            // fallback measurement, which counts every rune for spacing gaps.
-            if (!PdfFallbackFont.IsNonRenderedControl(runes[i]))
-            {
-                PdfFallbackFont.TryEncodeWinAnsi(runes[i].Value, out byte code);
-                glyphs.Add(new PdfFallbackGlyph(cursorX, baselineY, code));
-            }
-
-            cursorX += PdfFallbackFont.MeasureAdvanceEm(runes[i]) * fontSize / PdfFallbackFont.UnitsPerEm;
-            if (i < runes.Length - 1)
-            {
-                cursorX += characterSpacing;
-            }
-        }
+        var glyphs = fallback.Font.PositionGlyphs(text, x, baselineY, fontSize, characterSpacing);
 
         graphics.DrawFallbackText(fallback.ResourceName, fontSize, color.Red, color.Green, color.Blue, glyphs);
     }

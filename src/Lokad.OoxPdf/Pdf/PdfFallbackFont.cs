@@ -5,12 +5,11 @@ namespace Lokad.OoxPdf.Pdf;
 
 // RV01: deterministic diagnosed fallback face for document text with no usable
 // embeddable font. The standard-14 Helvetica family needs no embedding, so text
-// stays visible and extractable; layout measures with the same deterministic
-// average advances the fallback measurers use, and emission positions every rune
-// absolutely, so measured and emitted selection agree by construction.
+// stays visible and extractable. Layout and absolute glyph placement share the
+// declared face's advances, including the question mark used for substitution.
 // WinAnsi covers U+0020-U+00FF plus the cp1252 0x80-0x9F set; anything else
 // renders as question mark (diagnosed) rather than vanishing silently.
-internal sealed class PdfFallbackFont
+internal sealed partial class PdfFallbackFont
 {
     public static PdfFallbackFont Helvetica { get; } = new("Helvetica", bold: false, italic: false);
     public static PdfFallbackFont HelveticaBold { get; } = new("Helvetica-Bold", bold: true, italic: false);
@@ -54,9 +53,8 @@ internal sealed class PdfFallbackFont
         return bold ? (italic ? HelveticaBoldOblique : HelveticaBold) : (italic ? HelveticaOblique : Helvetica);
     }
 
-    // Deterministic fallback metrics (1000-unit em): 500 for most runes, 1000
-    // for wide East-Asian/fullwidth ranges, 0 for combining marks. These are
-    // diagnosed-degradation constants, not a claim about Helvetica advances.
+    // Standard-face metrics use a 1000-unit em. Line-height and decoration
+    // defaults remain approximate; advances come from the face's Adobe AFM.
     public const int UnitsPerEm = 1000;
     public const double AscentEm = 0.718d;
     public const double DescentEm = 0.207d;
@@ -66,40 +64,53 @@ internal sealed class PdfFallbackFont
     public const double StrikeoutPositionEm = 0.25d;
     public const double StrikeoutThicknessEm = 0.05d;
 
-    public static double MeasureAdvanceEm(Rune rune)
+    public double MeasureAdvanceEm(Rune rune)
     {
         return MeasureAdvanceEm(rune.Value);
     }
 
-    public static double MeasureAdvanceEm(int codePoint)
+    public double MeasureAdvanceEm(int codePoint)
     {
-        if (codePoint < 0x20 || codePoint == 0x7F)
-        {
-            return 0d;
-        }
-
         if (IsNonRenderedControl(codePoint))
         {
             return 0d;
         }
 
-        // Combining marks render onto their base glyph without advancing.
-        UnicodeCategory markCategory = CharUnicodeInfo.GetUnicodeCategory(char.ConvertFromUtf32(codePoint), 0);
-        if (markCategory is UnicodeCategory.NonSpacingMark or UnicodeCategory.EnclosingMark)
-        {
-            return 0d;
-        }
+        TryEncodeWinAnsi(codePoint, out byte code);
+        return (Bold ? BoldAdvances : RegularAdvances)[code];
+    }
 
-        if (IsWide(codePoint))
+    // Containers may supply an allocated width (PPTX spans); preserve that
+    // placement contract while distributing advances according to the face.
+    // DOCX uses the natural width measured by the same face above.
+    public IReadOnlyList<PdfFallbackGlyph> PositionGlyphs(string text, double x, double baselineY,
+        double fontSize, double characterSpacing, double? allocatedWidth = null, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+        Rune[] runes = [.. text.EnumerateRunes()];
+        if (runes.Length == 0) return [];
+        double units = 0d;
+        foreach (Rune rune in runes) { token.ThrowIfCancellationRequested(); units += MeasureAdvanceEm(rune); }
+        double scale = allocatedWidth is { } width && units > 0d
+            ? Math.Max(0d, width - Math.Max(0, runes.Length - 1) * characterSpacing) / units
+            : fontSize / UnitsPerEm;
+        var glyphs = new List<PdfFallbackGlyph>(runes.Length);
+        for (int i = 0; i < runes.Length; i++)
         {
-            return 1000d;
+            token.ThrowIfCancellationRequested();
+            if (!IsNonRenderedControl(runes[i]))
+            {
+                TryEncodeWinAnsi(runes[i].Value, out byte code);
+                glyphs.Add(new(x, baselineY, code));
+            }
+            x += MeasureAdvanceEm(runes[i]) * scale;
+            if (i < runes.Length - 1) x += characterSpacing;
         }
-
-        return 500d;
+        return glyphs;
     }
 
     // RV01: layout constructs and format controls never reach glyph emission
-    // (tabs expand to spacing, breaks split lines, marks combine). Excluding them
+    // (tabs expand to spacing and breaks split lines). Excluding them
     // keeps missing-glyph detection, subset question-mark inclusion and emission
     // substitution aligned with what emission can actually drop.
     public static bool IsNonRenderedControl(Rune rune)
@@ -121,19 +132,6 @@ internal sealed class PdfFallbackFont
             or UnicodeCategory.ParagraphSeparator
             or UnicodeCategory.Surrogate;
     }
-    private static bool IsWide(int codePoint)
-    {
-        return (codePoint >= 0x1100 && codePoint <= 0x115F)
-            || (codePoint >= 0x2E80 && codePoint <= 0xA4CF)
-            || (codePoint >= 0xAC00 && codePoint <= 0xD7A3)
-            || (codePoint >= 0xF900 && codePoint <= 0xFAFF)
-            || (codePoint >= 0xFE10 && codePoint <= 0xFE1F)
-            || (codePoint >= 0xFE30 && codePoint <= 0xFE4F)
-            || (codePoint >= 0xFF00 && codePoint <= 0xFF60)
-            || (codePoint >= 0xFFE0 && codePoint <= 0xFFE6)
-            || (codePoint >= 0x20000 && codePoint <= 0x3FFFF);
-    }
-
     // WinAnsi (cp1252): ASCII/Latin-1 are identity; the 0x80-0x9F set maps through
     // the table below; controls, DEL, the five undefined positions and everything
     // outside WinAnsi render as question mark rather than vanishing.

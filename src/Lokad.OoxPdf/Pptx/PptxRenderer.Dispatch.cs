@@ -277,7 +277,8 @@ internal sealed partial class PptxRenderer
                         renderPlaceholders,
                         linkAnnotations,
                         reportedHyperlinkIds,
-                        sourcePartName);
+                        sourcePartName,
+                        cancellationToken);
                 }
 
                 break;
@@ -315,7 +316,7 @@ internal sealed partial class PptxRenderer
                 AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
                 IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, node, graphics, transform, sourceColorMap);
                 var tableHyperlinkScope = new PptxTextHyperlinkScope(context, sourcePartName, linkAnnotations, reportedHyperlinkIds);
-                DrawTextSpansWithFonts(tableTextSpans, graphics, fonts, tableHyperlinkScope);
+                DrawTextSpansWithFonts(tableTextSpans, graphics, fonts, tableHyperlinkScope, cancellationToken);
                 EndSlideNodeClip(graphics);
                 break;
             case PptxSceneNodeKind.UnknownGraphicFrame:
@@ -372,7 +373,8 @@ internal sealed partial class PptxRenderer
         bool renderPlaceholders,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
-        string? sourcePartName)
+        string? sourcePartName,
+        CancellationToken cancellationToken)
     {
         if (node.TextBody is null)
         {
@@ -383,7 +385,7 @@ internal sealed partial class PptxRenderer
         var key = new PptxTextSpanMemoKey(node, sourceColorMap, renderPlaceholders);
         if (context.TextSpanMemo is null || !context.TextSpanMemo.TryGetValue(key, out var spans))
             throw new InvalidOperationException("Shape text must be prepared before painting.");
-        DrawTextSpansWithFonts(spans, graphics, fonts, hyperlinkScope);
+        DrawTextSpansWithFonts(spans, graphics, fonts, hyperlinkScope, cancellationToken);
     }
 
     private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)

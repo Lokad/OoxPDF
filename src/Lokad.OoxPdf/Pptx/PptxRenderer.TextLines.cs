@@ -102,7 +102,7 @@ internal sealed partial class PptxRenderer
             {
                 // Keep the measured fallback advance when emission splits by face.
                 // A zero-width marker would collapse visible standard-font text.
-                double fallbackAdvance = PptxTextMetricRules.FallbackAdvanceWidth(rune.Utf16SequenceLength, 1, run.FontSize, 0d);
+                double fallbackAdvance = advanceEstimator.MeasureFallbackAdvance(rune, run.FontSize, run.FontFamily, run.Bold, run.Italic);
                 glyphs.Add(new PptxTextGlyphLayout(rune.Value, null, PptxGlyphTypefaceResolutionSource.Unresolved, 0,
                     fallbackAdvance, glyphs.Count > 0 ? run.CharacterSpacing : 0d));
                 previousFont = null;
