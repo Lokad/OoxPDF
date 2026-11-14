@@ -29,7 +29,7 @@ internal static partial class DocxNumberingTests
                 numbered[1].ListLabel!.NumberingChange?.PreviousText);
             TestAssert.Equal(4, paragraphs.Sum(p => DocxMathParagraphPolicy.GetPreparationEquations(p).Count));
             foreach (var paragraph in paragraphs.Where(p => p.Equations.Count != 0))
-                TestAssert.True(paragraph.HasSourceNumbering && DocxInlineContent.HasSupportedSourceOwner(paragraph),
+                TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph),
                     "A style-resolved list reference owns its actual revision metadata beside supported equations.");
         }
     }
@@ -96,8 +96,8 @@ internal static partial class DocxNumberingTests
                 (xml, w, _) => xml.Descendants(w + "p").First(p => p.Element(w + "pPr")?.Element(w + "numPr") is not null)
                     .Element(w + "pPr")!.Element(w + "numPr")!.Add(new XElement(w + "numId", new XAttribute(w + "val", id))));
             var first = document.Paragraphs.First(p => p.Equations.Count != 0);
-            TestAssert.True(first.ListLabel is null && !first.HasSourceNumbering && !DocxInlineContent.HasSupportedSourceOwner(first),
-                "A direct disabled/unknown reference cannot fall back to the style or invent revision ownership.");
+            TestAssert.True(first.ListLabel is null && DocxInlineContent.HasSupportedSourceOwner(first),
+                "A direct disabled/unknown reference suppresses its marker without erasing the actual mark owner.");
         }
     }
 

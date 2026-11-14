@@ -24,7 +24,6 @@ internal static partial class DocxInlineCompositionTests
             foreach (var invalid in new[]
             {
                 paragraph with { ParagraphMarkRun = null },
-                paragraph with { ListLabel = null, HasSourceNumbering = false },
                 paragraph with { ParagraphMarkRun = mark with { SourceRunIndex = 0 } },
                 paragraph with { ParagraphMarkRun = mark with { Revisions = [revision with { }] } }
             })

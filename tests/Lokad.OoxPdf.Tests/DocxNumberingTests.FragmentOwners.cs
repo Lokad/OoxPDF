@@ -29,7 +29,8 @@ internal static partial class DocxNumberingTests
             TestAssert.Equal(inserted && review ? "2." : null, numbered[2].ListLabel?.NumberingChange?.PreviousText);
             int pageEvents = cell.BodyElements.OfType<DocxPageBreakElement>().Sum(element => element.BreakCount);
             TestAssert.Equal(pure && kind.Contains("page", StringComparison.Ordinal) ? count : 0, pageEvents);
-            foreach (var continuation in paragraphs.Where(paragraph => paragraph.HasSourceNumbering && paragraph.ListLabel is null))
+            foreach (var continuation in paragraphs.SkipWhile(paragraph => !ReferenceEquals(paragraph, numbered[0]))
+                .Skip(1).TakeWhile(paragraph => !ReferenceEquals(paragraph, numbered[1])))
             {
                 TestAssert.True(continuation.Indent.FirstLinePoints is null && continuation.Indent.HangingPoints is null,
                     "A cell continuation does not repeat the source first-line offset.");

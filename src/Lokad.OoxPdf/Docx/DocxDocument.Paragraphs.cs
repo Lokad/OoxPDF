@@ -14,8 +14,6 @@ internal sealed record DocxParagraph(
     DocxParagraphKeepRules KeepRules,
     DocxListLabel? ListLabel)
 {
-    // Source numbering survives placement fragments whose painted label is suppressed.
-    public bool HasSourceNumbering { get; init; }
     public DocxParagraphShading? Shading { get; init; }
     public DocxParagraphIndent Indent { get; init; } = DocxParagraphIndent.Empty;
     public IReadOnlyList<DocxTabStop> TabStops { get; init; } = [];

@@ -19,13 +19,11 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(mark!.Revisions.Any(r => ReferenceEquals(r, insertion)), "The mark owns the original source revision object.");
         TestAssert.True(!DocxInlineContent.HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, default),
             "Ordinary text runs cannot stand in for an inserted paragraph mark.");
-        TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph), "Numbering gives the actual mark an explicit source owner.");
+        TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph), "The captured mark owns its actual source revision.");
         TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with { ParagraphMarkRun = null }),
             "A missing paragraph mark cannot own its insertion.");
         TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph with { ListLabel = null }),
             "Suppressing painted numbering does not erase its actual source owner.");
-        TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with { ListLabel = null, HasSourceNumbering = false }),
-            "Unnumbered mark revisions retain their existing fallback.");
         foreach (var invalid in new[]
         {
             mark with { Revisions = [insertion with { }] },
@@ -33,7 +31,7 @@ internal static partial class DocxInlineCompositionTests
             mark with { Text = "ordinary text" }
         })
             TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with { ParagraphMarkRun = invalid }),
-                "Value-equal or misplaced metadata cannot manufacture a numbering owner.");
+                "Value-equal or misplaced metadata cannot manufacture a source owner.");
         var deletion = insertion with { Kind = DocxRevisionKind.Deletion, SourceElement = "del" };
         TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with
             { Revisions = [deletion], ParagraphMarkRun = mark with { Revisions = [deletion] } }),

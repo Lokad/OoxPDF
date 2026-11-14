@@ -344,7 +344,6 @@ internal sealed partial class DocxReader
             resolvedParagraph.KeepRules,
             listLabel)
         {
-            HasSourceNumbering = sourceNumbering is not null,
             Shading = resolvedParagraph.Shading,
             Indent = resolvedParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,

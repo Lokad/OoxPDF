@@ -278,9 +278,7 @@ internal static class DocxInlineContent
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
-            paragraph.HasSourceNumbering || paragraph.ListLabel is not null ||
-            paragraph.ParagraphMarkRun?.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange }]
-                ? paragraph.ParagraphMarkRun : null, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
+            paragraph.ParagraphMarkRun, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
             paragraph.ConsumedParagraphMarks, paragraph.PropertyRevision, paragraph.InlineTextBoxes);
 
     // Reference identity and captured source position establish actual owners.
@@ -445,9 +443,9 @@ internal static class DocxInlineContent
         if (equationOwners is not null)
             foreach (var owner in equationOwners)
             { token.ThrowIfCancellationRequested(); remaining.Remove(owner); }
-        // A resolved mark owns its unique run-formatting snapshot independently
-        // of visible inline text. Insertion still requires a numbering owner
-        // supplied above; other mark kinds and duplicate histories retain fallback.
+        // The captured empty mark owns its insertion and unique run-formatting
+        // snapshot independently of visible inline text or numbering. Other mark
+        // kinds and duplicate formatting histories retain fallback.
         if (paragraphMark is { SourceRunIndex: -1 } && string.IsNullOrWhiteSpace(paragraphMark.Text))
         {
             if (paragraphMark.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange,
