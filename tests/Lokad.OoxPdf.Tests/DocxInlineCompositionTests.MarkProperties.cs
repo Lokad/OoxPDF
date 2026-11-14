@@ -64,8 +64,13 @@ internal static partial class DocxInlineCompositionTests
             if (container == "plain")
             {
                 var insertion = revision with { Kind = DocxRevisionKind.Insertion, SourceElement = "ins" };
+                TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph with
+                    { Revisions = [insertion], ParagraphMarkRun = mark with { Revisions = [insertion] } }, default),
+                    "The actual empty mark owns its insertion independently of visible numbering.");
+                var misplaced = insertion with { SourceElement = "pPrChange" };
                 TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph with
-                    { Revisions = [insertion], ParagraphMarkRun = mark with { Revisions = [insertion] } }, default), "Insertion still requires a visible numbering owner.");
+                    { Revisions = [misplaced], ParagraphMarkRun = mark with { Revisions = [misplaced] } }, default),
+                    "An insertion with the wrong source element cannot manufacture mark ownership.");
             }
             TestAssert.True(!DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph), "This change does not broaden note or typography correction guards.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
