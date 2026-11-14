@@ -1,4 +1,23 @@
 {
+  "docx-break-continuation-insets": [
+    "DocxRunBreakFragmentsKeepContinuationInsets",
+    "DocxRunBreakContinuationPaintKeepsSourceInsetsAndWords",
+    "DocxNumberedRunBreaksConsumeOneSourceCounterEvent",
+    "DocxNumberedRunBreaksPaintConsecutiveLabels",
+    "DocxReaderPromotesInlineRunPageBreakInsideParagraph",
+    "DocxReaderPromotesHyperlinkRunPageBreakInsideParagraph",
+    "DocxReaderPromotesSimpleFieldRunPageBreakInsideParagraph",
+    "DocxExplicitPageBreaksRetainEventsAndSingleMarkAdmission",
+    "DocxHiddenHardBreaksPreserveComposedPagesAndPaint",
+    "DocxHardBreaksUseInheritedVisibilityAndKeepVisibleOverrides",
+    "DocxSyntheticNumberingParagraphIndentOverridesLevelIndent",
+    "DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth",
+    "DocxInlineCompositionNumberedDisplayRowsMatchIndependentWord",
+    "DocxColumnAdmissionMatchesIndependentWordOrigins",
+    "DocxExplicitPageStartMatchesWordAcrossModesSizesAndSurroundingContent",
+    "DocxColumnAdmissionKeepsRunSplitsAndNavigation",
+    "PortableRenderingPageBreaksKeepMathPicturesAndNavigation"
+  ],
   "docx-numbered-run-breaks": [
     "DocxNumberedRunBreaksConsumeOneSourceCounterEvent",
     "DocxNumberedRunBreaksPaintConsecutiveLabels",

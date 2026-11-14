@@ -109,6 +109,7 @@ internal sealed partial class DocxReader
                 if (element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode)))
                 {
                     bool isContinuationFragment = false;
+                    DocxNumberingIndent? sourceListIndent = null;
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
                         retainEmptyColumnTail: true, isBreak: VisibleBreak))
                     {
@@ -136,7 +137,8 @@ internal sealed partial class DocxReader
                             isContinuationFragment: isContinuationFragment);
                         if (splitParagraph is not null)
                         {
-                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part)));
+                            sourceListIndent ??= splitParagraph.ListLabel?.Indent;
+                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceListIndent)));
                             isContinuationFragment = true;
                         }
                     }
@@ -399,13 +401,32 @@ internal sealed partial class DocxReader
         };
     }
 
-    private static DocxParagraph AdjustBreakParagraphFragment(DocxParagraph paragraph, ParagraphBreakPart part)
+    private static DocxParagraph AdjustBreakParagraphFragment(DocxParagraph paragraph, ParagraphBreakPart part,
+        DocxNumberingIndent? sourceListIndent = null)
     {
+        DocxParagraphIndent indent = paragraph.Indent;
+        if (part.StartsAfterBreak)
+        {
+            // A source paragraph keeps its continuation insets across a page or
+            // column. Suppressing the repeated label must not discard its level's
+            // indentation, or apply the paragraph's first-line offset again.
+            sourceListIndent ??= paragraph.ListLabel?.Indent;
+            indent = indent with
+            {
+                LeftPoints = indent.LeftPoints ?? sourceListIndent?.LeftPoints,
+                LeftValue = indent.LeftValue ?? sourceListIndent?.LeftValue,
+                RightPoints = indent.RightPoints ?? sourceListIndent?.RightPoints,
+                RightValue = indent.RightValue ?? sourceListIndent?.RightValue,
+                FirstLinePoints = null, FirstLineValue = null,
+                HangingPoints = null, HangingValue = null
+            };
+        }
         return paragraph with
         {
             SpacingBeforePoints = part.StartsAfterBreak ? 0d : paragraph.SpacingBeforePoints,
             SpacingAfterPoints = part.EndsBeforeBreak ? 0d : paragraph.SpacingAfterPoints,
-            ListLabel = part.StartsAfterBreak ? null : paragraph.ListLabel
+            ListLabel = part.StartsAfterBreak ? null : paragraph.ListLabel,
+            Indent = indent
         };
     }
 
