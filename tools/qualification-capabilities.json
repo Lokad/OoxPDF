@@ -1,4 +1,26 @@
 {
+  "docx-static-inheritance": [
+    "DocxInheritedStaticPicturesKeepContentInBothViews",
+    "DocxExplicitStaticReplacementClearsInheritedPictures",
+    "DocxInheritedStaticDrawingVariantsStayIndependent",
+    "DocxInheritedStaticTextBoxesKeepActualFontsAndRefusals",
+    "DocxFontPlanUsesEnabledAndInheritedStaticVariants",
+    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames",
+    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
+    "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
+    "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
+    "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
+    "DocxInheritedStaticFontsKeepTheirActualFaceAndFailures",
+    "DocxDisabledStaticSvgFontsUseSharedResourceReachability",
+    "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
+    "DocxSectionScopedInlineBoxesKeepVisibleLabelsInBothViews",
+    "DocxInheritedFirstStoryActivationKeepsItsRevisionLane",
+    "DocxDisabledStaticPropertyOwnersKeepTheBodyPrintScale",
+    "DocxDisabledStaticPropertyHistoryKeepsBodyPaintInBothViews",
+    "DocxEquationWarningsOmitUnselectedStaticParts",
+    "DocxEquationWarningsKeepActiveSharedStaticPartsAcrossPages",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-static-resource-fonts": [
     "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
     "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
@@ -19264,7 +19286,12 @@
     "DocxNoteMathFieldsStaticTablesRetainExactClippedAndUnsupportedFallbacks",
     "DocxNoteMathFieldsStaticCountersRetainUnknownAndInconsistentFallbacks",
     "DocxOrdinaryPictureBoxesKeepCancellationAndPurePictureFallback",
-    "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow"
+    "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow",
+    "DocxInheritedStaticPicturesKeepContentInBothViews",
+    "DocxExplicitStaticReplacementClearsInheritedPictures",
+    "DocxInheritedStaticDrawingVariantsStayIndependent",
+    "DocxInheritedStaticTextBoxesKeepActualFontsAndRefusals",
+    "DocxFontPlanUsesEnabledAndInheritedStaticVariants"
   ],
   "docx-column-admission": [
     "DocxColumnAdmission",

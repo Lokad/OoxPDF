@@ -305,7 +305,7 @@ internal static class DocxPageTests
         TestAssert.True(annotation.Width > 0d, "The annotation should cover footer hyperlink text.");
     }
 
-    public static void DocxFontPlanIncludesAllHeaderFooterVariants()
+    public static void DocxFontPlanUsesEnabledAndInheritedStaticVariants()
     {
         var defaultHeader = DocxTests.CreateFontPlanParagraph(new DocxTextRun("DefaultHeader", 11d, null, false, false, false, null, "Default Sans")
         {
@@ -365,9 +365,14 @@ internal static class DocxPageTests
         };
         var resolver = new MapFontResolver(["Default Sans", "First Sans", "Even Sans", "Section Sans", "Section Footer Sans"], "Resolver Fallback");
 
-        string plannedTexts = string.Join("|", DocxFontPlan.Create(document, resolver, CancellationToken.None).Runs.Select(run => run.Run.Text).Order(StringComparer.Ordinal));
-
-        TestAssert.Equal("DefaultHeader|EvenFooter|FirstHeader|SectionFooter|SectionHeader", plannedTexts);
+        string PlannedTexts(DocxDocument source) => string.Join("|", DocxFontPlan.Create(source, resolver, CancellationToken.None)
+            .Runs.Select(run => run.Run.Text).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal));
+        TestAssert.Equal("DefaultHeader|SectionFooter|SectionHeader", PlannedTexts(document));
+        TestAssert.Equal("DefaultHeader|EvenFooter|FirstHeader|SectionFooter|SectionHeader",
+            PlannedTexts(document with { PageSettings = document.PageSettings with { TitlePage = true, EvenAndOddHeaders = true } }));
+        string inspectedTexts = string.Join("|", DocxBlockTraversal.EnumerateSourceParagraphs(document)
+            .SelectMany(paragraph => paragraph.Runs).Select(run => run.Text).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal));
+        TestAssert.Equal("DefaultHeader|EvenFooter|FirstHeader|SectionFooter|SectionHeader", inspectedTexts);
     }
 
     public static void DocxLayoutUsesResolvedBodyPageFieldForLineBreaking()

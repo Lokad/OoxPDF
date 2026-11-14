@@ -77,6 +77,10 @@ internal sealed partial class DocxLayoutEngine
             new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedFooterBodyElementsByType =
             new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> inheritedHeaderDrawingsByType =
+            new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> inheritedFooterDrawingsByType =
+            new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase);
 
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
@@ -91,7 +95,9 @@ internal sealed partial class DocxLayoutEngine
                 inheritedHeadersByType,
                 inheritedFootersByType,
                 inheritedHeaderBodyElementsByType,
-                inheritedFooterBodyElementsByType);
+                inheritedFooterBodyElementsByType,
+                inheritedHeaderDrawingsByType,
+                inheritedFooterDrawingsByType);
             sectionSettingsByElementIndex[elementIndex] = new DocxEffectiveSectionSettings(
                 effectiveSettings,
                 CreateSectionLayoutProperties(sectionBreak));
@@ -99,6 +105,8 @@ internal sealed partial class DocxLayoutEngine
             inheritedFootersByType = effectiveSettings.FooterParagraphsByType;
             inheritedHeaderBodyElementsByType = effectiveSettings.HeaderBodyElementsByType;
             inheritedFooterBodyElementsByType = effectiveSettings.FooterBodyElementsByType;
+            inheritedHeaderDrawingsByType = effectiveSettings.HeaderFloatingDrawingsByType;
+            inheritedFooterDrawingsByType = effectiveSettings.FooterFloatingDrawingsByType;
         }
 
         finalSectionSettings = new DocxEffectiveSectionSettings(
@@ -107,7 +115,9 @@ internal sealed partial class DocxLayoutEngine
                 inheritedHeadersByType,
                 inheritedFootersByType,
                 inheritedHeaderBodyElementsByType,
-                inheritedFooterBodyElementsByType),
+                inheritedFooterBodyElementsByType,
+                inheritedHeaderDrawingsByType,
+                inheritedFooterDrawingsByType),
             document.FinalSectionBreak is null
                 ? new DocxSectionLayoutProperties(null, null, null, null, null, null, [])
                 : CreateSectionLayoutProperties(document.FinalSectionBreak));
@@ -180,19 +190,23 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedFootersByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedHeaderBodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedFooterBodyElementsByType)
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedFooterBodyElementsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> inheritedHeaderDrawingsByType,
+        IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> inheritedFooterDrawingsByType)
     {
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = MergeInheritedStaticParagraphs(inheritedHeadersByType, settings.HeaderParagraphsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = MergeInheritedStaticParagraphs(inheritedFootersByType, settings.FooterParagraphsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = MergeInheritedStaticBodyElements(inheritedHeaderBodyElementsByType, settings.HeaderBodyElementsByType);
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = MergeInheritedStaticBodyElements(inheritedFooterBodyElementsByType, settings.FooterBodyElementsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> headersByType = MergeInheritedStaticItems(inheritedHeadersByType, settings.HeaderParagraphsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> footersByType = MergeInheritedStaticItems(inheritedFootersByType, settings.FooterParagraphsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> headerBodyElementsByType = MergeInheritedStaticItems(inheritedHeaderBodyElementsByType, settings.HeaderBodyElementsByType);
+        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> footerBodyElementsByType = MergeInheritedStaticItems(inheritedFooterBodyElementsByType, settings.FooterBodyElementsByType);
 
         return settings with
         {
             HeaderParagraphsByType = headersByType,
             FooterParagraphsByType = footersByType,
             HeaderBodyElementsByType = headerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(headersByType) : headerBodyElementsByType,
-            FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType
+            FooterBodyElementsByType = footerBodyElementsByType.Count == 0 ? ToStaticBodyElementsByType(footersByType) : footerBodyElementsByType,
+            HeaderFloatingDrawingsByType = MergeInheritedStaticItems(inheritedHeaderDrawingsByType, settings.HeaderFloatingDrawingsByType),
+            FooterFloatingDrawingsByType = MergeInheritedStaticItems(inheritedFooterDrawingsByType, settings.FooterFloatingDrawingsByType)
         };
     }
 
@@ -205,47 +219,26 @@ internal sealed partial class DocxLayoutEngine
             StringComparer.OrdinalIgnoreCase);
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> MergeInheritedStaticBodyElements(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> inheritedBodyElementsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> localBodyElementsByType)
+    // The reader supplies a key even for an explicitly empty story. Replacing
+    // that list clears the previous owner; an absent key inherits it unchanged.
+    private static IReadOnlyDictionary<string, IReadOnlyList<T>> MergeInheritedStaticItems<T>(
+        IReadOnlyDictionary<string, IReadOnlyList<T>> inheritedByType,
+        IReadOnlyDictionary<string, IReadOnlyList<T>> localByType)
     {
-        if (inheritedBodyElementsByType.Count == 0)
+        if (inheritedByType.Count == 0)
         {
-            return localBodyElementsByType;
+            return localByType;
         }
 
-        if (localBodyElementsByType.Count == 0)
+        if (localByType.Count == 0)
         {
-            return inheritedBodyElementsByType;
+            return inheritedByType;
         }
 
-        var merged = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(inheritedBodyElementsByType, StringComparer.OrdinalIgnoreCase);
-        foreach ((string type, IReadOnlyList<DocxBodyElement> bodyElements) in localBodyElementsByType)
+        var merged = new Dictionary<string, IReadOnlyList<T>>(inheritedByType, StringComparer.OrdinalIgnoreCase);
+        foreach ((string type, IReadOnlyList<T> items) in localByType)
         {
-            merged[type] = bodyElements;
-        }
-
-        return merged;
-    }
-
-    private static IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> MergeInheritedStaticParagraphs(
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedParagraphsByType,
-        IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> localParagraphsByType)
-    {
-        if (inheritedParagraphsByType.Count == 0)
-        {
-            return localParagraphsByType;
-        }
-
-        if (localParagraphsByType.Count == 0)
-        {
-            return inheritedParagraphsByType;
-        }
-
-        var merged = new Dictionary<string, IReadOnlyList<DocxParagraph>>(inheritedParagraphsByType, StringComparer.OrdinalIgnoreCase);
-        foreach ((string type, IReadOnlyList<DocxParagraph> paragraphs) in localParagraphsByType)
-        {
-            merged[type] = paragraphs;
+            merged[type] = items;
         }
 
         return merged;
