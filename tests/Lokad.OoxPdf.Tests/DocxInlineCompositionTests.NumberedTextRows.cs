@@ -52,7 +52,7 @@ internal static partial class DocxInlineCompositionTests
                 LineSpacingFactor = 1.15d,
                 Spacing = original.Paragraphs[0].Spacing with { LineValue = explicitSpacing ? "276" : null, LineRuleValue = "auto" }
             };
-            var source = original with { BodyElements = [new DocxParagraphElement(paragraph)], Paragraphs = [paragraph] };
+            var source = original with { BodyElements = [new DocxParagraphElement(paragraph)] };
             var plan = DocxFontPlan.Create(source, resolver, default);
             var measurer = DocxFontPlanTextMeasurer.CreateAsync(plan, resolver.Resolve(new FontRequest("DejaVu Sans", false, false)),
                 default, resolver).GetAwaiter().GetResult();
