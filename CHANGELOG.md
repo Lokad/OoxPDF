@@ -36,6 +36,7 @@
   They also retain fitting equation rows on their source page when only trailing spacing overflows.
   Nonprinting editing metadata around page/column breaks preserves paragraph spacing.
   Repeated column breaks retain every source boundary and one paragraph mark.
+  Repeated and leading page breaks preserve explicitly authored empty pages.
   Hidden run breaks and inline text boxes
   honor inherited visibility; annotation-only revision scopes retain neighboring
   equations, including scopes containing hyperlinks, complete empty stored fields

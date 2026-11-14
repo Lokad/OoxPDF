@@ -1186,7 +1186,68 @@ internal static class DocxPageTests
             .SelectMany(page => page.Items.OfType<DocxTextLineLayout>()).Where(line => !string.IsNullOrWhiteSpace(line.Text));
     }
 
-    private static DocxDocument ReadBreakMetadataDocument(string content, OoxPdfDocxMarkupMode mode, int columns = 1)
+    public static void DocxExplicitPageBreaksRetainEventsAndSingleMarkAdmission()
+    {
+        foreach (OoxPdfDocxMarkupMode mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in Enum.GetValues<OoxPdfDocxMarkupGeometryMode>())
+        foreach (string carrier in new[] { "pure", "runs", "metadata", "mixed", "leading" })
+        {
+            var engine = new DocxLayoutEngine(geometry);
+            var measurer = new DocxTests.FamilyWidthTextMeasurer();
+            DocxDocument Read(int count) => ReadBreakMetadataDocument(Content(count), mode, omitBeforeParagraph: carrier == "leading");
+            DocxLayout single = engine.Create(Read(1), measurer, default);
+            var singleAfter = single.Pages[^1].Items.OfType<DocxTextLineLayout>().Single(line => line.Text == "AFTER BREAK");
+            foreach (int count in new[] { 1, 2, 3, 4 })
+            {
+                DocxDocument document = Read(count);
+                var events = document.BodyElements.OfType<DocxPageBreakElement>().ToArray();
+                TestAssert.Equal(count, events.Sum(boundary => boundary.BreakCount));
+                TestAssert.Equal(carrier is "mixed" or "leading" ? 0 : 1, events.Count(boundary => boundary.BreakParagraph is not null));
+                var snapshot = new DocxRenderer(null, mode, geometry).InspectStructure(document);
+                TestAssert.Equal(count, snapshot.Blocks.Sum(block => block.SourceBreakCount ?? 0));
+                DocxLayout layout = count == 1 ? single : engine.Create(document, measurer, default);
+                TestAssert.Equal(count + 1, layout.Pages.Count);
+                var after = layout.Pages[^1].Items.OfType<DocxTextLineLayout>().Single(line => line.Text == "AFTER BREAK");
+                TestAssert.Equal(singleAfter.X, after.X);
+                TestAssert.Equal(singleAfter.BaselineY, after.BaselineY);
+                string expected = carrier switch
+                {
+                    "mixed" => "BEFOREBREAKINLINEBEFOREINLINEAFTERAFTERBREAK",
+                    "leading" => "INLINEAFTERAFTERBREAK",
+                    _ => "BEFOREBREAKAFTERBREAK"
+                };
+                string actual = string.Concat(layout.Pages.SelectMany(page => page.Items.OfType<DocxTextLineLayout>()).Select(line => line.Text));
+                TestAssert.Equal(expected, string.Concat(actual.Where(character => !char.IsWhiteSpace(character))));
+            }
+
+            string Content(int count)
+            {
+                const string item = "<w:br w:type=\"page\"/>";
+                if (carrier == "runs") return string.Concat(Enumerable.Repeat("<w:r>" + item + "</w:r>", count));
+                string run = "<w:r>" + (carrier == "mixed" ? "<w:t>INLINE BEFORE</w:t>" : "") +
+                    string.Concat(Enumerable.Repeat(item, count)) + (carrier is "mixed" or "leading" ? "<w:t>INLINE AFTER</w:t>" : "") + "</w:r>";
+                return carrier == "metadata"
+                    ? "<w:sdt><w:sdtPr/><w:sdtContent><w:smartTag><w:smartTagPr/><w:permStart w:id=\"28\"/>" + run + "<w:permEnd w:id=\"28\"/></w:smartTag></w:sdtContent></w:sdt>"
+                    : run;
+            }
+        }
+    }
+
+    public static void DocxRepeatedPageBreaksRetainLayoutPageLimit()
+    {
+        var document = ReadBreakMetadataDocument("<w:r>" + string.Concat(Enumerable.Repeat("<w:br w:type=\"page\"/>", 4)) + "</w:r>", OoxPdfDocxMarkupMode.Final);
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var measurer = new DocxTests.FamilyWidthTextMeasurer();
+        using (OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxPagesPerConversion = 2 }))
+        {
+            var error = TestAssert.Throws<OoxPdfLimitExceededException>(() => engine.Create(document, measurer, default));
+            TestAssert.Contains("layout pagination", error.Message);
+        }
+        using (OoxConversionBudget.BeginScope(new OoxConversionLimits { MaxPagesPerConversion = 5 }))
+            TestAssert.Equal(5, engine.Create(document, measurer, default).Pages.Count);
+    }
+
+    private static DocxDocument ReadBreakMetadataDocument(string content, OoxPdfDocxMarkupMode mode, int columns = 1, bool omitBeforeParagraph = false)
     {
         using MemoryStream stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
         {
@@ -1204,7 +1265,7 @@ internal static class DocxPageTests
                 """,
             ["word/document.xml"] = $$"""
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
-                  <w:p><w:r><w:t>BEFORE BREAK</w:t></w:r></w:p>
+                  {{(omitBeforeParagraph ? "" : "<w:p><w:r><w:t>BEFORE BREAK</w:t></w:r></w:p>")}}
                   <w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240"/></w:pPr>{{content}}</w:p>
                   <w:p><w:r><w:t>AFTER BREAK</w:t></w:r></w:p>
                   <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:left="1440" w:right="1440" w:top="1440" w:bottom="1440"/><w:cols w:num="{{columns}}"/></w:sectPr>

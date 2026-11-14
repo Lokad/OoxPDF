@@ -1262,9 +1262,16 @@ internal sealed partial class DocxLayoutEngine
                     activeColumnHasContent = true;
                 }
 
-                if (HasPageContent() || pageBreak.BreakParagraph is not null)
+                // Explicit characters also end empty frames. Paragraph-level
+                // page-break-before remains an admission rule and can coalesce.
+                for (int breakIndex = 0; breakIndex < pageBreak.BreakCount; breakIndex++)
                 {
-                    FinishPage();
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (HasPageContent() || pageBreak.BreakParagraph is not null ||
+                        pageBreak.SourceKind == DocxBreakSourceKind.RunBreak)
+                    {
+                        FinishPage();
+                    }
                 }
 
                 pendingSpacingAfter = 0d;

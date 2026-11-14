@@ -99,6 +99,8 @@ internal sealed record DocxStructureBlockSnapshot(
     double? ManualBreakLineSpacingPoints,
     double? ManualBreakLineSpacingFactor)
 {
+    public int? SourceBreakCount { get; init; }
+
     public static DocxStructureBlockSnapshot ForUnknown(
         int blockIndex,
         string? previousKind,

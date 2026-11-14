@@ -67,7 +67,10 @@ internal sealed record DocxImplicitParagraphElement(DocxBreakSourceKind SourceKi
     }
 }
 
-internal sealed record DocxPageBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement;
+internal sealed record DocxPageBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement
+{
+    public int BreakCount { get; init; } = 1;
+}
 
 internal sealed record DocxManualBreakElement(DocxBreakSourceKind SourceKind, string? Value, DocxParagraph? BreakParagraph) : DocxBodyElement
 {
@@ -109,11 +112,13 @@ internal static class DocxBodyElementFactory
         DocxBreakSourceKind sourceKind,
         string? value,
         DocxParagraph? breakParagraph,
-        IReadOnlyList<DocxRevisionInfo>? revisions)
+        IReadOnlyList<DocxRevisionInfo>? revisions,
+        int breakCount = 1)
     {
         return new DocxPageBreakElement(sourceKind, value, breakParagraph)
         {
-            Revisions = revisions ?? breakParagraph?.Revisions ?? []
+            Revisions = revisions ?? breakParagraph?.Revisions ?? [],
+            BreakCount = breakCount
         };
     }
 
