@@ -1,5 +1,8 @@
 {
   "docx-tab-text-row-metrics": [
+    "DocxSimpleScriptPlainFramesRetainShapingAndUnknownTextFallbacks",
+    "DocxSimpleScriptNeighborsKeepUnchangedParagraphGeometry",
+    "DocxSimpleScriptNeighborsMatchIndependentWordMinimumFrames",
     "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
     "DocxTabbedTextRowsShareKeepAndWidowAdmission",
     "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",

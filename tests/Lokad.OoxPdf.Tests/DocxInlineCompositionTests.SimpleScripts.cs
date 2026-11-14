@@ -61,9 +61,9 @@ internal static partial class DocxInlineCompositionTests
         var paragraph = DocxTests.ReadDocx(StaticNoteAdmissionCasePath("ordinary-minimum-line-20.docx"), OoxPdfDocxMarkupMode.Final).Paragraphs[1];
         bool Eligible(string text) => DocxPlainBodyFrame.HasPlainTextContent(paragraph with
             { Runs = [paragraph.Runs[0] with { Text = text }] });
-        foreach (string text in new[] { "", "AV 123!\r\n", "caf\u00e9 \u010c\u01ce", "\u1ea1 \u1f04", "\u0391\u03bb\u03c6\u03b1", "\u0410\u043b\u044c\u0444\u0430" })
-            TestAssert.True(Eligible(text), "Qualified simple letters and existing printable ASCII retain plain frames.");
-        foreach (string text in new[] { "e\u0301", "\u0483", "\u037e", "\u00d7", "\u00a0", "\t", "\u0000", "\u200f", "\u202e",
+        foreach (string text in new[] { "", "AV 123!\r\n", "\t", "AV\t123", "caf\u00e9 \u010c\u01ce", "\u1ea1 \u1f04", "\u0391\u03bb\u03c6\u03b1", "\u0410\u043b\u044c\u0444\u0430" })
+            TestAssert.True(Eligible(text), "Qualified simple letters, printable ASCII and supported horizontal tabs retain plain frames.");
+        foreach (string text in new[] { "e\u0301", "\u0483", "\u037e", "\u00d7", "\u00a0", "\u0000", "\u200f", "\u202e",
             "\u05d0", "\u0627", "\u0915", "\u0e01", "\u4e2d", "\U0001e900", "\U0001f600", "\ud800" })
             TestAssert.True(!Eligible(text), "Combining, bidi, complex/unknown scripts, controls and invalid scalars retain explicit fallback.");
         TestAssert.True(!DocxPlainBodyFrame.HasPlainTextContent(paragraph with
