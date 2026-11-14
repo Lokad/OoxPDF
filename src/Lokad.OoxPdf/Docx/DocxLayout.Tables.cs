@@ -747,7 +747,7 @@ internal sealed partial class DocxLayoutEngine
             }
 
             int ResolveKeepBoundary(IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> lines,
-                int first, int end)
+                int first, int end, double? maximumContentHeight = null)
             {
                 // Work backwards so moving a target also reconsiders its kept
                 // predecessor. Stop at a legal source boundary, not a partial
@@ -763,37 +763,62 @@ internal sealed partial class DocxLayoutEngine
                     if (before == 0) continue;
                     if (after != 0)
                     {
-                        if (RequiresAtomicParagraphKeep(rules, group.Select(item => item.Line)) ||
+                        if (RequiresAtomicParagraphKeep(rules, group.Select(item => item.Line), maximumContentHeight) ||
                             (rules.WidowControl ?? (reviewFragmentScale == 1d)) && (before == 1 || before == 2 && after == 1))
                             end = Math.Max(first, group.First().Index);
                         else if ((rules.WidowControl ?? (reviewFragmentScale == 1d)) && after == 1)
                             end = group.Last().Index - 1;
                     }
-                    if (before != 0 && after == 0 && rules.KeepNext == true &&
+                    if (after == 0 && rules.KeepNext == true &&
                         lines.Any(line => line.SourceParagraphIndex == index + 1) &&
                         lines.Select((line, position) => (Line: line, Position: position))
-                            .Where(item => item.Line.SourceParagraphIndex == index + 1).All(item => item.Position >= end))
+                            .Where(item => item.Line.SourceParagraphIndex == index + 1).All(item => item.Position >= end) &&
+                        (maximumContentHeight is null || RequiresAtomicNextGroup(paragraphs, lines, index, maximumContentHeight.Value)))
                         end = Math.Max(first, group.First().Index);
                 }
                 return end;
             }
 
-            bool RequiresAtomicParagraphKeep(DocxParagraphKeepRules rules, IEnumerable<DocxTextLineLayout> lines)
+            bool RequiresAtomicParagraphKeep(DocxParagraphKeepRules rules, IEnumerable<DocxTextLineLayout> lines,
+                double? maximumContentHeight = null) =>
+                (rules.KeepLines == true || rules.KeepNext == true) &&
+                !CanRelaxMeasuredKeep(lines, maximumContentHeight ?? maximumPageContentHeight);
+
+            bool RequiresAtomicNextGroup(IReadOnlyList<DocxParagraph> paragraphs, IReadOnlyList<DocxTextLineLayout> lines,
+                int paragraphIndex, double maximumContentHeight)
             {
-                if (rules.KeepLines != true && rules.KeepNext != true) return false;
-                if (row.IsHeader || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue)) return true;
+                // The original connected group has one admission decision. A
+                // consumed prefix must not turn an impossible group into a new
+                // atomic tail on every following page.
+                int first = paragraphIndex, last = paragraphIndex + 1;
+                while (first > 0 && paragraphs[first - 1].EffectiveProperties.KeepRules.KeepNext == true)
+                { cancellationToken.ThrowIfCancellationRequested(); first--; }
+                while (last + 1 < paragraphs.Count && paragraphs[last].EffectiveProperties.KeepRules.KeepNext == true)
+                { cancellationToken.ThrowIfCancellationRequested(); last++; }
+                foreach (var line in lines)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (line.SourceParagraphIndex is not { } owner || owner < 0 || owner >= paragraphs.Count ||
+                        !ReferenceEquals(line.SourceParagraph, paragraphs[owner])) return true;
+                }
+                return !CanRelaxMeasuredKeep(lines.Where(line => line.SourceParagraphIndex >= first &&
+                    line.SourceParagraphIndex <= last), maximumContentHeight);
+            }
+
+            bool CanRelaxMeasuredKeep(IEnumerable<DocxTextLineLayout> lines, double maximumContentHeight)
+            {
+                if (row.IsHeader || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) ||
+                    !double.IsFinite(maximumContentHeight) || maximumContentHeight <= 0d) return false;
                 double lower = double.PositiveInfinity, upper = double.NegativeInfinity;
                 foreach (var line in lines)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top)) return true;
+                    if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top)) return false;
                     lower = Math.Min(lower, bottom); upper = Math.Max(upper, top);
                 }
-                // A paragraph too tall for even an empty body frame cannot be
-                // kept on one page. Reuse ordinary row flow instead of painting
-                // its remaining source below the page. Fitting/unknown frames
-                // and authored row heights retain their existing keep policy.
-                return !double.IsFinite(upper - lower) || upper - lower <= maximumPageContentHeight + .001d;
+                // An impossible keep uses ordinary source flow; fitting and
+                // unknown measured groups retain their existing constraint.
+                return double.IsFinite(upper - lower) && upper - lower > maximumContentHeight + .001d;
             }
 
             // Cells consume natural source frames independently. Exposed solid
@@ -875,7 +900,9 @@ internal sealed partial class DocxLayoutEngine
                             cancellationToken.ThrowIfCancellationRequested();
                             end++;
                         }
-                        int keptEnd = ResolveKeepBoundary(cell.Paragraphs, cell.TextLines, first, end);
+                        double emptyContentHeight = maximumPageContentHeight - topInsets[cellIndex] - finalBottomInset -
+                            headerRows.Sum(entry => frame.RowHeights[entry.RowIndex]);
+                        int keptEnd = ResolveKeepBoundary(cell.Paragraphs, cell.TextLines, first, end, emptyContentHeight);
                         if (row.IsHeader && keptEnd != end) return false;
                         end = keptEnd;
                         if (end == first) return false;

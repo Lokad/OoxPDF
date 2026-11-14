@@ -30,8 +30,9 @@
   groups flow without repeatedly starting new pages. Natural-height table body rows
   also flow paragraphs with a keep constraint that cannot fit on one page; fitting paragraph keeps
   and explicit breaks remain respected. Measured cell flow selects legal paragraph
-  boundaries and retries fragmentation after page admission. Unfit cell keep-next
-  chains remain unqualified. Hidden run breaks and inline text boxes
+  boundaries and retries fragmentation after page admission. Measured unfit cell
+  keep-next groups flow while fitting paragraphs and groups remain together.
+  Hidden run breaks and inline text boxes
   honor inherited visibility; annotation-only revision scopes retain neighboring
   equations, including scopes containing hyperlinks, complete empty stored fields
   and reader-proven empty move ranges.

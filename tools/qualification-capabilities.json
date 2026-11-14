@@ -1135,6 +1135,8 @@
       "StagedPageMemory"
   ],
   "docx-oversized-kept-cell-content": [
+      "DocxUnfitCellKeepNextGroups",
+      "DocxCellKeepGroupsRespectEmptyContentAfterHeadersAndPadding",
       "DocxFittingKeptCellParagraphs",
       "DocxNaturalRowFragmentsKeepIndependentWordBorderCoverage",
       "DocxTrailingRowsPreserveIndependentWordSpanningInk",
@@ -4978,6 +4980,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxUnfitCellKeepNextGroups",
+    "DocxCellKeepGroupsRespectEmptyContentAfterHeadersAndPadding",
     "DocxFittingKeptCellParagraphs",
     "DocxOversizedCellKeepNext",
     "DocxFittingCellKeepNextPreservesTargetAndPageAdmission",

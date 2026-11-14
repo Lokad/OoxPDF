@@ -140,16 +140,58 @@ internal static class DocxTableKeepContentTests
     public static void DocxFittingKeptCellParagraphsRetainUnqualifiedAtomicFallbacks()
     {
         foreach (var mode in Modes)
-        foreach (string rule in new[] { "exact", "atLeast", "header", "unfit-chain" })
+        foreach (string rule in new[] { "exact", "atLeast", "header" })
+        foreach (bool next in new[] { false, true })
         {
             var paragraphs = Enumerable.Range(0, 3).Select(index => Paragraph(16, true, index.ToString())).ToArray();
-            if (rule == "unfit-chain")
+            if (next)
                 for (int index = 0; index < 2; index++)
                     paragraphs[index] = paragraphs[index] with { KeepRules = paragraphs[index].KeepRules with { KeepNext = true } };
-            var layout = Layout(Document(paragraphs, false, rule == "unfit-chain" ? null : rule), mode);
+            var layout = Layout(Document(paragraphs, false, rule), mode);
             var row = layout.Pages.SelectMany(page => page.Items.OfType<DocxTableRowLayout>()).Single();
             TestAssert.Equal(1, row.FragmentCount);
-            TestAssert.True(row.Height > 180d, "Unqualified header, declared-height and unfit next-chain fallbacks remain explicit; this does not claim visible completeness.");
+            TestAssert.True(row.Height > 180d, "Unqualified header and declared-height fallbacks remain explicit; this does not claim visible completeness.");
+        }
+    }
+
+    public static void DocxUnfitCellKeepNextGroupsPreserveCompleteParagraphs()
+    {
+        foreach (var mode in Modes)
+        foreach (bool prefix in new[] { false, true })
+        foreach (int[] counts in new int[][] { [16, 16, 16], [4, 14, 4], [5, 5, 9], [2, 8, 10], [4, 52, 4] })
+        {
+            var paragraphs = counts.Select((count, index) => Paragraph(count, true, "ABC"[index].ToString())).ToArray();
+            for (int index = 0; index < 2; index++)
+                paragraphs[index] = paragraphs[index] with { KeepRules = paragraphs[index].KeepRules with { KeepNext = true } };
+            var layout = Layout(Document(paragraphs, prefix), mode);
+            for (int index = 0; index < paragraphs.Length; index++)
+            {
+                var paragraph = paragraphs[index];
+                AssertLines(layout, paragraph, counts[index], "ABC"[index].ToString());
+                if (counts[index] <= 18)
+                    TestAssert.Equal(1, layout.Pages.Count(page => page.Items.OfType<DocxTableRowLayout>()
+                        .SelectMany(row => row.Cells).SelectMany(cell => cell.TextLines)
+                        .Any(line => ReferenceEquals(line.SourceParagraph, paragraph))));
+            }
+        }
+    }
+
+    public static void DocxCellKeepGroupsRespectEmptyContentAfterHeadersAndPadding()
+    {
+        foreach (var mode in Modes)
+        foreach (int headerLines in new[] { 0, 3 })
+        foreach (double padding in new[] { 0d, 15d })
+        {
+            var paragraphs = Enumerable.Range(0, 3).Select(index => Paragraph(6, true, "ABC"[index].ToString())).ToArray();
+            for (int index = 0; index < 2; index++)
+                paragraphs[index] = paragraphs[index] with { KeepRules = paragraphs[index].KeepRules with { KeepNext = true } };
+            var layout = Layout(Document(paragraphs, false, headerLines: headerLines, verticalPadding: padding), mode);
+            TestAssert.Equal(headerLines == 0 && padding == 0d ? 1 : 2, layout.Pages.Count);
+            for (int index = 0; index < paragraphs.Length; index++)
+                AssertLines(layout, paragraphs[index], 6, "ABC"[index].ToString());
+            if (headerLines != 0)
+                TestAssert.True(layout.Pages.All(page => page.Items.OfType<DocxTableRowLayout>().Any(row => row.IsHeader)),
+                    "Each admitted continuation keeps its persistent header without hiding body source frames.");
         }
     }
 
@@ -184,11 +226,15 @@ internal static class DocxTableKeepContentTests
         DocxTests.CreateDocxLayoutParagraph(string.Join('\n', Enumerable.Range(0, count).Select(index => label + index.ToString("000"))),
             10d, 10d, keepRules: DocxParagraphKeepRules.Empty with { KeepLines = keep, WidowControl = false });
 
-    private static DocxDocument Document(IReadOnlyList<DocxParagraph> paragraphs, bool prefix, string? declaredRule = null)
+    private static DocxDocument Document(IReadOnlyList<DocxParagraph> paragraphs, bool prefix, string? declaredRule = null,
+        int headerLines = 0, double verticalPadding = 0d)
     {
         var cells = new DocxTableCell(string.Empty, paragraphs, null, null, null, null, [],
-            DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d, TopPoints = 0d, BottomPoints = 0d });
+            DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d, TopPoints = verticalPadding, BottomPoints = verticalPadding });
         var rows = new List<DocxTableRow>();
+        if (headerLines != 0)
+            rows.Add(new([new DocxTableCell(string.Empty, [Paragraph(headerLines, false, "R")], null, null, null, null, [],
+                DocxTableCellMargins.Empty with { LeftPoints = 0d, RightPoints = 0d, TopPoints = 0d, BottomPoints = 0d })], null) { IsHeader = true });
         if (prefix) rows.Add(new([new DocxTableCell("Prefix", [], null, null, null, null, [], DocxTableCellMargins.Empty)], 90d)
             { HeightRuleValue = "exact", CantSplit = true });
         rows.Add(new([cells], declaredRule is null or "header" ? null : 600d)

@@ -524,8 +524,10 @@ Supported within the following constraints:
   body frame. Measured cell flow selects complete kept-paragraph boundaries and
   retries on a fresh page when its first kept group cannot fit the remainder;
   fitting paragraph keeps and existing next-target boundaries remain effective.
-  Unfit keep-next chains across otherwise fitting cell paragraphs remain
-  unqualified and can still overflow. Repeating headers, declared row heights and unresolved rich frames
+  Connected keep-next groups too tall for the empty content frame flow while
+  independently fitting paragraphs stay whole. Persistent headers and cell
+  padding reduce that frame; source-matched Word pagination remains unqualified.
+  Repeating headers, declared row heights and unresolved rich frames
   retain their existing fallbacks. Arbitrary rich-row
   fragmentation remains approximate.
   Conditional bands, columns,
