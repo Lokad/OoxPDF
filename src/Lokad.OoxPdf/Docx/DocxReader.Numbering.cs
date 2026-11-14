@@ -45,10 +45,12 @@ internal sealed partial class DocxReader
         return OoxNumbering.ToRomanUpper(value);
     }
 
-    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, DocxNumberingCounters counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun,
+    private static DocxListLabel? CreateListLabel(
+        (string NumberId, string AbstractId, int Level, DocxNumberingLevel Definition)? sourceNumbering,
+        XElement? paragraphProperties, DocxNumberingSet numbering, DocxNumberingCounters counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun,
         bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? markInsertion)
     {
-        if (ResolveParagraphNumbering(paragraphProperties, numbering) is not { } source) return null;
+        if (sourceNumbering is not { } source) return null;
         var (numId, abstractId, level, numberingLevel) = source;
 
         DocxTextRunStyle labelStyle = ResolveListLabelStyle(numberingLevel.Style, paragraphProperties, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun);
@@ -69,20 +71,51 @@ internal sealed partial class DocxReader
     }
 
     private static (string NumberId, string AbstractId, int Level, DocxNumberingLevel Definition)? ResolveParagraphNumbering(
-        XElement? paragraphProperties, DocxNumberingSet numbering)
+        XElement? paragraphProperties, DocxResolvedParagraphProperties properties,
+        string? paragraphStyleId, DocxStyleSet styles, DocxNumberingSet numbering, CancellationToken cancellationToken)
     {
-        XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
-        string? numId = NormalizeDecimalId((string?)numberingProperties?
-            .Element(WordprocessingNamespace + "numId")
-            ?.Attribute(WordprocessingNamespace + "val"));
-        int level = numberingProperties?
-            .Element(WordprocessingNamespace + "ilvl")
-            ?.Attribute(WordprocessingNamespace + "val") is { } levelAttribute
-            ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
-            : 0;
-        if (numId is null || !numbering.NumToAbstract.TryGetValue(numId, out string? abstractId))
+        cancellationToken.ThrowIfCancellationRequested();
+        string? numId = properties.NumberingId;
+        if (numId is null or "0" || !numbering.NumToAbstract.TryGetValue(numId, out string? abstractId))
         {
             return null;
+        }
+        int level = properties.NumberingLevel ?? 0;
+        bool inheritedId = paragraphProperties?.Element(WordprocessingNamespace + "numPr")?
+            .Element(WordprocessingNamespace + "numId")?.Attribute(WordprocessingNamespace + "val") is null;
+        if (inheritedId && properties.NumberingLevel is null)
+        {
+            // The nearest applied paragraph style owns an associated level.
+            // Reuse the same bounded/cycle-safe chain as other paragraph properties.
+            // Ambiguous associations cannot manufacture a numbering owner.
+            foreach (DocxStyle style in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles).Reverse())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int? associatedLevel = null;
+                foreach (var candidate in numbering.Levels)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (candidate.Key.AbstractId != abstractId) continue;
+                    DocxNumberingLevel definition = numbering.LevelOverrides.TryGetValue((numId, candidate.Key.Level), out var replacement)
+                        && replacement.ParagraphStyleId is not null ? replacement : candidate.Value;
+                    if (definition.ParagraphStyleId is not { } styleId || !styles.ParagraphStyles.TryGetValue(styleId, out var owner) ||
+                        !ReferenceEquals(style, owner)) continue;
+                    if (associatedLevel is not null) return null;
+                    associatedLevel = candidate.Key.Level;
+                }
+                foreach (var candidate in numbering.LevelOverrides)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (candidate.Key.NumId != numId || numbering.Levels.ContainsKey((abstractId, candidate.Key.Level)) ||
+                        candidate.Value.ParagraphStyleId is not { } styleId || !styles.ParagraphStyles.TryGetValue(styleId, out var owner) ||
+                        !ReferenceEquals(style, owner)) continue;
+                    if (associatedLevel is not null) return null;
+                    associatedLevel = candidate.Key.Level;
+                }
+                if (associatedLevel is not { } selectedLevel) continue;
+                level = selectedLevel;
+                break;
+            }
         }
 
         DocxNumberingLevel? numberingLevel = numbering.LevelOverrides.TryGetValue((numId, level), out DocxNumberingLevel? concreteLevel)
@@ -322,7 +355,10 @@ internal sealed partial class DocxReader
             (format.Equals("bullet", StringComparison.OrdinalIgnoreCase) ? "\u2022" : "%" + (levelIndex + 1) + ".");
         string suffix = (string?)level.Element(WordprocessingNamespace + "suff")?.Attribute(WordprocessingNamespace + "val") ?? "tab";
         DocxTextRunStyle style = ReadTextRunStyle(level.Element(WordprocessingNamespace + "rPr"));
-        return new DocxNumberingLevel(format, ResolveNumberingSymbolText(text, style, fontCatalog), suffix, start, ReadNumberingIndent(level), style);
+        return new DocxNumberingLevel(format, ResolveNumberingSymbolText(text, style, fontCatalog), suffix, start, ReadNumberingIndent(level), style)
+        {
+            ParagraphStyleId = (string?)level.Element(WordprocessingNamespace + "pStyle")?.Attribute(WordprocessingNamespace + "val")
+        };
     }
 
     private static string ResolveNumberingSymbolText(string text, DocxTextRunStyle style, DocxFontCatalog fontCatalog)
@@ -371,7 +407,10 @@ internal sealed partial class DocxReader
             new Dictionary<(string NumId, int Level), DocxNumberingLevel>());
     }
 
-    private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent, DocxTextRunStyle Style);
+    private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent, DocxTextRunStyle Style)
+    {
+        public string? ParagraphStyleId { get; init; }
+    }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)
     {

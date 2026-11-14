@@ -64,9 +64,10 @@ internal sealed partial class DocxReader
                 bool VisiblePageBreak(XElement source) => IsPageBreak(source) && VisibleBreak(source);
                 bool VisibleColumnBreak(XElement source) => IsColumnBreak(source) && VisibleBreak(source);
                 XElement? paragraphProperties = element.Element(WordprocessingNamespace + "pPr");
+                string? paragraphStyleId = ReadEffectiveParagraphStyleId(paragraphProperties, styles);
                 DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(
                     paragraphProperties,
-                    ReadParagraphStyleId(paragraphProperties),
+                    paragraphStyleId,
                     styles,
                     null);
                 if (resolvedParagraph.PageBreakBefore == true)
@@ -82,7 +83,8 @@ internal sealed partial class DocxReader
                 // Numbering belongs to the paragraph, outside its run children.
                 // A visible marker keeps the source first line even when its only
                 // run payload is a break; ordinary paragraph layout paints it.
-                var sourceNumbering = hasVisibleBreak ? ResolveParagraphNumbering(paragraphProperties, numbering) : null;
+                var sourceNumbering = hasVisibleBreak ? ResolveParagraphNumbering(paragraphProperties, resolvedParagraph,
+                    paragraphStyleId, styles, numbering, cancellationToken) : null;
                 bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
                 if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, markupMode))
                 {

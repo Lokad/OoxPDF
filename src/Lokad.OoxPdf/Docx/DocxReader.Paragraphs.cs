@@ -35,6 +35,7 @@ internal sealed partial class DocxReader
             paragraphStyleId,
             styles,
             tableCellStyle?.Paragraph);
+        var sourceNumbering = ResolveParagraphNumbering(paragraphProperties, resolvedParagraph, paragraphStyleId, styles, numbering, cancellationToken);
         DocxParagraphStyleResolution styleResolution = CreateParagraphStyleResolution(
             paragraphProperties,
             authoredParagraphStyleId,
@@ -343,8 +344,7 @@ internal sealed partial class DocxReader
             resolvedParagraph.KeepRules,
             listLabel)
         {
-            HasSourceNumbering = listLabel is not null ||
-                isContinuationFragment && ResolveParagraphNumbering(paragraphProperties, numbering) is not null,
+            HasSourceNumbering = sourceNumbering is not null,
             Shading = resolvedParagraph.Shading,
             Indent = resolvedParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,
@@ -605,7 +605,7 @@ internal sealed partial class DocxReader
 
         DocxListLabel? ResolveParagraphListLabel()
         {
-            var label = CreateListLabel(paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun,
+            var label = CreateListLabel(sourceNumbering, paragraphProperties, numbering, numberingCounters, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun,
                 DocxMarkupContext.FromMode(markupMode).AppliesInlineRevisionStyle,
                 originalNumberingIncluded, numberingMarkInsertion);
             // A marker without its own paragraph/mark revision owns the resolved

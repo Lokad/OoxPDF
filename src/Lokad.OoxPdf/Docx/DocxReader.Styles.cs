@@ -48,7 +48,7 @@ internal sealed partial class DocxReader
 
             var parsed = new DocxStyle(
                 (string?)style.Element(WordprocessingNamespace + "basedOn")?.Attribute(WordprocessingNamespace + "val"),
-                ReadParagraphProperties(style.Element(WordprocessingNamespace + "pPr")),
+                ReadParagraphProperties(style.Element(WordprocessingNamespace + "pPr"), includeNumberingLevel: false),
                 ReadRunProperties(style.Element(WordprocessingNamespace + "rPr")));
             if (type == "paragraph")
             {
@@ -252,7 +252,7 @@ internal sealed partial class DocxReader
         }
     }
 
-    private static DocxResolvedParagraphProperties ReadParagraphProperties(XElement? properties)
+    private static DocxResolvedParagraphProperties ReadParagraphProperties(XElement? properties, bool includeNumberingLevel = true)
     {
         string? alignmentValue = ReadAlignmentValue(properties);
         DocxTextAlignment? alignment = ReadAlignment(alignmentValue);
@@ -298,6 +298,7 @@ internal sealed partial class DocxReader
         XElement? pageBreakBefore = properties?.Element(WordprocessingNamespace + "pageBreakBefore");
         XElement? wordWrap = properties?.Element(WordprocessingNamespace + "wordWrap");
         XElement? shading = properties?.Element(WordprocessingNamespace + "shd");
+        XElement? numbering = properties?.Element(WordprocessingNamespace + "numPr");
 
         return new DocxResolvedParagraphProperties(
             alignment,
@@ -317,6 +318,12 @@ internal sealed partial class DocxReader
             ReadOnOff(wordWrap),
             (string?)wordWrap?.Attribute(WordprocessingNamespace + "val"))
         {
+            NumberingId = NormalizeDecimalId((string?)numbering?.Element(WordprocessingNamespace + "numId")?.Attribute(WordprocessingNamespace + "val")),
+            // Paragraph styles select their associated abstract level through
+            // pStyle. A style's own ilvl is not a direct paragraph override.
+            NumberingLevel = includeNumberingLevel && numbering?.Element(WordprocessingNamespace + "ilvl")?
+                .Attribute(WordprocessingNamespace + "val") is { } numberingLevel
+                    ? int.Parse(numberingLevel.Value, CultureInfo.InvariantCulture) : null,
             // Word retains inherited paragraph shading for a nil declaration
             // (independent ParagraphShading flow/cell controls). Other declarations
             // replace the complete shading value rather than mixing its attributes.
@@ -629,6 +636,8 @@ internal sealed partial class DocxReader
         bool? WordWrap,
         string? WordWrapValue)
     {
+        public string? NumberingId { get; init; }
+        public int? NumberingLevel { get; init; }
         public DocxParagraphShading? Shading { get; init; }
         public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null);
 
@@ -656,7 +665,11 @@ internal sealed partial class DocxReader
                 other.PageBreakBeforeValue ?? PageBreakBeforeValue,
                 other.WordWrap ?? WordWrap,
                 other.WordWrapValue ?? WordWrapValue)
-            { Shading = other.Shading ?? Shading };
+            {
+                Shading = other.Shading ?? Shading,
+                NumberingId = other.NumberingId ?? NumberingId,
+                NumberingLevel = other.NumberingLevel ?? NumberingLevel
+            };
         }
     }
 }

@@ -398,7 +398,10 @@ internal sealed partial class DocxReader
                 if (IsRunBreakOnlyParagraph(child, VisibleBreak, markupMode) &&
                     child.Elements().Any(element => HasVisibleRunBreak(element, VisiblePageBreak, markupMode)))
                 {
-                    var sourceNumbering = ResolveParagraphNumbering(child.Element(WordprocessingNamespace + "pPr"), numbering);
+                    XElement? paragraphProperties = child.Element(WordprocessingNamespace + "pPr");
+                    string? paragraphStyleId = ReadEffectiveParagraphStyleId(paragraphProperties, styles);
+                    var resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles, tableCellStyle.Paragraph);
+                    var sourceNumbering = ResolveParagraphNumbering(paragraphProperties, resolvedParagraph, paragraphStyleId, styles, numbering, cancellationToken);
                     bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode,
                         isBreak: VisiblePageBreak, retainFirstLine: hasListMarker))
