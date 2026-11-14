@@ -448,15 +448,22 @@ internal static class DocxInlineContent
         // kinds and duplicate formatting histories retain fallback.
         if (paragraphMark is { SourceRunIndex: -1 } && string.IsNullOrWhiteSpace(paragraphMark.Text))
         {
-            if (paragraphMark.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange,
-                SourceElement: "rPrChange", PropertyChangeFamily: DocxRevisionPropertyFamily.Run } formatting])
-                remaining.Remove(formatting);
+            DocxRevisionInfo? formatting = null;
+            int formattingCount = 0;
             foreach (var revision in paragraphMark.Revisions)
             {
                 token.ThrowIfCancellationRequested();
+                if (revision.Kind == DocxRevisionKind.RunPropertiesChange)
+                {
+                    formatting = revision;
+                    formattingCount++;
+                }
                 if (revision.Kind == DocxRevisionKind.Insertion && revision.SourceElement == "ins")
                     remaining.Remove(revision);
             }
+            if (formattingCount == 1 && formatting is
+                { SourceElement: "rPrChange", PropertyChangeFamily: DocxRevisionPropertyFamily.Run })
+                remaining.Remove(formatting);
         }
         // Only a join's actual deleted marks can discharge this metadata.
         // Unconsumed, misplaced and value-equal revisions keep their fallback.

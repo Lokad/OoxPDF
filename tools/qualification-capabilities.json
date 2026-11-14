@@ -1,5 +1,7 @@
 {
   "docx-paragraph-mark-ownership": [
+    "DocxCombinedMarkRevisionsRetainTheirIndependentSourceOwners",
+    "DocxCombinedMarkRevisionsKeepMathPicturesAndNavigation",
     "DocxParagraphMarkFormattingRetainsResolvedSourceAcrossViews",
     "DocxParagraphMarkFormattingRequiresActualUniqueOwnersAndCancellation",
     "DocxParagraphMarkFormattingPreservesComposedPaintAndNavigation",
