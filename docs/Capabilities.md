@@ -601,6 +601,9 @@ Supported within the following constraints:
   Static-story placement shares physical frames with painting
   and annotations. Without printed balloons, unit-scale Review pages preserve
   the Final text, equation and picture origins on note-only continuation pages.
+  Natural text-row fragments share printed Review placement whether automatic
+  row height is omitted or explicit; declared minima and exact heights retain
+  their separate fallback rules.
   Complete unscaled endnote rows that fit a fresh note frame move intact to
   the next page; source-affined picture-only paragraphs share this admission when
   every picture survives its cell, ancestor and explicit viewport clips.

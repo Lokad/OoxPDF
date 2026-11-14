@@ -1000,7 +1000,7 @@ internal sealed partial class DocxLayoutEngine
         // retain explicit fallbacks until their placement is qualified.
         foreach (DocxTableRow row in table.Rows)
         {
-            if (row.IsHeader || row.CantSplit || row.HeightRuleValue is not null || row.HeightPoints is not null)
+            if (row.IsHeader || row.CantSplit || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue))
                 return false;
             foreach (DocxTableCell cell in row.Cells)
             {

@@ -1087,7 +1087,24 @@
     "PortableRenderingExactComment",
     "StagedPageMemory"
   ],
+  "docx-automatic-review-row-frame": [
+    "DocxExplicitAutomaticRowsSharePrintedFragmentFrames",
+    "DocxReviewTablePrintedCapacityPreservesWordPagesAndStaticStoryCombinations",
+    "DocxReviewTableFragmentsPreserveAllWordsWithExplicitWidowControl",
+    "DocxReviewTableWidowBoundaryChecksEveryCell",
+    "DocxReviewTableCellInsetsUsePrintedFontSize",
+    "DocxReviewTableCorrectionPreservesSurroundingTextFlow",
+    "DocxReviewAuthoredRowsStayInsideTheirPrintedPages",
+    "DocxReviewNestedHeaderAndContinuationSharePrintedCapacity",
+    "DocxReviewTableBorderScalingKeepsExtremePrintScaleFallback",
+    "DocxReviewTableSplitProjectionPreservesContinuationPitch",
+    "DocxOversizedCellKeepLinesRetainsNeighborsAndCancellation",
+    "DocxDeclaredKeptRowsRetainTheirAtomicFallback",
+    "DocxUnfitCellKeepNextGroupsPreserveCompleteParagraphs",
+    "DocxCellKeepGroupsRespectEmptyContentAfterHeadersAndPadding"
+  ],
   "docx-review-table-frame": [
+    "DocxExplicitAutomaticRowsSharePrintedFragmentFrames",
     "DocxMixedTableRowsKeepCaptionInkAcrossPages",
     "DocxKeptMixedCellRetainsInkAndFollowingParagraphAfterPageAdmission",
     "DocxTableLayoutStageContinuesRowsInActiveColumnFrame",
