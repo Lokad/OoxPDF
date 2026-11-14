@@ -78,7 +78,13 @@ internal sealed partial class DocxReader
                         revisions: inheritedRevision is null ? [] : [inheritedRevision]));
                 }
 
-                if (IsRunBreakOnlyParagraph(element, VisiblePageBreak, markupMode))
+                bool hasVisibleBreak = element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode));
+                // Numbering belongs to the paragraph, outside its run children.
+                // A visible marker keeps the source first line even when its only
+                // run payload is a break; ordinary paragraph layout paints it.
+                bool hasListMarker = hasVisibleBreak && ResolveParagraphNumbering(paragraphProperties, numbering) is { } sourceNumbering &&
+                    !string.IsNullOrWhiteSpace(sourceNumbering.Definition.Text);
+                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisiblePageBreak, markupMode)).Count();
@@ -92,7 +98,7 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (IsRunBreakOnlyParagraph(element, VisibleColumnBreak, markupMode))
+                if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisibleColumnBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
                     int breakCount = element.Elements().SelectMany(child => EnumerateVisibleRunBreaks(child, VisibleColumnBreak, markupMode)).Count();
@@ -106,12 +112,12 @@ internal sealed partial class DocxReader
                     continue;
                 }
 
-                if (element.Elements().Any(child => HasVisibleRunBreak(child, VisibleBreak, markupMode)))
+                if (hasVisibleBreak)
                 {
                     bool isContinuationFragment = false;
                     DocxNumberingIndent? sourceListIndent = null;
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
-                        retainEmptyColumnTail: true, isBreak: VisibleBreak))
+                        retainEmptyColumnTail: true, isBreak: VisibleBreak, retainFirstLine: hasListMarker))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
@@ -431,7 +437,7 @@ internal sealed partial class DocxReader
     }
 
     private static IReadOnlyList<ParagraphBreakPart> SplitParagraphAtRunBreaks(XElement paragraph, OoxPdfDocxMarkupMode markupMode,
-        bool retainEmptyColumnTail = false, Func<XElement, bool>? isBreak = null)
+        bool retainEmptyColumnTail = false, Func<XElement, bool>? isBreak = null, bool retainFirstLine = false)
     {
         isBreak ??= IsPageOrColumnBreak;
         var parts = new List<ParagraphBreakPart>();
@@ -445,7 +451,8 @@ internal sealed partial class DocxReader
             // Its style, pitch and after-spacing belong to the continuation frame.
             bool emptyColumnTail = retainEmptyColumnTail && !endsBeforeBreak && startsAfterBreak &&
                 string.Equals(parts.LastOrDefault()?.BreakValue, "column", StringComparison.OrdinalIgnoreCase);
-            if (currentChildren.Count == 0 && !emptyColumnTail)
+            bool firstMarkerLine = retainFirstLine && endsBeforeBreak && parts.Count == 0;
+            if (currentChildren.Count == 0 && !emptyColumnTail && !firstMarkerLine)
             {
                 return;
             }

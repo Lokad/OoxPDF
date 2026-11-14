@@ -48,6 +48,29 @@ internal sealed partial class DocxReader
     private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, DocxNumberingCounters counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun,
         bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? markInsertion)
     {
+        if (ResolveParagraphNumbering(paragraphProperties, numbering) is not { } source) return null;
+        var (numId, abstractId, level, numberingLevel) = source;
+
+        DocxTextRunStyle labelStyle = ResolveListLabelStyle(numberingLevel.Style, paragraphProperties, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun);
+        if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
+        {
+            return new DocxListLabel(numberingLevel.Text, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle);
+        }
+
+        int? startOverride = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
+            ? overriddenStart : null;
+        var change = counters.Advance(abstractId, numId, level, numberingLevel.Start, startOverride,
+            numberingLevel.Text, trackOriginal, originalIncluded, markInsertion);
+        string labelText = ResolveNumberingLevelText(numberingLevel.Text, abstractId, counters.Current);
+        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle)
+        {
+            NumberingChange = change
+        };
+    }
+
+    private static (string NumberId, string AbstractId, int Level, DocxNumberingLevel Definition)? ResolveParagraphNumbering(
+        XElement? paragraphProperties, DocxNumberingSet numbering)
+    {
         XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
         string? numId = NormalizeDecimalId((string?)numberingProperties?
             .Element(WordprocessingNamespace + "numId")
@@ -67,26 +90,7 @@ internal sealed partial class DocxReader
             : numbering.Levels.TryGetValue((abstractId, level), out DocxNumberingLevel? abstractLevel)
                 ? abstractLevel
                 : null;
-        if (numberingLevel is null)
-        {
-            return null;
-        }
-
-        DocxTextRunStyle labelStyle = ResolveListLabelStyle(numberingLevel.Style, paragraphProperties, styles, paragraphStyleId, tableCellStyle, paragraphMarkRun);
-        if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
-        {
-            return new DocxListLabel(numberingLevel.Text, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle);
-        }
-
-        int? startOverride = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
-            ? overriddenStart : null;
-        var change = counters.Advance(abstractId, numId, level, numberingLevel.Start, startOverride,
-            numberingLevel.Text, trackOriginal, originalIncluded, markInsertion);
-        string labelText = ResolveNumberingLevelText(numberingLevel.Text, abstractId, counters.Current);
-        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle)
-        {
-            NumberingChange = change
-        };
+        return numberingLevel is null ? null : (numId, abstractId, level, numberingLevel);
     }
 
     // One current/original timeline per story, shared with its tables. Concrete
