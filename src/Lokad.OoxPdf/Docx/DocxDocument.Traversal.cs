@@ -2,7 +2,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal static class DocxBlockTraversal
 {
-    // Preserve the established source order shared by font purposes and review ownership.
+    // All-source inspection and review-author ordering include unprinted stories.
     public static IEnumerable<DocxParagraph> EnumerateSourceParagraphs(DocxDocument document)
         => EnumerateStoryParagraphs(document)
             .Concat(EnumerateStoryParagraphs(document).SelectMany(EnumerateInlineTextBoxParagraphs));
@@ -28,9 +28,56 @@ internal static class DocxBlockTraversal
         return EnumerateSourceFloatingDrawings(document).SelectMany(drawing => EnumerateBodyParagraphs(drawing.TextBoxBodyElements));
     }
 
-    public static IEnumerable<DocxInlineImage> EnumerateSourceImages(DocxDocument document) =>
-        EnumerateSourceParagraphs(document).SelectMany(paragraph => paragraph.Images)
-            .Concat(EnumerateSourceFloatingDrawings(document).Select(drawing => drawing.Image).OfType<DocxInlineImage>());
+    // Resource discovery uses the same effective inheritance and variant rules
+    // as placement. Enabled variants remain possible before pagination.
+    public static IEnumerable<(DocxPageSettings Settings, string Variant,
+        IReadOnlyList<DocxBodyElement> BodyElements, IReadOnlyList<DocxFloatingDrawing> Drawings)>
+        EnumerateStaticStorySources(DocxDocument document, CancellationToken token)
+    {
+        var sections = DocxLayoutEngine.BuildEffectiveSectionSettings(document, out var final, token);
+        foreach (var settings in sections.Values.Select(section => section.PageSettings).Prepend(final.PageSettings))
+        {
+            token.ThrowIfCancellationRequested();
+            for (int side = 0; side < 2; side++)
+            {
+                var bodies = side == 0 ? settings.HeaderBodyElementsByType : settings.FooterBodyElementsByType;
+                var paragraphs = side == 0 ? settings.HeaderParagraphsByType : settings.FooterParagraphsByType;
+                var drawings = side == 0 ? settings.HeaderFloatingDrawingsByType : settings.FooterFloatingDrawingsByType;
+                foreach (string variant in bodies.Keys.Concat(paragraphs.Keys).Concat(drawings.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    token.ThrowIfCancellationRequested();
+                    yield return (settings, variant, GetStaticStoryBodyElements(variant, bodies, paragraphs),
+                        drawings.TryGetValue(variant, out var selected) ? selected : []);
+                }
+            }
+        }
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateResourceParagraphs(DocxDocument document, CancellationToken token)
+    {
+        var stories = EnumerateStaticStorySources(document, token)
+            .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant)).ToArray();
+        var drawings = document.FloatingDrawings.Concat(stories.SelectMany(story => story.Drawings))
+            .Concat(document.RelatedStories.SelectMany(story => story.FloatingDrawings));
+        var parents = EnumerateBodyParagraphs(document)
+            .Concat(stories.SelectMany(story => EnumerateBodyParagraphs(story.BodyElements)))
+            .Concat(document.RelatedStories.SelectMany(EnumerateBodyParagraphs))
+            .Concat(drawings.SelectMany(drawing => EnumerateBodyParagraphs(drawing.TextBoxBodyElements)));
+        foreach (var paragraph in parents.Concat(parents.SelectMany(EnumerateInlineTextBoxParagraphs)))
+        {
+            token.ThrowIfCancellationRequested();
+            yield return paragraph;
+        }
+    }
+
+    public static IEnumerable<DocxInlineImage> EnumerateResourceImages(DocxDocument document, CancellationToken token) =>
+        EnumerateResourceParagraphs(document, token).SelectMany(paragraph => paragraph.Images)
+            .Concat(document.FloatingDrawings
+                .Concat(EnumerateStaticStorySources(document, token)
+                    .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
+                    .SelectMany(story => story.Drawings))
+                .Concat(document.RelatedStories.SelectMany(story => story.FloatingDrawings))
+                .Select(drawing => drawing.Image).OfType<DocxInlineImage>());
 
     private static IEnumerable<DocxFloatingDrawing> EnumerateSourceFloatingDrawings(DocxDocument document)
     {

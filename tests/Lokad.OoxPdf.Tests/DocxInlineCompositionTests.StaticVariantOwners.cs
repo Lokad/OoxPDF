@@ -79,18 +79,7 @@ internal static partial class DocxInlineCompositionTests
             OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
         foreach (string story in new[] { "header", "footer" })
         {
-            var source = ReadSectionScopedStory(story, OoxPdfDocxMarkupMode.AllMarkup, sectioned: true, formattedTable: true);
-            var first = source.BodyElements.OfType<DocxSectionBreakElement>().Single();
-            var earlier = first with { PageSettings = StaticVariantSettings(first.PageSettings, story, "first", enabled: false) };
-            var final = StaticVariantSettings(source.PageSettings, story, "first", enabled: true);
-            // The final section activates its predecessor's first story without
-            // defining another reference. This exercises layout's inheritance.
-            final = final with { HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
-                FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
-                HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
-                FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>() };
-            source = WithStaticVariantSettings(source, final) with
-            { BodyElements = source.BodyElements.Select(element => ReferenceEquals(element, first) ? earlier : element).ToArray() };
+            var source = ReadInheritedFirstStory(story, OoxPdfDocxMarkupMode.AllMarkup, formattedTable: true);
             TestAssert.True(DocxRenderer.ResolveWordCompatiblePrintScale(source, context) < 1d,
                 "Filtering raw section dictionaries must not lose a later activated inherited owner.");
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
@@ -100,6 +89,22 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(2, pages.Length);
             TestAssert.Contains("series.", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
         }
+    }
+
+    private static DocxDocument ReadInheritedFirstStory(string story, OoxPdfDocxMarkupMode mode, bool formattedTable)
+    {
+        var source = ReadSectionScopedStory(story, mode, sectioned: true, formattedTable: formattedTable);
+        var first = source.BodyElements.OfType<DocxSectionBreakElement>().Single();
+        var earlier = first with { PageSettings = StaticVariantSettings(first.PageSettings, story, "first", enabled: false) };
+        var final = StaticVariantSettings(source.PageSettings, story, "first", enabled: true);
+        // The final section activates its predecessor's first story without
+        // defining another reference. This exercises layout's inheritance.
+        final = final with { HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+            FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(),
+            HeaderParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>(),
+            FooterParagraphsByType = new Dictionary<string, IReadOnlyList<DocxParagraph>>() };
+        return WithStaticVariantSettings(source, final) with
+        { BodyElements = source.BodyElements.Select(element => ReferenceEquals(element, first) ? earlier : element).ToArray() };
     }
 
     private static DocxDocument ReadStaticVariantPropertySource(string story, string variant, OoxPdfDocxMarkupMode mode,

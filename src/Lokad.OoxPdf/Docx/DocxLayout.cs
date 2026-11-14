@@ -335,7 +335,7 @@ internal sealed partial class DocxLayoutEngine
         int currentSectionStartIndex = 0;
         int sectionFirstPageNumber = 1;
 
-        IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings);
+        IReadOnlyDictionary<int, DocxEffectiveSectionSettings> sectionSettingsByElementIndex = BuildEffectiveSectionSettings(document, out DocxEffectiveSectionSettings finalSectionSettings, cancellationToken);
         if (OoxConversionBudget.Current is { Memory: not null } budget)
         {
             long repeatedHeaders = EstimateRepeatedTableHeaderCapacity(document, cancellationToken);

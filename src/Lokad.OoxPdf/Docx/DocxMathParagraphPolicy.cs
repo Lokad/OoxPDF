@@ -63,13 +63,9 @@ internal static class DocxMathParagraphPolicy
     public static IEnumerable<DocxParagraph> EnumerateInlineBoxPreparationCandidates(DocxDocument document, CancellationToken token)
     {
         var parents = DocxBlockTraversal.EnumerateBodyParagraphs(document)
-            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.HeaderBodyElementsByType,
-                document.HeaderParagraphsByType, document.HeaderParagraphs))
-            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(document.FooterBodyElementsByType,
-                document.FooterParagraphsByType, document.FooterParagraphs))
-            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
-            .Concat(document.BodyElements.OfType<DocxSectionBreakElement>().SelectMany(section =>
-                DocxBlockTraversal.EnumerateStaticStoryParagraphs(section.PageSettings)));
+            .Concat(DocxBlockTraversal.EnumerateStaticStorySources(document, token)
+                .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
+                .SelectMany(story => DocxBlockTraversal.EnumerateBodyParagraphs(story.BodyElements)));
         var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
         foreach (var parent in parents)
         {
@@ -123,13 +119,15 @@ internal static class DocxMathParagraphPolicy
     public static IEnumerable<(DocxParagraph Paragraph, bool HasPageInputs)> EnumerateStaticPreparationCandidates(DocxDocument document, CancellationToken token)
     {
         var fieldInputOwners = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
-        foreach (var paragraph in DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(
-                document.HeaderBodyElementsByType, document.HeaderParagraphsByType, document.HeaderParagraphs)
-            .Concat(DocxBlockTraversal.EnumerateReferencedStaticStoryParagraphs(
-                document.FooterBodyElementsByType, document.FooterParagraphsByType, document.FooterParagraphs))
-            .Concat(DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
-            .Concat(document.BodyElements.OfType<DocxSectionBreakElement>().SelectMany(section =>
-                DocxBlockTraversal.EnumerateStaticStoryParagraphs(section.PageSettings))))
+        var staticSources = DocxBlockTraversal.EnumerateStaticStorySources(document, token).ToArray();
+        var disabledBodies = new HashSet<IReadOnlyList<DocxBodyElement>>(staticSources
+            .Where(story => story.BodyElements.Count != 0).Select(story => story.BodyElements), ReferenceEqualityComparer.Instance);
+        disabledBodies.ExceptWith(staticSources
+            .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
+            .Select(story => story.BodyElements));
+        foreach (var paragraph in staticSources
+            .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
+            .SelectMany(story => DocxBlockTraversal.EnumerateBodyParagraphs(story.BodyElements)))
         {
             token.ThrowIfCancellationRequested();
             fieldInputOwners.Add(paragraph);
@@ -148,7 +146,7 @@ internal static class DocxMathParagraphPolicy
         foreach (DocxEquationPartSource part in document.EquationParts)
         {
             token.ThrowIfCancellationRequested();
-            if (part.PartName == document.MainPartName) { continue; }
+            if (part.PartName == document.MainPartName || disabledBodies.Contains(part.BodyElements)) { continue; }
             foreach (DocxBodyElement element in part.BodyElements)
             {
                 token.ThrowIfCancellationRequested();

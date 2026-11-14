@@ -25,7 +25,7 @@ internal sealed record DocxFontPlan(IReadOnlyList<DocxResolvedRunTypeface> Runs)
     public static DocxFontPlan Create(DocxDocument document, IFontResolver fontResolver, CancellationToken cancellationToken, bool includeReviewSources = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateSourceParagraphs(document)
+        IReadOnlyList<DocxTextRun> runs = DocxBlockTraversal.EnumerateResourceParagraphs(document, cancellationToken)
             .SelectMany(paragraph => GetParagraphFontRuns(paragraph, includeReviewSources))
             // Body column-break marks consume a font-dependent pitch after the
             // frame turn, even though their empty text never emits glyphs.

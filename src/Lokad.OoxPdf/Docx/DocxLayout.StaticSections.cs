@@ -65,7 +65,8 @@ internal sealed partial class DocxLayoutEngine
         return page.PageSettings.FooterDistancePoints ?? DocxDefaults.HeaderFooterDistancePoints;
     }
 
-    internal static IReadOnlyDictionary<int, DocxEffectiveSectionSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxEffectiveSectionSettings finalSectionSettings)
+    internal static IReadOnlyDictionary<int, DocxEffectiveSectionSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxEffectiveSectionSettings finalSectionSettings,
+        CancellationToken cancellationToken = default)
     {
         var sectionSettingsByElementIndex = new Dictionary<int, DocxEffectiveSectionSettings>();
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType =
@@ -79,6 +80,7 @@ internal sealed partial class DocxLayoutEngine
 
         for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (document.BodyElements[elementIndex] is not DocxSectionBreakElement sectionBreak)
             {
                 continue;

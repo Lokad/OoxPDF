@@ -409,7 +409,7 @@ internal sealed partial class DocxRenderer
         // SVG labels do not affect paragraph pagination. Prepare their borrowed
         // outline programs once, after count/note retries, through the same owner.
         var svgFonts = await PptxRenderer.PrepareSvgTextFontsAsync(
-            DocxBlockTraversal.EnumerateSourceImages(first.Document)
+            DocxBlockTraversal.EnumerateResourceImages(first.Document, cancellationToken)
                 .Where(image => image.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
                 .Select(image => image.Bytes).OfType<byte[]>(),
             resolver, (face, token) => LoadFontAsync(face, fontCache, token), diagnostics, cancellationToken).ConfigureAwait(false);
@@ -728,16 +728,10 @@ internal sealed partial class DocxRenderer
         var notes = document.RelatedStories.Where(story => story.IsNormalStoryType &&
             references.Contains((story.Kind, story.Id))).ToArray();
 
-        // Use placement's resolved inheritance: a disabled story in one section
-        // can become active in a later section without another part reference.
-        var sections = DocxLayoutEngine.BuildEffectiveSectionSettings(document, out var finalSection);
-        foreach (DocxPageSettings settings in sections.Values.Select(section => section.PageSettings)
-            .Append(finalSection.PageSettings))
+        foreach (var story in DocxBlockTraversal.EnumerateStaticStorySources(document, default))
         {
-            if (HasStaticContent(settings, settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType,
-                    settings.HeaderFloatingDrawingsByType) ||
-                HasStaticContent(settings, settings.FooterBodyElementsByType, settings.FooterParagraphsByType,
-                    settings.FooterFloatingDrawingsByType))
+            if (DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant) &&
+                (HasContent(story.BodyElements, isMainStory: false) || HasFloatingContent(story.Drawings)))
             {
                 return true;
             }
@@ -745,16 +739,6 @@ internal sealed partial class DocxRenderer
 
         return notes.Any(story => HasStory(story.BodyElements, story.Paragraphs, story.Tables) ||
             HasFloatingContent(story.FloatingDrawings));
-
-        bool HasStaticContent(DocxPageSettings settings, IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodies,
-            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphs,
-            IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawings) =>
-            (bodies.Count != 0
-                ? bodies.Any(pair => DocxLayoutEngine.IsStaticStoryVariantEnabled(settings, pair.Key) &&
-                    HasContent(pair.Value, isMainStory: false))
-                : paragraphs.Any(pair => DocxLayoutEngine.IsStaticStoryVariantEnabled(settings, pair.Key) &&
-                    pair.Value.Any(paragraph => HasParagraph(paragraph, isMainStory: false)))) ||
-            drawings.Any(pair => DocxLayoutEngine.IsStaticStoryVariantEnabled(settings, pair.Key) && HasFloatingContent(pair.Value));
 
         bool HasFloatingContent(IEnumerable<DocxFloatingDrawing> drawings) =>
             drawings.Any(drawing => HasContent(drawing.TextBoxBodyElements, isMainStory: false));

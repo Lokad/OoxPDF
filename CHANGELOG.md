@@ -38,6 +38,8 @@
   rows retain their design frames when the Review page scales.
   Earlier section headers and footers retain that lane when a later section
   supplies a plain story, preventing captions from covering source words.
+  Disabled header/footer variants no longer acquire unused text, math or SVG fonts;
+  active and later inherited stories keep their resources and failure behavior.
   Explicit automatic row heights share the same printed Review frames as omitted heights.
   They also retain fitting equation rows on their source page when only trailing spacing overflows.
   Nonprinting editing metadata around page/column breaks preserves paragraph spacing.

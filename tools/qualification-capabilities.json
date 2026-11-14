@@ -1,4 +1,26 @@
 {
+  "docx-static-resource-fonts": [
+    "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
+    "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
+    "DocxInheritedStaticFontsKeepTheirActualFaceAndFailures",
+    "DocxDisabledStaticSvgFontsUseSharedResourceReachability",
+    "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
+    "DocxSectionScopedInlineBoxesKeepVisibleLabelsInBothViews",
+    "DocxInheritedFirstStoryActivationKeepsItsRevisionLane",
+    "DocxDisabledStaticPropertyOwnersKeepTheBodyPrintScale",
+    "DocxDisabledStaticPropertyHistoryKeepsBodyPaintInBothViews",
+    "DocxEnabledStaticPropertyOwnersKeepVisibleCaptionsAndMath",
+    "DocxEquationWarningsOmitUnselectedStaticParts",
+    "DocxEquationWarningsKeepActiveSharedStaticPartsAcrossPages",
+    "DocxEquationWarningsRetainUnresolvedStaticBindings",
+    "DocxStaticEquationDiagnosticsPreserveObserverFailuresAndCancellation",
+    "DocxFooterRevisionFramesKeepPortableContentAndOwnedCaptionFaces",
+    "DocxFooterRevisionFramesKeepFontFallbackAndTerminalAcquisitionFailures",
+    "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
+    "SvgLabelPreparationFailurePreservesDestinationAndCleansTemporaryFiles",
+    "PortableRenderingInlineBoxFallbackKeepsOutsideSiblings",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-static-equation-diagnostics": [
     "DocxEquationWarningsOmitUnselectedStaticParts",
     "DocxEquationWarningsKeepActiveSharedStaticPartsAcrossPages",
@@ -19200,6 +19222,10 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-fixed-static-frames": [
+    "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
+    "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
+    "DocxInheritedStaticFontsKeepTheirActualFaceAndFailures",
+    "DocxDisabledStaticSvgFontsUseSharedResourceReachability",
     "DocxDisabledStaticPropertyOwnersKeepTheBodyPrintScale",
     "DocxDisabledStaticPropertyHistoryKeepsBodyPaintInBothViews",
     "DocxEnabledStaticPropertyOwnersKeepVisibleCaptionsAndMath",
