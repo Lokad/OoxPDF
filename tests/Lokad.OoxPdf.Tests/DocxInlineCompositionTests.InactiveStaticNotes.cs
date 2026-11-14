@@ -25,9 +25,14 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(control.Length, pages.Length);
                 for (int index = 0; index < pages.Length; index++)
                 {
-                    string Markers(PdfPage page) => string.Join('|', DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
-                        .Where(show => show.Size < 9d && !show.Font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
-                            show.Text.Length != 0 && show.Text.All(char.IsAsciiDigit)).Select(show => show.Text));
+                    string Markers(PdfPage page)
+                    {
+                        var mathFonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                            .Select(font => font.Font).ToHashSet();
+                        return string.Join('|', DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                            .Where(show => show.Size < 9d && !mathFonts.Contains(show.Font) &&
+                                show.Text.Length != 0 && show.Text.All(char.IsAsciiDigit)).Select(show => show.Text));
+                    }
                     TestAssert.Equal("09|10|09|10", Markers(control[index]));
                     TestAssert.Equal(Markers(control[index]), Markers(pages[index]));
                     TestAssert.Equal(DocxPageFootnoteNumberingTests.DecodeText(control[index]), DocxPageFootnoteNumberingTests.DecodeText(pages[index]));
