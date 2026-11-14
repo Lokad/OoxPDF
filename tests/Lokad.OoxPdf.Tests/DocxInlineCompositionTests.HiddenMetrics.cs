@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -110,7 +111,25 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.Equal(expected.Length, actual.Length);
         for (int index = 0; index < expected.Length; index++)
         {
-            TestAssert.Equal(expected[index].Content, actual[index].Content);
+            // Retained hidden source can change subset CIDs without changing
+            // painted glyphs. Check decoded physical glyphs and original font
+            // programs, then keep every other emitted operator exact.
+            var before = DocxCommentsTests.ReadEmbeddedGlyphTextShows(expected[index], true, honorActualText: false).ToArray();
+            var after = DocxCommentsTests.ReadEmbeddedGlyphTextShows(actual[index], true, honorActualText: false).ToArray();
+            TestAssert.Equal(before.Length, after.Length);
+            for (int glyph = 0; glyph < before.Length; glyph++)
+            {
+                TestAssert.Equal(before[glyph].Text, after[glyph].Text);
+                TestAssert.Equal(before[glyph].Size, after[glyph].Size);
+                TestAssert.Equal(before[glyph].X, after[glyph].X);
+                TestAssert.Equal(before[glyph].Y, after[glyph].Y);
+            }
+            TestAssert.Equal(expected[index].Fonts.Count, actual[index].Fonts.Count);
+            foreach (var resource in expected[index].Fonts)
+                TestAssert.True(resource.Font.Font.Bytes.Span.SequenceEqual(actual[index].Fonts.Single(
+                    font => font.ResourceName == resource.ResourceName).Font.Font.Bytes.Span), "Paint uses the same source font program.");
+            TestAssert.Equal(Regex.Replace(expected[index].Content, @"<[0-9A-Fa-f]+>", "<>"),
+                Regex.Replace(actual[index].Content, @"<[0-9A-Fa-f]+>", "<>"));
             TestAssert.Equal(expected[index].Images.Count, actual[index].Images.Count);
             TestAssert.True(expected[index].Annotations.SequenceEqual(actual[index].Annotations),
                 "Hidden metric owners cannot move navigation.");
