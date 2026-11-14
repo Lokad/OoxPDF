@@ -138,25 +138,18 @@ internal static class DocxPlainBodyFrame
     internal static bool IsEligible(DocxDocument document) =>
         HasPlainBody(document) && (HasNoStaticStories(document) || HasNoSelectableStaticStories(document));
 
-    private static bool HasNoSelectableStaticStories(DocxDocument document)
+    internal static bool HasNoSelectableStaticStories(DocxDocument document, CancellationToken token = default)
     {
-        // Plain source flow has one final section. Before pagination, require
-        // no story references for any possible page variant, using layout's selector.
-        // A disabled template cannot change numbering, font or leading ownership.
-        if (document.HeaderParagraphs.Count != 0 || document.FooterParagraphs.Count != 0) return false;
-        var settings = document.PageSettings;
-        var variants = document.HeaderParagraphsByType.Keys.Concat(document.FooterParagraphsByType.Keys)
-            .Concat(document.HeaderBodyElementsByType.Keys).Concat(document.FooterBodyElementsByType.Keys)
-            .Concat(document.HeaderFloatingDrawingsByType.Keys).Concat(document.FooterFloatingDrawingsByType.Keys)
-            .Concat(settings.HeaderParagraphsByType.Keys).Concat(settings.FooterParagraphsByType.Keys)
-            .Concat(settings.HeaderBodyElementsByType.Keys).Concat(settings.FooterBodyElementsByType.Keys)
-            .Concat(settings.HeaderFloatingDrawingsByType.Keys).Concat(settings.FooterFloatingDrawingsByType.Keys);
-        string first = DocxLayoutEngine.GetStaticStoryVariant(settings, 1);
-        string even = DocxLayoutEngine.GetStaticStoryVariant(settings, 2);
-        string ordinary = DocxLayoutEngine.GetStaticStoryVariant(settings, 3);
-        return !variants.Any(variant => string.Equals(variant, first, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(variant, even, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(variant, ordinary, StringComparison.OrdinalIgnoreCase));
+        // Before pagination, exclude only known disabled templates. Effective
+        // sections preserve both earlier and later inherited owners. Unknown
+        // variants and explicit empty active references retain their fallback.
+        foreach (var story in DocxBlockTraversal.EnumerateStaticStorySources(document, token))
+        {
+            if (DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant) ||
+                !string.Equals(story.Variant, "first", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(story.Variant, "even", StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        return true;
     }
 
     internal static bool HasNoStaticStories(DocxDocument document) =>

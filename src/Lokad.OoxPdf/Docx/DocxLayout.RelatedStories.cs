@@ -478,7 +478,7 @@ internal sealed partial class DocxLayoutEngine
                             .Select(s => s.TopY).DefaultIfEmpty(activePage.MarginBottom).Max());
                 bool localEndnoteBoundaries = !hasFootnotes &&
                     CanUseUnscaledEndnoteParagraphBoundaries(document, activePage, documentEndSeparatorLayout, printScale,
-                        DocxPlainBodyFrame.HasNoStaticStories(document));
+                        DocxPlainBodyFrame.HasNoSelectableStaticStories(document, cancellationToken));
                 DocxRelatedStoryLayout? previousEndnote = null;
                 foreach (DocxRelatedStoryLayout endnoteStoryLayout in documentEndStories)
                 {
@@ -559,7 +559,7 @@ internal sealed partial class DocxLayoutEngine
         bool measuredStart = !followsBodyParagraph && CanUseMeasuredEndnoteStart(document, activePage, activePlacedStories,
             endnoteSeparatorLayout, printScale, storyLayouts, cancellationToken, hasCompleteStaticFrame);
         bool paragraphStart = completeBoundaries || measuredStart;
-        bool localBoundaries = measuredStart && DocxPlainBodyFrame.HasNoStaticStories(document) &&
+        bool localBoundaries = measuredStart && DocxPlainBodyFrame.HasNoSelectableStaticStories(document, cancellationToken) &&
             !document.RelatedStories.Any(story => story.IsNormalStoryType && story.Kind == DocxRelatedStoryKind.Footnote);
         double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
             followsBodyParagraph || measuredStart ? bodyBoundaryToNoteDesign : null, activePageIndex);

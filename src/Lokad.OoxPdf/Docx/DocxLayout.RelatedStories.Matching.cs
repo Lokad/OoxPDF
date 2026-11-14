@@ -400,6 +400,7 @@ internal sealed partial class DocxLayoutEngine
         [NotNullWhen(true)] IDocxTextMeasurer? measurer, double printScale, CancellationToken cancellationToken)
     {
         if (printScale != 1d || measurer is not IDocxStaticTextMetricsProvider) return false;
+        if (DocxPlainBodyFrame.HasNoSelectableStaticStories(document, cancellationToken)) return true;
         DocxPageSettings settings = page.PageSettings;
         if (document.HeaderFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||
             document.FooterFloatingDrawingsByType.Values.Any(v => v.Count != 0) ||

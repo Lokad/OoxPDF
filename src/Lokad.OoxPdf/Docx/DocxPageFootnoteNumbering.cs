@@ -16,7 +16,7 @@ internal static class DocxPageFootnoteNumbering
     // Numbering owns measured marker/note pages. Font and leading purposes keep
     // their existing plain-body admission through IsEligibleDocument above.
     private static bool IsEligibleInlineNumberingDocument(DocxDocument document, CancellationToken token) =>
-        DocxPlainBodyFrame.HasKnownBodyFrame(document) && DocxPlainBodyFrame.HasNoStaticStories(document) &&
+        DocxPlainBodyFrame.HasKnownBodyFrame(document) && DocxPlainBodyFrame.HasNoSelectableStaticStories(document, token) &&
         HasEligibleNoteSettingsAndStories(document, includeContinuousRestart: false) &&
         document.BodyElements.Count != 0 && HasNumberingSourceElements(document.BodyElements, token) &&
         DocxBlockTraversal.EnumerateBodyParagraphs(document).All(paragraph => DocxPlainBodyFrame.IsPlainParagraph(paragraph) ||

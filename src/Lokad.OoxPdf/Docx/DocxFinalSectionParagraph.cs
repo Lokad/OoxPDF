@@ -5,7 +5,7 @@ internal static class DocxFinalSectionParagraph
     internal static DocxDocument Materialize(DocxDocument document, CancellationToken token, double printScale = 1d)
     {
         if (printScale != 1d || !DocxPlainBodyFrame.HasKnownBodyFrame(document) ||
-            !DocxPlainBodyFrame.HasNoStaticStories(document) || document.EmptyFinalSectionParagraph is not { } paragraph ||
+            !DocxPlainBodyFrame.HasNoSelectableStaticStories(document, token) || document.EmptyFinalSectionParagraph is not { } paragraph ||
             !DocxPlainBodyFrame.IsPlainParagraph(paragraph) || !OwnsDocumentEndnotes(document, token)) return document;
         return document with { BodyElements = [.. document.BodyElements, new DocxParagraphElement(paragraph)] };
     }

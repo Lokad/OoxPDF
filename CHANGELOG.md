@@ -42,6 +42,8 @@
   active and later inherited stories keep their resources and failure behavior.
   Section-inherited header/footer pictures and textboxes retain their content;
   an explicit replacement clears the previous story's drawings.
+  Disabled static templates no longer revoke page-local footnote numbering or
+  add endnote continuation pages.
   Explicit automatic row heights share the same printed Review frames as omitted heights.
   They also retain fitting equation rows on their source page when only trailing spacing overflows.
   Nonprinting editing metadata around page/column breaks preserves paragraph spacing.

@@ -1,4 +1,26 @@
 {
+  "docx-inactive-static-notes": [
+    "DocxInactiveStaticTemplatesKeepMixedNoteCounterPaints",
+    "DocxInactiveStaticTemplatesKeepFinalEndnotePageFrames",
+    "DocxSelectableStaticOwnersRetainNoteFrameFallbacks",
+    "DocxStaticNoteEligibilityKeepsInheritedOwnersAndCancellation",
+    "DocxInlineCompositionPageNotesRenumberOwnedRunsWithoutDiscardingMath",
+    "DocxInlineCompositionCellPageNotesPublishOneOwnedParagraphAcrossViews",
+    "DocxInlineCompositionCellPageNotesRejectMissingAmbiguousAndClippedGlyphs",
+    "DocxEmptyFinalSectionRetainsContinuousAndParityFallbacks",
+    "DocxEmptyFinalNextPageSectionOwnsDocumentEndnoteFrame",
+    "DocxImplicitFinalSectionParagraphUsesOrdinaryFlow",
+    "DocxEmptyFinalSectionDoesNotCreateUnreferencedNotePages",
+    "DocxImplicitFinalParagraphRetainsStaticAndScaledFallbacks",
+    "DocxSectionEndNotesDoNotClaimEmptyFinalDocumentFrame",
+    "DocxMissingFinalParagraphDefaultsRetainTheBoundedFrame",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxPageFootnoteNumbersRejectMovedOrPartialNotes",
+    "DocxPageFootnoteNumbersUseSectionRequestDespiteDocumentRestartMetadata",
+    "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
+    "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-static-inheritance": [
     "DocxInheritedStaticPicturesKeepContentInBothViews",
     "DocxExplicitStaticReplacementClearsInheritedPictures",
@@ -19291,7 +19313,12 @@
     "DocxExplicitStaticReplacementClearsInheritedPictures",
     "DocxInheritedStaticDrawingVariantsStayIndependent",
     "DocxInheritedStaticTextBoxesKeepActualFontsAndRefusals",
-    "DocxFontPlanUsesEnabledAndInheritedStaticVariants"
+    "DocxFontPlanUsesEnabledAndInheritedStaticVariants",
+    "DocxInactiveStaticTemplatesKeepMixedNoteCounterPaints",
+    "DocxInactiveStaticTemplatesKeepFinalEndnotePageFrames",
+    "DocxSelectableStaticOwnersRetainNoteFrameFallbacks",
+    "DocxStaticNoteEligibilityKeepsInheritedOwnersAndCancellation",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories"
   ],
   "docx-column-admission": [
     "DocxColumnAdmission",
