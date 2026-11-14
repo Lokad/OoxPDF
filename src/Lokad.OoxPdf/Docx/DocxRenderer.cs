@@ -703,13 +703,6 @@ internal sealed partial class DocxRenderer
         return false;
     }
 
-    private static bool HasMainStoryRevisionBalloon(DocxDocument document)
-    {
-        // Cell insertion/deletion captions belong only to the main story.
-        return document.Paragraphs.Any(paragraph => HasRevisionBalloon(paragraph.Revisions)) ||
-            document.Tables.Any(table => TableSubtreeHasRevisionBalloon(table));
-    }
-
     private static bool HasRevisionBalloon(IReadOnlyList<DocxRevisionInfo> revisions, bool isMainStory = true)
     {
         return revisions.Any(revision => IsWordCompatibleBalloonRevision(revision, isMainStory));
@@ -720,7 +713,8 @@ internal sealed partial class DocxRenderer
     // stories do not independently place revision captions.
     private static bool HasAnyRevisionBalloon(DocxDocument document)
     {
-        if (HasMainStoryRevisionBalloon(document))
+        if (HasStory(document.BodyElements, document.Paragraphs, document.Tables, isMainStory: true) ||
+            HasFloatingContent(document.FloatingDrawings))
         {
             return true;
         }
@@ -734,174 +728,76 @@ internal sealed partial class DocxRenderer
         var notes = document.RelatedStories.Where(story => story.IsNormalStoryType &&
             references.Contains((story.Kind, story.Id))).ToArray();
 
-        foreach (DocxParagraph paragraph in ParaEnumerations())
-        {
-            if (HasRevisionBalloon(paragraph.Revisions, isMainStory: false))
-            {
-                return true;
-            }
-        }
-
-        foreach (DocxTable table in TableEnumerations())
-        {
-            if (TableSubtreeHasRevisionBalloon(table, isMainStory: false))
-            {
-                return true;
-            }
-        }
-
-        return false;
-
-        IEnumerable<DocxPageSettings> SectionSettings() =>
-            document.BodyElements.OfType<DocxSectionBreakElement>()
-                .Select(section => section.PageSettings).Prepend(document.PageSettings);
-
-        IEnumerable<DocxParagraph> ParaEnumerations()
-        {
-            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType))
-            {
-                yield return paragraph;
-            }
-
-            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.FooterBodyElementsByType, document.FooterParagraphsByType))
-            {
-                yield return paragraph;
-            }
-
-            foreach (var settings in SectionSettings())
-            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(settings))
-            {
-                yield return paragraph;
-            }
-
-            foreach (DocxRelatedStory story in notes)
-            {
-                foreach (DocxParagraph paragraph in story.Paragraphs)
-                {
-                    yield return paragraph;
-                }
-
-                foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(story.FloatingDrawings))
-                {
-                    yield return paragraph;
-                }
-            }
-
-            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.FloatingDrawings))
-            {
-                yield return paragraph;
-            }
-
-            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.HeaderFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
-            {
-                yield return paragraph;
-            }
-
-            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.FooterFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
-            {
-                yield return paragraph;
-            }
-
-            foreach (var settings in SectionSettings())
-            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(
-                settings.HeaderFloatingDrawingsByType.Values.Concat(settings.FooterFloatingDrawingsByType.Values)
-                    .SelectMany(drawings => drawings)))
-            {
-                yield return paragraph;
-            }
-        }
-
-        IEnumerable<DocxParagraph> FloatingDrawingParagraphs(IEnumerable<DocxFloatingDrawing> drawings)
-        {
-            foreach (DocxFloatingDrawing drawing in drawings)
-            {
-                foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements))
-                {
-                    yield return paragraph;
-                }
-            }
-        }
-
-        IEnumerable<DocxTable> TableEnumerations()
-        {
-            foreach (DocxTable table in StaticStoryTables(document.HeaderBodyElementsByType))
-            {
-                yield return table;
-            }
-
-            foreach (DocxTable table in StaticStoryTables(document.FooterBodyElementsByType))
-            {
-                yield return table;
-            }
-
-            foreach (var settings in SectionSettings())
-            foreach (DocxTable table in StaticStoryTables(settings.HeaderBodyElementsByType)
-                .Concat(StaticStoryTables(settings.FooterBodyElementsByType)))
-            {
-                yield return table;
-            }
-
-            foreach (DocxRelatedStory story in notes)
-            {
-                foreach (DocxTable table in story.Tables)
-                {
-                    yield return table;
-                }
-            }
-        }
-    }
-
-    private static IEnumerable<DocxTable> StaticStoryTables(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType)
-    {
-        foreach (IReadOnlyList<DocxBodyElement> elements in bodyElementsByType.Values)
-        {
-            foreach (DocxTable table in DocxBlockTraversal.EnumerateBodyTables(elements))
-            {
-                yield return table;
-            }
-        }
-    }
-
-    private static bool TableSubtreeHasRevisionBalloon(DocxTable table, bool isMainStory = true)
-    {
-        if (HasRevisionBalloon(table.Revisions, isMainStory))
+        if (HasStaticContent(document.HeaderBodyElementsByType, document.HeaderParagraphsByType,
+                document.HeaderFloatingDrawingsByType) ||
+            HasStaticContent(document.FooterBodyElementsByType, document.FooterParagraphsByType,
+                document.FooterFloatingDrawingsByType))
         {
             return true;
         }
 
-        foreach (DocxTableRow row in table.Rows)
+        foreach (DocxPageSettings settings in document.BodyElements.OfType<DocxSectionBreakElement>()
+            .Select(section => section.PageSettings).Prepend(document.PageSettings))
         {
-            if (HasRevisionBalloon(row.Revisions, isMainStory))
+            if (HasStaticContent(settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType,
+                    settings.HeaderFloatingDrawingsByType) ||
+                HasStaticContent(settings.FooterBodyElementsByType, settings.FooterParagraphsByType,
+                    settings.FooterFloatingDrawingsByType))
             {
                 return true;
             }
-
-            foreach (DocxTableCell cell in row.Cells)
-            {
-                if (HasRevisionBalloon(cell.Revisions, isMainStory))
-                {
-                    return true;
-                }
-
-                foreach (DocxParagraph paragraph in cell.Paragraphs)
-                {
-                    if (HasRevisionBalloon(paragraph.Revisions, isMainStory))
-                    {
-                        return true;
-                    }
-                }
-
-                foreach (DocxTable nested in DocxBlockTraversal.EnumerateBodyTables(DocxTableCellContent.GetBodyElements(cell)))
-                {
-                    if (TableSubtreeHasRevisionBalloon(nested, isMainStory))
-                    {
-                        return true;
-                    }
-                }
-            }
         }
 
-        return false;
+        return notes.Any(story => HasStory(story.BodyElements, story.Paragraphs, story.Tables) ||
+            HasFloatingContent(story.FloatingDrawings));
+
+        bool HasStaticContent(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodies,
+            IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphs,
+            IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawings) =>
+            (bodies.Count != 0
+                ? bodies.Values.Any(elements => HasContent(elements, isMainStory: false))
+                : paragraphs.Values.Any(items => items.Any(paragraph => HasParagraph(paragraph, isMainStory: false)))) ||
+            HasFloatingContent(drawings.Values.SelectMany(items => items));
+
+        bool HasFloatingContent(IEnumerable<DocxFloatingDrawing> drawings) =>
+            drawings.Any(drawing => HasContent(drawing.TextBoxBodyElements, isMainStory: false));
+
+        bool HasStory(IReadOnlyList<DocxBodyElement> elements, IReadOnlyList<DocxParagraph> paragraphs,
+            IReadOnlyList<DocxTable> tables, bool isMainStory = false) =>
+            elements.Count != 0 ? HasContent(elements, isMainStory) :
+                paragraphs.Any(paragraph => HasParagraph(paragraph, isMainStory)) ||
+                tables.Any(table => HasTable(table, isMainStory, includeInlineTextBoxes: true));
+
+        bool HasContent(IEnumerable<DocxBodyElement> elements, bool isMainStory, bool includeInlineTextBoxes = true) =>
+            elements.Any(element => element switch
+            {
+                DocxParagraphElement paragraph => HasParagraph(paragraph.Paragraph, isMainStory, includeInlineTextBoxes),
+                DocxTableElement table => HasTable(table.Table, isMainStory, includeInlineTextBoxes),
+                _ => false
+            });
+
+        bool HasParagraph(DocxParagraph paragraph, bool isMainStory, bool includeInlineTextBoxes = true) =>
+            HasRevisionBalloon(paragraph.Revisions, isMainStory) ||
+            // Inline boxes are distinct stories; boxes nested inside them are
+            // ignored by layout and cannot reserve a lane for unpainted captions.
+            includeInlineTextBoxes && paragraph.InlineTextBoxes.Any(box =>
+                HasContent(box.BodyElements, isMainStory: false, includeInlineTextBoxes: false));
+
+        bool HasTable(DocxTable table, bool isMainStory, bool includeInlineTextBoxes)
+        {
+            if (HasRevisionBalloon(table.Revisions, isMainStory)) return true;
+            foreach (DocxTableRow row in table.Rows)
+            {
+                if (HasRevisionBalloon(row.Revisions, isMainStory)) return true;
+                foreach (DocxTableCell cell in row.Cells)
+                {
+                    if (HasRevisionBalloon(cell.Revisions, isMainStory) ||
+                        HasContent(DocxTableCellContent.GetBodyElements(cell), isMainStory, includeInlineTextBoxes)) return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     private static IDocxTextMeasurer? ResolveLayoutTextMeasurer(DocxFontResources fontResources, DocxMarkupContext markupContext)
