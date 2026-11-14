@@ -40,7 +40,7 @@ internal static class DocxAutomaticReviewRowTests
                     .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default);
             }
 
-            static (int Page, string Text, double X, double Y, double Width, double Height)[] Lines(DocxLayout layout) =>
+            static (int Page, string Text, double X, double Y, double Width, double? Height)[] Lines(DocxLayout layout) =>
                 layout.Pages.SelectMany((page, index) => page.Items.OfType<DocxTableRowLayout>()
                     .SelectMany(row => row.Cells).SelectMany(c => c.TextLines)
                     .Select(line => (index, line.Text, line.X, line.BaselineY, line.Width, line.LineHeight))).ToArray();
