@@ -1,5 +1,12 @@
 {
   "docx-fragment-source-ownership": [
+    "DocxInlineCompositionMarkFormattingBalloonsKeepActualSourceOwners",
+    "DocxInlineCompositionMarkFormattingBalloonsMatchIndependentWord",
+    "PortableRenderingMarkFormattingBalloonsKeepSourceOwners",
+    "DocxInlineCompositionFormattingBalloonDescriptionsMatchIndependentWord",
+    "DocxInlineCompositionFormattingBalloonDescriptionsResolveInheritedState",
+    "DocxInlineCompositionFormattingBalloonDescriptionsKeepExplicitFallbacks",
+    "PortableRenderingFormattingBalloonDescriptionsKeepSourceOwners",
     "DocxHardBreaksRetainParagraphOwnedFirstMarkers",
     "DocxHardBreakFirstMarkersPaintOnTheirSourceLine",
     "DocxHardBreakMarkerAdmissionKeepsEmptyAndUnknownFallbacks",

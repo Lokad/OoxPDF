@@ -87,6 +87,7 @@ internal static partial class DocxNumberingTests
             var continuation = document.Paragraphs.Single(paragraph => paragraph.Equations.Count != 0 && paragraph.ListLabel is null);
             TestAssert.True(continuation.ParagraphMarkRun is not null &&
                 DocxInlineContent.HasSupportedSourceOwner(continuation), "The actual numbered source owns the continuation revision.");
+            TestAssert.Equal("Font: Bold", DocxRenderer.BuildWordCompatibleRunFormattingPreview(continuation, default));
             var diagnostics = new List<OoxPdfDiagnostic>();
             var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
                 mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :

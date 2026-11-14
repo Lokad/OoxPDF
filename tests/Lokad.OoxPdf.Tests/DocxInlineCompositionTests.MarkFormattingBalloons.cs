@@ -18,12 +18,13 @@ internal static partial class DocxInlineCompositionTests
             var mark = paragraph.ParagraphMarkRun!;
             var revision = mark.Revisions.Single();
             TestAssert.Equal("Font: Bold", DocxRenderer.BuildWordCompatibleRunFormattingPreview(paragraph, default));
+            TestAssert.Equal("Font: Bold", DocxRenderer.BuildWordCompatibleRunFormattingPreview(paragraph with { ListLabel = null }, default));
             TestAssert.True(!DocxInlineContent.HasSupportedRunRevisionOwners(paragraph.Revisions, paragraph.Runs, default),
                 "Run-only ownership cannot substitute for the actual numbered mark.");
             foreach (var invalid in new[]
             {
                 paragraph with { ParagraphMarkRun = null },
-                paragraph with { ListLabel = null },
+                paragraph with { ListLabel = null, HasSourceNumbering = false },
                 paragraph with { ParagraphMarkRun = mark with { SourceRunIndex = 0 } },
                 paragraph with { ParagraphMarkRun = mark with { Revisions = [revision with { }] } }
             })
