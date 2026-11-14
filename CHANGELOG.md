@@ -41,7 +41,8 @@
   honor inherited visibility; annotation-only revision scopes retain neighboring
   equations, including scopes containing hyperlinks, complete empty stored fields
   and reader-proven empty move ranges. Actual paragraph-mark revisions retain
-  neighboring equations before and after supported joins.
+  neighboring equations before and after supported joins. Supported Review numbering
+  retains old/current labels alongside paragraph-mark formatting history.
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
   qualified authored horizontal legends retain every name; manual pie viewports
   own their radius and use the measured automatic frame for factor offsets in both axes.

@@ -456,25 +456,35 @@ internal static class DocxInlineContent
         {
             token.ThrowIfCancellationRequested();
             if (mark.SourceRunIndex != -1 || !string.IsNullOrWhiteSpace(mark.Text)) return false;
-            DocxRevisionInfo? formatting = null;
-            int formattingCount = 0;
+            bool knownFormatting = TryGetParagraphMarkFormattingRevision(mark.Revisions, token, out var formatting);
             foreach (var revision in mark.Revisions)
             {
                 token.ThrowIfCancellationRequested();
-                if (revision.Kind == DocxRevisionKind.RunPropertiesChange)
-                {
-                    formatting = revision;
-                    formattingCount++;
-                }
                 if (revision.PropertyChangeFamily is null &&
                     (revision is { Kind: DocxRevisionKind.Deletion, SourceElement: "del" } or
                         { Kind: DocxRevisionKind.Insertion, SourceElement: "ins" }))
                     remaining.Remove(revision);
             }
-            if (formattingCount == 1 && formatting is
-                { SourceElement: "rPrChange", PropertyChangeFamily: DocxRevisionPropertyFamily.Run })
+            if (knownFormatting && formatting is not null)
                 remaining.Remove(formatting);
             return true;
         }
+    }
+
+    // Zero or one actual run-property snapshot can accompany a mark operation.
+    // Inline ownership and numbering use the same ambiguity/family rule.
+    internal static bool TryGetParagraphMarkFormattingRevision(IReadOnlyList<DocxRevisionInfo> revisions,
+        CancellationToken token, out DocxRevisionInfo? formatting)
+    {
+        formatting = null;
+        foreach (var revision in revisions)
+        {
+            token.ThrowIfCancellationRequested();
+            if (revision.Kind != DocxRevisionKind.RunPropertiesChange) continue;
+            if (formatting is not null || revision.SourceElement != "rPrChange" ||
+                revision.PropertyChangeFamily != DocxRevisionPropertyFamily.Run) return false;
+            formatting = revision;
+        }
+        return true;
     }
 }

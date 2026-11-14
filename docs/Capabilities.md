@@ -514,8 +514,10 @@ Supported within the following constraints:
   independently of first-run styling. Actual inserted paragraph marks preserve
   adjacent text/equations independently of numbering, including one owned format
   snapshot. Actual deleted marks also retain inline content in unjoined views;
-  duplicate/unowned formatting retains fallback. Review renumbering and marker
-  decoration remain incomplete;
+  duplicate/unowned formatting retains fallback. Supported inserted-mark Review
+  timelines retain old/current list numbers alongside one mark-format snapshot,
+  including history on preceding/following paragraphs. Other Review renumbering
+  and marker decoration remain incomplete;
   combined-role captions and geometry remain approximate.
 - Fixed-grid tables with fills, common collapsed border styles/conflicts,
   nil/none suppression, repeated headers, split rows and cell content. Actual page

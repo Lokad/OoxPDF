@@ -45,6 +45,26 @@ internal sealed partial class DocxReader
         return OoxNumbering.ToRomanUpper(value);
     }
 
+    // Formatting history does not insert a list boundary or consume a counter.
+    // Other mark operations still need their own original/current timeline rule.
+    private static bool TryGetNumberingMarkInsertion(IReadOnlyList<DocxRevisionInfo> revisions,
+        CancellationToken token, out DocxRevisionInfo? insertion)
+    {
+        insertion = null;
+        if (!DocxInlineContent.TryGetParagraphMarkFormattingRevision(revisions, token, out var formatting)) return false;
+        DocxRevisionInfo? candidate = null;
+        foreach (var revision in revisions)
+        {
+            token.ThrowIfCancellationRequested();
+            if (ReferenceEquals(revision, formatting)) continue;
+            if (candidate is not null || revision is not
+                { Kind: DocxRevisionKind.Insertion, SourceElement: "ins", PropertyChangeFamily: null }) return false;
+            candidate = revision;
+        }
+        insertion = candidate;
+        return true;
+    }
+
     private static DocxListLabel? CreateListLabel(
         (string NumberId, string AbstractId, int Level, DocxNumberingLevel Definition)? sourceNumbering,
         XElement? paragraphProperties, DocxNumberingSet numbering, DocxNumberingCounters counters, DocxStyleSet styles, string? paragraphStyleId, DocxTableCellStyle? tableCellStyle, DocxResolvedRunProperties paragraphMarkRun,

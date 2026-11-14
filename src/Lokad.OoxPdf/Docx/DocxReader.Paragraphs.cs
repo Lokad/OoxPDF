@@ -69,12 +69,10 @@ internal sealed partial class DocxReader
             paragraphMarkRunProperties, paragraphStyleId, characterStyleId: null, styles, tableCellStyle?.Run);
         IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadRunPropertyChangeRevisions(
             paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run, paragraphMarkRun);
-        DocxRevisionInfo? numberingMarkInsertion = inheritedRevision is null &&
-            paragraphMarkRevisions is [{ Kind: DocxRevisionKind.Insertion, SourceElement: "ins" } insertion]
-            ? insertion : null;
-        bool? originalNumberingIncluded = inheritedRevision is not null ||
-            paragraphMarkRevisions.Count != 0 && numberingMarkInsertion is null
-            ? null : numberingMarkInsertion is null;
+        DocxRevisionInfo? numberingMarkInsertion = null;
+        bool knownNumberingMark = inheritedRevision is null &&
+            TryGetNumberingMarkInsertion(paragraphMarkRevisions, cancellationToken, out numberingMarkInsertion);
+        bool? originalNumberingIncluded = knownNumberingMark ? numberingMarkInsertion is null : null;
         bool hasDeletedParagraphMark = paragraphMarkRevisions.Any(revision => revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del");
         AddRevisions(paragraphRevisions, paragraphMarkRevisions);
         bool pageInstructionSeen = false;
