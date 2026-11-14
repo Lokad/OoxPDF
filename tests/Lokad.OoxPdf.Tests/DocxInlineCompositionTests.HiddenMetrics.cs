@@ -83,26 +83,28 @@ internal static partial class DocxInlineCompositionTests
         }
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            DocxDocument Source(bool hidden) => ReadTextRowMetrics("plain", "ordinary", mode, (xml, w, _) =>
+            DocxDocument Source(int hiddenSize) => ReadTextRowMetrics("plain", "ordinary", mode, (xml, w, _) =>
             {
                 var paragraph = xml.Descendants(w + "body").Single().Element(w + "p")!;
                 paragraph.Elements(w + "r").Remove();
                 paragraph.Element(w + "pPr")!.Add(new XElement(w + "rPr", new XElement(w + "sz", new XAttribute(w + "val", "52"))));
-                if (hidden) paragraph.Add(new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish"),
-                    new XElement(w + "sz", new XAttribute(w + "val", "240"))), new XElement(w + "t", "Unprinted")));
+                paragraph.Add(new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish"),
+                    new XElement(w + "sz", new XAttribute(w + "val", hiddenSize * 2))), new XElement(w + "t", "Unprinted")));
                 paragraph.AddAfterSelf(new XElement(w + "p", new XElement(w + "pPr", new XElement(w + "spacing",
                     new XAttribute(w + "before", "0"), new XAttribute(w + "after", "0"))),
                     new XElement(w + "r", new XElement(w + "t", "Afterword"))));
             });
-            var empty = Source(false); var allHidden = Source(true);
+            // Keep the same hidden owner and authored paragraph mark. A parsed
+            // empty paragraph has a separate existing implicit-mark layout path.
+            var ordinaryHidden = Source(11); var allHidden = Source(120);
             TestAssert.Equal(26d, allHidden.Paragraphs[0].ParagraphMarkFontSize!.Value);
-            var control = RenderTextRowMetricDocument(empty, mode); var actual = RenderTextRowMetricDocument(allHidden, mode);
+            var control = RenderTextRowMetricDocument(ordinaryHidden, mode); var actual = RenderTextRowMetricDocument(allHidden, mode);
             TestAssert.Equal(control.Length, actual.Length);
             var expected = DocxCommentsTests.ReadEmbeddedGlyphTextShows(control[0]).Where(show => show.Text.Trim().Length != 0).ToArray();
             var observed = DocxCommentsTests.ReadEmbeddedGlyphTextShows(actual[0]).Where(show => show.Text.Trim().Length != 0).ToArray();
             TestAssert.Equal(string.Concat(expected.Select(show => show.Text)), string.Concat(observed.Select(show => show.Text)));
             TestAssert.True(expected.Zip(observed).All(pair => Math.Abs(pair.First.Y - pair.Second.Y) < .001d),
-                "All-hidden source retains the empty paragraph's authored mark slot and following baseline.");
+                "Changing only hidden font size retains the authored mark slot and following baseline.");
         }
     }
 
