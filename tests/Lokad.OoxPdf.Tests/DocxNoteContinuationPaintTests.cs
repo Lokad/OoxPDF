@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Pdf;
 
@@ -16,11 +17,71 @@ internal static class DocxNoteContinuationPaintTests
         {
             TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, baseline, 792d,
                 hasBalloonContent: false));
-            TestAssert.Equal(baseline is null ? 69.58d : 0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, baseline, 792d,
+            TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, baseline, 792d,
                 hasBalloonContent: true));
         }
         TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(
             context with { WordCompatiblePrintScale = .75d }, null, 792d, hasBalloonContent: true));
+    }
+
+    public static void DocxEndnotePropertyHistoryKeepsContinuationPaintInsideUnscaledClips()
+    {
+        foreach (bool cell in new[] { false, true })
+        {
+            PdfPage[] Render(OoxPdfDocxMarkupMode mode)
+            {
+                var source = DocxInlineCompositionTests.ReadMutation("CompositionProbes/mixed-note-endnote-table",
+                    mode, false, false, (xml, w, _) =>
+                    {
+                        var note = xml.Root!.Elements(w + "endnote").Single(note => (string?)note.Attribute(w + "id") == "37");
+                        var row = note.Element(w + "tbl")!.Element(w + "tr")!;
+                        row.AddFirst(new XElement(w + "trPr", new XElement(w + "trHeight",
+                            new XAttribute(w + "val", "8400"), new XAttribute(w + "hRule", "atLeast"))));
+                        row.Descendants(w + "p").Single().Add(new XElement(w + "r", new XElement(w + "t",
+                            " " + string.Join(" ", Enumerable.Range(0, 160).Select(i => $"FlowToken{i:000}")))));
+                        var second = new XElement(row);
+                        second.Descendants().Where(element => element.Name == w + "bookmarkStart" || element.Name == w + "bookmarkEnd").Remove();
+                        XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+                        second.Descendants(wp + "docPr").Single().SetAttributeValue("id", "2701");
+                        row.AddAfterSelf(second);
+                        string name = cell ? "tcPr" : "trPr";
+                        var owner = cell ? row.Element(w + "tc")! : row;
+                        var properties = owner.Element(w + name);
+                        if (properties is null) { properties = new XElement(w + name); owner.AddFirst(properties); }
+                        properties.Add(new XElement(w + name + "Change", new XAttribute(w + "id", "6901"),
+                            new XAttribute(w + "author", "Property Reviewer"), new XElement(w + name)));
+                    }, partOverride: "word/endnotes.xml");
+                var settings = source.PageSettings with { HeightValue = "12000" };
+                source = source with { PageHeightPoints = 600d, PageSettings = settings,
+                    FinalSectionBreak = source.FinalSectionBreak is { } final ? final with { PageSettings = settings } : null,
+                    BodyElements = source.BodyElements.Select(element => element is DocxSectionBreakElement section
+                        ? section with { PageSettings = section.PageSettings with { HeightValue = "12000" } } : element).ToArray() };
+                return new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode,
+                    mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                        : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            }
+            var final = Render(OoxPdfDocxMarkupMode.Final);
+            var review = Render(OoxPdfDocxMarkupMode.AllMarkup);
+            TestAssert.True(final.Length >= 3 && final.Length == review.Length,
+                "Property history must retain complete rows and dedicated note continuation pages.");
+            foreach (var pages in new[] { final, review })
+                TestAssert.Equal(320, Regex.Matches(string.Concat(pages.Select(DocxPageFootnoteNumberingTests.DecodeText)), @"FlowToken\d{3}").Count);
+            foreach (string anchor in new[] { "Public destination Bravo.", "Public destination Charlie.", "Public destination Delta." })
+            {
+                var before = Anchor(final, anchor);
+                var after = Anchor(review, anchor);
+                TestAssert.True(before.Page > 1 && before.Page == after.Page &&
+                    Math.Abs(before.X - after.X) < .002d && Math.Abs(before.Y - after.Y) < .002d,
+                    "A property-history balloon cannot displace the following note outside its clip: " + anchor);
+            }
+            for (int page = 0; page < final.Length; page++)
+                TestAssert.True(MathBaselines(final[page]).SequenceEqual(MathBaselines(review[page])),
+                    "Resolved row/cell history preserves source math placement.");
+            TestAssert.True(final.SelectMany(page => page.Annotations).Select(link => link.Destination)
+                .SequenceEqual(review.SelectMany(page => page.Annotations).Select(link => link.Destination)),
+                "Property history retains source-owned note destinations.");
+        }
     }
 
     public static void DocxEndnoteOnlyContinuationsKeepUnscaledTextMathPictureAndClipOrigins()

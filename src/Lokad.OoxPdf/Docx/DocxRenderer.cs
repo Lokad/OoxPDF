@@ -987,9 +987,10 @@ internal sealed partial class DocxRenderer
             return 0d;
         }
 
-        // Balloonless unit-scale pages retain their physical origin even when
-        // they contain only note continuations and have no measured baseline.
-        if (Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d && !hasBalloonContent)
+        // Unit-scale pages without a body origin retain physical coordinates.
+        // Balloons elsewhere cannot supply an origin for note-only continuations.
+        if (Math.Abs(markupContext.WordCompatiblePrintScale - 1d) < 0.000000001d &&
+            (!hasBalloonContent || firstBaselineY is null))
         {
             return 0d;
         }

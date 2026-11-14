@@ -1,5 +1,12 @@
 {
   "docx-note-property-composition": [
+    "DocxEndnotePropertyHistoryKeepsContinuationPaintInsideUnscaledClips",
+    "DocxEndnoteOnlyContinuationsKeepUnscaledTextMathPictureAndClipOrigins",
+    "DocxBalloonlessUnitScaleOriginsDoNotRequireBodyText",
+    "DocxWordCompatibleTextYOffsetUsesMeasuredUnitScaleOriginWithBalloons",
+    "DocxWordCompatibleTextYOffsetPinsFirstBaseline",
+    "DocxWordCompatibleTextYOffsetPinsFirstBaselineOffReference",
+    "DocxWordCompatibleTextYOffsetDropsAnchorWithoutBalloons",
     "DocxCompleteEndnoteRowsRetainResolvedPropertyHistory",
     "DocxEndnotePropertyHistoryPreservesUnknownAndAmbiguousFallbacks",
     "DocxCompleteEndnoteRowDefersWithoutClippingItsContent",

@@ -863,7 +863,7 @@ internal static class DocxMarkupTests
         TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d, hasBalloonContent: true));
         TestAssert.Equal(2d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, 700d, 792d,
             hasBalloonContent: true, sourceBaselineOffset: 2d));
-        TestAssert.Equal(69.58d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, null, 792d, hasBalloonContent: true));
+        TestAssert.Equal(0d, DocxRenderer.ResolveWordCompatibleTextYOffset(context, null, 792d, hasBalloonContent: true));
     }
 
     public static void DocxWordCompatibleTextYOffsetDropsAnchorWithoutBalloons()

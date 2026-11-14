@@ -32,7 +32,8 @@
   and explicit breaks remain respected. Measured cell flow selects legal paragraph
   boundaries and retries fragmentation after page admission. Measured unfit cell
   keep-next groups flow while fitting paragraphs and groups remain together.
-  Endnote row/cell formatting history retains complete content and page admission.
+  Endnote row/cell formatting history retains complete content, page admission
+  and visible continuation text in unscaled Review views.
   Explicit automatic row heights share the same printed Review frames as omitted heights.
   They also retain fitting equation rows on their source page when only trailing spacing overflows.
   Nonprinting editing metadata around page/column breaks preserves paragraph spacing.
