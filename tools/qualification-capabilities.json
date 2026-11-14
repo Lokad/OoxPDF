@@ -1,4 +1,28 @@
 {
+  "docx-static-variant-ownership": [
+    "DocxDisabledStaticPropertyOwnersKeepTheBodyPrintScale",
+    "DocxDisabledStaticPropertyHistoryKeepsBodyPaintInBothViews",
+    "DocxEnabledStaticPropertyOwnersKeepVisibleCaptionsAndMath",
+    "DocxInheritedFirstStoryActivationKeepsItsRevisionLane",
+    "DocxSyntheticHeaderReferenceTypesSelectDefaultWhenNoFirstOrEvenSetting",
+    "DocxTitlePageSuppressesDefaultHeaderWithoutFirstStory",
+    "DocxEvenPagesSuppressDefaultHeaderWithoutEvenStory",
+    "DocxSectionNavigationDoesNotBackfillAnUndefinedFirstHeader",
+    "DocxReaderReadsEvenAndOddHeadersFromSectionProperties",
+    "DocxEarlierStaticRevisionOwnersKeepThePrintedPageLane",
+    "DocxEarlierStaticRevisionCaptionsKeepSourceWordsAndMathVisible",
+    "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
+    "DocxSectionScopedInlineBoxesKeepVisibleLabelsInBothViews",
+    "DocxContainerPropertyOwnersShareThePrintedPageLane",
+    "DocxContainerPropertyCaptionsKeepVisibleSourceContent",
+    "DocxNestedBoxPropertyHistoryDoesNotReserveAnUnpaintedLane",
+    "DocxInlineCompositionTableMathMetadataSharesPrintedLaneAcrossContainers",
+    "DocxInlineCompositionTableMathMetadataKeepsIndependentWordContentAndInk",
+    "DocxInlineCompositionCellStructureKeepsActualChildOwnersAndPrintedLane",
+    "DocxNotePropertyBalloonsShareThePrintedPageLane",
+    "DocxCommentUnknownEndpointsRetainTheirEstablishedFallback",
+    "PortableRenderingInlineBoxFallbackKeepsOutsideSiblings"
+  ],
   "docx-container-revision-lane": [
     "DocxContainerPropertyOwnersShareThePrintedPageLane",
     "DocxContainerPropertyCaptionsKeepVisibleSourceContent",

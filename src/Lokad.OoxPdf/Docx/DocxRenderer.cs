@@ -728,20 +728,15 @@ internal sealed partial class DocxRenderer
         var notes = document.RelatedStories.Where(story => story.IsNormalStoryType &&
             references.Contains((story.Kind, story.Id))).ToArray();
 
-        if (HasStaticContent(document.HeaderBodyElementsByType, document.HeaderParagraphsByType,
-                document.HeaderFloatingDrawingsByType) ||
-            HasStaticContent(document.FooterBodyElementsByType, document.FooterParagraphsByType,
-                document.FooterFloatingDrawingsByType))
+        // Use placement's resolved inheritance: a disabled story in one section
+        // can become active in a later section without another part reference.
+        var sections = DocxLayoutEngine.BuildEffectiveSectionSettings(document, out var finalSection);
+        foreach (DocxPageSettings settings in sections.Values.Select(section => section.PageSettings)
+            .Append(finalSection.PageSettings))
         {
-            return true;
-        }
-
-        foreach (DocxPageSettings settings in document.BodyElements.OfType<DocxSectionBreakElement>()
-            .Select(section => section.PageSettings).Prepend(document.PageSettings))
-        {
-            if (HasStaticContent(settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType,
+            if (HasStaticContent(settings, settings.HeaderBodyElementsByType, settings.HeaderParagraphsByType,
                     settings.HeaderFloatingDrawingsByType) ||
-                HasStaticContent(settings.FooterBodyElementsByType, settings.FooterParagraphsByType,
+                HasStaticContent(settings, settings.FooterBodyElementsByType, settings.FooterParagraphsByType,
                     settings.FooterFloatingDrawingsByType))
             {
                 return true;
@@ -751,13 +746,15 @@ internal sealed partial class DocxRenderer
         return notes.Any(story => HasStory(story.BodyElements, story.Paragraphs, story.Tables) ||
             HasFloatingContent(story.FloatingDrawings));
 
-        bool HasStaticContent(IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodies,
+        bool HasStaticContent(DocxPageSettings settings, IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodies,
             IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphs,
             IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> drawings) =>
             (bodies.Count != 0
-                ? bodies.Values.Any(elements => HasContent(elements, isMainStory: false))
-                : paragraphs.Values.Any(items => items.Any(paragraph => HasParagraph(paragraph, isMainStory: false)))) ||
-            HasFloatingContent(drawings.Values.SelectMany(items => items));
+                ? bodies.Any(pair => DocxLayoutEngine.IsStaticStoryVariantEnabled(settings, pair.Key) &&
+                    HasContent(pair.Value, isMainStory: false))
+                : paragraphs.Any(pair => DocxLayoutEngine.IsStaticStoryVariantEnabled(settings, pair.Key) &&
+                    pair.Value.Any(paragraph => HasParagraph(paragraph, isMainStory: false)))) ||
+            drawings.Any(pair => DocxLayoutEngine.IsStaticStoryVariantEnabled(settings, pair.Key) && HasFloatingContent(pair.Value));
 
         bool HasFloatingContent(IEnumerable<DocxFloatingDrawing> drawings) =>
             drawings.Any(drawing => HasContent(drawing.TextBoxBodyElements, isMainStory: false));

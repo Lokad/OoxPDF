@@ -11,8 +11,15 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxLayoutEngine
 {
     internal static string GetStaticStoryVariant(DocxPageSettings settings, int pageNumber, int sectionFirstPageNumber = 1) =>
-        settings.TitlePage == true && pageNumber == sectionFirstPageNumber ? "first" :
-        settings.EvenAndOddHeaders == true && pageNumber % 2 == 0 ? "even" : "default";
+        IsStaticStoryVariantEnabled(settings, "first") && pageNumber == sectionFirstPageNumber ? "first" :
+        IsStaticStoryVariantEnabled(settings, "even") && pageNumber % 2 == 0 ? "even" : "default";
+
+    // Pre-layout ownership can exclude disabled variants without predicting a
+    // section's page count. Placement applies first-page/parity selection below.
+    internal static bool IsStaticStoryVariantEnabled(DocxPageSettings settings, string variant) =>
+        string.Equals(variant, "default", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(variant, "first", StringComparison.OrdinalIgnoreCase) && settings.TitlePage == true ||
+        string.Equals(variant, "even", StringComparison.OrdinalIgnoreCase) && settings.EvenAndOddHeaders == true;
 
     private static DocxSelectedStaticStory SelectStaticHeaderFooter(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
@@ -58,7 +65,7 @@ internal sealed partial class DocxLayoutEngine
         return page.PageSettings.FooterDistancePoints ?? DocxDefaults.HeaderFooterDistancePoints;
     }
 
-    private static IReadOnlyDictionary<int, DocxEffectiveSectionSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxEffectiveSectionSettings finalSectionSettings)
+    internal static IReadOnlyDictionary<int, DocxEffectiveSectionSettings> BuildEffectiveSectionSettings(DocxDocument document, out DocxEffectiveSectionSettings finalSectionSettings)
     {
         var sectionSettingsByElementIndex = new Dictionary<int, DocxEffectiveSectionSettings>();
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> inheritedHeadersByType =

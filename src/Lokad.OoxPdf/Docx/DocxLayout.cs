@@ -268,7 +268,7 @@ internal sealed partial class DocxLayoutEngine
         public double? MarkupLaneDesignBodyEnd { get; init; }
     }
 
-    private sealed record DocxEffectiveSectionSettings(
+    internal sealed record DocxEffectiveSectionSettings(
         DocxPageSettings PageSettings,
         DocxSectionLayoutProperties SectionProperties);
 
