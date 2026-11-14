@@ -71,8 +71,10 @@ internal static class DocxDeletedParagraphMarkTests
             TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(replacement),
                 "Missing, value-equal, misplaced or visible objects cannot stand in for consumed source marks.");
         var original = Read(false, OoxPdfDocxMarkupMode.AllMarkup).Paragraphs.First();
-        TestAssert.True(original.HasDeletedParagraphMark && !DocxInlineContent.HasSupportedSourceOwner(original),
-            "Unconsumed paragraph-mark revisions retain their eligibility fallback.");
+        TestAssert.True(original.HasDeletedParagraphMark && DocxInlineContent.HasSupportedSourceOwner(original),
+            "An actual unconsumed boundary owns its deletion without removing inline content.");
+        TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(original with { ParagraphMarkRun = null }),
+            "Removing the actual unconsumed mark loses its metadata owner.");
         using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxInlineContent.HasSupportedSourceOwner(paragraph, token: cancellation.Token));
     }

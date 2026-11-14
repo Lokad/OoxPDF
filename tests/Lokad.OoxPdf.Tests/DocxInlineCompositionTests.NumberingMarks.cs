@@ -32,10 +32,11 @@ internal static partial class DocxInlineCompositionTests
         })
             TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with { ParagraphMarkRun = invalid }),
                 "Value-equal or misplaced metadata cannot manufacture a source owner.");
-        var deletion = insertion with { Kind = DocxRevisionKind.Deletion, SourceElement = "del" };
-        TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with
-            { Revisions = [deletion], ParagraphMarkRun = mark with { Revisions = [deletion] } }),
-            "Paragraph-mark deletion/merge behavior needs its separate qualification.");
+        foreach (var invalid in new[] { insertion with { SourceElement = "pPrChange" },
+            insertion with { PropertyChangeFamily = DocxRevisionPropertyFamily.Run } })
+            TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with
+                { Revisions = [invalid], ParagraphMarkRun = mark with { Revisions = [invalid] } }),
+                "Wrong source elements or property-change families cannot manufacture insertion ownership.");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         TestAssert.Throws<OperationCanceledException>(() => DocxInlineContent.HasSupportedSourceOwner(paragraph, token: cancellation.Token));

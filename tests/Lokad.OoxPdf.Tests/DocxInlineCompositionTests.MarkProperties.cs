@@ -58,20 +58,9 @@ internal static partial class DocxInlineCompositionTests
                 revision with { PropertyChangeFamily = DocxRevisionPropertyFamily.Paragraph }, revision with { Kind = DocxRevisionKind.MoveTo },
                 revision with { Kind = DocxRevisionKind.Deletion, SourceElement = "del" } })
                 TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph with
-                    { Revisions = [invalid], ParagraphMarkRun = mark with { Revisions = [invalid] } }, default), "Other mark roles keep their fallback.");
+                    { Revisions = [invalid], ParagraphMarkRun = mark with { Revisions = [invalid] } }, default), "Wrong elements, kinds or property families keep their fallback.");
             var duplicate = MarkPropertyParagraph(ReadMarkPropertyMath(container, OoxPdfDocxMarkupMode.Final, duplicate: true));
             TestAssert.Equal(0, DocxMathParagraphPolicy.GetPreparationEquations(duplicate).Count);
-            if (container == "plain")
-            {
-                var insertion = revision with { Kind = DocxRevisionKind.Insertion, SourceElement = "ins" };
-                TestAssert.True(DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph with
-                    { Revisions = [insertion], ParagraphMarkRun = mark with { Revisions = [insertion] } }, default),
-                    "The actual empty mark owns its insertion independently of visible numbering.");
-                var misplaced = insertion with { SourceElement = "pPrChange" };
-                TestAssert.True(!DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph with
-                    { Revisions = [misplaced], ParagraphMarkRun = mark with { Revisions = [misplaced] } }, default),
-                    "An insertion with the wrong source element cannot manufacture mark ownership.");
-            }
             TestAssert.True(!DocxInlineContent.HasOnlyNonRenderingRevisionMetadata(paragraph), "This change does not broaden note or typography correction guards.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => DocxInlineContent.HasSupportedParagraphRevisionOwners(paragraph, canceled.Token));

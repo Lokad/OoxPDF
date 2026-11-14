@@ -481,8 +481,9 @@ break geometry and revision pagination keep their stated limits.
 
 Final/Simple joins across deleted paragraph marks retain supported inline
 equations, pictures, links and bookmarks in source order. Consumed marks keep
-their revision provenance. Original/AllMarkup retain the source paragraphs;
-unconsumed mark revisions keep their existing equation eligibility fallback.
+their revision provenance. Original/AllMarkup retain the source paragraphs and
+their supported inline content. Actual paragraph-mark deletion does not remove
+neighboring equations; duplicate or unowned formatting histories retain fallback.
 General paragraph-format changes and unrestricted revision layout remain partial.
 
 - Optional styles, settings, numbering, fonts/themes and related stories follow
@@ -512,8 +513,9 @@ Supported within the following constraints:
   selection follows numbering-level values and the paragraph mark/style/defaults,
   independently of first-run styling. Actual inserted paragraph marks preserve
   adjacent text/equations independently of numbering, including one owned format
-  snapshot. Duplicate/unowned formatting and unconsumed deleted marks retain their
-  fallbacks. Review renumbering and marker decoration remain incomplete;
+  snapshot. Actual deleted marks also retain inline content in unjoined views;
+  duplicate/unowned formatting retains fallback. Review renumbering and marker
+  decoration remain incomplete;
   combined-role captions and geometry remain approximate.
 - Fixed-grid tables with fills, common collapsed border styles/conflicts,
   nil/none suppression, repeated headers, split rows and cell content. Actual page

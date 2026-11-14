@@ -400,9 +400,8 @@ internal static class DocxInlineContent
                 }
         // Resolved text owns its inserted/deleted content and run formatting.
         // Formatting balloons consume the same run's metadata independently of
-        // equation measurement. A numbered inserted mark has its separate owner
-        // below; other paragraph/mark, unsupported equation and nontext revisions retain
-        // their existing fallbacks.
+        // equation measurement. Paragraph marks have separate source owners below;
+        // unowned and unsupported metadata retain their fallbacks.
         // Resolve actual source ownership in linear work.
         foreach (var run in runs)
         {
@@ -443,16 +442,17 @@ internal static class DocxInlineContent
         if (equationOwners is not null)
             foreach (var owner in equationOwners)
             { token.ThrowIfCancellationRequested(); remaining.Remove(owner); }
-        // Active and actually consumed marks own their unique formatting snapshot
-        // independently of visible text/numbering. Only consumed joins own deletion.
+        // A mark revision belongs to the paragraph boundary, not its inline math.
+        // Active and consumed marks own their unique formatting snapshot; joining
+        // remains a separate reader decision for the selected view.
         if (paragraphMark is not null)
-            ConsumeMarkRevisions(paragraphMark, DocxRevisionKind.Insertion);
+            ConsumeMarkRevisions(paragraphMark);
         if (consumedParagraphMarks is not null)
             foreach (var mark in consumedParagraphMarks)
-                if (!ConsumeMarkRevisions(mark, DocxRevisionKind.Deletion)) return false;
+                if (!ConsumeMarkRevisions(mark)) return false;
         return remaining.Count == 0;
 
-        bool ConsumeMarkRevisions(DocxTextRun mark, DocxRevisionKind contentKind)
+        bool ConsumeMarkRevisions(DocxTextRun mark)
         {
             token.ThrowIfCancellationRequested();
             if (mark.SourceRunIndex != -1 || !string.IsNullOrWhiteSpace(mark.Text)) return false;
@@ -466,8 +466,9 @@ internal static class DocxInlineContent
                     formatting = revision;
                     formattingCount++;
                 }
-                if (revision.Kind == contentKind &&
-                    revision.SourceElement == (contentKind == DocxRevisionKind.Insertion ? "ins" : "del"))
+                if (revision.PropertyChangeFamily is null &&
+                    (revision is { Kind: DocxRevisionKind.Deletion, SourceElement: "del" } or
+                        { Kind: DocxRevisionKind.Insertion, SourceElement: "ins" }))
                     remaining.Remove(revision);
             }
             if (formattingCount == 1 && formatting is
