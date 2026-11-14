@@ -14,7 +14,14 @@ internal static partial class DocxEndnoteBlockTests
 
     public static void DocxOversizedEndnoteRowsRetainHeightOnlyProgress() => Check(false, oversized: true, emptyOnly: true);
 
-    private static void Check(bool multipleRows, bool oversized = false, bool emptyOnly = false)
+    public static void DocxCompleteEndnoteRowsRetainResolvedPropertyHistory()
+    {
+        foreach (var family in new[] { DocxRevisionPropertyFamily.Row, DocxRevisionPropertyFamily.Cell })
+        foreach (int row in new[] { 0, 1 }) Check(true, history: family, historyRow: row);
+    }
+
+    private static void Check(bool multipleRows, bool oversized = false, bool emptyOnly = false,
+        DocxRevisionPropertyFamily? history = null, int historyRow = 0)
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
@@ -35,6 +42,19 @@ internal static partial class DocxEndnoteBlockTests
                         second.Descendants(wp + "docPr").Single().SetAttributeValue("id", "2701");
                         row.AddAfterSelf(second);
                     }
+                    if (history is { } family)
+                    {
+                        var target = row.Parent!.Elements(w + "tr").ElementAt(historyRow);
+                        bool cell = family == DocxRevisionPropertyFamily.Cell;
+                        var owner = cell ? target.Element(w + "tc")! : target;
+                        string name = cell ? "tcPr" : "trPr";
+                        var properties = owner.Element(w + name);
+                        if (properties is null) { properties = new XElement(w + name); owner.AddFirst(properties); }
+                        properties.Add(new XElement(w + name + "Change", new XAttribute(w + "id", "6801"),
+                            new XAttribute(w + "author", "Property Reviewer"), new XElement(w + name,
+                                cell ? new XElement(w + "shd", new XAttribute(w + "fill", "FFFF00")) :
+                                    new XElement(w + "trHeight", new XAttribute(w + "val", "20"), new XAttribute(w + "hRule", "atLeast")))));
+                    }
                 }, partOverride: "word/endnotes.xml");
             var settings = source.PageSettings with { HeightValue = "12000" };
             source = source with { PageHeightPoints = 600d, PageSettings = settings,
@@ -46,6 +66,13 @@ internal static partial class DocxEndnoteBlockTests
                     ? item with { BodyElements = item.BodyElements.OfType<DocxTableElement>().Cast<DocxBodyElement>().ToArray() }
                     : item).ToArray() };
             var story = source.RelatedStories.Single(story => story.Id == "37");
+            if (history is { } ownerFamily)
+            {
+                var row = story.BodyElements.OfType<DocxTableElement>().Single().Table.Rows[historyRow];
+                var revisions = ownerFamily == DocxRevisionPropertyFamily.Cell ? row.Cells[0].Revisions : row.Revisions;
+                TestAssert.Equal(1, revisions.Count);
+                TestAssert.Equal(ownerFamily, revisions[0].PropertyChangeFamily!.Value);
+            }
             var math = DocxBlockTraversal.EnumerateBodyParagraphs(story).SelectMany(paragraph => paragraph.Equations)
                 .ToDictionary(equation => equation, equation => new DocxPreparedMathParagraph(equation,
                     new(18d, 9d, 4d, []), 12d, 16d));

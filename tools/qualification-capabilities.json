@@ -1,4 +1,22 @@
 {
+  "docx-note-property-composition": [
+    "DocxCompleteEndnoteRowsRetainResolvedPropertyHistory",
+    "DocxEndnotePropertyHistoryPreservesUnknownAndAmbiguousFallbacks",
+    "DocxCompleteEndnoteRowDefersWithoutClippingItsContent",
+    "DocxCompleteEndnoteRowsAdvanceIndependentlyOfDirectTextLines",
+    "DocxOversizedEndnoteRowsDeferBeforeTheirBoundedClip",
+    "DocxOversizedEndnoteRowsRetainHeightOnlyProgress",
+    "DocxPictureOnlyEndnoteRowsUseCompleteSourceFrames",
+    "DocxPictureOnlyNoteRowsRejectIncompleteSourceViewports",
+    "DocxPictureOnlyNoteRowsRetainAuthoredCellClipping",
+    "DocxPictureNoteStartDoesNotDependOnLaterNoteLength",
+    "DocxMeasuredEndnoteBoundaryRejectsUnownedOrClippedSource",
+    "DocxNoteTableCellsRetainPageContainedInkBeyondFlowAdmission",
+    "DocxPartiallyClippedNoteRowsReportTextAndMathContent",
+    "DocxPartialNoteRowsKeepFittingAndIntentionalClipExceptions",
+    "DocxUnfitNoteRowsReportClippingWithoutChangingPdf",
+    "DocxPictureOnlyNoteRowsReportClippingWithoutChangingPdf"
+  ],
   "docx-mark-numbering-composition": [
     "DocxMarkFormattingKeepsNumberingDecorationSource",
     "DocxMarkFormattingPreservesNumberingTimelines",

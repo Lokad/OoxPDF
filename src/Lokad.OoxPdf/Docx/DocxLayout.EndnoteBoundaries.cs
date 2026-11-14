@@ -185,11 +185,13 @@ internal sealed partial class DocxLayoutEngine
                     foreach (var row in table.Table.Rows)
                     {
                         token.ThrowIfCancellationRequested();
-                        if (row.Revisions.Count != 0 || !DocxMathParagraphPolicy.IsSupportedSimpleRow(row)) return false;
+                        if (!HasOnlyPropertyHistory(row.Revisions, DocxRevisionKind.TableRowPropertiesChange,
+                            DocxRevisionPropertyFamily.Row, "trPrChange") || !DocxMathParagraphPolicy.IsSupportedSimpleRow(row)) return false;
                         foreach (var cell in row.Cells)
                         {
                             token.ThrowIfCancellationRequested();
-                            if (cell.Revisions.Count != 0 || !DocxMathParagraphPolicy.IsSupportedCellProperties(cell) ||
+                            if (!HasOnlyPropertyHistory(cell.Revisions, DocxRevisionKind.TableCellPropertiesChange,
+                                DocxRevisionPropertyFamily.Cell, "tcPrChange") || !DocxMathParagraphPolicy.IsSupportedCellProperties(cell) ||
                                 !Elements(DocxTableCellContent.GetBodyElements(cell))) return false;
                         }
                     }
@@ -199,6 +201,14 @@ internal sealed partial class DocxLayoutEngine
             return true;
         }
         return Elements(story.Story.BodyElements);
+
+        // The reader has already resolved current properties. One known snapshot
+        // does not replace the measured row/cell or its source content. Ambiguous
+        // history and content/structural revisions retain the existing fallback.
+        static bool HasOnlyPropertyHistory(IReadOnlyList<DocxRevisionInfo> revisions,
+            DocxRevisionKind kind, DocxRevisionPropertyFamily family, string element) =>
+            revisions.Count == 0 || revisions is [var revision] && revision.Kind == kind &&
+                revision.PropertyChangeFamily == family && revision.SourceElement == element;
     }
 
 }

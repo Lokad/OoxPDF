@@ -616,7 +616,9 @@ Supported within the following constraints:
   trailing spacing crosses the page edge; tighter frames and cantSplit retain
   their existing placement.
   Complete unscaled endnote rows that fit a fresh note frame move intact to
-  the next page; source-affined picture-only paragraphs share this admission when
+  the next page, including one known row/cell property-history snapshot. Ambiguous
+  history and content/structural revisions retain their existing admission fallback.
+  Source-affined picture-only paragraphs share this admission when
   every picture survives its cell, ancestor and explicit viewport clips.
   Measured paragraphs and rows retain source order. In mixed
   paragraph/table notes, oversized measured rows also defer from occupied frames
