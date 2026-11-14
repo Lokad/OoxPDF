@@ -2,6 +2,12 @@
   "docx-ordered-text-row-metrics": [
     "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
     "DocxOrderedTextRowsShareKeepAndWidowAdmission",
+    "DocxCachedPictureResultsKeepSourceAcrossPlacementsAndFormats",
+    "DocxCachedPictureResultsPreservePaintAndNavigation",
+    "DocxCachedPictureResultsKeepNestedComputedAndEmptyOwners",
+    "DocxCachedPictureResultsMatchIndependentWordContentAndOrigins",
+    "DocxCachedMathResultsPreservePaintNavigationAndDiagnostics",
+    "DocxCachedMathResultsMatchIndependentWordContentAndOrigins",
     "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow",
     "DocxInlineCompositionAutomaticSpacingSurvivesResumedWrapping",
     "DocxMinimumPictureRowsKeepDeclaredLineFrames",

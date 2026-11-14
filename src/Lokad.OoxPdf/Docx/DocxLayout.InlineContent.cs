@@ -89,7 +89,13 @@ internal sealed partial class DocxLayoutEngine
             // with the actual wrapped runs; this projection never replaces source.
             var metricParagraph = GetBodyTextLineMetricParagraph(paragraph,
                 line.Fragments.SelectMany(fragment => fragment.Text).ToArray()) with
-            { Images = [], Equations = [], InlineTextBoxes = [] };
+            {
+                Images = [], Equations = [], InlineTextBoxes = [],
+                // An already admitted stored result is source metadata here;
+                // its wrapper cannot change a text-only row's metrics. Computed
+                // and unresolved fields retain their existing eligibility.
+                FieldReferences = paragraph.FieldReferences.Where(field => !field.RendersCachedResult).ToArray()
+            };
             double lineSize = GetParagraphFontSize(metricParagraph);
             var profile = ResolveLineHeightProfile(metricParagraph, lineSize, measurer);
             if (UsesBodyTextLineMetrics(metricParagraph, profile, measurer))
