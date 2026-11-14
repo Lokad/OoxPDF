@@ -5628,6 +5628,13 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
+    "DocxOrderedTextRowsShareKeepAndWidowAdmission",
+    "DocxHiddenTextMetricsShareBodyAndCellAscenderOwnership",
+    "DocxHiddenTextMetricsPreserveComposedPaginationAndPaint",
+    "DocxHiddenTextMetricsRespectInheritedAndExplicitVisibility",
+    "DocxHiddenTextMetricsKeepParagraphMarksAndDeclaredSlots",
+    "DocxCachedPictureResultsPreservePaintAndNavigation",
     "DocxUnfitCellKeepNextGroups",
     "DocxCellKeepGroupsRespectEmptyContentAfterHeadersAndPadding",
     "DocxFittingKeptCellParagraphs",
