@@ -78,7 +78,9 @@ internal static class FallbackFontMetricsTests
                 TestAssert.True(diagnostics.Any(d => d.Id == "FONT_NO_USABLE_FACE"), "Fallback stays diagnosed.");
             }
             var wide = ReadDocx(mode, new string('W', 60) + " ", bold: false, italic: false);
-            var wrapped = new DocxRenderer(new MissingTestFontResolver(), mode).RenderPagesAsync(wide, null, default).ToBlockingEnumerable().ToArray();
+            var wrapped = new DocxRenderer(new MissingTestFontResolver(), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+                .RenderPagesAsync(wide, null, default).ToBlockingEnumerable().ToArray();
             var letters = ReadGlyphs(wrapped[0].Content).Where(g => g.Code == (byte)'W').Take(60).ToArray();
             TestAssert.Equal(60, letters.Length);
             TestAssert.True(letters.Select(g => g.Y).Distinct().Count() >= 2,
