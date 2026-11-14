@@ -2,6 +2,8 @@
   "docx-revision-lane-composition": [
     "DocxNotePropertyBalloonsShareThePrintedPageLane",
     "DocxScaledNotePropertyBalloonsPreserveCompleteRowsAndReadableContent",
+    "DocxScaledNoteRevisionAnchorsShareTheirPaintedRowFrame",
+    "DocxInlineCompositionMappedNoteBandBottomMatchesIndependentWord",
     "DocxBalloonFramesUnitScaleEdgesMatchIndependentWord",
     "DocxBalloonFramesVerticalBoundsAndTitleOriginsMatchIndependentWord",
     "DocxBalloonFramesPreservePortableContentAndCancellation",

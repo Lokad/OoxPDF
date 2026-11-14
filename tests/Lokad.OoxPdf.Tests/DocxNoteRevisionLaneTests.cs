@@ -73,6 +73,28 @@ internal static class DocxNoteRevisionLaneTests
     private static DocxRenderer Renderer() => new(new PortableRenderingTests.PinnedResolver(mathFont: true),
         OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
+    public static void DocxScaledNoteRevisionAnchorsShareTheirPaintedRowFrame()
+    {
+        foreach (bool cell in new[] { false, true })
+        {
+            var source = Read("endnote", cell, twoRows: true);
+            var renderer = Renderer();
+            var balloon = renderer.InspectMarkupBalloons(source).Single();
+            var page = renderer.InspectLayout(source).Pages[balloon.PageIndex];
+            var row = page.PlacedRelatedStories.Single(note => note.Id == "37" && note.TableRowCount == 1);
+            double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source,
+                DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup));
+            var frame = new DocxPrintedPageFrame(page.Height, scale);
+            TestAssert.True(Math.Abs(balloon.AnchorConnectorX - (row.LeftX + row.Width * .5d) * scale) < .01d,
+                "The single full-width source cell/row owns the connector's printed horizontal center.");
+            // The established Word profile places its anchor2.44pt below the
+            // source center. This coarse frame check catches a second coordinate
+            // convention; independent Office checks retain their1pt thresholds.
+            TestAssert.True(Math.Abs(balloon.AnchorY - frame.MapY(row.TopY - row.Height * .5d)) < 3d,
+                "The revision anchor follows its painted row, independently of the body page origin.");
+        }
+    }
+
     private static DocxDocument Read(string kind, bool cell, bool twoRows) =>
         DocxInlineCompositionTests.ReadMutation("CompositionProbes/mixed-note-" + kind + "-table",
             OoxPdfDocxMarkupMode.AllMarkup, false, false, (xml, w, _) =>

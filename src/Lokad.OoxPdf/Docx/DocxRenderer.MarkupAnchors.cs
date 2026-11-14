@@ -344,13 +344,14 @@ internal sealed partial class DocxRenderer
         return true;
     }
 
-    private static IEnumerable<DocxTableRowLayout> EnumerateMarkupBalloonTableRows(
+    private static IEnumerable<(DocxTableRowLayout Row, double AnchorYOffset)> EnumerateMarkupBalloonTableRows(
         DocxLayoutPage page,
-        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings)
+        IReadOnlyList<DocxFloatingDrawingLayout> floatingDrawings,
+        DocxMarkupContext markupContext, CancellationToken cancellationToken)
     {
         foreach (DocxTableRowLayout row in EnumerateTableRows(page.StaticTableRows))
         {
-            yield return row;
+            yield return (row, 0d);
         }
 
         foreach (DocxInlineTextBoxLayout box in page.StaticInlineTextBoxes)
@@ -359,27 +360,34 @@ internal sealed partial class DocxRenderer
             {
                 foreach (DocxTableRowLayout nested in EnumerateTableRows(row))
                 {
-                    yield return nested;
+                    yield return (nested, 0d);
                 }
             }
         }
 
         foreach (DocxTableRowLayout row in EnumerateTableRows(page.Items))
         {
-            yield return row;
+            yield return (row, 0d);
         }
 
         foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
         {
-            foreach (DocxTableRowLayout row in EnumerateTableRows(story.TableRows))
+            var frame = ResolvePlacedStoryPaintFrame(story, markupContext, page.Height);
+            // Notes expose physical row bounds to both marker painters. Only
+            // balloon-anchor resolution subsequently consumes the body Y offset.
+            // Keep that adapter explicit, sharing the row painter's fitting proof.
+            FloatingTextBoxEmissionMap? map = frame.Mapped ? frame.Map with { XOffset = 0d, YOffset = 0d } : null;
+            foreach (DocxTableRowLayout row in story.TableRows)
             {
-                yield return row;
+                var painted = ResolvePlacedStoryTablePaintFrame(story, row, map, cancellationToken);
+                double offset = ReferenceEquals(painted, row) ? 0d : markupContext.WordCompatibleTextYOffset;
+                foreach (var nested in EnumerateTableRows(painted)) yield return (nested, offset);
             }
         }
 
         foreach (DocxTableRowLayout row in EnumerateFloatingDrawingTextBoxTableRows(floatingDrawings))
         {
-            yield return row;
+            yield return (row, 0d);
         }
 
         foreach (DocxLayoutItem item in page.Items)
@@ -393,7 +401,7 @@ internal sealed partial class DocxRenderer
             {
                 foreach (DocxTableRowLayout nested in EnumerateTableRows(row))
                 {
-                    yield return nested;
+                    yield return (nested, 0d);
                 }
             }
         }
@@ -402,7 +410,7 @@ internal sealed partial class DocxRenderer
         {
             foreach (DocxTableRowLayout row in EnumerateFloatingDrawingTextBoxTableRows(story.FloatingDrawings))
             {
-                yield return row;
+                yield return (row, 0d);
             }
         }
     }

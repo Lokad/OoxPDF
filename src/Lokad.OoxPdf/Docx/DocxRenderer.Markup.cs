@@ -865,7 +865,7 @@ internal sealed partial class DocxRenderer
 
             if (markupContext.RendersRevisionBalloons)
             {
-                foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, floatingDrawings))
+                foreach (var (row, anchorYOffset) in EnumerateMarkupBalloonTableRows(page, floatingDrawings, markupContext, cancellationToken))
                 {
                     IReadOnlyList<DocxRevisionInfo> tableRevisions = row.Table.Revisions ?? [];
                     bool mainTableStory = row.Story?.Kind is null or DocxStoryKind.Body;
@@ -883,7 +883,7 @@ internal sealed partial class DocxRenderer
                                 revisionBody,
                                 revisionTitle,
                                 revisionBody,
-                                row.Y + Math.Max(0d, row.Height) * 0.5d,
+                                row.Y + Math.Max(0d, row.Height) * 0.5d + anchorYOffset,
                                 row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
                                 row.Table.TableX - 2d,
                                 row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
@@ -917,7 +917,7 @@ internal sealed partial class DocxRenderer
                                 revisionBody,
                                 revisionTitle,
                                 revisionBody,
-                                row.Y + Math.Max(0d, row.Height) * 0.5d,
+                                row.Y + Math.Max(0d, row.Height) * 0.5d + anchorYOffset,
                                 row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) * 0.5d,
                                 row.Table.TableX - 2d,
                                 row.Table.TableX + Math.Max(0d, row.Table.ResolvedTableWidth) + 2d,
@@ -969,7 +969,7 @@ internal sealed partial class DocxRenderer
                             revisionBody,
                             cellStructureOnly ? revisionBody : revisionTitle,
                             cellStructureOnly ? string.Empty : revisionBody,
-                            structuralAnchor?.BaselineY ?? cell.Y + Math.Max(0d, cell.Height) * 0.5d,
+                            (structuralAnchor?.BaselineY ?? cell.Y + Math.Max(0d, cell.Height) * 0.5d) + anchorYOffset,
                             structuralAnchor is null ? cell.X + Math.Max(0d, cell.Width) * 0.5d :
                                 structuralAnchor.X + ResolveTextEmissionXOffset(markupContext),
                             cell.X - 2d,

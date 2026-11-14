@@ -164,7 +164,7 @@ internal sealed partial class DocxRenderer
             IncludeStoryBounds(owner, bounds.Bottom, bounds.Top);
         }
 
-        foreach (DocxTableRowLayout row in EnumerateMarkupBalloonTableRows(page, drawingPages.PageAll(pageIndex)))
+        foreach (var (row, _) in EnumerateMarkupBalloonTableRows(page, drawingPages.PageAll(pageIndex), markupContext, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!HasTableRowRevision(row))
