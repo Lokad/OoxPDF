@@ -27,9 +27,26 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot pin source revision' }
 $inputRoot = 'tests/Lokad.OoxPdf.Tests/Cases'
 $inputTree = git -C $repo rev-parse ("HEAD:" + $inputRoot)
 if ($LASTEXITCODE -ne 0) { throw 'Cannot pin public input tree' }
+# A clean status can still hide stale materialization or an index stat override.
+# Compare raw bytes with committed blobs, without checkout filters or one Git
+# process per fixture. Git's quoted paths round-trip through --stdin-paths.
+$treeEntries = @(git -C $repo ls-tree -r '--format=%(objectname) %(path)' $revision -- $inputRoot)
+if ($LASTEXITCODE -ne 0 -or !$treeEntries.Count) { throw 'Public input tree is unavailable' }
+$materializedBlobs = @($treeEntries | ForEach-Object { $_.Substring($_.IndexOf(' ') + 1) } |
+    git -C $repo hash-object --no-filters --stdin-paths)
+if ($LASTEXITCODE -ne 0 -or $materializedBlobs.Count -ne $treeEntries.Count) { throw 'Cannot verify public input Git blobs' }
+for ($i = 0; $i -lt $treeEntries.Count; $i++) {
+    $separator = $treeEntries[$i].IndexOf(' ')
+    if ($materializedBlobs[$i] -ne $treeEntries[$i].Substring(0, $separator)) {
+        throw ('Public input bytes differ from committed Git blob: ' + $treeEntries[$i].Substring($separator + 1))
+    }
+}
 $commonDirectory = git -C $repo rev-parse --path-format=absolute --git-common-dir
 if ($LASTEXITCODE -ne 0) { throw 'Cannot locate shared Git workspace' }
-$snapshot = Join-Path (Split-Path $commonDirectory) ('artifacts/qualification-inputs/' + $inputTree)
+# Earlier snapshots could contain noncanonical checkout bytes. Keep them intact
+# for historical evidence; the canonical namespace cannot collide with them.
+$snapshotName = 'git-' + $inputTree
+$snapshot = Join-Path (Split-Path $commonDirectory) ('artifacts/qualification-inputs/' + $snapshotName)
 $inputs = [ordered]@{}
 foreach ($name in @(git -C $repo ls-files $inputRoot)) {
     $inputs[$name] = (Get-FileHash -LiteralPath (Join-Path $repo $name)).Hash
@@ -63,7 +80,7 @@ if (!$reusedInputs) {
         if (Test-Path -LiteralPath $staging) {
             $parent = [IO.Path]::GetFullPath((Split-Path $snapshot)) + [IO.Path]::DirectorySeparatorChar
             if (!$staging.StartsWith($parent, [StringComparison]::OrdinalIgnoreCase) -or
-                !(Split-Path $staging -Leaf).StartsWith($inputTree + '.staging-', [StringComparison]::Ordinal)) {
+                !(Split-Path $staging -Leaf).StartsWith($snapshotName + '.staging-', [StringComparison]::Ordinal)) {
                 throw 'Refusing cleanup outside the owned input staging directory'
             }
             # These new copies have no aliases in a checkout or prior snapshot.

@@ -40,6 +40,8 @@ New-Item -ItemType Directory -Path (Split-Path $inputFile) -Force | Out-Null
 $nested = Join-Path (Split-Path $inputFile) 'nested/second.txt'
 New-Item -ItemType Directory -Path (Split-Path $nested) -Force | Out-Null
 [IO.File]::WriteAllText($nested, "nested fixture`n")
+$spaced = Join-Path (Split-Path $inputFile) 'nested/spaced fixture.txt'
+[IO.File]::WriteAllText($spaced, "committed CRLF fixture`r`n")
 foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')) {
     $projectName=Split-Path $project -Leaf
     New-Item -ItemType Directory -Path (Join-Path $repo $project) -Force | Out-Null
@@ -68,7 +70,37 @@ function Reject([string] $Name, [string] $ExpectedMessage) {
     }
     throw ('Expected rejection: ' + $Name)
 }
+function Reject-Noncanonical([string] $Name, [string] $Bytes) {
+    # Force a clean status despite altered bytes; this models the observed gap
+    # without claiming how the historical checkout acquired its CRLF files.
+    Invoke-Git @('update-index', '--assume-unchanged', $inputPath)
+    try {
+        [IO.File]::WriteAllText($inputFile, $Bytes)
+        Reject $Name 'Public input bytes differ from committed Git blob'
+    }
+    finally {
+        [IO.File]::WriteAllText($inputFile, "first fixture`n")
+        Invoke-Git @('update-index', '--no-assume-unchanged', $inputPath)
+    }
+}
+Reject-Noncanonical 'noncanonical-before-snapshot' "first fixture`r`n"
+if (Test-Path -LiteralPath (Join-Path $repo 'artifacts/qualification-inputs')) { throw 'Noncanonical rejection created a snapshot' }
+# A retained preflight-era snapshot may own CRLF bytes under the same tree.
+# New canonical snapshots must neither reuse nor overwrite that evidence.
+$legacyTree = git -C $repo rev-parse 'HEAD:tests/Lokad.OoxPdf.Tests/Cases'
+$legacySnapshot = Join-Path $repo ('artifacts/qualification-inputs/' + $legacyTree)
+$legacyFile = Join-Path $legacySnapshot $inputPath
+New-Item -ItemType Directory -Path (Split-Path $legacyFile) -Force | Out-Null
+[IO.File]::WriteAllText($legacyFile, "first fixture`r`n")
+(Get-Item -LiteralPath $legacyFile).IsReadOnly = $true
 $first = Freeze 'first'
+if ($first.InputSnapshot -eq $legacySnapshot -or [IO.File]::ReadAllText($legacyFile) -cne "first fixture`r`n" -or
+    !(Get-Item -LiteralPath $legacyFile).IsReadOnly) { throw 'Canonical freeze changed retained legacy evidence' }
+if ([IO.File]::ReadAllText((Join-Path $first.InputSnapshot 'tests/Lokad.OoxPdf.Tests/Cases/nested/spaced fixture.txt')) -cne "committed CRLF fixture`r`n") {
+    throw 'Committed CRLF bytes or spaced fixture path changed'
+}
+Reject-Noncanonical 'noncanonical-reuse' "first fixture`r`n"
+Reject-Noncanonical 'same-length-noncanonical' "other fixture`n"
 $second = Freeze 'second'
 $expectedSharedAssets = @($first.Assets.psobject.Properties).Count - @($first.Assets.psobject.Properties.Value | Sort-Object -Unique).Count
 if ($expectedSharedAssets -lt 1 -or $first.SharedAssetFiles -ne $expectedSharedAssets -or $first.SharedAssetBytes -lt 1) {
@@ -341,6 +373,8 @@ Copy-Item -LiteralPath $inputFile -Destination $damaged -Force
 Reject 'mixed' 'Release library copies differ'
 [ordered]@{
     Checks=@('Shared unchanged fixture tree', 'Frozen runner input link', 'Linked worktree reuse', 'Verbatim autocrlf checkout', 'Dirty source rejection',
+        'Canonical LF and committed CRLF with spaced path', 'Noncanonical refusal before snapshot',
+        'Noncanonical reuse refusal', 'Same-length noncanonical refusal', 'Retained legacy snapshot isolation',
         'Changed fixture isolation', 'Cross-tree ownership isolation', 'Corrupt copy rejection',
         'Independent prior-tree corruption isolation', 'Failed staging cleanup', 'Concurrent publication cleanup',
         'Corrupt snapshot rejection', 'Mixed library rejection',
@@ -353,4 +387,4 @@ Reject 'mixed' 'Release library copies differ'
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
-Write-Output 'Thirty-two fixture-freeze/asset/parent/harness-ownership checks passed; no library build or test-suite replay.'
+Write-Output 'Fixture-freeze/asset/parent/harness-ownership checks passed; no library build or test-suite replay.'
