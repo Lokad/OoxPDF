@@ -2314,6 +2314,24 @@
     "StreamLengthsMatchPayloads",
     "XrefTablePointsAtObjectHeaders"
   ],
+  "docx-break-only-metadata": [
+    "DocxBreakOnlyMetadataPreservesParagraphFrames",
+    "DocxBreakOnlyMetadataDoesNotHidePayloadOrMisplacedProperties",
+    "DocxReaderPromotesRunPageBreakOnlyParagraph",
+    "DocxReaderPromotesRunColumnBreakOnlyParagraphAsManualBreak",
+    "DocxReaderRetainsEmptyTailAfterTrailingBodyColumnBreak",
+    "DocxBreakOnlyParagraphEmitsOfficeSpacingRows",
+    "DocxColumnBreakParagraphCarriesPitchAndCollapsedSpacingIntoNextFrame",
+    "DocxColumnBreakParagraphUsesItsResolvedFontPitch",
+    "DocxInlineMetadataWrappersKeepHardBreakBoundaries",
+    "DocxInlineMetadataWrappersKeepCancellationAndUnknownFallback",
+    "DocxReaderSplitsNestedVisibleInlineContainerPageBreaks",
+    "DocxHardBreaksUseInheritedVisibilityAndKeepVisibleOverrides",
+    "DocxMarkupModesFilterSectionHeaderFooterAndBreakRevisions",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "docx-composed-breaks": [
     "PortableRenderingPageBreaksKeepMathPicturesAndNavigation",
     "PortableRenderingHardBreakMathRowsPreserveDisplayFramesAcrossStories",

@@ -1087,6 +1087,93 @@ internal static class DocxPageTests
         TestAssert.Equal("page", pageBreak.Value ?? string.Empty);
     }
 
+    public static void DocxBreakOnlyMetadataPreservesParagraphFrames()
+    {
+        foreach (string breakType in new[] { "page", "column" })
+        foreach (OoxPdfDocxMarkupMode mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
+        foreach (OoxPdfDocxMarkupGeometryMode geometry in Enum.GetValues<OoxPdfDocxMarkupGeometryMode>())
+        {
+            string run = "<w:r><w:br w:type=\"" + breakType + "\"/></w:r>";
+            string permissions = "<w:permStart w:id=\"28\" w:edGrp=\"everyone\"/>" + run + "<w:permEnd w:id=\"28\"/>";
+            string[] variants = [
+                permissions,
+                "<w:customXml w:element=\"PublicBreak\"><w:customXmlPr/>" + run + "</w:customXml>",
+                "<w:smartTag><w:smartTagPr/>" + permissions + "</w:smartTag>",
+                "<w:sdt><w:sdtPr/><w:sdtContent><w:customXml><w:customXmlPr/>" + permissions + "</w:customXml></w:sdtContent><w:sdtEndPr/></w:sdt>",
+                "<w:bookmarkStart w:id=\"28\" w:name=\"Break\"/><w:proofErr w:type=\"spellStart\"/>" + run + "<w:bookmarkEnd w:id=\"28\"/>"
+            ];
+            DocxLayout expected = Layout(ReadBreakMetadataDocument(run, mode));
+            var expectedLines = Lines(expected);
+            TestAssert.Equal(2, expected.Pages.Count);
+            TestAssert.Equal("BEFOREBREAKAFTERBREAK", string.Concat(expectedLines.Select(line => line.Text)).Replace(" ", string.Empty));
+            foreach (string variant in variants)
+            {
+                DocxDocument document = ReadBreakMetadataDocument(variant, mode);
+                TestAssert.Equal(3, document.BodyElements.Count);
+                TestAssert.True(breakType == "page"
+                    ? document.BodyElements[1] is DocxPageBreakElement { BreakParagraph: not null }
+                    : document.BodyElements[1] is DocxManualBreakElement { BreakParagraph: not null },
+                    "Nonprinting metadata must retain the authored break paragraph, not add empty paragraphs around a split break.");
+                DocxLayout actual = Layout(document);
+                TestAssert.Equal(expected.Pages.Count, actual.Pages.Count);
+                TestAssert.True(expectedLines.SequenceEqual(Lines(actual)),
+                    "Adding metadata must preserve every prose fragment's page, advance and baseline in Final/Review, including column pitch.");
+            }
+
+            DocxLayout Layout(DocxDocument document) => new DocxLayoutEngine(geometry)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), CancellationToken.None);
+        }
+
+        static (int Page, string Text, double X, double Y, double Width)[] Lines(DocxLayout layout) =>
+            layout.Pages.SelectMany((page, index) => page.Items.OfType<DocxTextLineLayout>()
+                .Where(line => !string.IsNullOrWhiteSpace(line.Text))
+                .Select(line => (index, line.Text, line.X, line.BaselineY, line.Width))).ToArray();
+    }
+
+    public static void DocxBreakOnlyMetadataDoesNotHidePayloadOrMisplacedProperties()
+    {
+        const string run = "<w:r><w:br w:type=\"page\"/></w:r>";
+        foreach (string metadata in new[] {
+            "<w:permStart w:id=\"28\"><w:r><w:t>Payload</w:t></w:r></w:permStart>",
+            "<w:proofErr>Payload</w:proofErr>",
+            "<w:customXmlPr/>", "<w:smartTagPr/>", "<w:sdtPr/>", "<w:sdtEndPr/>" })
+        {
+            DocxDocument document = ReadBreakMetadataDocument(metadata + run, OoxPdfDocxMarkupMode.Final);
+            TestAssert.True(document.BodyElements.OfType<DocxPageBreakElement>().Single().BreakParagraph is null,
+                "Payload-bearing markers and properties outside their actual owner must retain the ordinary paragraph fallback.");
+            TestAssert.True(document.BodyElements.OfType<DocxParagraphElement>().Count() > 2,
+                "Unrecognized source content must not be discarded by break-only promotion.");
+        }
+    }
+
+    private static DocxDocument ReadBreakMetadataDocument(string content, OoxPdfDocxMarkupMode mode)
+    {
+        using MemoryStream stream = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                  <w:p><w:r><w:t>BEFORE BREAK</w:t></w:r></w:p>
+                  <w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240"/></w:pPr>{{content}}</w:p>
+                  <w:p><w:r><w:t>AFTER BREAK</w:t></w:r></w:p>
+                  <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:left="1440" w:right="1440" w:top="1440" w:bottom="1440"/></w:sectPr>
+                </w:body></w:document>
+                """
+        });
+        return new DocxReader().Read(OoxPackage.Open(stream, CancellationToken.None), null, CancellationToken.None, mode);
+    }
+
     public static void DocxReaderPromotesInlineRunPageBreakInsideParagraph()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>

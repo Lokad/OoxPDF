@@ -644,7 +644,7 @@ internal sealed partial class DocxReader
         }
 
         return IsVisibleRunContainer(element, markupMode) &&
-            element.Elements().Any(child => HasVisibleRunBreak(child, isBreak, markupMode));
+            DocxSourceXml.StoredChildren(element).Any(child => HasVisibleRunBreak(child, isBreak, markupMode));
     }
 
     private static bool IsBreakOnlyInlineElement(XElement element, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)
@@ -662,18 +662,16 @@ internal sealed partial class DocxReader
         }
 
         return IsVisibleRunContainer(element, markupMode) &&
-            element.Elements().All(child => IsBreakOnlyInlineElement(child, isBreak, markupMode));
+            DocxSourceXml.StoredChildren(element).All(child => IsBreakOnlyInlineElement(child, isBreak, markupMode));
     }
 
     private static bool IsIgnorableBreakOnlyContainerChild(XElement element)
     {
-        return element.Name == WordprocessingNamespace + "bookmarkStart" ||
+        return DocxSourceXml.IsNonPrintingMarker(element) ||
+            element.Name == WordprocessingNamespace + "bookmarkStart" ||
             element.Name == WordprocessingNamespace + "bookmarkEnd" ||
             element.Name == WordprocessingNamespace + "commentRangeStart" ||
-            element.Name == WordprocessingNamespace + "commentRangeEnd" ||
-            element.Name == WordprocessingNamespace + "proofErr" ||
-            element.Name == WordprocessingNamespace + "sdtPr" ||
-            element.Name == WordprocessingNamespace + "sdtEndPr";
+            element.Name == WordprocessingNamespace + "commentRangeEnd";
     }
 
     private static bool IsPageOrColumnBreak(XElement breakElement)
