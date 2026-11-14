@@ -1,5 +1,10 @@
 {
   "docx-paragraph-mark-ownership": [
+    "DocxConsumedMarkFormattingKeepsActualUniqueSourceOwners",
+    "DocxConsumedMarkFormattingPreservesMathPicturesAndNavigation",
+    "DocxDeletedParagraphMarksRetainCompleteOrderedSources",
+    "DocxDeletedParagraphMarksRequireConsumedRevisionOwners",
+    "DocxDeletedParagraphMarkConversionRetainsMathPicturesAndLinks",
     "DocxCombinedMarkRevisionsRetainTheirIndependentSourceOwners",
     "DocxCombinedMarkRevisionsKeepMathPicturesAndNavigation",
     "DocxParagraphMarkFormattingRetainsResolvedSourceAcrossViews",

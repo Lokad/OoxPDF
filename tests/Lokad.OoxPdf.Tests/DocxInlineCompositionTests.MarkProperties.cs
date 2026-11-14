@@ -136,11 +136,13 @@ internal static partial class DocxInlineCompositionTests
         .Distinct<DocxParagraph>(ReferenceEqualityComparer.Instance).Single(p => p.BookmarkAnchors.Any(anchor => anchor.Name == "Calculation"));
 
     private static DocxDocument ReadMarkPropertyMath(string container, OoxPdfDocxMarkupMode mode,
-        bool baseline = false, bool noOp = false, bool duplicate = false, bool inserted = false) =>
+        bool baseline = false, bool noOp = false, bool duplicate = false, bool inserted = false, bool deleted = false) =>
         ReadMutation("CompositionProbes/math-mark-property-" + container, mode, false, false, (xml, w, m) =>
         {
             var change = xml.Descendants(w + "rPrChange").Single();
             if (inserted) change.Parent!.AddFirst(new XElement(w + "ins", new XAttribute(w + "id", "991"),
+                new XAttribute(w + "author", "Public Reviewer"), new XAttribute(w + "date", "2026-11-14T00:00:00Z")));
+            if (deleted) change.Parent!.AddFirst(new XElement(w + "del", new XAttribute(w + "id", "991"),
                 new XAttribute(w + "author", "Public Reviewer"), new XAttribute(w + "date", "2026-11-14T00:00:00Z")));
             if (baseline) change.Remove();
             else if (noOp) change.Descendants(w + "b").Single().SetAttributeValue(w + "val", null);

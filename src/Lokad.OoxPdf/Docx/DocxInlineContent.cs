@@ -443,14 +443,22 @@ internal static class DocxInlineContent
         if (equationOwners is not null)
             foreach (var owner in equationOwners)
             { token.ThrowIfCancellationRequested(); remaining.Remove(owner); }
-        // The captured empty mark owns its insertion and unique run-formatting
-        // snapshot independently of visible inline text or numbering. Other mark
-        // kinds and duplicate formatting histories retain fallback.
-        if (paragraphMark is { SourceRunIndex: -1 } && string.IsNullOrWhiteSpace(paragraphMark.Text))
+        // Active and actually consumed marks own their unique formatting snapshot
+        // independently of visible text/numbering. Only consumed joins own deletion.
+        if (paragraphMark is not null)
+            ConsumeMarkRevisions(paragraphMark, DocxRevisionKind.Insertion);
+        if (consumedParagraphMarks is not null)
+            foreach (var mark in consumedParagraphMarks)
+                if (!ConsumeMarkRevisions(mark, DocxRevisionKind.Deletion)) return false;
+        return remaining.Count == 0;
+
+        bool ConsumeMarkRevisions(DocxTextRun mark, DocxRevisionKind contentKind)
         {
+            token.ThrowIfCancellationRequested();
+            if (mark.SourceRunIndex != -1 || !string.IsNullOrWhiteSpace(mark.Text)) return false;
             DocxRevisionInfo? formatting = null;
             int formattingCount = 0;
-            foreach (var revision in paragraphMark.Revisions)
+            foreach (var revision in mark.Revisions)
             {
                 token.ThrowIfCancellationRequested();
                 if (revision.Kind == DocxRevisionKind.RunPropertiesChange)
@@ -458,27 +466,14 @@ internal static class DocxInlineContent
                     formatting = revision;
                     formattingCount++;
                 }
-                if (revision.Kind == DocxRevisionKind.Insertion && revision.SourceElement == "ins")
+                if (revision.Kind == contentKind &&
+                    revision.SourceElement == (contentKind == DocxRevisionKind.Insertion ? "ins" : "del"))
                     remaining.Remove(revision);
             }
             if (formattingCount == 1 && formatting is
                 { SourceElement: "rPrChange", PropertyChangeFamily: DocxRevisionPropertyFamily.Run })
                 remaining.Remove(formatting);
+            return true;
         }
-        // Only a join's actual deleted marks can discharge this metadata.
-        // Unconsumed, misplaced and value-equal revisions keep their fallback.
-        if (consumedParagraphMarks is not null)
-            foreach (var mark in consumedParagraphMarks)
-            {
-                token.ThrowIfCancellationRequested();
-                if (mark.SourceRunIndex != -1 || !string.IsNullOrWhiteSpace(mark.Text)) return false;
-                foreach (var revision in mark.Revisions)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (revision.Kind == DocxRevisionKind.Deletion && revision.SourceElement == "del")
-                        remaining.Remove(revision);
-                }
-            }
-        return remaining.Count == 0;
     }
 }
