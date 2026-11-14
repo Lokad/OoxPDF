@@ -1087,6 +1087,16 @@
     "PortableRenderingExactComment",
     "StagedPageMemory"
   ],
+  "docx-automatic-math-row-tail": [
+    "PortableRenderingExplicitAutomaticMathTailKeepsBoundaryPage",
+    "PortableRenderingMathRowKeepsPaintedContentBeforeUnpaintedTail",
+    "DocxInlineCompositionMathTableTailAdmissionMatchesWordBoundaryControls",
+    "DocxExplicitAutomaticRowsSharePrintedFragmentFrames",
+    "DocxDeclaredKeptRowsRetainTheirAtomicFallback",
+    "DocxOversizedCellKeepLinesRetainsNeighborsAndCancellation",
+    "DocxUnfitCellKeepNextGroupsPreserveCompleteParagraphs",
+    "DocxCellKeepGroupsRespectEmptyContentAfterHeadersAndPadding"
+  ],
   "docx-automatic-review-row-frame": [
     "DocxExplicitAutomaticRowsSharePrintedFragmentFrames",
     "DocxReviewTablePrintedCapacityPreservesWordPagesAndStaticStoryCombinations",

@@ -604,6 +604,9 @@ Supported within the following constraints:
   Natural text-row fragments share printed Review placement whether automatic
   row height is omitted or explicit; declared minima and exact heights retain
   their separate fallback rules.
+  Fitting math rows also share automatic-height admission when only unpainted
+  trailing spacing crosses the page edge; tighter frames and cantSplit retain
+  their existing placement.
   Complete unscaled endnote rows that fit a fresh note frame move intact to
   the next page; source-affined picture-only paragraphs share this admission when
   every picture survives its cell, ancestor and explicit viewport clips.

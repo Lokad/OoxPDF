@@ -1482,6 +1482,32 @@ internal static partial class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingExplicitAutomaticMathTailKeepsBoundaryPage()
+    {
+        foreach (string suffix in new[] { "0", "6", "24", "24-cant-split", "24-tight" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = DocxTests.ReadDocx(Case("PortableFonts/math-table-boundary-after" + suffix + "-normal.docx"), mode);
+            var elements = source.BodyElements.Select(element => element is DocxTableElement table
+                ? table with { Table = table.Table with { Rows = table.Table.Rows.Select(row =>
+                    row.HeightPoints is null && row.HeightRuleValue is null
+                        ? row with { HeightPoints = 0d, HeightValue = "0", HeightRuleValue = "auto" } : row).ToArray() } }
+                : element).ToArray();
+            var explicitSource = source with { BodyElements = elements,
+                FallbackTables = elements.OfType<DocxTableElement>().Select(element => element.Table).ToArray() };
+            var renderer = new DocxRenderer(new PinnedResolver(), mode, mode == OoxPdfDocxMarkupMode.Final
+                ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var expected = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            var actual = renderer.RenderPagesAsync(explicitSource, null, default).ToBlockingEnumerable().ToArray();
+            int expectedPage = suffix.Contains("cant-split", StringComparison.Ordinal) || suffix.Contains("tight", StringComparison.Ordinal) ? 1 : 0;
+            TestAssert.Contains("x+2y", DocxPageFootnoteNumberingTests.DecodeText(actual[expectedPage]).Normalize(NormalizationForm.FormKC));
+            TestAssert.True(expected.Select(DocxPageFootnoteNumberingTests.DecodeText)
+                    .SequenceEqual(actual.Select(DocxPageFootnoteNumberingTests.DecodeText)),
+                "Explicit automatic height must retain every paragraph and equation on its original page, including unpainted row tails and tighter/cantSplit fallbacks.");
+            CheckWrittenPages(actual);
+        }
+    }
+
     public static void PortableRenderingAutofitKeepsMathematicalCellContent()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

@@ -33,6 +33,7 @@
   boundaries and retries fragmentation after page admission. Measured unfit cell
   keep-next groups flow while fitting paragraphs and groups remain together.
   Explicit automatic row heights share the same printed Review frames as omitted heights.
+  They also retain fitting equation rows on their source page when only trailing spacing overflows.
   Hidden run breaks and inline text boxes
   honor inherited visibility; annotation-only revision scopes retain neighboring
   equations, including scopes containing hyperlinks, complete empty stored fields

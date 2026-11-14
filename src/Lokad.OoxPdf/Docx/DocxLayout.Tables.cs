@@ -1952,7 +1952,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static bool CanDiscardTableRowAfterSpacing(DocxTableRow row)
     {
-        if (row.IsHeader || row.CantSplit || row.HeightPoints is not null || row.HeightRuleValue is not null)
+        if (row.IsHeader || row.CantSplit || !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue))
             return false;
         foreach (var cell in row.Cells)
         {
