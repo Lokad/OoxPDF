@@ -16,7 +16,7 @@ internal static class DocxPageFootnoteNumbering
     // Numbering owns measured marker/note pages. Font and leading purposes keep
     // their existing plain-body admission through IsEligibleDocument above.
     private static bool IsEligibleInlineNumberingDocument(DocxDocument document, CancellationToken token) =>
-        DocxPlainBodyFrame.HasKnownBodyFrame(document) && DocxPlainBodyFrame.HasNoSelectableStaticStories(document, token) &&
+        DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
         HasEligibleNoteSettingsAndStories(document, includeContinuousRestart: false) &&
         document.BodyElements.Count != 0 && HasNumberingSourceElements(document.BodyElements, token) &&
         DocxBlockTraversal.EnumerateBodyParagraphs(document).All(paragraph => DocxPlainBodyFrame.IsPlainParagraph(paragraph) ||
@@ -232,8 +232,12 @@ internal static class DocxPageFootnoteNumbering
         {
             cancellationToken.ThrowIfCancellationRequested();
             var page = layout.Pages[i];
-            if (page.ColumnFrames.Count > 1 || page.StaticTextLines.Count != 0 || page.StaticInlineImages.Count != 0 ||
-                page.StaticTableRows.Count != 0 || page.StaticInlineTextBoxes.Count != 0) return false;
+            // Static paint does not own body note counters. Numbering uses the
+            // complete marker/note page map below; font purposes retain their
+            // separately qualified static-free frame.
+            if (page.ColumnFrames.Count > 1 || !forNumbering &&
+                (page.StaticTextLines.Count != 0 || page.StaticInlineImages.Count != 0 ||
+                 page.StaticTableRows.Count != 0 || page.StaticInlineTextBoxes.Count != 0)) return false;
             var owners = forNumbering ? DocxTableCellClipGeometry.EnumerateBodyLines(page, cancellationToken)
                 : page.Items.OfType<DocxTextLineLayout>().Select(line => (Line: line, Clip: (DocxTableCellClipSnapshot?)null));
             foreach (var owner in owners)

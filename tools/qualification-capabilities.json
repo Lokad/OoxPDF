@@ -1,4 +1,23 @@
 {
+  "docx-static-page-counters": [
+    "DocxActiveMarginStoriesKeepPageLocalNotePaints",
+    "DocxStaticPageCountersRequireCompleteStableOwners",
+    "DocxInactiveStaticTemplatesKeepMixedNoteCounterPaints",
+    "DocxSelectableStaticOwnersRetainNoteFrameFallbacks",
+    "DocxStaticNoteEligibilityKeepsInheritedOwnersAndCancellation",
+    "DocxInlineCompositionPageNotesRenumberOwnedRunsWithoutDiscardingMath",
+    "DocxInlineCompositionCellPageNotesPublishOneOwnedParagraphAcrossViews",
+    "DocxInlineCompositionCellPageNotesRejectMissingAmbiguousAndClippedGlyphs",
+    "DocxInlineCompositionSpanningPageNotesUseMarkerPagesAndKeepTypographyScope",
+    "DocxInlineCompositionMixedPageNotesCountOnlyAutomaticOwnedMarkers",
+    "DocxInlineCompositionMixedPageNotesRejectUnownedCustomTargets",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxPageFootnoteNumbersRejectMovedOrPartialNotes",
+    "DocxPageFootnoteNumbersUseSectionRequestDespiteDocumentRestartMetadata",
+    "DocxInactiveNoteTemplatesKeepEnabledStoryAndSectionFallbacks",
+    "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-inactive-static-notes": [
     "DocxInactiveStaticTemplatesKeepMixedNoteCounterPaints",
     "DocxInactiveStaticTemplatesKeepFinalEndnotePageFrames",
@@ -19267,6 +19286,8 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-fixed-static-frames": [
+    "DocxActiveMarginStoriesKeepPageLocalNotePaints",
+    "DocxStaticPageCountersRequireCompleteStableOwners",
     "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
     "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
     "DocxInheritedStaticFontsKeepTheirActualFaceAndFailures",

@@ -25,6 +25,8 @@
   and mixed picture runs. Cached results and runs without emitted text retain
   formatting-revision ownership beside equations, including picture-only runs,
   field codes and pagination hints;
+  Page-local note counters follow complete measured marker/note ownership beside
+  visible headers and footers, preserving the separate typography fallback.
   automatic note references retain source order and link ownership,
   and Review endnote counters retain neighboring equations. Oversized body keep-with-next
   groups flow without repeatedly starting new pages. Natural-height table body rows
