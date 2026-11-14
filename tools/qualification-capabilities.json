@@ -8966,7 +8966,7 @@
     "DocxRendererEmitsDistinctResourcesForResolvedRunTypefaces",
     "DocxRendererDoesNotSynthesizeBoldForImplicitDefaultBoldFace",
     "DocxWordCompatibleBalloonUsesUniformCommentTypeface",
-    "DocxFontPlanIncludesAllHeaderFooterVariants",
+    "DocxFontPlanUsesEnabledAndInheritedStaticVariants",
     "DocxFontPlanIncludesPlainTableCellText",
     "DocxBlockTraversalAndFontPlanIncludeNestedTableCellBody",
     "DocxFontPlanKeepsPrimaryBeforeAlternateAndTheme",
