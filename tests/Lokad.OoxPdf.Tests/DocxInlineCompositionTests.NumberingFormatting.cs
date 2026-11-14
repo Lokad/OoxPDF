@@ -124,6 +124,7 @@ internal static partial class DocxInlineCompositionTests
             mark.Add(history);
             if (duplicate) mark.Add(new XElement(history));
         }, partOverride: id.Contains("header", StringComparison.Ordinal) ? "word/header1.xml" :
-            id is "list-decoration-mark-inserted" or "numbering-counter-second-mark" || id.EndsWith("footer", StringComparison.Ordinal)
+            id is "list-decoration-mark-inserted" or "numbering-counter-second-mark" ||
+                id.StartsWith("numbering-mark-decoration-", StringComparison.Ordinal) || id.EndsWith("footer", StringComparison.Ordinal)
                 ? "word/footer1.xml" : null);
 }
