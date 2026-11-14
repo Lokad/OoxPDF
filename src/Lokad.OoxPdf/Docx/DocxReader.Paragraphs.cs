@@ -343,6 +343,8 @@ internal sealed partial class DocxReader
             resolvedParagraph.KeepRules,
             listLabel)
         {
+            HasSourceNumbering = listLabel is not null ||
+                isContinuationFragment && ResolveParagraphNumbering(paragraphProperties, numbering) is not null,
             Shading = resolvedParagraph.Shading,
             Indent = resolvedParagraph.Indent,
             TabStops = resolvedParagraph.TabStops,

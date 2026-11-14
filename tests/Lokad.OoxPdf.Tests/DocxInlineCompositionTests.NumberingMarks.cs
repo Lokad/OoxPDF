@@ -22,7 +22,9 @@ internal static partial class DocxInlineCompositionTests
         TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph), "Numbering gives the actual mark an explicit source owner.");
         TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with { ParagraphMarkRun = null }),
             "A missing paragraph mark cannot own its insertion.");
-        TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with { ListLabel = null }),
+        TestAssert.True(DocxInlineContent.HasSupportedSourceOwner(paragraph with { ListLabel = null }),
+            "Suppressing painted numbering does not erase its actual source owner.");
+        TestAssert.True(!DocxInlineContent.HasSupportedSourceOwner(paragraph with { ListLabel = null, HasSourceNumbering = false }),
             "Unnumbered mark revisions retain their existing fallback.");
         foreach (var invalid in new[]
         {

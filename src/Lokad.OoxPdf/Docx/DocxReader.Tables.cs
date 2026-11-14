@@ -398,7 +398,10 @@ internal sealed partial class DocxReader
                 if (IsRunBreakOnlyParagraph(child, VisibleBreak, markupMode) &&
                     child.Elements().Any(element => HasVisibleRunBreak(element, VisiblePageBreak, markupMode)))
                 {
-                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode, isBreak: VisiblePageBreak))
+                    var sourceNumbering = ResolveParagraphNumbering(child.Element(WordprocessingNamespace + "pPr"), numbering);
+                    bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
+                    foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(child, markupMode,
+                        isBreak: VisiblePageBreak, retainFirstLine: hasListMarker))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         if (part.BreakValue is not null)
@@ -424,10 +427,11 @@ internal sealed partial class DocxReader
                             documentSettings: documentSettings,
                             inheritedRevision: childRevision,
                             markupMode: markupMode,
-                            cancellationToken: cancellationToken);
+                            cancellationToken: cancellationToken,
+                            isContinuationFragment: !part.IsFirstFragment);
                         if (splitParagraph is not null)
                         {
-                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part)));
+                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)));
                         }
                     }
 

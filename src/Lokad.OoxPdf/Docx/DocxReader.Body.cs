@@ -82,8 +82,8 @@ internal sealed partial class DocxReader
                 // Numbering belongs to the paragraph, outside its run children.
                 // A visible marker keeps the source first line even when its only
                 // run payload is a break; ordinary paragraph layout paints it.
-                bool hasListMarker = hasVisibleBreak && ResolveParagraphNumbering(paragraphProperties, numbering) is { } sourceNumbering &&
-                    !string.IsNullOrWhiteSpace(sourceNumbering.Definition.Text);
+                var sourceNumbering = hasVisibleBreak ? ResolveParagraphNumbering(paragraphProperties, numbering) : null;
+                bool hasListMarker = sourceNumbering is { } source && !string.IsNullOrWhiteSpace(source.Definition.Text);
                 if (!hasListMarker && IsRunBreakOnlyParagraph(element, VisiblePageBreak, markupMode))
                 {
                     DocxParagraph? breakParagraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken);
@@ -114,8 +114,6 @@ internal sealed partial class DocxReader
 
                 if (hasVisibleBreak)
                 {
-                    bool isContinuationFragment = false;
-                    DocxNumberingIndent? sourceListIndent = null;
                     foreach (ParagraphBreakPart part in SplitParagraphAtRunBreaks(element, markupMode,
                         retainEmptyColumnTail: true, isBreak: VisibleBreak, retainFirstLine: hasListMarker))
                     {
@@ -140,12 +138,10 @@ internal sealed partial class DocxReader
                         }
 
                         DocxParagraph? splitParagraph = ReadParagraph(part.Paragraph, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: inlineReferenceCounters, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken,
-                            isContinuationFragment: isContinuationFragment);
+                            isContinuationFragment: !part.IsFirstFragment);
                         if (splitParagraph is not null)
                         {
-                            sourceListIndent ??= splitParagraph.ListLabel?.Indent;
-                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceListIndent)));
-                            isContinuationFragment = true;
+                            elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)));
                         }
                     }
 
@@ -444,6 +440,7 @@ internal sealed partial class DocxReader
         var currentChildren = new List<XElement>();
         XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
         bool startsAfterBreak = false;
+        bool hasParagraphPart = false;
 
         void AddParagraphPart(bool endsBeforeBreak)
         {
@@ -464,7 +461,8 @@ internal sealed partial class DocxReader
             }
 
             splitParagraph.Add(currentChildren.Select(child => new XElement(child)));
-            parts.Add(new ParagraphBreakPart(splitParagraph, null, startsAfterBreak, endsBeforeBreak));
+            parts.Add(new ParagraphBreakPart(splitParagraph, null, startsAfterBreak, endsBeforeBreak, !hasParagraphPart));
+            hasParagraphPart = true;
             currentChildren.Clear();
             startsAfterBreak = false;
         }

@@ -278,7 +278,8 @@ internal static class DocxInlineContent
     public static bool HasSupportedParagraphRevisionOwners(DocxParagraph paragraph, CancellationToken token,
         IReadOnlyList<DocxRevisionInfo>? revisions = null) =>
         HasSupportedRunRevisionOwners(revisions ?? paragraph.Revisions, paragraph.Runs, token,
-            paragraph.ListLabel is not null || paragraph.ParagraphMarkRun?.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange }]
+            paragraph.HasSourceNumbering || paragraph.ListLabel is not null ||
+            paragraph.ParagraphMarkRun?.Revisions is [{ Kind: DocxRevisionKind.RunPropertiesChange }]
                 ? paragraph.ParagraphMarkRun : null, paragraph.Images, paragraph.NonRenderingRunOwners, paragraph.Equations,
             paragraph.ConsumedParagraphMarks, paragraph.PropertyRevision, paragraph.InlineTextBoxes);
 

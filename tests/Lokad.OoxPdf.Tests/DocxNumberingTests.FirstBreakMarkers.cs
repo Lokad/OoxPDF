@@ -88,10 +88,10 @@ internal static partial class DocxNumberingTests
     }
 
     private static DocxDocument ReadFirstMarkerBreak(string kind, bool pure, int count, string carrier, string family,
-        bool inserted, OoxPdfDocxMarkupMode mode)
+        bool inserted, OoxPdfDocxMarkupMode mode, bool inCell = false)
     {
-        string type = kind == "soft" ? "" : " w:type=\"" + kind + "\"";
-        string breaks = string.Concat(Enumerable.Repeat("<w:r><w:br" + type + "/></w:r>", count));
+        string breaks = string.Concat(Enumerable.Repeat(string.Concat(kind.Split('-').Select(value =>
+            "<w:r><w:br" + (value == "soft" ? "" : " w:type=\"" + value + "\"") + "/></w:r>")), count));
         breaks = carrier switch
         {
             "control" => "<w:sdt><w:sdtContent>" + breaks + "</w:sdtContent></w:sdt>",
@@ -105,6 +105,9 @@ internal static partial class DocxNumberingTests
         string body = "<w:p><w:r><w:t>BEFORE</w:t></w:r></w:p><w:p><w:pPr>" + properties + "</w:pPr>" +
             breaks + (pure ? "" : "<w:r><w:t>AFTER</w:t></w:r>") + "</w:p>" +
             following + "NEXT</w:t></w:r></w:p>" + following + "LAST</w:t></w:r></w:p>";
+        if (inCell) body = "<w:tbl><w:tblPr><w:tblW w:w=\"5000\" w:type=\"dxa\"/></w:tblPr>" +
+            "<w:tblGrid><w:gridCol w:w=\"5000\"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"5000\" w:type=\"dxa\"/></w:tcPr>" +
+            body + "</w:tc></w:tr></w:tbl>";
         string format = family is "bullet" or "empty" or "whitespace" ? "bullet" : "decimal";
         string pattern = family == "empty" ? "" : family == "whitespace" ? " " : family == "bullet" ? "\u2022" : "%1.";
         using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>

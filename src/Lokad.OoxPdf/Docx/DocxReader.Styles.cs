@@ -575,7 +575,8 @@ internal sealed partial class DocxReader
         XElement? Paragraph,
         string? BreakValue,
         bool StartsAfterBreak,
-        bool EndsBeforeBreak);
+        bool EndsBeforeBreak,
+        bool IsFirstFragment = false);
 
     private static DocxTextRunStyle ReadTextRunStyle(XElement? properties)
     {
