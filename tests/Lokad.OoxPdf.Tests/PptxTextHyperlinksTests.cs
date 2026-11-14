@@ -24,15 +24,18 @@ internal static class PptxTextHyperlinksTests
             Rune[] runes = text.EnumerateRunes().ToArray();
             TestAssert.Equal(runes.Length, shows.Length);
             double firstX = double.Parse(shows[0].Groups[1].Value, CultureInfo.InvariantCulture);
-            int codeUnits = 0;
+            // Primary Helvetica AFM widths: Link, or A/question/B. A surrogate
+            // source character owns one emitted question-mark advance.
+            int[] advances = text == "Link" ? [556, 222, 556, 500] : [667, 556, 667];
+            int units = 0;
             for (int i = 0; i < runes.Length; i++)
             {
                 double x = double.Parse(shows[i].Groups[1].Value, CultureInfo.InvariantCulture);
-                TestAssert.True(Math.Abs(x - firstX - codeUnits * 18d * 0.42d) < 0.001d,
+                TestAssert.True(Math.Abs(x - firstX - units * 18d / 1000d) < 0.001d,
                     "Fallback glyphs must retain their measured advances instead of overlapping.");
-                codeUnits += runes[i].Utf16SequenceLength;
+                units += advances[i];
             }
-            TestAssert.True(Math.Abs(page.Annotations.Single().Width - codeUnits * 18d * 0.42d) < 0.001d,
+            TestAssert.True(Math.Abs(page.Annotations.Single().Width - units * 18d / 1000d) < 0.001d,
                 "The link must cover the same fallback advance as the painted text.");
         }
     }
