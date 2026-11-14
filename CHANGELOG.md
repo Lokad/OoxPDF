@@ -18,6 +18,8 @@
   or column move. Keep-with-next shares occupied picture, textbox and numbered-label
   frames. Fitting table-header groups stay together with kept headings; repeated
   fields bind to the admitted source page.
+  Text-only rows beside picture or equation rows use their own font metrics for
+  body pagination, including keep and widow admission.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field
   runs or wrapped in supported content controls and metadata containers;

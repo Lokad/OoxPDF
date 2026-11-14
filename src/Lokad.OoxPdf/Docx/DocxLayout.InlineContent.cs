@@ -77,6 +77,41 @@ internal sealed partial class DocxLayoutEngine
             DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, measurer as IDocxLineMetricsProvider),
             DocxLineMetrics.ResolveBodyTierAMaxPoints(paragraph, measurer));
 
+    private static (DocxMeasuredInlineLine Line, DocxLineHeightProfile? Profile, double FontSize)
+        ResolveOrderedBodyLine(DocxParagraph paragraph, DocxMeasuredInlineLine line,
+            IDocxTextMeasurer measurer, double scale, double paragraphInset)
+    {
+        double size = GetParagraphFontSize(paragraph);
+        if (line.Fragments.Count != 0 && line.Fragments.All(fragment => fragment.Source is DocxInlineText))
+        {
+            // This row owns only text, even when another row of its source
+            // paragraph owns a picture or equation. Reuse ordinary body metrics
+            // with the actual wrapped runs; this projection never replaces source.
+            var metricParagraph = GetBodyTextLineMetricParagraph(paragraph,
+                line.Fragments.SelectMany(fragment => fragment.Text).ToArray()) with
+            { Images = [], Equations = [], InlineTextBoxes = [] };
+            double lineSize = GetParagraphFontSize(metricParagraph);
+            var profile = ResolveLineHeightProfile(metricParagraph, lineSize, measurer);
+            if (UsesBodyTextLineMetrics(metricParagraph, profile, measurer))
+            {
+                double inset = ResolveOrderedBodyBaselineInset(metricParagraph, lineSize, profile.LineHeight, measurer) * scale;
+                return (line with { OccupiedHeight = profile.LineHeight, BaselineInset = inset,
+                    TextBaselineInset = inset }, profile, lineSize);
+            }
+        }
+        // Intrinsic objects and authored slots retain their shared frame.
+        double objectInset = 0d;
+        foreach (var fragment in line.Fragments)
+            if (fragment.Math is not null || fragment.Source is DocxInlinePicture or DocxInlineBox)
+                objectInset = Math.Max(objectInset, fragment.BaselineInset);
+        double labelLeading = line.BaselineInset - Math.Max(line.TextBaselineInset, objectInset);
+        return (line with
+        {
+            BaselineInset = Math.Max(paragraphInset * scale, objectInset) + labelLeading,
+            TextBaselineInset = paragraphInset * scale
+        }, null, size);
+    }
+
     private static IReadOnlyDictionary<DocxParagraph, DocxInlineParagraphFrame>? GetOrderedInlineParagraphFrames(
         IReadOnlyList<DocxTextLineLayout> lines, CancellationToken token)
     {

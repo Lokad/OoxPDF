@@ -330,15 +330,18 @@ internal sealed partial class DocxLayoutEngine
         DocxPlainBodyFrame.HasPlainTextContent(paragraph);
 
     private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, DocxWrappedTextLine line)
-    {
-        if (line.Spans.Count == 0) return paragraph;
+        => GetBodyTextLineMetricParagraph(paragraph, line.Spans);
 
-        bool sameRuns = line.Spans.Count == paragraph.Runs.Count;
-        for (int index = 0; sameRuns && index < line.Spans.Count; index++)
-            sameRuns = ReferenceEquals(line.Spans[index].StyleRun, paragraph.Runs[index]);
+    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, IReadOnlyList<DocxTextSpan> spans)
+    {
+        if (spans.Count == 0) return paragraph;
+
+        bool sameRuns = spans.Count == paragraph.Runs.Count;
+        for (int index = 0; sameRuns && index < spans.Count; index++)
+            sameRuns = ReferenceEquals(spans[index].StyleRun, paragraph.Runs[index]);
         if (sameRuns) return paragraph;
 
-        return paragraph with { Runs = line.Spans.Select(span => span.StyleRun).ToArray() };
+        return paragraph with { Runs = spans.Select(span => span.StyleRun).ToArray() };
     }
 
     private static bool ShouldMoveParagraphForWidowControl(
@@ -545,7 +548,8 @@ internal sealed partial class DocxLayoutEngine
                     inlineInset, inlineHeight, paragraphSpacingScale, cancellationToken, out var measured,
                     physicalTextBaselineInset: DocxPlainBodyFrame.HasFixedLineFlow(value) ? inlineInset * paragraphSpacingScale : null,
                     defaultTabStopPoints: defaultTabStopPoints, pageNumber: pageNumber, pageCount: pageCount))
-                    return measured.Sum(line => line.OccupiedHeight);
+                    return measured.Sum(line => ResolveOrderedBodyLine(value, line, textMeasurer,
+                        paragraphSpacingScale, inlineInset).Line.OccupiedHeight);
             }
             double regular = EstimateParagraphContentHeight(value, availableWidth, textMeasurer, defaultTabStopPoints, pageNumber,
                 paragraphSpacingScale, scaleExactBodyAdvances, scaleMinimumBodyAdvances, cancellationToken,

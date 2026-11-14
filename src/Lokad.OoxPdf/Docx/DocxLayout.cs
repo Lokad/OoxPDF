@@ -1622,7 +1622,8 @@ internal sealed partial class DocxLayoutEngine
                     TryWrapOrderedInlineAtoms(atoms, Math.Max(1d, width - firstInset - rightInset),
                         Math.Max(1d, width - nextInset - rightInset), cancellationToken, out var measured,
                         physicalTextBaselineInset: baseInset * paragraphSpacingScale) &&
-                    measured.All(line => line.OccupiedHeight <= page.Height - page.MarginTop - page.MarginBottom))
+                    measured.All(line => ResolveOrderedBodyLine(paragraph, line, textMeasurer,
+                        paragraphSpacingScale, baseInset).Line.OccupiedHeight <= page.Height - page.MarginTop - page.MarginBottom))
                 {
                     firstBodyLineBaselineOffset ??= baseInset;
                     firstDocumentBodyBaselineOffset ??= baseInset;
@@ -1677,6 +1678,8 @@ internal sealed partial class DocxLayoutEngine
                                     supportedPreview = false;
                                     break; // An unfit atomic item retains its existing placement fallback.
                                 }
+                                pending = ResolveOrderedBodyLine(paragraph, pending, textMeasurer,
+                                    paragraphSpacingScale, baseInset).Line;
                                 remaining++;
                                 full |= bottom - pending.OccupiedHeight < CurrentParagraphFrameBottom(
                                     pending.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d);
@@ -1720,18 +1723,9 @@ internal sealed partial class DocxLayoutEngine
                             if (referenceLine < measured.Count && measured[referenceLine].EndCursor.AtomIndex == line.EndCursor.AtomIndex)
                                 line = line with { DisplayGroupAdvance = measured[referenceLine].DisplayGroupAdvance };
                         }
-                        double objectInset = 0d;
-                        foreach (var fragment in line.Fragments)
-                            if (fragment.Math is not null || fragment.Source is DocxInlinePicture or DocxInlineBox)
-                                objectInset = Math.Max(objectInset, fragment.BaselineInset);
-                        // Placement shares the ordinary body's scaled local inset
-                        // and page anchor. The measured occupied height stays intact.
-                        double labelLeading = line.BaselineInset - Math.Max(line.TextBaselineInset, objectInset);
-                        line = line with
-                        {
-                            BaselineInset = Math.Max(baseInset * paragraphSpacingScale, objectInset) + labelLeading,
-                            TextBaselineInset = baseInset * paragraphSpacingScale
-                        };
+                        var bodyLine = ResolveOrderedBodyLine(paragraph, line, textMeasurer, paragraphSpacingScale, baseInset);
+                        line = bodyLine.Line;
+                        var bodyLineProfile = bodyLine.Profile ?? lineHeightProfile;
                         if (completeFootnoteAdmission is not null)
                             RegisterInFlightFootnotesForSourceBlock(elementIndex, line.Fragments.SelectMany(fragment => fragment.Text));
                         if (cursorY - line.OccupiedHeight < CurrentParagraphFrameBottom(
@@ -1747,7 +1741,7 @@ internal sealed partial class DocxLayoutEngine
                         double available = Math.Max(1d, width - inset - rightInset);
                         double align = ResolveOrderedInlineAlignment(line, effective.Alignment, available);
                         var placed = PlaceOrderedInlineLine(paragraph, line, x + inset + align, x, cursorY - anchorInset,
-                            paragraphFontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
+                            bodyLine.FontSize, paragraphSpacingScale, pages.Count + 1, elementIndex, 0, index, DocxStoryId.Body());
                         currentItems.Add(placed.Line with
                         {
                             // Text-bearing rows retain their typographic origin.
@@ -1763,9 +1757,9 @@ internal sealed partial class DocxLayoutEngine
                             ParagraphBeforeSpacing = index == 0 ? spacingProfile.ParagraphBeforeSpacing : null,
                             ContextualSpacingSuppressed = index == 0 ? spacingProfile.ContextualSpacingSuppressed : null,
                             ParagraphAfterSpacing = line.EndCursor.IsComplete(atoms) ? spacingProfile.ParagraphAfterSpacing : 0d,
-                            SingleLineHeight = lineHeightProfile.SingleLineHeight,
-                            EffectiveLineSpacingFactor = lineHeightProfile.EffectiveLineSpacingFactor,
-                            LineHeightSource = lineHeightProfile.Source,
+                            SingleLineHeight = bodyLineProfile.SingleLineHeight,
+                            EffectiveLineSpacingFactor = bodyLineProfile.EffectiveLineSpacingFactor,
+                            LineHeightSource = bodyLineProfile.Source,
                             FirstLineInsetPoints = index == 0 ? line.BaselineInset : null,
                             BodyLineBoxBaselineInsetPoints = line.BaselineInset,
                             BodyLineBoxHeightPoints = line.OccupiedHeight
