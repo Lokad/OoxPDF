@@ -36,6 +36,8 @@
   and visible continuation text in unscaled Review views.
   Printed revision balloons share lane fitting across stories; complete endnote
   rows retain their design frames when the Review page scales.
+  Earlier section headers and footers retain that lane when a later section
+  supplies a plain story, preventing captions from covering source words.
   Explicit automatic row heights share the same printed Review frames as omitted heights.
   They also retain fitting equation rows on their source page when only trailing spacing overflows.
   Nonprinting editing metadata around page/column breaks preserves paragraph spacing.

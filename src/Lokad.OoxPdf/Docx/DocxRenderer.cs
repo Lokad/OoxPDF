@@ -752,6 +752,10 @@ internal sealed partial class DocxRenderer
 
         return false;
 
+        IEnumerable<DocxPageSettings> SectionSettings() =>
+            document.BodyElements.OfType<DocxSectionBreakElement>()
+                .Select(section => section.PageSettings).Prepend(document.PageSettings);
+
         IEnumerable<DocxParagraph> ParaEnumerations()
         {
             foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.HeaderBodyElementsByType, document.HeaderParagraphsByType))
@@ -764,7 +768,8 @@ internal sealed partial class DocxRenderer
                 yield return paragraph;
             }
 
-            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(document.PageSettings))
+            foreach (var settings in SectionSettings())
+            foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateStaticStoryParagraphs(settings))
             {
                 yield return paragraph;
             }
@@ -797,12 +802,10 @@ internal sealed partial class DocxRenderer
                 yield return paragraph;
             }
 
-            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.PageSettings.HeaderFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
-            {
-                yield return paragraph;
-            }
-
-            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(document.PageSettings.FooterFloatingDrawingsByType.Values.SelectMany(drawings => drawings)))
+            foreach (var settings in SectionSettings())
+            foreach (DocxParagraph paragraph in FloatingDrawingParagraphs(
+                settings.HeaderFloatingDrawingsByType.Values.Concat(settings.FooterFloatingDrawingsByType.Values)
+                    .SelectMany(drawings => drawings)))
             {
                 yield return paragraph;
             }
@@ -831,12 +834,9 @@ internal sealed partial class DocxRenderer
                 yield return table;
             }
 
-            foreach (DocxTable table in StaticStoryTables(document.PageSettings.HeaderBodyElementsByType))
-            {
-                yield return table;
-            }
-
-            foreach (DocxTable table in StaticStoryTables(document.PageSettings.FooterBodyElementsByType))
+            foreach (var settings in SectionSettings())
+            foreach (DocxTable table in StaticStoryTables(settings.HeaderBodyElementsByType)
+                .Concat(StaticStoryTables(settings.FooterBodyElementsByType)))
             {
                 yield return table;
             }

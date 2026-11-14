@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Xml.Linq;
+using System.Text;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
@@ -12,7 +13,7 @@ internal static partial class DocxInlineCompositionTests
     {
         foreach (string story in new[] { "header", "footer" })
         {
-            var source = ReadSectionScopedBox(story, OoxPdfDocxMarkupMode.Final, sectioned: true);
+            var source = ReadSectionScopedStory(story, OoxPdfDocxMarkupMode.Final, sectioned: true);
             var section = source.BodyElements.OfType<DocxSectionBreakElement>().Single();
             var parent = DocxBlockTraversal.EnumerateStaticStoryParagraphs(section.PageSettings)
                 .Single(paragraph => paragraph.InlineTextBoxes.Count != 0);
@@ -34,9 +35,9 @@ internal static partial class DocxInlineCompositionTests
         foreach (bool split in new[] { false, true })
         {
             var renderer = new DocxRenderer(new SectionBoxResolver(), mode, CachedMathGeometry(mode));
-            var control = renderer.RenderPagesAsync(ReadSectionScopedBox(story, mode, sectioned: false, split),
+            var control = renderer.RenderPagesAsync(ReadSectionScopedStory(story, mode, sectioned: false, split),
                 null, default).ToBlockingEnumerable().Single();
-            var pages = renderer.RenderPagesAsync(ReadSectionScopedBox(story, mode, sectioned: true, split),
+            var pages = renderer.RenderPagesAsync(ReadSectionScopedStory(story, mode, sectioned: true, split),
                 null, default).ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
             string label = "SECTION " + story.ToUpperInvariant() + " BOX LABEL";
@@ -53,33 +54,90 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static DocxDocument ReadSectionScopedBox(string story, OoxPdfDocxMarkupMode mode, bool sectioned, bool split = false)
+    public static void DocxEarlierStaticRevisionOwnersKeepThePrintedPageLane()
     {
-        string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "InlineBoxMath",
-            "inline-box-math-" + story + ".docx"));
+        var context = DocxMarkupContext.FromMode(OoxPdfDocxMarkupMode.AllMarkup,
+            OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+        foreach (string story in new[] { "header", "footer" })
+        {
+            var control = ReadSectionScopedStory(story, OoxPdfDocxMarkupMode.AllMarkup, false, formattedTable: true);
+            var source = ReadSectionScopedStory(story, OoxPdfDocxMarkupMode.AllMarkup, true, formattedTable: true);
+            double expected = DocxRenderer.ResolveWordCompatiblePrintScale(control, context);
+            TestAssert.True(expected < 1d, "The single-story control has an independently qualified printed revision lane.");
+            TestAssert.Equal(expected, DocxRenderer.ResolveWordCompatiblePrintScale(source, context));
+            var removed = source with { BodyElements = source.BodyElements.Where(element => element is not DocxSectionBreakElement).ToArray() };
+            TestAssert.Equal(1d, DocxRenderer.ResolveWordCompatiblePrintScale(removed, context));
+        }
+    }
+
+    public static void DocxEarlierStaticRevisionCaptionsKeepSourceWordsAndMathVisible()
+    {
+        foreach (string story in new[] { "header", "footer" })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true),
+                OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var control = renderer.RenderPagesAsync(ReadSectionScopedStory(story, OoxPdfDocxMarkupMode.AllMarkup,
+                false, formattedTable: true), null, default).ToBlockingEnumerable().Single();
+            var source = ReadSectionScopedStory(story, OoxPdfDocxMarkupMode.AllMarkup, true, formattedTable: true);
+            var balloon = renderer.InspectMarkupBalloons(source).Single();
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(2, pages.Length);
+            TestAssert.Equal(0, balloon.PageIndex);
+            var word = DocxCommentsTests.ReadEmbeddedGlyphTextShows(pages[0], true)
+                .Single(show => show.Text.Contains("series.", StringComparison.Ordinal));
+            double width = word.Text.EnumerateRunes().Sum(rune => (double)word.Font.Font.GetAdvanceWidth(
+                word.Font.Font.MapCodePoint(rune.Value))) * word.Size / word.Font.Font.UnitsPerEm;
+            TestAssert.True(word.X + width <= balloon.X + .01d,
+                "A later plain story cannot let its predecessor's opaque revision caption cover the source word.");
+            string MathText(Lokad.OoxPdf.Pdf.PdfPage page)
+            {
+                var fonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                    .Select(font => font.Font).ToHashSet();
+                return string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true)
+                    .Where(show => fonts.Contains(show.Font)).Select(show => show.Text));
+            }
+            TestAssert.True(MathText(control).Length != 0, "The independent source contains supported equations.");
+            TestAssert.Equal(MathText(control), MathText(pages[0]));
+            TestAssert.Equal(string.Empty, MathText(pages[1]));
+            TestAssert.Contains("SECOND " + story.ToUpperInvariant() + " PLAIN", DocxPageFootnoteNumberingTests.DecodeText(pages[1]));
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null, cancellation.Token)
+                .ToBlockingEnumerable().ToArray());
+        }
+    }
+
+    private static DocxDocument ReadSectionScopedStory(string story, OoxPdfDocxMarkupMode mode, bool sectioned,
+        bool split = false, bool formattedTable = false)
+    {
+        string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            formattedTable ? "CompositionProbes" : "InlineBoxMath", formattedTable
+                ? "table-math-revision-" + story + "-cell-format.docx" : "inline-box-math-" + story + ".docx"));
         using var memory = new MemoryStream();
         memory.Write(File.ReadAllBytes(seed));
         using (var zip = new ZipArchive(memory, ZipArchiveMode.Update, leaveOpen: true))
         {
             XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
             XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-            string part = "word/inline-box-" + story + ".xml";
-            var staticXml = Read(part);
-            string label = "SECTION " + story.ToUpperInvariant() + " BOX LABEL";
-            var run = new XElement(w + "r", new XElement(w + "rPr",
-                new XElement(w + "rFonts", new XAttribute(w + "ascii", "Consolas"), new XAttribute(w + "hAnsi", "Consolas")),
-                new XElement(w + "sz", new XAttribute(w + "val", "24"))), new XElement(w + "t", label));
-            var paragraph = new XElement(w + "p", run);
-            if (split)
+            if (!formattedTable)
             {
-                var second = new XElement(run);
-                run.Element(w + "t")!.Value = "SECTION ";
-                second.Element(w + "t")!.Value = label[8..];
-                run.Element(w + "t")!.SetAttributeValue(XNamespace.Xml + "space", "preserve");
-                paragraph.Add(second);
+                string part = "word/inline-box-" + story + ".xml";
+                var staticXml = Read(part);
+                string label = "SECTION " + story.ToUpperInvariant() + " BOX LABEL";
+                var run = new XElement(w + "r", new XElement(w + "rPr",
+                    new XElement(w + "rFonts", new XAttribute(w + "ascii", "Consolas"), new XAttribute(w + "hAnsi", "Consolas")),
+                    new XElement(w + "sz", new XAttribute(w + "val", "24"))), new XElement(w + "t", label));
+                var paragraph = new XElement(w + "p", run);
+                if (split)
+                {
+                    var second = new XElement(run);
+                    run.Element(w + "t")!.Value = "SECTION ";
+                    second.Element(w + "t")!.Value = label[8..];
+                    run.Element(w + "t")!.SetAttributeValue(XNamespace.Xml + "space", "preserve");
+                    paragraph.Add(second);
+                }
+                staticXml.Descendants(w + "txbxContent").Single().ReplaceNodes(paragraph);
+                Write(part, staticXml);
             }
-            staticXml.Descendants(w + "txbxContent").Single().ReplaceNodes(paragraph);
-            Write(part, staticXml);
             if (sectioned)
             {
                 var document = Read("word/document.xml");

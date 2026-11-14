@@ -1,4 +1,23 @@
 {
+  "docx-section-revision-lane": [
+    "DocxEarlierStaticRevisionOwnersKeepThePrintedPageLane",
+    "DocxEarlierStaticRevisionCaptionsKeepSourceWordsAndMathVisible",
+    "DocxSectionScopedInlineBoxesKeepTheirActualFontSources",
+    "DocxSectionScopedInlineBoxesKeepVisibleLabelsInBothViews",
+    "DocxFooterRevisionFramesMatchIndependentWordBoundsAndUiFaces",
+    "DocxFooterRevisionFramesKeepPortableContentAndOwnedCaptionFaces",
+    "DocxFooterRevisionFramesKeepFontFallbackAndTerminalAcquisitionFailures",
+    "DocxInlineCompositionTableMathMetadataSharesPrintedLaneAcrossContainers",
+    "DocxInlineCompositionTableMathMetadataKeepsIndependentWordContentAndInk",
+    "DocxInlineCompositionCellStructureKeepsActualChildOwnersAndPrintedLane",
+    "DocxCommentEndpointBeforeContentKeepsNominalPageAndSource",
+    "DocxCommentEndpointsSharePerReferencePaintingAndLaneOwnership",
+    "DocxCommentUnknownEndpointsRetainTheirEstablishedFallback",
+    "DocxNotePropertyBalloonsShareThePrintedPageLane",
+    "DocxScaledNotePropertyBalloonsPreserveCompleteRowsAndReadableContent",
+    "DocxScaledNoteRevisionAnchorsShareTheirPaintedRowFrame",
+    "DocxEndnotePropertyHistoryKeepsContinuationPaintInsideUnscaledClips"
+  ],
   "docx-revision-lane-composition": [
     "DocxNotePropertyBalloonsShareThePrintedPageLane",
     "DocxScaledNotePropertyBalloonsPreserveCompleteRowsAndReadableContent",
