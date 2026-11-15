@@ -16,7 +16,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode));
             var control = renderer.RenderPagesAsync(ReadCustomMarkText(kind, count, mode, "original"), null, default)
                 .ToBlockingEnumerable().ToArray();
-            foreach (string variant in new[] { "empty", "several-empty", "trimmed-empty", "trimmed-mark", "page-hint", "page-hints-and-empty" })
+            foreach (string variant in new[] { "empty", "several-empty", "trimmed-empty", "trimmed-mark", "page-hint", "page-hint-namespace", "page-hints-and-empty" })
             {
                 var source = ReadCustomMarkText(kind, count, mode, variant);
                 var paragraph = source.Paragraphs.Single(p => p.Equations.Count != 0);
@@ -118,6 +118,8 @@ internal static partial class DocxInlineCompositionTests
                 case "trimmed-empty": mark.AddBeforeSelf(new XElement(w + "t", " \t\n ")); break;
                 case "trimmed-mark": mark.Attribute(XNamespace.Xml + "space")?.Remove(); mark.Value = " \t* \n"; break;
                 case "page-hint": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak")); break;
+                case "page-hint-namespace": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak",
+                    new XAttribute(XNamespace.Xmlns + "w", w.NamespaceName))); break;
                 case "page-hints-and-empty": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak"),
                     new XElement(w + "t"), new XElement(w + "lastRenderedPageBreak", string.Empty), new XElement(w + "t", " \t ")); break;
                 case "preserved-space": mark.AddBeforeSelf(new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), " ")); break;

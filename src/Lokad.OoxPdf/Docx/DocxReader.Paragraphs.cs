@@ -1616,7 +1616,8 @@ internal sealed partial class DocxReader
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (following.Name == WordprocessingNamespace + "lastRenderedPageBreak" &&
-                    !following.HasAttributes && !following.HasElements && following.Value.Length == 0) continue;
+                    following.Attributes().All(attribute => attribute.IsNamespaceDeclaration) &&
+                    !following.HasElements && following.Value.Length == 0) continue;
                 if (following.Name != WordprocessingNamespace + "t") return null;
                 string text = ResolveRunDisplayText(ReadRunTextChild(following), resolvedRun);
                 if (text.Length != 0)
