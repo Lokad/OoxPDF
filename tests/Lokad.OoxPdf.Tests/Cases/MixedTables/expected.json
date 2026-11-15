@@ -1,0 +1,78 @@
+[
+  {
+    "Id": "maintenance-matrix",
+    "Rows": 4,
+    "Columns": 3,
+    "PictureWidth": 48,
+    "PictureHeight": 24,
+    "Text": [
+      "Maintenance matrix",
+      "Check 1-1",
+      "Check 1-2",
+      "A longer independent description wraps inside its own cell and preserves the neighboring record.",
+      "Check 1-3",
+      "Check 2-1",
+      "Below the marker",
+      "Check 2-2",
+      "Check 2-3",
+      "Check 3-1",
+      "Check 3-2",
+      "Nested record",
+      "After nested record",
+      "Check 3-3",
+      "Check 4-1",
+      "Check 4-2",
+      "Check 4-3",
+      "Rate ",
+      "End of schedule",
+      "Public table-flow record complete."
+    ],
+    "Math": [
+      "a+b",
+      "v+2"
+    ],
+    "InputSha256": "AE5136AF2D07F4826E58A464C31BE8C0861CEA2C35928E7DD095C5F2E2625D6A"
+  },
+  {
+    "Id": "capacity-schedule",
+    "Rows": 5,
+    "Columns": 4,
+    "PictureWidth": 36,
+    "PictureHeight": 18,
+    "Text": [
+      "Capacity schedule",
+      "Stage 1-1",
+      "Stage 1-2",
+      "A longer independent description wraps inside its own cell and preserves the neighboring record.",
+      "Stage 1-3",
+      "Stage 1-4",
+      "Stage 2-1",
+      "Below the marker",
+      "Stage 2-2",
+      "Stage 2-3",
+      "Stage 2-4",
+      "Stage 3-1",
+      "Stage 3-2",
+      "Nested record",
+      "After nested record",
+      "Stage 3-3",
+      "Stage 3-4",
+      "Stage 4-1",
+      "Stage 4-2",
+      "Stage 4-3",
+      "Stage 4-4",
+      "Stage 5-1",
+      "Stage 5-2",
+      "Stage 5-3",
+      "Stage 5-4",
+      "Rate ",
+      "End of schedule",
+      "Public table-flow record complete."
+    ],
+    "Math": [
+      "a+b",
+      "v+2"
+    ],
+    "InputSha256": "55ED53E5BB976BF1AA90D962888A0B0D5F1D5B66233BEDBCE83270A3E2BA4600"
+  }
+]

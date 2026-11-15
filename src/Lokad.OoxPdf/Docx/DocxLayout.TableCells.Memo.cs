@@ -2,10 +2,10 @@ using System.Runtime.CompilerServices;
 
 namespace Lokad.OoxPdf.Docx;
 
-// Cell text-line memo. One table layout pass measures each cell up to three
+// Cell content memo. One table layout pass measures each cell up to three
 // times (split-feasibility, break resolution, final fragments) plus nested-table
 // remeasurement; keys capture every layout input so hits reproduce the computed lines
-// exactly after caller-side re-offsetting by the new origin. Stored lines are
+// exactly after caller-side re-offsetting by the new origin. Stored content is
 // origin-relative (absolute minus store origin); callers reconstruct absolute lines
 // by shifting relative lines by the lookup origin. Source PAGE/NUMPAGES dependencies
 // select each page input independently, including inline-box children. The memo
@@ -40,10 +40,12 @@ internal sealed partial class DocxLayoutEngine
             out IReadOnlyList<DocxTextLineLayout> relativeLines,
             out IReadOnlyList<DocxInlineImageLayout> relativePlacedImages,
             out IReadOnlyList<DocxInlineTextBoxLayout> relativePlacedBoxes,
-            out double usedHeight)
+            out double usedHeight,
+            out IReadOnlyList<DocxTableRowLayout> relativeNestedRows,
+            double nestedPageHeight = 0d)
         {
             if (entries.TryGetValue(
-                new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale),
+                new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, nestedPageHeight),
                 out StoredLines? stored) && stored is not null &&
                 stored.CounterInputs == ResolveCounterInputs(pageNumber, pageCount, dependencies))
             {
@@ -52,6 +54,7 @@ internal sealed partial class DocxLayoutEngine
                 relativePlacedImages = stored.PlacedImages;
                 relativePlacedBoxes = stored.PlacedBoxes;
                 usedHeight = stored.UsedHeight;
+                relativeNestedRows = stored.NestedRows;
                 return true;
             }
 
@@ -60,6 +63,7 @@ internal sealed partial class DocxLayoutEngine
             relativePlacedImages = [];
             relativePlacedBoxes = [];
             usedHeight = 0d;
+            relativeNestedRows = [];
             return false;
         }
 
@@ -78,13 +82,16 @@ internal sealed partial class DocxLayoutEngine
             IReadOnlyList<DocxInlineTextBoxLayout> absolutePlacedBoxes,
             double originX,
             double originY,
-            double usedHeight)
+            double usedHeight,
+            IReadOnlyList<DocxTableRowLayout> absoluteNestedRows,
+            double nestedPageHeight = 0d)
         {
             IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
             IReadOnlyList<DocxInlineImageLayout> relativePlaced = ToRelativeImages(absolutePlacedImages, originX, originY);
             var relativeBoxes = absolutePlacedBoxes.Select(box => ShiftInlineTextBox(box, -originY, -originX)).ToArray();
-            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale)] =
-                new StoredLines(relative, relativePlaced, relativeBoxes, usedHeight,
+            var relativeRows = ShiftTableRows(absoluteNestedRows, -originY, -originX);
+            entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, nestedPageHeight)] =
+                new StoredLines(relative, relativePlaced, relativeBoxes, relativeRows, usedHeight,
                     ResolveCounterInputs(pageNumber, pageCount, dependencies));
         }
 
@@ -160,6 +167,7 @@ internal sealed partial class DocxLayoutEngine
             private readonly double defaultTabStopPoints;
             private readonly double rowTopPadding;
             private readonly double paragraphSpacingScale;
+            private readonly double nestedPageHeight;
 
             public MemoKey(
                 DocxTableCell cell,
@@ -167,7 +175,8 @@ internal sealed partial class DocxLayoutEngine
                 IDocxTextMeasurer? measurer,
                 double defaultTabStopPoints,
                 double rowTopPadding,
-                double paragraphSpacingScale)
+                double paragraphSpacingScale,
+                double nestedPageHeight)
             {
                 this.cell = cell;
                 this.cellWidth = cellWidth;
@@ -175,6 +184,7 @@ internal sealed partial class DocxLayoutEngine
                 this.defaultTabStopPoints = defaultTabStopPoints;
                 this.rowTopPadding = rowTopPadding;
                 this.paragraphSpacingScale = paragraphSpacingScale;
+                this.nestedPageHeight = nestedPageHeight;
             }
 
             public bool Equals(MemoKey other)
@@ -184,7 +194,8 @@ internal sealed partial class DocxLayoutEngine
                     && ReferenceEquals(measurer, other.measurer)
                     && defaultTabStopPoints.Equals(other.defaultTabStopPoints)
                     && rowTopPadding.Equals(other.rowTopPadding)
-                    && paragraphSpacingScale.Equals(other.paragraphSpacingScale);
+                    && paragraphSpacingScale.Equals(other.paragraphSpacingScale)
+                    && nestedPageHeight.Equals(other.nestedPageHeight);
             }
 
             public override bool Equals(object? obj)
@@ -201,12 +212,13 @@ internal sealed partial class DocxLayoutEngine
                 hash.Add(defaultTabStopPoints);
                 hash.Add(rowTopPadding);
                 hash.Add(paragraphSpacingScale);
+                hash.Add(nestedPageHeight);
                 return hash.ToHashCode();
             }
         }
 
         private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> placedImages,
-            IReadOnlyList<DocxInlineTextBoxLayout> placedBoxes, double usedHeight,
+            IReadOnlyList<DocxInlineTextBoxLayout> placedBoxes, IReadOnlyList<DocxTableRowLayout> nestedRows, double usedHeight,
             (int? PageNumber, int? PageCount) counterInputs)
         {
             public (int? PageNumber, int? PageCount) CounterInputs { get; } = counterInputs;
@@ -217,6 +229,7 @@ internal sealed partial class DocxLayoutEngine
             public IReadOnlyList<DocxInlineImageLayout> PlacedImages { get; } = placedImages;
 
             public double UsedHeight { get; } = usedHeight;
+            public IReadOnlyList<DocxTableRowLayout> NestedRows { get; } = nestedRows;
         }
 
         // RV05: placed mid-line images relativize exactly like lines so memo hits

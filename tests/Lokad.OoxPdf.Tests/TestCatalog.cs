@@ -156,6 +156,7 @@ internal static class TestCatalog
         .. FromType("docx-text", typeof(DocxNoteListOrderTests)),
         .. FromType("docx-tables", typeof(DocxTableCellsTests)),
         .. FromType("docx-tables", typeof(DocxCellMemoTests)),
+        .. FromType("docx-tables", typeof(DocxTableFlowTests)),
         .. FromType("docx-tables", typeof(DocxBorderPlanTests)),
         .. FromType("docx-tables", typeof(DocxTablesLayoutTests)),
         .. FromType("docx-tables", typeof(DocxTablesMarkupTests)),

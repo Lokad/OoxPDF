@@ -12,8 +12,8 @@ internal static class DocxCellMemoTests
         var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d);
-        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out var relative, out _, out _, out double usedHeight);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d, []);
+        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out var relative, out _, out _, out double usedHeight, out _);
         TestAssert.True(hit, "Same key must hit.");
         TestAssert.Equal(1, memo.Hits);
         TestAssert.Equal(0, memo.Misses);
@@ -32,8 +32,8 @@ internal static class DocxCellMemoTests
         var cell = new DocxTableCell("sample", [], null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d);
-        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out var relative, out _, out _, out double usedHeight);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d, []);
+        bool hit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out var relative, out _, out _, out double usedHeight, out _);
         TestAssert.True(hit, "Same key must hit for origin replay.");
         TestAssert.Equal(30d, usedHeight);
         var replayed = DocxLayoutEngine.DocxTableCellTextLinesMemo.ShiftLines(relative, 30d, 40d);
@@ -50,12 +50,12 @@ internal static class DocxCellMemoTests
         TestAssert.True(((object)cell).Equals((object)clone), "Test requires equal-valued clones.");
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var line = MakeLine("sample", 10d, 20d, 12d);
-        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d);
-        bool cloneHit = memo.TryGetRelativeLines(clone, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _);
+        memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d, []);
+        bool cloneHit = memo.TryGetRelativeLines(clone, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _, out _);
         TestAssert.True(!cloneHit, "Equal-valued distinct cell must not hit reference-identity memo.");
         TestAssert.Equal(0, memo.Hits);
         TestAssert.Equal(1, memo.Misses);
-        bool sameHit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _);
+        bool sameHit = memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _, out _);
         TestAssert.True(sameHit, "Same reference must hit.");
         TestAssert.Equal(1, memo.Hits);
     }
@@ -75,12 +75,12 @@ internal static class DocxCellMemoTests
         {
             var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
             memo.StoreRelativeLines(cell, 80d, null, 36d, 0d, 1d, 1, 12, item.Dependencies,
-                [line], [], [], 10d, 20d, 30d);
+                [line], [], [], 10d, 20d, 30d, []);
             foreach (int number in new[] { 1, 2 })
             foreach (int count in new[] { 12, 13 })
             {
                 TestAssert.Equal(item.Hits.Contains((number, count)), memo.TryGetRelativeLines(cell, 80d, null, 36d, 0d, 1d,
-                    number, count, item.Dependencies, out _, out _, out _, out _));
+                    number, count, item.Dependencies, out _, out _, out _, out _, out _));
             }
         }
     }
@@ -154,7 +154,7 @@ internal static class DocxCellMemoTests
         _ = PlaceCounterCell(cell, measurer, memo, 1, 1);
         var dependencies = kind == DocxFieldKind.Page ? DocxCounterDependencies.PageNumber : DocxCounterDependencies.PageCount;
         TestAssert.True(memo.TryGetRelativeLines(cell, 160d, measurer, 36d, 0d, 1d, 1, 1, dependencies,
-            out var relative, out _, out _, out _), "Capture the live cached measurement.");
+            out var relative, out _, out _, out _, out _), "Capture the live cached measurement.");
         return new WeakReference(relative);
     }
 
@@ -182,17 +182,48 @@ internal static class DocxCellMemoTests
         TestAssert.Equal(1, box.TextLines.Sum(line => line.InlineMath.Count));
     }
 
+    public static void CellMemoReplaysNestedContentAtItsCurrentAlignedOrigin()
+    {
+        var document = DocxTests.ReadDocx(DocxTableFlowTests.CasePath("maintenance-matrix.docx"), OoxPdfDocxMarkupMode.Final);
+        var source = document.Tables[0].Rows[2].Cells[1];
+        foreach (var alignment in new[] { DocxTableCellVerticalAlignment.Top, DocxTableCellVerticalAlignment.Center, DocxTableCellVerticalAlignment.Bottom })
+        {
+            var cell = source with { VerticalAlignment = alignment };
+            var measurer = new CountingMeasurer();
+            var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
+            var first = PlaceCounterCell(cell, measurer, memo, 1, 2);
+            long calls = measurer.Calls;
+            var moved = PlaceCounterCell(cell, measurer, memo, 2, 2, x: 30d, y: 40d);
+            TestAssert.Equal(calls, measurer.Calls);
+            TestAssert.Equal(1, memo.Hits);
+            var fresh = PlaceCounterCell(cell, measurer, new(), 2, 2, x: 30d, y: 40d);
+            var before = first.Rows.Single(); var after = moved.Rows.Single(); var expected = fresh.Rows.Single();
+            TestAssert.True(Math.Abs(after.Y - before.Y - 20d) < .000001d &&
+                Math.Abs(after.Table.TableX - before.Table.TableX - 20d) < .000001d,
+                "Cached nested rows translate with their containing cell: " + alignment);
+            TestAssert.Equal(expected.Y, after.Y);
+            TestAssert.Equal(expected.Cells[0].TextLines[0].BaselineY, after.Cells[0].TextLines[0].BaselineY);
+            TestAssert.Equal(expected.Cells[0].TextLines[0].X, after.Cells[0].TextLines[0].X);
+            // A changed nested admission height is a distinct measurement;
+            // unlike ordinary text it cannot silently reuse the prior frame.
+            _ = PlaceCounterCell(cell, measurer, memo, 2, 2, height: 280d);
+            TestAssert.Equal(2, memo.Misses);
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => PlaceCounterCell(cell, measurer, memo, 2, 2, token: cancellation.Token));
+        }
+    }
+
     private static (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images,
-        IReadOnlyList<DocxInlineTextBoxLayout> Boxes, double Height) PlaceCounterCell(
+        IReadOnlyList<DocxInlineTextBoxLayout> Boxes, IReadOnlyList<DocxTableRowLayout> Rows, double Height) PlaceCounterCell(
         DocxTableCell cell, IDocxTextMeasurer measurer, DocxLayoutEngine.DocxTableCellTextLinesMemo memo,
         int number, int count, double x = 10d, double y = 20d, double height = 240d, double width = 160d,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math = null, CancellationToken token = default)
     {
-        var method = typeof(DocxLayoutEngine).GetMethod("LayoutTableCellTextLines", BindingFlags.NonPublic | BindingFlags.Static)
+        var method = typeof(DocxLayoutEngine).GetMethod("LayoutTableCellContent", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Expected live cell-layout method.");
         try
         {
-            return ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, IReadOnlyList<DocxInlineTextBoxLayout>, double))
+            return ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, IReadOnlyList<DocxInlineTextBoxLayout>, IReadOnlyList<DocxTableRowLayout>, double))
                 method.Invoke(null, [cell, x, y, width, height, 0d, measurer, 36d, number, count, 1d, memo, number - 1, math, token])!;
         }
         catch (TargetInvocationException exception) when (exception.InnerException is not null)
@@ -209,10 +240,10 @@ internal static class DocxCellMemoTests
         var line = MakeLine("sample", 10d, 20d, 12d);
         var firstMeasurer = new CountingMeasurer();
         var secondMeasurer = new CountingMeasurer();
-        memo.StoreRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d);
-        bool sameHit = memo.TryGetRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _);
+        memo.StoreRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, new[] { line }, Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), 10d, 20d, 30d, []);
+        bool sameHit = memo.TryGetRelativeLines(cell, 80d, firstMeasurer, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _, out _);
         TestAssert.True(sameHit, "Same measurer reference must hit.");
-        bool otherMiss = memo.TryGetRelativeLines(cell, 80d, secondMeasurer, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _);
+        bool otherMiss = memo.TryGetRelativeLines(cell, 80d, secondMeasurer, 36d, 0d, 1d, null, null, DocxCounterDependencies.None, out _, out _, out _, out _, out _);
         TestAssert.True(!otherMiss, "Different measurer reference must miss.");
     }
 

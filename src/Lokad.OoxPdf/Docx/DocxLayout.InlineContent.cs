@@ -45,7 +45,6 @@ internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
     public DocxMathDisplayAlignment? DisplayAlignment { get; init; }
     public double AutomaticSpacingPoints { get; init; }
 }
-internal readonly record struct DocxInlineParagraphFrame(double OccupiedHeight, DocxTextLineLayout LastLine);
 
 internal sealed partial class DocxLayoutEngine
 {
@@ -122,27 +121,6 @@ internal sealed partial class DocxLayoutEngine
             BaselineInset = Math.Max(paragraphInset * scale, objectInset) + labelLeading,
             TextBaselineInset = paragraphInset * scale
         }, null, size);
-    }
-
-    private static IReadOnlyDictionary<DocxParagraph, DocxInlineParagraphFrame>? GetOrderedInlineParagraphFrames(
-        IReadOnlyList<DocxTextLineLayout> lines, CancellationToken token)
-    {
-        Dictionary<DocxParagraph, DocxInlineParagraphFrame>? heights = null;
-        foreach (var line in lines)
-        {
-            token.ThrowIfCancellationRequested();
-            if (line.InlineFrame is null && line.InlineMath.Count == 0 || line.SourceParagraph is not { } paragraph) continue;
-            heights ??= new(ReferenceEqualityComparer.Instance);
-            heights.TryAdd(paragraph, new(0d, line));
-        }
-        if (heights is null) return null;
-        foreach (var line in lines)
-        {
-            token.ThrowIfCancellationRequested();
-            if (line.SourceParagraph is { } paragraph && heights.TryGetValue(paragraph, out var frame))
-                heights[paragraph] = new(frame.OccupiedHeight + (line.LineHeight ?? 0d), line);
-        }
-        return heights;
     }
 
     private static bool TryMeasureOrderedCellContent(DocxTableCell cell, DocxParagraph paragraph,
