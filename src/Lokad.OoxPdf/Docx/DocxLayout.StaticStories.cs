@@ -349,9 +349,10 @@ internal sealed partial class DocxLayoutEngine
             // Legacy unpositioned objects keep their block fallback. Parsed
             // pictures have source positions for the shared ordered path.
             bool sourcePictures = paragraph.Images.Count != 0 && paragraph.Images.All(image => image.SourceRunIndex >= 0);
-            bool sourceTabs = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden && run.Text.Contains('\t'));
+            bool sourceControls = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden &&
+                (run.Text.Contains('\t') || run.Text.Contains('\n')));
             bool needsInlineFrame = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden &&
-                ResolveStaticFieldPlaceholders(run, pageNumber, pageCount).Length != 0) && (sourceTabs ||
+                ResolveStaticFieldPlaceholders(run, pageNumber, pageCount).Length != 0) && (sourceControls ||
                 GetParagraphFirstLineIndentOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphRightInset(paragraph, paragraphSpacingScale) != 0d);

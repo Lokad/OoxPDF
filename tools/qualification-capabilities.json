@@ -1,4 +1,19 @@
 {
+  "docx-static-break-rows": [
+    "DocxStaticHardBreaksRetainAuthoredEmptyRows",
+    "DocxStaticHardBreaksKeepHiddenOwnersAndBoundaryRows",
+    "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
+    "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
+    "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
+    "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
+    "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
+    "DocxInlineMetadataWrappersKeepHardBreakBoundaries",
+    "DocxReaderExplicitTextWrappingBreakPreservesSourceMeaning",
+    "DocxNativeAlignedStaticFramesRetainOfficeBodyAndFooterSlots",
+    "DocxNativeScaledStaticFramesKeepFooterVisibleAndHeaderBodyInOfficeSlots",
+    "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
+    "PortableRenderingStaticSourceFramesKeepProseOnPage"
+  ],
   "docx-static-paragraph-insets": [
     "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
     "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
@@ -1384,6 +1399,8 @@
     "DocxInlineCompositionFormattingBalloonDescriptions"
   ],
   "docx-paragraph-mark-formatting": [
+    "DocxStaticHardBreaksRetainAuthoredEmptyRows",
+    "DocxStaticHardBreaksKeepHiddenOwnersAndBoundaryRows",
     "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
     "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
     "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
@@ -6008,6 +6025,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxStaticHardBreaksRetainAuthoredEmptyRows",
+    "DocxStaticHardBreaksKeepHiddenOwnersAndBoundaryRows",
     "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
     "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
     "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
