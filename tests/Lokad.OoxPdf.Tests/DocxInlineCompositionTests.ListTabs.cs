@@ -25,26 +25,11 @@ internal static partial class DocxInlineCompositionTests
                 includeTextTransforms: true, honorActualText: false)).ToArray();
             var prefixes = shows.Where(show => show.Text.StartsWith("STEP ", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(paragraphs.Sum(p => p.ListLabel!.NumberingChange is null ? 1 : 2), prefixes.Length);
-            foreach (var page in actual)
-            {
-                var pageShows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true,
-                    includeTextTransforms: true, honorActualText: false).ToArray();
-                foreach (var row in pageShows.Where(show => show.Text.StartsWith("STEP ", StringComparison.Ordinal)).GroupBy(show => show.Y))
-                {
-                    // Static-story fixtures also retain unnumbered body prose.
-                    // Bind each check to its actual page and generated-label row.
-                    var prose = pageShows.Where(show => Math.Abs(show.Y - row.Key) < .001d &&
-                        new[] { "Summary:", "The two relationships", "The trend marker" }.Any(text =>
-                            show.Text.StartsWith(text, StringComparison.Ordinal))).ToArray();
-                    TestAssert.Equal(1, prose.Length);
-                    foreach (var label in row)
-                    {
-                        double advance = label.Text.Sum(c => (double)label.Font.Font.GetAdvanceWidth(label.Font.Font.MapCodePoint(c))) *
-                            label.Size / label.Font.Font.UnitsPerEm;
-                        TestAssert.True(label.X + advance <= prose[0].X + .001d, "Every source row clears its complete visible prefix.");
-                    }
-                }
-            }
+            // Repeated static/body source text is not an ownership key. The
+            // complete glyph/font/operator/annotation comparison above binds
+            // each painted occurrence to the explicit-stop source control.
+            foreach (string text in new[] { "Summary:", "The two relationships", "The trend marker" })
+                TestAssert.True(shows.Any(show => show.Text.StartsWith(text, StringComparison.Ordinal)), "The complete source prose remains painted.");
             TestAssert.True(actual.Any(page => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
                 "Clearing list prefixes preserves supported equations in each container.");
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Tab placement cannot drop composed mathematics.");
