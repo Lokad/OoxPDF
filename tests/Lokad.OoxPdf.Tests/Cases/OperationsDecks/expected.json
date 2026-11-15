@@ -1,0 +1,135 @@
+[
+  {
+    "Id": "service-operations",
+    "HeldOut": false,
+    "InputSha256": "F773513C3A8D46BB76699A7F8A8077EF21F585EE966976331007F78E031B8069",
+    "Size": [
+      800,
+      600
+    ],
+    "LegendNames": [
+      "Intake",
+      "Inspect",
+      "Clean",
+      "Calibrate",
+      "Test",
+      "Handover"
+    ],
+    "ChartBox": [
+      30,
+      120,
+      740,
+      390
+    ],
+    "Slides": [
+      {
+        "Page": 1,
+        "Text": [
+          "Service operations",
+          "Illustrative weekly work volume",
+          "Weekly throughput",
+          "Week A",
+          "Week B",
+          "All values are synthetic.",
+          "Intake",
+          "Inspect",
+          "Clean",
+          "Calibrate",
+          "Test",
+          "Handover"
+        ],
+        "Picture": [
+          720,
+          24,
+          48,
+          24
+        ],
+        "Links": 0
+      },
+      {
+        "Page": 2,
+        "Text": [
+          "Record checklist",
+          "Confirm that every label remains visible.",
+          "Keep the status marker with the record.",
+          "Public schedule",
+          "Retain the public record."
+        ],
+        "Picture": [
+          590,
+          150,
+          120,
+          60
+        ],
+        "Links": 1
+      }
+    ]
+  },
+  {
+    "Id": "survey-operations",
+    "HeldOut": true,
+    "InputSha256": "46790617B36F5EA89F9E00563C2CA83024F76A3BB25CC6059436951693461423",
+    "Size": [
+      1000,
+      500
+    ],
+    "LegendNames": [
+      "Survey",
+      "Prepare",
+      "Measure",
+      "Adjust",
+      "Verify",
+      "Archive"
+    ],
+    "ChartBox": [
+      36,
+      105,
+      610,
+      320
+    ],
+    "Slides": [
+      {
+        "Page": 1,
+        "Text": [
+          "Survey operations",
+          "Illustrative weekly work volume",
+          "Weekly throughput",
+          "Week A",
+          "Week B",
+          "All values are synthetic.",
+          "Survey",
+          "Prepare",
+          "Measure",
+          "Adjust",
+          "Verify",
+          "Archive",
+          "Keep all six named work streams visible."
+        ],
+        "Picture": [
+          920,
+          24,
+          48,
+          24
+        ],
+        "Links": 0
+      },
+      {
+        "Page": 2,
+        "Text": [
+          "Record checklist",
+          "Confirm that every label remains visible.",
+          "Keep the status marker with the record.",
+          "Public schedule",
+          "Retain the public record."
+        ],
+        "Picture": [
+          790,
+          150,
+          120,
+          60
+        ],
+        "Links": 1
+      }
+    ]
+  }
+]

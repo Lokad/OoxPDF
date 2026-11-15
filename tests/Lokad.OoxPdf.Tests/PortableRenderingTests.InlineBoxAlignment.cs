@@ -171,7 +171,7 @@ internal static partial class PortableRenderingTests
             "The equivalent single-line alignment keeps its source origin and physical font size.");
 
     private static IReadOnlyList<(Vector2 Origin, double Size, PdfRectangle Ink)> ReadPaintedSourceLabel(PdfPage page,
-        string label, bool mathOnly = false)
+        string label, bool mathOnly = false, string? fontPrefix = null)
     {
         // Match source characters across text-show boundaries, then check their
         // font ink against each physical paint frame. Existing readers own PDF syntax.
@@ -181,7 +181,8 @@ internal static partial class PortableRenderingTests
         foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
         foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts),
             usePageCoordinates: false, honorActualText: false,
-            fontResourceFilter: mathOnly ? name => name.StartsWith("Eq", StringComparison.Ordinal) : null))
+            fontResourceFilter: mathOnly ? name => name.StartsWith("Eq", StringComparison.Ordinal) :
+                fontPrefix is not null ? name => name.StartsWith(fontPrefix, StringComparison.Ordinal) : null))
         {
             double x = show.X, scale = show.Size / show.Font.Font.UnitsPerEm;
             foreach (var rune in show.Text.EnumerateRunes())

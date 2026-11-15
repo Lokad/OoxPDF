@@ -1,0 +1,132 @@
+[
+  {
+    "Id": "field-brief",
+    "HeldOut": false,
+    "InputSha256": "BC95C718CEE42F691D8629901F1EFF8C29DA63F451969769770C8CB790508030",
+    "PageSize": [
+      612.0,
+      792.0
+    ],
+    "PictureSize": [
+      48,
+      24
+    ],
+    "Pages": [
+      {
+        "Page": 1,
+        "Header": "Field service brief / Intake",
+        "Footer": "Intake ledger / Page 1 of 2",
+        "Text": [
+          "Field service brief",
+          "Record the initial condition before starting work. All readings in this public service example are illustrative.",
+          "Navigate to the final section: Final details",
+          "Public supporting information: Service reference",
+          "Source-owned verification",
+          "End of intake."
+        ],
+        "Note": "Intake note: the corresponding source record is retained.",
+        "Mark": "1",
+        "Math": [
+          "h+1",
+          "n+1"
+        ],
+        "Picture": false
+      },
+      {
+        "Page": 2,
+        "Header": "Field service brief / Review",
+        "Footer": "Review ledger / Page 2 of 2",
+        "Text": [
+          "Review findings",
+          "Retain the final observations, the verification note and the signed handover record.",
+          "Reading Review",
+          "Table-owned verification",
+          "Service marker retained.",
+          "End of review."
+        ],
+        "Note": "Review note: the corresponding source record is retained.",
+        "Mark": "2",
+        "Math": [
+          "h+2",
+          "n+2",
+          "r+2"
+        ],
+        "Picture": true
+      }
+    ]
+  },
+  {
+    "Id": "visit-record",
+    "HeldOut": true,
+    "InputSha256": "8D2CFD337A744BC9C8169D2C9D62542155FD03D83B8DCA6E5312882D323BE51B",
+    "PageSize": [
+      595.3,
+      841.9
+    ],
+    "PictureSize": [
+      36,
+      18
+    ],
+    "Pages": [
+      {
+        "Page": 1,
+        "Header": "Site visit record / Preparation",
+        "Footer": "Preparation ledger / Page 1 of 3",
+        "Text": [
+          "Site visit record",
+          "Review the access instructions and identify the equipment before entering the work area.",
+          "Navigate to the final section: Final details",
+          "Public supporting information: Service reference",
+          "Source-owned verification",
+          "Service marker retained.",
+          "End of preparation."
+        ],
+        "Note": "Preparation note: the corresponding source record is retained.",
+        "Mark": "1",
+        "Math": [
+          "h+1",
+          "n+1"
+        ],
+        "Picture": true
+      },
+      {
+        "Page": 2,
+        "Header": "Site visit record / Observation",
+        "Footer": "Observation ledger / Page 2 of 3",
+        "Text": [
+          "Observation findings",
+          "Keep each observation with its source reading. A longer statement here checks normal prose wrapping without changing note or section ownership.",
+          "Reading Observation",
+          "Table-owned verification",
+          "End of observation."
+        ],
+        "Note": "Observation note: the corresponding source record is retained.",
+        "Mark": "2",
+        "Math": [
+          "h+2",
+          "n+2",
+          "r+2"
+        ],
+        "Picture": false
+      },
+      {
+        "Page": 3,
+        "Header": "Site visit record / Handover",
+        "Footer": "Handover ledger / Page 3 of 3",
+        "Text": [
+          "Handover findings",
+          "Hand over the completed visit record and retain the supporting observations for the next planned inspection.",
+          "Source-owned verification",
+          "End of handover."
+        ],
+        "Note": "Handover note: the corresponding source record is retained.",
+        "Mark": "3",
+        "Math": [
+          "h+3",
+          "n+3"
+        ],
+        "Picture": false
+      }
+    ]
+  }
+]
