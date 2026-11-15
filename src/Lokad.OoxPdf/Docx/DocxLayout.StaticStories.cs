@@ -349,8 +349,9 @@ internal sealed partial class DocxLayoutEngine
             // Legacy unpositioned objects keep their block fallback. Parsed
             // pictures have source positions for the shared ordered path.
             bool sourcePictures = paragraph.Images.Count != 0 && paragraph.Images.All(image => image.SourceRunIndex >= 0);
+            bool sourceTabs = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden && run.Text.Contains('\t'));
             if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
-                paragraph.InlineTextBoxes.Count != 0 ||
+                paragraph.InlineTextBoxes.Count != 0 || sourceTabs ||
                 sourcePictures && (!pictureOnly || unscaledLineMetrics is not null))
             {
                 double size = GetParagraphFontSize(paragraph);

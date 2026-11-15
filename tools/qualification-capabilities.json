@@ -1,4 +1,23 @@
 {
+  "docx-static-tab-fields": [
+    "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
+    "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
+    "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
+    "DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts",
+    "DocxInlineCompositionAlignedTabsMeasureCompleteFieldsAndKeepFallbacks",
+    "DocxInlineCompositionAlignedTabsMatchIndependentWordAndSourceTransforms",
+    "DocxInlineCompositionUnusedTabMetadataKeepsIndependentFieldOffsets",
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "DocxDefaultStaticDistancesMatchIndependentWordMathAndBodyOrigins",
+    "DocxListTabsClearMeasuredPrefixesAcrossContainers",
+    "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
+    "DocxParagraphLayoutPreservesTabsAsTabAdvances",
+    "DocxParagraphLayoutUsesAuthoredLeftTabStopsBeforeDefaultGrid",
+    "DocxParagraphLayoutUsesAuthoredRightTabStops",
+    "DocxParagraphLayoutUsesAuthoredCenterTabStops",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-list-tab-clearance": [
     "DocxListTabsClearMeasuredPrefixesAcrossContainers",
     "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
@@ -1337,6 +1356,8 @@
     "DocxInlineCompositionFormattingBalloonDescriptions"
   ],
   "docx-paragraph-mark-formatting": [
+    "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
+    "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
     "DocxListTabsClearMeasuredPrefixesAcrossContainers",
     "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
     "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
@@ -5956,6 +5977,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
+    "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
     "DocxListTabsClearMeasuredPrefixesAcrossContainers",
     "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
     "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
