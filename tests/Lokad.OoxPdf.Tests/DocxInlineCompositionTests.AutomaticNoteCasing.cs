@@ -26,7 +26,11 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.Equal(raw.ToUpperInvariant(), target.Paragraphs[0].Runs.Single(r => r.IsAutomaticNoteStoryMarker).Text);
             var diagnostics = new List<OoxPdfDiagnostic>();
             var actual = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
-            AssertCustomMarkPaint(expected, actual, count);
+            // Raw counter labels can change retained subset CIDs independently of paint.
+            AssertMetricPaint(expected, actual);
+            string painted = string.Concat(actual.SelectMany(CustomMarkPhysicalGlyphs).Select(g => g.Text));
+            TestAssert.Equal(count, painted.Split("ratetime", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(4, actual.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
             TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
                 "Resolved generated markers cannot suppress neighboring supported content.");
         }
