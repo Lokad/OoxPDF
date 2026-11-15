@@ -330,11 +330,11 @@ internal sealed partial class DocxLayoutEngine
         var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool CompleteContent)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
         bool useSourceSectionStarts = document.FinalSectionBreak is not null &&
-            document.Settings.MirrorMargins != true && document.FloatingDrawings.Count == 0 &&
+            document.Settings.MirrorMargins != true && document.FloatingDrawings.Count == 0;
+        bool useSimpleSectionFootnoteAdmission = useSourceSectionStarts &&
+            UsesSimpleSectionFootnoteAdmission(document, cancellationToken) &&
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
              Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
-        bool useSimpleSectionFootnoteAdmission = useSourceSectionStarts &&
-            UsesSimpleSectionFootnoteAdmission(document, cancellationToken);
         int currentSectionStartIndex = 0;
         int sectionFirstPageNumber = 1;
 

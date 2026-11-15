@@ -59,17 +59,24 @@ internal static partial class DocxFootnotesTests
             TestAssert.Contains("PUBLIC NOTE", string.Concat(pages.SelectMany(PhysicalSectionGlyphs).Select(x => x.Text)));
             TestAssert.Equal(1, pages.SelectMany(page => page.Annotations).Count(link => link.IsDestination));
         }
-        foreach (string fallback in new[] { "margins", "columns", "header", "mirror", "unknown-final", "scale" })
+        foreach (string fallback in new[] { "margins", "columns", "header", "mirror", "unknown-final" })
         {
             var source = ReadComposedSections("nextPage", "continuous", "picture", OoxPdfDocxMarkupMode.Final,
                 fallback: fallback);
             if (fallback == "mirror") source = source with { Settings = source.Settings with { MirrorMargins = true } };
             if (fallback == "unknown-final") source = source with { FinalSectionBreak = null };
-            var engine = fallback == "scale"
-                ? new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: .5d)
-                : new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
             TestAssert.True(engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), default).Pages.Count == 2,
                 "The existing frame fallback remains explicit: " + fallback);
+        }
+        foreach (double scale in new[] { .5d, .75d, 1d })
+        foreach (string following in new[] { "continuous", "nextPage" })
+        {
+            var source = ReadComposedSections(following == "continuous" ? "nextPage" : "continuous", following,
+                "picture", OoxPdfDocxMarkupMode.AllMarkup);
+            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: scale)
+                .Create(source, new DocxTests.FamilyWidthTextMeasurer(), default);
+            TestAssert.Equal(following == "continuous" ? 1 : 2, layout.Pages.Count);
         }
     }
 
