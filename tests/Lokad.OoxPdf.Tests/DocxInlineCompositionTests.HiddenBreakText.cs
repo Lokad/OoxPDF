@@ -120,16 +120,15 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (bool math in new[] { false, true })
         {
-            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode));
+            // DejaVu Sans has both MATH data and the literal soft-hyphen glyph;
+            // Math TeX Gyre deliberately has no glyph for that note character.
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, CachedMathGeometry(mode));
             var source = ReadCustomMarkCharacter(kind, 1, mode, '\u00ad', null, keepMath: math);
             var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 true, honorActualText: false)).Select(show => show.Text));
             int marks = text.Count(character => character == '\u00ad');
-            TestAssert.True(marks == 2, $"{kind}/{mode}/math={math}: expected two literal marks, got {marks}; source roles: " +
-                string.Join(";", DocxBlockTraversal.EnumerateBodyParagraphs(source).Concat(source.RelatedStories.SelectMany(story => story.Paragraphs))
-                    .SelectMany(paragraph => paragraph.Runs).Where(run => run.Text.Contains('\u00ad'))
-                    .Select(run => $"{run.SourceRunIndex}:{run.SourceTextOffsetInRun}/{run.LiteralNoteMarkerOffset}")));
+            TestAssert.True(marks == 2, $"{kind}/{mode}/math={math}: expected two literal marks, got {marks}.");
             TestAssert.Equal(4, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
             TestAssert.Contains("Public destination Alpha.", text);
             TestAssert.Contains("and after note.", text);
