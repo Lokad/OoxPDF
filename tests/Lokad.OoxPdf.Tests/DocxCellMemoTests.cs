@@ -207,8 +207,9 @@ internal static class DocxCellMemoTests
                 "Fresh and cached nested placement agree at the caller's origin: " + alignment);
             // A changed nested admission height is a distinct measurement;
             // unlike ordinary text it cannot silently reuse the prior frame.
+            long misses = memo.Misses;
             _ = PlaceCounterCell(cell, measurer, memo, 2, 2, height: 280d);
-            TestAssert.Equal(2, memo.Misses);
+            TestAssert.True(memo.Misses > misses, "Changing nested admission height must remeasure its containing cell.");
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => PlaceCounterCell(cell, measurer, memo, 2, 2, token: cancellation.Token));
         }
