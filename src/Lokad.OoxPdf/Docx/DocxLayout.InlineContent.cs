@@ -432,7 +432,7 @@ internal sealed partial class DocxLayoutEngine
                             SourceInlineItemIndex = sourceItemIndex };
                         // Keep raw spans for break opportunities/source cursors;
                         // fitting text shares the ordinary nonprinting-break rule.
-                        var segments = CreateTextSegments(NormalizeOrderedInlineText(paragraph, [span], token),
+                        var segments = CreateTextSegments(NormalizeHiddenBreakSpans([span], false),
                             0d, fontSize, measurer, [], 36d);
                         double width = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
                         if (!double.IsFinite(width) || width < 0d) return false;
@@ -694,7 +694,7 @@ internal sealed partial class DocxLayoutEngine
             if (cursor.TextOffset >= fullValue.Length || !field && cursor.BoundFieldValue is not null) return false;
             var span = original.Text[0] with { Text = fullValue[cursor.TextOffset..],
                 SourceTextOffsetInRun = original.Text[0].SourceTextOffsetInRun + cursor.TextOffset };
-            var segments = CreateTextSegments(NormalizeOrderedInlineText(paragraph, [span], token),
+            var segments = CreateTextSegments(NormalizeHiddenBreakSpans([span], false),
                 0d, fontSize, measurer, [], 36d);
             double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
             if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
@@ -963,8 +963,8 @@ internal sealed partial class DocxLayoutEngine
                 return DocxMathRowLayout.Glue(beforeEdges.Last, afterEdges.First) * spacingSize * scale / 18d;
             }
             if (left.Text.Count == 0 || right.Text.Count == 0) return 0d;
-            var beforeSpans = NormalizeOrderedInlineText(paragraph, left.Text, token);
-            var afterSpans = NormalizeOrderedInlineText(paragraph, right.Text, token);
+            var beforeSpans = NormalizeHiddenBreakSpans(left.Text, false);
+            var afterSpans = NormalizeHiddenBreakSpans(right.Text, false);
             if (beforeSpans.Count == 0 || afterSpans.Count == 0) return 0d;
             var before = beforeSpans[^1];
             var after = afterSpans[0];
@@ -1132,37 +1132,6 @@ internal sealed partial class DocxLayoutEngine
                     EndCursor = endCursor with { LineIndex = cursor.LineIndex + output.Count + 1 } });
             current.Clear(); advance = 0d; above = baselineInset; below = Math.Max(0d, lineHeight - baselineInset);
         }
-    }
-
-    private static IReadOnlyList<DocxTextSpan> NormalizeOrderedInlineText(DocxParagraph paragraph,
-        IReadOnlyList<DocxTextSpan> spans, CancellationToken token)
-    {
-        if (!paragraph.InlineReferences.Any(reference => reference.CustomMarkText is not null) ||
-            !spans.Any(span => span.Text.IndexOfAny(['\u00ad', '\u200b']) >= 0))
-            return NormalizeHiddenBreakSpans(spans, false);
-
-        // A qualified custom note mark is literal visible content, even when
-        // its character is normally a discretionary break. Preserve only its
-        // owned source character; following ordinary text keeps normal rules.
-        var owners = DocxCustomNoteMarkerOwners.IndexSourceRuns(paragraph.Runs, token);
-        var result = new List<DocxTextSpan>();
-        foreach (var span in spans)
-        {
-            token.ThrowIfCancellationRequested();
-            bool marker = span.Text.Length != 0 && paragraph.InlineReferences.Any(reference =>
-                span.SourceTextOffsetInRun == reference.TextOffsetInRun &&
-                DocxCustomNoteMarkerOwners.TryGetSourceRun(reference, owners, out var owner) &&
-                ReferenceEquals(owner, span.StyleRun));
-            if (!marker) result.AddRange(NormalizeHiddenBreakSpans([span], false));
-            else
-            {
-                result.Add(span with { Text = span.Text[..1] });
-                if (span.Text.Length > 1)
-                    result.AddRange(NormalizeHiddenBreakSpans([span with { Text = span.Text[1..],
-                        SourceTextOffsetInRun = span.SourceTextOffsetInRun + 1 }], false));
-            }
-        }
-        return result;
     }
 
     private static bool CanMeasureOrderedTabStop(DocxResolvedTabStop stop) =>

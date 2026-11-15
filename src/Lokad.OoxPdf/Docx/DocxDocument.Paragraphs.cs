@@ -448,6 +448,9 @@ internal sealed record DocxTextRun(
     // ordinary text and custom marks never acquire this role from their value/style.
     public bool IsAutomaticNoteStoryMarker { get; init; }
     public bool IsAutomaticNoteReferenceMarker { get; init; }
+    // Absolute source offset of an explicitly owned literal note character.
+    // Slices retain the offset, so only that character bypasses break hiding.
+    public int? LiteralNoteMarkerOffset { get; init; }
     // Set only on a qualified Word-compatible body clone; source metadata stays unchanged.
     public bool UseLogicalSizeForPdfAdvances { get; init; }
 
@@ -682,6 +685,7 @@ internal sealed record DocxTextRunStyle(
             KerningMinimumHalfPointsValue = KerningMinimumHalfPointsValue ?? source.KerningMinimumHalfPointsValue,
             PairKerningEnabled = source.PairKerningEnabled,
             IsAutomaticNoteReferenceMarker = source.IsAutomaticNoteReferenceMarker,
+            LiteralNoteMarkerOffset = source.LiteralNoteMarkerOffset,
             UseLogicalSizeForPdfAdvances = source.UseLogicalSizeForPdfAdvances,
             StyleResolution = source.StyleResolution,
             SourceRunIndex = source.SourceRunIndex,

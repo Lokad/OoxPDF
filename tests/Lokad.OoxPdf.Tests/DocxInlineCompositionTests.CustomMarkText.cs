@@ -188,13 +188,16 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadCustomMarkCharacter(string kind, int count, OoxPdfDocxMarkupMode mode,
-        char character, string? element) => ReadMutation("CompositionProbes/math-custom-note-" + kind + "-" + count,
-        mode, false, false, (xml, w, _) =>
+        char character, string? element, bool keepMath = true) => ReadMutation("CompositionProbes/math-custom-note-" + kind + "-" + count,
+        mode, false, false, (xml, w, m) =>
         {
             var reference = xml.Descendants(w + kind + "Reference").Single(r => r.Attribute(w + "customMarkFollows")?.Value == "1");
             var mark = reference.ElementsAfterSelf().First(e => e.Name == w + "t");
             mark.Value = (element is null ? character.ToString() : string.Empty) + mark.Value[1..];
             if (element is not null) mark.AddBeforeSelf(new XElement(w + element));
+            if (!keepMath)
+                foreach (var equation in xml.Descendants(m + "oMath").ToArray())
+                    equation.ReplaceWith(new XElement(w + "r", new XElement(w + "t", "rate over time")));
         }, packageChange: archive =>
         {
             XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";

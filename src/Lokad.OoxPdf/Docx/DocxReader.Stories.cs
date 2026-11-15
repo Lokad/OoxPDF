@@ -211,16 +211,28 @@ internal sealed partial class DocxReader
         IReadOnlyList<DocxBodyElement>? mainBodyElements = null,
         XDocument? settings = null, IMemoryReservation? modelStorage = null)
     {
-        var noteReferences = new Dictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order)>();
+        var noteReferences = new Dictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order, string? CustomMark)>();
         foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(mainBodyElements ?? []))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            Dictionary<(int Run, int Offset), DocxTextRun?>? markerOwners = null;
             foreach (DocxInlineReference reference in paragraph.InlineReferences)
             {
                 if (reference.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote &&
                     reference.Id is { } id)
                 {
-                    noteReferences.TryAdd((reference.Kind, id), (reference.DisplayText, noteReferences.Count));
+                    string? customMark = reference.CustomMarkText is not null &&
+                        DocxCustomNoteMarkerOwners.TryGetSourceRun(reference,
+                            markerOwners ??= DocxCustomNoteMarkerOwners.IndexSourceRuns(paragraph.Runs, cancellationToken), out _)
+                        ? reference.CustomMarkText : null;
+                    var key = (reference.Kind, id);
+                    if (!noteReferences.TryAdd(key, (reference.DisplayText, noteReferences.Count, customMark)))
+                    {
+                        var previous = noteReferences[key];
+                        // Repeated/ambiguous custom references do not establish
+                        // one literal target owner. Automatic numbering stays.
+                        noteReferences[key] = (previous.Label, previous.Order, null);
+                    }
                 }
             }
         }
@@ -271,7 +283,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
         HashSet<string>? warnedParts = null,
-        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order)>? noteReferences = null,
+        IReadOnlyDictionary<(DocxRelatedStoryKind Kind, string Id), (string? Label, int Order, string? CustomMark)>? noteReferences = null,
         XDocument? settings = null, IMemoryReservation? modelStorage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -296,6 +308,19 @@ internal sealed partial class DocxReader
         IEnumerable<(XElement Story, int Index)> sourceStories =
             (partXml.Root?.Elements(WordprocessingNamespace + storyElementName) ?? [])
                 .Select((story, index) => (story, index));
+        HashSet<string>? literalTargetIds = null;
+        if (noteReferences is not null)
+        {
+            literalTargetIds = noteReferences.Where(pair => pair.Key.Kind == kind && pair.Value.CustomMark is not null)
+                .Select(pair => pair.Key.Id).ToHashSet(StringComparer.Ordinal);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var source in sourceStories)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (NormalizeDecimalId((string?)source.Story.Attribute(WordprocessingNamespace + "id")) is { } id &&
+                    literalTargetIds.Contains(id) && !seen.Add(id)) literalTargetIds.Remove(id);
+            }
+        }
         if (noteReferences is not null)
         {
             // List instances continue across referenced notes in document order.
@@ -348,6 +373,29 @@ internal sealed partial class DocxReader
                     CreateDefaultNoteSeparatorParagraph(type));
             }
             DocxRelatedStory story = ReadRelatedStory(kind, part.Name, effectiveStory, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
+            if (story.Id is { } storyId && literalTargetIds?.Contains(storyId) == true && noteReferences is not null &&
+                noteReferences.TryGetValue((kind, storyId), out var literalReference) &&
+                literalReference.CustomMark is { } literalMark &&
+                DocxCustomNoteMarkerOwners.TryGetTargetRun(story, literalMark, out var marker))
+            {
+                var paragraph = story.Paragraphs[0];
+                var marked = marker with { LiteralNoteMarkerOffset = marker.SourceTextOffsetInRun };
+                var updated = paragraph with
+                {
+                    Runs = paragraph.Runs.Select(run => ReferenceEquals(run, marker) ? marked : run).ToArray(),
+                    InlineContent = paragraph.InlineContent?.Select(item => item switch
+                    {
+                        DocxInlineText text when ReferenceEquals(text.Run, marker) => text with { Run = marked },
+                        DocxInlineTab tab when ReferenceEquals(tab.Run, marker) => tab with { Run = marked },
+                        DocxInlineBreak lineBreak when ReferenceEquals(lineBreak.Run, marker) => lineBreak with { Run = marked },
+                        _ => item
+                    }).ToArray()
+                };
+                var replacements = new DocxParagraphReplacements(
+                    new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance) { [paragraph] = updated }, cancellationToken);
+                story = story with { BodyElements = replacements.ReplaceElements(story.BodyElements),
+                    FallbackParagraphs = story.FallbackParagraphs.Select(replacements.Replace).ToArray() };
+            }
             if (usesDefaultSeparator) story = story with { IsSynthetic = true };
             if (story.BodyElements.Count > 0)
             {

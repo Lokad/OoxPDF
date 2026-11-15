@@ -664,6 +664,7 @@ internal sealed partial class DocxReader
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen, DocxRevisionInfo? revision)
         {
             int firstRun = runs.Count;
+            int firstReference = inlineReferences.Count;
             int firstImage = images.Count;
             int currentSourceRunIndex = sourceRunIndex;
             int firstBox = inlineTextBoxes.Count;
@@ -769,6 +770,21 @@ internal sealed partial class DocxReader
 
             void PublishRun()
             {
+                if (inlineReferences.Count > firstReference &&
+                    inlineReferences.Skip(firstReference).Any(reference => reference.CustomMarkText is not null))
+                {
+                    var owners = DocxCustomNoteMarkerOwners.IndexSourceRuns(runs.GetRange(firstRun, runs.Count - firstRun), cancellationToken);
+                    foreach (var reference in inlineReferences.Skip(firstReference))
+                        if (reference.SourceRunIndex == currentSourceRunIndex &&
+                            DocxCustomNoteMarkerOwners.TryGetSourceRun(reference, owners, out var marker))
+                        {
+                            int index = runs.IndexOf(marker, firstRun);
+                            if (index < 0) continue;
+                            var marked = marker with { LiteralNoteMarkerOffset = reference.TextOffsetInRun };
+                            runs[index] = marked;
+                            owners[(marker.SourceRunIndex, marker.SourceTextOffsetInRun)] = marked;
+                        }
+                }
                 // Pictures share their source run's resolved visibility. Keep
                 // the paragraph/source index even when that run paints nothing.
                 if (resolvedRun.Hidden != true)

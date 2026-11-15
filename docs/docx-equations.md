@@ -16,6 +16,9 @@ Links and annotations follow the resulting physical geometry.
 Unused soft hyphens and zero-width break characters remain nonprinting beside
 equations and pictures. A soft hyphen selected as a line break keeps its visible
 hyphen; source offsets and resumed wrapping retain the original characters.
+An explicitly owned custom note marker keeps its literal glyph in both the body
+and note target, with or without an equation. Only that source character bypasses
+nonprinting-break normalization; neighboring ordinary text retains its break rules.
 In qualified ordinary textboxes, omitting unsupported mathematics retains its
 diagnostic while supported captions and pictures keep their shared wrapping.
 Prepared math keeps its measured frame; entirely unsupported paragraphs and

@@ -114,6 +114,55 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxLiteralNoteMarksKeepGlyphsAndLinksAcrossPlainAndComposedParagraphs()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (bool math in new[] { false, true })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode));
+            var source = ReadCustomMarkCharacter(kind, 1, mode, '\u00ad', null, keepMath: math);
+            var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            string text = string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                true, honorActualText: false)).Select(show => show.Text));
+            TestAssert.Equal(2, text.Count(character => character == '\u00ad'));
+            TestAssert.Equal(4, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
+            TestAssert.Contains("Public destination Alpha.", text);
+            TestAssert.Contains("and after note.", text);
+            TestAssert.Equal(math ? "ratetime" : string.Empty, ZeroAreaMathText(pages).Normalize(System.Text.NormalizationForm.FormKC));
+            using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+            TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(source, null,
+                cancelled.Token).ToBlockingEnumerable().ToArray());
+        }
+    }
+
+    public static void DocxLiteralNoteMarkerOffsetsSurviveWrappingWithoutPreservingOrdinaryBreaks()
+    {
+        var (source, equations) = InlineBreakMeasurement(["\u00adABC\u00adDEFG"]);
+        var run = source.Runs[0] with { LiteralNoteMarkerOffset = 0 };
+        var paragraph = source with { Runs = [run], InlineContent =
+            [new DocxInlineText(run, 0, run.Text.Length), new DocxInlineEquation(source.Equations.Single())] };
+        TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations,
+            new DocxTests.FamilyWidthTextMeasurer(), 10d, 8d, 12d, 1d, default, out var measured), "A literal note prefix owns one source character.");
+        var atoms = TestAssert.NotNull(measured);
+        TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, 100d, 100d, default, out var fitting), "The unbroken word fits.");
+        TestAssert.Equal("\u00adABCDEFG", Paint(TestAssert.NotNull(fitting).Single()));
+        TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, 25d, 25d, default, out var wrapped), "The ordinary discretionary break can still be selected.");
+        var lines = TestAssert.NotNull(wrapped);
+        TestAssert.Equal("\u00adABC\u00ad", Paint(lines[0]));
+        TestAssert.Equal("DEFG", Paint(lines[1]));
+        var cursor = default(DocxInlineSourceCursor);
+        foreach (var expected in lines)
+        {
+            TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, 25d, 25d, default, out var next), "Resuming cannot replay the already consumed literal prefix.");
+            var actual = TestAssert.NotNull(next);
+            TestAssert.Equal(Paint(expected), Paint(actual));
+            cursor = actual.EndCursor;
+        }
+        TestAssert.True(cursor.IsComplete(atoms), "Source offsets finish after the equation.");
+        static string Paint(DocxMeasuredInlineLine line) => string.Concat(line.Fragments.SelectMany(fragment => fragment.TextSegments).Select(segment => segment.Text));
+    }
+
     private static DocxDocument ReadInlineBreakWord(string container, OoxPdfDocxMarkupMode mode, char? marker) =>
         ReadMutation("CompositionProbes/inline-math-navigation" + (container == "body" ? "" : "-" + container), mode, false, false,
             (xml, w, m) =>

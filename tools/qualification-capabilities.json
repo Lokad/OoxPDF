@@ -1,5 +1,9 @@
 {
   "docx-hidden-break-composition": [
+    "DocxLiteralNoteMarksKeepGlyphsAndLinksAcrossPlainAndComposedParagraphs",
+    "DocxLiteralNoteMarkerOffsetsSurviveWrappingWithoutPreservingOrdinaryBreaks",
+    "DocxCustomNoteMarksRequireOwnedVisibleSourceAndTarget",
+    "DocxCustomNoteMarksKeepRepeatedMarksAndDestinationsDistinct",
     "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
     "DocxSharedCustomRunReferencesPreserveSupportedMathAndMarkerOwners",
     "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
@@ -21,6 +25,8 @@
     "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow"
   ],
   "docx-hidden-break-composition-portable": [
+    "DocxLiteralNoteMarksKeepGlyphsAndLinksAcrossPlainAndComposedParagraphs",
+    "DocxLiteralNoteMarkerOffsetsSurviveWrappingWithoutPreservingOrdinaryBreaks",
     "DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter",
     "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
     "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
@@ -6142,6 +6148,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxLiteralNoteMarksKeepGlyphsAndLinksAcrossPlainAndComposedParagraphs",
+    "DocxLiteralNoteMarkerOffsetsSurviveWrappingWithoutPreservingOrdinaryBreaks",
     "DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter",
     "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
     "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",

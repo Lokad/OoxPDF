@@ -870,19 +870,20 @@ internal sealed partial class DocxLayoutEngine
         string lineText = text.Substring(start, length);
         bool preserveTerminalSoftHyphen = endsWithIntraTokenBreak && lineText.EndsWith('\u00AD');
         IReadOnlyList<DocxTextSpan> sliced = SliceTextSpans(spans, start, length, spanStarts);
+        IReadOnlyList<DocxTextSpan> normalized = NormalizeHiddenBreakSpans(sliced, preserveTerminalSoftHyphen);
         int? objectOffset = null;
-        if (sliced.Any(span => span.IsInlineObjectMarker))
+        if (normalized.Any(span => span.IsInlineObjectMarker))
         {
             int visibleLength = 0;
-            foreach (DocxTextSpan span in sliced)
+            foreach (DocxTextSpan span in normalized)
             {
                 if (span.IsInlineObjectMarker) { objectOffset = visibleLength; }
-                else { visibleLength += RemoveHiddenBreakCharacters(span.Text, preserveTerminalSoftHyphen: false).Length; }
+                else { visibleLength += span.Text.Length; }
             }
         }
         return new DocxWrappedTextLine(
-            RemoveHiddenBreakCharacters(lineText, preserveTerminalSoftHyphen),
-            NormalizeHiddenBreakSpans(sliced, preserveTerminalSoftHyphen),
+            ReferenceEquals(normalized, sliced) ? lineText : string.Concat(normalized.Select(span => span.Text)),
+            normalized,
             endsWithIntraTokenBreak) { InlineObjectCharOffset = objectOffset, SourceTextStart = start };
     }
 
@@ -1001,7 +1002,8 @@ internal sealed partial class DocxLayoutEngine
             int chunkStart = 0;
             for (int index = 0; index < span.Text.Length; index++)
             {
-                if (!IsHiddenBreakCharacter(span.Text[index], preserveTerminalSoftHyphen && index == span.Text.Length - 1))
+                if (span.StyleRun.LiteralNoteMarkerOffset == span.SourceTextOffsetInRun + index ||
+                    !IsHiddenBreakCharacter(span.Text[index], preserveTerminalSoftHyphen && index == span.Text.Length - 1))
                 {
                     continue;
                 }
@@ -1030,28 +1032,6 @@ internal sealed partial class DocxLayoutEngine
             Text = span.Text[start..end],
             SourceTextOffsetInRun = span.SourceTextOffsetInRun + start
         });
-    }
-
-    private static string RemoveHiddenBreakCharacters(string text, bool preserveTerminalSoftHyphen)
-    {
-        if (text.IndexOf('\u00AD') < 0 && text.IndexOf('\u200B') < 0)
-        {
-            return text;
-        }
-
-        var builder = new StringBuilder(text.Length);
-        for (int index = 0; index < text.Length; index++)
-        {
-            char value = text[index];
-            if (IsHiddenBreakCharacter(value, preserveTerminalSoftHyphen && index == text.Length - 1))
-            {
-                continue;
-            }
-
-            builder.Append(value);
-        }
-
-        return builder.ToString();
     }
 
     private static bool IsHiddenBreakCharacter(char value, bool preserveTerminalSoftHyphen)
