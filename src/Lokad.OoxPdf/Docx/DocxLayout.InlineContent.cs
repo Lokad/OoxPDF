@@ -829,8 +829,10 @@ internal sealed partial class DocxLayoutEngine
                     }
                     if (lineIndex + 1 < wrapped.Length)
                     {
-                        var endCursor = wrapped[lineIndex].Spans.Count == 0 ? new DocxInlineSourceCursor(end) :
-                            CursorAfterSpan(wrapped[lineIndex].Spans[^1], index, end);
+                        // Painted spans omit nonprinting characters and can be
+                        // empty. The next row's raw source start still records
+                        // exactly what this row consumed.
+                        var endCursor = CursorAtSourceOffset(wrapped[lineIndex + 1].SourceTextStart, index, end);
                         if (endCursor is null) return false;
                         Flush(endCursor.Value);
                         if (stopAfterFirstLine) { lines = output; return true; }
@@ -922,22 +924,27 @@ internal sealed partial class DocxLayoutEngine
             return 0d;
         }
 
-        DocxInlineSourceCursor? CursorAfterSpan(DocxTextSpan span, int begin, int end)
+        DocxInlineSourceCursor? CursorAtSourceOffset(int offset, int begin, int end)
         {
+            if (offset < 0) return null;
             for (int index = begin; index < end; index++)
             {
                 var original = measured[index];
-                if (original.Source is not DocxInlineText source || original.Text.Count != 1 ||
-                    !ReferenceEquals(source.Run, span.StyleRun)) continue;
+                var fragment = Atom(index);
+                if (original.Source is not DocxInlineText source || original.Text.Count != 1 || fragment.Text.Count != 1) return null;
+                if (offset >= fragment.Text[0].Text.Length)
+                {
+                    offset -= fragment.Text[0].Text.Length;
+                    continue;
+                }
                 bool field = source.Run.FieldKind is { } kind && kind.IsDynamic();
                 string value = field && index == cursor.AtomIndex && cursor.BoundFieldValue is { } bound
                     ? bound : original.Text[0].Text;
-                int offset = span.SourceTextOffsetInRun - original.Text[0].SourceTextOffsetInRun;
-                if (offset < 0 || offset >= value.Length) continue;
-                int consumed = offset + span.Text.Length;
+                int consumed = fragment.Text[0].SourceTextOffsetInRun - original.Text[0].SourceTextOffsetInRun + offset;
+                if (consumed < 0 || consumed > value.Length) return null;
                 return consumed >= value.Length ? new(index + 1) : new(index, consumed, field ? value : null);
             }
-            return null;
+            return offset == 0 ? new(end) : null;
         }
 
         static bool IsSpace(DocxMeasuredInlineFragment fragment) => fragment.Source is DocxInlineText { Length: > 0 } text &&

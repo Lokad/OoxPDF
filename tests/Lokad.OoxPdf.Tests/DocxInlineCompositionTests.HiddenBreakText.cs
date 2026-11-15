@@ -86,6 +86,34 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter()
+    {
+        const string word = "ABCDEFGHIJKLMN";
+        foreach (string[] values in new[] { new[] { "\u200b" + word }, new[] { "\u200b", word } })
+        {
+            var (paragraph, equations) = InlineBreakMeasurement(values);
+            TestAssert.True(DocxLayoutEngine.TryMeasureOrderedInlineAtoms(paragraph, equations,
+                new DocxTests.FamilyWidthTextMeasurer(), 10d, 8d, 12d, 1d, default, out var measured), "Measure the original source once.");
+            var atoms = TestAssert.NotNull(measured);
+            TestAssert.True(DocxLayoutEngine.TryWrapOrderedInlineAtoms(atoms, 25d, 25d, default, out var wrapped), "The complete wrap retains every letter.");
+            var lines = TestAssert.NotNull(wrapped);
+            var cursor = default(DocxInlineSourceCursor);
+            var actualText = new System.Text.StringBuilder();
+            foreach (var expected in lines)
+            {
+                TestAssert.True(DocxLayoutEngine.TryGetNextOrderedInlineLine(atoms, cursor, 25d, 25d, default, out var next),
+                    "An empty painted row cannot consume the rest of its source word.");
+                var actual = TestAssert.NotNull(next);
+                TestAssert.Equal(expected.EndCursor, actual.EndCursor);
+                actualText.Append(string.Concat(actual.Fragments.SelectMany(fragment => fragment.TextSegments).Select(segment => segment.Text)));
+                TestAssert.True(actual.EndCursor != cursor, "Source advances even when the row has no painted spans.");
+                cursor = actual.EndCursor;
+            }
+            TestAssert.Equal(word, actualText.ToString());
+            TestAssert.True(cursor.IsComplete(atoms), "All text and the following equation are consumed once.");
+        }
+    }
+
     private static DocxDocument ReadInlineBreakWord(string container, OoxPdfDocxMarkupMode mode, char? marker) =>
         ReadMutation("CompositionProbes/inline-math-navigation" + (container == "body" ? "" : "-" + container), mode, false, false,
             (xml, w, m) =>

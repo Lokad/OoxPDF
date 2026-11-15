@@ -1,5 +1,6 @@
 {
   "docx-hidden-break-composition": [
+    "DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter",
     "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
     "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
     "DocxInlineNonprintingRunsKeepVisibleBoundaryKerning",
@@ -13,6 +14,7 @@
     "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow"
   ],
   "docx-hidden-break-composition-portable": [
+    "DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter",
     "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
     "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
     "DocxInlineNonprintingRunsKeepVisibleBoundaryKerning"
@@ -6133,6 +6135,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter",
     "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
     "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
     "DocxInlineNonprintingRunsKeepVisibleBoundaryKerning",
