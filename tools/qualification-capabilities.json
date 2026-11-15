@@ -1,5 +1,31 @@
 {
+  "docx-shared-cell-content-portable": [
+    "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk",
+      "DocxCellFlowNestedTablesFollowMeasuredDisplayMath",
+      "DocxCellFlowIndependentTablesRetainVisibleContent",
+      "CellMemoReplaysNestedContentAtItsCurrentAlignedOrigin",
+      "MemoReturnsHitForSameKey",
+      "MemoReplaysAtChangedOrigin",
+      "MemoDistinguishesReferenceIdentity",
+      "MemoTiersPageStaticVsDynamic",
+      "MemoKeyIncludesMeasurerReference",
+      "CellMemoCounterInputsRemainIndependentDuringPlacement",
+      "CellMemoCounterInputsReleaseSupersededMeasurements",
+      "CellMemoCounterInputsFollowChildBoxOwnership",
+      "DocxTableCellTextLinesMemoSharesSplitCells",
+      "DocxTableLayoutStageLaysOutNestedTableCellBodies",
+      "DocxTableLayoutStagePreservesMixedCellBodyOrderAroundNestedTables",
+      "DocxTableLayoutStagePlacesCellBlockImageBelowBreakSpillRow",
+      "DocxTableLayoutStagePlacesNestedTableBelowBreakSpillRow",
+      "DocxTableLayoutStageKeepsNestedTablesOnAuthoredSideOfPageBreak",
+      "DocxTableLayoutStagePartitionsNestedTablesAcrossCompetingCellPageBreaks",
+      "DocxTableLayoutStageSplitsNestedTableRowsAcrossCompetingCellPageBreak",
+      "PortableRenderingPictureOnlyNestedTablesKeepTheirBodyOrigin",
+      "DocxInlineCompositionNestedMathKeepsPreparedOwnersThroughEveryMeasuredFrame",
+      "DocxInlineCompositionNestedMathKeepsContainingRowsAtomicAtPageBoundaries"
+  ],
   "docx-shared-cell-content": [
+    "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk",
       "DocxCellFlowNestedTablesFollowMeasuredDisplayMath",
       "DocxCellFlowIndependentTablesRetainVisibleContent",
       "CellMemoReplaysNestedContentAtItsCurrentAlignedOrigin",
@@ -6262,6 +6288,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk",
     "DocxListFormatsResolveReferencedLevelsAndConcreteOverrides",
     "DocxListFormatTransitionsKeepStartsAndCounterRestarts",
     "DocxListLegalNumberingOwnsAllReferencedFormats",
