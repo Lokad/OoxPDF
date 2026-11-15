@@ -25,7 +25,8 @@
   Disabled header/footer templates no longer change otherwise supported section pagination.
   Matching section frames use the following section's start type beside supported
   inline content and comments, while conservative footnote admission remains separate.
-  Empty XML text before a custom note mark no longer drops neighboring equations or note links.
+  Custom note marks share resolved text and casing rules, preserving equations
+  and links beside empty XML text or all-caps formatting.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field

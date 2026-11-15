@@ -65,6 +65,41 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        foreach (int count in new[] { 1, 2 })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode));
+            var control = renderer.RenderPagesAsync(ReadCasedCustomMark(kind, count, mode, "A", empty: false), null, default)
+                .ToBlockingEnumerable().ToArray();
+            foreach (bool empty in new[] { false, true })
+            {
+                var source = ReadCasedCustomMark(kind, count, mode, "a", empty);
+                var reference = source.Paragraphs.SelectMany(p => p.InlineReferences).Single(r => r.CustomMarkFollowsValue == "1");
+                TestAssert.Equal("A", reference.CustomMarkText!);
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var actual = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
+                TestAssert.Equal(control.Length, actual.Length);
+                for (int page = 0; page < actual.Length; page++)
+                {
+                    TestAssert.Equal(control[page].Content, actual[page].Content);
+                    var a = CustomMarkPhysicalGlyphs(actual[page]); var b = CustomMarkPhysicalGlyphs(control[page]);
+                    TestAssert.Equal(b.Length, a.Length);
+                    for (int glyph = 0; glyph < a.Length; glyph++) TestAssert.Equal(b[glyph], a[glyph]);
+                    TestAssert.Equal(control[page].Annotations.Count, actual[page].Annotations.Count);
+                    for (int link = 0; link < actual[page].Annotations.Count; link++)
+                        TestAssert.Equal(control[page].Annotations[link], actual[page].Annotations[link]);
+                }
+                string text = string.Concat(actual.SelectMany(CustomMarkPhysicalGlyphs).Select(g => g.Text));
+                TestAssert.Equal(count, text.Split("ratetime", StringSplitOptions.None).Length - 1);
+                TestAssert.Equal(4, actual.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
+                TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"), "Resolved casing cannot discard supported mathematics.");
+            }
+        }
+    }
+
     private static (string Text, double Size, double X, double Y)[] CustomMarkPhysicalGlyphs(PdfPage page) =>
         DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true, includeTextTransforms: true, honorActualText: false)
             .Select(show => (show.Text, show.Size, show.X, show.Y)).ToArray();
@@ -96,4 +131,30 @@ internal static partial class DocxInlineCompositionTests
                 default: throw new InvalidOperationException("Unknown custom-mark text mutation.");
             }
         });
+
+    private static DocxDocument ReadCasedCustomMark(string kind, int count, OoxPdfDocxMarkupMode mode, string letter, bool empty)
+    {
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        void SetMark(XElement text)
+        {
+            text.Value = letter + text.Value[1..];
+            var run = text.Parent!; var properties = run.Element(w + "rPr");
+            if (properties is null) { properties = new XElement(w + "rPr"); run.AddFirst(properties); }
+            properties.Elements(w + "caps").Remove(); properties.Add(new XElement(w + "caps"));
+        }
+        return ReadMutation("CompositionProbes/math-custom-note-" + kind + "-" + count, mode, false, false,
+            (xml, _, _) =>
+            {
+                var reference = xml.Descendants(w + kind + "Reference").Single(r => r.Attribute(w + "customMarkFollows")?.Value == "1");
+                var mark = reference.ElementsAfterSelf().First(e => e.Name == w + "t"); SetMark(mark);
+                if (empty) mark.AddBeforeSelf(new XElement(w + "t"));
+            }, packageChange: archive =>
+            {
+                var entry = archive.GetEntry("word/" + kind + "s.xml")!; XDocument notes;
+                using (var input = entry.Open()) notes = XDocument.Load(input);
+                var note = notes.Root!.Elements(w + kind).Single(n => n.Attribute(w + "id")?.Value == "37");
+                SetMark(note.Descendants(w + "t").First(t => t.Value.StartsWith('*')));
+                entry.Delete(); using var output = archive.CreateEntry("word/" + kind + "s.xml").Open(); notes.Save(output);
+            });
+    }
 }

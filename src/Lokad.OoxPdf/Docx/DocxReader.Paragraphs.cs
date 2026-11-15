@@ -658,7 +658,7 @@ internal sealed partial class DocxReader
                 paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, sourceRunIndex, revision);
-            AddResolvedTextRuns(runs, resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text, ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
+            AddResolvedTextRuns(runs, ResolveRunDisplayText(text, resolvedRun), ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
         }
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen, DocxRevisionInfo? revision)
@@ -814,7 +814,7 @@ internal sealed partial class DocxReader
                 return;
             }
 
-            string displayText = resolvedRun.AllCaps == true ? text.ToUpperInvariant() : text;
+            string displayText = ResolveRunDisplayText(text, resolvedRun);
             DocxComplexFieldState[] resultFields = ActiveComplexResultFields();
             if (resultFields.Length != 0)
             {
@@ -1033,7 +1033,7 @@ internal sealed partial class DocxReader
                     int firstRun = runs.Count;
                     AddResolvedTextRuns(
                         runs,
-                        resolvedRun.AllCaps == true ? placeholder.ToUpperInvariant() : placeholder,
+                        ResolveRunDisplayText(placeholder, resolvedRun),
                         resolvedRun,
                         runStyleResolution,
                         currentSourceRunIndex,
@@ -1616,7 +1616,7 @@ internal sealed partial class DocxReader
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (following.Name != WordprocessingNamespace + "t") return null;
-                string text = ReadRunTextChild(following);
+                string text = ResolveRunDisplayText(ReadRunTextChild(following), resolvedRun);
                 if (text.Length != 0)
                     return char.IsWhiteSpace(text[0]) || char.IsSurrogate(text[0]) ? null : text[..1];
                 if (following.HasElements) return null;
@@ -1649,6 +1649,9 @@ internal sealed partial class DocxReader
                 revisions: null);
         }
     }
+
+    private static string ResolveRunDisplayText(string text, DocxResolvedRunProperties properties) =>
+        properties.AllCaps == true ? text.ToUpperInvariant() : text;
 
     private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {
