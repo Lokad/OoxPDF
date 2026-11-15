@@ -1,5 +1,6 @@
 {
   "docx-static-paragraph-insets": [
+    "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
     "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
     "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
@@ -1383,6 +1384,7 @@
     "DocxInlineCompositionFormattingBalloonDescriptions"
   ],
   "docx-paragraph-mark-formatting": [
+    "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
     "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
     "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
@@ -6006,6 +6008,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
     "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
     "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",

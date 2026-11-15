@@ -55,6 +55,25 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxStaticParagraphFramesRetainHiddenOnlyFallbacks()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string container in new[] { "header", "footer" })
+        {
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, CachedMathGeometry(mode));
+            var control = renderer.RenderPagesAsync(ReadStaticInsetFrame(container, mode, "none", longText: false, hiddenFirst: true),
+                null, default).ToBlockingEnumerable().ToArray();
+            foreach (string frame in new[] { "first", "hanging", "right" })
+            {
+                var actual = renderer.RenderPagesAsync(ReadStaticInsetFrame(container, mode, frame, longText: false, hiddenFirst: true),
+                    null, default).ToBlockingEnumerable().ToArray();
+                AssertMetricPaint(control, actual);
+                TestAssert.True(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true,
+                    honorActualText: false)).Any(show => show.Text == "FollowingFrame."), "Hidden-only insets retain following visible content.");
+            }
+        }
+    }
+
     private static (string Text, double X)[] StaticInsetRows(PdfPage[] pages) =>
         pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true,
             includeTextTransforms: true, honorActualText: false))
@@ -65,7 +84,7 @@ internal static partial class DocxInlineCompositionTests
     private static string StaticInsetText() => "FrameAlpha " + string.Join(' ', Enumerable.Range(1, 10).Select(index => $"Frame{index:00}")) + " FrameOmega.";
 
     private static DocxDocument ReadStaticInsetFrame(string container, OoxPdfDocxMarkupMode mode,
-        string frame, bool longText = true) => ReadPlainTabFields(container, mode, "none", paragraphChange: (paragraph, w) =>
+        string frame, bool longText = true, bool hiddenFirst = false) => ReadPlainTabFields(container, mode, "none", paragraphChange: (paragraph, w) =>
         {
             var properties = paragraph.Element(w + "pPr")!; properties.Elements(w + "ind").Remove();
             if (frame != "none")
@@ -81,5 +100,16 @@ internal static partial class DocxInlineCompositionTests
             textRuns[0].AddBeforeSelf(new XElement(w + "r", style is null ? null : new XElement(style),
                 new XElement(w + "t", longText ? StaticInsetText() : "FrameAlpha FrameOmega.")));
             foreach (var run in textRuns) run.Remove();
+            if (hiddenFirst)
+            {
+                foreach (var run in paragraph.Elements(w + "r"))
+                {
+                    var runProperties = run.Element(w + "rPr");
+                    if (runProperties is null) { runProperties = new XElement(w + "rPr"); run.AddFirst(runProperties); }
+                    runProperties.Add(new XElement(w + "vanish", new XAttribute(w + "val", "true")));
+                }
+                paragraph.AddAfterSelf(new XElement(w + "p", new XElement(w + "r", style is null ? null : new XElement(style),
+                    new XElement(w + "t", "FollowingFrame."))));
+            }
         });
 }

@@ -350,10 +350,11 @@ internal sealed partial class DocxLayoutEngine
             // pictures have source positions for the shared ordered path.
             bool sourcePictures = paragraph.Images.Count != 0 && paragraph.Images.All(image => image.SourceRunIndex >= 0);
             bool sourceTabs = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden && run.Text.Contains('\t'));
-            bool needsInlineFrame = sourceTabs ||
+            bool needsInlineFrame = paragraph.Runs.Any(run => !run.EffectiveProperties.Hidden &&
+                ResolveStaticFieldPlaceholders(run, pageNumber, pageCount).Length != 0) && (sourceTabs ||
                 GetParagraphFirstLineIndentOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) != 0d ||
-                GetParagraphRightInset(paragraph, paragraphSpacingScale) != 0d;
+                GetParagraphRightInset(paragraph, paragraphSpacingScale) != 0d);
             if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
                 paragraph.InlineTextBoxes.Count != 0 || needsInlineFrame ||
                 sourcePictures && (!pictureOnly || unscaledLineMetrics is not null))
