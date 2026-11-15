@@ -462,7 +462,7 @@ internal sealed partial class DocxLayoutEngine
                 // so pending after-spacing is consumed, not reset.
                 cursorY -= Math.Max(0d, pendingSpacingAfter);
                 pendingSpacingAfter = 0d;
-                if (previousParagraph is not null)
+                if (previousParagraph is not null && measurer is not null)
                 {
                     for (int cellLineIndex = lines.Count - 1; cellLineIndex >= 0; cellLineIndex--)
                     {
@@ -1039,19 +1039,22 @@ internal sealed partial class DocxLayoutEngine
         double textWidth,
         DocxTableCellLayoutContext context)
     {
+        // Break partitioning needs text metrics; geometry-only placement does
+        // not use this paragraph estimate.
+        if (context.TextMeasurer is not { } measurer) return 0d;
         double height = 0d;
         double fontSize = GetParagraphFontSize(paragraph);
-        double lineHeight = ResolveLineHeight(paragraph, fontSize, context.TextMeasurer);
+        double lineHeight = ResolveLineHeight(paragraph, fontSize, measurer);
         IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, context.PageNumber, context.PageCount);
         DocxMidLinePlan? singlePlan = null;
         if (textSpans.Count != 0)
         {
-            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints);
+            double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints);
             double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
             double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale) - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
-            height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, context.TextMeasurer);
-            DocxWrappedTextLine[] singleLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, context.TextMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: context.PageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, context.ParagraphSpacingScale), sourceParagraph: paragraph).ToArray();
-            singlePlan = CreateMidLinePlan(paragraph, textSpans, singleLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell)), paragraph, context.TextMeasurer), context.ParagraphSpacingScale, context.TextMeasurer);
+            height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
+            DocxWrappedTextLine[] singleLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, measurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, context.ParagraphSpacingScale), context.DefaultTabStopPoints * context.ParagraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: context.PageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, context.ParagraphSpacingScale), sourceParagraph: paragraph).ToArray();
+            singlePlan = CreateMidLinePlan(paragraph, textSpans, singleLines, firstParagraphWidth, continuationParagraphWidth, DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight, IsExactLineSpacing(paragraph.EffectiveProperties), GetParagraphsFromBodyElements(DocxTableCellContent.GetBodyElements(cell)), paragraph, measurer), context.ParagraphSpacingScale, measurer);
             for (int singleLineIndex = 0; singleLineIndex < singleLines.Length; singleLineIndex++)
             {
                 double singleShift = IsExactLineSpacing(paragraph.EffectiveProperties) ? 0d : (singlePlan?.ShiftAboveHeights[singleLineIndex] ?? 0d);
@@ -1060,7 +1063,7 @@ internal sealed partial class DocxLayoutEngine
         }
         else if (paragraph.Images.Count == 0)
         {
-            height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, context.TextMeasurer);
+            height += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
             height += lineHeight;
         }
 

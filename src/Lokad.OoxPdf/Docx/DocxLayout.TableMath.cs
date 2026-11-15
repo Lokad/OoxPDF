@@ -9,9 +9,10 @@ internal sealed partial class DocxLayoutEngine
         DocxTableCellLayoutContext context)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
-        return TryGetSinglePreparedMath(paragraph, context.MathEquations, out var math) && !math.Equation.Display
+        return context.TextMeasurer is { } measurer &&
+            TryGetSinglePreparedMath(paragraph, context.MathEquations, out var math) && !math.Equation.Display
             ? WrapInlineMath(paragraph, math, spans, ref lines, firstWidth, continuationWidth, fontSize,
-                context.TextMeasurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints,
+                measurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints,
                 context.PageNumber ?? 1, context.CancellationToken) : null;
     }
 
