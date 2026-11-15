@@ -343,6 +343,32 @@ native label/math/picture presence for the independent `MixedTables` family.
 nested record, in Final/Review and two table shapes. `DocxCellMemoTests` owns cached
 nested origin/alignment, admission-height invalidation and cancellation. Existing
 Word controls retain their absolute thresholds. `docx-shared-cell-content` selects
-158 affected methods; its 23-method portable subset runs in Ubuntu CI. These
+160 affected methods; its 25-method portable subset runs in Ubuntu CI. These
 checks replace the removed placement walks' responsibilities without preserving
 their obsolete private entry points.
+
+
+`PortableRenderingTests.IndependentRecords.cs` owns visible composition in the
+independent `SectionRecords` and `OperationsDecks` families. Source-role counts
+separate repeated header/title text from duplication; actual glyph ink and clips,
+source picture colors, page/story ownership, fields and navigation supplement
+extraction. `DocxTableFlowTests` owns the no-font picture-advance contract; it also
+retains the older geometry-only test that caught the R2 regression in full CI.
+
+`PortableRenderingChartSeriesOrderSurvivesXmlReordering` owns the declared-series-
+order metamorphic contract and whole XML-order fallback for missing, negative,
+duplicate or malformed values. This tests shared model behavior through final
+paint, without preserving a private implementation shape. A real parent fails;
+its complete-legend control passes.
+
+Select `composition-independent-records` for 72 affected methods and its
+26-method `composition-independent-records-portable` subset for portable hosts.
+The subset runs in Ubuntu CI; new semantic controls also join framework
+compatibility. `tools/qualification-independent-composition.json` defines eight
+independent sources/fourteen outcomes across four families; it supplements the
+original portfolio, without duplicating its manifest or redefining image success.
+
+Frozen harness reuse permits added public fixtures while preserving every earlier
+fixture and production/build input. Changed/deleted prior inputs are refused;
+report joins still require identical full input sets. Thirteen synthetic build
+workflow guards pass on Windows and Ubuntu without native builds or conversions.

@@ -67,6 +67,10 @@ Supported within the following constraints:
   Unresolved/action-only links are diagnosed and omitted.
 - Native cached-data bar/column, line, area, pie/doughnut, scatter, bubble and radar
   charts, with supported titles, legends, axes/ticks, labels and source formatting.
+  Complete, unique nonnegative series-order declarations determine order within
+  each plot, keeping source identity, data and explicit styles together. Missing,
+  negative, duplicate or malformed declarations retain XML sibling order; arbitrary
+  cross-plot stacking and Office default-style parity are not established.
   Bar/column series and point negative-inversion flags control fills, fallback
   outlines and label swatches; explicit point outlines remain authored.
   Legend keys adorn visible data-label text; a key alone does not create a label
@@ -445,7 +449,10 @@ Approximate or restricted:
   marker flags alone do not suppress automatic line markers. Authored/composed
   styles, dense layout, label placement and font geometry remain approximate.
 - Legends without an overlay flag follow PowerPoint's overlay default. Specify
-  `<c:overlay val="0"/>` to reserve plot space. Legend geometry remains approximate.
+  `<c:overlay val="0"/>` to reserve plot space. Automatic right bar legends whose
+  measured names would cross the physical page reserve plot space when the chart
+  itself fits the page. Authored manual/overlay/off-page placement remains intact;
+  unfit content retains its fallback. Legend geometry remains approximate.
   Bottom line legends share measured wrapping with horizontal bar legends;
   empty layout metadata preserves wrapping; authored manual frames constrain overflow.
 - Authored chart titles survive automatic-title deletion flags. Automatic-title

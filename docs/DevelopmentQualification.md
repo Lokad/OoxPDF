@@ -6,139 +6,97 @@ build or prepared package does not establish complete rendering or Office parity
 
 ## Verified outcomes
 
-The later cell-flow batch compiles production revision `477b8feea` with harness
-`fad5f6735`. It removes two independent placement walks and reconstructed paragraph
-frames, giving text, drawings and nested tables one measured cursor and vertical
-alignment. A nested record previously started alongside a preceding fraction's
-denominator; its native ink now starts 4.606pt below the complete formula. An
-independent pinned-font end-to-end regression and a measured-advance regression
-both fail against the actual parent, while two neighboring controls pass.
-
-This batch passes 158 affected Windows methods and 23 portable Ubuntu methods.
-Harness-only assertion repairs retain the original failures and reuse all 21
-production assets and 3,467 inputs; unaffected methods are not replayed. Two
-independent 4×3 automatic and 5×4 minimum-height tables retain prose, math and
-pictures in four outputs, with 1,298 actual-program glyphs and no measured cuts or
-unknowns. Both Final paints and the fraction parent/candidate were reviewed.
-All sixteen baseline portfolio PDFs and diagnostics remain exact, so their prior
-comparisons are reused. The legacy paragraph estimate remains live in three
-page-break partition callers; the older clipping eligibility rules remain scoped
-to their qualified witnesses. No new Office geometry or application-view claim.
-
-The following list-format batch is locally qualified after that broader baseline.
-Revision 94a9fb96b resolves ordinary labels using each referenced level's effective
-format, including concrete overrides and legal decimal references. It also fixes
-Word's repeated-letter carry in notes. The shared numeral path removes two reader
-wrappers and retains PPTX's independently qualified cycle.
-
-Twenty-two focused Windows checks and 21 Ubuntu checks pass, with one declared
-Windows-font skip. Six new checks fail against the actual parent while three
-controls pass. Two independently authored documents retain 28 source-defined labels
-across four Final/Review outputs, one-page flow, neighboring prose/math, pictures
-and navigation. Their 1,650 actual-program glyphs have no measured cuts or unknowns;
-both Final renders were reviewed. Exact new-source Word layout remains unqualified.
-A harness-only correction reads labels across split PDF shows without changing the
-library. All sixteen baseline portfolio PDFs and diagnostics remain exact.
-
-One frozen Release runtime supplies the tests, content checks and 24-asset transfer
-with two exact integration PDFs. Broader framework/package qualification of this
-new behavior remains separate; the selected checkpoint183 package excludes it.
-No new Office action or threshold change. The roadmap and publication remain open.
-
-The latest completed broader checkpoint compiles revision `74a0fda59` for .NET 10 and
-.NET 11. CI run 43718846675 is terminal green on Windows and Ubuntu. Its production
-source includes the shared text-normalization and source-cursor corrections below.
+The current rendering source is `df16d7f5f`. CI revision `3baa52e52` adds only
+an independent-portfolio manifest, with identical production/build inputs. The
+final local frozen artifacts record each framework's exact library/PDB/harness
+identity. CI checks establish source-equivalent broader coverage; local PDFs are
+not relabeled as CI output.
 
 | Capability | Concrete outcome and qualification limit |
 |---|---|
-| Authored legends | The six-name omission is repaired. In the 840pt long-name control, all six names/155 native glyphs paint without measured cuts or unknowns; origin residuals remain 8.042pt X/0.090pt Y against the unchanged 1pt gate. |
-| Other legend geometry | A separate automatic top legend has origin/key errors of 13.514/13.519pt. The authored manual top grid retains 11.169pt X/31.387pt Y origin errors. These are separate source pairs; wrapping and manual/dense placement remain approximate. |
-| Resumed composed text | Two outputs regain 236 letters previously dropped after a leading nonprinting break. The cursor advances by original source position, including rows with no painted spans. Ordinary break characters remain nonprinting; selected soft-hyphen breaks retain their hyphen. |
-| Literal note marks | Four outputs regain six literal marker glyphs and two links. Shared normalization preserves only the explicitly owned source character in body and note target, with or without an equation. Existing ownership and typography fallbacks remain. |
-| Note overlap | Two plain-soft outcomes previously overprinted first-page note captions on one baseline. Complete-marker admission now separates their bounds by 14.648pt, as in unchanged asterisk controls. This is bounded content/overlap evidence, not new Word note-placement parity. |
-| Picture and story composition | Shared picture fitting, source ownership, static-story placement and body/cell admission retain qualified prose, pictures and equations. Zero-area pictures do not remove supported neighbors. Unfit, clipped, fragmented and unresolved owners retain documented fallbacks. |
-| Compressed display math | Body controls restore 18 missing mathematical glyphs while preserving the independent Word-PDF baseline/advance gates. Standalone compressed cells remain a separate clipping gap below. |
+| List formats | Each referenced level resolves its effective Roman/alphabetic/padded-decimal format, including concrete overrides and legal decimal references, before measurement/paint. Two independent list sources retain 28 labels and 1,650 native glyphs in four outputs. Language alphabets/custom restart semantics remain restricted. |
+| Shared cell flow | One measured cursor replaces two placement walks and reconstructed paragraph frames. Nested content starts 4.606pt below the complete preceding fraction, instead of overlapping its denominator. Independent automatic/minimum tables retain 1,298 native glyphs. The subsequent no-font regression is repaired in the same cursor: authored pictures keep their geometry without text metrics. |
+| Automatic right bar legends | The independent 800×600 deck previously extracted all six names but painted only two completely, with ten cut/six hidden glyphs. Measured plot-space admission restores all six names/keys. Manual, overlay and authored off-page controls remain unchanged; different series counts and text sizes check the shared rule. Exact Office geometry remains approximate. |
+| Chart series order | Complete unique nonnegative series-order declarations resolve in the shared model before preparation/paint. Reordering XML siblings preserves PDF content. Missing, negative, duplicate or malformed orders retain whole XML-order fallback. Series identities/styles/data stay together. |
+| Section/story composition | Two independent two-/three-section records retain headers/footers, page fields, notes in body/tables, math, pictures and navigation in Final/Review. These controls already passed in the parent; they are broader coverage, not newly restored content. |
 
-The latest marker batch passes 23 exact Windows methods and 22 Ubuntu methods with
-one declared Calibri skip. A repaired pinned-font test fails against the actual
-parent while neighboring controls pass. Eight public outcomes retain prose and
-visible native codes/styles, with four links each; 2,176 measured native glyphs have
-zero cuts or unknown traces. Four asterisk PDFs are unchanged. Two plain-soft
-outputs lose one prior whitespace glyph each; note paint order and positions also
-change. New source-matched Word geometry remains unqualified.
+The final batch passes **72 affected Windows methods and 26 portable Ubuntu
+methods**, without skips, using one frozen .NET 11 runtime. The same 26 portable
+methods pass on both hosts against one frozen .NET 10 build. Genuine parent
+regressions retain failures alongside passing controls. One coherent set of
+frozen assets supplies content checks, transfer and package preparation;
+production bytes are not rebuilt in the root for qualification.
 
-One production runtime supplies those checks. Harness-only repairs reuse its
-production assets and inputs, rerun only changed or failed methods, and retain
-original failures. A further six-output justified-continuity check retains all
-visible words, equations, picture identities/counts and links; 2,427 native glyphs
-have no cuts or unknowns. Its approximately 0.15pt Review vertical residual remains
-recorded without tuning. No new defect is claimed by that check.
+The initial R1 batch passed 22 Windows / 21 Ubuntu methods with one declared font
+skip; the initial R2 batch passed 158 / 23. A later full Windows run caught the
+R2 no-font picture regression, now covered by both its existing and new semantic
+controls. Earlier failed CI attempts remain evidence; their results are not
+silently relabeled. All current selectors resolve (4,709 selected exact methods
+in the capability union; catalogue validation is not execution).
 
-## Finite document checkpoint
+## Composition portfolio outcomes
 
-The fixed repository manifest `tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json`
-pins nine sources and sixteen outcomes: default Final with preserved layout and
-AllMarkup with Word-compatible geometry for each DOCX, plus two PPTX decks.
-The documents combine prose, numbering, tables, equations, pictures, links,
-headers/footers and notes. Shared template ancestry limits their diversity.
+The original nine sources remain sixteen outcomes: seven DOCX sources in both
+Final/Review and two PPTX sources. All original source/PDF/diagnostic identities
+remain exact through this batch, so independent comparisons are reused. Their
+strict image results remain **fourteen DOCX failures and two PPTX passes**, with
+unchanged thresholds. They are fourteen mode outcomes, not fourteen independently
+proven fatal documents.
 
-| Document | Final / Review pages | Reviewed content and pagination |
-|---|---|---|
-| Operations report | 2 / 2 | Heading, equations, illustration, table, items 1–3, sections 1–12, conclusion, note and footer; sections 9–12 stay on page two. |
-| Letter | 1 / 1 | Equations, illustration, acceptance items, sections 1–4, conclusion and note. |
-| Specification | 2 / 2 | Sections 1–8 on page one; sections 9–20, conclusion and note on page two. |
-| Held-out technical memo | 2 / 2 | Sections 1–8 and equation table on page one; conclusion and note on page two. |
-| Held-out static-cell report | 2 / 2 | Nested-cell/static-story equations, illustration, prose and transitions. |
-| Held-out static-SVG report | 2 / 2 | Body illustration, header math, footer SVG and page-two sections 9–12. |
-| Held-out linked-footnote report | 4 / 4 | All 64 continuation lines retain order/pages, with pictures, math and links. |
-| Briefing and held-out decks | One page each | Twenty-five items, 162 glyphs, seven ticks and twelve bars; maximum measured edge residual 0.125pt. |
+Four independent families add eight sources/fourteen outcomes: hierarchical lists,
+mixed tables, section records and operations decks, each with a held-out source.
+`tools/qualification-independent-composition.json` selects these sources; the
+original portfolio remains a separate regression contract. The joined result is
+**17 sources / 30 outcomes**, not thirty new Office passes.
 
-All sixteen source/PDF/diagnostic identities remain unchanged through the latest
-rendering checkpoint, so prior independent comparisons are reused. A thirty
-page-pair review found no new consequential omission, serious overlap or wrong
-page within this portfolio. This does not certify arbitrary documents or painting.
+The additions retain 6,545 actual-program glyphs without measured cuts or unknowns.
+Records/decks additionally check eight picture paints against 48 source-color
+samples, twelve legend names/keys, numeric ticks/bars, note destinations and
+page/story ownership. Native reports are reused only through exact source/PDF
+identity. Four selected page panels were viewed; arbitrary occlusion is not
+certified. New-source Office references are unavailable. The held-out survey
+retains six readable numeric captions touching the vertical axis, identical to
+its parent: an approximate geometry residual, not missing labels.
 
-Strict image results remain **two PPTX passes and fourteen DOCX failures**.
-Thresholds are unchanged. Native/content checks cover 590 prose groups, 160 markers,
-56,513 glyphs, 106 simple math frames and eight footer fractions. Long-prose
-residuals reach 0.322pt X/1.365pt Y; simple math reaches 0.276pt X/1.064pt Y.
-Twenty of 22 PNG paints pass independent foreground checks; two page-two instances
-miss by three/two pixels at 288DPI. Those image failures and residuals remain open.
+The original native checks retain 590 prose groups, 160 markers, 56,513 glyphs,
+106 simple math frames and eight footer fractions. Long-prose residuals reach
+0.322pt X/1.365pt Y; simple math reaches 0.276pt X/1.064pt Y. Twenty of 22 PNG paints
+pass independent foreground checks; two page-two instances miss by three/two
+pixels at 288DPI. These scoped failures remain open; the additions do not erase them.
 
-## Prepared development package payload
+## Broader qualification and prepared package
 
-The coherent checkpoint passes these broader checks once per host/framework:
+CI run **43747878443 is terminal green** on Windows and Ubuntu:
 
 | Framework | Windows | Ubuntu |
 |---|---|---|
-| .NET 11 | 5,042 passes / 19 skips | 2,526 passes / 133 skips |
-| .NET 10 | 211 passes / 0 skips | 211 passes / 0 skips |
+| .NET 11 | 5,056 passes / 19 skips | 2,550 passes / 133 skips |
+| .NET 10 | 223 passes / 0 skips | 223 passes / 0 skips |
 
-All 58 critical exact methods pass in all four contexts. One Windows-produced
-package passes all four host/framework consumers, each checking 13 behavior
-contracts plus local documentation links. Both Windows results were reused;
-only the two Ubuntu consumers ran against that same package. The contracts cover
-conversion, cancellation, refusal, leases, cleanup, async output and destination
-preservation. This is not exhaustive API or ABI certification.
+The .NET 11 lanes differ intentionally: Windows runs the full console suite with
+slow tests excluded; Ubuntu runs portable groups and capability selections.
+Both .NET 10 lanes run compatibility selections. Source-equivalent CI coverage
+does not imply byte identity with local frozen artifacts.
 
-Packages, portable symbols, checksums and qualification records live directly in
-ignored `artifacts/nuget/`. Exact selected identities belong to
+The coherent candidate uses those qualified local framework builds, without a
+root rebuild. Installed consumers must use the same Windows-produced package
+bytes on Windows/Ubuntu and both frameworks. Their thirteen behavior contracts
+cover conversion, cancellation, refusal, leases, cleanup, async output and
+destination preservation, plus packaged documentation links; they are not an
+exhaustive API/ABI certification.
+
+Packages, portable symbols, checksums and exact qualification records live directly
+in ignored `artifacts/nuget/`. Selected identities belong to
 `SHA256SUMS.0.3.0.txt`, both per-package checksum files and
-`Lokad.OoxPdf.0.3.0.qualification.json`; all active checksum copies must agree.
-The latest selection corrected two stale per-package checksum copies while
-preserving the previous directory state. Published 0.2.0 assets remain unchanged.
+`Lokad.OoxPdf.0.3.0.qualification.json`; active copies must agree. Preserve the prior
+selection and published 0.2.0 assets. Transfer verifies every runtime asset and
+two exact integration PDFs per framework, without replaying suites. Each framework
+has a separate identity; importing net11 does not update net10.
 
-Verify each framework's library/PDB bytes, assembly/file versions, informational
-revision and packaged caller links. Transfer imports the actual qualified CI
-assets and checks two exact integration PDFs, without a root build or suite replay.
-Transferring net11 does not refresh root net10. Source/build equivalence is recorded
-separately from binary identity; local rendering PDFs are not relabeled as CI output.
-
-This page describes the current development evidence. The selected ZIP remains
-bound to the documentation and source recorded at its compiled revision; a later
-documentation edit does not qualify different bytes or require another repack.
-Historical numerical results remain in Git history and their original frozen
-reports. Preparation does not authorize publication or close the rendering gate.
+A package is bound to its compiled revision and bundled documentation. Later
+summary edits do not qualify different bytes or require another pack. Historical
+results remain in Git and frozen reports. Preparation does not authorize
+publication, tagging or acceptance of unresolved rendering limitations.
 
 ## Independent content checks and limits
 
@@ -200,9 +158,8 @@ rejected capture/export actions are not retried or relabeled as completed work.
   fill 16.459pt versus Word 8.016pt remains unresolved; a nominal-strut fix was refuted.
 - Nested inline boxes are unsupported. Complex SVG text, arbitrary custom/non-BMP
   note marks, typography and broader combinations retain documented limits.
-  Ordinary list formatting is now implemented at source resolution; its new
-  focused qualification is separate from the retained checkpoint183 package.
-  Locale-dependent alphabets and custom restart policies remain unqualified.
+  Ordinary list formatting now resolves supported source formats; locale-dependent
+  alphabets and custom restart policies remain unqualified.
 - Coarse host memory admission is partial, not a comprehensive heap ceiling.
   Safe managed execution, cancellation, meaningful input bounds, bounded caches
   and staging, deterministic refunds/cleanup, atomic publication and PDF validity

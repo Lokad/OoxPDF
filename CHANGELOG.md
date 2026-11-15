@@ -32,7 +32,8 @@
   level, including concrete overrides and legal decimal references; Word letter carry
   is shared with note formatting.
   Cell text, pictures, text boxes and nested tables share one placement cursor,
-  keeping nested records below the complete measured display formula.
+  keeping nested records below the complete measured display formula. Authored
+  cell pictures retain their geometry when font measurement is unavailable.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field
@@ -78,6 +79,8 @@
   retains old/current labels alongside paragraph-mark formatting history, without
   inheriting hyperlink decoration from adjacent text.
 - PPTX: improves shared chart-data ownership, scales, colors, labels and legends;
+  respects valid declared series order and admits automatic right bar legends
+  inside the page without changing authored manual/overlay placement;
   qualified authored horizontal legends retain every name; manual pie viewports
   own their radius and use the measured automatic frame for factor offsets in both axes.
   Side plots reserve measured legend space; default legends retain their chart frame
