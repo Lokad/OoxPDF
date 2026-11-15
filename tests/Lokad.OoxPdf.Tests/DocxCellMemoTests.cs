@@ -201,9 +201,10 @@ internal static class DocxCellMemoTests
             TestAssert.True(Math.Abs(after.Y - before.Y - 20d) < .000001d &&
                 Math.Abs(after.Table.TableX - before.Table.TableX - 20d) < .000001d,
                 "Cached nested rows translate with their containing cell: " + alignment);
-            TestAssert.Equal(expected.Y, after.Y);
-            TestAssert.Equal(expected.Cells[0].TextLines[0].BaselineY, after.Cells[0].TextLines[0].BaselineY);
-            TestAssert.Equal(expected.Cells[0].TextLines[0].X, after.Cells[0].TextLines[0].X);
+            TestAssert.True(Math.Abs(expected.Y - after.Y) < .000001d &&
+                Math.Abs(expected.Cells[0].TextLines[0].BaselineY - after.Cells[0].TextLines[0].BaselineY) < .000001d &&
+                Math.Abs(expected.Cells[0].TextLines[0].X - after.Cells[0].TextLines[0].X) < .000001d,
+                "Fresh and cached nested placement agree at the caller's origin: " + alignment);
             // A changed nested admission height is a distinct measurement;
             // unlike ordinary text it cannot silently reuse the prior frame.
             _ = PlaceCounterCell(cell, measurer, memo, 2, 2, height: 280d);
