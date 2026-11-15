@@ -19,6 +19,8 @@ internal static partial class DocxInlineCompositionTests
             {
                 var source = ReadNoteTextRows(content, "ordinary", mode, endnote, sameRun);
                 var paragraph = source.Paragraphs[0]; var reference = paragraph.InlineReferences.Single();
+                string label = endnote ? "i" : "1";
+                TestAssert.Equal(label, reference.DisplayText);
                 var marker = TestAssert.NotNull(reference.DisplayRun);
                 TestAssert.True(paragraph.Runs.Any(run => ReferenceEquals(run, marker)), "The actual marker owns its generated run.");
                 if (sameRun) TestAssert.True(paragraph.Runs.Any(run => !ReferenceEquals(run, marker) &&
@@ -31,8 +33,9 @@ internal static partial class DocxInlineCompositionTests
                     true, includeTextTransforms: true, honorActualText: false)).Select(show => show.Text));
                 for (int row = 1; row <= 7; row++) TestAssert.Equal(1, Regex.Matches(native, $"Small row {row:00}").Count);
                 TestAssert.Equal(1, Regex.Matches(native, "Source note").Count);
-                TestAssert.True(native.Count(ch => ch == '1') == 3,
-                    $"Both decimal note markers and row01 paint: {mode}/{content}/endnote={endnote}/sameRun={sameRun}; source label={reference.DisplayText}; native={native}");
+                string expected = "Largeheading" + (content is "math" or "mixed" ? "x" : "") + label +
+                    string.Concat(Enumerable.Range(1, 7).Select(row => $"Smallrow{row:00}")) + label + "Sourcenote";
+                TestAssert.Equal(expected, string.Concat(native.Normalize(System.Text.NormalizationForm.FormKC).Where(ch => !char.IsWhiteSpace(ch))));
                 TestAssert.Equal(content is "picture" or "mixed" ? 1 : 0,
                     actual.Sum(page => Regex.Matches(page.Content, @"/\w+\s+Do\b").Count));
                 string math = string.Concat(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
@@ -117,12 +120,6 @@ internal static partial class DocxInlineCompositionTests
                 Run(new XElement(w + "footnoteRef")), Run(new XElement(w + "t", "Source note"))));
             if (endnote)
             {
-                var settingsEntry = zip.GetEntry("word/settings.xml")!; XDocument settings;
-                using (var stream = settingsEntry.Open()) settings = XDocument.Load(stream);
-                settings.Root!.Element(w + "endnotePr")?.Remove();
-                settings.Root.Add(new XElement(w + "endnotePr", new XElement(w + "numFmt", new XAttribute(w + "val", "decimal"))));
-                settingsEntry.Delete();
-                using (var output = zip.CreateEntry("word/settings.xml").Open()) settings.Save(output);
                 foreach (var node in notes.Descendants().Where(node => node.Name == w + "footnotes" || node.Name == w + "footnote" || node.Name == w + "footnoteRef"))
                     node.Name = w + node.Name.LocalName.Replace("footnote", "endnote", StringComparison.Ordinal);
                 foreach (string part in new[] { "word/_rels/document.xml.rels", "[Content_Types].xml" })
