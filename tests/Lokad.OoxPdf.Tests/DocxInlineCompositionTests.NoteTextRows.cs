@@ -28,14 +28,14 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(1, actual.Length);
                 AssertTextRowOwnersAndPitches(control, actual);
                 string native = string.Concat(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
-                    true, honorActualText: false)).Select(show => show.Text));
+                    true, includeTextTransforms: true, honorActualText: false)).Select(show => show.Text));
                 for (int row = 1; row <= 7; row++) TestAssert.Equal(1, Regex.Matches(native, $"Small row {row:00}").Count);
                 TestAssert.Equal(1, Regex.Matches(native, "Source note").Count);
                 TestAssert.Equal(3, native.Count(ch => ch == '1')); // row01, body marker, note marker
                 TestAssert.Equal(content is "picture" or "mixed" ? 1 : 0,
                     actual.Sum(page => Regex.Matches(page.Content, @"/\w+\s+Do\b").Count));
                 string math = string.Concat(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
-                    true, honorActualText: false).Where(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
+                    true, includeTextTransforms: true, honorActualText: false).Where(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
                         ReferenceEquals(font.Font, show.Font)))).Select(show => show.Text)).Normalize(System.Text.NormalizationForm.FormKC);
                 TestAssert.Equal(content is "math" or "mixed" ? "x" : "", math);
                 TestAssert.True(actual.Sum(page => page.Annotations.Count(annotation => annotation.Destination is not null)) >= 1,
