@@ -107,7 +107,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadNoteTextRows(string content, string admission, OoxPdfDocxMarkupMode mode, bool endnote, bool sameRun,
-        int markerRow = 0, bool beforeText = false) =>
+        int markerRow = 0, bool beforeText = false, bool splitRows = false) =>
         ReadTextRowMetrics(content, admission, mode, (xml, w, _) =>
         {
             var paragraph = xml.Descendants(w + "p").Single(p => p.Descendants(w + "t").Any(text => text.Value == "Large heading"));
@@ -132,6 +132,18 @@ internal static partial class DocxInlineCompositionTests
                 }
                 else if (beforeText) text.Parent!.AddBeforeSelf(marker);
                 else text.Parent!.AddAfterSelf(marker);
+            }
+            if (splitRows)
+            {
+                var propertiesTemplate = paragraph.Element(w + "pPr")!;
+                var rows = new List<XElement>(); var row = new XElement(w + "p", new XElement(propertiesTemplate));
+                foreach (var child in paragraph.Elements().Where(child => child.Name != w + "pPr"))
+                {
+                    if (child.Name == w + "r" && child.Element(w + "br") is not null)
+                    { rows.Add(row); row = new XElement(w + "p", new XElement(propertiesTemplate)); }
+                    else row.Add(new XElement(child));
+                }
+                rows.Add(row); paragraph.ReplaceWith(rows);
             }
         }, zip =>
         {

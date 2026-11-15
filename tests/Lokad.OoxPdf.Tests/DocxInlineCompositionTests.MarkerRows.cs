@@ -12,12 +12,13 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (string content in new[] { "plain", "picture", "math", "mixed" })
         {
-            var control = MarkerRowOrigins(RenderTextRowMetrics(content, "ordinary", mode));
             foreach (bool endnote in new[] { false, true })
             foreach (bool before in new[] { false, true })
             foreach (bool sameRun in new[] { false, true })
             {
                 string label = endnote ? "i" : "1";
+                var control = MarkerRowOrigins(RenderTextRowMetricDocument(ReadNoteTextRows(content, "ordinary", mode,
+                    endnote, sameRun, markerRow: 4, beforeText: before, splitRows: true), mode));
                 var source = ReadNoteTextRows(content, "ordinary", mode, endnote, sameRun, markerRow: 4, beforeText: before);
                 var actual = RenderTextRowMetricDocument(source, mode);
                 TestAssert.Equal(1, actual.Length);
@@ -44,7 +45,7 @@ internal static partial class DocxInlineCompositionTests
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         foreach (string admission in new[] { "keepLines", "keepNext", "widow" })
         {
-            var control = RenderTextRowMetricDocument(ReadNoteTextRows("plain", admission, mode, false, false, markerRow: 4), mode);
+            var control = RenderTextRowMetricDocument(ReadNoteTextRows("plain", admission, mode, false, true, markerRow: 4), mode);
             var actual = RenderTextRowMetricDocument(ReadNoteTextRows("picture", admission, mode, false, true, markerRow: 4), mode);
             TestAssert.Equal(2, actual.Length);
             var rows = MarkerRowOrigins(actual);
