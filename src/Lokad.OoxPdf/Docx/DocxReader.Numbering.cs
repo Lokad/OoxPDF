@@ -221,7 +221,8 @@ internal sealed partial class DocxReader
                 (labelFonts == DocxRunFonts.Empty ? "Times New Roman" : null),
             Fonts = labelFonts,
             Bold = levelStyle.Bold ?? paragraphMarkRun.Bold ?? false,
-            Italic = levelStyle.Italic ?? paragraphMarkRun.Italic ?? false
+            Italic = levelStyle.Italic ?? paragraphMarkRun.Italic ?? false,
+            AllCaps = levelStyle.AllCaps ?? paragraphMarkRun.AllCaps ?? false
         };
         // Office sizes bullets from the numbering level, then paragraph/table styles (style-less paragraphs
         // resolve through Normal), then document defaults outright, then unstyled table cells fall back to 12pt,

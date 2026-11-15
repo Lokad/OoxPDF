@@ -962,7 +962,7 @@ internal sealed partial class DocxLayoutEngine
     private static double MeasureListLabel(DocxListLabel label, DocxTextRun? baseRun, double fontSize, IDocxTextMeasurer textMeasurer)
     {
         DocxTextRun run = CreateListLabelRun(label, baseRun, fontSize);
-        double width = textMeasurer.MeasureText(run, label.Text, run.EffectiveProperties.FontSize);
+        double width = textMeasurer.MeasureText(run, run.Text, run.EffectiveProperties.FontSize);
         if (label.NumberingChange is { } change)
         {
             var previous = CreatePreviousListLabelRun(run, change.PreviousText);
@@ -973,7 +973,7 @@ internal sealed partial class DocxLayoutEngine
 
     internal static DocxTextRun CreatePreviousListLabelRun(DocxTextRun run, string text) => run with
     {
-        Text = text, Underline = false, UnderlineValue = null, UnderlineColorHex = null,
+        Text = DocxTextRun.ResolveDisplayText(text, run.AllCaps), Underline = false, UnderlineValue = null, UnderlineColorHex = null,
         Strike = true, StrikeValue = "true", DoubleStrike = false, DoubleStrikeValue = null,
         Revision = null, Revisions = []
     };
@@ -988,6 +988,7 @@ internal sealed partial class DocxLayoutEngine
             FontFamily = label.Style.FontFamily,
             Fonts = label.Style.Fonts
         };
+        run = run with { Text = DocxTextRun.ResolveDisplayText(run.Text, run.AllCaps) };
         return label.NumberingChange is null ? run : run with
         {
             Underline = true, UnderlineValue = "single", UnderlineColorHex = null,
