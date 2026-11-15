@@ -1236,17 +1236,29 @@ internal static class DocxNativeMathTests
         }
     }
 
-    public static void DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback()
+    public static void DocxNativeCompressedDisplayMathMatchesRetainedWordContentAndBaselines()
     {
         RequireMathFont();
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        PdfPage page = Renderer().RenderPagesAsync(NamedFixture("docx-omml-display-spacing-literal-first-auto120"),
-            diagnostics.Add, CancellationToken.None).ToBlockingEnumerable().Single();
-        TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Id == "DOCX_UNSUPPORTED_EQUATION") &&
-            diagnostics.All(diagnostic => diagnostic.Id != "DOCX_APPROXIMATED_EQUATION"),
-            "Compressed slots need their own baseline contract and retain explicit fallback.");
-        TestAssert.True(!page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal)),
-            "Unpainted math cannot publish unused resources.");
+        foreach (string kind in new[] { "literal", "fraction" })
+        {
+            var source = DocxInlineCompositionTests.ReadCompressedDisplayMath(kind, OoxPdfDocxMarkupMode.Final, 120);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfPage page = Renderer().RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            var math = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true, includeTextTransforms: true,
+                honorActualText: false, fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).ToArray();
+            string meaning = string.Concat(math.Select(show => show.Text)).Normalize(NormalizationForm.FormKC);
+            TestAssert.Equal(kind == "literal" ? "α+β=γ" : "a+bc", meaning);
+            // Retained Word16 half-spacing controls from rv06-l286; literal
+            // and fraction source/PDF identities are pinned in the qualification.
+            double[] xs = kind == "literal" ? [280.13d, 290.45d, 302.09d, 313.01d, 325.27d] : [292.01d, 301.73d, 313.37d, 303.05d];
+            double[] ys = kind == "literal" ? [77.76d, 77.76d, 77.76d, 77.76d, 77.76d] : [79.10d, 79.10d, 79.10d, 96.26d];
+            TestAssert.Equal(xs.Length, math.Length);
+            for (int index = 0; index < math.Length; index++)
+                TestAssert.True(Math.Abs(math[index].X - xs[index]) < .6d && Math.Abs(page.Height - math[index].Y - ys[index]) < .15d,
+                    "Compressed native math retains the existing Word coordinate tolerances: " + kind + "/" + index);
+            TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION") &&
+                diagnostics.Any(d => d.Id == "DOCX_APPROXIMATED_EQUATION"), "Rendered approximate math cannot retain an ignored diagnostic.");
+        }
     }
 
     public static void DocxNativeSignedArgumentSizesPaintTheirSourceOwnedRoles()

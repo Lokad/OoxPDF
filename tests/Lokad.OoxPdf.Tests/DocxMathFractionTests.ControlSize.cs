@@ -4,6 +4,36 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxMathFractionTests
 {
+    public static void MathFontCompressedAutomaticSpacingRetainsInkAndRejectsInvalidSlots()
+    {
+        var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));
+        foreach (double ownerSize in new[] { 12d, 24d })
+        {
+            var source = Fraction() with { ParentFontSize = ownerSize };
+            TestAssert.True(DocxMathLayout.TryMeasure(source, _ => resource, default, out var measured, out var reason,
+                resolveControlMetrics: _ => resource.Font.Font), reason ?? "The supported fraction is measured.");
+            var box = TestAssert.NotNull(measured);
+            var glyphs = box.Glyphs.ToArray();
+            var rules = box.Rules.ToArray();
+            TestAssert.True(DocxMathLayout.TryGetLineMetrics(box, default, out double normalAbove, out double normalHeight),
+                "The unchanged ordinary metric is available.");
+            foreach (double factor in new[] { .5d, .75d })
+            {
+                TestAssert.True(DocxMathLayout.TryGetLineMetrics(box, default, out double above, out double height, factor) &&
+                    above >= 0d && above <= height && height > 0d && height < normalHeight,
+                    "Automatic compression changes baseline and advance while retaining a positive row.");
+                TestAssert.True(glyphs.SequenceEqual(box.Glyphs) && rules.SequenceEqual(box.Rules),
+                    "Compression cannot scale or rewrite mathematical ink.");
+                using var canceled = new CancellationTokenSource(); canceled.Cancel();
+                TestAssert.Throws<OperationCanceledException>(() => DocxMathLayout.TryGetLineMetrics(
+                    box, canceled.Token, out _, out _, factor));
+            }
+            foreach (double invalid in new[] { 0d, -1d, double.NaN, double.PositiveInfinity })
+                TestAssert.True(!DocxMathLayout.TryGetLineMetrics(box, default, out _, out _, invalid),
+                    "Invalid line spacing keeps its clean fallback.");
+        }
+    }
+
     public static void MathFontFractionAutomaticSpacingUsesNominalControlAcrossChildSizes()
     {
         var resource = Resource(TestFontBuilder.CreateMathFont(Constants()));

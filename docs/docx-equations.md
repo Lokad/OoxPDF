@@ -78,8 +78,9 @@ display equations use their nominal metric owner for ordinary expansion while
 child glyphs retain their own sizes and ink bounds. Mixed inline rows add ordinary
 expansion after their occupied math/picture frame, once per completed line.
 Supported picture-only paragraphs share that frame across body, cells and static
-stories. Minimum, exact and compressed spacing retain their qualified contracts;
-these rules do not establish full-page Office fidelity.
+stories. Compressed automatic display rows retain mathematical ink while reducing
+font-line advance and its descent. Minimum and exact spacing retain their existing
+contracts; these rules do not establish full-page Office fidelity.
 
 Body-table placement reuses prepared boxes, cell measurements and clips. Resolved
 automatic, minimum and exact row heights have independent Office controls. A zero

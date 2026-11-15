@@ -196,9 +196,9 @@ internal static class DocxMathParagraphPolicy
         // The reader has already resolved style/default spacing. An absent raw
         // value does not mean single spacing, including for a math-only row.
         factor = paragraph.LineSpacingFactor;
-        // Compressed automatic slots change Office's first math baseline and
-        // need a separate placement contract. Expanded slots retain the box.
-        return double.IsFinite(factor) && factor >= 1d;
+        // Automatic compression changes the row baseline and advance, while
+        // the prepared mathematical glyph box keeps its original geometry.
+        return double.IsFinite(factor) && factor > 0d;
     }
 
     public static DocxEquation? GetInlineRow(DocxParagraph paragraph) =>

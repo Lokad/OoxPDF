@@ -20,7 +20,7 @@ internal static partial class DocxMathLayout
         above = box.AboveBaseline;
         double below = box.BelowBaseline, leading = 0d, naturalLine = 0d;
         height = 0d;
-        if (!double.IsFinite(lineSpacingFactor) || lineSpacingFactor < 1d) { return false; }
+        if (!double.IsFinite(lineSpacingFactor) || lineSpacingFactor <= 0d) { return false; }
         foreach (DocxMathGlyphPlacement glyph in box.Glyphs)
         {
             token.ThrowIfCancellationRequested();
@@ -58,6 +58,11 @@ internal static partial class DocxMathLayout
         // Automatic paragraph expansion adds ordinary font-line spacing after
         // the occupied math frame; it does not scale tall ink or its baseline.
         height = above + below + naturalLine * (lineSpacingFactor - 1d);
+        // Compressed automatic rows retain the intrinsic glyph box. Their
+        // descent shares the spacing factor; reconstruct the baseline from
+        // that descent and the reduced font-line advance. Expanded rows keep
+        // their independently qualified baseline and add leading afterward.
+        if (lineSpacingFactor < 1d) above = height - below * lineSpacingFactor;
         return double.IsFinite(above) && double.IsFinite(height) && height > 0d;
     }
 

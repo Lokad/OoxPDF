@@ -1,4 +1,19 @@
 {
+  "docx-compressed-display-math-portable": [
+    "DocxCompressedDisplayMathRetainsSourceGlyphsAcrossPresets",
+    "MathFontCompressedAutomaticSpacingRetainsInkAndRejectsInvalidSlots"
+  ],
+  "docx-compressed-display-math": [
+    "DocxNativeCompressedDisplayMathMatchesRetainedWordContentAndBaselines",
+    "DocxCompressedDisplayMathRetainsSourceGlyphsAcrossPresets",
+    "MathFontCompressedAutomaticSpacingRetainsInkAndRejectsInvalidSlots",
+    "DocxInlineCompositionDisplaySlotsRetainResolvedAutomaticSpacingDefaults",
+    "DocxInlineCompositionMinimumLineSlotOwnsLeadingAndRetainsSpacingFallbacks",
+    "MathFontFractionAutomaticSpacingUsesNominalControlAcrossChildSizes",
+    "DocxNativeDisplayAutomaticSpacingPaintsLiteralFractionAndScriptMeaning",
+    "DocxNativeDisplaySpacingUsesTheMathFontLineRatherThanTheParentSize",
+    "DocxNativeDisplayFractionParentMetricsRetainWordChildBaselineSeparation"
+  ],
   "docx-picture-fit": [
     "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
     "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",
@@ -2241,7 +2256,7 @@
       "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks",
       "DocxNativeInlineMathRetainsLiteralMeaningAndSharedProseBaseline",
       "DocxNativeDisplaySpacingUsesTheMathFontLineRatherThanTheParentSize",
-      "DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback",
+      "DocxNativeCompressedDisplayMathMatchesRetainedWordContentAndBaselines",
       "DocxStaticPictureOnly",
       "DocxPassiveStaticPicturesPreserveIndependentWordBodyBaselines",
       "DocxStaticSvgFramesPreserveIndependentWordBodyBaselines",
@@ -6100,6 +6115,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "MathFontCompressedAutomaticSpacingRetainsInkAndRejectsInvalidSlots",
+    "DocxCompressedDisplayMathRetainsSourceGlyphsAcrossPresets",
     "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
     "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",
     "DocxFixedPictureFitPreservesZeroWidthHeightAndBoundedRatios",
@@ -7687,7 +7704,7 @@
     "DocxInlineCompositionMathOnlyGroupsCenterAcrossParagraphAlignment",
     "DocxNativeDisplayFractionUsesItsFullFrameBeforeFollowingProseTurnsPage",
     "DocxNativeTableDisplayMathRetainsCellsProseAndDeclaredClips",
-    "DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback"
+    "DocxNativeCompressedDisplayMathMatchesRetainedWordContentAndBaselines"
   ],
   "docx-authored-math-rows": [
     "DocxReaderPreservesBookmarkAnchors",
@@ -14074,7 +14091,7 @@
     "DocxNativeTableDisplayMathRetainsCellsProseAndDeclaredClips",
     "DocxNativeDeclaredTableMathSharesHeightAlignmentAndSourceFallbacks",
     "DocxNativeDisplaySpacingUsesTheMathFontLineRatherThanTheParentSize",
-    "DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback",
+    "DocxNativeCompressedDisplayMathMatchesRetainedWordContentAndBaselines",
     "DocxNativeDisplayMathRetainsMeaningAndReportsPaintedContent",
     "DocxNativeInlineMathRetainsLiteralMeaningAndSharedProseBaseline",
     "DocxInlineCompositionOrderedPictureTranslationKeepsClipsAndFallbacks"
@@ -17349,7 +17366,7 @@
     "DocxLayoutStageWrapsMixedRunTextWithRunAwareWidths",
     "DocxLayoutUsesCompactBodyNumPagesFieldForLineBreaking",
     "DocxNativeDeclaredTableMathSharesHeightAlignmentAndSourceFallbacks",
-    "DocxNativeDisplayMathCompressedAutomaticSlotsKeepTheirFallback",
+    "DocxNativeCompressedDisplayMathMatchesRetainedWordContentAndBaselines",
     "DocxNativeMathMissingFontsAndUnqualifiedFormattingRetainIgnoredDiagnostics",
     "DocxNativeMathUnsupportedStructuredRowsKeepTheirFallback",
     "DocxNativeTableInlineMathRetainsProseWrappingAndWholeFallbacks",
