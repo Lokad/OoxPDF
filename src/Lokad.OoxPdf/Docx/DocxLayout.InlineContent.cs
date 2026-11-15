@@ -83,7 +83,10 @@ internal sealed partial class DocxLayoutEngine
     {
         double size = GetParagraphFontSize(paragraph);
         if (line.ListLabelSegments.Count == 0 && line.Fragments.Count != 0 &&
-            line.Fragments.All(fragment => fragment.Source is DocxInlineText or DocxInlineTab))
+            line.Fragments.All(fragment => fragment.Source is DocxInlineText or DocxInlineTab) &&
+            GetBodyTextLineMetricParagraph(paragraph,
+                line.Fragments.SelectMany(fragment => fragment.Source is DocxInlineTab tab
+                    ? new[] { tab.Run } : fragment.Text.Select(span => span.StyleRun))) is { } metricSource)
         {
             // This row owns only text, even when another row of its source
             // paragraph owns a picture or equation. Reuse ordinary body metrics
@@ -91,9 +94,7 @@ internal sealed partial class DocxLayoutEngine
             // this projection never replaces source or changes horizontal tabs.
             // A painted label keeps its first-row frame; continuations still
             // inherit paragraph-wide list spacing when resolving their profile.
-            var metricParagraph = GetBodyTextLineMetricParagraph(paragraph,
-                line.Fragments.SelectMany(fragment => fragment.Source is DocxInlineTab tab
-                    ? new[] { tab.Run } : fragment.Text.Select(span => span.StyleRun))) with
+            var metricParagraph = metricSource with
             {
                 Images = [], Equations = [], InlineTextBoxes = [],
                 // An already admitted stored result is source metadata here;

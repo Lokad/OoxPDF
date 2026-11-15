@@ -1827,7 +1827,7 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken.ThrowIfCancellationRequested();
                     if (canResumeText && width != wrappedFrameWidth) RewrapRemainingText(lineIndex);
                     DocxWrappedTextLine line = lines[lineIndex];
-                    DocxParagraph metricParagraph = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;
+                    DocxParagraph metricParagraph = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) ?? paragraph : paragraph;
                     double lineFontSize = ReferenceEquals(metricParagraph, paragraph) ? paragraphFontSize : GetParagraphFontSize(metricParagraph);
                     DocxLineHeightProfile lineProfile = ReferenceEquals(metricParagraph, paragraph) ? lineHeightProfile :
                         ResolveLineHeightProfile(metricParagraph, lineFontSize, textMeasurer);

@@ -327,23 +327,38 @@ internal sealed partial class DocxLayoutEngine
         DocxLineHeightProfile profile, IDocxTextMeasurer textMeasurer) =>
         profile.Source == DocxLineHeightSource.BodySingleLineAuto &&
         textMeasurer is IDocxLineMetricsProvider &&
-        !paragraph.InlineReferences.Any(reference => reference.Kind != DocxRelatedStoryKind.Comment) &&
+        DocxInlineContent.HasSupportedReferences(paragraph.InlineReferences, paragraph.Runs) &&
         DocxPlainBodyFrame.HasPlainTextContent(paragraph.ListLabel is null ? paragraph : paragraph with { ListLabel = null });
 
-    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, DocxWrappedTextLine line)
+    private static DocxParagraph? GetBodyTextLineMetricParagraph(DocxParagraph paragraph, DocxWrappedTextLine line)
         => GetBodyTextLineMetricParagraph(paragraph, line.Spans.Select(span => span.StyleRun));
 
-    private static DocxParagraph GetBodyTextLineMetricParagraph(DocxParagraph paragraph, IEnumerable<DocxTextRun> sourceRuns)
+    private static DocxParagraph? GetBodyTextLineMetricParagraph(DocxParagraph paragraph, IEnumerable<DocxTextRun> sourceRuns)
     {
         var runs = sourceRuns.ToArray();
-        if (runs.Length == 0) return paragraph;
+        if (runs.Length == 0) return null;
+
+        // An automatic marker owns its generated run even when it shares an
+        // OOXML run with ordinary text. Only the row containing that marker
+        // retains the paragraph frame. Unknown/custom owners stay conservative;
+        // original references and annotations are never replaced for painting.
+        foreach (var reference in paragraph.InlineReferences)
+        {
+            if (reference.Kind == DocxRelatedStoryKind.Comment) continue;
+            if (!DocxInlineContent.TryGetAutomaticNoteRun(reference, out var marker) ||
+                marker.SourceRunIndex < 0 || marker.SourceRunIndex != reference.SourceRunIndex ||
+                marker.SourceTextOffsetInRun != reference.TextOffsetInRun ||
+                !paragraph.Runs.Any(run => ReferenceEquals(run, marker)) ||
+                runs.Any(run => ReferenceEquals(run, marker))) return null;
+        }
 
         bool sameRuns = runs.Length == paragraph.Runs.Count;
         for (int index = 0; sameRuns && index < runs.Length; index++)
             sameRuns = ReferenceEquals(runs[index], paragraph.Runs[index]);
         if (sameRuns) return paragraph;
 
-        return paragraph with { Runs = runs };
+        return paragraph with { Runs = runs,
+            InlineReferences = paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment).ToArray() };
     }
 
     private static bool ShouldMoveParagraphForWidowControl(
@@ -370,7 +385,7 @@ internal sealed partial class DocxLayoutEngine
         foreach (var line in lines)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) : paragraph;
+            DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, line) ?? paragraph : paragraph;
             double height = ReferenceEquals(metrics, paragraph) ? fallbackLineHeight :
                 ResolveLineHeightProfile(metrics, GetParagraphFontSize(metrics), textMeasurer).LineHeight;
             if (remaining < height) break;
@@ -681,7 +696,7 @@ internal sealed partial class DocxLayoutEngine
             for (int index = 0; index < lines.Length; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, lines[index]) : paragraph;
+                DocxParagraph metrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, lines[index]) ?? paragraph : paragraph;
                 height += ReferenceEquals(metrics, paragraph) ? lineHeight :
                     ResolveLineHeightProfile(metrics, GetParagraphFontSize(metrics), textMeasurer).LineHeight;
                 height += (imagePlan?.ShiftAboveHeights[index] ?? 0d) + (imagePlan?.ExtraBelow(index) ?? 0d);

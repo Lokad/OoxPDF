@@ -1,4 +1,31 @@
 {
+  "docx-note-text-row-metrics": [
+    "DocxNoteTextRowsRetainLocalMetricsContentAndSourceOwners",
+    "DocxNoteTextRowsShareNoteReservationKeepAndWidowAdmission",
+    "DocxNoteTextRowsKeepMarkerAndUnknownOwnerFrameFallbacks",
+    "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
+    "DocxOrderedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
+    "DocxNumberedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
+    "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
+    "DocxTabbedTextRowsShareKeepAndWidowAdmission",
+    "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",
+    "DocxCompleteFootnoteAdmissionOwnsSharedRunMarkersOnTheirMeasuredPages",
+    "DocxCompleteFootnoteAdmissionSharedRunsPreserveRenderedPagesAndTargets",
+    "DocxCompleteFootnoteAdmissionSharedRunsRejectUnownedAutomaticMarkers",
+    "DocxSharedRunFootnoteNumbersKeepIndependentGeneratedOwners",
+    "DocxSharedRunFootnoteNumbersRenderLikeSeparateMarkerRuns",
+    "DocxSharedRunFootnoteNumbersRejectMissingDuplicateAndForeignMeasuredOwners",
+    "DocxInlineCompositionOwnedNoteFramesMatchWordContinuationAndKeepBodyOrigins",
+    "DocxInlineCompositionMinimumMixedNoteFramesMatchIndependentWord",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxPageFootnoteNumbersRejectMovedOrPartialNotes",
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxKeptListLabelCountersFollowTheAdmittedFrame",
+    "DocxCachedPictureResultsPreservePaintAndNavigation",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-tab-text-row-metrics": [
     "DocxSimpleScriptPlainFramesRetainShapingAndUnknownTextFallbacks",
     "DocxSimpleScriptNeighborsKeepUnchangedParagraphGeometry",
@@ -601,6 +628,9 @@
     "DocxColumnAdmissionKeepsRunSplitsAndNavigation"
   ],
   "docx-keep-chain-admission": [
+    "DocxNoteTextRowsRetainLocalMetricsContentAndSourceOwners",
+    "DocxNoteTextRowsShareNoteReservationKeepAndWidowAdmission",
+    "DocxNoteTextRowsKeepMarkerAndUnknownOwnerFrameFallbacks",
     "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
     "DocxTabbedTextRowsShareKeepAndWidowAdmission",
     "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",
@@ -5693,6 +5723,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxNoteTextRowsRetainLocalMetricsContentAndSourceOwners",
+    "DocxNoteTextRowsShareNoteReservationKeepAndWidowAdmission",
+    "DocxNoteTextRowsKeepMarkerAndUnknownOwnerFrameFallbacks",
     "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
     "DocxTabbedTextRowsShareKeepAndWidowAdmission",
     "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",
