@@ -129,6 +129,7 @@ internal sealed partial class DocxLayoutEngine
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines)
     {
         lines = null;
+        if (context.TextMeasurer is null) return false;
         if (!DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, context.MathEquations)) return false;
         double scale = context.ParagraphSpacingScale;
         double paragraphInset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,

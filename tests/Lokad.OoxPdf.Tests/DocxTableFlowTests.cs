@@ -12,6 +12,28 @@ internal static class DocxTableFlowTests
     internal static string CasePath(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", "MixedTables", name));
 
+    public static void DocxCellFlowWithoutFontMeasurementKeepsAuthoredPictureAdvance()
+    {
+        var first = new DocxInlineImage(18d, 12d, "image/png", [1, 2, 3], "/word/media/first.png") { SourceRunIndex = 0 };
+        var second = new DocxInlineImage(24d, 18d, "image/png", [1, 2, 3], "/word/media/second.png") { SourceRunIndex = 0 };
+        DocxParagraph Picture(DocxInlineImage image) => DocxTests.CreateDocxLayoutParagraph("", 10d, 10d) with
+        { Runs = [], Images = [image], SpacingBeforePoints = 0d, SpacingAfterPoints = 0d };
+        var cell = new DocxTableCell("", [], null, null, null, null, [], DocxTableCellMargins.Empty)
+        { BodyElements = [new DocxParagraphElement(Picture(first)), new DocxParagraphElement(Picture(second))] };
+        var table = new DocxTable(null, [80d], [new DocxTableRow([cell], 80d)]);
+        var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)], [table]);
+        var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        var placed = engine.Create(document, embedded: null, default).Pages.Single().Items.OfType<DocxTableRowLayout>().Single().Cells.Single();
+        TestAssert.Equal(0, placed.TextLines.Count);
+        TestAssert.Equal(2, placed.InlineImages.Count);
+        TestAssert.True(ReferenceEquals(first, placed.InlineImages[0].Image) && ReferenceEquals(second, placed.InlineImages[1].Image),
+            "Body elements retain each authored picture and its source order without font measurement.");
+        TestAssert.True(Math.Abs(placed.InlineImages[0].Y - placed.InlineImages[1].Y - second.HeightPoints) < .000001d,
+            "One geometry cursor consumes each source-owned picture height exactly once.");
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        TestAssert.Throws<OperationCanceledException>(() => engine.Create(document, embedded: null, cancellation.Token));
+    }
+
     public static void DocxCellFlowNestedTablesFollowMeasuredDisplayMath()
     {
         // Change only the prepared display frame's advance. The following
