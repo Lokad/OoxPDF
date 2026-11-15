@@ -14,9 +14,9 @@ internal static partial class DocxInlineCompositionTests
         foreach (var (lower, upper) in new[] { ("lowerRoman", "upperRoman"), ("lowerLetter", "upperLetter") })
         {
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode));
-            var expected = renderer.RenderPagesAsync(ReadAutomaticNoteCasing(kind, count, mode, upper, true, true), null, default)
+            var expected = renderer.RenderPagesAsync(ReadAutomaticNoteCasing(kind, count, mode, upper, true, true, allMarkers: true), null, default)
                 .ToBlockingEnumerable().ToArray();
-            var source = ReadAutomaticNoteCasing(kind, count, mode, lower, true, true);
+            var source = ReadAutomaticNoteCasing(kind, count, mode, lower, true, true, allMarkers: true);
             var reference = source.Paragraphs.SelectMany(p => p.InlineReferences).Single(r => r.Id == "4");
             string raw = lower == "lowerRoman" ? "iv" : "d";
             TestAssert.Equal(raw, reference.DisplayText!);
@@ -63,7 +63,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadAutomaticNoteCasing(string kind, int count, OoxPdfDocxMarkupMode mode,
-        string format, bool bodyCaps, bool targetCaps)
+        string format, bool bodyCaps, bool targetCaps, bool allMarkers = false)
     {
         XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         void SetFormat(XDocument xml)
@@ -86,8 +86,9 @@ internal static partial class DocxInlineCompositionTests
             (xml, _, _) =>
             {
                 SetFormat(xml);
-                var reference = xml.Descendants(w + kind + "Reference").Single(r => r.Attribute(w + "id")?.Value == "4");
-                SetCaps(reference.Parent!, bodyCaps);
+                foreach (var reference in xml.Descendants(w + kind + "Reference").Where(r =>
+                    r.Attribute(w + "id")?.Value == "4" || allMarkers && r.Attribute(w + "customMarkFollows") is null))
+                    SetCaps(reference.Parent!, bodyCaps);
             }, packageChange: archive =>
             {
                 var settings = archive.GetEntry("word/settings.xml");
@@ -98,8 +99,8 @@ internal static partial class DocxInlineCompositionTests
                 }
                 var entry = archive.GetEntry("word/" + kind + "s.xml")!; XDocument notes;
                 using (var input = entry.Open()) notes = XDocument.Load(input);
-                var target = notes.Root!.Elements(w + kind).Single(n => n.Attribute(w + "id")?.Value == "4");
-                SetCaps(target.Descendants(w + kind + "Ref").Single().Parent!, targetCaps);
+                foreach (var target in notes.Root!.Elements(w + kind).Where(n => n.Attribute(w + "id")?.Value == "4" || allMarkers))
+                    foreach (var reference in target.Descendants(w + kind + "Ref")) SetCaps(reference.Parent!, targetCaps);
                 entry.Delete(); using var noteOutput = archive.CreateEntry("word/" + kind + "s.xml").Open(); notes.Save(noteOutput);
             });
     }
