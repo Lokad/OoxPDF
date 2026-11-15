@@ -1,4 +1,31 @@
 {
+  "docx-static-paragraph-insets": [
+    "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
+    "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
+    "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
+    "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
+    "DocxInlineCompositionLeftTabsMatchIndependentFieldOffsets",
+    "DocxInlineCompositionLeftTabMeasurementRetainsWrapAndFallbackContracts",
+    "DocxInlineCompositionAlignedTabsMeasureCompleteFieldsAndKeepFallbacks",
+    "DocxInlineCompositionAlignedTabsMatchIndependentWordAndSourceTransforms",
+    "DocxInlineCompositionUnusedTabMetadataKeepsIndependentFieldOffsets",
+    "DocxInlineCompositionStaticPageFieldsRequireActualPageInputs",
+    "DocxInlineCompositionStaticPageFieldsMatchIndependentWordFrames",
+    "DocxDefaultStaticDistancesMatchIndependentWordMathAndBodyOrigins",
+    "DocxListTabsClearMeasuredPrefixesAcrossContainers",
+    "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
+    "DocxParagraphLayoutPreservesTabsAsTabAdvances",
+    "DocxParagraphLayoutUsesAuthoredLeftTabStopsBeforeDefaultGrid",
+    "DocxParagraphLayoutUsesAuthoredRightTabStops",
+    "DocxParagraphLayoutUsesAuthoredCenterTabStops",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "DocxNativeAlignedStaticFramesRetainOfficeBodyAndFooterSlots",
+    "DocxNativeScaledStaticFramesKeepFooterVisibleAndHeaderBodyInOfficeSlots",
+    "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
+    "PortableRenderingStaticSourceFramesKeepProseOnPage",
+    "DocxSyntheticHeaderAndFooterRenderOnPage",
+    "DocxSyntheticHeaderFooterDistancesUsePageMarginTokens"
+  ],
   "docx-static-tab-fields": [
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
     "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
@@ -1356,6 +1383,8 @@
     "DocxInlineCompositionFormattingBalloonDescriptions"
   ],
   "docx-paragraph-mark-formatting": [
+    "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
+    "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
     "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
     "DocxListTabsClearMeasuredPrefixesAcrossContainers",
@@ -5977,6 +6006,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
+    "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
     "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
     "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
     "DocxListTabsClearMeasuredPrefixesAcrossContainers",

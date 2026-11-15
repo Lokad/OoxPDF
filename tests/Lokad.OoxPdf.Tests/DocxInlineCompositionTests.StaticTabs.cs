@@ -63,7 +63,8 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadPlainTabFields(string container, OoxPdfDocxMarkupMode mode,
-        string stops, bool fields = false, bool hiddenTab = false) =>
+        string stops, bool fields = false, bool hiddenTab = false,
+        Action<XElement, XNamespace>? paragraphChange = null) =>
         ReadMutation("CompositionProbes/math-tabs-left72-" + container, mode, false, false, (xml, w, m) =>
         {
             var paragraph = xml.Descendants(w + "p").Single(p => p.Elements(m + "oMath").Any());
@@ -94,5 +95,6 @@ internal static partial class DocxInlineCompositionTests
                 paragraph.Add(new XElement(w + "r", new XElement(w + "rPr", new XElement(w + "vanish"),
                     new XElement(w + "rFonts", new XAttribute(w + "ascii", "Arial"), new XAttribute(w + "hAnsi", "Arial")),
                     new XElement(w + "sz", new XAttribute(w + "val", "160"))), new XElement(w + "tab")));
+            paragraphChange?.Invoke(paragraph, w);
         }, partOverride: container == "body" ? null : "word/math-tabs-" + container + ".xml");
 }
