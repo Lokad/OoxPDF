@@ -13,6 +13,9 @@ inline pictures share measurement and placement in body paragraphs, simple table
 cells and direct headers/footers. Numbering owns the first authored row; formulas
 beside prose use inline sizing while a later math-only row owns display sizing.
 Links and annotations follow the resulting physical geometry.
+Unused soft hyphens and zero-width break characters remain nonprinting beside
+equations and pictures. A soft hyphen selected as a line break keeps its visible
+hyphen; source offsets and resumed wrapping retain the original characters.
 In qualified ordinary textboxes, omitting unsupported mathematics retains its
 diagnostic while supported captions and pictures keep their shared wrapping.
 Prepared math keeps its measured frame; entirely unsupported paragraphs and

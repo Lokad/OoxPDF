@@ -192,7 +192,7 @@ internal sealed partial class DocxLayoutEngine
                 foreach (var segment in fragment.TextSegments)
                     segments.Add(segment with { X = segment.X + x + offset,
                         BaselineOffsetY = segment.BaselineOffsetY * scale });
-                foreach (var span in fragment.Text) text.Append(span.Text);
+                foreach (var segment in fragment.TextSegments) text.Append(segment.Text);
             }
             else if (fragment.Math is { } math) equations.Add(new(math, offset));
             else if (fragment.Source is DocxInlinePicture picture)
@@ -430,7 +430,10 @@ internal sealed partial class DocxLayoutEngine
                         var span = CreateTextSpan(value, text.Run, runIndex);
                         span = span with { SourceTextOffsetInRun = span.SourceTextOffsetInRun + start,
                             SourceInlineItemIndex = sourceItemIndex };
-                        var segments = CreateTextSegments([span], 0d, fontSize, measurer, [], 36d);
+                        // Keep raw spans for break opportunities/source cursors;
+                        // fitting text shares the ordinary nonprinting-break rule.
+                        var segments = CreateTextSegments(NormalizeHiddenBreakSpans([span], false),
+                            0d, fontSize, measurer, [], 36d);
                         double width = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
                         if (!double.IsFinite(width) || width < 0d) return false;
                         measured.Add(new(source, width, baselineInset, Math.Max(lineHeight, baselineInset), [span])
@@ -691,7 +694,8 @@ internal sealed partial class DocxLayoutEngine
             if (cursor.TextOffset >= fullValue.Length || !field && cursor.BoundFieldValue is not null) return false;
             var span = original.Text[0] with { Text = fullValue[cursor.TextOffset..],
                 SourceTextOffsetInRun = original.Text[0].SourceTextOffsetInRun + cursor.TextOffset };
-            var segments = CreateTextSegments([span], 0d, fontSize, measurer, [], 36d);
+            var segments = CreateTextSegments(NormalizeHiddenBreakSpans([span], false),
+                0d, fontSize, measurer, [], 36d);
             double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
             if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
             partial = original with
@@ -740,13 +744,13 @@ internal sealed partial class DocxLayoutEngine
                 if (string.Equals(tabStop.Value, "right", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(tabStop.Value, "center", StringComparison.OrdinalIgnoreCase))
                 {
-                    double fieldWidth = 0d;
-                    for (int field = index + 1; field < measured.Count && Atom(field).Source is not (DocxInlineTab or DocxInlineBreak); field++)
+                    int fieldEnd = index + 1;
+                    while (fieldEnd < measured.Count && Atom(fieldEnd).Source is not (DocxInlineTab or DocxInlineBreak))
                     {
                         token.ThrowIfCancellationRequested();
-                        if (field > index + 1) fieldWidth += InlineBoundaryAdvance(Atom(field - 1), Atom(field));
-                        fieldWidth += Atom(field).Advance;
+                        fieldEnd++;
                     }
+                    double fieldWidth = GroupAdvance(index + 1, fieldEnd);
                     double start = GetAlignedTabFieldStart(tabStop, fieldWidth, null);
                     // The complete aligned field must fit without overlap. Its
                     // wrapping/leader/decimal variants remain staged fallbacks.
@@ -819,7 +823,7 @@ internal sealed partial class DocxLayoutEngine
                         if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
                         var part = new DocxMeasuredInlineFragment(source, partWidth, baselineInset, Math.Max(lineHeight, baselineInset), [span])
                             { TextSegments = segments, SourceItemIndex = span.SourceInlineItemIndex };
-                        part = part with { LeadingAdvance = current.Count == 0 ? 0d : InlineBoundaryAdvance(current[^1], part) };
+                        part = part with { LeadingAdvance = BoundaryBefore(part) };
                         current.Add(part);
                         advance += part.LeadingAdvance + partWidth;
                     }
@@ -835,7 +839,7 @@ internal sealed partial class DocxLayoutEngine
                 index = end;
                 continue;
             }
-            double boundary = current.Count == 0 ? 0d : InlineBoundaryAdvance(current[^1], Atom(index));
+            double boundary = BoundaryBefore(Atom(index));
             if (current.Count != 0 && !FitsLineWidth(advance + boundary + groupWidth, width))
             {
                 if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
@@ -856,8 +860,7 @@ internal sealed partial class DocxLayoutEngine
             if (space && current.Count == 0 && !authoredLineStart) { index = end; continue; }
             for (; index < end; index++)
             {
-                var fragment = Atom(index) with
-                    { LeadingAdvance = current.Count == 0 ? 0d : InlineBoundaryAdvance(current[^1], Atom(index)) };
+                var fragment = Atom(index) with { LeadingAdvance = BoundaryBefore(Atom(index)) };
                 current.Add(fragment); advance += fragment.LeadingAdvance + fragment.Advance;
                 above = Math.Max(above, fragment.BaselineInset);
                 below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);
@@ -891,13 +894,32 @@ internal sealed partial class DocxLayoutEngine
         double GroupAdvance(int begin, int end)
         {
             double width = 0d;
+            DocxMeasuredInlineFragment? previous = null;
             for (int index = begin; index < end; index++)
             {
                 token.ThrowIfCancellationRequested();
-                if (index > begin) width += InlineBoundaryAdvance(Atom(index - 1), Atom(index));
-                width += Atom(index).Advance;
+                var fragment = Atom(index);
+                if (previous is not null) width += InlineBoundaryAdvance(previous, fragment);
+                width += fragment.Advance;
+                if (!IsEmptyInlineText(fragment)) previous = fragment;
             }
             return width;
+        }
+
+        // A separate run containing only nonprinting break characters keeps its
+        // source position, but cannot interrupt the visible glyph pair's kerning.
+        static bool IsEmptyInlineText(DocxMeasuredInlineFragment fragment) =>
+            fragment.Source is DocxInlineText && fragment.TextSegments.Count == 0;
+
+        double BoundaryBefore(DocxMeasuredInlineFragment fragment)
+        {
+            if (IsEmptyInlineText(fragment)) return 0d;
+            for (int index = current.Count - 1; index >= 0; index--)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!IsEmptyInlineText(current[index])) return InlineBoundaryAdvance(current[index], fragment);
+            }
+            return 0d;
         }
 
         DocxInlineSourceCursor? CursorAfterSpan(DocxTextSpan span, int begin, int end)
@@ -934,8 +956,11 @@ internal sealed partial class DocxLayoutEngine
                 return DocxMathRowLayout.Glue(beforeEdges.Last, afterEdges.First) * spacingSize * scale / 18d;
             }
             if (left.Text.Count == 0 || right.Text.Count == 0) return 0d;
-            var before = left.Text[^1];
-            var after = right.Text[0];
+            var beforeSpans = NormalizeHiddenBreakSpans(left.Text, false);
+            var afterSpans = NormalizeHiddenBreakSpans(right.Text, false);
+            if (beforeSpans.Count == 0 || afterSpans.Count == 0) return 0d;
+            var before = beforeSpans[^1];
+            var after = afterSpans[0];
             if (!ReferenceEquals(before.StyleRun, after.StyleRun) &&
                 !HaveSameInlineMeasurementState(before.StyleRun, after.StyleRun))
                 return DocxTextSpacing.BoundarySpacing(before.StyleRun, before.Text, after.Text);

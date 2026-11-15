@@ -1,4 +1,22 @@
 {
+  "docx-hidden-break-composition": [
+    "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
+    "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
+    "DocxInlineNonprintingRunsKeepVisibleBoundaryKerning",
+    "DocxParagraphLayoutSuppressesUnbrokenSoftHyphens",
+    "DocxParagraphLayoutBreaksOverwideSoftHyphenatedTokens",
+    "DocxParagraphLayoutPreservesSourceOffsetsAfterHiddenSoftHyphens",
+    "DocxParagraphLayoutBreaksAtHiddenZeroWidthSpaces",
+    "DocxEmergencyWrappingMatchesIndependentWordLineCountsAndGaps",
+    "DocxInlineCompositionMeasurementPreservesSourceTrackingKerningAndHiddenRuns",
+    "DocxInlineCompositionAutomaticSpacingSurvivesResumedWrapping",
+    "DocxInlineCompositionAutomaticSpacingFollowsTheCompletedRow"
+  ],
+  "docx-hidden-break-composition-portable": [
+    "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
+    "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
+    "DocxInlineNonprintingRunsKeepVisibleBoundaryKerning"
+  ],
   "docx-compressed-display-math-portable": [
     "DocxCompressedDisplayMathRetainsSourceGlyphsAcrossPresets",
     "MathFontCompressedAutomaticSpacingRetainsInkAndRejectsInvalidSlots"
@@ -6115,6 +6133,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
+    "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
+    "DocxInlineNonprintingRunsKeepVisibleBoundaryKerning",
     "MathFontCompressedAutomaticSpacingRetainsInkAndRejectsInvalidSlots",
     "DocxCompressedDisplayMathRetainsSourceGlyphsAcrossPresets",
     "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
