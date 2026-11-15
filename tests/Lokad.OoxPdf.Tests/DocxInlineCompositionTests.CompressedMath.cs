@@ -37,7 +37,7 @@ internal static partial class DocxInlineCompositionTests
     }
 
     internal static DocxDocument ReadCompressedDisplayMath(string kind, OoxPdfDocxMarkupMode mode, int line) =>
-        ReadMutation("docx-omml-display-spacing-" + kind + "-first-auto240", mode, false, false, (xml, w, m) =>
+        ReadMutation("docx-omml-display-spacing-" + kind + "-first-auto360", mode, false, false, (xml, w, m) =>
         {
             var paragraph = xml.Descendants(w + "p").Single(p => p.Element(m + "oMathPara") is not null);
             paragraph.Element(w + "pPr")!.Element(w + "spacing")!.SetAttributeValue(w + "line", line);
