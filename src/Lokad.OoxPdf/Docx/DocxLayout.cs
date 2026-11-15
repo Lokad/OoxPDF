@@ -329,7 +329,7 @@ internal sealed partial class DocxLayoutEngine
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int, int), DocxStaticStoryLayoutResult?>();
         var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool CompleteContent)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
-        bool useSimpleSectionPagination = UsesSimpleSectionPagination(document) &&
+        bool useSimpleSectionPagination = UsesSimpleSectionPagination(document, cancellationToken) &&
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
              Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
         int currentSectionStartIndex = 0;

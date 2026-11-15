@@ -2,13 +2,10 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static bool UsesSimpleSectionPagination(DocxDocument document)
+    private static bool UsesSimpleSectionPagination(DocxDocument document, CancellationToken cancellationToken)
     {
         if (document.FinalSectionBreak is null || document.Settings.MirrorMargins == true ||
-            document.FloatingDrawings.Count != 0 || document.HeaderParagraphs.Count != 0 || document.FooterParagraphs.Count != 0 ||
-            document.HeaderParagraphsByType.Count != 0 || document.FooterParagraphsByType.Count != 0 ||
-            document.HeaderBodyElementsByType.Count != 0 || document.FooterBodyElementsByType.Count != 0 ||
-            document.HeaderFloatingDrawingsByType.Count != 0 || document.FooterFloatingDrawingsByType.Count != 0 ||
+            document.FloatingDrawings.Count != 0 || !DocxPlainBodyFrame.HasNoSelectableStaticStories(document, cancellationToken) ||
             document.BodyElements.Any(e => e.Revisions.Count != 0 ||
                 e is not (DocxParagraphElement or DocxSectionBreakElement or DocxPageBreakElement or DocxManualBreakElement)) ||
             DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements).Any(p => !IsSimpleSectionParagraph(p)))
@@ -29,7 +26,8 @@ internal sealed partial class DocxLayoutEngine
         !paragraph.HasDeletedParagraphMark && paragraph.DeletedText.Length == 0 && paragraph.ListLabel is null;
 
     private static bool HasStaticSectionContent(DocxPageSettings settings) =>
-        settings.HeaderParagraphsByType.Count != 0 || settings.FooterParagraphsByType.Count != 0 ||
-        settings.HeaderBodyElementsByType.Count != 0 || settings.FooterBodyElementsByType.Count != 0 ||
-        settings.HeaderFloatingDrawingsByType.Count != 0 || settings.FooterFloatingDrawingsByType.Count != 0;
+        settings.HeaderParagraphsByType.Keys.Concat(settings.FooterParagraphsByType.Keys)
+            .Concat(settings.HeaderBodyElementsByType.Keys).Concat(settings.FooterBodyElementsByType.Keys)
+            .Concat(settings.HeaderFloatingDrawingsByType.Keys).Concat(settings.FooterFloatingDrawingsByType.Keys)
+            .Any(variant => !IsStaticStoryVariantKnownDisabled(settings, variant));
 }

@@ -223,7 +223,8 @@ internal static partial class DocxFootnotesTests
     private static readonly XNamespace NoteWord = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
     private static DocxDocument ReadSectionNumberingFixture(string kind,
-        Action<XDocument, XDocument, Dictionary<string, string>>? modify = null)
+        Action<XDocument, XDocument, Dictionary<string, string>>? modify = null,
+        OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup)
     {
         string seed = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "note-sections-" + kind + ".docx"));
         var parts = new Dictionary<string, string>();
@@ -239,7 +240,7 @@ internal static partial class DocxFootnotesTests
         parts["word/document.xml"] = document.ToString();
         parts["word/settings.xml"] = settings.ToString();
         string input = TestFixtures.WriteTempPackage(".docx", parts);
-        try { return DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup); }
+        try { return DocxTests.ReadDocx(input, mode); }
         finally { File.Delete(input); }
     }
 

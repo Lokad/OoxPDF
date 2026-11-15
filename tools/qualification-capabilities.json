@@ -1,4 +1,28 @@
 {
+  "docx-disabled-section-pages": [
+    "DocxDisabledSectionHeadersRetainSourcePagesAndVisibleOrigins",
+    "DocxDisabledSectionFootersRetainSourcePagesAndVisibleOrigins",
+    "DocxSectionTemplatesKeepActiveUnknownInheritedAndCancelledFallbacks",
+    "DocxSimpleSectionPaginationUsesFollowingStartType",
+    "DocxSimpleSectionPaginationSeparatesPageBottomFootnotes",
+    "DocxSimpleSectionPaginationIgnoresNotesAlreadyPlacedOnEarlierPages",
+    "DocxSimpleSectionPaginationRetainsExcludedFlow",
+    "DocxSimpleSectionPaginationPreservesLabelsAndRepeatedDestinations",
+    "DocxSectionBreakNextPageStartsNewLayoutPage",
+    "DocxSectionBreakPageSettingsOwnPrecedingLayoutSection",
+    "DocxSectionBreakCustomColumnsCreatePageOwnedFrames",
+    "DocxSectionNavigationKeepsIndependentWordControlContent",
+    "DocxSectionNavigationSelectsFirstThenDefaultAndEvenStories",
+    "DocxSectionNavigationDoesNotBackfillAnUndefinedFirstHeader",
+    "DocxStaticNoteEligibilityKeepsInheritedOwnersAndCancellation",
+    "DocxInactiveNoteTemplatesKeepEnabledStoryAndSectionFallbacks",
+    "DocxInactiveStaticTemplatesKeepMixedNoteCounterPaints",
+    "DocxInactiveStaticTemplatesKeepFinalEndnotePageFrames",
+    "DocxSelectableStaticOwnersRetainNoteFrameFallbacks",
+    "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
+    "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-marker-row-metrics": [
     "DocxMarkerRowsRetainLocalMetricsVisibleContentAndNoteTargets",
     "DocxMarkerRowsShareKeepWidowAndCompleteNoteAdmission",
@@ -5764,6 +5788,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxDisabledSectionHeadersRetainSourcePagesAndVisibleOrigins",
+    "DocxDisabledSectionFootersRetainSourcePagesAndVisibleOrigins",
+    "DocxSectionTemplatesKeepActiveUnknownInheritedAndCancelledFallbacks",
     "DocxMarkerRowsRetainLocalMetricsVisibleContentAndNoteTargets",
     "DocxMarkerRowsShareKeepWidowAndCompleteNoteAdmission",
     "DocxMarkerRowsKeepActualLargeStrutsDeclaredSlotsAndUnknownFallbacks",

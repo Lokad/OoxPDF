@@ -21,6 +21,11 @@ internal sealed partial class DocxLayoutEngine
         string.Equals(variant, "first", StringComparison.OrdinalIgnoreCase) && settings.TitlePage == true ||
         string.Equals(variant, "even", StringComparison.OrdinalIgnoreCase) && settings.EvenAndOddHeaders == true;
 
+    internal static bool IsStaticStoryVariantKnownDisabled(DocxPageSettings settings, string variant) =>
+        (string.Equals(variant, "first", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(variant, "even", StringComparison.OrdinalIgnoreCase)) &&
+        !IsStaticStoryVariantEnabled(settings, variant);
+
     private static DocxSelectedStaticStory SelectStaticHeaderFooter(
         IReadOnlyDictionary<string, IReadOnlyList<DocxBodyElement>> bodyElementsByType,
         IReadOnlyDictionary<string, IReadOnlyList<DocxParagraph>> paragraphsByType,
