@@ -336,3 +336,13 @@ Select their 22-method union with `docx-list-number-formats`; the six new portab
 methods also run in Ubuntu CI and the framework-compatibility lane. These source
 content expectations require no Office action; exact layout/reference gates remain
 separate and retain their thresholds.
+
+`DocxTableFlowTests` owns cell source-order/advance relationships and complete
+native label/math/picture presence for the independent `MixedTables` family.
+`PortableRenderingTests.TableFlow.cs` owns real fraction ink clearance before a
+nested record, in Final/Review and two table shapes. `DocxCellMemoTests` owns cached
+nested origin/alignment, admission-height invalidation and cancellation. Existing
+Word controls retain their absolute thresholds. `docx-shared-cell-content` selects
+158 affected methods; its 23-method portable subset runs in Ubuntu CI. These
+checks replace the removed placement walks' responsibilities without preserving
+their obsolete private entry points.

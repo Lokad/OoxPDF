@@ -31,6 +31,8 @@
   Ordinary labels resolve Roman, alphabetic and padded-decimal formats per referenced
   level, including concrete overrides and legal decimal references; Word letter carry
   is shared with note formatting.
+  Cell text, pictures, text boxes and nested tables share one placement cursor,
+  keeping nested records below the complete measured display formula.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field

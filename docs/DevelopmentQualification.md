@@ -6,6 +6,25 @@ build or prepared package does not establish complete rendering or Office parity
 
 ## Verified outcomes
 
+The later cell-flow batch compiles production revision `477b8feea` with harness
+`fad5f6735`. It removes two independent placement walks and reconstructed paragraph
+frames, giving text, drawings and nested tables one measured cursor and vertical
+alignment. A nested record previously started alongside a preceding fraction's
+denominator; its native ink now starts 4.606pt below the complete formula. An
+independent pinned-font end-to-end regression and a measured-advance regression
+both fail against the actual parent, while two neighboring controls pass.
+
+This batch passes 158 affected Windows methods and 23 portable Ubuntu methods.
+Harness-only assertion repairs retain the original failures and reuse all 21
+production assets and 3,467 inputs; unaffected methods are not replayed. Two
+independent 4×3 automatic and 5×4 minimum-height tables retain prose, math and
+pictures in four outputs, with 1,298 actual-program glyphs and no measured cuts or
+unknowns. Both Final paints and the fraction parent/candidate were reviewed.
+All sixteen baseline portfolio PDFs and diagnostics remain exact, so their prior
+comparisons are reused. The legacy paragraph estimate remains live in three
+page-break partition callers; the older clipping eligibility rules remain scoped
+to their qualified witnesses. No new Office geometry or application-view claim.
+
 The following list-format batch is locally qualified after that broader baseline.
 Revision 94a9fb96b resolves ordinary labels using each referenced level's effective
 format, including concrete overrides and legal decimal references. It also fixes
