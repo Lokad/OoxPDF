@@ -62,7 +62,7 @@ internal static partial class DocxInlineCompositionTests
                 HeaderParagraphsByType = settings.HeaderParagraphsByType, FooterParagraphsByType = settings.FooterParagraphsByType,
                 HeaderBodyElementsByType = settings.HeaderBodyElementsByType, FooterBodyElementsByType = settings.FooterBodyElementsByType };
             var engine = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-            var page = engine.Create(source, new TrackingMeasurer(), default).Pages.Single();
+            var page = engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), default).Pages.Single();
             var placed = page.StaticInlineImages.Single();
             double ratio = width == 0d ? 1d : Math.Min(1d, (page.Width - page.MarginLeft - page.MarginRight) / width);
             TestAssert.True(ReferenceEquals(image, placed.Image) && ReferenceEquals(paragraph, placed.SourceParagraph),
@@ -70,7 +70,7 @@ internal static partial class DocxInlineCompositionTests
             TestAssert.True(Math.Abs(placed.Width - width * ratio) < 1e-9d && Math.Abs(placed.Height - 18d * ratio) < 1e-9d,
                 "Static fallback shares zero-width height preservation and bounded aspect ratios.");
             using var canceled = new CancellationTokenSource(); canceled.Cancel();
-            TestAssert.Throws<OperationCanceledException>(() => engine.Create(source, new TrackingMeasurer(), canceled.Token));
+            TestAssert.Throws<OperationCanceledException>(() => engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), canceled.Token));
         }
     }
 }
