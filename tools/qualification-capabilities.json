@@ -1,5 +1,12 @@
 {
   "docx-hidden-break-composition": [
+    "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
+    "DocxSharedCustomRunReferencesPreserveSupportedMathAndMarkerOwners",
+    "DocxInlineCompositionMeasuredAtomsRebindOnlyCounters",
+    "DocxInlineCompositionSourceCursorMatchesWholeParagraphWrapping",
+    "DocxInlineCompositionSourceCursorRebindsUnplacedPageCounters",
+    "DocxMathCenterGroupCounterResumptionReusesMeasuredFrames",
+    "DocxOrderedWidowFragmentsRebindCountersAndRetainPictureNavigation",
     "DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter",
     "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
     "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
