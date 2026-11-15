@@ -125,7 +125,11 @@ internal static partial class DocxInlineCompositionTests
             var pages = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             string text = string.Concat(pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
                 true, honorActualText: false)).Select(show => show.Text));
-            TestAssert.Equal(2, text.Count(character => character == '\u00ad'));
+            int marks = text.Count(character => character == '\u00ad');
+            TestAssert.True(marks == 2, $"{kind}/{mode}/math={math}: expected two literal marks, got {marks}; source roles: " +
+                string.Join(";", DocxBlockTraversal.EnumerateBodyParagraphs(source).Concat(source.RelatedStories.SelectMany(story => story.Paragraphs))
+                    .SelectMany(paragraph => paragraph.Runs).Where(run => run.Text.Contains('\u00ad'))
+                    .Select(run => $"{run.SourceRunIndex}:{run.SourceTextOffsetInRun}/{run.LiteralNoteMarkerOffset}")));
             TestAssert.Equal(4, pages.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
             TestAssert.Contains("Public destination Alpha.", text);
             TestAssert.Contains("and after note.", text);
