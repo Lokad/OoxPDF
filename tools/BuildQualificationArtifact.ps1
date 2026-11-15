@@ -40,7 +40,7 @@ function Assert-Source {
     if (@(Read-Git -Arguments @('status','--porcelain','--untracked-files=normal')).Count) { throw 'Commit source and public inputs before qualification builds' }
 }
 Assert-Source
-$reuse=$null; $runtime=@()
+$reuse=$null; $runtime=@(); $addedPublicInputs=0
 if ($ReuseRuntimeDirectory) {
     $original=(Resolve-Path -LiteralPath $ReuseRuntimeDirectory).Path
     if ($output.Equals($original,$comparison) -or $output.StartsWith($original+[IO.Path]::DirectorySeparatorChar,$comparison)) {
@@ -55,8 +55,16 @@ if ($ReuseRuntimeDirectory) {
     if (@(Read-Git -Arguments (@('diff','--name-only',$reuse.Revision,$Revision,'--')+$buildInputs)).Count) {
         throw 'Production source or build inputs changed; build a new runtime'
     }
-    if ((Read-Git -Arguments @('rev-parse','HEAD:tests/Lokad.OoxPdf.Tests/Cases')) -ne $reuse.InputTree) {
-        throw 'Reused public input tree differs'
+    $inputTree=Read-Git -Arguments @('rev-parse','HEAD:tests/Lokad.OoxPdf.Tests/Cases')
+    if ($inputTree -ne $reuse.InputTree) {
+        # New coverage can extend the harness without recompiling production.
+        # Preserve every qualified input; joins still require identical complete
+        # input sets and cannot silently reuse tests across the extended corpus.
+        $inputChanges=@(Read-Git -Arguments @('diff','--name-status','--no-renames',$reuse.InputTree,$inputTree))
+        if (@($inputChanges | Where-Object { !$_.StartsWith("A`t",[StringComparison]::Ordinal) }).Count) {
+            throw 'Reused public inputs changed or were removed'
+        }
+        $addedPublicInputs=$inputChanges.Count
     }
     foreach ($name in $reuse.Assets.Keys) {
         if ((Get-FileHash -LiteralPath (Join-Path $original $name)).Hash -ne $reuse.Assets[$name]) { throw 'Reused runtime asset differs' }
@@ -110,10 +118,11 @@ $pin=Get-Content -LiteralPath (Join-Path $output 'identity.json') -Raw | Convert
 if ($pin.Revision -ne $Revision) { throw 'Frozen source revision differs' }
 [ordered]@{Worktree=$source;Revision=$Revision;Builds=$builds;Artifact=$output;
     Framework=$Framework;LibrarySha256=$pin.LibrarySha256;TestsRun=0;
-    ReusedRuntimeRevision=$(if ($reuse) {$reuse.Revision} else {$null});ReusedRuntimeAssets=$runtime.Count} | ConvertTo-Json -Depth 5 |
+    ReusedRuntimeRevision=$(if ($reuse) {$reuse.Revision} else {$null});ReusedRuntimeAssets=$runtime.Count;
+    AddedPublicInputs=$addedPublicInputs} | ConvertTo-Json -Depth 5 |
     Set-Content -LiteralPath (Join-Path $logs 'evidence.json') -Encoding utf8
 if ($reuse) {
-    Write-Output ('Reused '+$runtime.Count+' runtime assets; built/froze the corrected harness at '+$Revision+'; no library build or tests replayed.')
+    Write-Output ('Reused '+$runtime.Count+' runtime assets; built/froze the updated harness at '+$Revision+'; '+$addedPublicInputs+' added public inputs; no library build or tests replayed.')
 } else {
     Write-Output ('Built and froze '+$Revision+' from explicit linked worktree; no tests replayed.')
 }

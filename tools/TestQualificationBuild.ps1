@@ -14,8 +14,11 @@ New-Item -ItemType Directory -Path $repo -Force | Out-Null
 git -C $repo init --quiet
 git -C $repo config user.name 'Qualification test'
 git -C $repo config user.email 'qualification@example.invalid'
-'artifacts/' | Set-Content -LiteralPath (Join-Path $repo '.gitignore')
+@('artifacts/','**/bin/') | Set-Content -LiteralPath (Join-Path $repo '.gitignore')
 'Committed source marker' | Set-Content -LiteralPath (Join-Path $repo 'marker.txt')
+$control='tests/Lokad.OoxPdf.Tests/Cases/control.txt'
+New-Item -ItemType Directory -Path (Split-Path (Join-Path $repo $control)) -Force | Out-Null
+'Qualified input' | Set-Content -LiteralPath (Join-Path $repo $control)
 foreach ($relative in @('tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj','src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj','tools/Lokad.OoxPdf.DocxInspect/Lokad.OoxPdf.DocxInspect.csproj')) {
     $project=Join-Path $repo $relative
     New-Item -ItemType Directory -Path (Split-Path $project) -Force | Out-Null
@@ -115,6 +118,55 @@ try {
     $evidence=Get-Content -LiteralPath ($destination+'.build/evidence.json') -Raw | ConvertFrom-Json
     if (!$identity.Fake -or $identity.Revision -ne $revision -or $evidence.TestsRun -ne 0) { throw 'Publication identity differs' }
     $passed+='absolute-projects-and-publication'
+
+    # An extended harness uses the same qualified production bytes. Added
+    # fixtures are a new complete snapshot; old fixtures cannot change/disappear.
+    $seed=Join-Path $repo 'artifacts/reusable-runtime'
+    $asset='src/Lokad.OoxPdf/bin/Release/net11.0/Lokad.OoxPdf.dll'
+    New-Item -ItemType Directory -Path (Split-Path (Join-Path $seed $asset)) -Force | Out-Null
+    'Qualified production bytes' | Set-Content -LiteralPath (Join-Path $seed $asset)
+    $assetHash=(Get-FileHash -LiteralPath (Join-Path $seed $asset)).Hash
+    @{Revision=$revision;Framework='net11.0';InputTree=(git -C $worktree rev-parse "${revision}:tests/Lokad.OoxPdf.Tests/Cases");
+        Assets=@{$asset=$assetHash}} | ConvertTo-Json -Depth 4 |
+        Set-Content -LiteralPath (Join-Path $seed 'identity.json')
+    'Additional public coverage' | Set-Content -LiteralPath (Join-Path $worktree 'tests/Lokad.OoxPdf.Tests/Cases/added.txt')
+    git -C $worktree add -- tests/Lokad.OoxPdf.Tests/Cases/added.txt
+    git -C $worktree commit --quiet -m 'Add an independent public input'
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot commit added test input' }
+    $extended=git -C $worktree rev-parse HEAD
+    $destination=Join-Path $repo 'artifacts/extended-harness'
+    $before=$global:ooxPdfBuildGuardCalls.Count
+    & $BuildScript -WorktreeDirectory $worktree -Revision $extended -OutputDirectory $destination -ReuseRuntimeDirectory $seed | Out-Null
+    $evidence=Get-Content -LiteralPath ($destination+'.build/evidence.json') -Raw | ConvertFrom-Json
+    $arguments=$global:ooxPdfBuildGuardCalls[-1]
+    if ($global:ooxPdfBuildGuardCalls.Count -ne $before+1 -or
+        $arguments[1] -ne (Join-Path $worktree 'tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj') -or
+        '-p:BuildProjectReferences=false' -notin $arguments -or
+        $evidence.ReusedRuntimeAssets -ne 1 -or $evidence.AddedPublicInputs -ne 1 -or
+        (Get-FileHash -LiteralPath (Join-Path $worktree $asset)).Hash -ne $assetHash) {
+        throw 'Extended harness rebuilt or changed production, or lost its added-input evidence'
+    }
+    $passed+='added-input-reuses-runtime'
+    foreach ($fault in @('changed-public-input','removed-public-input')) {
+        $inputPath=Join-Path $worktree $control
+        if ($fault -eq 'changed-public-input') { 'Changed qualified input' | Set-Content -LiteralPath $inputPath }
+        else { Remove-Item -LiteralPath $inputPath }
+        git -C $worktree add -- $control
+        git -C $worktree commit --quiet -m $fault
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot commit input guard fixture' }
+        $changedRevision=git -C $worktree rev-parse HEAD
+        $destination=Join-Path $repo ('artifacts/'+$fault)
+        $before=$global:ooxPdfBuildGuardCalls.Count
+        $rejected=$false
+        try { & $BuildScript -WorktreeDirectory $worktree -Revision $changedRevision -OutputDirectory $destination -ReuseRuntimeDirectory $seed | Out-Null }
+        catch {
+            if (!$_.Exception.Message.Contains('Reused public inputs changed or were removed')) { throw }
+            $rejected=$true
+        }
+        if (!$rejected -or $global:ooxPdfBuildGuardCalls.Count -ne $before -or
+            (Test-Path -LiteralPath ($destination+'.build'))) { throw ('Changed inputs reached a build: '+$fault) }
+        $passed+=$fault
+    }
     @{Passed=$passed;NativeBuilds=0;LibraryTests=0;Scope='Tiny Git repository; fake dotnet and freeze commands'} |
         ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $output 'evidence.json')
     Write-Output ($passed.Count.ToString()+' qualification build guards passed; no native builds or library tests.')
