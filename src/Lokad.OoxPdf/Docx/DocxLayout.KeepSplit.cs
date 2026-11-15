@@ -767,7 +767,8 @@ internal sealed partial class DocxLayoutEngine
         {
             double textStart = GetParagraphTextStartOffset(paragraph, fixedScale);
             double preferred = Math.Max(textStart, GetNumberingTabPosition() ?? 0d);
-            if (paragraph.ListLabel.NumberingChange is null) return preferred;
+            // A suffix tab follows the complete painted label, whether it is
+            // one current counter or a retained previous/current pair.
             double prefixEnd = GetParagraphLabelStartOffset(paragraph, fixedScale) +
                 MeasureListLabel(paragraph.ListLabel, paragraph.Runs.FirstOrDefault(), fontSize, textMeasurer);
             return prefixEnd < preferred - .001d ? preferred : Math.Max(preferred,

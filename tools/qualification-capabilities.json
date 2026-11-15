@@ -1,4 +1,41 @@
 {
+  "docx-list-tab-clearance": [
+    "DocxListTabsClearMeasuredPrefixesAcrossContainers",
+    "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
+    "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
+    "DocxListLabelCasingBelongsToLevelAndParagraphMark",
+    "DocxInlineCompositionListLabelStylesMatchIndependentWord",
+    "PortableRenderingListLabelStylesKeepSourceOwners",
+    "DocxInlineCompositionListLabelFamiliesMatchIndependentWord",
+    "PortableRenderingListLabelFamiliesKeepSourceOwners",
+    "DocxInlineCompositionStaticListLabelsMatchIndependentWord",
+    "PortableRenderingStaticListsKeepLabelsAcrossModes",
+    "DocxInlineCompositionNumberingCountersRetainSourceTimelines",
+    "DocxInlineCompositionNumberingCounterPaintsMatchIndependentWord",
+    "PortableRenderingNumberingCounterPaintsKeepVisibleContent",
+    "DocxMarkFormattingPreservesNumberingTimelines",
+    "DocxMarkFormattingPreservesNumberingPaintAndSourceContent",
+    "DocxMarkFormattingKeepsNumberingDecorationSource",
+    "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
+    "DocxNumberedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
+    "DocxFontPlanIncludesNumberingMarkerTypeface",
+    "DocxReaderMapsSymbolCharsetNumberingText",
+    "DocxSyntheticNumberingSpaceSuffixPlacesTextAfterLabel",
+    "DocxNumberingSeparatorUsesBodyRunStyle",
+    "DocxSyntheticNumberingTabPositionMovesTextOnly",
+    "DocxSyntheticNumberingWrapsContinuationLinesWithHangingWidth",
+    "DocxTextEmissionPlannerOwnsListLabelTextStateTarget",
+    "DocxTextEmissionDoesNotApplyNumberedTcToBulletListMarkers",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "DocxInlineCompositionNumberingContinuationRetainsDefinitionAndTimelineOwners",
+    "DocxInlineCompositionNumberingContinuationMatchesIndependentWord",
+    "PortableRenderingNumberingContinuationKeepsVisibleContent",
+    "DocxSyntheticNumberingTabBeyondIndentMovesTextOnly",
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxKeptListLabelCountersFollowTheAdmittedFrame",
+    "DocxHardBreaksRetainParagraphOwnedFirstMarkers"
+  ],
   "docx-list-display-casing": [
     "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
     "DocxListLabelCasingBelongsToLevelAndParagraphMark",
@@ -1300,6 +1337,8 @@
     "DocxInlineCompositionFormattingBalloonDescriptions"
   ],
   "docx-paragraph-mark-formatting": [
+    "DocxListTabsClearMeasuredPrefixesAcrossContainers",
+    "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
     "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
     "DocxListLabelCasingBelongsToLevelAndParagraphMark",
     "DocxParagraphMarkFormatting",
@@ -5917,6 +5956,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxListTabsClearMeasuredPrefixesAcrossContainers",
+    "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
     "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
     "DocxListLabelCasingBelongsToLevelAndParagraphMark",
     "DocxAutomaticNoteCasingMatchesOwnedReferenceAndTargetPaint",
@@ -9130,6 +9171,8 @@
     "DocxUnsupportedEquationInFooterIsDiagnosed"
   ],
   "docx-list-font-style": [
+    "DocxListTabsClearMeasuredPrefixesAcrossContainers",
+    "DocxListTabsPreserveShortLabelsAndNonTabSuffixes",
     "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
     "DocxListLabelCasingBelongsToLevelAndParagraphMark",
     "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",

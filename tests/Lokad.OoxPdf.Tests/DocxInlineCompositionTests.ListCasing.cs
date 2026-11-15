@@ -60,7 +60,8 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static DocxDocument ReadListCasing(string container, OoxPdfDocxMarkupMode mode,
-        bool? levelCaps, bool? markCaps, bool bodyCaps, string suffix, bool upperPrefix = false)
+        bool? levelCaps, bool? markCaps, bool bodyCaps, string suffix, bool upperPrefix = false,
+        string? labelPrefix = null, Action<XDocument>? paragraphChange = null)
     {
         XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         void SetCaps(XElement owner, bool? value)
@@ -82,6 +83,7 @@ internal static partial class DocxInlineCompositionTests
                     SetCaps(paragraph.Element(w + "pPr")!, markCaps);
                     SetCaps(paragraph.Elements(w + "r").First(), bodyCaps);
                 }
+                paragraphChange?.Invoke(xml);
             }, packageChange: archive =>
             {
                 var entry = archive.GetEntry("word/numbering.xml")!; XDocument xml;
@@ -89,7 +91,7 @@ internal static partial class DocxInlineCompositionTests
                 foreach (var level in xml.Descendants(w + "lvl"))
                 {
                     SetCaps(level, levelCaps);
-                    level.Element(w + "lvlText")!.SetAttributeValue(w + "val", upperPrefix ? "STEP %1." : "step %1.");
+                    level.Element(w + "lvlText")!.SetAttributeValue(w + "val", (labelPrefix ?? (upperPrefix ? "STEP " : "step ")) + "%1.");
                     level.Elements(w + "suff").Remove();
                     level.Add(new XElement(w + "suff", new XAttribute(w + "val", suffix)));
                 }
