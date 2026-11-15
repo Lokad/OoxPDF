@@ -1615,14 +1615,13 @@ internal sealed partial class DocxReader
             foreach (var following in child.ElementsAfterSelf())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (following.Name == WordprocessingNamespace + "lastRenderedPageBreak" &&
-                    following.Attributes().All(attribute => attribute.IsNamespaceDeclaration) &&
-                    !following.HasElements && following.Value.Length == 0) continue;
-                if (following.Name != WordprocessingNamespace + "t") return null;
+                bool isText = following.Name == WordprocessingNamespace + "t";
+                if (!isText && (following.HasElements || following.Value.Length != 0 ||
+                    following.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration))) return null;
                 string text = ResolveRunDisplayText(ReadRunTextChild(following), resolvedRun);
                 if (text.Length != 0)
                     return char.IsWhiteSpace(text[0]) || char.IsSurrogate(text[0]) ? null : text[..1];
-                if (following.HasElements) return null;
+                if (following.HasElements || !isText && following.Name != WordprocessingNamespace + "lastRenderedPageBreak") return null;
             }
             return null;
         }

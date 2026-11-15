@@ -25,7 +25,7 @@
   Disabled header/footer templates no longer change otherwise supported section pagination.
   Matching section frames use the following section's start type beside supported
   inline content and comments, while conservative footnote admission remains separate.
-  Custom note marks share resolved text and casing rules, preserving equations
+  Custom note marks share resolved run-character and casing rules, preserving equations
   and links beside empty XML text, saved pagination hints or all-caps formatting.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields

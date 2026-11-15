@@ -1,5 +1,6 @@
 {
   "docx-custom-mark-empty-text": [
+    "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
     "DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks",
     "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
     "DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries",
@@ -2376,6 +2377,7 @@
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException"
   ],
   "docx-custom-run-owners": [
+    "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
     "DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks",
     "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
     "DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries",
@@ -5851,6 +5853,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
     "DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks",
     "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
     "DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries",
