@@ -643,11 +643,13 @@ internal sealed partial class DocxLayoutEngine
         // Keep decisions look ahead: the chain about to move must reserve the notes
         // its not-yet-laid follower blocks will register, measured exactly like the
         // body reserve. Measured notes are consumed from future lookahead so follower
-        // checks on later pages do not re-advance the same chain; in-flight notes live
-        // in the body reserve and the checking block itself stays exempt like Register.
+        // checks on later pages do not re-advance the same chain. A kept block
+        // must also clear its own complete note heads; the legacy self-exemption
+        // remains for notes whose continuation/occupied frame is not complete.
         double KeepChainFootnoteReserve(int sourceBlockIndex, IReadOnlyList<int> chainBlocks)
         {
-            double reserve = 0d;
+            double reserve = TryCompleteFootnoteReserve(inFlightNotes.Values.Where(note =>
+                note.SourceBlockIndex == sourceBlockIndex), out double ownReserve) ? ownReserve : 0d;
             foreach (int chainBlock in chainBlocks)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1861,7 +1863,7 @@ internal sealed partial class DocxLayoutEngine
                     double admissionAdvance = lineAdvance;
                     if (reserveTail)
                     {
-                        var nextMetrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, lines[lineIndex + 1]) : paragraph;
+                        var nextMetrics = useLineMetrics ? GetBodyTextLineMetricParagraph(paragraph, lines[lineIndex + 1]) ?? paragraph : paragraph;
                         double nextHeight = ReferenceEquals(nextMetrics, paragraph) ? lineHeightProfile.LineHeight :
                             ResolveLineHeightProfile(nextMetrics, GetParagraphFontSize(nextMetrics), textMeasurer).LineHeight;
                         admissionAdvance += scalesExactBodyAdvance ? lineHeight : nextHeight;

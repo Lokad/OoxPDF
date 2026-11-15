@@ -1,5 +1,9 @@
 {
   "docx-note-text-row-metrics": [
+    "DocxCompleteFootnoteReserveReclaimsRowsWithoutMovingNotes",
+    "DocxCompleteFootnoteReserveKeepsUnqualifiedStories",
+    "DocxCompleteFootnoteReserveRejectsChangedCompleteOwnerPages",
+    "DocxMidBodyFootnoteAnchorKeepsPrecedingFillersOnPage",
     "DocxNoteTextRowsRetainLocalMetricsContentAndSourceOwners",
     "DocxNoteTextRowsShareNoteReservationKeepAndWidowAdmission",
     "DocxNoteTextRowsKeepMarkerAndUnknownOwnerFrameFallbacks",

@@ -34,6 +34,10 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(3, native.Count(ch => ch == '1')); // row01, body marker, note marker
                 TestAssert.Equal(content is "picture" or "mixed" ? 1 : 0,
                     actual.Sum(page => Regex.Matches(page.Content, @"/\w+\s+Do\b").Count));
+                string math = string.Concat(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                    true, honorActualText: false).Where(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
+                        ReferenceEquals(font.Font, show.Font)))).Select(show => show.Text)).Normalize(System.Text.NormalizationForm.FormKC);
+                TestAssert.Equal(content is "math" or "mixed" ? "x" : "", math);
                 TestAssert.True(actual.Sum(page => page.Annotations.Count(annotation => annotation.Destination is not null)) >= 1,
                     "The actual note marker retains its painted navigation.");
                 TestAssert.True(ReferenceEquals(reference, paragraph.InlineReferences.Single()) && ReferenceEquals(marker, reference.DisplayRun),
@@ -112,6 +116,12 @@ internal static partial class DocxInlineCompositionTests
                 Run(new XElement(w + "footnoteRef")), Run(new XElement(w + "t", "Source note"))));
             if (endnote)
             {
+                var settingsEntry = zip.GetEntry("word/settings.xml")!; XDocument settings;
+                using (var stream = settingsEntry.Open()) settings = XDocument.Load(stream);
+                settings.Root!.Element(w + "endnotePr")?.Remove();
+                settings.Root.Add(new XElement(w + "endnotePr", new XElement(w + "numFmt", new XAttribute(w + "val", "decimal"))));
+                settingsEntry.Delete();
+                using (var output = zip.CreateEntry("word/settings.xml").Open()) settings.Save(output);
                 foreach (var node in notes.Descendants().Where(node => node.Name == w + "footnotes" || node.Name == w + "footnote" || node.Name == w + "footnoteRef"))
                     node.Name = w + node.Name.LocalName.Replace("footnote", "endnote", StringComparison.Ordinal);
                 foreach (string part in new[] { "word/_rels/document.xml.rels", "[Content_Types].xml" })
