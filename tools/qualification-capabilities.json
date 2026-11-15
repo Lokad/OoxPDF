@@ -1,5 +1,6 @@
 {
   "composition-independent-records-portable": [
+    "PortableRenderingChartSeriesOrderSurvivesXmlReordering",
       "PortableRenderingSectionRecordsKeepContentAndPageOwners",
       "DocxTableLayoutStageUsesCellBodyElementsForInlineImages",
       "DocxCellFlowWithoutFontMeasurementKeepsAuthoredPictureAdvance",
@@ -27,6 +28,7 @@
       "PortableRenderingColumnLabelWrappingKeepsUnicodeAndBreaks"
   ],
   "composition-independent-records": [
+    "PortableRenderingChartSeriesOrderSurvivesXmlReordering",
       "PortableRenderingSectionRecordsKeepContentAndPageOwners",
       "DocxTableLayoutStageUsesCellBodyElementsForInlineImages",
       "DocxCellFlowWithoutFontMeasurementKeepsAuthoredPictureAdvance",
@@ -6386,6 +6388,7 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "PortableRenderingChartSeriesOrderSurvivesXmlReordering",
     "PortableRenderingSectionRecordsKeepContentAndPageOwners",
     "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
     "DocxTableLayoutStageUsesCellBodyElementsForInlineImages",

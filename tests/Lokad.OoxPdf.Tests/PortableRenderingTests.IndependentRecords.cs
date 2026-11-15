@@ -1,6 +1,9 @@
 using System.Security.Cryptography;
+using System.IO.Compression;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -112,6 +115,66 @@ internal static partial class PortableRenderingTests
             }
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             TestAssert.Throws<OperationCanceledException>(() => renderer.RenderPagesAsync(document, package, null, cancellation.Token).ToBlockingEnumerable().ToArray());
+        }
+    }
+
+    public static void PortableRenderingChartSeriesOrderSurvivesXmlReordering()
+    {
+        foreach (string name in new[] { "service-operations", "survey-operations" })
+        {
+            string input = Case("OperationsDecks/" + name + ".pptx");
+            PdfPage[] Render(string path)
+            {
+                using var package = OoxPackage.Open(path, default);
+                return new PptxRenderer(new PinnedResolver()).RenderPagesAsync(new PptxReader().Read(package, default),
+                    package, null, default).ToBlockingEnumerable().ToArray();
+            }
+            var baseline = Render(input);
+            foreach (string declaration in new[] { "valid", "missing", "negative", "duplicate", "malformed" })
+            {
+                string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pptx");
+                File.Copy(input, path);
+                new FileInfo(path).IsReadOnly = false; // Only this owned temporary input is writable.
+                try
+                {
+                    string[] xmlNames;
+                    using (var zip = ZipFile.Open(path, ZipArchiveMode.Update))
+                    {
+                        const string part = "ppt/charts/chart1.xml";
+                        var entry = zip.GetEntry(part)!;
+                        XDocument chart;
+                        using (var stream = entry.Open()) chart = XDocument.Load(stream);
+                        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+                        var series = chart.Descendants(c + "barChart").Single().Elements(c + "ser").ToArray();
+                        if (declaration == "missing") series[0].Element(c + "order")!.Remove();
+                        else if (declaration != "valid") series[0].Element(c + "order")!.SetAttributeValue("val",
+                            declaration == "negative" ? "-1" : declaration == "duplicate" ? "1" : "invalid");
+                        var anchor = new XComment("Source series container position");
+                        series[0].AddBeforeSelf(anchor);
+                        foreach (var item in series) item.Remove();
+                        anchor.AddBeforeSelf(series.Reverse());
+                        anchor.Remove();
+                        xmlNames = series.Reverse().Select(item => item.Element(c + "tx")!.Value).ToArray();
+                        entry.Delete();
+                        using var writer = new StreamWriter(zip.CreateEntry(part).Open(), new UTF8Encoding(false));
+                        chart.Save(writer, SaveOptions.DisableFormatting);
+                    }
+                    var actual = Render(path);
+                    if (declaration == "valid")
+                    {
+                        for (int index = 0; index < actual.Length; index++)
+                            TestAssert.Equal(baseline[index].Content, actual[index].Content);
+                    }
+                    else
+                    {
+                        string legend = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(actual[0], true,
+                            honorActualText: false, fontResourceFilter: resource => resource.StartsWith("CL", StringComparison.Ordinal)).Select(show => show.Text));
+                        TestAssert.Equal(string.Concat(xmlNames), legend);
+                    }
+                    foreach (var page in actual) PdfContentValidator.ValidatePage(page, 0, default);
+                }
+                finally { File.Delete(path); }
+            }
         }
     }
 

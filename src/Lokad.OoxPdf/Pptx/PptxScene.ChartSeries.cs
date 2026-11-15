@@ -73,7 +73,14 @@ internal sealed partial class PptxSceneBuilder
             });
         }
 
-        return series;
+        // Series identity (idx) and display order are distinct. Resolve valid
+        // order declarations once so values, styles and legend names stay paired
+        // through font preparation, layout and paint. Broken/ambiguous orders
+        // retain the existing XML-order fallback without inventing an index.
+        return series.All(item => item.Order is >= 0) &&
+            series.Select(item => item.Order).Distinct().Count() == series.Count
+                ? series.OrderBy(item => item.Order).ToArray()
+                : series;
     }
 
     internal static PptxSceneChartNegativeInversion ReadChartNegativeInversion(XElement series)
