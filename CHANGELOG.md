@@ -23,6 +23,8 @@
   Numbered and tabbed continuation rows retain their own text metrics and paragraph list spacing.
   Text and automatic note references use their actual row metrics; kept blocks reserve complete note heads.
   Disabled header/footer templates no longer change otherwise supported section pagination.
+  Matching section frames use the following section's start type beside supported
+  inline content and comments, while conservative footnote admission remains separate.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field

@@ -1,0 +1,156 @@
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
+
+namespace Lokad.OoxPdf.Tests;
+
+internal static partial class DocxFootnotesTests
+{
+    public static void DocxSectionStartsKeepPictureAndTableContentOnOwnedPages() =>
+        CheckComposedSectionStarts(["picture", "table"]);
+
+    public static void DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages() =>
+        CheckComposedSectionStarts(["comment", "mixed"]);
+
+    private static void CheckComposedSectionStarts(string[] contents)
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (var (first, following) in new (string?, string?)[]
+            { ("nextPage", "continuous"), ("continuous", "nextPage"), (null, "continuous"), ("continuous", null) })
+        foreach (string content in contents)
+        {
+            var renderer = SectionCompositionRenderer(mode);
+            var source = ReadComposedSections(first, following, content, mode);
+            var control = ReadComposedSections(following, following, content, mode);
+            var expected = renderer.RenderPagesAsync(control, null, default).ToBlockingEnumerable().ToArray();
+            var actual = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(following == "continuous" ? 1 : 2, expected.Length);
+            TestAssert.True(actual.Length == expected.Length,
+                $"{content}/{mode}: the following section owns the boundary, including a source-matched first-section control.");
+            for (int page = 0; page < actual.Length; page++)
+            {
+                var a = PhysicalSectionGlyphs(actual[page]); var b = PhysicalSectionGlyphs(expected[page]);
+                TestAssert.Equal(b.Length, a.Length);
+                for (int glyph = 0; glyph < a.Length; glyph++) TestAssert.Equal(b[glyph], a[glyph]);
+                TestAssert.Equal(expected[page].Annotations.Count, actual[page].Annotations.Count);
+                TestAssert.Equal(Regex.Matches(expected[page].Content, @"/Im\d+ Do").Count,
+                    Regex.Matches(actual[page].Content, @"/Im\d+ Do").Count);
+            }
+            string text = string.Concat(actual.SelectMany(PhysicalSectionGlyphs).Select(x => x.Text));
+            TestAssert.Contains("FIRST SECTION WORDS", text); TestAssert.Contains("SECOND SECTION WORDS", text);
+            if (content == "table") TestAssert.Contains("TABLE CELL WORDS", text);
+            if (content is "picture" or "mixed")
+                TestAssert.Equal(1, actual.Sum(page => Regex.Matches(page.Content, @"/Im\d+ Do").Count));
+            if (mode == OoxPdfDocxMarkupMode.Final)
+                TestAssert.True(!text.Contains("A public comment.", StringComparison.Ordinal), "Final comments remain unpainted.");
+        }
+    }
+
+    public static void DocxSectionStartOwnershipKeepsNoteAndFrameAdmissionFallbacks()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string content in new[] { "plain", "picture", "comment" })
+        {
+            var source = ReadComposedSections("continuous", "continuous", content, mode, notes: true);
+            var pages = SectionCompositionRenderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(content == "plain" ? 2 : 1, pages.Length);
+            TestAssert.Contains("PUBLIC NOTE", string.Concat(pages.SelectMany(PhysicalSectionGlyphs).Select(x => x.Text)));
+            TestAssert.Equal(1, pages.SelectMany(page => page.Annotations).Count(link => link.IsDestination));
+        }
+        foreach (string fallback in new[] { "margins", "columns", "header", "mirror", "unknown-final", "scale" })
+        {
+            var source = ReadComposedSections("nextPage", "continuous", "picture", OoxPdfDocxMarkupMode.Final,
+                fallback: fallback);
+            if (fallback == "mirror") source = source with { Settings = source.Settings with { MirrorMargins = true } };
+            if (fallback == "unknown-final") source = source with { FinalSectionBreak = null };
+            var engine = fallback == "scale"
+                ? new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup, wordCompatiblePrintScale: .5d)
+                : new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+            TestAssert.True(engine.Create(source, new DocxTests.FamilyWidthTextMeasurer(), default).Pages.Count == 2,
+                "The existing frame fallback remains explicit: " + fallback);
+        }
+    }
+
+    private static DocxRenderer SectionCompositionRenderer(OoxPdfDocxMarkupMode mode) => new(new TestFaceFontResolver(), mode,
+        mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+            : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+
+    private static DocxDocument ReadComposedSections(string? first, string? following, string content,
+        OoxPdfDocxMarkupMode mode, bool notes = false, string? fallback = null)
+    {
+        XNamespace w = NoteWord;
+        XNamespace rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        XNamespace pr = "http://schemas.openxmlformats.org/package/2006/relationships";
+        XNamespace ct = "http://schemas.openxmlformats.org/package/2006/content-types";
+        var types = new XElement(ct + "Types",
+            new XElement(ct + "Default", new XAttribute("Extension", "rels"), new XAttribute("ContentType", "application/vnd.openxmlformats-package.relationships+xml")),
+            new XElement(ct + "Default", new XAttribute("Extension", "xml"), new XAttribute("ContentType", "application/xml")),
+            new XElement(ct + "Override", new XAttribute("PartName", "/word/document.xml"),
+                new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml")));
+        var relationships = new XElement(pr + "Relationships");
+        var parts = new Dictionary<string, byte[]>();
+        void AddPart(string name, string kind, string id, byte[] data)
+        {
+            parts["word/" + name] = data;
+            relationships.Add(new XElement(pr + "Relationship", new XAttribute("Id", id),
+                new XAttribute("Type", rel.NamespaceName + "/" + kind), new XAttribute("Target", name)));
+            if (kind != "image") types.Add(new XElement(ct + "Override", new XAttribute("PartName", "/word/" + name),
+                new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml." + kind + "+xml")));
+        }
+        XElement Section(string? kind) => new(w + "sectPr",
+            kind is null ? null : new XElement(w + "type", new XAttribute(w + "val", kind)),
+            new XElement(w + "pgSz", new XAttribute(w + "w", "12240"), new XAttribute(w + "h", "15840")),
+            new XElement(w + "pgMar", new XAttribute(w + "top", "1440"), new XAttribute(w + "bottom", "1440"),
+                new XAttribute(w + "left", "1440"), new XAttribute(w + "right", "1440")));
+        XElement Paragraph(string text) => new(w + "p", new XElement(w + "r", new XElement(w + "t", text)));
+        var firstSection = Section(first); var finalSection = Section(following);
+        var firstParagraph = Paragraph("FIRST SECTION WORDS");
+        firstParagraph.AddFirst(new XElement(w + "pPr", firstSection));
+        var body = new XElement(w + "body", firstParagraph, Paragraph("SECOND SECTION WORDS"), finalSection);
+        if (content is "picture" or "mixed")
+        {
+            AddPart("media/picture.png", "image", "rPicture", TestFixtures.CreateTinyStoredRgbPng());
+            types.Add(new XElement(ct + "Default", new XAttribute("Extension", "png"), new XAttribute("ContentType", "image/png")));
+            firstParagraph.Add(XElement.Parse($$"""
+                <w:r xmlns:w="{{w}}" xmlns:r="{{rel}}" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:drawing><wp:inline><wp:extent cx="12700" cy="12700"/><wp:docPr id="1" name="Public picture"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="Public picture"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rPicture"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12700" cy="12700"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>
+                """));
+        }
+        if (content is "comment" or "mixed")
+        {
+            firstParagraph.Element(w + "r")!.AddBeforeSelf(new XElement(w + "commentRangeStart", new XAttribute(w + "id", "0")));
+            firstParagraph.Add(new XElement(w + "commentRangeEnd", new XAttribute(w + "id", "0")),
+                new XElement(w + "r", new XElement(w + "commentReference", new XAttribute(w + "id", "0"))));
+            AddPart("comments.xml", "comments", "rComment", Encoding.UTF8.GetBytes(new XElement(w + "comments",
+                new XElement(w + "comment", new XAttribute(w + "id", "0"), new XAttribute(w + "author", "Public Reviewer"),
+                    Paragraph("A public comment."))).ToString()));
+        }
+        if (content == "table")
+        {
+            firstSection.Remove();
+            firstParagraph.AddAfterSelf(new XElement(w + "tbl", new XElement(w + "tr", new XElement(w + "tc", Paragraph("TABLE CELL WORDS")))),
+                new XElement(w + "p", new XElement(w + "pPr", firstSection)));
+        }
+        if (notes)
+        {
+            firstParagraph.Add(new XElement(w + "r", new XElement(w + "footnoteReference", new XAttribute(w + "id", "1"))));
+            AddPart("footnotes.xml", "footnotes", "rNote", Encoding.UTF8.GetBytes(new XElement(w + "footnotes",
+                new XElement(w + "footnote", new XAttribute(w + "id", "1"), Paragraph("PUBLIC NOTE"))).ToString()));
+        }
+        if (fallback == "margins") finalSection.Element(w + "pgMar")!.SetAttributeValue(w + "left", "1800");
+        if (fallback == "columns") finalSection.Add(new XElement(w + "cols", new XAttribute(w + "num", "2")));
+        if (fallback == "header")
+        {
+            firstSection.AddFirst(new XElement(w + "headerReference", new XAttribute(w + "type", "default"), new XAttribute(rel + "id", "rHeader")));
+            AddPart("header.xml", "header", "rHeader", Encoding.UTF8.GetBytes(new XElement(w + "hdr", Paragraph("PUBLIC HEADER")).ToString()));
+        }
+        parts["[Content_Types].xml"] = Encoding.UTF8.GetBytes(types.ToString());
+        parts["_rels/.rels"] = Encoding.UTF8.GetBytes(new XElement(pr + "Relationships", new XElement(pr + "Relationship",
+            new XAttribute("Id", "rDocument"), new XAttribute("Type", rel.NamespaceName + "/officeDocument"), new XAttribute("Target", "word/document.xml"))).ToString());
+        parts["word/_rels/document.xml.rels"] = Encoding.UTF8.GetBytes(relationships.ToString());
+        parts["word/document.xml"] = Encoding.UTF8.GetBytes(new XElement(w + "document", body).ToString());
+        string input = TestFixtures.WriteTempPackage(".docx", parts);
+        try { return DocxTests.ReadDocx(input, mode); } finally { File.Delete(input); }
+    }
+}

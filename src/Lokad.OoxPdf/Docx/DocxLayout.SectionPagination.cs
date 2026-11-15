@@ -2,7 +2,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static bool UsesSimpleSectionPagination(DocxDocument document, CancellationToken cancellationToken)
+    private static bool UsesSimpleSectionFootnoteAdmission(DocxDocument document, CancellationToken cancellationToken)
     {
         if (document.FinalSectionBreak is null || document.Settings.MirrorMargins == true ||
             document.FloatingDrawings.Count != 0 || !DocxPlainBodyFrame.HasNoSelectableStaticStories(document, cancellationToken) ||

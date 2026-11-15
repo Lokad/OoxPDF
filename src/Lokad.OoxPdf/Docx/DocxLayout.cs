@@ -329,9 +329,12 @@ internal sealed partial class DocxLayoutEngine
         var continuationHeaderByPage = new Dictionary<(DocxPageSettings, double, int, int, int), DocxStaticStoryLayoutResult?>();
         var continuationFooterTopByPage = new Dictionary<(DocxPageSettings, double, int, int, int), (double Body, double Note, double? Physical, bool CompleteContent)>();
         var plainFootnoteFooterFrames = new Dictionary<(DocxPageSettings, double, double, double, double, double, double, int, int), DocxLayoutPage?>();
-        bool useSimpleSectionPagination = UsesSimpleSectionPagination(document, cancellationToken) &&
+        bool useSourceSectionStarts = document.FinalSectionBreak is not null &&
+            document.Settings.MirrorMargins != true && document.FloatingDrawings.Count == 0 &&
             (Math.Abs(paragraphSpacingScale - 1d) < 0.000001d ||
              Math.Abs(paragraphSpacingScale - WordCompatibleAllMarkupParagraphSpacingScale) < 0.000001d);
+        bool useSimpleSectionFootnoteAdmission = useSourceSectionStarts &&
+            UsesSimpleSectionFootnoteAdmission(document, cancellationToken);
         int currentSectionStartIndex = 0;
         int sectionFirstPageNumber = 1;
 
@@ -1317,7 +1320,10 @@ internal sealed partial class DocxLayoutEngine
             {
                 DocxSectionBreakElement boundary = sectionBreak;
                 bool admitBoundary = false;
-                if (useSimpleSectionPagination && page.ColumnFrames.Count == 1 &&
+                // Following-section source ownership does not depend on the
+                // paragraph's inline content. The extra continuous-footnote
+                // admission below retains its separately qualified eligibility.
+                if (useSourceSectionStarts && page.ColumnFrames.Count == 1 &&
                     (sectionBreak.TypeValue is null or DocxSectionBreakType.NextPage or DocxSectionBreakType.Continuous) &&
                     document.BodyElements.Skip(elementIndex + 1).Any(e => e is not DocxSectionBreakElement))
                 {
@@ -1338,7 +1344,7 @@ internal sealed partial class DocxLayoutEngine
                     }
                 }
                 bool startsNewPage = ShouldStartNewPageForSectionBreak(boundary) ||
-                    (admitBoundary && IsContinuousSectionBreak(boundary) &&
+                    (useSimpleSectionFootnoteAdmission && admitBoundary && IsContinuousSectionBreak(boundary) &&
                      (sectionBreak.PageSettings.FootnoteReferenceSettings.PositionValue is null or "pageBottom") &&
                      HasCurrentSectionFootnoteMarkers(elementIndex));
                 if (startsNewPage && HasPageContent())
