@@ -106,7 +106,8 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
-    private static DocxDocument ReadNoteTextRows(string content, string admission, OoxPdfDocxMarkupMode mode, bool endnote, bool sameRun) =>
+    private static DocxDocument ReadNoteTextRows(string content, string admission, OoxPdfDocxMarkupMode mode, bool endnote, bool sameRun,
+        int markerRow = 0, bool beforeText = false) =>
         ReadTextRowMetrics(content, admission, mode, (xml, w, _) =>
         {
             var paragraph = xml.Descendants(w + "p").Single(p => p.Descendants(w + "t").Any(text => text.Value == "Large heading"));
@@ -116,8 +117,22 @@ internal static partial class DocxInlineCompositionTests
             if (!sameRun) properties.Element(w + "sz")!.SetAttributeValue(w + "val", "16");
             var marker = new XElement(w + "r", properties,
                 new XElement(w + (endnote ? "endnoteReference" : "footnoteReference"), new XAttribute(w + "id", "1")));
-            firstBreak.AddBeforeSelf(marker);
-            if (sameRun) { marker.Add(new XElement(w + "br"), new XElement(small.Element(w + "t")!)); firstBreak.Remove(); small.Remove(); }
+            if (markerRow == 0)
+            {
+                firstBreak.AddBeforeSelf(marker);
+                if (sameRun) { marker.Add(new XElement(w + "br"), new XElement(small.Element(w + "t")!)); firstBreak.Remove(); small.Remove(); }
+            }
+            else
+            {
+                var text = paragraph.Elements(w + "r").Elements(w + "t").Single(text => text.Value == $"Small row {markerRow:00}");
+                if (sameRun)
+                {
+                    if (beforeText) text.AddBeforeSelf(marker.Elements().Single(child => child.Name != w + "rPr"));
+                    else text.AddAfterSelf(marker.Elements().Single(child => child.Name != w + "rPr"));
+                }
+                else if (beforeText) text.Parent!.AddBeforeSelf(marker);
+                else text.Parent!.AddAfterSelf(marker);
+            }
         }, zip =>
         {
             XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";

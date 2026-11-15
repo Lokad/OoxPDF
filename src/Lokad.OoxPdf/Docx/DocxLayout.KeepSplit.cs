@@ -339,8 +339,8 @@ internal sealed partial class DocxLayoutEngine
         if (runs.Length == 0) return null;
 
         // An automatic marker owns its generated run even when it shares an
-        // OOXML run with ordinary text. Only the row containing that marker
-        // retains the paragraph frame. Unknown/custom owners stay conservative;
+        // OOXML run with ordinary text. Each row retains only its owned markers
+        // and measures their actual runs. Unknown/custom owners stay conservative;
         // original references and annotations are never replaced for painting.
         foreach (var reference in paragraph.InlineReferences)
         {
@@ -348,8 +348,7 @@ internal sealed partial class DocxLayoutEngine
             if (!DocxInlineContent.TryGetAutomaticNoteRun(reference, out var marker) ||
                 marker.SourceRunIndex < 0 || marker.SourceRunIndex != reference.SourceRunIndex ||
                 marker.SourceTextOffsetInRun != reference.TextOffsetInRun ||
-                !paragraph.Runs.Any(run => ReferenceEquals(run, marker)) ||
-                runs.Any(run => ReferenceEquals(run, marker))) return null;
+                !paragraph.Runs.Any(run => ReferenceEquals(run, marker))) return null;
         }
 
         bool sameRuns = runs.Length == paragraph.Runs.Count;
@@ -358,7 +357,8 @@ internal sealed partial class DocxLayoutEngine
         if (sameRuns) return paragraph;
 
         return paragraph with { Runs = runs,
-            InlineReferences = paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment).ToArray() };
+            InlineReferences = paragraph.InlineReferences.Where(reference => reference.Kind == DocxRelatedStoryKind.Comment ||
+                reference.DisplayRun is { } marker && runs.Any(run => ReferenceEquals(run, marker))).ToArray() };
     }
 
     private static bool ShouldMoveParagraphForWidowControl(

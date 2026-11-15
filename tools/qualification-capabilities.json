@@ -1,4 +1,38 @@
 {
+  "docx-marker-row-metrics": [
+    "DocxMarkerRowsRetainLocalMetricsVisibleContentAndNoteTargets",
+    "DocxMarkerRowsShareKeepWidowAndCompleteNoteAdmission",
+    "DocxMarkerRowsKeepActualLargeStrutsDeclaredSlotsAndUnknownFallbacks",
+    "DocxCompleteFootnoteReserveReclaimsRowsWithoutMovingNotes",
+    "DocxCompleteFootnoteReserveKeepsUnqualifiedStories",
+    "DocxCompleteFootnoteReserveRejectsChangedCompleteOwnerPages",
+    "DocxMidBodyFootnoteAnchorKeepsPrecedingFillersOnPage",
+    "DocxNoteTextRowsRetainLocalMetricsContentAndSourceOwners",
+    "DocxNoteTextRowsShareNoteReservationKeepAndWidowAdmission",
+    "DocxNoteTextRowsKeepMarkerAndUnknownOwnerFrameFallbacks",
+    "DocxOrderedTextRowsRetainLocalFontMetricsAndPages",
+    "DocxOrderedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainContinuationMetricsAndPages",
+    "DocxNumberedTextRowsShareKeepAndWidowAdmission",
+    "DocxNumberedTextRowsRetainDefaultAndExplicitListSpacing",
+    "DocxTabbedTextRowsRetainLocalMetricsAndVisibleContent",
+    "DocxTabbedTextRowsShareKeepAndWidowAdmission",
+    "DocxTabbedTextRowsKeepOwnRunStrutsAndDeclaredSlots",
+    "DocxCompleteFootnoteAdmissionOwnsSharedRunMarkersOnTheirMeasuredPages",
+    "DocxCompleteFootnoteAdmissionSharedRunsPreserveRenderedPagesAndTargets",
+    "DocxCompleteFootnoteAdmissionSharedRunsRejectUnownedAutomaticMarkers",
+    "DocxSharedRunFootnoteNumbersKeepIndependentGeneratedOwners",
+    "DocxSharedRunFootnoteNumbersRenderLikeSeparateMarkerRuns",
+    "DocxSharedRunFootnoteNumbersRejectMissingDuplicateAndForeignMeasuredOwners",
+    "DocxInlineCompositionOwnedNoteFramesMatchWordContinuationAndKeepBodyOrigins",
+    "DocxInlineCompositionMinimumMixedNoteFramesMatchIndependentWord",
+    "DocxPageFootnoteNumbersKeepExcludedSettingsAndStories",
+    "DocxPageFootnoteNumbersRejectMovedOrPartialNotes",
+    "DocxKeptListLabelsShareFirstLineLeadingWithPlacement",
+    "DocxKeptListLabelCountersFollowTheAdmittedFrame",
+    "DocxCachedPictureResultsPreservePaintAndNavigation",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-note-text-row-metrics": [
     "DocxCompleteFootnoteReserveReclaimsRowsWithoutMovingNotes",
     "DocxCompleteFootnoteReserveKeepsUnqualifiedStories",
@@ -632,6 +666,9 @@
     "DocxColumnAdmissionKeepsRunSplitsAndNavigation"
   ],
   "docx-keep-chain-admission": [
+    "DocxMarkerRowsRetainLocalMetricsVisibleContentAndNoteTargets",
+    "DocxMarkerRowsShareKeepWidowAndCompleteNoteAdmission",
+    "DocxMarkerRowsKeepActualLargeStrutsDeclaredSlotsAndUnknownFallbacks",
     "DocxNoteTextRowsRetainLocalMetricsContentAndSourceOwners",
     "DocxNoteTextRowsShareNoteReservationKeepAndWidowAdmission",
     "DocxNoteTextRowsKeepMarkerAndUnknownOwnerFrameFallbacks",
@@ -5727,6 +5764,9 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxMarkerRowsRetainLocalMetricsVisibleContentAndNoteTargets",
+    "DocxMarkerRowsShareKeepWidowAndCompleteNoteAdmission",
+    "DocxMarkerRowsKeepActualLargeStrutsDeclaredSlotsAndUnknownFallbacks",
     "DocxNoteTextRowsRetainLocalMetricsContentAndSourceOwners",
     "DocxNoteTextRowsShareNoteReservationKeepAndWidowAdmission",
     "DocxNoteTextRowsKeepMarkerAndUnknownOwnerFrameFallbacks",
