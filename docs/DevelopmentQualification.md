@@ -12,7 +12,8 @@ source includes the shared text-normalization and source-cursor corrections belo
 
 | Capability | Concrete outcome and qualification limit |
 |---|---|
-| Authored legends | All six authored names/155 glyphs now paint. The earlier image pass concealed missing names. Origins/keys still miss the unchanged 1pt gate by 13.514/13.519pt; wrapping and manual/dense placement remain approximate. |
+| Authored legends | The six-name omission is repaired. In the 840pt long-name control, all six names/155 native glyphs paint without measured cuts or unknowns; origin residuals remain 8.042pt X/0.090pt Y against the unchanged 1pt gate. |
+| Other legend geometry | A separate automatic top legend has origin/key errors of 13.514/13.519pt. The authored manual top grid retains 11.169pt X/31.387pt Y origin errors. These are separate source pairs; wrapping and manual/dense placement remain approximate. |
 | Resumed composed text | Two outputs regain 236 letters previously dropped after a leading nonprinting break. The cursor advances by original source position, including rows with no painted spans. Ordinary break characters remain nonprinting; selected soft-hyphen breaks retain their hyphen. |
 | Literal note marks | Four outputs regain six literal marker glyphs and two links. Shared normalization preserves only the explicitly owned source character in body and note target, with or without an equation. Existing ownership and typography fallbacks remain. |
 | Note overlap | Two plain-soft outcomes previously overprinted first-page note captions on one baseline. Complete-marker admission now separates their bounds by 14.648pt, as in unchanged asterisk controls. This is bounded content/overlap evidence, not new Word note-placement parity. |
