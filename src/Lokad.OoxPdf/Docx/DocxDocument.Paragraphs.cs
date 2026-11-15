@@ -503,6 +503,8 @@ internal sealed record DocxTextRun(
 
     public DocxRunVerticalAlignment VerticalAlignment => ParseVerticalAlignment(VerticalAlignmentValue);
 
+    internal static string ResolveDisplayText(string text, bool allCaps) => allCaps ? text.ToUpperInvariant() : text;
+
     public static DocxRunVerticalAlignment ParseVerticalAlignment(string? value)
     {
         if (string.Equals(value, "superscript", StringComparison.OrdinalIgnoreCase))

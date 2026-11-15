@@ -112,7 +112,8 @@ internal static class DocxInlineContent
             // accepts one stable retry. Endnote page restarts remain unsupported.
             (reference.NoteNumberRestartValue is null or "continuous" or "eachSect" ||
                 reference.Kind == DocxRelatedStoryKind.Footnote && reference.NoteNumberRestartValue == "eachPage") &&
-            run is { IsAutomaticNoteReferenceMarker: true } && run.Text == reference.DisplayText;
+            run is { IsAutomaticNoteReferenceMarker: true } && reference.DisplayText is { } label &&
+            run.Text == DocxTextRun.ResolveDisplayText(label, run.AllCaps);
     }
 
     public static bool HasSourceFieldResults(IReadOnlyList<DocxFieldReference> fields,

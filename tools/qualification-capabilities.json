@@ -1,4 +1,36 @@
 {
+  "docx-note-display-casing": [
+      "DocxAutomaticNoteCasingMatchesOwnedReferenceAndTargetPaint",
+      "DocxAutomaticNoteCasingKeepsCounterLabelsAndTargetStylesIndependent",
+      "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
+      "DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks",
+      "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
+      "DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries",
+      "DocxSharedCustomRunReferencesPreserveSupportedMathAndMarkerOwners",
+      "DocxSharedCustomRunReferencesKeepAutomaticPageCountersAndStableOwners",
+      "DocxSharedCustomRunReferencesKeepImmediateCharacterFallbacks",
+      "DocxCustomNoteMarksOwnOffsetsWithinSharedSourceRuns",
+      "DocxCustomNoteMarksKeepRepeatedMarksAndDestinationsDistinct",
+      "DocxCustomNoteMarksRequireOwnedVisibleSourceAndTarget",
+      "DocxCustomNoteMarksHonorExplicitFalseFlags",
+      "DocxCustomNoteMarksLinkOnlyTheirFirstVisibleCharacter",
+      "DocxInlineCompositionCustomNotesRetainExactSourceOwnersAndFallbacks",
+      "DocxCompleteFootnoteKerningProtectsOwnedCustomBaselinePrefixes",
+      "DocxCompleteFootnoteKerningRejectsAmbiguousCustomSourceOwners",
+      "DocxCustomNoteLineMetricsPreserveMinimumBottomBearingsAndSourceOwners",
+      "DocxCustomNoteSuffixMetricsFollowActualSourceSpans",
+      "DocxCustomNoteLineMetricsRetainFixedRichScaledAndAmbiguousFallbacks",
+      "DocxReaderTextWhitespaceMatchesOffice",
+      "DocxInlineCompositionCustomNotesMatchIndependentContentAndKeepFirstGlyphLinks",
+      "ConvertObservesCancellationAfterWorkBegins",
+      "DocxFontSlotsKeepSourceOffsetsAndLinkRevisionOwnership",
+      "DocxReaderEmitsAutomaticFootnoteAndEndnoteMarkersWithCascadeAlignment",
+      "DocxSectionNoteNumbersUseClosingSectionPropertiesAndRestart",
+      "DocxSectionNoteNumberLinksKeepRepeatedLabelsDistinct",
+      "DocxReaderPreservesParagraphSimpleFieldCachedResultRunsInOrder",
+      "PortableRenderingFootnoteLinksIgnoreIdenticalAuthoredDigits",
+      "DocxInlineCompositionAutomaticFootnotesRetainOwnedMarkerRuns"
+  ],
   "docx-custom-mark-empty-text": [
     "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
     "DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks",
@@ -2377,6 +2409,8 @@
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException"
   ],
   "docx-custom-run-owners": [
+    "DocxAutomaticNoteCasingMatchesOwnedReferenceAndTargetPaint",
+    "DocxAutomaticNoteCasingKeepsCounterLabelsAndTargetStylesIndependent",
     "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
     "DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks",
     "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
@@ -5853,6 +5887,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxAutomaticNoteCasingMatchesOwnedReferenceAndTargetPaint",
+    "DocxAutomaticNoteCasingKeepsCounterLabelsAndTargetStylesIndependent",
     "DocxCustomMarkRunCharactersKeepFractionsAndFirstGlyphLinks",
     "DocxCustomMarkCasingKeepsResolvedFractionsAndFirstGlyphLinks",
     "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",

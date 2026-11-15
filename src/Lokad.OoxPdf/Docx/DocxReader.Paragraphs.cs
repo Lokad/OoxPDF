@@ -658,7 +658,7 @@ internal sealed partial class DocxReader
                 paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, sourceRunIndex, revision);
-            AddResolvedTextRuns(runs, ResolveRunDisplayText(text, resolvedRun), ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
+            AddResolvedTextRuns(runs, DocxTextRun.ResolveDisplayText(text, resolvedRun.AllCaps == true), ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode), runStyleResolution, sourceRunIndex, sourceTextOffsetInRun: 0, revision, MergeRevisionLists(revision, runRevisions), placeholderKind);
         }
 
         void AddParagraphRun(XElement run, ref bool currentPageInstructionSeen, DocxRevisionInfo? revision)
@@ -814,7 +814,7 @@ internal sealed partial class DocxReader
                 return;
             }
 
-            string displayText = ResolveRunDisplayText(text, resolvedRun);
+            string displayText = DocxTextRun.ResolveDisplayText(text, resolvedRun.AllCaps == true);
             DocxComplexFieldState[] resultFields = ActiveComplexResultFields();
             if (resultFields.Length != 0)
             {
@@ -1033,7 +1033,7 @@ internal sealed partial class DocxReader
                     int firstRun = runs.Count;
                     AddResolvedTextRuns(
                         runs,
-                        ResolveRunDisplayText(placeholder, resolvedRun),
+                        DocxTextRun.ResolveDisplayText(placeholder, resolvedRun.AllCaps == true),
                         resolvedRun,
                         runStyleResolution,
                         currentSourceRunIndex,
@@ -1618,7 +1618,7 @@ internal sealed partial class DocxReader
                 bool isText = following.Name == WordprocessingNamespace + "t";
                 if (!isText && (following.HasElements || following.Value.Length != 0 ||
                     following.Attributes().Any(attribute => !attribute.IsNamespaceDeclaration))) return null;
-                string text = ResolveRunDisplayText(ReadRunTextChild(following), resolvedRun);
+                string text = DocxTextRun.ResolveDisplayText(ReadRunTextChild(following), resolvedRun.AllCaps == true);
                 if (text.Length != 0)
                     return char.IsWhiteSpace(text[0]) || char.IsSurrogate(text[0]) ? null : text[..1];
                 if (following.HasElements || !isText && following.Name != WordprocessingNamespace + "lastRenderedPageBreak") return null;
@@ -1642,7 +1642,7 @@ internal sealed partial class DocxReader
             // keep it through the cascade.
             AddResolvedTextRuns(
                 runs,
-                displayText,
+                DocxTextRun.ResolveDisplayText(displayText, resolvedRun.AllCaps == true),
                 resolvedRun,
                 runStyleResolution,
                 currentSourceRunIndex,
@@ -1651,9 +1651,6 @@ internal sealed partial class DocxReader
                 revisions: null);
         }
     }
-
-    private static string ResolveRunDisplayText(string text, DocxResolvedRunProperties properties) =>
-        properties.AllCaps == true ? text.ToUpperInvariant() : text;
 
     private static void AddResolvedTextRuns(List<DocxTextRun> runs, string text, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution styleResolution, int sourceRunIndex, int sourceTextOffsetInRun, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo>? revisions, DocxFieldKind? fieldKind = null)
     {

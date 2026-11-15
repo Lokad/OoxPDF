@@ -82,7 +82,7 @@ internal sealed partial class DocxRenderer
                         if (reference.DisplayRun is not null &&
                             (!segment.StyleRun.IsAutomaticNoteReferenceMarker ||
                              !ReferenceEquals(reference.DisplayRun, segment.StyleRun))) continue;
-                        if (segment.Text != automatic) continue;
+                        if (segment.Text != DocxTextRun.ResolveDisplayText(automatic, segment.StyleRun.AllCaps)) continue;
                     }
                     else if (reference.CustomMarkText is { } custom && segment.Text.StartsWith(custom, StringComparison.Ordinal) &&
                         fontResources.TextMeasurer is { } measurer)
