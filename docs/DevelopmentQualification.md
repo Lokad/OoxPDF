@@ -57,7 +57,7 @@ recorded without tuning. No new defect is claimed by that check.
 
 ## Finite document checkpoint
 
-The fixed [portfolio manifest](../tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json)
+The fixed repository manifest `tests/Lokad.OoxPdf.Tests/Cases/Composition/portfolio.json`
 pins nine sources and sixteen outcomes: default Final with preserved layout and
 AllMarkup with Word-compatible geometry for each DOCX, plus two PPTX decks.
 The documents combine prose, numbering, tables, equations, pictures, links,
