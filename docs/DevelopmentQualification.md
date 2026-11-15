@@ -161,8 +161,9 @@ rejected capture/export actions are not retried or relabeled as completed work.
   fill 16.459pt versus Word 8.016pt remains unresolved; a nominal-strut fix was refuted.
 - Nested inline boxes are unsupported. Complex SVG text, arbitrary custom/non-BMP
   note marks, typography and broader combinations retain documented limits.
-  Ordinary Roman/letter list placeholders still emit decimals; decimal/bullet
-  support does not imply additional numbering formats.
+  Ordinary list formatting is now implemented at source resolution; its new
+  focused qualification is separate from the retained checkpoint183 package.
+  Locale-dependent alphabets and custom restart policies remain unqualified.
 - Coarse host memory admission is partial, not a comprehensive heap ceiling.
   Safe managed execution, cancellation, meaningful input bounds, bounded caches
   and staging, deterministic refunds/cleanup, atomic publication and PDF validity

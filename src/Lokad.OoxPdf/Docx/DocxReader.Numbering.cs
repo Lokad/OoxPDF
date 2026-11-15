@@ -10,40 +10,17 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    private static string FormatNoteReferenceNumber(int value, string? format)
+    // DOCX list and note counters share the same numeral content. Formatting
+    // is resolved before font discovery, measurement and painting.
+    private static string FormatNumberingCounter(int value, string? format) => format switch
     {
-        return format switch
-        {
-            "decimalZero" => value.ToString("D2", CultureInfo.InvariantCulture),
-            "lowerRoman" => ToRomanNumeral(value).ToLowerInvariant(),
-            "upperRoman" => ToRomanNumeral(value),
-            "lowerLetter" => ToAlphabeticNumber(value, upper: false),
-            "upperLetter" => ToAlphabeticNumber(value, upper: true),
-            _ => value.ToString(CultureInfo.InvariantCulture)
-        };
-    }
-
-    // Single caller; loop core shared via OoxNumbering, per-spec edge guard stays.
-    private static string ToAlphabeticNumber(int value, bool upper)
-    {
-        if (value <= 0)
-        {
-            return value.ToString(CultureInfo.InvariantCulture);
-        }
-
-        return OoxNumbering.ToAlphabetic(value, upper);
-    }
-
-    // Single caller; loop core shared via OoxNumbering, per-spec edge guard stays.
-    private static string ToRomanNumeral(int value)
-    {
-        if (value <= 0 || value > 3999)
-        {
-            return value.ToString(CultureInfo.InvariantCulture);
-        }
-
-        return OoxNumbering.ToRomanUpper(value);
-    }
+        "decimalZero" => value.ToString("D2", CultureInfo.InvariantCulture),
+        "lowerRoman" when value is > 0 and <= 3999 => OoxNumbering.ToRomanUpper(value).ToLowerInvariant(),
+        "upperRoman" when value is > 0 and <= 3999 => OoxNumbering.ToRomanUpper(value),
+        "lowerLetter" when value > 0 => OoxNumbering.ToRepeatedAlphabetic(value, upper: false),
+        "upperLetter" when value > 0 => OoxNumbering.ToRepeatedAlphabetic(value, upper: true),
+        _ => value.ToString(CultureInfo.InvariantCulture)
+    };
 
     // Formatting history does not insert a list boundary or consume a counter.
     // Other mark operations still need their own original/current timeline rule.
@@ -82,8 +59,8 @@ internal sealed partial class DocxReader
         int? startOverride = numbering.StartOverrides.TryGetValue((numId, level), out int overriddenStart)
             ? overriddenStart : null;
         var change = counters.Advance(abstractId, numId, level, numberingLevel.Start, startOverride,
-            numberingLevel.Text, trackOriginal, originalIncluded, markInsertion);
-        string labelText = ResolveNumberingLevelText(numberingLevel.Text, abstractId, counters.Current);
+            numberingLevel, numbering, trackOriginal, originalIncluded, markInsertion);
+        string labelText = ResolveNumberingLevelText(numberingLevel, numId, abstractId, level, numbering, counters.Current);
         return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numberingLevel.Suffix, numId, level, numberingLevel.Indent, labelStyle)
         {
             NumberingChange = change
@@ -138,11 +115,7 @@ internal sealed partial class DocxReader
             }
         }
 
-        DocxNumberingLevel? numberingLevel = numbering.LevelOverrides.TryGetValue((numId, level), out DocxNumberingLevel? concreteLevel)
-            ? concreteLevel
-            : numbering.Levels.TryGetValue((abstractId, level), out DocxNumberingLevel? abstractLevel)
-                ? abstractLevel
-                : null;
+        DocxNumberingLevel? numberingLevel = numbering.ResolveLevel(numId, abstractId, level);
         return numberingLevel is null ? null : (numId, abstractId, level, numberingLevel);
     }
 
@@ -158,7 +131,8 @@ internal sealed partial class DocxReader
         private HashSet<string>? unsupportedOriginalGroups;
 
         public DocxNumberingChange? Advance(string groupId, string numId, int level, int start,
-            int? startOverride, string pattern, bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? insertion)
+            int? startOverride, DocxNumberingLevel definition, DocxNumberingSet numbering,
+            bool trackOriginal, bool? originalIncluded, DocxRevisionInfo? insertion)
         {
             if (trackOriginal)
             {
@@ -175,8 +149,8 @@ internal sealed partial class DocxReader
             if (originalIncluded == true) original.Advance(groupId, numId, level, start, startOverride);
             if (originalIncluded != true || unsupportedOriginalGroups?.Contains(groupId) == true ||
                 triggers is null || !triggers.TryGetValue(groupId, out var trigger)) return null;
-            string previous = ResolveNumberingLevelText(pattern, groupId, original.Values);
-            string value = ResolveNumberingLevelText(pattern, groupId, current.Values);
+            string previous = ResolveNumberingLevelText(definition, numId, groupId, level, numbering, original.Values);
+            string value = ResolveNumberingLevelText(definition, numId, groupId, level, numbering, current.Values);
             return previous == value ? null : new(previous, trigger);
         }
 
@@ -270,21 +244,23 @@ internal sealed partial class DocxReader
         return levelStyle with { FontSize = WordListLabelFallbackMaxPoints };
     }
 
-    private static string ResolveNumberingLevelText(string text, string groupId, IReadOnlyDictionary<(string GroupId, int Level), int> counters)
+    private static string ResolveNumberingLevelText(DocxNumberingLevel definition, string numId,
+        string groupId, int currentLevel, DocxNumberingSet numbering,
+        IReadOnlyDictionary<(string GroupId, int Level), int> counters)
     {
-        string resolved = text;
+        string resolved = definition.Text;
         for (int level = 0; level < 9; level++)
         {
             string token = "%" + (level + 1).ToString(CultureInfo.InvariantCulture);
-            if (resolved.Contains(token, StringComparison.Ordinal))
-            {
-                string value = counters.TryGetValue((groupId, level), out int counter)
-                    ? counter.ToString(CultureInfo.InvariantCulture)
-                    : "0";
-                resolved = resolved.Replace(token, value, StringComparison.Ordinal);
-            }
+            if (!resolved.Contains(token, StringComparison.Ordinal)) continue;
+            // Each reference owns its effective format, including concrete
+            // overrides. Legal numbering overrides all referenced formats.
+            // A reference deeper than the current level contributes no number.
+            string format = definition.IsLegal ? "decimal" : numbering.ResolveLevel(numId, groupId, level)?.Format ?? "decimal";
+            string value = level > currentLevel ? string.Empty : FormatNumberingCounter(
+                counters.TryGetValue((groupId, level), out int counter) ? counter : 0, format);
+            resolved = resolved.Replace(token, value, StringComparison.Ordinal);
         }
-
         return resolved;
     }
 
@@ -378,7 +354,8 @@ internal sealed partial class DocxReader
         DocxTextRunStyle style = ReadTextRunStyle(level.Element(WordprocessingNamespace + "rPr"));
         return new DocxNumberingLevel(format, ResolveNumberingSymbolText(text, style, fontCatalog), suffix, start, ReadNumberingIndent(level), style)
         {
-            ParagraphStyleId = (string?)level.Element(WordprocessingNamespace + "pStyle")?.Attribute(WordprocessingNamespace + "val")
+            ParagraphStyleId = (string?)level.Element(WordprocessingNamespace + "pStyle")?.Attribute(WordprocessingNamespace + "val"),
+            IsLegal = ReadOnOff(level.Element(WordprocessingNamespace + "isLgl")) == true
         };
     }
 
@@ -421,6 +398,9 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<(string NumId, int Level), int> StartOverrides,
         IReadOnlyDictionary<(string NumId, int Level), DocxNumberingLevel> LevelOverrides)
     {
+        public DocxNumberingLevel? ResolveLevel(string numId, string abstractId, int level) =>
+            LevelOverrides.TryGetValue((numId, level), out var concrete) ? concrete : Levels.GetValueOrDefault((abstractId, level));
+
         public static DocxNumberingSet Empty { get; } = new(
             new Dictionary<string, string>(),
             new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>(),
@@ -431,6 +411,7 @@ internal sealed partial class DocxReader
     private sealed record DocxNumberingLevel(string Format, string Text, string Suffix, int Start, DocxNumberingIndent Indent, DocxTextRunStyle Style)
     {
         public string? ParagraphStyleId { get; init; }
+        public bool IsLegal { get; init; }
     }
 
     private static DocxNumberingIndent ReadNumberingIndent(XElement level)

@@ -1619,7 +1619,7 @@ internal sealed partial class DocxReader
             // lowerRoman endnotes); Office numbers the first style-less endnote "i".
             string? numberFormat = settings.NumberFormatValue
                 ?? (kind == DocxRelatedStoryKind.Endnote ? "lowerRoman" : "decimal");
-            return FormatNoteReferenceNumber(next, numberFormat);
+            return FormatNumberingCounter(next, numberFormat);
         }
 
         string? ResolveCustomMarkText()

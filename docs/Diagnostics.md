@@ -273,3 +273,9 @@ Use stable prefixes by subsystem:
 - `IMAGE_`: image parsing or rendering issues.
 
 Prefer one durable code per observable behavior. Aggregate repeated unsupported features when the exact count is not useful to the caller.
+
+Ordinary list placeholders support decimal/decimalZero, Roman (1–3999) and Latin
+letter formats, plus legal decimal references. Unknown formats retain decimal
+fallback and their original format tokens in the source model; there is currently
+no dedicated list-format warning. Custom `lvlRestart` policies and localized
+alphabets remain unqualified. Source-derived labels do not qualify new Word geometry.

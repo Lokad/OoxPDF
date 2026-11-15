@@ -26,6 +26,16 @@ internal static class OoxNumbering
     }
 
     /// <summary>
+    /// Word alphabetic label: A..Z, AA..ZZ, AAA..ZZZ for positive values.
+    /// DrawingML callers retain their separately qualified cycling behavior.
+    /// </summary>
+    internal static string ToRepeatedAlphabetic(int value, bool upper)
+    {
+        int index = value - 1;
+        return new string((char)((upper ? 'A' : 'a') + index % 26), index / 26 + 1);
+    }
+
+    /// <summary>
     /// Upper-case Roman label for positive values; callers keep range and case contracts.
     /// </summary>
     internal static string ToRomanUpper(int value)

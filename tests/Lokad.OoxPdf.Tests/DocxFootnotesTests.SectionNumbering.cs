@@ -350,6 +350,15 @@ internal static partial class DocxFootnotesTests
         }
     }
 
+    public static void DocxNoteLetterFormatsShareWordAlphabeticCarry()
+    {
+        foreach (string kind in new[] { "footnote", "endnote" })
+        {
+            CheckNoteLabels(ReadNotePrecedenceFixture(kind, "decimal", "lowerLetter", 27, true), ["aa", "bb"]);
+            CheckNoteLabels(ReadNotePrecedenceFixture(kind, "decimal", "upperLetter", 52, true), ["ZZ", "AAA"]);
+        }
+    }
+
     public static void DocxNoteDecimalZeroLabelsCrossTenWithoutExtraPadding()
     {
         foreach (string kind in new[] { "footnote", "endnote" })

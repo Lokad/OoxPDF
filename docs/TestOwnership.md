@@ -323,3 +323,16 @@ their independent font and geometry requirements.
 semantics. The original four-row balloon control requires actual Times New Roman
 and retains its Office0.05pt gate; a two-font portable control checks all24 words
 and painted row extents without substituting another fixed row count.
+
+`DocxNumberingTests.Formats.cs` owns effective list-format/placeholder resolution,
+concrete overrides, starts/restarts, legal numbering and current/original label
+content. Its independent literal expectations replace decimal-only assumptions in
+the older metadata-preservation test. `DocxNumberingTests.ComposedFormats.cs` owns
+actual native glyph-label paint and neighboring equation/picture/link preservation
+for the independent `HierarchicalLists` family and its held-out schedule. Note
+carry belongs to `DocxFootnotesTests.SectionNumbering.cs`; PPTX's existing cycle
+controls protect its distinct behavior over the shared repeated-letter primitive.
+Select their 22-method union with `docx-list-number-formats`; the six new portable
+methods also run in Ubuntu CI and the framework-compatibility lane. These source
+content expectations require no Office action; exact layout/reference gates remain
+separate and retain their thresholds.

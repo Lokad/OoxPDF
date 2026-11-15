@@ -1,4 +1,37 @@
 {
+  "docx-list-number-formats": [
+    "DocxListFormatsResolveReferencedLevelsAndConcreteOverrides",
+    "DocxListFormatTransitionsKeepStartsAndCounterRestarts",
+    "DocxListLegalNumberingOwnsAllReferencedFormats",
+    "DocxListFormatsKeepOriginalAndCurrentRevisionCounters",
+    "DocxListFormatsPaintIndependentComposedDocuments",
+    "DocxNoteLetterFormatsShareWordAlphabeticCarry",
+    "DocxReaderPreservesNumberingFormatTokens",
+    "DocxReaderNumberingStartOverrideRestartsList",
+    "DocxReaderNumberingLevelOverrideReplacesAbstractLevel",
+    "DocxReaderNumberingResolvesMultilevelLabels",
+    "DocxNumericNumberingIdsResolveAliasesAndKeepDistinctSequences",
+    "DocxEmptyBulletLabelsKeepIndentAndMissingTextDefaults",
+    "DocxStyleNumberingResolvesAssociatedLevelsAndDefaultOwners",
+    "DocxInlineCompositionNumberingCountersRetainSourceTimelines",
+    "DocxInlineCompositionNumberingCounterPaintsMatchIndependentWord",
+    "PortableRenderingNumberingCounterPaintsKeepVisibleContent",
+    "DocxListLabelCasingSharesMeasuredAndPaintedTextAcrossContainers",
+    "DocxListTabsClearMeasuredPrefixesAcrossContainers",
+    "DocxNoteDecimalZeroLabelsCrossTenWithoutExtraPadding",
+    "DocxSingleSectionNoteNumbersUseExplicitSectionProperties",
+    "PptxNumberingOverrideMatchesOfficeAlphabeticRolloverAndCycle",
+    "PptxNumberingContinuesEqualSettingsAndRestartsChangedSettings"
+  ],
+  "docx-list-number-formats-portable": [
+    "DocxListFormatsResolveReferencedLevelsAndConcreteOverrides",
+    "DocxListFormatTransitionsKeepStartsAndCounterRestarts",
+    "DocxListLegalNumberingOwnsAllReferencedFormats",
+    "DocxListFormatsKeepOriginalAndCurrentRevisionCounters",
+    "DocxListFormatsPaintIndependentComposedDocuments",
+    "DocxNoteLetterFormatsShareWordAlphabeticCarry"
+  ],
+
   "docx-hidden-break-composition": [
     "DocxLiteralNoteMarksKeepGlyphsAndLinksAcrossPlainAndComposedParagraphs",
     "DocxLiteralNoteMarkerOffsetsSurviveWrappingWithoutPreservingOrdinaryBreaks",
@@ -6148,6 +6181,13 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxListFormatsResolveReferencedLevelsAndConcreteOverrides",
+    "DocxListFormatTransitionsKeepStartsAndCounterRestarts",
+    "DocxListLegalNumberingOwnsAllReferencedFormats",
+    "DocxListFormatsKeepOriginalAndCurrentRevisionCounters",
+    "DocxListFormatsPaintIndependentComposedDocuments",
+    "DocxNoteLetterFormatsShareWordAlphabeticCarry",
+
     "DocxLiteralNoteMarksKeepGlyphsAndLinksAcrossPlainAndComposedParagraphs",
     "DocxLiteralNoteMarkerOffsetsSurviveWrappingWithoutPreservingOrdinaryBreaks",
     "DocxInlineLeadingHiddenBreaksKeepEveryWrappedSourceCharacter",

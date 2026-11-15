@@ -603,7 +603,7 @@ internal static partial class DocxNumberingTests
         TestAssert.Equal("lowerRoman", paragraphs[0].ListLabel?.FormatValue ?? string.Empty);
         TestAssert.Equal("%1)", paragraphs[0].ListLabel?.LevelTextValue ?? string.Empty);
         TestAssert.Equal("tab", paragraphs[0].ListLabel?.SuffixValue ?? string.Empty);
-        TestAssert.Equal("3)", paragraphs[0].ListLabel?.Text ?? string.Empty);
+        TestAssert.Equal("iii)", paragraphs[0].ListLabel?.Text ?? string.Empty);
         TestAssert.Equal("3", paragraphs[0].ListLabel?.NumberId ?? string.Empty);
         TestAssert.Equal(0, paragraphs[0].ListLabel?.Level ?? -1);
         TestAssert.Equal("720", paragraphs[0].ListLabel?.Indent.LeftValue ?? string.Empty);

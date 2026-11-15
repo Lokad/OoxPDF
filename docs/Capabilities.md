@@ -509,7 +509,15 @@ Supported within the following constraints:
   Undeclared prose/list families use the documented Times New Roman fallback when
   available, after an explicit resolver document default. Missing faces/glyphs are
   diagnosed; no general shaping or font-independent Office parity is promised.
-- Simple decimal/bullet numbering and twip-based indents/tabs. Numbering font
+- Decimal, decimalZero, lower/upper Roman and Latin letter list numbering, bullets
+  and twip-based indents/tabs. Each placeholder uses its referenced level's concrete
+  override or abstract format; legal numbering uses decimal references. Letter
+  counters repeat after Z (AA, BB; then AAA after ZZ), shared with note formatting.
+  Unsupported formats retain decimal fallback; nonpositive letter/Roman values and
+  Roman values above 3999 also use decimal. Locale-dependent alphabets and custom
+  lvlRestart policies remain unqualified; ordinary parent-level restarts and start
+  overrides retain their existing counter semantics. Exact new-source Office
+  placement remains unqualified. Numbering font
   selection follows numbering-level values and the paragraph mark/style/defaults,
   independently of first-run styling. Actual inserted paragraph marks preserve
   adjacent text/equations independently of numbering, including one owned format

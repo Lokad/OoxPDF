@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "mixed-formats",
+    "Labels": [
+      "IV.",
+      "IV.z)",
+      "IV.aa)",
+      "IV.aa.09)",
+      "IV.aa.10)",
+      "V.",
+      "V.z)",
+      "(ZZ)",
+      "ZZ-viii"
+    ],
+    "Picture": true,
+    "Math": "x+1",
+    "Text": [
+      "Scope and assumptions",
+      "Table-owned continuation item",
+      "All public source content remains visible."
+    ],
+    "InputSha256": "0E474CC478A2422BCA84CB1C515D394FBD4256C1577EDA284B51394BC883E969"
+  },
+  {
+    "Id": "legal-overrides",
+    "Labels": [
+      "XII.",
+      "12.9",
+      "12.10",
+      "XIII.",
+      "13.9"
+    ],
+    "Picture": false,
+    "Math": "",
+    "Text": [
+      "Effective concrete format owns this section.",
+      "The subordinate legal counter starts again.",
+      "End of the independently structured schedule."
+    ],
+    "InputSha256": "C728D61358A7F64A39930EB7BBCA6AB61A65B0F13EB1AB5EE7CAA688AD4950B1"
+  }
+]

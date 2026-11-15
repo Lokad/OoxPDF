@@ -518,8 +518,7 @@ internal sealed partial class PptxRenderer
         }
 
         // Office uses a..z, aa..zz, aaa..zzz, cycling after thirty repeated letters.
-        int index = value - 1;
-        return new string((char)((upper ? 'A' : 'a') + index % 26), index / 26 % 30 + 1);
+        return OoxNumbering.ToRepeatedAlphabetic((value - 1) % (26 * 30) + 1, upper);
     }
 
     private static string FormatRomanNumber(int value, bool upper)
