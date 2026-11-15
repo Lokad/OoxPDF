@@ -452,7 +452,7 @@ internal sealed partial class DocxLayoutEngine
                     break;
                 case DocxInlinePicture picture:
                     double imageWidth = picture.Image.WidthPoints * scale, imageHeight = picture.Image.HeightPoints * scale;
-                    if (!double.IsFinite(imageWidth) || !double.IsFinite(imageHeight) || imageWidth <= 0d || imageHeight <= 0d) return false;
+                    if (!double.IsFinite(imageWidth) || !double.IsFinite(imageHeight) || imageWidth < 0d || imageHeight < 0d) return false;
                     // A picture's source run owns its font strut even though it
                     // paints no glyphs. Reuse the ordinary row's descent growth;
                     // the picture stays at the baseline while following content

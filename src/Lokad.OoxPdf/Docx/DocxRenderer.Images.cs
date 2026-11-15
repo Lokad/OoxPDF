@@ -28,6 +28,9 @@ internal sealed partial class DocxRenderer
         IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? svgTextFonts = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        // A zero-area source frame still owns layout advance/height, but has
+        // no image paint. Do not emit a singular image transform or resource.
+        if (width == 0d || height == 0d) return;
         DocxPictureCrop crop = image.Crop;
         bool hasFlip = image.FlipHorizontal || image.FlipVertical;
         bool rotates = image.RotationDegrees != 0d;

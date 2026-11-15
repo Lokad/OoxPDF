@@ -1,4 +1,26 @@
 {
+  "docx-zero-area-pictures": [
+    "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
+    "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
+    "DocxMissingPicturePreservesIndependentControlFrames",
+    "DocxMissingPicturePreservesCellAndStaticStoryGeometry",
+    "DocxMissingPicturePreservesDanglingAndVmlFrames",
+    "DocxMissingPictureReusesFailureAndOmitsItsLinks",
+    "DocxMixedPictureRangesIncludePaintAcrossContainersAndPresets",
+    "DocxMixedPictureRangesKeepDecodeRotationClipAndChildTargetFallbacks",
+    "PortableRenderingInlinePictureLinksFollowVisibleFrames",
+    "PortableRenderingStaticPictureLinksRetainComposedFrames",
+    "DocxInlinePictureLinksRequireDecodedAndUnclippedPaint",
+    "DocxInlineCompositionUnsupportedEquationRetainsAccuratePartialPartDiagnostics",
+    "DocxLeadingInlinePicturesKeepFollowingWordInk",
+    "DocxMinimumPictureRowsKeepDeclaredLineFrames",
+    "DocxFixedPictureRowsKeepFollowingWordsAndPhysicalSlots",
+    "DocxFixedPictureAdmissionUsesPhysicalSlot",
+    "DocxOversizedFixedPicturesKeepFollowingWords",
+    "DocxStaticJustificationSharesBodyWordPositionsAndLinks",
+    "DocxStaticJustificationKeepsLastRowsAndHiddenOwnerPaint",
+    "DocxInlineCompositionDisplayImageRowsRetainIndependentOfficeFractionFrames"
+  ],
   "docx-static-justification": [
     "DocxLayoutStageJustifiesWrappedNonFinalLines",
     "DocxJustifiedInlineImageUsesImageAwareStretch",
@@ -1005,6 +1027,8 @@
     "DocxTableLayoutStageNaturalAutoWidthIgnoresEmptyParagraphMarks"
   ],
   "docx-picture-placement": [
+    "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
+    "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
     "DocxLeadingInlinePicturesKeepFollowingWordInk",
     "DocxMinimumPictureRowsKeepDeclaredLineFrames",
     "DocxFixedPictureRowsKeepFollowingWordsAndPhysicalSlots",
@@ -6050,6 +6074,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
+    "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
     "DocxStaticJustificationSharesBodyWordPositionsAndLinks",
     "DocxStaticJustificationKeepsLastRowsAndHiddenOwnerPaint",
     "DocxStaticHardBreaksRetainAuthoredEmptyRows",
