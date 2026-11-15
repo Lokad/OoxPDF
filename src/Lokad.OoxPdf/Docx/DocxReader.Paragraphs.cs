@@ -1609,12 +1609,14 @@ internal sealed partial class DocxReader
         string? ResolveCustomMarkText()
         {
             // The mark owns the first resolved character in this source run.
-            // Empty text contributes no character; controls and other owners
-            // stop the lookup. Use the same XML-space rules as emitted text.
+            // Empty text and saved pagination hints contribute no character;
+            // controls and other owners stop the lookup. Use emitted XML-space rules.
             if (!OoxBoolean.IsTrue(customMarkFollows)) return null;
             foreach (var following in child.ElementsAfterSelf())
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (following.Name == WordprocessingNamespace + "lastRenderedPageBreak" &&
+                    !following.HasAttributes && !following.HasElements && following.Value.Length == 0) continue;
                 if (following.Name != WordprocessingNamespace + "t") return null;
                 string text = ResolveRunDisplayText(ReadRunTextChild(following), resolvedRun);
                 if (text.Length != 0)

@@ -26,7 +26,7 @@
   Matching section frames use the following section's start type beside supported
   inline content and comments, while conservative footnote admission remains separate.
   Custom note marks share resolved text and casing rules, preserving equations
-  and links beside empty XML text or all-caps formatting.
+  and links beside empty XML text, saved pagination hints or all-caps formatting.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field

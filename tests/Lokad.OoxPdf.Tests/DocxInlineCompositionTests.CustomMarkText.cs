@@ -16,7 +16,7 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(mathFont: true), mode, CachedMathGeometry(mode));
             var control = renderer.RenderPagesAsync(ReadCustomMarkText(kind, count, mode, "original"), null, default)
                 .ToBlockingEnumerable().ToArray();
-            foreach (string variant in new[] { "empty", "several-empty", "trimmed-empty", "trimmed-mark" })
+            foreach (string variant in new[] { "empty", "several-empty", "trimmed-empty", "trimmed-mark", "page-hint", "page-hints-and-empty" })
             {
                 var source = ReadCustomMarkText(kind, count, mode, variant);
                 var paragraph = source.Paragraphs.Single(p => p.Equations.Count != 0);
@@ -24,7 +24,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal("*", reference.CustomMarkText!);
                 TestAssert.True(DocxCustomNoteMarkerOwners.TryGetSourceRun(reference,
                     DocxCustomNoteMarkerOwners.IndexSourceRuns(paragraph.Runs, default), out var owner) && owner.Text.StartsWith('*'),
-                    "Resolved-empty XML text cannot replace the mark's exact source owner.");
+                    "Nonprinting XML text or saved pagination metadata cannot replace the mark's exact source owner.");
                 TestAssert.Equal(count, DocxMathParagraphPolicy.GetPreparationEquations(paragraph).Count);
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 var actual = renderer.RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
@@ -45,7 +45,7 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(count, text.Split("ratetime", StringSplitOptions.None).Length - 1);
                 TestAssert.Equal(4, actual.Sum(page => page.Annotations.Count(link => link.Destination is not null)));
                 TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_EQUATION"),
-                    "Source-empty text must not remove an independently supported fraction.");
+                    "Nonprinting source metadata must not remove an independently supported fraction.");
             }
         }
     }
@@ -53,7 +53,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries()
     {
         foreach (string kind in new[] { "footnote", "endnote" })
-        foreach (string variant in new[] { "preserved-space", "tab", "break", "reference", "unknown", "nested-empty", "surrogate", "end-of-run", "other-run" })
+        foreach (string variant in new[] { "preserved-space", "tab", "break", "page-break", "reference", "unknown", "nested-empty", "surrogate", "end-of-run", "other-run", "page-hint-attribute", "page-hint-text", "page-hint-child" })
         {
             var source = ReadCustomMarkText(kind, 1, OoxPdfDocxMarkupMode.Final, variant);
             var paragraph = source.Paragraphs.Single(p => p.Equations.Count != 0);
@@ -117,9 +117,16 @@ internal static partial class DocxInlineCompositionTests
                     new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve")))); break;
                 case "trimmed-empty": mark.AddBeforeSelf(new XElement(w + "t", " \t\n ")); break;
                 case "trimmed-mark": mark.Attribute(XNamespace.Xml + "space")?.Remove(); mark.Value = " \t* \n"; break;
+                case "page-hint": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak")); break;
+                case "page-hints-and-empty": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak"),
+                    new XElement(w + "t"), new XElement(w + "lastRenderedPageBreak", string.Empty), new XElement(w + "t", " \t ")); break;
                 case "preserved-space": mark.AddBeforeSelf(new XElement(w + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), " ")); break;
                 case "tab": mark.AddBeforeSelf(new XElement(w + "tab")); break;
                 case "break": mark.AddBeforeSelf(new XElement(w + "br")); break;
+                case "page-break": mark.AddBeforeSelf(new XElement(w + "br", new XAttribute(w + "type", "page"))); break;
+                case "page-hint-attribute": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak", new XAttribute(w + "future", "1"))); break;
+                case "page-hint-text": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak", "payload")); break;
+                case "page-hint-child": mark.AddBeforeSelf(new XElement(w + "lastRenderedPageBreak", new XElement(w + "tab"))); break;
                 case "reference": mark.AddBeforeSelf(new XElement(w + kind + "Reference", new XAttribute(w + "id", "4"))); break;
                 case "unknown": mark.AddBeforeSelf(new XElement(XName.Get("future", "urn:future"))); break;
                 case "nested-empty": mark.AddBeforeSelf(new XElement(w + "t", new XElement(XName.Get("future", "urn:future")))); break;
