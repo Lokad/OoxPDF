@@ -31,7 +31,8 @@ internal static partial class DocxInlineCompositionTests
                     true, includeTextTransforms: true, honorActualText: false)).Select(show => show.Text));
                 for (int row = 1; row <= 7; row++) TestAssert.Equal(1, Regex.Matches(native, $"Small row {row:00}").Count);
                 TestAssert.Equal(1, Regex.Matches(native, "Source note").Count);
-                TestAssert.Equal(3, native.Count(ch => ch == '1')); // row01, body marker, note marker
+                TestAssert.True(native.Count(ch => ch == '1') == 3,
+                    $"Both decimal note markers and row01 paint: {mode}/{content}/endnote={endnote}/sameRun={sameRun}; source label={reference.DisplayText}; native={native}");
                 TestAssert.Equal(content is "picture" or "mixed" ? 1 : 0,
                     actual.Sum(page => Regex.Matches(page.Content, @"/\w+\s+Do\b").Count));
                 string math = string.Concat(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
