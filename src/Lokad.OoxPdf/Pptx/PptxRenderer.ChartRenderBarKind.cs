@@ -126,6 +126,8 @@ internal sealed partial class PptxRenderer
                     resolvedValueScale: sharedValueAxis || horizontalBars && CanOwnCartesianChartSourceRange(sceneChart, valueSceneAxis)
                         ? (valueExtents, valueAxisOptions.Units) : null).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
+                chartLayout = await AdmitAutomaticBarRightLegendAsync(chartLayout, sceneChart, legendEntries,
+                    legendTextStyle, fontResolver, document.SlideWidthPoints).ConfigureAwait(false);
                 ChartLegendBox? preparedLegendBox = null;
                 double? measuredLegendAllocation = null;
                 ChartLayout unreservedLayout = chartLayout;

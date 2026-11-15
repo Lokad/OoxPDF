@@ -36,6 +36,41 @@ internal sealed partial class PptxRenderer
         baseline - box.ContentDescent < box.ClipY - 0.001d ||
         baseline + (box.ContentAscent ?? box.LineHeight) > box.ClipY + box.ClipHeight + 0.001d;
 
+    private static async ValueTask<ChartLayout> AdmitAutomaticBarRightLegendAsync(
+        ChartLayout layout, PptxSceneChart chart, IReadOnlyList<ChartLegendEntry> entries,
+        ChartTextStyle style, PresentationFontResolver resolver, double pageWidth)
+    {
+        if (layout.ManualPlotLayoutApplied || chart.PlotAreaLayout.HasGeometryValues ||
+            !layout.Legend.Visible || layout.Legend.Overlay ||
+            layout.Legend.PositionKind != PptxSceneChartLegendPosition.Right ||
+            layout.Legend.Layout.HasGeometryValues || entries.Count == 0)
+            return layout;
+
+        double frameRight = layout.Frame.X + layout.Frame.Width;
+        // Authored off-page charts keep their crop. Admission repairs computed
+        // overflow from a chart that was placed completely inside the page.
+        if (layout.Frame.X < 0d || frameRight > pageWidth) return layout;
+
+        var measure = new ChartTextMeasurer(resolver, kerningEnabled: false);
+        await measure.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
+        ChartLegendBox box = ResolveChartLegendBox(layout.Frame, layout.PlotBox, entries,
+            layout.Legend, style, measure, ChartLegendPlacement.Default);
+        double contentWidth = entries.Max(entry => box.MarkerWidth + box.TextGap + measure.Measure(entry.Name, style));
+        // Retain qualified placement when the painted content fits the page.
+        // Otherwise the automatic plot must make room for the same measured
+        // legend box that painting consumes; moving only the legend can overlap
+        // bars. Empty allocation tails alone do not move accepted content.
+        if (box.X + contentWidth <= pageWidth) return layout;
+        double reserve = box.X + box.Width - frameRight;
+        if (!double.IsFinite(reserve) || reserve <= 0d || layout.PlotBox.Width - reserve < 1d)
+            return layout; // The existing unfit-frame fallback remains explicit.
+        return layout with
+        {
+            PlotBox = layout.PlotBox with { Width = layout.PlotBox.Width - reserve },
+            PlotAreaBox = layout.PlotAreaBox with { Width = Math.Max(1d, layout.PlotAreaBox.Width - reserve) }
+        };
+    }
+
     private static IReadOnlyList<ChartLegendEntry> BuildBarCategoryLegendEntries(
         PptxTheme theme, PptxColorMap colorMap, ChartColorPalette palette,
         PptxSceneChartPlot plot, XElement chart, ChartIndexedNumberVector vector,
