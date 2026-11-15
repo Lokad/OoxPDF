@@ -1,4 +1,27 @@
 {
+  "docx-static-justification": [
+    "DocxLayoutStageJustifiesWrappedNonFinalLines",
+    "DocxJustifiedInlineImageUsesImageAwareStretch",
+    "DocxJustifiedInlineImageAlignsWithStretchedText",
+    "DocxStaticJustificationSharesBodyWordPositionsAndLinks",
+    "DocxStaticJustificationKeepsLastRowsAndHiddenOwnerPaint",
+    "DocxInlineCompositionJustifiedMathMatchesIndependentWord",
+    "DocxInlineCompositionJustificationOwnsWhitespaceAndContinuation",
+    "PortableRenderingJustifiedMathRetainsContentAndNeutralOrigins",
+    "PortableRenderingJustifiedStaticParagraphsKeepFooterInkAndPhysicalFrames",
+    "PortableRenderingPlainStaticCountersKeepFooterInkAndIndependentFrames",
+    "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
+    "DocxStaticParagraphFramesShareBodyInsetsAndWrapping",
+    "DocxStaticParagraphFramesPreserveNeutralInsetPaintAndOwners",
+    "DocxStaticHardBreaksRetainAuthoredEmptyRows",
+    "DocxStaticHardBreaksKeepHiddenOwnersAndBoundaryRows",
+    "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
+    "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
+    "DocxNativeAlignedStaticFramesRetainOfficeBodyAndFooterSlots",
+    "DocxNativeScaledStaticFramesKeepFooterVisibleAndHeaderBodyInOfficeSlots",
+    "DocxInlineCompositionStaticSourceFramesMatchIndependentWord",
+    "PortableRenderingStaticSourceFramesKeepProseOnPage"
+  ],
   "docx-static-break-rows": [
     "DocxStaticHardBreaksRetainAuthoredEmptyRows",
     "DocxStaticHardBreaksKeepHiddenOwnersAndBoundaryRows",
@@ -1399,6 +1422,8 @@
     "DocxInlineCompositionFormattingBalloonDescriptions"
   ],
   "docx-paragraph-mark-formatting": [
+    "DocxStaticJustificationSharesBodyWordPositionsAndLinks",
+    "DocxStaticJustificationKeepsLastRowsAndHiddenOwnerPaint",
     "DocxStaticHardBreaksRetainAuthoredEmptyRows",
     "DocxStaticHardBreaksKeepHiddenOwnersAndBoundaryRows",
     "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",
@@ -6025,6 +6050,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxStaticJustificationSharesBodyWordPositionsAndLinks",
+    "DocxStaticJustificationKeepsLastRowsAndHiddenOwnerPaint",
     "DocxStaticHardBreaksRetainAuthoredEmptyRows",
     "DocxStaticHardBreaksKeepHiddenOwnersAndBoundaryRows",
     "DocxStaticParagraphFramesRetainHiddenOnlyFallbacks",

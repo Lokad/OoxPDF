@@ -427,11 +427,12 @@ internal sealed partial class DocxLayoutEngine
                         continue;
                     }
 
-                    double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer) + (staticMidLinePlan?.LineImageWidths[staticLineIndex] ?? 0d);
+                    double lineImageWidth = staticMidLinePlan?.LineImageWidths[staticLineIndex] ?? 0d;
+                    double lineWidth = MeasureStaticTextSpans(line.Spans, textMeasurer) + lineImageWidth;
                     // RV06 header-align probe: Office centers/rights drawable header and
                     // footer text too, letting trailing spaces overflow past the edge.
-                    double lineAlignWidth = paragraph.EffectiveProperties.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right
-                        ? MeasureStaticTextSpans(SliceTextSpans(line.Spans, 0, FindDrawableTextLength(line.Spans)), textMeasurer) + (staticMidLinePlan?.LineImageWidths[staticLineIndex] ?? 0d)
+                    double lineAlignWidth = paragraph.EffectiveProperties.Alignment is DocxTextAlignment.Center or DocxTextAlignment.Right or DocxTextAlignment.Justified
+                        ? MeasureStaticTextSpans(SliceTextSpans(line.Spans, 0, FindDrawableTextLength(line.Spans)), textMeasurer) + lineImageWidth
                         : lineWidth;
                     double lineX = paragraph.EffectiveProperties.Alignment switch
                     {
@@ -511,7 +512,13 @@ internal sealed partial class DocxLayoutEngine
                             double.IsFinite(baselineOffset) && baselineOffset >= 0d && baselineOffset <= staticLineHeight)
                             staticOccupiedLineBox = new(staticLineHeight, baselineOffset);
                     }
-                    IReadOnlyList<DocxTextSegmentLayout> segments = CreateStaticTextSegments(line.Spans, lineX);
+                    bool justifyLine = ShouldJustifyTextLine(paragraph.EffectiveProperties.Alignment,
+                        staticLineIndex == staticLines.Length - 1, lineAlignWidth, width, line.Spans);
+                    IReadOnlyList<DocxTextSegmentLayout> segments = justifyLine
+                        ? CreateJustifiedTextSegments(line.Spans, lineX, lineAlignWidth - lineImageWidth, width,
+                            lineImageWidth, staticFontSize, textMeasurer, [], defaultTabStopPoints * paragraphSpacingScale)
+                        : CreateStaticTextSegments(line.Spans, lineX);
+                    if (justifyLine) lineWidth = width;
                     IReadOnlyList<DocxTextSegmentLayout> emissionSegments = segments;
                     if (staticMidLinePlan is not null && staticMidLinePlan.ImagesByLine[staticLineIndex].Count != 0)
                     {
