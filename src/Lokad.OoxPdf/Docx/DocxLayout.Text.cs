@@ -685,7 +685,10 @@ internal sealed partial class DocxLayoutEngine
     private static (double Width, double Height) ResolveInlineImageSize(DocxInlineImage image, double availableWidth, double scale)
     {
         double width = Math.Min(availableWidth, image.WidthPoints * scale);
-        return (width, image.HeightPoints * width / Math.Max(1d, image.WidthPoints));
+        double height = image.WidthPoints > 0d
+            ? image.HeightPoints * width / image.WidthPoints
+            : image.HeightPoints * scale;
+        return (width, height);
     }
 
     private static double ResolveInlineImageExtraBelow(DocxInlineImage image, double textDescender,

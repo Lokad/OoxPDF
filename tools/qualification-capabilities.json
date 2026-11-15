@@ -1,4 +1,24 @@
 {
+  "docx-picture-fit": [
+    "DocxFittingNarrowPicturesKeepAuthoredHeightInFixedRows",
+    "DocxFixedPictureFitPreservesZeroWidthHeightAndBoundedRatios",
+    "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
+    "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
+    "DocxMinimumPictureRowsKeepDeclaredLineFrames",
+    "DocxFixedPictureRowsKeepFollowingWordsAndPhysicalSlots",
+    "DocxFixedPictureAdmissionUsesPhysicalSlot",
+    "DocxOversizedFixedPicturesKeepFollowingWords",
+    "DocxTerminalInlinePicturesKeepExistingUnfitWidthFallback",
+    "DocxOrdinaryPicturesKeepPaintWhenFormattedRunsAreMerged",
+    "DocxMixedPictureRangesKeepDecodeRotationClipAndChildTargetFallbacks",
+    "DocxMissingPicturePreservesIndependentControlFrames",
+    "DocxMissingPicturePreservesCellAndStaticStoryGeometry",
+    "DocxTableMinimumPictureRowsUseTheOccupiedInlineExtent",
+    "DocxKeptFallbackPicturesShareOccupiedLinesWithPlacement",
+    "DocxKeptFallbackPicturesBindCountersAfterOccupiedAdmission",
+    "DocxOrdinaryPictureBoxesMatchIndependentWordOrigins",
+    "DocxInlineCompositionDisplayImageRowsRetainIndependentOfficeFractionFrames"
+  ],
   "docx-zero-area-pictures": [
     "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
     "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
@@ -1027,6 +1047,8 @@
     "DocxTableLayoutStageNaturalAutoWidthIgnoresEmptyParagraphMarks"
   ],
   "docx-picture-placement": [
+    "DocxFixedPictureFitPreservesZeroWidthHeightAndBoundedRatios",
+    "DocxFittingNarrowPicturesKeepAuthoredHeightInFixedRows",
     "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
     "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
     "DocxLeadingInlinePicturesKeepFollowingWordInk",
@@ -6074,6 +6096,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxFixedPictureFitPreservesZeroWidthHeightAndBoundedRatios",
+    "DocxFittingNarrowPicturesKeepAuthoredHeightInFixedRows",
     "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
     "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
     "DocxStaticJustificationSharesBodyWordPositionsAndLinks",
