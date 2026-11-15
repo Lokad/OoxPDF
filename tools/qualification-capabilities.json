@@ -1,5 +1,7 @@
 {
   "docx-picture-fit": [
+    "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
+    "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",
     "DocxFittingNarrowPicturesKeepAuthoredHeightInFixedRows",
     "DocxFixedPictureFitPreservesZeroWidthHeightAndBoundedRatios",
     "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
@@ -1047,6 +1049,8 @@
     "DocxTableLayoutStageNaturalAutoWidthIgnoresEmptyParagraphMarks"
   ],
   "docx-picture-placement": [
+    "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
+    "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",
     "DocxFixedPictureFitPreservesZeroWidthHeightAndBoundedRatios",
     "DocxFittingNarrowPicturesKeepAuthoredHeightInFixedRows",
     "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",
@@ -6096,6 +6100,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxPictureOnlyNotesShareAuthoredAspectRatioFitting",
+    "DocxUnpositionedStaticPicturesShareBoundedFitAndOwners",
     "DocxFixedPictureFitPreservesZeroWidthHeightAndBoundedRatios",
     "DocxFittingNarrowPicturesKeepAuthoredHeightInFixedRows",
     "DocxZeroAreaPicturesRetainNeighboringMathAcrossContainers",

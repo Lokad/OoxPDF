@@ -2672,8 +2672,7 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                double imageWidth = Math.Min(bodyWidth, image.WidthPoints);
-                double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+                var (imageWidth, imageHeight) = ResolveInlineImageSize(image, bodyWidth, 1d);
                 double imageX = paragraph.EffectiveProperties.Alignment switch
                 {
                     DocxTextAlignment.Center => Math.Max(0, bodyWidth - imageWidth) / 2d,
