@@ -30,10 +30,11 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(1, actual.Length);
                 AssertTextRowOwnersAndPitches(control, actual);
                 string native = string.Concat(actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
-                    true, includeTextTransforms: true, honorActualText: false)).Select(show => show.Text));
+                    true, includeTextTransforms: true, honorActualText: false,
+                    fontResourceFilter: name => !name.StartsWith("Eq", StringComparison.Ordinal))).Select(show => show.Text));
                 for (int row = 1; row <= 7; row++) TestAssert.Equal(1, Regex.Matches(native, $"Small row {row:00}").Count);
                 TestAssert.Equal(1, Regex.Matches(native, "Source note").Count);
-                string expected = "Largeheading" + (content is "math" or "mixed" ? "x" : "") + label +
+                string expected = "Largeheading" + label +
                     string.Concat(Enumerable.Range(1, 7).Select(row => $"Smallrow{row:00}")) + label + "Sourcenote";
                 TestAssert.Equal(expected, string.Concat(native.Normalize(System.Text.NormalizationForm.FormKC).Where(ch => !char.IsWhiteSpace(ch))));
                 TestAssert.Equal(content is "picture" or "mixed" ? 1 : 0,
@@ -42,6 +43,17 @@ internal static partial class DocxInlineCompositionTests
                     true, includeTextTransforms: true, honorActualText: false).Where(show => page.Fonts.Any(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal) &&
                         ReferenceEquals(font.Font, show.Font)))).Select(show => show.Text)).Normalize(System.Text.NormalizationForm.FormKC);
                 TestAssert.Equal(content is "math" or "mixed" ? "x" : "", math);
+                if (content is "math" or "mixed")
+                {
+                    var shows = actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                        true, includeTextTransforms: true, honorActualText: false)).ToArray();
+                    var markerShow = shows.First(show => show.Text == label);
+                    var mathShow = actual.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
+                        true, includeTextTransforms: true, honorActualText: false,
+                        fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal))).Single();
+                    TestAssert.True(mathShow.X < markerShow.X,
+                        "The equation remains before its note marker in visible source order, independently of PDF paint-operation order.");
+                }
                 TestAssert.True(actual.Sum(page => page.Annotations.Count(annotation => annotation.Destination is not null)) >= 1,
                     "The actual note marker retains its painted navigation.");
                 TestAssert.True(ReferenceEquals(reference, paragraph.InlineReferences.Single()) && ReferenceEquals(marker, reference.DisplayRun),
