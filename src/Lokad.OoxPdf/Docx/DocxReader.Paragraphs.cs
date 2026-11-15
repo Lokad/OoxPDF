@@ -890,7 +890,7 @@ internal sealed partial class DocxReader
                         openCommentRanges: openCommentRanges,
                         inlineReferenceCounters: inlineReferenceCounters,
                         documentSettings: documentSettings,
-                        runs: runs, sourceDrawingIndex: position.Order);
+                        runs: runs, cancellationToken: cancellationToken, sourceDrawingIndex: position.Order);
                 }
                 else
                 {
@@ -1143,7 +1143,7 @@ internal sealed partial class DocxReader
                         openCommentRanges: openCommentRanges,
                         inlineReferenceCounters: inlineReferenceCounters,
                         documentSettings: documentSettings,
-                        runs: runs, sourceDrawingIndex: position.Order);
+                        runs: runs, cancellationToken: cancellationToken, sourceDrawingIndex: position.Order);
                 }
                 else
                 {
@@ -1189,7 +1189,7 @@ internal sealed partial class DocxReader
                     openCommentRanges: openCommentRanges,
                     inlineReferenceCounters: inlineReferenceCounters,
                     documentSettings: documentSettings,
-                    runs: runs);
+                    runs: runs, cancellationToken: cancellationToken);
 
                 textOffset += ReadRunTextChild(child).Length;
                 childIndex++;
@@ -1491,6 +1491,7 @@ internal sealed partial class DocxReader
         DocxNoteReferenceCounters? inlineReferenceCounters,
         DocxDocumentSettings? documentSettings,
         List<DocxTextRun> runs,
+        CancellationToken cancellationToken,
         int sourceDrawingIndex = 0)
     {
         if (ResolveInlineReferenceKind(child) is not { } kind)
@@ -1607,15 +1608,20 @@ internal sealed partial class DocxReader
 
         string? ResolveCustomMarkText()
         {
-            // Office anchors the first character immediately following the
-            // reference in the same source run. Never guess from another run.
-            XElement? following = child.ElementsAfterSelf().FirstOrDefault();
-            if (!OoxBoolean.IsTrue(customMarkFollows) || following?.Name != WordprocessingNamespace + "t" ||
-                following.Value.Length == 0 || char.IsWhiteSpace(following.Value[0]) || char.IsSurrogate(following.Value[0]))
+            // The mark owns the first resolved character in this source run.
+            // Empty text contributes no character; controls and other owners
+            // stop the lookup. Use the same XML-space rules as emitted text.
+            if (!OoxBoolean.IsTrue(customMarkFollows)) return null;
+            foreach (var following in child.ElementsAfterSelf())
             {
-                return null;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (following.Name != WordprocessingNamespace + "t") return null;
+                string text = ReadRunTextChild(following);
+                if (text.Length != 0)
+                    return char.IsWhiteSpace(text[0]) || char.IsSurrogate(text[0]) ? null : text[..1];
+                if (following.HasElements) return null;
             }
-            return following.Value[..1];
+            return null;
         }
 
         void AddInlineReferenceDisplayRun(

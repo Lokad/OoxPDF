@@ -1,4 +1,26 @@
 {
+  "docx-custom-mark-empty-text": [
+    "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
+    "DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries",
+    "DocxSharedCustomRunReferencesPreserveSupportedMathAndMarkerOwners",
+    "DocxSharedCustomRunReferencesKeepAutomaticPageCountersAndStableOwners",
+    "DocxSharedCustomRunReferencesKeepImmediateCharacterFallbacks",
+    "DocxCustomNoteMarksOwnOffsetsWithinSharedSourceRuns",
+    "DocxCustomNoteMarksKeepRepeatedMarksAndDestinationsDistinct",
+    "DocxCustomNoteMarksRequireOwnedVisibleSourceAndTarget",
+    "DocxCustomNoteMarksHonorExplicitFalseFlags",
+    "DocxCustomNoteMarksLinkOnlyTheirFirstVisibleCharacter",
+    "DocxInlineCompositionCustomNotesRetainExactSourceOwnersAndFallbacks",
+    "DocxCompleteFootnoteKerningProtectsOwnedCustomBaselinePrefixes",
+    "DocxCompleteFootnoteKerningRejectsAmbiguousCustomSourceOwners",
+    "DocxCustomNoteLineMetricsPreserveMinimumBottomBearingsAndSourceOwners",
+    "DocxCustomNoteSuffixMetricsFollowActualSourceSpans",
+    "DocxCustomNoteLineMetricsRetainFixedRichScaledAndAmbiguousFallbacks",
+    "DocxReaderTextWhitespaceMatchesOffice",
+    "DocxInlineCompositionCustomNotesMatchIndependentContentAndKeepFirstGlyphLinks",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "DocxFontSlotsKeepSourceOffsetsAndLinkRevisionOwnership"
+  ],
   "docx-section-start-ownership": [
     "DocxSectionStartsKeepPictureAndTableContentOnOwnedPages",
     "DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages",
@@ -2353,6 +2375,8 @@
     "MemoryAdmissionRefundsOnFailureCancellationAndObserverException"
   ],
   "docx-custom-run-owners": [
+    "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
+    "DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries",
     "DocxSharedCustomRunReferencesPreserveSupportedMathAndMarkerOwners",
     "DocxSharedCustomRunReferencesKeepAutomaticPageCountersAndStableOwners",
     "DocxSharedCustomRunReferencesKeepImmediateCharacterFallbacks",
@@ -5825,6 +5849,8 @@
       "PortableRenderingPptxPreservesCompositeChartAndText"
   ],
   "framework-compatibility": [
+    "DocxCustomMarkEmptyTextPreservesFractionsPaintAndNoteLinks",
+    "DocxCustomMarkTextRetainsVisibleWhitespaceAndOwnerBoundaries",
     "DocxSectionStartsKeepPictureAndTableContentOnOwnedPages",
     "DocxSectionStartsKeepCommentAndMixedContentOnOwnedPages",
     "DocxSectionStartOwnershipKeepsNoteAndFrameAdmissionFallbacks",
