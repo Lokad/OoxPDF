@@ -188,7 +188,7 @@ internal static class DocxCellMemoTests
         var source = document.Tables[0].Rows[2].Cells[1];
         foreach (var alignment in new[] { DocxTableCellVerticalAlignment.Top, DocxTableCellVerticalAlignment.Center, DocxTableCellVerticalAlignment.Bottom })
         {
-            var cell = source with { VerticalAlignment = alignment };
+            var cell = source with { VerticalAlignmentValue = alignment.ToString().ToLowerInvariant() };
             var measurer = new CountingMeasurer();
             var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
             var first = PlaceCounterCell(cell, measurer, memo, 1, 2);
