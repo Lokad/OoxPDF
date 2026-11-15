@@ -20,7 +20,9 @@ internal static partial class DocxInlineCompositionTests
                 {
                     var pages = Render(container, breaks);
                     double gap = BreakOrigin(pages, "BreakOmega.") - BreakOrigin(pages, "BreakAlpha.");
-                    TestAssert.True(Math.Abs(gap - expected) < .001d,
+                    // PDF origins use three decimals; include the boundary
+                    // quantum and floating-point subtraction roundoff.
+                    TestAssert.True(Math.Abs(gap - expected) <= .001d + 1e-9,
                         "Every authored empty row has the same advance across containers: " + container + "/" + breaks + "/" + mode +
                         $"; body={expected:G17}, static={gap:G17}");
                     TestAssert.True(pages.All(page => page.Fonts.All(font => !font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))),
