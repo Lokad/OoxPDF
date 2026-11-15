@@ -43,7 +43,9 @@ internal static partial class DocxInlineCompositionTests
             var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode, CachedMathGeometry(mode));
             var control = renderer.RenderPagesAsync(ReadStaticInsetFrame(container, mode, "none", longText: false), null, default).ToBlockingEnumerable().ToArray();
             var source = ReadStaticInsetFrame(container, mode, "zero", longText: false);
-            var paragraph = DocxBlockTraversal.EnumerateSourceParagraphs(source).Single(p => p.Runs.Any(run => run.Text.StartsWith("FrameAlpha", StringComparison.Ordinal)));
+            var paragraph = DocxBlockTraversal.EnumerateSourceParagraphs(source)
+                .Distinct<DocxParagraph>(ReferenceEqualityComparer.Instance)
+                .Single(p => p.Runs.Any(run => run.Text.StartsWith("FrameAlpha", StringComparison.Ordinal)));
             var indent = paragraph.EffectiveProperties.Indent;
             var actual = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
             AssertMetricPaint(control, actual);
