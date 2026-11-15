@@ -25,9 +25,17 @@ internal static partial class DocxNumberingTests
             TestAssert.Equal(1, pages.Length);
             var shows = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true, honorActualText: false)).ToArray();
             var expected = row.GetProperty("Labels").EnumerateArray().Select(value => value.GetString()!).ToArray();
-            var labels = shows.Where(show => expected.Contains(show.Text.Trim(), StringComparer.Ordinal)).ToArray();
-            TestAssert.True(labels.Select(show => show.Text.Trim()).SequenceEqual(expected),
-                "Actual embedded glyph paint retains every source-defined list label in document order: " + row.GetProperty("Id").GetString());
+            // A hyphenated label may paint through several PDF shows. Read
+            // each physical row's visible prefix rather than assuming one show
+            // per source label; longest matches distinguish IV. from IV.aa).
+            var labels = shows.GroupBy(show => Math.Round(show.Y, 2))
+                .Select(line => string.Concat(line.OrderBy(show => show.X).Select(show => show.Text)).TrimStart())
+                .Select(line => expected.OrderByDescending(label => label.Length)
+                    .FirstOrDefault(label => line.StartsWith(label, StringComparison.Ordinal)))
+                .Where(label => label is not null).ToArray();
+            TestAssert.True(labels.SequenceEqual(expected),
+                "Actual embedded glyph paint retains every source-defined list label in document order: " +
+                row.GetProperty("Id").GetString() + "; actual " + string.Join(" | ", labels));
             string text = string.Concat(shows.Select(show => show.Text));
             foreach (var prose in row.GetProperty("Text").EnumerateArray()) TestAssert.Contains(prose.GetString()!, text);
             TestAssert.Equal(row.GetProperty("Picture").GetBoolean() ? 1 : 0, pages.Sum(page => page.Images.Count));
