@@ -6,7 +6,27 @@ build or prepared package does not establish complete rendering or Office parity
 
 ## Verified outcomes
 
-The latest coherent checkpoint compiles revision `74a0fda59` for .NET 10 and
+The following list-format batch is locally qualified after that broader baseline.
+Revision 94a9fb96b resolves ordinary labels using each referenced level's effective
+format, including concrete overrides and legal decimal references. It also fixes
+Word's repeated-letter carry in notes. The shared numeral path removes two reader
+wrappers and retains PPTX's independently qualified cycle.
+
+Twenty-two focused Windows checks and 21 Ubuntu checks pass, with one declared
+Windows-font skip. Six new checks fail against the actual parent while three
+controls pass. Two independently authored documents retain 28 source-defined labels
+across four Final/Review outputs, one-page flow, neighboring prose/math, pictures
+and navigation. Their 1,650 actual-program glyphs have no measured cuts or unknowns;
+both Final renders were reviewed. Exact new-source Word layout remains unqualified.
+A harness-only correction reads labels across split PDF shows without changing the
+library. All sixteen baseline portfolio PDFs and diagnostics remain exact.
+
+One frozen Release runtime supplies the tests, content checks and 24-asset transfer
+with two exact integration PDFs. Broader framework/package qualification of this
+new behavior remains separate; the selected checkpoint183 package excludes it.
+No new Office action or threshold change. The roadmap and publication remain open.
+
+The latest completed broader checkpoint compiles revision `74a0fda59` for .NET 10 and
 .NET 11. CI run 43718846675 is terminal green on Windows and Ubuntu. Its production
 source includes the shared text-normalization and source-cursor corrections below.
 

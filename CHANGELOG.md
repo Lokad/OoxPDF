@@ -28,6 +28,9 @@
   Automatic and custom note marks share resolved run-character and casing rules, preserving equations
   and links beside empty XML text, saved pagination hints or all-caps formatting.
   Generated list labels measure and paint their own resolved casing, including previous Review counters.
+  Ordinary labels resolve Roman, alphabetic and padded-decimal formats per referenced
+  level, including concrete overrides and legal decimal references; Word letter carry
+  is shared with note formatting.
   Hidden text formatting no longer inflates visible line metrics or pagination.
   Computed fields
   remain intact beside pictures and inline text boxes, including drawings split across cached simple-field
