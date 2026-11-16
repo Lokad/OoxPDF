@@ -17,7 +17,7 @@ public sealed class FileFontProgramSource : IFontProgramSource, IDisposable
     private int disposed;
 
     public FileFontProgramSource(string path, IMemoryBudget? cacheBudget = null)
-        : this(path, new FontProgramCache(MaxLocalFontBytes, StringComparer.OrdinalIgnoreCase, cacheBudget))
+        : this(path, new FontProgramCache(MaxLocalFontBytes, StringComparer.Ordinal, cacheBudget))
     {
         ownsCache = true;
     }

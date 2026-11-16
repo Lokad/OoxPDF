@@ -19,7 +19,10 @@ namespace Lokad.OoxPdf.Fonts;
 public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposable
 {
     private static readonly object CacheLock = new();
-    private static readonly Dictionary<string, DiscoveryState> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
+    // Filesystem case sensitivity can vary by volume/directory on either OS.
+    // Keep exact path spellings distinct; aliases may occupy separate bounded
+    // program entries. Font-family matching remains case-insensitive.
+    private static readonly Dictionary<string, DiscoveryState> DiscoveryCaches = new(StringComparer.Ordinal);
     private DiscoverySnapshot? cache;
     private readonly IMemoryReservation? ownedMetadata;
     private readonly FontProgramCache? ownedPrograms;
@@ -118,7 +121,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
         IMemoryReservation? metadata = null;
         bool published = false;
         using var construction = OoxMemory.Reserve(cacheBudget, 0, OoxPdfLimitScope.SharedResource);
-        var programs = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase, cacheBudget);
+        var programs = new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.Ordinal, cacheBudget);
         try
         {
             metadata = OoxMemory.Reserve(cacheBudget, 0, OoxPdfLimitScope.SharedResource)!;
@@ -146,7 +149,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
     {
         string cacheKey = string.Join("|", fontDirectories
             .Where(d => !string.IsNullOrWhiteSpace(d))
-            .Select(Path.GetFullPath).Order(StringComparer.OrdinalIgnoreCase));
+            .Select(Path.GetFullPath).Order(StringComparer.Ordinal));
         lock (CacheLock)
         {
             if (!DiscoveryCaches.TryGetValue(cacheKey, out DiscoveryState? state))
@@ -164,9 +167,9 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
     {
         var fonts = new List<FontFaceResolution>();
         var aliases = new Dictionary<string, List<FontFaceResolution>>(StringComparer.OrdinalIgnoreCase);
-        var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.OrdinalIgnoreCase);
-        var retention = programs ?? new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.OrdinalIgnoreCase);
-        foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
+        var sourcesByPath = new Dictionary<string, FileFontProgramSource>(StringComparer.Ordinal);
+        var retention = programs ?? new FontProgramCache(MaxSnapshotRetainedBytes, StringComparer.Ordinal);
+        foreach (string fontsDirectory in fontDirectories.Where(Directory.Exists).Distinct(StringComparer.Ordinal))
         {
             SearchOption searchOption = fontsDirectory.Contains("CloudFonts", StringComparison.OrdinalIgnoreCase)
                 ? SearchOption.AllDirectories
@@ -176,7 +179,7 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
                          .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
                              p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
                              p.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
-                         .Order(StringComparer.OrdinalIgnoreCase))
+                         .Order(StringComparer.OrdinalIgnoreCase).ThenBy(path => path, StringComparer.Ordinal))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 // Discovery buffers are invocation-local. The static catalog and
@@ -627,6 +630,12 @@ public sealed class WindowsFontResolver : IFontResolver, IFontCatalog, IDisposab
         }
 
         result = string.Compare(left.Source.StableId, right.Source.StableId, StringComparison.OrdinalIgnoreCase);
+        if (result != 0)
+        {
+            return result;
+        }
+
+        result = string.Compare(left.Source.StableId, right.Source.StableId, StringComparison.Ordinal);
         if (result != 0)
         {
             return result;
