@@ -14,9 +14,9 @@ internal static class PptxVisibilityTests
         // A hidden group must exclude descendants before preflight, just as a
         // hidden leaf excludes its own text, picture or table resources.
         foreach (string kind in new[] { "shape", "picture", "table", "group" })
-        foreach (string hidden in new[] { "", "0", "false", "1", "true" })
+        foreach (string hidden in new[] { "", "0", "false", "1", "true", " true ", " 1 " })
         {
-            bool visible = hidden is not ("1" or "true");
+            bool visible = hidden is not ("1" or "true" or " true " or " 1 ");
             string flag = hidden.Length == 0 ? "" : " hidden=\"" + hidden + "\"";
             const string link = "<a:hlinkClick r:id=\"rIdLink\"/>";
             const string transform = "<a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"2743200\" cy=\"914400\"/></a:xfrm>";
@@ -39,7 +39,7 @@ internal static class PptxVisibilityTests
                 ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdLink\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"https://example.invalid/visible\" TargetMode=\"External\"/><Relationship Id=\"rIdImage\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"../media/image.png\"/></Relationships>"),
                 ["ppt/media/image.png"] = TestFixtures.CreateTinyStoredRgbPng()
             });
-            OoxPackage package = OoxPackage.Open(input, default);
+            using OoxPackage package = OoxPackage.Open(input, default);
             PptxDocument document = new PptxReader().Read(package, default);
             PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
             TestAssert.Equal(visible ? 1 : 0, page.Annotations.Count);
@@ -162,6 +162,25 @@ internal static class PptxVisibilityTests
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
     }
 
+    public static void PptxPaddedBooleanValuesPreserveExcludedSlides()
+    {
+        foreach (string show in new[] { "false", " false ", "0", " 0 " })
+        {
+            string input = WriteHiddenSlidePackage(show);
+            try
+            {
+                using var source = File.OpenRead(input);
+                using var output = new MemoryStream();
+                OoxPdfConverter.Convert(source, output, new OoxPdfOptions { InputKind = OoxPdfInputKind.Pptx });
+                string pdf = Encoding.ASCII.GetString(output.ToArray());
+                TestAssert.Equal(1, PptxTests.CountOccurrences(pdf, "/Type /Page "));
+                TestAssert.Contains("0 0 1 rg", pdf);
+                TestAssert.DoesNotContain("1 0 0 rg", pdf);
+            }
+            finally { File.Delete(input); }
+        }
+    }
+
     public static void PptxLinksToHiddenSlidesAreDiagnosed()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -238,7 +257,7 @@ internal static class PptxVisibilityTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_HYPERLINK"), "A link to a hidden slide should diagnose the unresolvable target.");
     }
 
-    private static string WriteHiddenSlidePackage()
+    private static string WriteHiddenSlidePackage(string show = "0")
     {
         return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -268,9 +287,9 @@ internal static class PptxVisibilityTests
                 </p:presentation>
                 """,
             ["ppt/slides/slide1.xml"] = PptxTests.InheritedShapePart("0000FF", 914400, 914400),
-            ["ppt/slides/slide2.xml"] = """
+            ["ppt/slides/slide2.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" show="0">
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" show="{{show}}">
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr>
                       <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>

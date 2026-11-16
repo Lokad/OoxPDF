@@ -614,7 +614,7 @@ internal sealed class PdfDocumentWriter
                     builder.Append(' ');
                 }
 
-                builder.Append(FormatNumber(stops[i].Offset));
+                builder.Append(PdfShading.FormatStopOffset(stops[i].Offset));
             }
 
             builder.Append("] /Encode [");

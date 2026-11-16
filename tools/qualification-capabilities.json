@@ -1,4 +1,29 @@
 {
+  "pdf-shading-partitions": [
+    "ShadingStopPartitionsPreserveNearbyAndEndpointOffsets",
+    "ShadingResourceIdentityPreservesDistinctStopPositions",
+    "ShadingCoalescingKeepsDomainEndpointsAndLatestColor",
+    "WritesAxialShadingResources",
+    "WritesStitchedAxialShadingFunctionForMultipleStops",
+    "RadialShadingResourcesReusePaletteAcrossPagesWithoutAliasingAxial",
+    "RadialSpreadFunctionsPreserveCycleBoundariesAndReflection",
+    "RejectsDanglingShadingReference"
+  ],
+  "ooxml-boolean-values": [
+    "XmlBooleanWhitespacePreservesSchemaValues",
+    "BooleanReadersPreserveVocabularyUnknownsAndMissingValues",
+    "PptxHiddenObjects",
+    "PptxHiddenSlidesAreSkipped",
+    "PptxPaddedBooleanValuesPreserveExcludedSlides",
+    "PptxLinksToHiddenSlidesAreDiagnosed",
+    "PptxHiddenMasterShapesStayUnpainted",
+    "PptxShownMasterShapesPaintByDefault",
+    "PptxExplicitShownMasterShapesPaint",
+    "PptxSlideMembership",
+    "DocxHiddenPictures",
+    "DocxHiddenInlineBoxesPreserveSiblingPaintAcrossContainers",
+    "DocxLockedFieldsUseBooleanLocksAndStoredFormatting"
+  ],
   "composition-independent-records-portable": [
     "PortableRenderingChartSeriesOrderSurvivesXmlReordering",
       "PortableRenderingSectionRecordsKeepContentAndPageOwners",

@@ -6,10 +6,15 @@ internal static class OoxBoolean
 {
     public static bool IsTrue(string? value)
     {
-        return value is not null &&
-            (value == "1" ||
-            value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("on", StringComparison.OrdinalIgnoreCase));
+        return IsXmlTrue(value) || string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // XML booleans collapse XML whitespace, not arbitrary Unicode spaces.
+    // Keep the legacy on/off vocabulary separate from this strict boolean reader.
+    public static bool IsXmlTrue(string? value)
+    {
+        ReadOnlySpan<char> token = value.AsSpan().Trim(" \t\r\n".AsSpan());
+        return token.SequenceEqual("1") || token.Equals("true", StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool ParseAttribute(XElement? element, XName attributeName, bool defaultValue)
@@ -28,10 +33,9 @@ internal static class OoxBoolean
     // open (shown), so garbage never drops content (S01).
     public static bool IsOff(string? value)
     {
-        return value is not null &&
-            (value == "0" ||
-            value.Equals("false", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("off", StringComparison.OrdinalIgnoreCase));
+        ReadOnlySpan<char> token = value.AsSpan().Trim(" \t\r\n".AsSpan());
+        return token.SequenceEqual("0") || token.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "off", StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool ParseElement(XElement? element, bool defaultValue, XName? valueAttributeName)

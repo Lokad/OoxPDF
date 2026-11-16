@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class OoxmlTests
+internal static partial class OoxmlTests
 {
     public static void ParsesContentTypesAndRelationships()
     {

@@ -81,7 +81,6 @@ internal static class OoxXml
 
     public static bool ReadBool(XElement element, string name)
     {
-        string? value = (string?)element.Attribute(name);
-        return value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+        return OoxBoolean.IsXmlTrue((string?)element.Attribute(name));
     }
 }

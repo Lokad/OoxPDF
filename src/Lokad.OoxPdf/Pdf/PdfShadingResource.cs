@@ -28,10 +28,22 @@ internal abstract class PdfShading
         builder.Append(CoordinateKey);
         foreach (PdfShadingStop stop in Stops)
         {
-            builder.Append(CultureInfo.InvariantCulture, $":{stop.Offset:0.#####}:{stop.Red:X2}{stop.Green:X2}{stop.Blue:X2}");
+            builder.Append(':').Append(FormatStopOffset(stop.Offset));
+            builder.Append(CultureInfo.InvariantCulture, $":{stop.Red:X2}{stop.Green:X2}{stop.Blue:X2}");
         }
 
         return builder.ToString();
+    }
+
+    // Normalized offsets are in [0, 1]. Preserve their round-trip precision for
+    // identity and stitching bounds; PDF numbers cannot use exponent notation.
+    internal static string FormatStopOffset(double offset)
+    {
+        string number = PdfDocumentWriter.FormatNumber(offset, "R");
+        int exponentIndex = number.IndexOf('E');
+        if (exponentIndex < 0) return number;
+        int exponent = int.Parse(number.AsSpan(exponentIndex + 1), CultureInfo.InvariantCulture);
+        return "0." + new string('0', -exponent - 1) + number[..exponentIndex].Replace(".", "", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<PdfShadingStop> NormalizeStops(IReadOnlyList<PdfShadingStop> stops)
@@ -65,16 +77,13 @@ internal abstract class PdfShading
             }
         }
 
+        // Coalescing a stop very near zero may replace the synthetic endpoint.
+        // Its color still owns the start of the function's [0, 1] domain.
+        normalized[0] = normalized[0] with { Offset = 0d };
         PdfShadingStop last = normalized[^1];
         if (last.Offset < 1d)
         {
             normalized.Add(last with { Offset = 1d });
-        }
-
-        if (normalized.Count < 2)
-        {
-            PdfShadingStop only = normalized[0];
-            normalized.Add(only with { Offset = 1d });
         }
 
         return normalized;
