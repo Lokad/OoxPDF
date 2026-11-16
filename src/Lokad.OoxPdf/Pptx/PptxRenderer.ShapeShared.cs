@@ -33,22 +33,13 @@ internal sealed partial class PptxRenderer
 
     private static void ApplyShapeTransform(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ShapeBounds bounds)
     {
-        double radians = -bounds.RotationDegrees * Math.PI / 180d;
-        double sx = bounds.FlipHorizontal ? -1d : 1d;
-        double sy = bounds.FlipVertical ? -1d : 1d;
-        double cos = Math.Cos(radians);
-        double sin = Math.Sin(radians);
-        double centerX = x + width / 2d;
-        double centerY = y + height / 2d;
-
-        double a = cos * sx;
-        double b = sin * sx;
-        double c = -sin * sy;
-        double d = cos * sy;
-        double e = centerX - a * centerX - c * centerY;
-        double f = centerY - b * centerX - d * centerY;
+        var (a, b, c, d, e, f) = ShapeTransformMatrix(x, y, width, height, bounds);
         graphics.Transform(a, b, c, d, e, f);
     }
+
+    private static (double A, double B, double C, double D, double E, double F) ShapeTransformMatrix(
+        double x, double y, double width, double height, ShapeBounds bounds) =>
+        CenteredTransformMatrix(bounds.RotationDegrees, x + width / 2d, y + height / 2d, bounds.FlipHorizontal, bounds.FlipVertical);
 
     private static void StrokeShapePatternFill(
         PdfGraphicsBuilder graphics,

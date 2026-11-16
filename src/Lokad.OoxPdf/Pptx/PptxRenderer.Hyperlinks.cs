@@ -36,6 +36,15 @@ internal sealed partial class PptxRenderer
         }
 
         double y = context.Document.SlideHeightPoints - yTop - height;
+        // Chart/table frame painters retain an unrotated frame fallback. Keep
+        // navigation on their actual paint; only shape-based owners use this matrix.
+        if (node.Kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector or PptxSceneNodeKind.Picture or PptxSceneNodeKind.Group &&
+            (Math.Abs(mapped.RotationDegrees) > 0.001d || mapped.FlipHorizontal || mapped.FlipVertical))
+        {
+            PdfRectangle frame = TransformedRectangleBounds(new PdfRectangle(x, y, width, height),
+                ShapeTransformMatrix(x, y, width, height, mapped));
+            (x, y, width, height) = (frame.X, frame.Y, frame.Width, frame.Height);
+        }
         string partName = sourcePartName ?? context.SlidePartName;
         string? relationshipId = node.HyperlinkClick.RelationshipId;
         if (string.IsNullOrEmpty(relationshipId))

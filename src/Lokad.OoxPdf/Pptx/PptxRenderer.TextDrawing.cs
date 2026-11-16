@@ -602,13 +602,7 @@ internal sealed partial class PptxRenderer
         void DrawWrappedRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
         {
             graphics.SaveState();
-            if (HasTextTransform(run))
-            {
-                ApplyTextTransform(graphics, run);
-            }
-
-            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
+            PrepareTextPaint(graphics, run);
             TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
             if (glyphRun is not null)
             {
@@ -655,13 +649,7 @@ internal sealed partial class PptxRenderer
         void DrawFallbackWrappedRun(PdfFallbackFontResource fallback, TextRun run)
         {
             graphics.SaveState();
-            if (HasTextTransform(run))
-            {
-                ApplyTextTransform(graphics, run);
-            }
-
-            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
+            PrepareTextPaint(graphics, run);
             double baselineY = run.Y + run.BaselineOffset;
             if (run.Text.Length != 0 && BaselineIntersectsClip(run, baselineY))
             {
@@ -792,13 +780,7 @@ internal sealed partial class PptxRenderer
         {
             TextRun run = span.Run;
             graphics.SaveState();
-            if (HasTextTransform(run))
-            {
-                ApplyTextTransform(graphics, run);
-            }
-
-            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
+            PrepareTextPaint(graphics, run);
             double baselineY = run.Y + run.BaselineOffset;
             if (run.Text.Length != 0 && BaselineIntersectsClip(run, baselineY))
             {
@@ -834,13 +816,7 @@ internal sealed partial class PptxRenderer
         {
             TextRun run = span.Run;
             graphics.SaveState();
-            if (HasTextTransform(run))
-            {
-                ApplyTextTransform(graphics, run);
-            }
-
-            (double clipX, double clipY, double clipWidth, double clipHeight) = InverseTransformClip(run, run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-            graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
+            PrepareTextPaint(graphics, run);
             TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
             if (glyphRun is not null)
             {

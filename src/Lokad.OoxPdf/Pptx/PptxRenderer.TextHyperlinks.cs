@@ -109,15 +109,11 @@ internal sealed partial class PptxRenderer
         double y1 = baselineY + ascender;
         if (Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance || run.FlipHorizontal || run.FlipVertical)
         {
-            (double a, double b, double c, double d, double e, double f) = TextTransformMatrix(run);
-            double tx0 = Math.Min(Math.Min(a * x0 + c * y0 + e, a * x1 + c * y0 + e), Math.Min(a * x0 + c * y1 + e, a * x1 + c * y1 + e));
-            double tx1 = Math.Max(Math.Max(a * x0 + c * y0 + e, a * x1 + c * y0 + e), Math.Max(a * x0 + c * y1 + e, a * x1 + c * y1 + e));
-            double ty0 = Math.Min(Math.Min(b * x0 + d * y0 + f, b * x1 + d * y0 + f), Math.Min(b * x0 + d * y1 + f, b * x1 + d * y1 + f));
-            double ty1 = Math.Max(Math.Max(b * x0 + d * y0 + f, b * x1 + d * y0 + f), Math.Max(b * x0 + d * y1 + f, b * x1 + d * y1 + f));
-            x0 = tx0;
-            x1 = tx1;
-            y0 = ty0;
-            y1 = ty1;
+            PdfRectangle frame = TransformedRectangleBounds(new PdfRectangle(x0, y0, x1 - x0, y1 - y0), TextTransformMatrix(run));
+            x0 = frame.X;
+            x1 = frame.X + frame.Width;
+            y0 = frame.Y;
+            y1 = frame.Y + frame.Height;
         }
 
         if (x1 - x0 <= 0d || y1 - y0 <= 0d)
