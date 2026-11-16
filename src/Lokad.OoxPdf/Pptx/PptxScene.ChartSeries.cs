@@ -9,12 +9,24 @@ internal sealed partial class PptxSceneBuilder
 {
     internal static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
     {
-        var series = new List<PptxSceneChartSeries>();
-        foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
+        var sources = plot.Elements(ChartNamespace + "ser").Select(element =>
         {
+            (int? order, string raw) = ReadChartElementIntWithValue(element, "order");
+            return (Element: element, Order: order, OrderValue: raw);
+        }).ToArray();
+        // Resolve display order before position-dependent defaults. Explicit
+        // identity/style/data stay with their source; ambiguous orders retain
+        // the complete XML-order fallback rather than sorting a partial set.
+        if (sources.All(item => item.Order is >= 0) &&
+            sources.Select(item => item.Order).Distinct().Count() == sources.Length)
+            Array.Sort(sources, static (left, right) => Nullable.Compare(left.Order, right.Order));
+
+        var series = new List<PptxSceneChartSeries>(sources.Length);
+        foreach (var source in sources)
+        {
+            XElement seriesElement = source.Element;
             int seriesIndex = series.Count;
             (int? index, string indexValue) = ReadChartElementIntWithValue(seriesElement, "idx");
-            (int? order, string orderValue) = ReadChartElementIntWithValue(seriesElement, "order");
             (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(seriesElement, "explosion");
             (int? valuePointCount, string valuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "val");
             (int? categoryPointCount, string categoryPointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "cat");
@@ -27,8 +39,8 @@ internal sealed partial class PptxSceneBuilder
             series.Add(new PptxSceneChartSeries(
                 index,
                 indexValue,
-                order,
-                orderValue,
+                source.Order,
+                source.OrderValue,
                 ReadChartSeriesName(seriesElement),
                 ReadChartSeriesDataSources(seriesElement),
                 ReadChartSeriesValues(seriesElement),
@@ -73,14 +85,7 @@ internal sealed partial class PptxSceneBuilder
             });
         }
 
-        // Series identity (idx) and display order are distinct. Resolve valid
-        // order declarations once so values, styles and legend names stay paired
-        // through font preparation, layout and paint. Broken/ambiguous orders
-        // retain the existing XML-order fallback without inventing an index.
-        return series.All(item => item.Order is >= 0) &&
-            series.Select(item => item.Order).Distinct().Count() == series.Count
-                ? series.OrderBy(item => item.Order).ToArray()
-                : series;
+        return series;
     }
 
     internal static PptxSceneChartNegativeInversion ReadChartNegativeInversion(XElement series)

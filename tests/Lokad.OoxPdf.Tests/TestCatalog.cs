@@ -214,6 +214,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(PptxLegendDefaultTests)),
         .. FromType("rendering-portable", typeof(PptxLegendRowsTests)),
         .. FromType("rendering-portable", typeof(PptxPointLegendTests)),
+        .. FromType("rendering-portable", typeof(PptxSeriesOrderTests)),
         .. FromType("rendering-portable", typeof(PptxBuiltinPaletteTests)),
         .. FromType("pptx-charts", typeof(PptxChartLegendsTests)),
         .. FromType("pptx-charts", typeof(PptxChartTitleDefaultsTests)),

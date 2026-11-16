@@ -1,4 +1,12 @@
 {
+  "pptx-series-default-order": [
+    "PptxSeriesOrder",
+    "PortableRenderingChartSeriesOrderSurvivesXmlReordering",
+    "PptxLineAutomaticMarkersRetainSeriesNoneAndRawPlotSwitch",
+    "PptxLinePointMarkersPreserveDotPositionAcrossPlotAndLegend",
+    "PptxLinePartialStrokeAndNoFillPreserveAutomaticMarkersAndKeys",
+    "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures"
+  ],
   "pptx-chart-number-content": [
     "PptxChartNumber",
     "PptxChartDateFallbackPreservesPlotAndLabels",
