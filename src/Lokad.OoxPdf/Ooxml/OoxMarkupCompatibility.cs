@@ -18,9 +18,15 @@ internal static class OoxMarkupCompatibility
             "http://schemas.openxmlformats.org/drawingml/2006/main",
             "http://schemas.openxmlformats.org/presentationml/2006/main",
             "http://schemas.openxmlformats.org/drawingml/2006/chart",
+            "http://schemas.openxmlformats.org/drawingml/2006/picture",
 
             "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
             "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+            "http://schemas.openxmlformats.org/officeDocument/2006/math",
+            "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+            "http://schemas.openxmlformats.org/package/2006/relationships",
+            "http://schemas.openxmlformats.org/package/2006/content-types",
 
             // RV05 Word-authored floating textboxes (edge-floatbox.docx, Word COM): the
             // anchor hides in mc:Choice Requires="wps" with a VML Fallback. Keeping the
@@ -121,7 +127,9 @@ internal static class OoxMarkupCompatibility
             }
 
             bool ignored = IsIgnorableExtension(element, out bool processContent, cancellationToken);
-            if (ignored && !processContent) { return; }
+            // Descendant readers consume this tree directly. Leaving an ignored
+            // subtree attached would expose its payload to those readers.
+            if (ignored && !processContent) { element.Remove(); return; }
             unrecognized |= HasUnrecognizedMustUnderstand(element);
             VisitChildren(element);
             if (ignored && processContent) { Unwrap(element, element); }
@@ -143,7 +151,11 @@ internal static class OoxMarkupCompatibility
     private static bool IsIgnorableExtension(XElement element, out bool processContent, CancellationToken cancellationToken)
     {
         processContent = false;
-        if (UnderstoodNamespaces.Contains(element.Name.NamespaceName)) { return false; }
+        if (UnderstoodNamespaces.Contains(element.Name.NamespaceName) ||
+            // The direct gallery scalar is already supported independently of
+            // the remaining c14 vocabulary and its AlternateContent fallback.
+            element.Parent?.Name == OoxNamespaces.ChartNamespace + "chartSpace" &&
+                !element.HasElements && ReadChartGalleryStyleValue(element) is not null) { return false; }
         bool ignorable = false;
         XNamespace compatibility = OoxNamespaces.MarkupCompatibilityNamespace;
         // Resolve inherited declarations at their owner, before any wrapper is
@@ -201,10 +213,8 @@ internal static class OoxMarkupCompatibility
             .Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         if (required.Length == 1 &&
             preferred?.GetNamespaceOfPrefix(required[0]) == OoxNamespaces.ChartStyle2010Namespace &&
-            preferredStyle?.Name == OoxNamespaces.ChartStyle2010Namespace + "style" &&
             fallbackStyle?.Name == OoxNamespaces.ChartNamespace + "style" &&
-            int.TryParse((string?)preferredStyle.Attribute("val"), out int style) &&
-            style is >= 101 and <= 148)
+            ReadChartGalleryStyleValue(preferredStyle) is { } style)
         {
             chartSpace.AddAnnotation(new ChartGalleryChoice(style));
         }
@@ -216,10 +226,13 @@ internal static class OoxMarkupCompatibility
     internal static int? ReadPreferredChartGalleryStyle(XElement? chartSpace)
     {
         XElement? direct = chartSpace?.Element(OoxNamespaces.ChartStyle2010Namespace + "style");
-        return direct is not null && int.TryParse((string?)direct.Attribute("val"), out int value) && value is >= 101 and <= 148
-            ? value
-            : chartSpace?.Annotation<ChartGalleryChoice>()?.Value;
+        return ReadChartGalleryStyleValue(direct) ?? chartSpace?.Annotation<ChartGalleryChoice>()?.Value;
     }
+
+    private static int? ReadChartGalleryStyleValue(XElement? element) =>
+        element?.Name == OoxNamespaces.ChartStyle2010Namespace + "style" &&
+        int.TryParse((string?)element.Attribute("val"), out int value) && value is >= 101 and <= 148
+            ? value : null;
 
     private static bool IsUnderstoodChoice(XElement choice)
     {

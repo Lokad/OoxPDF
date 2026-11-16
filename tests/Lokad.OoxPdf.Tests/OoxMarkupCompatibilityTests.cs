@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class OoxMarkupCompatibilityTests
+internal static partial class OoxMarkupCompatibilityTests
 {
     private const string Word = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private const string Mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";
@@ -109,7 +109,7 @@ internal static class OoxMarkupCompatibilityTests
               <e:box><w:p mc:MustUnderstand="e">Ignored</w:p></e:box>
             </w:document>
             """);
-        TestAssert.NotNull(document.Root?.Element(XName.Get("box", "urn:extension")));
+        TestAssert.Equal(0, document.Descendants(XName.Get("p", Word)).Count());
         TestAssert.True(!OoxMarkupCompatibility.HasUnrecognizedMustUnderstand(document), "Ignored extension descendants are not selected content.");
     }
 

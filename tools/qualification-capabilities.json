@@ -7274,6 +7274,7 @@
     "PptxUnsupportedPngImageEmitsDiagnostic"
   ],
   "markup-compatibility": [
+    "IgnoredExtension",
     "AlternateContent",
     "MustUnderstand",
     "ProcessContent",
@@ -7285,7 +7286,9 @@
     "PortableRenderingStructuralMetadataWrappersRetainParentFrames",
     "PortableRenderingInlineMetadataWrappersRetainParentFrames",
     "PortableRenderingStaticSvgFramesPreserveBodyAndVectorPaint",
-    "PortableRenderingPptxPreservesCompositeChartAndText"
+    "PortableRenderingPptxPreservesCompositeChartAndText",
+    "PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices",
+    "PortableRenderingBarKeysRetainIndependentOfficePaint"
   ],
   "preview-inert-pptx": [
     "PortableRenderingPptxPreservesCompositeChartAndText",
