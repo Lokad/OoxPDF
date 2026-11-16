@@ -6595,6 +6595,11 @@
   ],
   "pptx-inheritance": [
       "PptxInheritance",
+    "UnstyledRunsInherit",
+    "PlainShapeFullRunStyleAgrees",
+    "MatchedPlaceholderInheritanceAgrees",
+    "TableCellTextMatchesShapeText",
+    "GroupedShapeTextAgreesBetweenSceneAndSpans",
       "PptxMasterThemes",
       "PptxDiagnosticAdmission",
       "PptxVisibleDiagnostics",
