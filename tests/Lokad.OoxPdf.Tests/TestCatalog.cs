@@ -78,6 +78,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(DocxHiddenPictureTests)),
         .. FromType("rendering-portable", typeof(DocxParagraphIdentityTests)),
         .. FromType("rendering-portable", typeof(DocxLockedFieldTests)),
+        .. FromType("rendering-portable", typeof(DocxVmlTextBoxTests)),
         .. FromType("rendering-portable", typeof(DocxFontSlotTests)),
         .. FromType("fonts", typeof(FontResolverConcurrencyTests)),
         .. FromType("fonts", typeof(FontDiscoveryAsyncTests)),

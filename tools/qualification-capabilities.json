@@ -1,4 +1,15 @@
 {
+  "docx-vml-inline-content": [
+    "DocxVmlTextBoxes",
+    "DocxVmlHiddenDrawingRunSuppressesItsTextAndPictures",
+    "DocxSyntheticVmlInlineTextboxRendersTextWithoutUnsupportedDiagnostic",
+    "DocxHiddenInlineBoxes",
+    "DocxHiddenPictures",
+    "DocxLockedFieldsUseBooleanLocksAndStoredFormatting",
+    "DocxComputedFieldPictureRunBoundariesPreserveVisibleContent",
+    "DocxComputedSimpleFieldPicturesKeepVisibilityLocksAndRevisionOwners",
+    "DocxEmptyStoredResultsKeepNeighborSourceAcrossPlacements"
+  ],
   "pdf-shading-partitions": [
     "ShadingStopPartitionsPreserveNearbyAndEndpointOffsets",
     "ShadingResourceIdentityPreservesDistinctStopPositions",
@@ -7,7 +18,8 @@
     "WritesStitchedAxialShadingFunctionForMultipleStops",
     "RadialShadingResourcesReusePaletteAcrossPagesWithoutAliasingAxial",
     "RadialSpreadFunctionsPreserveCycleBoundariesAndReflection",
-    "RejectsDanglingShadingReference"
+    "RejectsDanglingShadingReference",
+    "ShadingPatternsRejectNonFiniteAndCollapsedPrintedGeometry"
   ],
   "ooxml-boolean-values": [
     "XmlBooleanWhitespacePreservesSchemaValues",

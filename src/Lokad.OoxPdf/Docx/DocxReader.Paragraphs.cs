@@ -672,10 +672,6 @@ internal sealed partial class DocxReader
             string? characterStyleId = ReadCharacterStyleId(run);
             DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
                 runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run);
-            IReadOnlyList<DocxInlineTextBox> runBoxes = ReadRunTextBoxes(run, currentSourceRunIndex, resolvedRun.Hidden == true, revision);
-            if (runBoxes.Count != 0) EnsureInlineContent();
-            sourceRunIndex++;
-            inlineTextBoxes.AddRange(runBoxes);
             string text = ReadRunText(run);
             string? fieldInstruction = run
                 .Elements(WordprocessingNamespace + "instrText")
@@ -695,6 +691,16 @@ internal sealed partial class DocxReader
                 paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
             IReadOnlyList<DocxRevisionInfo> effectiveRevisions = MergeRevisionLists(revision, runRevisions);
+            if (resolvedRun.Hidden != true && TryAddVmlTextBoxRun(run, revision))
+            {
+                if (sourceRunIndex == currentSourceRunIndex) sourceRunIndex++;
+                RetainNonRenderingRunOwner(currentSourceRunIndex, runRevisions);
+                return;
+            }
+            IReadOnlyList<DocxInlineTextBox> runBoxes = ReadRunTextBoxes(run, currentSourceRunIndex, resolvedRun.Hidden == true, revision);
+            if (runBoxes.Count != 0) EnsureInlineContent();
+            sourceRunIndex++;
+            inlineTextBoxes.AddRange(runBoxes);
             CaptureUnmarkedListTextStyle(text, resolvedRun, runStyleResolution, currentSourceRunIndex, revision);
             resolvedRun = ApplyMarkupRevisionStyle(resolvedRun, revision, markupMode);
             // Content revisions need a painted or known nonprinting source.
@@ -744,12 +750,6 @@ internal sealed partial class DocxReader
             else
             {
                 AddInlineReferences(run, currentSourceRunIndex, resolvedRun, runStyleResolution, emitDisplayRuns: false, revision, effectiveRevisions);
-            }
-
-            foreach (DocxVmlTextBoxContent textBoxContent in ReadVmlTextBoxContents(run))
-            {
-                AddRevisions(paragraphRevisions, textBoxContent.Revisions);
-                AddParagraphDisplayText(textBoxContent.Text, currentSourceRunIndex, sourceTextOffset: 0, resolvedRun, runStyleResolution, revision, effectiveRevisions);
             }
 
             if (fieldInstruction is not null)
@@ -820,7 +820,86 @@ internal sealed partial class DocxReader
                 markupMode, revision, cancellationToken, index);
             foreach (var inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
                 hiddenDrawingEquationSourceCount += CountSelectedEquationSources(inline, markupMode, cancellationToken, out _);
+            foreach (var textBox in EnumerateRunOwnedDrawings(run, VmlNamespace + "textbox", cancellationToken))
+                hiddenDrawingEquationSourceCount += CountSelectedEquationSources(textBox, markupMode, cancellationToken, out _);
             return [];
+        }
+
+        bool TryAddVmlTextBoxRun(XElement run, DocxRevisionInfo? revision)
+        {
+            var textBoxes = EnumerateRunOwnedDrawings(run, VmlNamespace + "textbox", cancellationToken)
+                .Where(box => box.Ancestors(WordprocessingNamespace + "pict").Any(pict => ReferenceEquals(pict.Parent, run)))
+                .ToLookup(box => box.Ancestors().First(owner => owner.Parent?.Name == WordprocessingNamespace + "pict" && ReferenceEquals(owner.Parent.Parent, run)));
+            if (textBoxes.Count == 0) return false;
+
+            // Keep the established paragraph-flow fallback, while feeding each
+            // source item through the same reader as ordinary inline content.
+            // Splitting the surrounding run preserves its before/after order.
+            var fragment = new List<XElement>();
+            foreach (var child in run.Elements())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (child.Name == WordprocessingNamespace + "rPr") continue;
+                if (child.Name != WordprocessingNamespace + "pict") { fragment.Add(child); continue; }
+                foreach (var shape in child.Elements())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!textBoxes.Contains(shape))
+                    {
+                        fragment.Add(new XElement(child.Name, child.Attributes(), new XElement(shape)));
+                        continue;
+                    }
+                    Flush();
+                    foreach (var box in textBoxes[shape])
+                    foreach (var content in box.Elements(WordprocessingNamespace + "txbxContent"))
+                    {
+                        bool first = true;
+                        foreach (var nestedParagraph in content.Elements(WordprocessingNamespace + "p"))
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (!first) AddParagraphRun(new XElement(WordprocessingNamespace + "r", new XElement(WordprocessingNamespace + "br")), ref pageInstructionSeen, revision);
+                            first = false;
+                            var properties = nestedParagraph.Element(WordprocessingNamespace + "pPr");
+                            AddRevisions(paragraphRevisions, ReadPropertyChangeRevisions(properties));
+                            string? outerStyle = paragraphStyleId;
+                            var outerCellStyle = tableCellStyle;
+                            var outerListStyle = unmarkedListTextStyle;
+                            try
+                            {
+                                // Textboxes own their run-style cascade, not the
+                                // enclosing paragraph or table's formatting.
+                                paragraphStyleId = ReadEffectiveParagraphStyleId(properties, styles);
+                                tableCellStyle = null;
+                                foreach (var item in nestedParagraph.Elements())
+                                    if (item.Name != WordprocessingNamespace + "pPr") AddInlineContainerChild(item, revision);
+                            }
+                            finally
+                            {
+                                paragraphStyleId = outerStyle;
+                                tableCellStyle = outerCellStyle;
+                                unmarkedListTextStyle = outerListStyle;
+                            }
+                        }
+                    }
+                }
+            }
+            Flush();
+            return true;
+
+            void Flush()
+            {
+                if (fragment.Count == 0) return;
+                var view = new XElement(run.Name, run.Attributes(),
+                    run.Element(WordprocessingNamespace + "rPr") is { } properties ? new XElement(properties) : null);
+                foreach (var source in fragment)
+                {
+                    var copy = new XElement(source);
+                    if (source.Annotation<AutomaticNoteStoryMarker>() is { } marker) copy.AddAnnotation(marker);
+                    view.Add(copy);
+                }
+                fragment.Clear();
+                AddParagraphRun(view, ref pageInstructionSeen, revision);
+            }
         }
 
         void AddParagraphDisplayText(string text, int currentSourceRunIndex, int sourceTextOffset, DocxResolvedRunProperties resolvedRun, DocxRunStyleResolution runStyleResolution, DocxRevisionInfo? revision, IReadOnlyList<DocxRevisionInfo> effectiveRevisions, DocxFieldKind? fieldKind = null)

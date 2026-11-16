@@ -1,9 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Text;
 using System.Xml.Linq;
-using Lokad.OoxPdf.Diagnostics;
-using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
@@ -64,43 +59,6 @@ internal sealed partial class DocxReader
     {
         return element.Name == WordprocessingNamespace + "fldChar" ||
             element.Name == WordprocessingNamespace + "instrText";
-    }
-
-    private sealed record DocxVmlTextBoxContent(string Text, IReadOnlyList<DocxRevisionInfo> Revisions);
-
-    private static IEnumerable<DocxVmlTextBoxContent> ReadVmlTextBoxContents(XElement run)
-    {
-        foreach (XElement textBox in run.Descendants(VmlNamespace + "textbox"))
-        {
-            foreach (XElement content in textBox.Descendants(WordprocessingNamespace + "txbxContent"))
-            {
-                DocxVmlTextBoxContent textBoxContent = ReadTextBoxContent(content);
-                if (textBoxContent.Text.Length != 0)
-                {
-                    yield return textBoxContent;
-                }
-            }
-        }
-    }
-
-    private static DocxVmlTextBoxContent ReadTextBoxContent(XElement content)
-    {
-        var paragraphs = new List<string>();
-        var revisions = new List<DocxRevisionInfo>();
-        foreach (XElement paragraph in content.Elements(WordprocessingNamespace + "p"))
-        {
-            AddRevisions(revisions, ReadPropertyChangeRevisions(paragraph.Element(WordprocessingNamespace + "pPr")));
-            string paragraphText = string.Concat(
-                paragraph
-                    .Descendants(WordprocessingNamespace + "r")
-                    .Select(ReadRunText));
-            if (paragraphText.Length != 0)
-            {
-                paragraphs.Add(paragraphText);
-            }
-        }
-
-        return new DocxVmlTextBoxContent(string.Join("\n", paragraphs), revisions);
     }
 
     // Math and pictures are result items, rather than ordinary w:r text children.
