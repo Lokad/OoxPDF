@@ -16,7 +16,8 @@ internal static partial class PptxPictureRecoveryTests
     {
         foreach (bool cropped in new[] { false, true })
         {
-            byte[] control = ConvertFallback(FallbackParts("svg-only", cropped: cropped), new RecoveryFontResolver(), out _);
+            byte[] control = ConvertFallback(FallbackParts("svg-only", cropped: cropped), new RecoveryFontResolver(), out var controlDiagnostics);
+            TestAssert.Equal(0, controlDiagnostics.Count);
             foreach (string variant in new[] { "relationship", "missing", "malformed", "payload" })
             {
                 byte[] actual = ConvertFallback(FallbackParts(variant, cropped: cropped), new RecoveryFontResolver(), out var diagnostics);
@@ -43,7 +44,8 @@ internal static partial class PptxPictureRecoveryTests
         TestAssert.True(!unused.Families.Contains("RecoverySvg"), "An unused SVG cannot trigger font acquisition.");
         var selected = new RecoveryFontResolver();
         byte[] recovered = ConvertFallback(FallbackParts("payload", text: true), selected, out _);
-        byte[] svg = ConvertFallback(FallbackParts("svg-only", text: true), new RecoveryFontResolver(), out _);
+        byte[] svg = ConvertFallback(FallbackParts("svg-only", text: true), new RecoveryFontResolver(), out var svgDiagnostics);
+        TestAssert.Equal(0, svgDiagnostics.Count);
         TestAssert.True(selected.Families.Contains("RecoverySvg"), "A recovered SVG prepares its selected text fonts before painting.");
         TestAssert.True(svg.AsSpan().SequenceEqual(recovered), "Recovery preserves glyph outlines as well as vector shapes.");
     }
@@ -142,7 +144,7 @@ internal static partial class PptxPictureRecoveryTests
             ["ppt/slides/slide1.xml"] = TestFixtures.Utf8($"<p:sld xmlns:p=\"{P}\" xmlns:a=\"{A}\" xmlns:r=\"{R}\"><p:cSld><p:spTree><p:pic><p:nvPicPr><p:cNvPr id=\"2\" name=\"Picture\"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed=\"{embed}\">{extension}</a:blip>{crop}<a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"1270000\" cy=\"1270000\"/></a:xfrm><a:prstGeom prst=\"rect\"/><a:ln><a:noFill/></a:ln></p:spPr></p:pic></p:spTree></p:cSld></p:sld>"),
             ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8($"<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" + (variant == "relationship" ? "" : $"<Relationship Id=\"raster\" Type=\"{R}/image\" Target=\"../media/preview.png\"/>") + $"<Relationship Id=\"svg\" Type=\"{R}/image\" Target=\"../media/vector.svg\"/></Relationships>"),
             ["ppt/media/preview.png"] = TestFixtures.CreateTinyStoredRgbPng(),
-            ["ppt/media/vector.svg"] = TestFixtures.Utf8(text ? "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\"><text x=\"2\" y=\"40\" font-family=\"RecoverySvg\" font-size=\"18\">LABEL</text></svg>" : "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\"><rect width=\"100\" height=\"100\" fill=\"#ff0000\"/></svg>")
+            ["ppt/media/vector.svg"] = TestFixtures.Utf8(text ? "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><text x=\"2\" y=\"40\" font-family=\"RecoverySvg\" font-size=\"18\">LABEL</text></svg>" : "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"#ff0000\"/></svg>")
         };
         if (variant is "missing" or "both-missing") parts.Remove("ppt/media/preview.png");
         if (variant == "both-missing") parts.Remove("ppt/media/vector.svg");
