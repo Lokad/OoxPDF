@@ -1,4 +1,16 @@
 {
+  "pdf-cleanup-failure-precedence": [
+    "ConvertAsyncStorageCleanup",
+    "ConvertAsyncStorageStandaloneCleanupFailurePreventsFilePublication",
+    "PdfStagingCleanupPreservesProducerRefusalAndWriteFailures",
+    "ConvertAsyncStorageAwaitsBothFormatsAndKeepsExactPdf",
+    "ConvertAsyncStorageCancellationAwaitsCreateWriteReadAndDisposal",
+    "ConvertAsyncStorageRejectsInvalidBackingAndTerminalAdmissionRefusal",
+    "ConvertAsyncStorageFailureKeepsFilePublicationAtomic",
+    "ConvertAsyncStorageRejectsInvalidRecordsDuringReadback",
+    "MemoryBudgetStagingFailuresRefundScratchAndSpillStorage",
+    "MemoryBudgetStagingRetainsCapacityThroughEmissionWithoutChangingPdf"
+  ],
   "docx-vml-inline-content": [
     "DocxVmlTextBoxes",
     "DocxVmlHiddenDrawingRunSuppressesItsTextAndPictures",

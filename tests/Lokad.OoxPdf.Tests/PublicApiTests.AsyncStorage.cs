@@ -1,4 +1,5 @@
 using System.Text;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
@@ -6,11 +7,12 @@ namespace Lokad.OoxPdf.Tests;
 internal static partial class PublicApiTests
 {
     private static OoxPdfOptions StorageOptions(TestMemoryBudget pool, IOoxPdfTemporaryStorage provider,
-        OoxPdfInputKind kind = OoxPdfInputKind.Docx) => new()
+        OoxPdfInputKind kind = OoxPdfInputKind.Docx, bool summary = false, Action<OoxPdfDiagnostic>? sink = null) => new()
     {
         InputKind = kind, MemoryBudget = pool, TemporaryStorage = provider,
         ConversionLimits = new() { MaxResidentPageContentBytesPerConversion = 0 },
-        FixedCreationDate = DateTimeOffset.UnixEpoch, FontResolver = new FixedFontResolver(TestFontBuilder.CreateTestFont())
+        FixedCreationDate = DateTimeOffset.UnixEpoch, FontResolver = new FixedFontResolver(TestFontBuilder.CreateTestFont()),
+        ReportResourceUsage = summary, DiagnosticSink = sink
     };
 
     public static void ConvertAsyncOutputUsesCallerAsyncWriteProtocol()
@@ -232,6 +234,8 @@ internal static partial class PublicApiTests
         private bool fontPayload;
         public int AsyncReads, AsyncWrites, SyncReads, SyncWrites, AsyncDisposals, SyncDisposals;
         public long BeforeFontCompression;
+        public EmissionGate? CleanupGate;
+        public IOException? CleanupFailure;
         public AsyncEmissionStream(bool ownedStorage = false, IMemoryBudget? budget = null, EmissionGate? gate = null,
             string? shape = null, string? failurePhase = null, IOException? failure = null, Func<long>? observeMemory = null)
         {
@@ -294,6 +298,8 @@ internal static partial class PublicApiTests
             try
             {
                 if (gate is not null) await gate.PauseAsync("dispose", ReadOnlyMemory<byte>.Empty, default).ConfigureAwait(false);
+                if (CleanupGate is not null) await CleanupGate.PauseAsync("dispose", ReadOnlyMemory<byte>.Empty, default).ConfigureAwait(false);
+                if (CleanupFailure is not null) throw CleanupFailure;
                 if (failurePhase == "dispose") throw failure!;
             }
             finally { data.Dispose(); data = null; reservation?.Dispose(); }

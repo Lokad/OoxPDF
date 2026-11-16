@@ -11,6 +11,11 @@ publishes atomically. Existing destinations survive a failure. Supplied streams,
 resolvers, budgets and temporary-storage providers remain caller-owned. Stream
 failures can leave a prefix; discard it.
 
+Cleanup is awaited even after failure. The original exception remains primary;
+a secondary disposal exception is available through
+`exception.Data["Lokad.OoxPdf.CleanupException"]` (an `AggregateException` if several
+cleanup faults accumulated). A disposal failure alone still fails conversion.
+
 Page/group content has a resident staging window. Stream conversion exceeding it
 requires `OoxPdfOptions.TemporaryStorage`; the library does not silently use the
 process temp folder. File/CLI conversion selects filesystem backing. A custom

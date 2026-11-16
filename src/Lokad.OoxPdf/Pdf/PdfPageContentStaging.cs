@@ -231,9 +231,9 @@ internal sealed class PdfPageContentStaging : IDisposable, IAsyncDisposable
                 throw new InvalidOperationException("Temporary storage must be an empty readable/writable/seekable stream positioned at zero.");
             token.ThrowIfCancellationRequested();
         }
-        catch
+        catch (Exception failure)
         {
-            await created.DisposeAsync().ConfigureAwait(false);
+            await OoxFailureCleanup.DisposeAsync(created, failure).ConfigureAwait(false);
             throw;
         }
         spillStream = created;

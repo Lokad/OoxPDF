@@ -265,13 +265,19 @@ public static class OoxPdfConverter
                 // emission follows from staging.
                 PdfStagedDocument staged = await PdfDocumentWriter.ProduceStagedPagesAsync(PreparePagesAsync(package, inputKind, options, diagnosticSink, cancellationToken),
                     options.ConversionLimits ?? new OoxConversionLimits(), diagnosticSink, cancellationToken, options.TemporaryStorage).ConfigureAwait(false);
-                await using (staged.ConfigureAwait(false))
+                try
                 {
                     totals = scope.Budget.Totals;
                     cancellationToken.ThrowIfCancellationRequested();
                     ReportResourceUsage(options, diagnosticSink, totals, checked((int)scope.Budget.PdfPages));
                     await PdfDocumentWriter.EmitStagedAsync(output, staged, cancellationToken, options.FixedCreationDate).ConfigureAwait(false);
                 }
+                catch (Exception failure)
+                {
+                    await OoxFailureCleanup.DisposeAsync(staged, failure).ConfigureAwait(false);
+                    throw;
+                }
+                await staged.DisposeAsync().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
             }
         }
@@ -285,7 +291,10 @@ public static class OoxPdfConverter
     // Document-recovery filters must never mistake a caller failure for malformed
     // content. Keep this marker conversion-local and restore the original exception
     // at the public boundary, including its identity and callback stack.
-    private sealed class DiagnosticObserverException(Exception cause) : Exception(null, cause);
+    private sealed class DiagnosticObserverException(Exception cause) : Exception(null, cause)
+    {
+        public override System.Collections.IDictionary Data => InnerException!.Data;
+    }
 
     private static Action<OoxPdfDiagnostic>? ProtectDiagnosticSink(Action<OoxPdfDiagnostic>? sink)
     {

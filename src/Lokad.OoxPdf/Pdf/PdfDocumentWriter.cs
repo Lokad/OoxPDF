@@ -55,10 +55,16 @@ internal sealed class PdfDocumentWriter
         PdfStagedDocument staged = await ProduceStagedPagesAsync(pages, limits, diagnosticSink,
             cancellationToken, temporaryStorage).ConfigureAwait(false);
         long result;
-        await using (staged.ConfigureAwait(false))
+        try
         {
             result = await EmitStagedAsync(stream, staged, cancellationToken, creationDate).ConfigureAwait(false);
         }
+        catch (Exception failure)
+        {
+            await OoxFailureCleanup.DisposeAsync(staged, failure).ConfigureAwait(false);
+            throw;
+        }
+        await staged.DisposeAsync().ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         return result;
     }
@@ -170,9 +176,9 @@ internal sealed class PdfDocumentWriter
 
             return new PdfStagedDocument(blanked, staging, pageEntries, groupEntries);
         }
-        catch
+        catch (Exception failure)
         {
-            await staging.DisposeAsync().ConfigureAwait(false);
+            await OoxFailureCleanup.DisposeAsync(staging, failure).ConfigureAwait(false);
             throw;
         }
     }
