@@ -36,6 +36,12 @@ internal sealed class PdfEmbeddedFont
         // numbering, content emission), often in per-rune paths. Cache the key once
         // instead of concatenating a fresh string per access.
         ResourceKey = BaseFontName + "-U" + CodepointSetHash;
+        if (subset is null)
+        {
+            // Whole fonts have no subset tag. Their display name and Unicode map
+            // cannot distinguish different programs from the same family.
+            ResourceKey += "-F" + Convert.ToHexString(SHA256.HashData(font.Bytes.Span));
+        }
     }
 
     public OpenTypeFont Font { get; }
@@ -118,6 +124,11 @@ internal sealed class PdfEmbeddedFont
         foreach (PdfEmbeddedFont font in items)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(font.Font, items[0].Font) &&
+                !font.Font.Bytes.Span.SequenceEqual(items[0].Font.Bytes.Span))
+            {
+                throw new InvalidDataException("Cannot merge PDF font resources from different font programs.");
+            }
             foreach ((ushort glyph, int codePoint) in font.UnicodeByOriginalGlyph)
             {
                 cancellationToken.ThrowIfCancellationRequested();

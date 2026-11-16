@@ -9,7 +9,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class FontTests
+internal static partial class FontTests
 {
     public static void WindowsFontResolverFindsInstalledFonts()
     {

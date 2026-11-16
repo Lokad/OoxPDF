@@ -103,6 +103,36 @@ internal static class FontRecoveryTests
         }
     }
 
+    public static void InvalidCmapCoverageUsesDiagnosedSubstitutionInBothFormats()
+    {
+        foreach (OoxPdfInputKind kind in new[] { OoxPdfInputKind.Docx, OoxPdfInputKind.Pptx })
+        foreach (bool invalid in new[] { false, true })
+        {
+            byte[] bytes = FontTests.CreateCmapBoundaryFont(4,
+                invalid ? (ushort)TestFontBuilder.GlyphCount : (ushort)(TestFontBuilder.GlyphCount - 1));
+            WithInput(kind, (path, _) =>
+            {
+                var diagnostics = new DiagnosticCollector();
+                using FileStream input = File.OpenRead(path);
+                using var output = new MemoryStream();
+                OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+                {
+                    InputKind = kind, FontResolver = new BoundaryFontResolver(bytes), DiagnosticSink = diagnostics.Add
+                });
+                TestAssert.True(output.Length > 0 && output.CanWrite && input.CanRead, "Recovery publishes a PDF and retains caller streams.");
+                var missing = diagnostics.Diagnostics.Where(d => d.Id == "FONT_MISSING_GLYPHS").ToArray();
+                TestAssert.Equal(invalid ? 1 : 0, missing.Length);
+                if (invalid) TestAssert.Contains("U+0056", missing[0].Message);
+            });
+        }
+    }
+
+    private sealed class BoundaryFontResolver(byte[] bytes) : IFontResolver
+    {
+        public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, "TestFace",
+            new FontStyleKey(request.Bold, request.Italic), new MemoryFontProgramSource("cmap-boundary", bytes), false);
+    }
+
     private static void WithInput(OoxPdfInputKind kind, Action<string,string> check)
     {
         string directory = Path.Combine(Path.GetTempPath(), "font-recovery-"+Guid.NewGuid().ToString("N"));

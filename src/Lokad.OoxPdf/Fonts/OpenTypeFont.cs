@@ -537,7 +537,10 @@ internal sealed partial class OpenTypeFont
 
     public ushort MapCodePoint(int codePoint)
     {
-        return cmap?.Map(codePoint, bytes) ?? 0;
+        ushort glyph = cmap?.Map(codePoint, bytes) ?? 0;
+        // A nonzero cmap result is coverage only when the declared glyph exists.
+        // Keep malformed mappings on the same diagnosed fallback path as missing ones.
+        return glyph < GlyphCount ? glyph : (ushort)0;
     }
 
     public ushort GetAdvanceWidth(ushort glyphId)
