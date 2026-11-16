@@ -1,4 +1,19 @@
 {
+  "pptx-run-effect-inheritance": [
+    "PptxInheritanceHighlightUsesDirectOrDefaultOwner",
+    "PptxInheritanceOutlineRemovalDiffersFromAbsentOrUnsupportedPaint",
+    "PptxInheritancePresentationDefaultsReachShapesAndCells",
+    "PptxInheritanceRunFillChoicesUseTheMoreSpecificLayer",
+    "PlainShapeFullRunStyleAgrees",
+    "SceneFedSpansMatchXmlPathForPlainShape",
+    "TableCellTextMatchesShapeText",
+    "PptxSyntheticTextBoxRendersTextHighlight",
+    "PptxSyntheticTextBoxRendersTextOutline",
+    "PptxPortableHeadlineHighlightKeepsContentAndSpanGeometry",
+    "PptxPortableHighlightContinuationKeepsSpacingAcrossWrappedLines",
+    "PptxSingleParagraphHighlightDoesNotStartContinuationTextState",
+    "PptxNoAutofitHeadlineHighlightDoesNotStartContinuationTextState"
+  ],
   "pptx-table-border-intervals": [
     "PptxTableBorders",
     "PptxSyntheticExplicitTableBordersClampAtOuterEdges",

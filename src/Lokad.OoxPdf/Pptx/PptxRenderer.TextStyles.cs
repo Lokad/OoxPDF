@@ -168,7 +168,7 @@ internal sealed partial class PptxRenderer
             colorSource,
             alpha,
             TryReadTextOutline(runProperties, defaultRunProperties, theme, colorMap, out TextOutline outline) ? outline : null,
-            TryReadHighlightColor(runProperties, out RgbColor highlightColor) ? highlightColor : null,
+            TryReadHighlightColor(runProperties, defaultRunProperties, out RgbColor highlightColor) ? highlightColor : null,
             hasHyperlinkClick,
             ReadHyperlinkClickId(runProperties),
             ReadHyperlinkClickAction(runProperties),
@@ -209,6 +209,11 @@ internal sealed partial class PptxRenderer
 
     private static bool TryReadTextOutline(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme, PptxColorMap colorMap, out TextOutline outline)
     {
+        // Explicit removal terminates inheritance. An unreadable authored paint
+        // still retains the established default-outline fallback below.
+        outline = default;
+        if (runProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
+            return false;
         return TryReadTextOutline(runProperties, theme, colorMap, out outline) ||
             TryReadTextOutline(defaultRunProperties, theme, colorMap, out outline);
     }

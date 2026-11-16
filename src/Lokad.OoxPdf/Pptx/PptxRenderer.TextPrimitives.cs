@@ -550,9 +550,10 @@ internal sealed partial class PptxRenderer
         return new BulletStyle(fontSize, color, bullet.ResolvedFontTypeface ?? textTypeface);
     }
 
-    private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)
+    private static bool TryReadHighlightColor(XElement? runProperties, XElement? defaultRunProperties, out RgbColor color)
     {
-        XElement? highlight = runProperties?.Element(DrawingNamespace + "highlight");
+        XElement? highlight = runProperties?.Element(DrawingNamespace + "highlight") ??
+            defaultRunProperties?.Element(DrawingNamespace + "highlight");
         string? hex = (string?)highlight?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
         return RgbColor.TryParse(hex, out color);
     }
