@@ -47,6 +47,32 @@ internal static class PptxChartNumberFormatsTests
         TestAssert.Equal("0.3%", FormatChartNumber(0.256d, "0.0\\%"));
     }
 
+    public static void PptxChartNumberLiteralSymbolsKeepSourcePositionAndMultiplicity()
+    {
+        foreach (var (format, expected) in new[] {
+            ("\"%\"0", "%2"), ("\"p%\"0", "p%2"), ("0\"$\"", "2$"), ("0\"x$\"", "2x$"),
+            ("\"%%\"0", "%%2"), ("\\%0", "%2"), ("0\\$", "2$"), ("\"$%\"0\"%$\"", "$%2%$"),
+            ("\"%%\"", "%%"), ("\"$\"", "$"), ("\"%\"0%", "%200%") })
+        {
+            TestAssert.Equal(expected, FormatChartNumber(2d, format));
+            TestAssert.Equal("", GetUnsupportedChartNumberConstructs(format));
+        }
+        TestAssert.Equal("%%-2", FormatChartNumber(-2d, "\"%%\"0"));
+        TestAssert.Equal("2$", FormatChartNumber(-2d, "0;0\"$\""));
+        TestAssert.Equal("0$", FormatChartNumber(0d, "0;0;0\"$\""));
+    }
+
+    public static void PptxChartNumberOptionalFractionalDigitsKeepTheirMeaning()
+    {
+        foreach (var (value, format, expected) in new[] {
+            (2d, "0.##", "2"), (2.5d, "0.##", "2.5"), (2.567d, "0.##", "2.57"),
+            (2d, "0.0#", "2.0"), (2d, "0.00", "2.00"), (0d, "0.##", "0"),
+            (-2.5d, "0.##", "-2.5"), (1234.5d, "#,##0.##", "1,234.5"),
+            (2500000d, "0.##,,", "2.5"), (.025d, "0.##%", "2.5%"),
+            (2.5d, "[$-407]0.##", "2,5"), (2.5d, "0.##\"%\"", "2.5%") })
+            TestAssert.Equal(expected, FormatChartNumber(value, format));
+    }
+
     public static void PptxChartNumberNegativeSectionSelectsSecondPattern()
     {
         TestAssert.Equal("-12.3", FormatChartNumber(-12.345d, "0.0;-0.0"));

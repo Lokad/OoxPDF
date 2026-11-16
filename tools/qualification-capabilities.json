@@ -1,4 +1,14 @@
 {
+  "pptx-chart-number-content": [
+    "PptxChartNumber",
+    "PptxChartDateFallbackPreservesPlotAndLabels",
+    "PptxChartAxisDate1904ResolvesFromChartSpace",
+    "PptxChartAxisDatesRenderFromParsedDateContext",
+    "PptxChartDataLabelDatesHonorChartSpaceDateSystem",
+    "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-run-effect-inheritance": [
     "PptxInheritanceHighlightUsesDirectOrDefaultOwner",
     "PptxInheritanceOutlineRemovalDiffersFromAbsentOrUnsupportedPaint",

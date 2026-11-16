@@ -74,13 +74,12 @@ internal sealed partial class PptxRenderer
             return localeCurrency.Length == 0 ? dateText : localeCurrency + dateText;
         }
 
-        ExtractChartNumberSectionLiterals(section, out string literalPrefix, out string literalSuffix, out bool hasDigitPlaceholders);
+        string view = ReadChartNumberSection(section, out string literalPrefix, out string literalSuffix, out bool hasDigitPlaceholders);
         if (!hasDigitPlaceholders && (literalPrefix.Length > 0 || literalSuffix.Length > 0))
         {
             return literalPrefix + literalSuffix;
         }
 
-        string view = ChartNumberFormatSyntaxView(section);
         bool percent = view.Contains('%', StringComparison.Ordinal);
         double displayValue = percent ? value * 100d : value;
         int scalingCommas = 0;
@@ -132,11 +131,11 @@ internal sealed partial class PptxRenderer
             for (int i = 0; i < integerEnd; i++)
                 if (view[i] == '0') integerDigits++;
             string numberFormat = (thousands ? "#,##" : string.Empty) + new string('0', Math.Max(1, integerDigits)) +
-                (decimals > 0 ? "." + new string('0', decimals) : string.Empty);
+                (decimals > 0 ? "." + view.Substring(decimalPoint + 1, decimals) : string.Empty);
             text = emitValue.ToString(numberFormat, numberCulture);
         }
 
-        if (view.Contains('$', StringComparison.Ordinal) || localeCurrency.Length > 0 || view.Contains(LiteralDollarPlaceholder, StringComparison.Ordinal))
+        if (view.Contains('$', StringComparison.Ordinal) || localeCurrency.Length > 0)
         {
             text = (localeCurrency.Length > 0 ? localeCurrency : "$") + text;
 
@@ -153,7 +152,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        if (percent || view.Contains(LiteralPercentPlaceholder, StringComparison.Ordinal))
+        if (percent)
         {
             text += "%";
         }
@@ -968,10 +967,6 @@ internal sealed partial class PptxRenderer
 
         return false;
     }
-    private const char LiteralPercentPlaceholder = '\u0002';
-
-    private const char LiteralDollarPlaceholder = '\u0003';
-
     private static string[] SplitChartNumberFormatSections(string formatCode)
     {
         var sections = new List<string>();
@@ -1007,33 +1002,17 @@ internal sealed partial class PptxRenderer
         return sections.ToArray();
     }
 
-    // Literal runs in one numeric section (S04). Quoted ("..."/"") and escaped runs are
-    // strong literals, except that quoted/escaped % and $ stay with the caller's
-    // placeholder logic and escaped _/* runs are spacing like in the syntax view.
+    // One numeric-section walk owns the syntax view and literal text. Quoted and
+    // escaped %/$ retain their position and multiplicity without acting as syntax.
+    // Escaped _/* keep the existing spacing fallback.
     // Unquoted letter/space/digit runs are weak literals that Excel also renders beside
     // digit placeholders; a weak run holding e/E/digits is dropped instead of partially
     // emitted, runs strictly inside the placeholder span (for example the fraction gap
     // in "# ?/?") are dropped, and bracket spans, cushion/fill runs, and other unquoted
     // syntax (including positional $/%) stay out of scope.
-    private static void ExtractChartNumberSectionLiterals(string section, out string prefix, out string suffix, out bool hasDigitPlaceholders)
+    private static string ReadChartNumberSection(string section, out string prefix, out string suffix, out bool hasDigitPlaceholders)
     {
-        prefix = string.Empty;
-        suffix = string.Empty;
-        hasDigitPlaceholders = false;
-        if (!ChartNumberSectionMayContainLiterals(section))
-        {
-            foreach (char scan in section)
-            {
-                if (scan is '0' or '#' or '?')
-                {
-                    hasDigitPlaceholders = true;
-                    break;
-                }
-            }
-
-            return;
-        }
-
+        var view = new StringBuilder(section.Length);
         StringBuilder? leading = null;
         StringBuilder? trailing = null;
         List<(int Start, int End, int StartPlaceholders)>? pendingWeak = null;
@@ -1045,45 +1024,23 @@ internal sealed partial class PptxRenderer
             if (!inQuotes && c == '\\' && i + 1 < section.Length)
             {
                 char escaped = section[++i];
+                view.Append('\0', 2);
                 if (escaped is '_' or '*')
                 {
                     continue;
                 }
 
-                if (escaped is '%' or '$')
-                {
-                    continue;
-                }
-
-                if (placeholders == 0)
-                {
-                    leading ??= new StringBuilder();
-                    leading.Append(escaped);
-                }
-                else
-                {
-                    trailing ??= new StringBuilder();
-                    trailing.Append(escaped);
-                }
-
+                AppendLiteral(escaped);
                 continue;
             }
 
             if (c == '"')
             {
+                view.Append('\0');
                 if (inQuotes && i + 1 < section.Length && section[i + 1] == '"')
                 {
-                    if (placeholders == 0)
-                    {
-                        leading ??= new StringBuilder();
-                        leading.Append('"');
-                    }
-                    else
-                    {
-                        trailing ??= new StringBuilder();
-                        trailing.Append('"');
-                    }
-
+                    AppendLiteral('"');
+                    view.Append('\0');
                     i++;
                     continue;
                 }
@@ -1094,22 +1051,8 @@ internal sealed partial class PptxRenderer
 
             if (inQuotes)
             {
-                if (c is '%' or '$')
-                {
-                    continue;
-                }
-
-                if (placeholders == 0)
-                {
-                    leading ??= new StringBuilder();
-                    leading.Append(c);
-                }
-                else
-                {
-                    trailing ??= new StringBuilder();
-                    trailing.Append(c);
-                }
-
+                view.Append('\0');
+                AppendLiteral(c);
                 continue;
             }
 
@@ -1118,20 +1061,28 @@ internal sealed partial class PptxRenderer
                 int close = section.IndexOf(']', i);
                 if (close >= 0)
                 {
+                    view.Append('\0', close - i + 1);
                     i = close;
                 }
+                else view.Append('\0');
 
                 continue;
             }
 
-            if ((c == '_' || c == '*') && i + 1 < section.Length)
+            if (c is '_' or '*')
             {
-                i++;
+                view.Append('\0');
+                if (i + 1 < section.Length)
+                {
+                    view.Append('\0');
+                    i++;
+                }
                 continue;
             }
 
             if (c is '0' or '#' or '?')
             {
+                view.Append(c);
                 placeholders++;
                 continue;
             }
@@ -1151,6 +1102,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 int runEnd = i - 1;
+                view.Append(section, runStart, runEnd - runStart + 1);
                 i--;
                 if (!poisoned)
                 {
@@ -1160,6 +1112,7 @@ internal sealed partial class PptxRenderer
 
                 continue;
             }
+            view.Append(c);
         }
 
         hasDigitPlaceholders = placeholders > 0;
@@ -1180,30 +1133,23 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        if (leading is not null)
-        {
-            prefix = leading.ToString();
-        }
+        prefix = leading?.ToString() ?? string.Empty;
+        suffix = trailing?.ToString() ?? string.Empty;
+        return view.ToString();
 
-        if (trailing is not null)
+        void AppendLiteral(char value)
         {
-            suffix = trailing.ToString();
-        }
-    }
-
-    // True when the section can hold literal runs worth a full walk: quotes, escapes,
-    // brackets, cushion/fill runs, or unquoted letters/spaces (S04).
-    private static bool ChartNumberSectionMayContainLiterals(string section)
-    {
-        foreach (char c in section)
-        {
-            if ((c is '"' or '\\' or '[' or '_' or '*' or ' ') || IsAsciiLetter(c))
+            if (placeholders == 0)
             {
-                return true;
+                leading ??= new StringBuilder();
+                leading.Append(value);
+            }
+            else
+            {
+                trailing ??= new StringBuilder();
+                trailing.Append(value);
             }
         }
-
-        return false;
     }
 
     // Unsupported-construct inventory for one chart number-format code (S04). The IDs
@@ -1567,57 +1513,4 @@ internal sealed partial class PptxRenderer
         return string.Empty;
     }
 
-    // Syntax view: escaped and quoted characters cannot act as format syntax. Escaped or
-    // quoted percent/dollar keep distinct placeholders so they render literally without scaling.
-    private static string ChartNumberFormatSyntaxView(string section)
-    {
-        var view = new StringBuilder(section.Length);
-        bool inQuotes = false;
-        for (int i = 0; i < section.Length; i++)
-        {
-            char c = section[i];
-            if (c == '\\' && i + 1 < section.Length)
-            {
-                char escaped = section[++i];
-                view.Append(escaped == '%' ? LiteralPercentPlaceholder : escaped == '$' ? LiteralDollarPlaceholder : '\0');
-                continue;
-            }
-
-            if ((c == '_' || c == '*'))
-            {
-                // Width-cushion and fill runs carry no renderable value text;
-                // mask the run so neighbours cannot misread the skipped char (S04).
-                view.Append('\0');
-                if (i + 1 < section.Length)
-                {
-                    view.Append('\0');
-                    i++;
-                }
-
-                continue;
-            }
-
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-                view.Append('\0');
-                continue;
-            }
-
-            if (!inQuotes && c == '[')
-            {
-                int bracketClose = section.IndexOf(']', i);
-                if (bracketClose >= 0)
-                {
-                    view.Append('\0', bracketClose - i + 1);
-                    i = bracketClose;
-                    continue;
-                }
-            }
-
-            view.Append(inQuotes ? (c == '%' ? LiteralPercentPlaceholder : c == '$' ? LiteralDollarPlaceholder : '\0') : c);
-        }
-
-        return view.ToString();
-    }
 }
