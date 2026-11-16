@@ -362,7 +362,11 @@ internal sealed record PptxScenePicture(
     PptxSceneOuterShadow OuterShadow,
     string Preset,
     IReadOnlyDictionary<string, double> PresetAdjustments,
-    bool HasCustomGeometry);
+    bool HasCustomGeometry)
+{
+    public string? SvgFallbackRelationshipId { get; init; }
+    public PptxSceneImageResource? SvgFallback { get; init; }
+}
 
 internal sealed record PptxSceneImageResource(
     string PartName,

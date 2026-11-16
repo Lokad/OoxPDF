@@ -54,6 +54,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
+            sceneSlide = PreparePictureSources(sceneSlide, imageCache, diagnosticSink, slideIndex + 1, cancellationToken);
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink, warnedMustUnderstandParts);
             using IMemoryReservation? construction = ReservePageConstruction(sceneSlide, cancellationToken, out long axisConstructionSites, out long svgSourceBytes);
             cancellationToken.ThrowIfCancellationRequested();

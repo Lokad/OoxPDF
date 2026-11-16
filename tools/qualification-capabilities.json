@@ -1,4 +1,16 @@
 {
+  "pptx-svg-fallback": [
+    "PptxPictureRecovery",
+    "PptxHiddenObjects",
+    "PptxHiddenMasterShapesStayUnpainted",
+    "PptxShownMasterShapesPaintByDefault",
+    "PptxExplicitShownMasterShapesPaint",
+    "PptxSyntheticSvgPictureRendersVectorPath",
+    "PptxSyntheticSvgPictureAppliesSourceCropBeforeScaling",
+    "SvgLabelsRetainEveryGlyphInDocxAndPptxPictures",
+    "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
+    "SvgLabelPreparationFailurePreservesDestinationAndCleansTemporaryFiles"
+  ],
   "pdf-cleanup-failure-precedence": [
     "ConvertAsyncStorageCleanup",
     "ConvertAsyncStorageStandaloneCleanupFailurePreventsFilePublication",

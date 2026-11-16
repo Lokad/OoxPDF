@@ -118,67 +118,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        PdfImageXObject? image = null;
-        if (!crop.IsEmpty)
-        {
-            image = GetOrCreateCroppedImage(crop);
-            if (image is not null)
-            {
-                crop = default;
-            }
-        }
-
-        PdfImageXObject? GetOrCreateCroppedImage(CropRect crop)
-        {
-            string cacheKey = imageResource.PartName + "\u001f" + ImageRecolorCacheKey(recolor) + "\u001fcrop:" +
-                crop.Left.ToString("R", CultureInfo.InvariantCulture) + "," +
-                crop.Top.ToString("R", CultureInfo.InvariantCulture) + "," +
-                crop.Right.ToString("R", CultureInfo.InvariantCulture) + "," +
-                crop.Bottom.ToString("R", CultureInfo.InvariantCulture);
-            if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
-            {
-                return cached;
-            }
-
-            PdfImageXObject? croppedImage = CreateCroppedImage(
-                imageResource.PartName,
-                imageResource.ContentType,
-                imageResource.Bytes);
-            imageCache?.TryAdd(cacheKey, croppedImage);
-            return croppedImage;
-
-            PdfImageXObject? CreateCroppedImage(string partName, string contentType, byte[] bytes)
-            {
-                try
-                {
-                    // D02: shared pixel decoding; unsupported types keep the silent
-                    // PDF-clipping fallback (no diagnostic), exactly as before.
-                    if (!OoxImageDecoder.IsSupportedContentType(contentType))
-                    {
-                        return null;
-                    }
-
-                    using DecodedPixels decoded = OoxImageDecoder.DecodePixelsOwned(contentType, bytes, cancellationToken);
-                    return CreateCroppedRgbImage(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, recolor, crop, cancellationToken);
-                }
-                catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or IndexOutOfRangeException)
-                {
-                    diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                        "IMAGE_CROP_UNSUPPORTED_FORMAT",
-                        OoxPdfSeverity.Warning,
-                        $"Image '{partName}' could not be decoded for Office-style cropped image embedding on slide {slideIndex}; falling back to PDF clipping.",
-                        partName,
-                        PageIndex: null,
-                        SlideIndex: slideIndex,
-                        Feature: "image crop",
-                        Fallback: "PDF clipping"));
-                }
-
-                return null;
-            }
-        }
-
-        image ??= GetOrCreateImage(imageResource, recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
+        PdfImageXObject? image = PrepareRasterPicture(imageResource, recolor, imageCache,
+            diagnosticSink, slideIndex, cancellationToken, ref crop);
         if (image is null)
         {
             return;

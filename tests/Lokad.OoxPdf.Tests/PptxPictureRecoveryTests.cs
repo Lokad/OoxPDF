@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxPictureRecoveryTests
+internal static partial class PptxPictureRecoveryTests
 {
     public static void PptxPictureRecoveryDistinguishesMissingRelationshipAndPart()
     {

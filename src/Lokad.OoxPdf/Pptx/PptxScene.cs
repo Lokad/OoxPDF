@@ -622,12 +622,14 @@ internal sealed partial class PptxSceneBuilder
         XElement? blip = picture
             .Element(PresentationNamespace + "blipFill")
             ?.Element(DrawingNamespace + "blip");
-        return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ??
-            blip?.Descendants()
+        return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ?? ReadSvgPictureRelationshipId(picture);
+    }
+
+    private static string? ReadSvgPictureRelationshipId(XElement picture) =>
+            ReadPictureBlip(picture)?.Descendants()
                 .FirstOrDefault(element => element.Name.LocalName == "svgBlip")
                 ?.Attribute(RelationshipsNamespace + "embed")
                 ?.Value;
-    }
 
     private static PptxScenePicture ReadPicture(
         XElement picture,
@@ -637,6 +639,7 @@ internal sealed partial class PptxSceneBuilder
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         string? relationshipId = ReadPictureRelationshipId(picture);
+        string? svgRelationshipId = ReadSvgPictureRelationshipId(picture);
         string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
         XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
         PptxSceneLineStyle line = TryReadShapeLine(shapeProperties, theme, colorMap, default, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
@@ -676,7 +679,12 @@ internal sealed partial class PptxSceneBuilder
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             ReadPresetGeometry(shapeProperties),
             ReadPresetAdjustments(shapeProperties),
-            shapeProperties?.Element(DrawingNamespace + "custGeom") is not null);
+            shapeProperties?.Element(DrawingNamespace + "custGeom") is not null)
+        {
+            SvgFallbackRelationshipId = svgRelationshipId,
+            SvgFallback = svgRelationshipId != relationshipId
+                ? ReadImageResource(package, ResolveRelationshipTarget(svgRelationshipId, relationships)) : null
+        };
 
         bool HasPictureAudio()
         {
