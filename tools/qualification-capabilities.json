@@ -1,4 +1,16 @@
 {
+  "docx-style-toggles": [
+    "DocxStyleToggles",
+    "DocxHiddenPicturesUseInheritedStylesAndExplicitFalse",
+    "DocxInlineBoxesUseInheritedVisibilityAndVisibleOverrides",
+    "DocxHiddenTextMetricsRespectInheritedAndExplicitVisibility",
+    "DocxConditionalTableStylesKeepFalseFlagsAndDirectFormatting",
+    "DocxNormalTableIdentityAndOverridesMatchIndependentWord",
+    "DocxFontSlots",
+    "DocxVmlTextBoxesOwnInnerStylesWithoutLeakingToSiblings",
+    "DocxParagraphMarkFormattingRetainsResolvedSourceAcrossViews",
+    "DocxHiddenPicturesAndMasterThemesCancelBeforePublication"
+  ],
   "pptx-svg-fallback": [
     "PptxPictureRecovery",
     "PptxHiddenObjects",

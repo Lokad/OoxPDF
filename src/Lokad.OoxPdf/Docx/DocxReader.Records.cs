@@ -41,6 +41,27 @@ internal sealed partial class DocxReader
         public string? KerningMinimumHalfPointsValue { get; init; }
         public static DocxResolvedRunProperties Empty { get; } = new(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
+        // A basedOn chain resolves by assignment within its style level. Word
+        // composes toggle properties between levels relative to document defaults
+        // (MS-OI29500 17.7.3); direct formatting still uses ordinary Merge.
+        public DocxResolvedRunProperties MergeStyleLevel(DocxResolvedRunProperties other, DocxResolvedRunProperties defaults)
+        {
+            return Merge(other) with
+            {
+                Bold = Toggle(Bold, other.Bold, defaults.Bold),
+                Italic = Toggle(Italic, other.Italic, defaults.Italic),
+                ComplexScriptBold = Toggle(ComplexScriptBold, other.ComplexScriptBold, defaults.ComplexScriptBold),
+                ComplexScriptItalic = Toggle(ComplexScriptItalic, other.ComplexScriptItalic, defaults.ComplexScriptItalic),
+                AllCaps = Toggle(AllCaps, other.AllCaps, defaults.AllCaps),
+                Strike = Toggle(Strike, other.Strike, defaults.Strike),
+                SmallCaps = Toggle(SmallCaps, other.SmallCaps, defaults.SmallCaps),
+                Hidden = Toggle(Hidden, other.Hidden, defaults.Hidden)
+            };
+
+            static bool? Toggle(bool? current, bool? declared, bool? defaultValue) =>
+                declared is { } value ? (current ?? false) ^ value ^ (defaultValue ?? false) : current;
+        }
+
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
             return new DocxResolvedRunProperties(

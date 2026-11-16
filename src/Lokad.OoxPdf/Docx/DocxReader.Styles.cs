@@ -187,20 +187,24 @@ internal sealed partial class DocxReader
         DocxResolvedRunProperties result = styles.RunDefaults;
         if (tableStyleProperties is { } tableProperties)
         {
-            result = result.Merge(tableProperties);
+            result = result.MergeStyleLevel(tableProperties, styles.RunDefaults);
         }
 
         // Unstyled paragraphs inherit through Normal like numbering does (bodysize-normal11 probe 2026-09-07:
         // Normal-11pt unsized runs resolve 11pt in Word, not the unstyled fallback).
+        DocxResolvedRunProperties? paragraphLevel = null;
         foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId ?? "Normal", styles.ParagraphStyles))
         {
-            result = result.Merge(paragraphStyle.Run);
+            paragraphLevel = paragraphLevel is { } inherited ? inherited.Merge(paragraphStyle.Run) : paragraphStyle.Run;
         }
+        if (paragraphLevel is { } paragraphProperties) result = result.MergeStyleLevel(paragraphProperties, styles.RunDefaults);
 
+        DocxResolvedRunProperties? characterLevel = null;
         foreach (DocxStyle characterStyle in EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles))
         {
-            result = result.Merge(characterStyle.Run);
+            characterLevel = characterLevel is { } inherited ? inherited.Merge(characterStyle.Run) : characterStyle.Run;
         }
+        if (characterLevel is { } characterProperties) result = result.MergeStyleLevel(characterProperties, styles.RunDefaults);
 
         return result.Merge(ReadRunProperties(directProperties));
     }
