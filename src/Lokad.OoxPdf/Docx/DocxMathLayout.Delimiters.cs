@@ -123,7 +123,7 @@ internal static partial class DocxMathLayout
             int point = Rune.GetRuneAt(character, 0).Value;
             VerticalGlyphShape? shape;
             bool measured = delimiter.GrowValue == false
-                ? TryMeasureFixedGlyphShape(resource, font.MapCodePoint(point), 0d, out shape)
+                ? TryMeasureFixedGlyphShape(resource, font.MapCodePoint(point), 0d, point, out shape)
                 : TryMeasureVerticalGlyphShape(resource, point, height / scale, scale, nearest: true, token, out shape, assemblyStorage);
             if (!measured || shape is null) return false;
             double baseline = axis - (shape.YMax + shape.YMin) / 2d * scale;

@@ -43,7 +43,7 @@ internal static partial class DocxMathLayout
         double below = Math.Max(0d, denominator.BelowBaseline - denominatorY);
         double glyphSize = OfficePdfTextEmissionProfile.FontSize(size), glyphScale = glyphSize / font.UnitsPerEm;
         if (!font.TryGetNearestMathVerticalVariant(font.MapCodePoint(0x2044), (above + below) / glyphScale, token, out var variant) ||
-            !font.TryGetGlyphBounds(variant.Glyph, out var bounds) || !resource!.Font.TryGetEncodedCid(variant.Glyph, out ushort cid))
+            !font.TryGetGlyphBounds(variant.Glyph, out var bounds) || !resource!.Font.TryGetEncodedCid(variant.Glyph, 0x2044, out ushort cid))
         { fallback = "UnsupportedMathSkewedFractionVariant"; return false; }
         double slashAdvance = font.GetAdvanceWidth(variant.Glyph) * glyphScale;
         double slashX = numerator.AdvanceWidth + (horizontalGap - slashAdvance) / 2d;

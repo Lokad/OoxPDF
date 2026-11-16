@@ -49,7 +49,7 @@ internal static partial class DocxMathRowLayout
             if (scriptLevel != 0 && !atom.Run.NormalText && !font.TryGetMathScriptGlyph(glyph, scriptLevel, token, out glyph))
             { fallback = "UnsupportedMathScriptGlyph"; return false; }
             if (glyph == 0) { fallback = "MissingMathGlyph"; return false; }
-            if (!resource.Font.TryGetEncodedCid(glyph, out ushort cid)) { fallback = "MissingMathEncoding"; return false; }
+            if (!resource.Font.TryGetEncodedCid(glyph, atom.Render.Value, out ushort cid)) { fallback = "MissingMathEncoding"; return false; }
             if (!font.TryGetMathItalicCorrection(glyph, out short italic)) { fallback = "InvalidMathGlyphMetrics"; return false; }
             double scale = size / font.UnitsPerEm;
             double advance = font.GetAdvanceWidth(glyph) * scale;

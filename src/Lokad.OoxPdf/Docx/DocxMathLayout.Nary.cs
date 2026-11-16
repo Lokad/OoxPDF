@@ -80,7 +80,7 @@ internal static partial class DocxMathLayout
         if (nary.GrowValue == true) { target = Math.Max(target, (body.AboveBaseline + body.BelowBaseline) / scale); }
         if (!double.IsFinite(target) || target < 0d ||
             !font.TryGetMathVerticalVariant(canonical, target, token, out var variant) ||
-            !font.TryGetGlyphBounds(variant.Glyph, out var bounds) || !resource.Font.TryGetEncodedCid(variant.Glyph, out ushort cid))
+            !font.TryGetGlyphBounds(variant.Glyph, out var bounds) || !resource.Font.TryGetEncodedCid(variant.Glyph, point, out ushort cid))
         { fallback = "UnsupportedMathNaryVariant"; return false; }
         double Value(OpenTypeMathConstant field) => constants.GetValue(field) * size / font.UnitsPerEm;
         double baseline = Value(OpenTypeMathConstant.AxisHeight) - (bounds.YMax + bounds.YMin) / 2d * scale;

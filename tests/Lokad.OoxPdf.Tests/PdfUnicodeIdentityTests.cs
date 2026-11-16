@@ -144,6 +144,24 @@ internal static class PdfUnicodeIdentityTests
         return output.ToArray();
     }
 
+    public static void PdfSourceUnicodeAliasesSurviveLiteralMathPreparation()
+    {
+        foreach (bool split in new[] { false, true })
+        {
+            using var input = Input(docx: true, split, math: true);
+            using var package = OoxPackage.Open(input, default);
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var document = new DocxReader().Read(package, diagnostics.Add, default, OoxPdfDocxMarkupMode.Final);
+            var page = new DocxRenderer(new AliasResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true, honorActualText: false,
+                fontResourceFilter: name => name.StartsWith("Eq", StringComparison.Ordinal)).Select(show => show.Text));
+            TestAssert.Equal(AliasedText, text);
+            TestAssert.True(diagnostics.All(d => d.Id == "DOCX_APPROXIMATED_EQUATION"), "Supported literal equations retain only their usual approximation diagnostic.");
+            PdfContentValidator.ValidatePage(page, 0, default);
+        }
+    }
+
     private static OpenTypeFont AliasFont(bool whole = false) => OpenTypeFont.Load(AliasBytes(whole));
     private static byte[] AliasBytes(bool whole = false)
     {
@@ -177,16 +195,20 @@ internal static class PdfUnicodeIdentityTests
         public FontFaceResolution Resolve(FontRequest request) => new(request.FamilyName, "TestFont", new FontStyleKey(), source, false);
     }
 
-    private static MemoryStream Input(bool docx, bool split)
+    private static MemoryStream Input(bool docx, bool split, bool math = false)
     {
         const string w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         const string rel = "http://schemas.openxmlformats.org/package/2006/relationships";
         const string office = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         string[] text = split ? AliasedText.EnumerateRunes().Select(rune => rune.ToString()).ToArray() : [AliasedText];
+        string paragraph = math
+            ? "<w:p xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\"><m:oMath>" +
+                string.Concat(text.Select(value => "<m:r><m:rPr><m:nor/></m:rPr><w:rPr><w:rFonts w:ascii=\"TestFont\" w:hAnsi=\"TestFont\"/><w:sz w:val=\"48\"/></w:rPr><m:t>" + value + "</m:t></m:r>")) + "</m:oMath></w:p>"
+            : "<w:p>" + string.Concat(text.Select(value => "<w:r><w:rPr><w:rFonts w:ascii=\"TestFont\" w:hAnsi=\"TestFont\"/><w:sz w:val=\"48\"/></w:rPr><w:t>" + value + "</w:t></w:r>")) + "</w:p>";
         if (docx) return TestFixtures.CreateZipPackage(new Dictionary<string, string> {
             ["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"xml\" ContentType=\"application/xml\"/><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
             ["_rels/.rels"] = $"<Relationships xmlns=\"{rel}\"><Relationship Id=\"main\" Type=\"{office}/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
-            ["word/document.xml"] = $"<w:document xmlns:w=\"{w}\"><w:body><w:p>" + string.Concat(text.Select(value => "<w:r><w:rPr><w:rFonts w:ascii=\"TestFont\" w:hAnsi=\"TestFont\"/><w:sz w:val=\"48\"/></w:rPr><w:t>" + value + "</w:t></w:r>")) + "</w:p><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>"
+            ["word/document.xml"] = $"<w:document xmlns:w=\"{w}\"><w:body>" + paragraph + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>"
         });
         return TestFixtures.CreateZipPackage(new Dictionary<string, string> {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(), ["_rels/.rels"] = PptxTests.PackageRelationship(),

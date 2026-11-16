@@ -156,7 +156,8 @@ internal sealed partial class DocxRenderer
     {
         var candidates = new List<(DocxParagraph Paragraph, DocxEquation Equation, DocxEquation SourceEquation, OpenTypeFont? ParentMetrics, IReadOnlyList<OpenTypeFont> ControlFaces)>();
         Dictionary<DocxEquation, DocxPreparedMathParagraph>? metricOnlyLayouts = null;
-        var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs)>();
+        var groups = new Dictionary<(string StableId, int FaceIndex), (OpenTypeFont Font, Dictionary<ushort, int> Glyphs,
+            HashSet<(ushort Glyph, int Unicode)>? Aliases)>();
         var runKeys = new Dictionary<DocxMathRun, (string StableId, int FaceIndex)>();
         var controlFaces = new Dictionary<OpenTypeFont, (Dictionary<ushort, int> Glyphs, Dictionary<ushort, int> Operators,
             Dictionary<ushort, int> AssemblyParts, HashSet<int> Characters)>(ReferenceEqualityComparer.Instance);
@@ -258,15 +259,25 @@ internal sealed partial class DocxRenderer
                     OpenTypeFont? font = await LoadFontAsync(resolution, fontCache, token).ConfigureAwait(false);
                     if (font is null || !font.HasTrueTypeOutlines) { valid = false; break; }
                     var key = (resolution.Source.StableId, resolution.FontFaceIndex);
-                    if (!groups.TryGetValue(key, out var group)) { group = (font, new Dictionary<ushort, int>()); groups.Add(key, group); }
+                    if (!groups.TryGetValue(key, out var group)) { group = (font, new Dictionary<ushort, int>(), null); groups.Add(key, group); }
                     DocxMathRowLayout.TryGetRenderCodePoints(new DocxMathRow([run]), token, out IReadOnlyList<int> points, out _);
                     foreach (int point in points)
                     {
                         ushort glyph = font.MapCodePoint(point);
                         if (glyph == 0 || source.ScriptLevel != 0 && !run.NormalText && !font.TryGetMathScriptGlyph(glyph, source.ScriptLevel, token, out glyph))
                         { valid = false; break; }
-                        if (!group.Glyphs.TryGetValue(glyph, out int existing) || existing != 0x20 && point == 0x20) { group.Glyphs[glyph] = point; }
+                        bool mapped = group.Glyphs.TryGetValue(glyph, out int existing);
+                        if (mapped && existing != point)
+                        {
+                            // Keep every authored identity for PDF encoding. The
+                            // existing preferred view still owns control eligibility.
+                            group.Aliases ??= [];
+                            group.Aliases.Add((glyph, existing));
+                            group.Aliases.Add((glyph, point));
+                        }
+                        if (!mapped || existing != 0x20 && point == 0x20) { group.Glyphs[glyph] = point; }
                     }
+                    groups[key] = group;
                     if (!valid) { break; }
                     runKeys[run] = key;
                 }
@@ -288,7 +299,7 @@ internal sealed partial class DocxRenderer
                         if (controlPoints.Count != 0)
                         {
                             if (!groups.TryGetValue(controlKey, out var controlGroup))
-                            { controlGroup = (controlFont, new Dictionary<ushort, int>()); groups.Add(controlKey, controlGroup); }
+                            { controlGroup = (controlFont, new Dictionary<ushort, int>(), null); groups.Add(controlKey, controlGroup); }
                             if (!controlFaces.TryGetValue(controlFont, out var face))
                             {
                                 face = (controlGroup.Glyphs, new Dictionary<ushort, int>(), new Dictionary<ushort, int>(), new HashSet<int>());
@@ -357,8 +368,9 @@ internal sealed partial class DocxRenderer
         foreach (var group in groups)
         {
             token.ThrowIfCancellationRequested();
-            var resource = new PdfFontResource("Eq" + (fonts.Count + 1), PdfEmbeddedFont.CreateForGlyphMappings(group.Value.Font,
-                group.Value.Glyphs.Select(pair => (pair.Key, pair.Value)), token));
+            IEnumerable<(ushort Glyph, int Unicode)> mappings = group.Value.Glyphs.Select(pair => (pair.Key, pair.Value));
+            if (group.Value.Aliases is { } aliases) mappings = mappings.Concat(aliases);
+            var resource = new PdfFontResource("Eq" + (fonts.Count + 1), PdfEmbeddedFont.CreateForGlyphMappings(group.Value.Font, mappings, token));
             fonts.Add(group.Key, resource);
             resources.Add(resource);
         }

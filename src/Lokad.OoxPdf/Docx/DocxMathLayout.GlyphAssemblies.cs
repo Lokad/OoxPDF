@@ -23,7 +23,7 @@ internal static partial class DocxMathLayout
         {
             // An encoding/bounds failure in a selected variant remains a failure;
             // an assembly only supplies a height that ready-made shapes cannot.
-            return TryMeasureFixedGlyphShape(resource, selected.Glyph, selected.Advance, out shape);
+            return TryMeasureFixedGlyphShape(resource, selected.Glyph, selected.Advance, point, out shape);
         }
         long previousCapacity = assemblyStorage?.Bytes ?? 0;
         bool retained = false;
@@ -58,13 +58,13 @@ internal static partial class DocxMathLayout
         }
     }
 
-    private static bool TryMeasureFixedGlyphShape(PdfFontResource resource, ushort glyph, double advanceHeight,
+    private static bool TryMeasureFixedGlyphShape(PdfFontResource resource, ushort glyph, double advanceHeight, int point,
         [NotNullWhen(true)] out VerticalGlyphShape? shape)
     {
         shape = null;
         var font = resource.Font.Font;
         if (glyph == 0 || !font.TryGetGlyphBounds(glyph, out var bounds) ||
-            !resource.Font.TryGetEncodedCid(glyph, out ushort cid)) return false;
+            !resource.Font.TryGetEncodedCid(glyph, point, out ushort cid)) return false;
         shape = new(glyph, cid.ToString("X4", CultureInfo.InvariantCulture), advanceHeight,
             font.GetAdvanceWidth(glyph), bounds.XMin, bounds.YMin, bounds.XMax, bounds.YMax, []);
         return true;

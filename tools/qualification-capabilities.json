@@ -10,6 +10,12 @@
     "PdfToUnicodeStreaming",
     "PdfEmbeddedFontToUnicodeEncodesSupplementaryAsSurrogatePair",
     "MathFontRadicalAssembliesKeepOneLogicalSymbolAndAllPhysicalParts",
+    "DocxMathBoxMathematicalHyphensPreserveSourceAndNormalTextIdentity",
+    "DocxMathBoxNormalTextDoesNotAcquireMathematicalOperatorSpacing",
+    "MathFontFixedDelimitersKeepCanonicalGlyphsLargeChildInkAndEncodingFallback",
+    "MathFontDelimiterAliasesKeepAuthoredUnicodeInEitherSourceOrder",
+    "MathFontMixedNaryRowsKeepSemanticEdgesControlsAndCompleteFallback",
+    "MathFontSkewedFractionsKeepLiteralAndControlOwnersAndCompleteFallbacks",
     "PortableRenderingSourceLabelOracle"
   ],
   "paint-oracle-unicode-units": [
