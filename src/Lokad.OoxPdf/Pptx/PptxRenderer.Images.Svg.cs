@@ -13,13 +13,13 @@ internal sealed partial class PptxRenderer
 {
     private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName, CancellationToken cancellationToken,
         string picturePreset, IReadOnlyDictionary<string, double> pictureAdjustments,
-        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts)
+        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts, double pictureOpacity)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - OoxUnits.EmuToPoints(bounds.Y) - height;
-        RenderSvgPictureCore(graphics, x, y, width, height, bounds, bytes, crop, fillRect, diagnosticSink, slideIndex, partName, cancellationToken, picturePreset, pictureAdjustments, textFonts);
+        RenderSvgPictureCore(graphics, x, y, width, height, bounds, bytes, crop, fillRect, diagnosticSink, slideIndex, partName, cancellationToken, picturePreset, pictureAdjustments, textFonts, pictureOpacity);
     }
 
     // The vector paint pipeline owns no presentation state. DOCX supplies its
@@ -44,7 +44,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect, Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex, string? partName, CancellationToken cancellationToken,
         string picturePreset = "rect", IReadOnlyDictionary<string, double>? pictureAdjustments = null,
-        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts = null)
+        IReadOnlyDictionary<FontRequest, SvgTextFont?>? textFonts = null, double pictureOpacity = 1d)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // Coarse render-local DOM, gradient/path models and working headroom.
@@ -139,7 +139,7 @@ internal sealed partial class PptxRenderer
             graphics.ClipRectangle(imageX, imageY, imageWidth, imageHeight);
         }
 
-        if (svg.Root is { } root && IsFullyTransparentSvgContainer(root))
+        if (pictureOpacity <= 0d || svg.Root is { } root && IsFullyTransparentSvgContainer(root))
         {
             graphics.RestoreState();
             return true;
@@ -184,6 +184,14 @@ internal sealed partial class PptxRenderer
             graphics = entry.Parent;
             graphics.DrawTransparencyGroup(entry.Child, new PdfRectangle(imageX, imageY, imageWidth, imageHeight), entry.Opacity);
         }
+        double? ContainerOpacity(XElement container)
+        {
+            double? local = ReadNumericSvgContainerOpacity(container);
+            // Picture opacity composites the complete vector, including overlap
+            // and local alpha. Reuse root isolation without mutating SVG source.
+            return pictureOpacity < 1d && ReferenceEquals(container, svg.Root)
+                ? (local ?? 1d) * pictureOpacity : local;
+        }
         foreach (XElement element in svg.Descendants().Where(candidate => IsSvgPaintableElement(candidate) || candidate.Name.LocalName == "text"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -195,7 +203,7 @@ internal sealed partial class PptxRenderer
             }
 
             XElement[] containers = element.Ancestors().Reverse()
-                .Where(ancestor => ReadNumericSvgContainerOpacity(ancestor) is > 0d and < 1d)
+                .Where(ancestor => ContainerOpacity(ancestor) is > 0d and < 1d)
                 .Take(PdfTransparencyGroup.MaxDepth).ToArray();
             int shared = 0;
             while (shared < isolation.Count && shared < containers.Length && ReferenceEquals(isolation[shared].Container, containers[shared])) { shared++; }
@@ -204,7 +212,7 @@ internal sealed partial class PptxRenderer
             {
                 XElement container = containers[i];
                 var child = new PdfGraphicsBuilder();
-                isolation.Add((container, graphics, child, ReadNumericSvgContainerOpacity(container)!.Value));
+                isolation.Add((container, graphics, child, ContainerOpacity(container)!.Value));
                 admittedContainers.Add(container);
                 graphics = child;
             }

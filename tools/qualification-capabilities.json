@@ -1,4 +1,20 @@
 {
+  "pptx-svg-picture-effects": [
+    "PptxSvgPicture",
+    "PptxPictureRecovery",
+    "PptxImageAlphaPreservesRawOoxmlTokens",
+    "PptxSvgZeroOpacityContainersMatchRemovedContent",
+    "PptxSvgNumericContainerOpacityIsolatesOverlappingChildren",
+    "PptxSvgNestedAndSiblingContainerOpacityPreservesPaintOrder",
+    "PptxSvgUnqualifiedOpacityRetainsPaintAndDiagnostics",
+    "SvgLabelOpacityGroupsRemainVectorOnlyAndKeepUnsupportedSiblingsExplicit",
+    "SvgSampledPageConstructionCoversReturnedPaintAndOpacityGroups",
+    "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
+    "SvgLabelPreparationFailurePreservesDestinationAndCleansTemporaryFiles",
+    "JpegPassthrough",
+    "CmykJpegMappingSurvivesDocxAndPptxCropRecolorFallbacks",
+    "PptxMalformedJpegReportsErrorIncludingRecolorFallback"
+  ],
   "docx-style-toggles": [
     "DocxStyleToggles",
     "DocxHiddenPicturesUseInheritedStylesAndExplicitFalse",

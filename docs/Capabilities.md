@@ -70,6 +70,11 @@ SVG text can become glyph outlines. Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 
+PPTX picture opacity composes with supported SVG opacity. Usable authored raster
+previews retain precedence. Unsupported SVG picture recoloring retains original
+colors with `PPTX_UNSUPPORTED_IMAGE_RECOLOR` / Original image; managed raster
+recoloring remains available.
+
 Known consequential or unresolved cases include partially clipped compressed
 standalone cell equations; severe displacement on some custom-paper Review pages;
 constrained exact-height/overflowing picture and table crops; and unsupported note

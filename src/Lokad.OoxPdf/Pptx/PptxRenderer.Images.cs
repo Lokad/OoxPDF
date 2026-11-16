@@ -113,7 +113,10 @@ internal sealed partial class PptxRenderer
         RenderPictureOuterShadow(document, graphics, transformedBounds, x, y, width, height, hasTransform, outerShadow, images, ref index, preset, geometry.PresetAdjustments, cancellationToken);
         if (imageResource.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
-            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments, svgTextFonts);
+            if (recolor.Kind != PptxSceneImageRecolorKind.None && alpha > 0d)
+                ReportUnsupportedImageRecolor(diagnosticSink, targetPartName, slideIndex,
+                    "PPTX image recolor cannot be applied to embedded SVG; its original vector colors are retained.");
+            RenderSvgPicture(graphics, document, transformedBounds, imageResource.Bytes, crop, fillRect, diagnosticSink, slideIndex, targetPartName, cancellationToken, preset, geometry.PresetAdjustments, svgTextFonts, alpha);
             StrokePictureFrame(document, graphics, transformedBounds, x, y, width, height, line, hasTransform, preset, geometry.PresetAdjustments);
             return;
         }
@@ -407,15 +410,8 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                    "PPTX_UNSUPPORTED_IMAGE_RECOLOR",
-                    OoxPdfSeverity.Warning,
-                    $"PPTX {ImageRecolorKindName()} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.",
-                    partName,
-                    PageIndex: null,
-                    SlideIndex: slideIndex,
-                    Feature: "image recolor",
-                    Fallback: "Original image"));
+                ReportUnsupportedImageRecolor(diagnosticSink, partName, slideIndex,
+                    $"PPTX {ImageRecolorKindName()} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.");
 
                 return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent, info.InvertedCmyk);
             }
@@ -589,6 +585,10 @@ internal sealed partial class PptxRenderer
     {
         return recolor.Kind == PptxSceneImageRecolorKind.None;
     }
+
+    private static void ReportUnsupportedImageRecolor(Action<OoxPdfDiagnostic>? sink, string? partName, int slideIndex, string message) =>
+        sink?.Invoke(new OoxPdfDiagnostic("PPTX_UNSUPPORTED_IMAGE_RECOLOR", OoxPdfSeverity.Warning,
+            message, partName, SlideIndex: slideIndex, Feature: "image recolor", Fallback: "Original image"));
 
     private static string ImageRecolorCacheKey(PptxSceneImageRecolor recolor)
     {
