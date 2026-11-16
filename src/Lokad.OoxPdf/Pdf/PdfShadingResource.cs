@@ -79,7 +79,7 @@ internal abstract class PdfShading
 
         // Coalescing a stop very near zero may replace the synthetic endpoint.
         // Its color still owns the start of the function's [0, 1] domain.
-        normalized[0] = normalized[0] with { Offset = 0d };
+        if (normalized[0].Offset > 0d) normalized[0] = normalized[0] with { Offset = 0d };
         PdfShadingStop last = normalized[^1];
         if (last.Offset < 1d)
         {
