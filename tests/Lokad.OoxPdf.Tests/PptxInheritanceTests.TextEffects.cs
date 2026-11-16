@@ -50,7 +50,7 @@ internal static partial class PptxInheritanceTests
             });
         PdfPage? result = null;
         WithDeck(parts, (document, package) => result = Render(document, package).Single());
-        PdfPage page = result!;
+        PdfPage page = result ?? throw new InvalidOperationException("The text-effect control produced no page.");
         string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
         TestAssert.Contains("Shape default", text);
         TestAssert.Contains("Cell default", text);
