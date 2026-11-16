@@ -13,10 +13,10 @@ internal static partial class PptxTableMergeTests
         {
             PdfPage page = RenderBorderIntervals(vertical, null);
             string[] expected = vertical
-                ? ["180 252 m 180 324.5 l S", "180 395.5 m 180 468 l S"]
-                : ["72 468 m 180.5 468 l S", "287.5 468 m 396 468 l S"];
+                ? ["180 252 m 180 324.375 l S", "180 395.625 m 180 468 l S"]
+                : ["72 468 m 180.375 468 l S", "287.625 468 m 396 468 l S"];
             TestAssert.True(BorderStrokes(page).SequenceEqual(expected),
-                "An explicitly borderless middle cell separates the two source edges in either axis.");
+                "An explicitly borderless middle cell separates the two source edges at the default 0.75pt width: " + string.Join("; ", BorderStrokes(page)));
             CheckBorderContent(page);
         }
     }
