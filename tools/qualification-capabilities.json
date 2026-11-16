@@ -1,4 +1,12 @@
 {
+  "pptx-table-border-intervals": [
+    "PptxTableBorders",
+    "PptxSyntheticExplicitTableBordersClampAtOuterEdges",
+    "PptxSyntheticTableRendersGridAndText",
+    "PptxSyntheticTableMerged",
+    "PptxMergedTableNeighborsKeepAllSourceContent",
+    "PptxMergedTableColumnsKeepStyleAndLinkOwnership"
+  ],
   "font-source-unicode-identity": [
     "PdfSourceUnicodeAliases",
     "PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace",

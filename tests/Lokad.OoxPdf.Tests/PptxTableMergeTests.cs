@@ -10,7 +10,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxTableMergeTests
+internal static partial class PptxTableMergeTests
 {
     private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace P = "http://schemas.openxmlformats.org/presentationml/2006/main";

@@ -143,26 +143,6 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<TableBorderLine> ordered = group
                 .OrderBy(border => group.Key.Vertical ? Math.Min(border.Y1, border.Y2) : Math.Min(border.X1, border.X2))
                 .ToArray();
-            double start = group.Key.Vertical
-                ? ordered.Min(border => Math.Min(border.Y1, border.Y2))
-                : ordered.Min(border => Math.Min(border.X1, border.X2));
-            double end = group.Key.Vertical
-                ? ordered.Max(border => Math.Max(border.Y1, border.Y2))
-                : ordered.Max(border => Math.Max(border.X1, border.X2));
-            double halfWidth = group.Key.LineWidth / 2d;
-            double x1 = group.Key.Vertical
-                ? group.Key.FixedCoordinate
-                : ExtendTableBorderEndpoint(start, -halfWidth, tableLeft);
-            double y1 = group.Key.Vertical
-                ? ExtendTableBorderEndpoint(start, -halfWidth, tableBottom)
-                : group.Key.FixedCoordinate;
-            double x2 = group.Key.Vertical
-                ? group.Key.FixedCoordinate
-                : ExtendTableBorderEndpoint(end, halfWidth, tableRight);
-            double y2 = group.Key.Vertical
-                ? ExtendTableBorderEndpoint(end, halfWidth, tableTop)
-                : group.Key.FixedCoordinate;
-
             bool transparentStroke = group.Key.Alpha < 0.999d;
             if (transparentStroke)
             {
@@ -172,10 +152,37 @@ internal sealed partial class PptxRenderer
 
             graphics.SetStrokeRgb(group.Key.Color.Red, group.Key.Color.Green, group.Key.Color.Blue);
             graphics.SetLineWidth(group.Key.LineWidth);
-            graphics.StrokeLine(x1, y1, x2, y2);
+            double start = group.Key.Vertical ? Math.Min(ordered[0].Y1, ordered[0].Y2) : Math.Min(ordered[0].X1, ordered[0].X2);
+            double end = group.Key.Vertical ? Math.Max(ordered[0].Y1, ordered[0].Y2) : Math.Max(ordered[0].X1, ordered[0].X2);
+            for (int index = 1; index < ordered.Count; index++)
+            {
+                TableBorderLine border = ordered[index];
+                double nextStart = group.Key.Vertical ? Math.Min(border.Y1, border.Y2) : Math.Min(border.X1, border.X2);
+                double nextEnd = group.Key.Vertical ? Math.Max(border.Y1, border.Y2) : Math.Max(border.X1, border.X2);
+                // Union touching intervals at the painter's printed precision.
+                // Matching style/axis alone must not fill a borderless cell.
+                if (Math.Round(nextStart, 3) > Math.Round(end, 3))
+                {
+                    StrokeInterval(start, end);
+                    start = nextStart;
+                    end = nextEnd;
+                }
+                else end = Math.Max(end, nextEnd);
+            }
+            StrokeInterval(start, end);
             if (transparentStroke)
             {
                 graphics.RestoreState();
+            }
+
+            void StrokeInterval(double first, double last)
+            {
+                double halfWidth = group.Key.LineWidth / 2d;
+                double x1 = group.Key.Vertical ? group.Key.FixedCoordinate : ExtendTableBorderEndpoint(first, -halfWidth, tableLeft);
+                double y1 = group.Key.Vertical ? ExtendTableBorderEndpoint(first, -halfWidth, tableBottom) : group.Key.FixedCoordinate;
+                double x2 = group.Key.Vertical ? group.Key.FixedCoordinate : ExtendTableBorderEndpoint(last, halfWidth, tableRight);
+                double y2 = group.Key.Vertical ? ExtendTableBorderEndpoint(last, halfWidth, tableTop) : group.Key.FixedCoordinate;
+                graphics.StrokeLine(x1, y1, x2, y2);
             }
         }
     }
