@@ -90,9 +90,12 @@ internal static partial class PublicApiTests
         }
     }
 
-    public static void ConvertAsyncStorageCleanupPreservesEmissionFailuresAndFileDestination()
+    public static void ConvertAsyncStorageCleanupPreservesStreamEmissionFailure() => CheckEmissionCleanup(file: false);
+
+    public static void ConvertAsyncStorageCleanupPreservesFileEmissionFailure() => CheckEmissionCleanup(file: true);
+
+    private static void CheckEmissionCleanup(bool file)
     {
-        foreach (bool file in new[] { false, true })
         foreach (bool cleanupThrows in new[] { false, true })
         {
             string? directory = file ? Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "ooxpdf-cleanup-" + Guid.NewGuid().ToString("N"))).FullName : null;
