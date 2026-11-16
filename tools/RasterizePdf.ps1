@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $pdfium = Join-Path $PSScriptRoot "vendor/pdfium/win-x64/bin/pdfium.dll"
 if (-not (Test-Path -LiteralPath $pdfium)) {
-    throw "Missing PDFium DLL: $pdfium. Restore the tracked pinned binary; see tools/vendor/pdfium/win-x64/VERSION, pdfium.sha256 and docs/VisualValidation.md."
+    throw "Missing PDFium DLL: $pdfium. Restore the tracked pinned binary; see tools/vendor/pdfium/win-x64/VERSION, pdfium.sha256 and docs/Development.md."
 }
 
 $pinFile = Join-Path $PSScriptRoot "vendor/pdfium/win-x64/pdfium.sha256"

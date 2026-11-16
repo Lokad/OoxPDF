@@ -101,7 +101,7 @@ function Read-PackedLibraryIdentity($Entry) {
 $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
 try {
     $localDocumentationLinks = 0
-    foreach ($required in @('README.md', 'CHANGELOG.md', 'docs/PublicApiChanges.md', 'docs/PreviewRelease.md')) {
+    foreach ($required in @('README.md', 'CHANGELOG.md', 'docs/Migration.md', 'docs/Capabilities.md', 'docs/Hosting.md', 'docs/Usage.md')) {
         $entry = $archive.GetEntry($required)
         if ($null -eq $entry) { throw "Packed caller documentation is missing: $required" }
     }

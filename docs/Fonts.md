@@ -2,7 +2,7 @@
 
 OOXPDF embeds resolved OpenType font programs in generated PDFs when a font source is available. Font access is intentionally not hard-wired to the filesystem: an `IFontResolver` returns a `FontFaceResolution`, and that resolution carries an `IFontProgramSource`.
 
-An `IFontProgramSource` can be backed by files, memory, blob storage, memory-mapped files, embedded resources, or another deployment-specific source:
+An `IFontProgramSource` supplies immutable font bytes through an owned lease:
 
 ```csharp
 public interface IFontProgramSource
@@ -137,5 +137,5 @@ caller-owned. Admission refusal is terminal, with `SharedResource` scope for a
 cache budget; it is never a transport retry or a missing-font fallback.
 
 Keep files unchanged while file-backed sources are in use. See the
-[font lifetime and migration contract](PublicApiChanges.md) before replacing
+[hosting contract](Hosting.md) before replacing
 fonts or invalidating discovery caches.

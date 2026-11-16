@@ -1,16 +1,16 @@
 # Lokad.OoxPdf
 
-Convert `.pptx` presentations and `.docx` documents to PDF in **.NET 10**.
+Convert `.pptx` presentations and `.docx` documents to PDF in **.NET 10 and .NET 11**.
 The library is safe managed code with no runtime dependencies, Office automation
 or native libraries. Office and PDFium are used only by separate validation tools.
 
 [Lokad.OoxPdf 0.2.0](https://www.nuget.org/packages/Lokad.OoxPdf/0.2.0) is available
 on NuGet. Read the
-[changelog](CHANGELOG.md), [migration guide](docs/PublicApiChanges.md) and
-[supported scope and limitations](docs/PreviewRelease.md).
+[changelog](CHANGELOG.md), [migration guide](docs/Migration.md) and
+[supported scope and limitations](docs/Capabilities.md).
 
-Source development for **0.3.0** targets .NET 10 and .NET 11; see the
-[development qualification](docs/DevelopmentQualification.md). Publication is deferred.
+The current **0.3.0** source targets .NET 10 and .NET 11. Documentation describes
+this source API; publication is deferred.
 
 ## Usage
 
@@ -50,16 +50,16 @@ dotnet run --project src/Lokad.OoxPdf.Cli -f net11.0 -- convert input.docx outpu
 ```
 
 With `--strict`, exit code `3` means the PDF was produced with warnings or errors.
-See [diagnostics and exit codes](docs/Diagnostics.md)
-and [DOCX markup modes](docs/DocxMarkupModes.md).
+See [API, markup modes and diagnostics](docs/Usage.md).
 
 ## Documentation
 
-- [Capabilities and fallbacks](docs/Capabilities.md)
-- [Rendering architecture](docs/RenderingModel.md)
-- [Resource limits and hosting](docs/OperatingEnvelope.md)
-- [Qualification results and known failures](docs/PreviewQualification.md)
-- [Visual validation](docs/VisualValidation.md) and [private documents](docs/PrivateValidation.md)
+- [Usage, diagnostics and review views](docs/Usage.md)
+- [Capabilities and limitations](docs/Capabilities.md)
+- [Fonts](docs/Fonts.md) and [hosting contracts](docs/Hosting.md)
+- [Architecture and PDF output](docs/Architecture.md)
+- [Development and validation](docs/Development.md)
+- [API migration](docs/Migration.md)
 
 ## Development
 
