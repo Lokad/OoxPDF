@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
             foreach (XElement element in svg.Descendants().Where(e => e.Name.LocalName == "text"))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) || IsHiddenSvgText(element) ||
+                if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element) ||
                     !TryReadSvgText(element, out SvgTextLabel? label) || label.Color is null ||
                     label.Opacity == 0d || label.Text.Length == 0 || fonts.ContainsKey(label.Font)) continue;
                 FontFaceResolution resolution = resolver.Resolve(label.Font);
@@ -72,14 +72,6 @@ internal sealed partial class PptxRenderer
 
     private static bool IsSvgMetadataElement(XElement element) =>
         element.Name.LocalName is "title" or "desc" or "metadata";
-
-    private static bool IsHiddenSvgText(XElement element)
-    {
-        string? visibility = ReadSvgInheritedAttribute(element, ReadSvgStyleDeclarations(element), "visibility");
-        return visibility?.Trim().ToLowerInvariant() is "hidden" or "collapse" ||
-            element.AncestorsAndSelf().Any(e => string.Equals(
-                ReadSvgPresentationAttribute(e, ReadSvgStyleDeclarations(e), "display")?.Trim(), "none", StringComparison.OrdinalIgnoreCase));
-    }
 
     private static bool TryReadSvgText(XElement element, [NotNullWhen(true)] out SvgTextLabel? label)
     {
@@ -169,7 +161,7 @@ internal sealed partial class PptxRenderer
         double sourceMinX, double sourceMinY, double imageX, double imageY, double imageWidth, double imageHeight,
         double scaleX, double scaleY, Action<int> admitSamples, CancellationToken cancellationToken)
     {
-        if (IsHiddenSvgText(element)) return true;
+        if (IsHiddenSvgElement(element)) return true;
         if (!TryReadSvgText(element, out SvgTextLabel? label)) return false;
         if (label.Color is not { } color || label.Opacity == 0d || label.Text.Length == 0) return true;
         if (fonts is null || !fonts.TryGetValue(label.Font, out SvgTextFont? prepared) || prepared is null) return false;

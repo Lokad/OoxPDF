@@ -197,7 +197,7 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
             // they do not paint into the picture or activate paint diagnostics.
-            if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element))
+            if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element))
             {
                 continue;
             }
@@ -515,8 +515,8 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in svg.Descendants())
         {
             string name = element.Name.LocalName;
-            if (IsSupportedSvgElement(name) || paintedText.Contains(element) || IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) ||
-                element.Ancestors().Any(parent => parent.Name.LocalName == "text" && IsHiddenSvgText(parent)))
+            if (IsSupportedSvgElement(name) || paintedText.Contains(element) || IsSvgDefinitionElement(element) ||
+                IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element))
             {
                 continue;
             }
@@ -659,6 +659,14 @@ internal sealed partial class PptxRenderer
         if (stop.Attribute("stop-opacity") is not { } opacity) { return 1d; }
         return double.TryParse(opacity.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) &&
             double.IsFinite(value) && value >= 0d && value <= 1d ? value : null;
+    }
+
+    private static bool IsHiddenSvgElement(XElement element)
+    {
+        string? visibility = ReadSvgInheritedAttribute(element, ReadSvgStyleDeclarations(element), "visibility");
+        return visibility?.Trim().ToLowerInvariant() is "hidden" or "collapse" ||
+            element.AncestorsAndSelf().Any(e => string.Equals(
+                ReadSvgPresentationAttribute(e, ReadSvgStyleDeclarations(e), "display")?.Trim(), "none", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsSupportedSvgElement(string name)

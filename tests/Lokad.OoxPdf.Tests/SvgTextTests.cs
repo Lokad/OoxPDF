@@ -12,7 +12,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class SvgTextTests
+internal static partial class SvgTextTests
 {
     private const string Label = "KEEP THIS LABEL";
     private const string LabelColor = "0.067 0.133 0.2 rg";

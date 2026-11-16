@@ -1,4 +1,15 @@
 {
+  "svg-visibility-composition": [
+    "SvgHiddenGraphics",
+    "SvgVisibility",
+    "SvgLabel",
+    "PptxSvgZeroOpacityContainersMatchRemovedContent",
+    "PptxSvgNumericContainerOpacityIsolatesOverlappingChildren",
+    "PptxSvgNestedAndSiblingContainerOpacityPreservesPaintOrder",
+    "PptxSvgPictureOpacityComposesWithRootAndNestedGroups",
+    "DocxSvgImagePublishesGradientAndIsolationResources",
+    "DocxSvgImageRendersAnchoredPicturesAndHonorsCancellation"
+  ],
   "pptx-affine-paint-navigation": [
     "PptxUnrotatedFramePaintersKeepLinkFallback",
     "PptxNodeHyperlinkBounds",
