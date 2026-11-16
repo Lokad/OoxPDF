@@ -105,7 +105,7 @@ internal static class DocxStyleToggleTests
         using var package = OoxPackage.Open(input, default);
         var diagnostics = new List<OoxPdfDiagnostic>();
         var document = new DocxReader().Read(package, diagnostics.Add, default, OoxPdfDocxMarkupMode.Final);
-        var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver())
+        var pages = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().ToArray();
         TestAssert.Equal(1, pages.Length);
         return (pages[0].Content, DocxPageFootnoteNumberingTests.DecodeText(pages[0]), diagnostics);
