@@ -6594,6 +6594,7 @@
     "PptxAutomaticTitlePlacement"
   ],
   "pptx-inheritance": [
+    "PptxSceneBuilderBuildsResolvedNodeLists",
       "PptxInheritance",
     "UnstyledRunsInherit",
     "PlainShapeFullRunStyleAgrees",

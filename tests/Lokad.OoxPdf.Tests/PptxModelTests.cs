@@ -275,8 +275,9 @@ internal static class PptxModelTests
             ["ppt/presentation.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:sldSz cx="9144000" cy="6858000"/>
                   <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
+                  <p:sldSz cx="9144000" cy="6858000"/>
+                  <p:defaultTextStyle xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:lvl2pPr><a:defRPr strike="sngStrike"/></a:lvl2pPr></p:defaultTextStyle>
                 </p:presentation>
                 """,
             ["ppt/slideMasters/slideMaster1.xml"] = """
@@ -285,7 +286,6 @@ internal static class PptxModelTests
                   <p:cSld><p:spTree>
                     <p:sp><p:nvSpPr><p:cNvPr id="1" name="MasterBox"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl2pPr/></a:lstStyle><a:p/></p:txBody></p:sp>
                   </p:spTree></p:cSld>
-                  <p:defaultTextStyle><a:lvl2pPr><a:defRPr strike="sng"/></a:lvl2pPr></p:defaultTextStyle>
                   <p:txStyles>
                     <p:bodyStyle><a:lvl2pPr algn="ctr"><a:defRPr sz="2800" b="1" spc="120"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mj-lt"/></a:defRPr></a:lvl2pPr></p:bodyStyle>
                   </p:txStyles>
@@ -1052,7 +1052,7 @@ internal static class PptxModelTests
             .ToArray();
         TestAssert.Equal("Hello", string.Concat(glyphHelloRuns.Select(run => run.Text)));
         TestAssert.True(glyphHelloRuns.All(run => run.Bold && run.Italic && run.Strike),
-            "Live glyph styles retain master bold/strike and the layout italic override.");
+            "Live glyph styles retain master bold, presentation strike and the layout italic override.");
         TestAssert.True(glyphHelloRuns.Length != 0 && glyphHelloRuns.All(run => run.Underline),
             "The live glyph inspector retains underline on every emitted source segment.");
         TestAssert.True(glyphHelloRuns.All(run => run.HighlightColor == new RgbColor(255, 255, 0)),
