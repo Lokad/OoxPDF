@@ -5,7 +5,7 @@ using Lokad.OoxPdf.Fonts;
 
 namespace Lokad.OoxPdf.Pdf;
 
-internal sealed class PdfEmbeddedFont
+internal sealed partial class PdfEmbeddedFont
 {
     private readonly IReadOnlyDictionary<ushort, ushort> cidByOriginalGlyph;
     private readonly byte[]? subsetFontBytes;
@@ -15,7 +15,9 @@ internal sealed class PdfEmbeddedFont
         string baseFontName,
         string codepointSetHash,
         IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph,
-        OpenTypeFontSubset? subset)
+        OpenTypeFontSubset? subset,
+        SortedSet<(ushort Glyph, int Unicode)>? aliases,
+        CancellationToken cancellationToken)
     {
         Font = font;
         BaseFontName = baseFontName;
@@ -31,6 +33,9 @@ internal sealed class PdfEmbeddedFont
             cidByOriginalGlyph = new Dictionary<ushort, ushort>();
         }
 
+        firstAliasCid = aliases is { Count: > 0 }
+            ? UsesSubsetFontProgram ? cidByOriginalGlyph.Values.Max() + 1 : font.GlyphCount : 0;
+        sourceAliases = CreateAliasCids(aliases, cancellationToken);
         UnicodeByCid = BuildUnicodeByCid();
         // ResourceKey is read on every writer lookup (grouping, object
         // numbering, content emission), often in per-rune paths. Cache the key once
@@ -66,18 +71,16 @@ internal sealed class PdfEmbeddedFont
     public static PdfEmbeddedFont Create(OpenTypeFont font, IEnumerable<int> codePoints, CancellationToken cancellationToken)
     {
         var unicodeByOriginalGlyph = new SortedDictionary<ushort, int>();
+        SortedSet<(ushort Glyph, int Unicode)>? aliases = null;
         foreach (int codePoint in codePoints)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(codePoint);
-            if (glyph != 0 && (!unicodeByOriginalGlyph.TryGetValue(glyph, out int existing) || (existing != 0x20 && codePoint == 0x20)))
-            {
-                unicodeByOriginalGlyph[glyph] = codePoint;
-            }
+            if (glyph != 0) AddSourceMapping(unicodeByOriginalGlyph, ref aliases, glyph, codePoint);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return CreateFromOriginalGlyphs(font, unicodeByOriginalGlyph, cancellationToken);
+        return CreateFromOriginalGlyphs(font, unicodeByOriginalGlyph, cancellationToken, aliases);
     }
 
     public static PdfEmbeddedFont Merge(IEnumerable<PdfEmbeddedFont> fonts, CancellationToken cancellationToken)
@@ -121,6 +124,7 @@ internal sealed class PdfEmbeddedFont
         }
 
         var unicodeByOriginalGlyph = new SortedDictionary<ushort, int>();
+        SortedSet<(ushort Glyph, int Unicode)>? aliases = null;
         foreach (PdfEmbeddedFont font in items)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -132,71 +136,88 @@ internal sealed class PdfEmbeddedFont
             foreach ((ushort glyph, int codePoint) in font.UnicodeByOriginalGlyph)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!unicodeByOriginalGlyph.TryGetValue(glyph, out int existingMerge) || (existingMerge != 0x20 && codePoint == 0x20))
-                {
-                    unicodeByOriginalGlyph[glyph] = codePoint;
-                }
+                AddSourceMapping(unicodeByOriginalGlyph, ref aliases, glyph, codePoint);
             }
+            if (font.sourceAliases is not null)
+                foreach (var mapping in font.sourceAliases.Keys)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    AddSourceMapping(unicodeByOriginalGlyph, ref aliases, mapping.Glyph, mapping.Unicode);
+                }
         }
 
-        return CreateFromOriginalGlyphs(items[0].Font, unicodeByOriginalGlyph, cancellationToken);
+        return CreateFromOriginalGlyphs(items[0].Font, unicodeByOriginalGlyph, cancellationToken, aliases);
     }
 
     internal static PdfEmbeddedFont CreateForGlyphMappings(OpenTypeFont font,
         IEnumerable<(ushort Glyph, int Unicode)> mappings, CancellationToken token)
     {
         var owned = new SortedDictionary<ushort, int>();
+        SortedSet<(ushort Glyph, int Unicode)>? aliases = null;
         foreach ((ushort glyph, int unicode) in mappings)
         {
             token.ThrowIfCancellationRequested();
             if (glyph == 0 || glyph >= font.GlyphCount || !Rune.IsValid(unicode))
                 throw new ArgumentException("Explicit font mappings require a valid source glyph and Unicode scalar.", nameof(mappings));
-            if (!owned.TryGetValue(glyph, out int existing) || existing != 0x20 && unicode == 0x20) { owned[glyph] = unicode; }
+            AddSourceMapping(owned, ref aliases, glyph, unicode);
         }
         token.ThrowIfCancellationRequested();
-        return CreateFromOriginalGlyphs(font, owned, token);
+        return CreateFromOriginalGlyphs(font, owned, token, aliases);
     }
 
     private static PdfEmbeddedFont CreateFromOriginalGlyphs(
         OpenTypeFont font,
         IReadOnlyDictionary<ushort, int> unicodeByOriginalGlyph,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        SortedSet<(ushort Glyph, int Unicode)>? aliases = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!OpenTypeFontSubsetter.TryCreate(font, unicodeByOriginalGlyph, cancellationToken, out OpenTypeFontSubset? subset, out string? subsetFailure))
+        // Optional alias lookup/Unicode projections share one conversion-owned
+        // family grant. Existing source/model grants cover input collection;
+        // this window covers construction overlap and retained alias mappings.
+        IMemoryReservation? aliasStorage = aliases is { Count: > 0 }
+            ? OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 256L * aliases.Count) : null;
+        try
         {
-            // Whole-TrueType fallback is only valid for TrueType outlines: embedding
-            // another format (e.g. CFF) as FontFile2/CIDFontType2 would silently
-            // produce a mismatched font dictionary.
-            //
-            // P04 embed-call-site audit: every Create/Merge caller either gates on
-            // HasTrueTypeOutlines with a FONT_UNSUPPORTED_OUTLINES diagnostic
-            // (DOCX substitution, document-fallback, and per-character guards;
-            // PPTX substitution and emission skip) or re-embeds from an existing
-            // PdfEmbeddedFont.Font, which is TrueType by construction here (subset
-            // success and the whole-font fallback above both imply it). This throw
-            // is therefore unreachable through diagnosed conversion paths and stays
-            // as a loud backstop. Pinned by
-            // FontFormatTests.CffKindFontRefusesCidFontType2Embedding.
-            if (!font.HasTrueTypeOutlines)
+            if (!OpenTypeFontSubsetter.TryCreate(font, unicodeByOriginalGlyph, cancellationToken, out OpenTypeFontSubset? subset, out string? subsetFailure))
             {
-                throw new InvalidDataException("Cannot embed font '" + font.FamilyName + "' without TrueType outlines as CIDFontType2: " + subsetFailure);
+                // Whole-TrueType fallback is only valid for TrueType outlines: embedding
+                // another format (e.g. CFF) as FontFile2/CIDFontType2 would silently
+                // produce a mismatched font dictionary.
+                //
+                // P04 embed-call-site audit: every Create/Merge caller either gates on
+                // HasTrueTypeOutlines with a FONT_UNSUPPORTED_OUTLINES diagnostic
+                // (DOCX substitution, document-fallback, and per-character guards;
+                // PPTX substitution and emission skip) or re-embeds from an existing
+                // PdfEmbeddedFont.Font, which is TrueType by construction here (subset
+                // success and the whole-font fallback above both imply it). This throw
+                // is therefore unreachable through diagnosed conversion paths and stays
+                // as a loud backstop. Pinned by
+                // FontFormatTests.CffKindFontRefusesCidFontType2Embedding.
+                if (!font.HasTrueTypeOutlines)
+                {
+                    throw new InvalidDataException("Cannot embed font '" + font.FamilyName + "' without TrueType outlines as CIDFontType2: " + subsetFailure);
+                }
+
+                subset = null;
+            }
+            var sortedGlyphs = new SortedDictionary<ushort, int>();
+            foreach ((ushort glyph, int codePoint) in unicodeByOriginalGlyph)
+            {
+                sortedGlyphs[glyph] = codePoint;
             }
 
-            subset = null;
+            // the codepoint-set hash was computed twice per subset (once for the
+            // base-font tag, once in the constructor). Compute it once here and share it.
+            string setHash = ComputeResourceMappingHash(font, sortedGlyphs);
+            if (aliases is { Count: > 0 }) setHash += "A" + ComputeAliasHash(aliases, cancellationToken);
+            string baseFontName = CreateBaseFontName(font, setHash, subset is not null);
+            var embedded = new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset, aliases, cancellationToken);
+            // The conversion scope retains font resources until emission finishes.
+            aliasStorage = null;
+            return embedded;
         }
-        var sortedGlyphs = new SortedDictionary<ushort, int>();
-        foreach ((ushort glyph, int codePoint) in unicodeByOriginalGlyph)
-        {
-            sortedGlyphs[glyph] = codePoint;
-        }
-
-        // the codepoint-set hash was computed twice per subset (once for the
-        // base-font tag, once in the constructor). Compute it once here and share it.
-        string setHash = ComputeResourceMappingHash(font, sortedGlyphs);
-        string baseFontName = CreateBaseFontName(font, setHash, subset is not null);
-        var embedded = new PdfEmbeddedFont(font, baseFontName, setHash, sortedGlyphs, subset);
-        return embedded;
+        finally { aliasStorage?.Dispose(); }
     }
 
     private static bool HasIdenticalMappings(PdfEmbeddedFont[] items)
@@ -217,6 +238,7 @@ internal sealed class PdfEmbeddedFont
                     return false;
                 }
             }
+            if (!items[0].HasIdenticalAliases(items[i])) return false;
         }
 
         return true;
@@ -355,13 +377,9 @@ internal sealed class PdfEmbeddedFont
         bool first = true;
         // Source glyphs and the subset's complete glyph closure are sorted.
         // Subset CIDs therefore preserve source order; whole-font CIDs are identity.
-        foreach (ushort originalGlyph in UnicodeByOriginalGlyph.Keys)
+        foreach ((ushort cid, ushort originalGlyph) in EnumerateEncodedGlyphs())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!TryGetCid(originalGlyph, out ushort cid))
-            {
-                continue;
-            }
 
             if (block.Length - used < 32)
             {
@@ -391,7 +409,7 @@ internal sealed class PdfEmbeddedFont
         foreach (Rune rune in text.EnumerateRunes())
         {
             ushort glyph = Font.MapCodePoint(rune.Value);
-            if (glyph != 0 && TryGetCid(glyph, out ushort cid))
+            if (glyph != 0 && TryGetEncodedCid(glyph, rune.Value, out ushort cid))
             {
                 builder.Append(cid.ToString("X4", CultureInfo.InvariantCulture));
             }
@@ -411,7 +429,7 @@ internal sealed class PdfEmbeddedFont
         foreach (Rune rune in text.EnumerateRunes())
         {
             ushort glyph = Font.MapCodePoint(rune.Value);
-            if (glyph != 0 && TryGetCid(glyph, out ushort cid))
+            if (glyph != 0 && TryGetEncodedCid(glyph, rune.Value, out ushort cid))
             {
                 glyphs.Add(new EncodedGlyph(glyph, cid));
             }
@@ -491,6 +509,8 @@ internal sealed class PdfEmbeddedFont
             }
         }
 
+        if (sourceAliases is not null)
+            foreach (var mapping in sourceAliases) unicodeByCid.Add(mapping.Value, mapping.Key.Unicode);
         return unicodeByCid;
     }
 

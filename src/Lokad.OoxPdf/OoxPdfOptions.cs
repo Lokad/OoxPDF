@@ -59,7 +59,7 @@ public sealed class OoxPdfOptions
     /// <summary>
     /// Emits an informational CONVERSION_RESOURCE_SUMMARY with page/content,
     /// serialized PDF output, font/image payload and spilled-content byte totals.
-    /// Font totals count uncompressed embedded programs and ToUnicode data before
+    /// Font totals count uncompressed embedded programs, ToUnicode and CID-to-glyph maps before
     /// PDF stream compression, excluding dictionaries and Standard-14 ToUnicode maps.
     /// Stream conversions report before serialization so observers can fail without
     /// writing output; file conversions report before atomic publication.

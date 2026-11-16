@@ -61,7 +61,7 @@ Caller-owned input/output buffers need caller-owned funding through their final 
 | `MaxPdfImageBytesPerConversion` | 512 MiB |
 | `MaxResidentPageContentBytesPerConversion` | 64 MiB |
 
-Font totals count uncompressed embedded programs and ToUnicode payload before
+Font totals count uncompressed embedded programs, ToUnicode and CID-to-glyph maps before
 compression, excluding dictionaries and standard Type1 maps. The complete PDF
 size is the output-byte total. Archive/XML/image/font bounds apply independently.
 These are payload limits, not cumulative work quotas; use cancellation for work.

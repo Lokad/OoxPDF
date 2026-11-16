@@ -12,6 +12,7 @@
   reports its fallback.
 - Hosting: awaits I/O, uses immutable font leases, explicit stream staging and
   optional shared-memory budgets. Custom resolvers define the complete font universe.
+- PDF text preserves distinct Unicode characters when fonts share glyph outlines.
 - Breaking API changes require recompilation; see [migration](docs/Migration.md).
 
 Rendering remains approximate in [documented areas](docs/Capabilities.md).

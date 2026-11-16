@@ -504,8 +504,10 @@ internal sealed class PdfDocumentWriter
             $"<< /Type /Font /Subtype /Type0 /BaseFont /{baseFont} /Encoding /Identity-H /DescendantFonts [{objects.CidFont} 0 R] /ToUnicode {objects.ToUnicode} 0 R >>\n")).ConfigureAwait(false);
 
         await writer.WriteObjectHeaderAsync(objects.CidFont).ConfigureAwait(false);
+        string cidToGid = objects.CidToGidMap is { } mapObject
+            ? FormattableString.Invariant($"{mapObject} 0 R") : "/Identity";
         await writer.WriteAsciiAsync(FormattableString.Invariant(
-            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap /Identity /W ")).ConfigureAwait(false);
+            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{baseFont} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor {objects.Descriptor} 0 R /CIDToGIDMap {cidToGid} /W ")).ConfigureAwait(false);
         await font.WriteWidthArrayAsync(writer, cancellationToken).ConfigureAwait(false);
         await writer.WriteAsciiAsync(" >>\n").ConfigureAwait(false);
         await writer.WriteObjectTrailerAsync().ConfigureAwait(false);
@@ -519,14 +521,20 @@ internal sealed class PdfDocumentWriter
         using (IMemoryReservation? storage = OoxMemory.Reserve(OoxConversionBudget.Current?.Memory, 0))
         {
             byte[] compressedFontProgram = PdfStreamCompression.Compress(fontProgram.Span, storage, 0, cancellationToken);
-            // Count uncompressed font/ToUnicode payloads, separately from
+            // Count uncompressed font/ToUnicode/CID-map payloads, separately from
             // dictionaries/output and from the compression buffer's admission.
-            OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicodeLength));
+            OoxConversionBudget.Current?.ChargePdfFontBytes(checked((long)fontProgram.Length + toUnicodeLength + font.CidToGidMapLength));
             await writer.WriteStreamObjectAsync(objects.FontFile, FormattableString.Invariant($"/Filter /FlateDecode /Length1 {fontProgram.Length}"), compressedFontProgram).ConfigureAwait(false);
         }
         await writer.WriteStreamObjectHeaderAsync(objects.ToUnicode, string.Empty, toUnicodeLength).ConfigureAwait(false);
         await font.WriteToUnicodeCMapAsync(writer, cancellationToken).ConfigureAwait(false);
         await writer.WriteStreamObjectTrailerAsync().ConfigureAwait(false);
+        if (objects.CidToGidMap is { } cidMap)
+        {
+            await writer.WriteStreamObjectHeaderAsync(cidMap, string.Empty, font.CidToGidMapLength).ConfigureAwait(false);
+            await font.WriteCidToGidMapAsync(writer, cancellationToken).ConfigureAwait(false);
+            await writer.WriteStreamObjectTrailerAsync().ConfigureAwait(false);
+        }
     }
 
     // Standard-14 faces have no embedded font program. Their dictionaries and
@@ -845,30 +853,34 @@ internal sealed class PdfDocumentWriter
 
     private static PdfDocumentNumbers AssignDocumentNumbers(PdfDocumentPlan plan, IReadOnlyList<PdfPage> pages, DateTimeOffset? creationDate, CancellationToken cancellationToken)
     {        int fontObjectBase = 3 + pages.Count * 2;
+        int nextFontObject = fontObjectBase;
         var fontObjects = new Dictionary<string, FontObjectNumbers>(StringComparer.Ordinal);
         for (int i = 0; i < plan.Fonts.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            int baseObject = fontObjectBase + i * 5;
+            int baseObject = nextFontObject;
+            nextFontObject += 5;
+            int? mapObject = plan.Fonts[i].CidToGidMapLength == 0 ? null : nextFontObject++;
             fontObjects[plan.Fonts[i].ResourceKey] = new FontObjectNumbers(
                 Type0: baseObject,
                 CidFont: baseObject + 1,
                 Descriptor: baseObject + 2,
                 FontFile: baseObject + 3,
-                ToUnicode: baseObject + 4);
+                ToUnicode: baseObject + 4,
+                CidToGidMap: mapObject);
         }
 
         var fallbackFontObjects = new Dictionary<string, FallbackFontObjectNumbers>(StringComparer.Ordinal);
         for (int i = 0; i < plan.FallbackFonts.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            int baseObject = fontObjectBase + plan.Fonts.Count * 5 + i * 2;
+            int baseObject = nextFontObject + i * 2;
             fallbackFontObjects[plan.FallbackFonts[i].ResourceKey] = new FallbackFontObjectNumbers(
                 Font: baseObject,
                 ToUnicode: baseObject + 1);
         }
 
-        int imageObjectBase = fontObjectBase + plan.Fonts.Count * 5 + plan.FallbackFonts.Count * 2;
+        int imageObjectBase = nextFontObject + plan.FallbackFonts.Count * 2;
         var imageObjects = new Dictionary<string, ImageObjectNumbers>(StringComparer.Ordinal);
         int nextImageObject = imageObjectBase;
         foreach (PdfImageXObject image in plan.Images)
@@ -934,7 +946,7 @@ internal sealed class PdfDocumentWriter
 
         return new PdfDocumentNumbers(fontObjects, fallbackFontObjects, imageObjects, shadingObjects, patternObjects, shadingPatternObjects, groupObjects, annotationObjectsByPage, objectCount, infoObjectNumber);
     }
-    private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);
+    private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode, int? CidToGidMap);
 
     private readonly record struct FallbackFontObjectNumbers(int Font, int ToUnicode);
 

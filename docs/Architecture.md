@@ -41,9 +41,10 @@ transparency groups, shadings/patterns and Link annotations. URI actions and exp
 internal destinations implement supported navigation.
 
 Embedded TrueType fonts use Type0/Identity-H and CIDFontType2 with subset FontFile2,
-widths and ToUnicode mappings. Shared glyphs can map to one preferred Unicode
-scalar; spaces take precedence over NBSP. Structural equation pieces can use
-ActualText. Unembedded standard Type1 fallback depends on viewer fonts. CFF
+widths and ToUnicode mappings. Distinct source characters retain separate PDF
+character identities while sharing embedded outlines through a CID-to-glyph map.
+Shared spaces still normalize to plain space when mixed with NBSP. Structural
+equation pieces can use ActualText. Unembedded standard Type1 fallback depends on viewer fonts. CFF
 outlines do not embed as FontFile3 and require a supported fallback.
 
 Resource references, encoding and balanced state/nesting are validated; writer

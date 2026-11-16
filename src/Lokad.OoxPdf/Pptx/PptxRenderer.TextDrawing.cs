@@ -1094,7 +1094,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (embedded.TryGetEncodedCid(glyph.GlyphId, out ushort cid))
+            if (embedded.TryGetEncodedCid(glyph.GlyphId, glyph.CodePoint, out ushort cid))
             {
                 builder.Append(cid.ToString("X4", CultureInfo.InvariantCulture));
             }
@@ -1137,7 +1137,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            if (embedded.TryGetEncodedCid(glyph.GlyphId, out ushort cid))
+            if (embedded.TryGetEncodedCid(glyph.GlyphId, glyph.CodePoint, out ushort cid))
             {
                 builder.Append('<').Append(cid.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
             }
@@ -1175,7 +1175,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            if (embedded.TryGetEncodedCid(glyph.GlyphId, out ushort cid))
+            if (embedded.TryGetEncodedCid(glyph.GlyphId, glyph.CodePoint, out ushort cid))
             {
                 builder.Append('<').Append(cid.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
             }

@@ -1,4 +1,17 @@
 {
+  "font-source-unicode-identity": [
+    "PdfSourceUnicodeAliases",
+    "PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace",
+    "SharedSpaceGlyphExtractsAsPlainSpace",
+    "PdfWidthStreaming",
+    "PdfEmbeddedFontSubsetsWith",
+    "FontResourceMergeRejectsDifferentProgramsAndKeepsEquivalentCopies",
+    "FontResourcesKeepDistinctProgramsDuringWholeFontRecovery",
+    "PdfToUnicodeStreaming",
+    "PdfEmbeddedFontToUnicodeEncodesSupplementaryAsSurrogatePair",
+    "MathFontRadicalAssembliesKeepOneLogicalSymbolAndAllPhysicalParts",
+    "PortableRenderingSourceLabelOracle"
+  ],
   "paint-oracle-unicode-units": [
     "PortableRenderingSourceLabelOracle",
     "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",

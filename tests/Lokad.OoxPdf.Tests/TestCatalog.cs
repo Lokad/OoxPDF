@@ -101,6 +101,7 @@ internal static class TestCatalog
         .. FromType("pdf", typeof(PdfTransparencyGroupTests)),
         .. FromType("pdf", typeof(PdfResourceIndexTests)),
         .. FromType("pdf", typeof(PdfIdentityTests)),
+        .. FromType("rendering-portable", typeof(PdfUnicodeIdentityTests)),
         .. FromType(ClassifyPptx, typeof(PptxTests)),
         .. FromType(ClassifyDocx, typeof(DocxTests)),
         .. FromType("docx-images", typeof(DocxImagesTests)),
