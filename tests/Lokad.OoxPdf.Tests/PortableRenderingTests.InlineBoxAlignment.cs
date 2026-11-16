@@ -175,7 +175,7 @@ internal static partial class PortableRenderingTests
     {
         // Match source characters across text-show boundaries, then check their
         // font ink against each physical paint frame. Existing readers own PDF syntax.
-        var characters = new List<(int Offset, ushort Glyph, PdfEmbeddedFont Font, double Size,
+        var characters = new List<(int Offset, int Length, ushort Glyph, PdfEmbeddedFont Font, double Size,
             double X, double Y, PdfRectangle Clip, Matrix3x2 Transform)>();
         var text = new StringBuilder();
         foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
@@ -190,8 +190,9 @@ internal static partial class PortableRenderingTests
                 ushort glyph = show.Font.Font.MapCodePoint(rune.Value);
                 if (!Rune.IsWhiteSpace(rune))
                 {
-                    characters.Add((text.Length, glyph, show.Font, show.Size, x, show.Y, clip, transform));
-                    text.Append(rune.ToString().Normalize(NormalizationForm.FormKC));
+                    string normalized = rune.ToString().Normalize(NormalizationForm.FormKC);
+                    characters.Add((text.Length, normalized.Length, glyph, show.Font, show.Size, x, show.Y, clip, transform));
+                    text.Append(normalized);
                 }
                 x += show.Font.Font.GetAdvanceWidth(glyph) * scale;
             }
@@ -202,8 +203,15 @@ internal static partial class PortableRenderingTests
         TestAssert.True(start >= 0 && start == actual.LastIndexOf(wanted, StringComparison.Ordinal),
             "Each complete source label paints once: " + label);
         var result = new List<(Vector2 Origin, double Size, PdfRectangle Ink)>();
+        int covered = start;
         foreach (var character in characters.Where(c => c.Offset >= start && c.Offset < start + wanted.Length))
         {
+            // A normalized UTF-16 span can belong to one supplementary scalar
+            // or compatibility glyph. Require complete span ownership rather
+            // than equating UTF-16 length with the number of painted glyphs.
+            TestAssert.Equal(covered, character.Offset);
+            covered += character.Length;
+            TestAssert.True(covered <= start + wanted.Length, "A source label must own complete glyphs: " + label);
             var font = character.Font.Font;
             TestAssert.True(font.TryGetGlyphBounds(character.Glyph, out var ink), "Pinned fonts supply the source glyph ink.");
             double scale = character.Size / font.UnitsPerEm;
@@ -222,7 +230,7 @@ internal static partial class PortableRenderingTests
             result.Add((Vector2.Transform(new((float)character.X, (float)character.Y), character.Transform), character.Size,
                 new PdfRectangle(left, bottom, right - left, top - bottom)));
         }
-        TestAssert.Equal(wanted.Length, result.Count);
+        TestAssert.Equal(start + wanted.Length, covered);
         return result;
     }
 }

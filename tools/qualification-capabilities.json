@@ -1,4 +1,12 @@
 {
+  "paint-oracle-unicode-units": [
+    "PortableRenderingSourceLabelOracle",
+    "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
+    "PortableRenderingSectionRecordsKeepContentAndPageOwners",
+    "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk",
+    "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
+    "PortableRenderingJustifiedStaticParagraphsKeepFooterInkAndPhysicalFrames"
+  ],
   "svg-visibility-composition": [
     "SvgHiddenGraphics",
     "SvgVisibility",
