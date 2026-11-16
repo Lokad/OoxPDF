@@ -96,7 +96,11 @@ internal sealed class PptxReader
                 }
             }
 
-            return result = new PptxDocument(presentationPart.Name, slides, width, height) { FirstSlideNumber = firstSlideNumber };
+            return result = new PptxDocument(presentationPart.Name, slides, width, height)
+            {
+                FirstSlideNumber = firstSlideNumber,
+                DefaultTextStyle = document.Root?.Element(PresentationNamespace + "defaultTextStyle")
+            };
         }
         finally
         {

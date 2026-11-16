@@ -11,7 +11,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxInheritanceTests
+internal static partial class PptxInheritanceTests
 {
     private static readonly XNamespace P = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -143,7 +143,7 @@ internal static class PptxInheritanceTests
     private static void WithDeck(Dictionary<string, byte[]> parts, Action<PptxDocument, OoxPackage> check)
     {
         using var input = TestFixtures.CreateZipPackage(parts);
-        var package = OoxPackage.Open(input, default);
+        using var package = OoxPackage.Open(input, default);
         check(new PptxReader().Read(package, default), package);
     }
     private static string Case(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name));

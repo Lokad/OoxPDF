@@ -350,7 +350,8 @@ internal sealed partial class PptxRenderer
             compatibleLineSpacing,
             compatibleDefaultLineSpacingFactor,
             shapeFontColor, default,
-            disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees));
+            disableZeroKerning: UsesNoWrapZeroKerning(bodyProperties, textRotationDegrees),
+            defaultTextStyle: document.DefaultTextStyle);
         fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         // Vertical middle/bottom anchors resolve from laid-out actuals below (the estimate
         // uses the wrong axis and advance); other orientations keep estimated offsets.
@@ -537,7 +538,8 @@ internal sealed partial class PptxRenderer
             compatibleLineSpacing,
             compatibleDefaultLineSpacingFactor,
             shapeFontColor: null,
-            tableFrame.TextStyle);
+            tableFrame.TextStyle,
+            defaultTextStyle: document.DefaultTextStyle);
         fontResolver ??= new PresentationFontResolver(await WindowsFontResolver.CreateAsync(cancellationToken).ConfigureAwait(false), cancellationToken);
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
@@ -650,7 +652,8 @@ internal sealed partial class PptxRenderer
         double compatibleDefaultLineSpacingFactor,
         RgbColor? shapeFontColor,
         PptxSceneTableCellTextStyle tableStyleTextStyle,
-        bool disableZeroKerning = false)
+        bool disableZeroKerning = false,
+        XElement? defaultTextStyle = null)
     {
         var paragraphs = new List<PptxTextParagraphModel>();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
@@ -710,11 +713,11 @@ internal sealed partial class PptxRenderer
             layers.Add(new PptxParagraphStyleLayer(
                 "inherited.txStyle",
                 PptxParagraphStyleLayerKind.InheritedTextStyle,
-                FindInheritedTextStyle(shape, placeholderSources, levelName)));
+                PptxTextStyleInheritance.FindInheritedTextStyle(shape, placeholderSources, levelName)));
             layers.Add(new PptxParagraphStyleLayer(
                 "defaultTextStyle",
                 PptxParagraphStyleLayerKind.DefaultTextStyle,
-                FindDefaultTextStyle(placeholderSources, levelName)));
+                PptxTextStyleInheritance.FindDefaultTextStyle(defaultTextStyle, levelName)));
             return new PptxParagraphStyleCascade(levelName, layers);
 
             PptxParagraphStyleLayerKind InheritedPlaceholderLayerKind(XElement placeholder, int sourceIndex, int sourceCount)

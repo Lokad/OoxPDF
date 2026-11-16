@@ -998,7 +998,7 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.Equal(new RgbColor(0x33,0x44,0x55), spanRuns[0].Style.Color);
     }
 
-    public static void UnstyledRunsInheritMasterDefaultStyle()
+    public static void UnstyledRunsInheritPresentationDefaultStyle()
     {
         // Source text and live rendering retain the declared formatting.
         string slideRels = """
@@ -1021,7 +1021,6 @@ internal static class PptxSceneTextAgreementTests
             <?xml version="1.0" encoding="UTF-8"?>
             <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <p:cSld><p:spTree/></p:cSld>
-              <p:defaultTextStyle><a:lvl1pPr><a:defRPr sz="2300"><a:solidFill><a:srgbClr val="556677"/></a:solidFill></a:defRPr></a:lvl1pPr></p:defaultTextStyle>
             </p:sldMaster>
             """;
         string types = """
@@ -1040,7 +1039,7 @@ internal static class PptxSceneTextAgreementTests
             ["[Content_Types].xml"] = types,
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
             ["ppt/_rels/presentation.xml.rels"] = PptxTests.PresentationRelationship(),
-            ["ppt/presentation.xml"] = PptxTests.BasicPresentation(),
+            ["ppt/presentation.xml"] = PptxTests.BasicPresentation().Replace("</p:presentation>", "<p:defaultTextStyle xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:lvl1pPr><a:defRPr sz=\"2300\"><a:solidFill><a:srgbClr val=\"556677\"/></a:solidFill></a:defRPr></a:lvl1pPr></p:defaultTextStyle></p:presentation>", StringComparison.Ordinal),
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">

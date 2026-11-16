@@ -310,9 +310,9 @@ internal sealed partial class PptxSceneBuilder
                     HasSlideTiming(slideXml),
                     HasSlideOleObject(slideXml),
                     ReadShowMasterShapes(slideXml, layoutXml),
-                    masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships, cancellationToken),
-                    layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships, cancellationToken),
-                    ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken)));
+                    masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships, cancellationToken, document.DefaultTextStyle),
+                    layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships, cancellationToken, document.DefaultTextStyle),
+                    ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships, cancellationToken, document.DefaultTextStyle)));
             }
 
             return result = new PptxScene(slides);
@@ -416,13 +416,14 @@ internal sealed partial class PptxSceneBuilder
         PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        XElement? defaultTextStyle)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, colorMap, package, relationships, cancellationToken));
+            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, colorMap, package, relationships, cancellationToken, defaultTextStyle));
         }
 
         return nodes;
@@ -446,7 +447,8 @@ internal sealed partial class PptxSceneBuilder
         PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        XElement? defaultTextStyle)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement child in container.Elements())
@@ -475,12 +477,12 @@ internal sealed partial class PptxSceneBuilder
                 ReadHyperlinkClick(nonVisualProperties),
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, colorMap, package, relationships) : null,
-                ReadTextBody(child, placeholderSources),
+                ReadTextBody(child, placeholderSources, defaultTextStyle),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, colorMap, package, relationships) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme, colorMap) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, colorMap, relationships, cancellationToken) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
-                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, colorMap, package, relationships, cancellationToken) : [],
+                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, colorMap, package, relationships, cancellationToken, defaultTextStyle) : [],
                 child));
         }
 

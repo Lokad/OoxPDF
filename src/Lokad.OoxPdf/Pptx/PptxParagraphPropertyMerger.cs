@@ -33,10 +33,47 @@ internal static class PptxParagraphPropertyMerger
             }
         }
 
+        // Supported paragraph properties inherit as complete choices. An absent
+        // tab list inherits; an authored empty list clears the inherited stops.
+        InheritParagraphChild("lnSpc");
+        InheritParagraphChild("spcBef");
+        InheritParagraphChild("spcAft");
+        InheritParagraphChild("tabLst");
         MergeRendererChildElement(defaultRunPropertiesName, merged, fallback);
         MergeRendererBulletProperties(merged, fallback);
         return merged;
+
+        void InheritParagraphChild(string name)
+        {
+            XName childName = merged.Name.Namespace + name;
+            if (merged.Element(childName) is not null || fallback.Element(childName) is not { } inherited) return;
+            AddParagraphChild(merged, inherited);
+        }
     }
+
+    private static void AddParagraphChild(XElement parent, XElement source)
+    {
+        XElement copy = new(source);
+        int order = ParagraphChildOrder(source.Name.LocalName);
+        XElement? next = parent.Elements().FirstOrDefault(child =>
+            child.Name.Namespace == parent.Name.Namespace && ParagraphChildOrder(child.Name.LocalName) > order);
+        if (next is null) parent.Add(copy);
+        else next.AddBeforeSelf(copy);
+    }
+
+    private static int ParagraphChildOrder(string name) => name switch
+    {
+        "lnSpc" => 0,
+        "spcBef" => 1,
+        "spcAft" => 2,
+        "buClrTx" or "buClr" => 3,
+        "buSzTx" or "buSzPct" or "buSzPts" => 4,
+        "buFontTx" or "buFont" => 5,
+        "buNone" or "buChar" or "buAutoNum" or "buBlip" => 6,
+        "tabLst" => 7,
+        "defRPr" => 8,
+        _ => 9
+    };
 
     private static void MergeRendererBulletProperties(XElement primaryParent, XElement fallbackParent)
     {
@@ -108,7 +145,7 @@ internal static class PptxParagraphPropertyMerger
 
         if (primary is null)
         {
-            primaryParent.Add(new XElement(fallback));
+            AddParagraphChild(primaryParent, fallback);
             return;
         }
 
@@ -120,13 +157,18 @@ internal static class PptxParagraphPropertyMerger
             }
         }
 
+        bool hasPrimaryFill = primary.Elements().Any(IsFill);
         foreach (XElement child in fallback.Elements())
         {
+            if (hasPrimaryFill && IsFill(child)) continue;
             if (primary.Element(child.Name) is null)
             {
                 primary.Add(new XElement(child));
             }
         }
+
+        bool IsFill(XElement child) => child.Name.Namespace == childName.Namespace &&
+            child.Name.LocalName is "noFill" or "solidFill" or "gradFill" or "blipFill" or "pattFill" or "grpFill";
     }
 
 }

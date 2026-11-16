@@ -6,7 +6,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxSceneBuilder
 {
-    private static PptxSceneTextBody? ReadTextBody(XElement element, IReadOnlyList<XDocument> placeholderSources)
+    private static PptxSceneTextBody? ReadTextBody(XElement element, IReadOnlyList<XDocument> placeholderSources, XElement? defaultTextStyle)
     {
         XElement? textBody = element.Element(PresentationNamespace + "txBody");
         if (textBody is null)
@@ -21,7 +21,7 @@ internal sealed partial class PptxSceneBuilder
             textBody.Element(DrawingNamespace + "lstStyle"),
             HasUnsupportedTextOrientation(bodyProperties),
             HasUnsupportedTextVerticalOverflow(bodyProperties),
-            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedPlaceholderShapes, placeholderSources)).ToArray());
+            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedPlaceholderShapes, placeholderSources, defaultTextStyle)).ToArray());
     }
 
     private static bool HasUnsupportedTextOrientation(XElement? bodyProperties)
@@ -48,7 +48,8 @@ internal sealed partial class PptxSceneBuilder
         XElement shape,
         XElement textBody,
         IReadOnlyList<XElement> inheritedPlaceholderShapes,
-        IReadOnlyList<XDocument> placeholderSources)
+        IReadOnlyList<XDocument> placeholderSources,
+        XElement? defaultTextStyle)
     {
         XElement? properties = paragraph.Element(DrawingNamespace + "pPr");
         int level = properties?.Attribute("lvl") is { } levelAttribute
@@ -73,7 +74,7 @@ internal sealed partial class PptxSceneBuilder
         cascadeLayers.Add(new PptxSceneCascadeLayer(
             "defaultTextStyle",
             "DefaultTextStyle",
-            PptxTextStyleInheritance.FindDefaultTextStyle(placeholderSources, levelName))
+            PptxTextStyleInheritance.FindDefaultTextStyle(defaultTextStyle, levelName))
 );
         return new PptxSceneTextParagraph(
             properties,
@@ -88,10 +89,11 @@ internal sealed partial class PptxSceneBuilder
     // the renderer resolves table-style defaults along with the live text style.
     internal static IReadOnlyList<PptxSceneTextParagraph> ReadTableCellParagraphs(
         XElement textBody,
-        IReadOnlyList<XDocument> placeholderSources)
+        IReadOnlyList<XDocument> placeholderSources,
+        XElement? defaultTextStyle)
     {
         return textBody.Elements(DrawingNamespace + "p")
-            .Select(paragraph => ReadParagraph(paragraph, textBody, textBody, [], placeholderSources))
+            .Select(paragraph => ReadParagraph(paragraph, textBody, textBody, [], placeholderSources, defaultTextStyle))
             .ToArray();
     }
 

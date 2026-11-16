@@ -1,8 +1,12 @@
+using System.Xml.Linq;
+
 namespace Lokad.OoxPdf.Pptx;
 
 internal sealed record PptxDocument(string PresentationPartName, IReadOnlyList<PptxSlide> Slides, double SlideWidthPoints, double SlideHeightPoints)
 {
     public long FirstSlideNumber { get; init; } = 1;
+    // Borrowed from the package-owned presentation DOM for this conversion.
+    public XElement? DefaultTextStyle { get; init; }
 }
 
 internal sealed record PptxSlide(string PartName, int Index)

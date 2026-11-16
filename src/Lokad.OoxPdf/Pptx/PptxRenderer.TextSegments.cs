@@ -470,7 +470,7 @@ internal sealed partial class PptxRenderer
     internal static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> BuildSceneFedTableCellTextSpansAsync(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
         PptxTextFrameModel frameModel = (await BuildTextFrameModelAsync(tableFrame, context.Document, context.Theme, context.DisplayedSlideNumber, context.InheritedXml, context.FontResolver, context.CancellationToken).ConfigureAwait(false));
-        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml);
+        IReadOnlyList<PptxSceneTextParagraph> cellParagraphs = PptxSceneBuilder.ReadTableCellParagraphs(tableFrame.TextBody, context.InheritedXml, context.Document.DefaultTextStyle);
         IReadOnlyList<PptxTextParagraphModel> fedParagraphs = BuildSceneFedParagraphModels(cellParagraphs, frameModel, context.Theme, tableFrame.ColorMap, context.DisplayedSlideNumber, shapeFontColor: null, tableFrame.TextStyle);
         var fedFrame = frameModel with { Paragraphs = fedParagraphs };
         PptxTextFrameLayout layout = (await BuildTextFrameLayoutAsync(fedFrame, context.Document, new TextAdvanceEstimator(context.FontResolver, context.CancellationToken)).ConfigureAwait(false));
@@ -480,16 +480,6 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)
     {
         return PptxPlaceholderMatcher.FindInheritedPlaceholderShapes(shape, placeholderSources);
-    }
-
-    private static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources, string levelName)
-    {
-        return PptxTextStyleInheritance.FindInheritedTextStyle(shape, placeholderSources, levelName);
-    }
-
-    private static XElement? FindDefaultTextStyle(IReadOnlyList<XDocument> placeholderSources, string levelName)
-    {
-        return PptxTextStyleInheritance.FindDefaultTextStyle(placeholderSources, levelName);
     }
 
     private static IEnumerable<PptxTextFlowSegment> SplitFlowSegments(string text, bool attachSpacesToFollowingWord)

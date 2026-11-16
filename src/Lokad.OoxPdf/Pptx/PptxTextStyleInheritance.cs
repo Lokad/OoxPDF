@@ -67,20 +67,10 @@ internal static class PptxTextStyleInheritance
             _ => $"inherited.placeholder[{sourceIndex}].lstStyle",
         };
     }
-    public static XElement? FindDefaultTextStyle(IReadOnlyList<XDocument> placeholderSources, string levelName)
+    public static XElement? FindDefaultTextStyle(XElement? presentationDefaultTextStyle, string levelName)
     {
-        foreach (XDocument source in placeholderSources)
-        {
-            XElement? defaultTextStyle = source.Root?.Element(PresentationNamespace + "defaultTextStyle");
-            XElement? level = defaultTextStyle?.Element(DrawingNamespace + levelName) ??
-                defaultTextStyle?.Element(DrawingNamespace + "defPPr");
-            if (level is not null)
-            {
-                return level;
-            }
-        }
-
-        return null;
+        return presentationDefaultTextStyle?.Element(DrawingNamespace + levelName) ??
+            presentationDefaultTextStyle?.Element(DrawingNamespace + "defPPr");
     }
 
     private static string ReadPlaceholderTextStyleName(XElement shape)
