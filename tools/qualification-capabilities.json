@@ -20976,6 +20976,24 @@
     "PortableRenderingStructuralFragmentsKeepContentAndSourceInk",
     "DocxMathMatrixDeepTraversalAndCancellationRemainIterative"
   ],
+  "consumed-input-metadata": [
+    "MemoryBudgetConsumedContentTypesReleaseParsingStorage",
+    "MemoryBudgetContentTypeParsingAdmitsBeforeReadingXml",
+    "MemoryBudgetXmlCacheOwnsStorageThroughPackageLifetime",
+    "MemoryBudgetXmlCacheRefusalCancellationAndMalformedInputRefundGrowth",
+    "MemoryBudgetPackageNamesStayFundedAfterArchiveDisposal",
+    "MemoryBudgetPackageDirectoryCancellationAndFailuresRefund",
+    "ParsesContentTypesAndRelationships",
+    "RejectsConflictingContentTypeOverrides",
+    "RejectsOversizedContentTypes",
+    "SyntheticFontLoadsWithExpectedIdentity",
+    "CffKindFontRefusesCidFontType2Embedding",
+    "RejectsTruncatedTableDirectory",
+    "SyntheticSubsetRoundTripKeepsCmapAndWidths",
+    "FontDiscoveryAsyncShortReadsPreserveSfntAndCollectionMetadata",
+    "PptxManualBreaksKeepAnchoredTextboxContent",
+    "PptxManualBreaksKeepAnchoredTableContent"
+  ],
   "pptx-manual-break-anchors": [
     "PptxManualBreaksKeepAnchoredTextboxContent",
     "PptxManualBreaksKeepAnchoredTableContent",

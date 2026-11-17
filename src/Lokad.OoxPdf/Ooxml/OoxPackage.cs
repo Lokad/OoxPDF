@@ -33,15 +33,12 @@ internal sealed class OoxPackage : IDisposable
     private readonly Dictionary<string, XDocument> xmlCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyDictionary<string, OoxRelationship>> relationshipCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private OoxPackage(Dictionary<string, OoxPart> parts, OoxContentTypes contentTypes, IMemoryScope? storageScope, IMemoryReservation? xmlStorage)
+    private OoxPackage(Dictionary<string, OoxPart> parts, IMemoryScope? storageScope, IMemoryReservation? xmlStorage)
     {
         this.parts = parts;
-        ContentTypes = contentTypes;
         this.storageScope = storageScope;
         this.xmlStorage = xmlStorage;
     }
-
-    public OoxContentTypes ContentTypes { get; }
 
     public IReadOnlyCollection<OoxPart> Parts
     {
@@ -153,7 +150,6 @@ internal sealed class OoxPackage : IDisposable
                 archiveStream = stagedBytes;
             }
 #endif
-            OoxContentTypes contentTypes;
             Dictionary<string, OoxPart> parts;
             long retainedNameBytes = 0;
             ZipArchive archive = await ZipArchive.CreateAsync(archiveStream, ZipArchiveMode.Read,
@@ -204,6 +200,7 @@ internal sealed class OoxPackage : IDisposable
                 }
                 OoxMemory.Resize(parsedXml, (long)contentTypesBytes.Length * XmlConstructionFactor + XmlReaderHeadroom);
                 cancellationToken.ThrowIfCancellationRequested();
+                OoxContentTypes contentTypes;
                 using (var contentTypesBuffer = new MemoryStream(contentTypesBytes, writable: false))
                 {
                     contentTypes = OoxContentTypes.Parse(contentTypesBuffer, cancellationToken);
@@ -298,7 +295,10 @@ internal sealed class OoxPackage : IDisposable
             stagedBytes = null;
             OoxMemory.Resize(compressed, 0);
             OoxMemory.Resize(working, 0);
-            OoxPackage result = new OoxPackage(parts, contentTypes, memory, parsedXml);
+            // Every retained part now owns its type. The intake lookup is gone;
+            // subsequent LoadXml calls admit their own cached DOM storage.
+            OoxMemory.Resize(parsedXml, 0);
+            OoxPackage result = new OoxPackage(parts, memory, parsedXml);
             memory = null;
             return result;
         }

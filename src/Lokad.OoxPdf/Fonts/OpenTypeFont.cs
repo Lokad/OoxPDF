@@ -25,12 +25,10 @@ internal sealed partial class OpenTypeFont
         CmapFormat? cmap,
         ushort[] advances,
         IReadOnlyDictionary<uint, short> kerningPairs,
-        string scalerTag,
         OpenTypeMathScriptStyles mathScriptStyles)
     {
         this.bytes = bytes;
         this.tables = tables;
-        ScalerTag = scalerTag;
         FamilyName = familyName;
         UnitsPerEm = unitsPerEm;
         Bounds = bounds;
@@ -43,8 +41,6 @@ internal sealed partial class OpenTypeFont
         this.kerningPairs = kerningPairs;
         this.mathScriptStyles = mathScriptStyles;
     }
-
-    public string ScalerTag { get; }
 
     public bool HasTrueTypeOutlines => tables.ContainsKey("glyf") && tables.ContainsKey("loca");
 
@@ -135,7 +131,7 @@ internal sealed partial class OpenTypeFont
     private static OpenTypeFont ParseSfnt(byte[] bytes, CancellationToken cancellationToken, IMemoryReservation? storage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        string scalerTag = ReadScalerTag(bytes);
+        ReadScalerTagAt(bytes, 0);
         try
         {
         ushort tableCount = U16(bytes, 4);
@@ -182,7 +178,7 @@ internal sealed partial class OpenTypeFont
         OpenTypeMathScriptStyles mathScripts = tables.ContainsKey("MATH") && tables.TryGetValue("GSUB", out TableRecord gsub)
             ? OpenTypeMathScriptStyles.Read(bytes.AsMemory(gsub.Offset, gsub.Length), cancellationToken)
             : OpenTypeMathScriptStyles.None;
-        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, hhea, post, cmap, advances, kerningPairs, scalerTag, mathScripts);
+        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, hhea, post, cmap, advances, kerningPairs, mathScripts);
 
         }
         catch (InvalidDataException)
@@ -934,11 +930,6 @@ internal sealed partial class OpenTypeFont
         }
 
         return true;
-    }
-
-    private static string ReadScalerTag(byte[] bytes)
-    {
-        return ReadScalerTagAt(bytes, 0);
     }
 
     private static string ReadScalerTagAt(byte[] bytes, int offset)

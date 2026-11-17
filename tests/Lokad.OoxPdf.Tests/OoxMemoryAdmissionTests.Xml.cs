@@ -7,6 +7,39 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class OoxMemoryAdmissionTests
 {
+    public static void MemoryBudgetConsumedContentTypesReleaseParsingStorage()
+    {
+        long baselineOverhead = 0;
+        foreach (int count in new[] { 0, 512 })
+        {
+            string types = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">" +
+                "<Default Extension=\"bin\" ContentType=\"application/octet-stream\"/>" +
+                string.Concat(Enumerable.Range(0, count).Select(i =>
+                    "<Default Extension=\"unused" + i + "\" ContentType=\"application/xml\"/>")) + "</Types>";
+            using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = types,
+                ["payload.bin"] = "ABC"
+            });
+            var pool = new TestMemoryBudget();
+            using (var conversion = OoxConversionBudget.BeginScope(null, pool))
+            using (var package = OoxPackage.Open(input, default))
+            {
+                TestAssert.Equal("application/octet-stream", TestAssert.NotNull(package.GetPart("/payload.bin")).ContentType);
+                long sourceBytes = package.Parts.Sum(part => part.Bytes.LongLength);
+                long overhead = pool.Reserved - sourceBytes;
+                if (count == 0) baselineOverhead = overhead;
+                else TestAssert.True(overhead <= baselineOverhead + 4096,
+                    "Unused content-type declarations must not retain parser storage after classification.");
+                TestAssert.True(pool.Peak > pool.Reserved + 64 * 1024,
+                    "Input classification keeps its construction admission before refunding it.");
+            }
+            TestAssert.Equal(0L, pool.Reserved);
+            TestAssert.Equal(pool.ScopesCreated, pool.ScopesDisposed);
+            TestAssert.True(input.CanRead, "The caller retains its input after package disposal.");
+        }
+    }
+
     public static void MemoryBudgetXmlCacheOwnsStorageThroughPackageLifetime()
     {
         using var input = XmlAdmissionPackage();
