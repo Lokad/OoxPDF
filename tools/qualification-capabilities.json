@@ -1,4 +1,25 @@
 {
+  "svg-fill-winding": [
+    "SvgFillRulesFollowTheSourcePathAcrossPaintAndDocumentKinds",
+    "PptxSyntheticSvgEvenOddFillRulePunchesHole",
+    "PptxSyntheticSvgNonzeroFillRuleKeepsOperator",
+    "PptxSyntheticSvgPictureSamplesCompoundPathGradient",
+    "PptxSyntheticSvgObjectBoundingBoxGradientVariesAcrossStrips",
+    "PptxSyntheticSvgVerticalGradientVariesTopToBottom",
+    "PptxSyntheticSvgRadialGradientPaintsSmoothShading",
+    "PptxSvgUniformNumericStopOpacityMatchesFillOpacity",
+    "PptxSvgNumericContainerOpacityIsolatesOverlappingChildren",
+    "PptxSvgLinearGradientStrokeRestoresFillMaskAndLaterSolidPaint",
+    "PptxSvgRadialOpacityPaintsOnceThroughTheClip",
+    "PptxSvgUnusedDefinitionsDoNotPaintOrActivateGradients",
+    "PptxSyntheticSvgExtremeGradientGeometryKeepsOtherShapes",
+    "DocxSvgImagePrefersNativeRelationshipAndPreservesInlineFlow",
+    "DocxSvgOnlyImageClipsPaintToItsViewport",
+    "DocxSvgImageRendersAnchoredPicturesAndHonorsCancellation",
+    "TransparencyGroupsRejectUnknownOrUnbalancedContentBeforeOutput",
+    "TransparencyGroupsCancellationDisposesSpilledContent",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched"
+  ],
   "jpeg-sample-interpretation": [
     "JpegPixelDecodeKeepsRgbAndYCbCrAcrossMarkerPlacement",
     "PptxJpegCropAndRecolorKeepSampleInterpretation",

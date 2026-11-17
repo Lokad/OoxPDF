@@ -363,9 +363,9 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("W n");
     }
 
-    public void ClipCurrentPath()
+    public void ClipCurrentPath(bool evenOdd = false)
     {
-        builder.AppendLine("W n");
+        builder.AppendLine(evenOdd ? "W* n" : "W n");
     }
 
     public void StrokeLine(double x1, double y1, double x2, double y2)

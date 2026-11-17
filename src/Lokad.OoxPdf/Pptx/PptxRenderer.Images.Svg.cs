@@ -348,7 +348,7 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds radialBounds))
                 {
-                    if (!TryRenderSvgRadialGradientPath(graphics, data, radialGradient, transform, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!TryRenderSvgRadialGradientPath(graphics, data, radialGradient, transform, evenOddFill, paint.Opacity, radialBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
@@ -373,7 +373,7 @@ internal sealed partial class PptxRenderer
                 bool varyingAlphaAdmitted = false;
                 if (TryReadSvgPathBounds(data, transform, out SvgPathBounds pathBounds))
                 {
-                    if (!TryRenderSvgGradientPath(graphics, data, gradient, transform, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
+                    if (!TryRenderSvgGradientPath(graphics, data, gradient, transform, evenOddFill, paint.Opacity, pathBounds, sourceMinX, sourceMinY, imageX, imageY, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth, out varyingAlphaAdmitted, AdmitSamples, cancellationToken))
                     {
                         nonFiniteGradientPaths++;
                     }
@@ -806,6 +806,7 @@ internal sealed partial class PptxRenderer
         string data,
         SvgGradient gradient,
         SvgTransform transform,
+        bool evenOddFill,
         double opacity,
         SvgPathBounds pathBounds,
         double minX,
@@ -866,7 +867,7 @@ internal sealed partial class PptxRenderer
             graphics.RestoreState();
             return false;
         }
-        graphics.ClipCurrentPath();
+        graphics.ClipCurrentPath(evenOddFill);
         if (opacity < 1d)
         {
             graphics.SaveState();
@@ -1810,7 +1811,7 @@ internal sealed partial class PptxRenderer
         }
         return gradients;
     }
-    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
+    private static bool TryRenderSvgRadialGradientPath(PdfGraphicsBuilder graphics, string data, SvgRadialGradient radial, SvgTransform transform, bool evenOddFill, double opacity, SvgPathBounds pathBounds, double minX, double minY, double imageX, double imageY, double imageHeight, double scaleX, double scaleY, bool allowAlphaMask, out bool varyingAlphaAdmitted, Action<int> admitSamples, CancellationToken cancellationToken)
     {
         varyingAlphaAdmitted = false;
         double pathWidth = Math.Max(0.001d, pathBounds.MaxX - pathBounds.MinX);
@@ -1846,7 +1847,7 @@ internal sealed partial class PptxRenderer
             graphics.RestoreState();
             return false;
         }
-        graphics.ClipCurrentPath();
+        graphics.ClipCurrentPath(evenOddFill);
         if (opacity < 1d)
         {
             graphics.SaveState();
