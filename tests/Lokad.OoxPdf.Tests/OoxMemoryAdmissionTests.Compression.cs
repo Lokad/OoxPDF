@@ -78,11 +78,11 @@ internal static partial class OoxMemoryAdmissionTests
     {
         byte[] rgba = [255, 0, 0, 128, 0, 0, 255, 255];
         byte[] source = TestFixtures.CreateRgbaPng(2, 1, rgba);
-        PdfImageXObject expected = OoxImageDecoder.Decode("image/png", source, static rgb => rgb);
+        PdfImageXObject expected = OoxImageDecoder.Decode("image/png", source);
         var pool = new TestMemoryBudget();
         using (var conversion = OoxConversionBudget.BeginScope(null, pool))
         {
-            PdfImageXObject image = OoxImageDecoder.Decode("image/png", source, static rgb => rgb);
+            PdfImageXObject image = OoxImageDecoder.Decode("image/png", source);
             TestAssert.True(image.HasIdenticalContent(expected), "Admission preserves RGB and alpha encoding.");
             long retained = image.Bytes.Length + TestAssert.NotNull(image.Alpha).Length;
             TestAssert.Equal(retained, pool.Reserved);
@@ -102,7 +102,7 @@ internal static partial class OoxMemoryAdmissionTests
         }};
         using (var conversion = OoxConversionBudget.BeginScope(null, refused))
         {
-            TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxImageDecoder.Decode("image/png", source, static rgb => rgb));
+            TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxImageDecoder.Decode("image/png", source));
             TestAssert.Equal(1, refusals);
             TestAssert.Equal(0L, refused.Reserved);
         }

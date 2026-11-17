@@ -10,7 +10,8 @@ internal sealed partial class PptxSceneBuilder
     private static PptxSceneShapePictureFill ReadShapePictureFill(
         XElement? shapeProperties,
         OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? blipFill = shapeProperties?.Element(DrawingNamespace + "blipFill");
         XElement? blip = blipFill?.Element(DrawingNamespace + "blip");
@@ -27,7 +28,7 @@ internal sealed partial class PptxSceneBuilder
                 ReadPictureFill(shapeProperties),
                 ReadPictureAlpha(shapeProperties),
                 ReadPictureAlphaValue(shapeProperties),
-                ReadPictureTile(shapeProperties));
+                ReadPictureTile(shapeProperties)) { Recolor = ReadImageRecolor(shapeProperties, theme, colorMap) };
     }
 
     private static PptxSceneImageResource? ReadImageResource(OoxPackage package, string? targetPartName)
@@ -137,9 +138,7 @@ internal sealed partial class PptxSceneBuilder
 
     internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? blip = picture
-            .Element(PresentationNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip");
+        XElement? blip = ReadPictureBlip(picture);
         if (blip is null)
         {
             return PptxSceneImageRecolor.None;

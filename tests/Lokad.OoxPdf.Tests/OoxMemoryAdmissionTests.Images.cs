@@ -30,13 +30,13 @@ internal static partial class OoxMemoryAdmissionTests
                 TestAssert.True(second.Rgb.SequenceEqual(baseline.Rgb), "Another owner remains readable and funded.");
                 second.Dispose();
                 TestAssert.Equal(0L, pool.Reserved);
-                bool observed = false;
-                var image = OoxImageDecoder.Decode(source.Type, source.Bytes, rgb => {
-                    observed = true;
-                    TestAssert.Equal(planes, pool.Reserved);
-                    return rgb;
-                });
-                TestAssert.True(observed && image.Bytes.Length > 0, "Real compression borrows admitted decoded planes.");
+                using var decoded = OoxImageDecoder.DecodePixelsOwned(source.Type, source.Bytes);
+                TestAssert.Equal(planes, pool.Reserved);
+                var image = Pdf.PdfImageXObject.RgbPng(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha);
+                long encoded = image.Bytes.Length + (image.Alpha?.Length ?? 0);
+                TestAssert.True(encoded > 0, "Real compression produces retained image bytes.");
+                TestAssert.Equal(planes + encoded, pool.Reserved);
+                decoded.Dispose();
                 TestAssert.Equal((long)image.Bytes.Length + (image.Alpha?.Length ?? 0), pool.Reserved);
             }
             TestAssert.Equal(0L, pool.Reserved);

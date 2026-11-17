@@ -85,7 +85,7 @@ internal sealed partial class PptxSceneBuilder
             fill,
             ReadShapeGradientFill(shapeProperties, theme, colorMap),
             ReadShapePatternFill(shapeProperties, theme, colorMap),
-            ReadShapePictureFill(shapeProperties, package, relationships),
+            ReadShapePictureFill(shapeProperties, package, relationships, theme, colorMap),
             HasUnsupportedAlpha(shapeProperties),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,

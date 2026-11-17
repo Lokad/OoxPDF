@@ -276,7 +276,10 @@ internal readonly record struct PptxSceneShapePictureFill(
     PptxSceneRect Fill,
     double Alpha,
     string? AlphaValue,
-    PptxScenePictureTile Tile);
+    PptxScenePictureTile Tile)
+{
+    public PptxSceneImageRecolor Recolor { get; init; }
+}
 
 internal readonly record struct PptxSceneGlow(
     bool HasGlow,

@@ -13,13 +13,13 @@ internal static class ImagingTests
         cancelled.Cancel();
 
         TestAssert.Throws<OperationCanceledException>(
-            () => OoxImageDecoder.Decode("image/png", png, static rgb => rgb, cancelled.Token));
+            () => OoxImageDecoder.Decode("image/png", png, cancelled.Token));
         TestAssert.Throws<OperationCanceledException>(
             () => PngImage.ReadOwned(png, cancelled.Token));
         TestAssert.Throws<OperationCanceledException>(
             () => BmpImage.ReadOwned(TestFixtures.CreateRgbBmp(64, 64, new byte[64 * 64 * 3]), cancelled.Token));
 
-        Pdf.PdfImageXObject image = OoxImageDecoder.Decode("image/png", png, static rgb => rgb, CancellationToken.None);
+        Pdf.PdfImageXObject image = OoxImageDecoder.Decode("image/png", png, CancellationToken.None);
         TestAssert.Equal(256, image.Width);
         TestAssert.Equal(256, image.Height);
     }
@@ -50,7 +50,7 @@ internal static class ImagingTests
             () => OoxImageDecoder.DecodePixelsOwned("image/gif", [71, 73, 70]));
         TestAssert.Equal("Unsupported image content type.", pixels.Message);
         NotSupportedException image = TestAssert.Throws<NotSupportedException>(
-            () => OoxImageDecoder.Decode("image/gif", [71, 73, 70], static rgb => rgb));
+            () => OoxImageDecoder.Decode("image/gif", [71, 73, 70]));
         TestAssert.Equal("Unsupported image content type.", image.Message);
     }
 
@@ -72,7 +72,7 @@ internal static class ImagingTests
             0xFF, 0xD9
         ];
 
-        Pdf.PdfImageXObject image = OoxImageDecoder.Decode("image/jpg", jpegHeader, static rgb => rgb);
+        Pdf.PdfImageXObject image = OoxImageDecoder.Decode("image/jpg", jpegHeader);
 
         TestAssert.Equal(5, image.Width);
         TestAssert.Equal(3, image.Height);
@@ -82,18 +82,13 @@ internal static class ImagingTests
 
     public static void SharedDecoderDecodesPngAndBmpPixels()
     {
-        // D02: PNG/BMP share one pixel path, with the caller recolor map applied.
+        // PNG/BMP share the live pixel decoder and PDF compression path.
         byte[] png = TestFixtures.CreateGrayscalePng(3, 1, [0, 128, 255]);
-        Pdf.PdfImageXObject plain = OoxImageDecoder.Decode("image/png", png, static rgb => rgb);
+        Pdf.PdfImageXObject plain = OoxImageDecoder.Decode("image/png", png);
 
         TestAssert.Equal(3, plain.Width);
         TestAssert.Equal(1, plain.Height);
         TestAssert.Equal("/FlateDecode", plain.Filter);
-
-        Pdf.PdfImageXObject inverted = OoxImageDecoder.Decode(
-            "image/png", png, rgb => rgb.Select(channel => (byte)(255 - channel)).ToArray());
-
-        TestAssert.True(!plain.Bytes.AsSpan().SequenceEqual(inverted.Bytes), "The recolor map must transform decoded pixels.");
 
         using var pixels = OoxImageDecoder.DecodePixelsOwned(
             "image/x-ms-bmp", TestFixtures.CreateRgbBmp(2, 1, [255, 0, 0, 0, 0, 255]));

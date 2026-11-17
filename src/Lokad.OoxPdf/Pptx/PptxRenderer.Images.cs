@@ -391,7 +391,7 @@ internal sealed partial class PptxRenderer
             // fallback policy below stays PPTX-specific.
             if (IsNoImageRecolor(recolor))
             {
-                return OoxImageDecoder.Decode(contentType, bytes, static rgb => rgb, cancellationToken);
+                return OoxImageDecoder.Decode(contentType, bytes, cancellationToken);
             }
 
             if (OoxImageDecoder.IsJpegContentType(contentType))
@@ -647,7 +647,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        image = GetOrCreateImage(resolvedPictureFill.Resource, PptxSceneImageRecolor.None, imageCache, diagnosticSink, slideIndex, cancellationToken);
+        image = GetOrCreateImage(resolvedPictureFill.Resource, resolvedPictureFill.Recolor, imageCache, diagnosticSink, slideIndex, cancellationToken);
         if (image is null)
         {
             return false;

@@ -797,7 +797,7 @@ internal sealed partial class DocxRenderer
         {
             try
             {
-                imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, static rgb => rgb, cancellationToken);
+                imageResource = OoxImageDecoder.Decode(image.ContentType, image.Bytes, cancellationToken);
             }
             catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
             {

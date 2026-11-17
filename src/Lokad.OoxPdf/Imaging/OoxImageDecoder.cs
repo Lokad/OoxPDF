@@ -4,8 +4,8 @@ namespace Lokad.OoxPdf.Imaging;
 
 /// <summary>
 /// Shared Office content-image decoding (D02). JPEG passes through as DCTDecode;
-/// PNG and BMP decode to RGB(A) pixels. A caller-supplied recolor map covers the
-/// PPTX recolor case; DOCX passes the identity. Per-format diagnostics (with
+/// PNG and BMP decode to RGB(A) pixels. PPTX transformations borrow decoded planes
+/// through DecodePixelsOwned. Per-format diagnostics (with
 /// page/slide location and severity) and PPTX crop/recolor policy stay in the
 /// renderers. Throws <see cref="InvalidDataException"/> for corrupt data and
 /// <see cref="NotSupportedException"/> for unknown content types.
@@ -26,7 +26,7 @@ internal static class OoxImageDecoder
     public static bool IsSupportedContentType(string contentType) =>
         IsJpegContentType(contentType) || IsPngContentType(contentType) || IsBmpContentType(contentType);
 
-    public static PdfImageXObject Decode(string contentType, byte[] bytes, Func<byte[], byte[]> recolorRgb, CancellationToken cancellationToken = default)
+    public static PdfImageXObject Decode(string contentType, byte[] bytes, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (IsJpegContentType(contentType))
@@ -36,7 +36,7 @@ internal static class OoxImageDecoder
         }
 
         using DecodedPixels decoded = DecodePixelsOwned(contentType, bytes, cancellationToken);
-        return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, recolorRgb(decoded.Rgb), decoded.Alpha, cancellationToken);
+        return PdfImageXObject.RgbPng(decoded.Width, decoded.Height, decoded.Rgb, decoded.Alpha, cancellationToken);
     }
 
     public static DecodedPixels DecodePixelsOwned(string contentType, byte[] bytes, CancellationToken cancellationToken = default)

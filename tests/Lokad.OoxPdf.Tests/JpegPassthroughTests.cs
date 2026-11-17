@@ -22,7 +22,7 @@ internal static class JpegPassthroughTests
         for (int i = 0; i < EncodedControls.Length; i++)
         {
             byte[] jpeg = Convert.FromBase64String(EncodedControls[i]);
-            var image = OoxImageDecoder.Decode("image/jpeg", jpeg, static rgb => rgb);
+            var image = OoxImageDecoder.Decode("image/jpeg", jpeg);
             TestAssert.Equal(2, image.Width);
             TestAssert.Equal(1, image.Height);
             TestAssert.Equal(8, image.BitsPerComponent);
@@ -35,7 +35,7 @@ internal static class JpegPassthroughTests
     {
         foreach (byte[] jpeg in DamagedFrames())
         {
-            TestAssert.Throws<InvalidDataException>(() => OoxImageDecoder.Decode("image/jpeg", jpeg, static rgb => rgb));
+            TestAssert.Throws<InvalidDataException>(() => OoxImageDecoder.Decode("image/jpeg", jpeg));
         }
         byte[] original = Convert.FromBase64String(EncodedControls[0]);
         int frame = original.AsSpan().IndexOf(new byte[] { 0xFF, 0xC0 });
@@ -43,11 +43,11 @@ internal static class JpegPassthroughTests
         {
             byte[] jpeg = (byte[])original.Clone();
             jpeg[frame + 4] = precision;
-            TestAssert.Throws<NotSupportedException>(() => OoxImageDecoder.Decode("image/jpeg", jpeg, static rgb => rgb));
+            TestAssert.Throws<NotSupportedException>(() => OoxImageDecoder.Decode("image/jpeg", jpeg));
         }
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        TestAssert.Throws<OperationCanceledException>(() => OoxImageDecoder.Decode("image/jpeg", original, static rgb => rgb, cancelled.Token));
+        TestAssert.Throws<OperationCanceledException>(() => OoxImageDecoder.Decode("image/jpeg", original, cancelled.Token));
     }
 
     public static void JpegCmykInterpretationFollowsAdobeMarkersAcrossFrameOrder()
@@ -81,7 +81,7 @@ internal static class JpegPassthroughTests
     {
         byte[] jpeg = Convert.FromBase64String(EncodedControls[2]);
         var normal = Pdf.PdfImageXObject.Jpeg(2, 1, jpeg, 4, 8);
-        var inverted = OoxImageDecoder.Decode("image/jpeg", jpeg, static rgb => rgb);
+        var inverted = OoxImageDecoder.Decode("image/jpeg", jpeg);
         TestAssert.True(normal.ResourceKey != inverted.ResourceKey, "Different sample interpretation must not deduplicate.");
         TestAssert.True(!normal.HasIdenticalContent(inverted), "Byte equality alone does not identify image interpretation.");
         TestAssert.Equal(2, Pdf.PdfDocumentWriter.DeduplicateImages([normal, inverted], default).Count);
