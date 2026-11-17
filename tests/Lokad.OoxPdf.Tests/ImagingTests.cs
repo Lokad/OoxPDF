@@ -5,10 +5,11 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class ImagingTests
 {
-    public static void SharedDecoderObservesCancellationMidDecode()
+    public static void SharedDecoderRejectsPreCancelledCalls()
     {
-        // Q01: long pixel decodes stay cancellable through the shared path.
-        byte[] png = TestFixtures.CreateGrayscalePng(256, 256, new byte[256 * 256]);
+        // Entry cancellation applies to both dispatch and direct decoders.
+        // Scanline and memory-admission tests cover cancellation after work starts.
+        byte[] png = TestFixtures.CreateTinyStoredRgbPng();
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
 
@@ -17,11 +18,7 @@ internal static class ImagingTests
         TestAssert.Throws<OperationCanceledException>(
             () => PngImage.ReadOwned(png, cancelled.Token));
         TestAssert.Throws<OperationCanceledException>(
-            () => BmpImage.ReadOwned(TestFixtures.CreateRgbBmp(64, 64, new byte[64 * 64 * 3]), cancelled.Token));
-
-        Pdf.PdfImageXObject image = OoxImageDecoder.Decode("image/png", png, CancellationToken.None);
-        TestAssert.Equal(256, image.Width);
-        TestAssert.Equal(256, image.Height);
+            () => BmpImage.ReadOwned(TestFixtures.CreateRgbBmp(1, 1, [0, 0, 0]), cancelled.Token));
     }
 
     public static void SharedDecoderClassifiesContentTypes()

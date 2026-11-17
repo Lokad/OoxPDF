@@ -65,7 +65,6 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
-        PptxTheme theme,
         GroupTransform groupTransform,
         List<PdfImageResource>? images,
         Dictionary<string, PdfImageXObject?>? imageCache,
@@ -83,7 +82,6 @@ internal sealed partial class PptxRenderer
             graphics,
             diagnosticSink,
             slideIndex,
-            theme,
             groupTransform,
             images,
             imageCache,
@@ -93,8 +91,7 @@ internal sealed partial class PptxRenderer
             shape.Shape.PresetAdjustments,
             shape.Shape.HasCustomGeometry,
             shape.Shape.CustomGeometry,
-            shape.Shape.NoFill,
-            ToFillStyle(shape.Shape.Fill),
+            shape.Shape.Fill,
             ToGradientFill(shape.Shape.GradientFill),
             ToShapePatternFill(shape.Shape.PatternFill),
             ToShapePictureFill(shape.Shape.PictureFill),
@@ -112,7 +109,6 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
-        PptxTheme theme,
         GroupTransform groupTransform,
         List<PdfImageResource>? images,
         Dictionary<string, PdfImageXObject?>? imageCache,
@@ -122,16 +118,15 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
         bool hasCustomGeometry,
         PptxSceneCustomGeometry? customGeometryOverride,
-        bool noFillOverride,
-        FillStyle? fillOverride,
+        PptxSceneFillStyle fillStyle,
         GradientFill? gradientFillOverride,
         ShapePatternFill? patternFillOverride,
         ShapePictureFill? pictureFillOverride,
         Glow? glowOverride,
         OuterShadow? outerShadowOverride,
-        LineStyle? lineOverride,
-        LineEndStyle? headEndOverride,
-        LineEndStyle? tailEndOverride,
+        LineStyle line,
+        LineEndStyle headEnd,
+        LineEndStyle tailEnd,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -150,70 +145,21 @@ internal sealed partial class PptxRenderer
         double y = document.SlideHeightPoints - yTop - height;
         bool transformed = bounds.RotationDegrees != 0d || bounds.FlipHorizontal || bounds.FlipVertical;
 
-        RgbColor fill;
-        double fillAlpha;
-        bool hasFill;
-        if (fillOverride is { } resolvedFill)
-        {
-            fill = resolvedFill.Color;
-            fillAlpha = resolvedFill.Alpha;
-            hasFill = resolvedFill.HasFill;
-        }
-        else if (noFillOverride)
-        {
-            fill = default;
-            fillAlpha = 1d;
-            hasFill = false;
-        }
-        else
-        {
-            fill = default;
-            fillAlpha = 1d;
-            hasFill = false;
-        }
+        RgbColor fill = fillStyle.Color;
+        double fillAlpha = fillStyle.Alpha;
+        bool hasFill = fillStyle.HasFill;
         GradientFill? gradientFill = gradientFillOverride;
         bool hasPatternFill = patternFillOverride is not null;
         ShapePatternFill patternFill;
         patternFill = patternFillOverride ?? default;
-        RgbColor stroke;
-        double lineWidth;
-        double strokeAlpha;
-        bool hasStroke;
-        if (lineOverride is { } line)
-        {
-            stroke = line.Color;
-            lineWidth = line.Width;
-            strokeAlpha = line.Alpha;
-            hasStroke = line.HasLine;
-        }
-        else
-        {
-            hasStroke = TryReadShapeLine(shape, shapeProperties, theme, out stroke, out lineWidth, out strokeAlpha);
-        }
-        bool hasDash;
-        IReadOnlyList<double> dashPattern;
-        int? lineCap;
-        int? lineJoin;
-        if (lineOverride is { } resolvedLine)
-        {
-            hasDash = resolvedLine.HasDash;
-            dashPattern = resolvedLine.DashPattern;
-            lineCap = resolvedLine.Cap;
-            lineJoin = resolvedLine.Join;
-        }
-        else
-        {
-            hasDash = TryReadPresetDash(shapeProperties, lineWidth, out dashPattern);
-            lineCap = ReadLineCap(shapeProperties) switch
-            {
-                "rnd" => 1,
-                "sq" => 2,
-                _ => null
-            };
-            lineJoin = ReadLineJoin(shapeProperties);
-        }
-        LineEndStyle headEnd = headEndOverride ?? ReadLineEnd(shapeProperties, "headEnd");
-        LineEndStyle tailEnd = tailEndOverride ?? ReadLineEnd(shapeProperties, "tailEnd");
+        RgbColor stroke = line.Color;
+        double lineWidth = line.Width;
+        double strokeAlpha = line.Alpha;
+        bool hasStroke = line.HasLine;
+        bool hasDash = line.HasDash;
+        IReadOnlyList<double> dashPattern = line.DashPattern;
+        int? lineCap = line.Cap;
+        int? lineJoin = line.Join;
         bool hasPictureFill = TryReadShapePictureFill(
             shapeProperties,
             diagnosticSink,

@@ -45,80 +45,9 @@ internal sealed partial class PptxRenderer
             : null;
     }
 
-    private static LineEndKind ReadLineEndKind(string? type)
-    {
-        return type switch
-        {
-            "triangle" => LineEndKind.Triangle,
-            "arrow" => LineEndKind.Arrow,
-            "stealth" => LineEndKind.Stealth,
-            "diamond" => LineEndKind.Diamond,
-            "oval" => LineEndKind.Oval,
-            _ => LineEndKind.None
-        };
-    }
-
-    private static double ReadLineEndScale(string? value)
-    {
-        return value switch
-        {
-            "sm" => 0.5d,
-            "lg" => 1.5d,
-            _ => 1d
-        };
-    }
-
     private static bool IsFilledTriangleArrow(LineEndStyle style)
     {
         return style.Kind is LineEndKind.Arrow or LineEndKind.Triangle;
-    }
-
-    private static bool TryReadPresetDash(XElement shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)
-    {
-        string? presetDash = (string?)shapeProperties
-            .Element(DrawingNamespace + "ln")
-            ?.Element(DrawingNamespace + "prstDash")
-            ?.Attribute("val");
-        double w = Math.Max(lineWidth, PptxTextMetricRules.MinimumStrokeWidth);
-        dashPattern = presetDash switch
-        {
-            "dot" or "sysDot" => [w, w * 2d],
-            "dash" or "sysDash" => [w * 4d, w * 3d],
-            "lgDash" => [w * 8d, w * 3d],
-            "dashDot" or "sysDashDot" => [w * 4d, w * 3d, w, w * 3d],
-            "lgDashDot" => [w * 8d, w * 3d, w, w * 3d],
-            "lgDashDotDot" or "sysDashDotDot" => [w * 8d, w * 3d, w, w * 3d, w, w * 3d],
-            _ => []
-        };
-        return dashPattern.Count > 0;
-    }
-
-    private static string? ReadLineCap(XElement shapeProperties)
-    {
-        return (string?)shapeProperties
-            .Element(DrawingNamespace + "ln")
-            ?.Attribute("cap");
-    }
-
-    private static int? ReadLineJoin(XElement shapeProperties)
-    {
-        XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
-        if (line?.Element(DrawingNamespace + "round") is not null)
-        {
-            return 1;
-        }
-
-        if (line?.Element(DrawingNamespace + "bevel") is not null)
-        {
-            return 2;
-        }
-
-        if (line?.Element(DrawingNamespace + "miter") is not null)
-        {
-            return 0;
-        }
-
-        return null;
     }
 
     private static bool TryCreatePresetPolygonPoints(string preset, double x, double y, double width, double height, out (double X, double Y)[] points)
@@ -577,8 +506,6 @@ internal sealed partial class PptxRenderer
         public bool HasDash => DashPattern is { Count: > 0 };
     }
 
-    private readonly record struct FillStyle(bool HasFill, RgbColor Color, double Alpha);
-
     private sealed record GradientFill(double AngleDegrees, IReadOnlyList<GradientStop> Stops);
 
     private readonly record struct GradientStop(double Offset, RgbColor Color, double Alpha);
@@ -636,18 +563,6 @@ internal sealed partial class PptxRenderer
         public double CenterY => (MinY + MaxY) / 2d;
     }
 
-    private static LineEndStyle ReadLineEnd(XElement shapeProperties, string elementName)
-    {
-        XElement? end = shapeProperties
-            .Element(DrawingNamespace + "ln")
-            ?.Element(DrawingNamespace + elementName);
-        LineEndKind kind = ReadLineEndKind((string?)end?.Attribute("type"));
-        return new LineEndStyle(
-            kind,
-            ReadLineEndScale((string?)end?.Attribute("w")),
-            ReadLineEndScale((string?)end?.Attribute("len")));
-    }
-
     private static LineEndStyle ToLineEndStyle(PptxSceneLineEnd lineEnd)
     {
         return new LineEndStyle(
@@ -667,10 +582,5 @@ internal sealed partial class PptxRenderer
     private static LineStyle ToLineStyle(PptxSceneLineStyle line)
     {
         return new LineStyle(line.HasLine, line.Color, line.Width, line.Alpha, line.DashPattern ?? [], line.Cap, line.Join);
-    }
-
-    private static FillStyle ToFillStyle(PptxSceneFillStyle fill)
-    {
-        return new FillStyle(fill.HasFill, fill.Color, fill.Alpha);
     }
 }
