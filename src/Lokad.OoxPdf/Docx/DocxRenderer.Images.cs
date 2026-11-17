@@ -21,7 +21,7 @@ internal sealed partial class DocxRenderer
         return placed with { LineFrame = new DocxPictureLineFrame(clip.Y, clip.Height) };
     }
 
-    private static void RenderImage(DocxInlineImage image, double x, double y, double width, double height,
+    private static bool RenderImage(DocxInlineImage image, double x, double y, double width, double height,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,
         DocxPictureLineFrame? lineFrame = null, bool requireLineFrame = false,
@@ -30,7 +30,7 @@ internal sealed partial class DocxRenderer
         cancellationToken.ThrowIfCancellationRequested();
         // A zero-area source frame still owns layout advance/height, but has
         // no image paint. Do not emit a singular image transform or resource.
-        if (width == 0d || height == 0d) return;
+        if (width == 0d || height == 0d) return false;
         DocxPictureCrop crop = image.Crop;
         bool hasFlip = image.FlipHorizontal || image.FlipVertical;
         bool rotates = image.RotationDegrees != 0d;
@@ -49,9 +49,8 @@ internal sealed partial class DocxRenderer
         }
         if (crop.IsEmpty && !hasFlip && !rotates)
         {
-            RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
+            return RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
                 pageIndex, cancellationToken, imageCache, ref imageIndex, svgTextFonts);
-            return;
         }
         double sourceWidth = paintWidth / (1d - crop.Left - crop.Right);
         double sourceHeight = paintHeight / (1d - crop.Top - crop.Bottom);
@@ -66,9 +65,8 @@ internal sealed partial class DocxRenderer
             sourceX = paintX; sourceY = paintY; sourceWidth = paintWidth; sourceHeight = paintHeight;
             if (!hasFlip && !rotates)
             {
-                RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
+                return RenderImageCore(image, x, y, width, height, graphics, pageImages, diagnosticSink,
                     pageIndex, cancellationToken, imageCache, ref imageIndex, svgTextFonts);
-                return;
             }
         }
         graphics.SaveState();
@@ -91,7 +89,7 @@ internal sealed partial class DocxRenderer
                 graphics.Transform(a, b, c, d, centerX - a * centerX - c * centerY, centerY - b * centerX - d * centerY);
             }
             if (rotates) graphics.ClipRectangle(paintX, paintY, paintWidth, paintHeight);
-            RenderImageCore(image, sourceX, sourceY, sourceWidth, sourceHeight, graphics, pageImages,
+            return RenderImageCore(image, sourceX, sourceY, sourceWidth, sourceHeight, graphics, pageImages,
                 diagnosticSink, pageIndex, cancellationToken, imageCache, ref imageIndex, svgTextFonts);
         }
         finally { graphics.RestoreState(); }
@@ -113,7 +111,7 @@ internal sealed partial class DocxRenderer
         return true;
     }
 
-    private static void RenderImageCore(DocxInlineImage image, double x, double y, double width, double height,
+    private static bool RenderImageCore(DocxInlineImage image, double x, double y, double width, double height,
         PdfGraphicsBuilder graphics, List<PdfImageResource> pageImages, Action<OoxPdfDiagnostic>? diagnosticSink,
         int pageIndex, CancellationToken cancellationToken, Dictionary<string, PdfImageXObject?> imageCache, ref int imageIndex,
         IReadOnlyDictionary<FontRequest, PptxRenderer.SvgTextFont?>? svgTextFonts)
@@ -124,14 +122,15 @@ internal sealed partial class DocxRenderer
                 diagnosticSink(image.RasterFallback is not null && diagnostic.Severity == OoxPdfSeverity.Error && diagnostic.Fallback == "Ignored"
                     ? diagnostic with { Severity = OoxPdfSeverity.Warning, Fallback = "RasterImage", Message = diagnostic.Message + " The authored raster preview is used." }
                     : diagnostic);
-            if (PptxRenderer.TryRenderSvgImage(graphics, x, y, width, height, bytes, svgSink, pageIndex, image.PartName, cancellationToken, svgTextFonts)) return;
-            if (image.RasterFallback is not { } preview) return;
+            if (PptxRenderer.TryRenderSvgImage(graphics, x, y, width, height, bytes, svgSink, pageIndex, image.PartName, cancellationToken, svgTextFonts)) return true;
+            if (image.RasterFallback is not { } preview) return false;
             image = preview;
         }
         PdfImageXObject? resource = CreateImage(image, imageCache, diagnosticSink, pageIndex, cancellationToken);
-        if (resource is null) return;
+        if (resource is null) return false;
         string name = "Im" + imageIndex++;
         graphics.DrawImage(name, x, y, width, height);
         pageImages.Add(new PdfImageResource(name, resource));
+        return true;
     }
 }

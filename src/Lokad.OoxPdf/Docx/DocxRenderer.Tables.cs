@@ -27,7 +27,8 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        RgbColor? background = null)
+        RgbColor? background = null,
+        HashSet<DocxInlineImage>? paintedPictures = null)
     {
         // Office A/B (comment-table and w6-celltuckborders probes, Word-COM rendered):
         // the first-pin emission shift moves text but table geometry was painted raw, so
@@ -119,7 +120,7 @@ internal sealed partial class DocxRenderer
                     // Pictures share the cell clip used by text, including aligned
                     // and repeated paragraphs.
                     DocxInlineImageLayout placedImage = PlaceCellImageForPaint(image, geometryXOffset, geometryYOffset, clip);
-                    RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext);
+                    RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext, paintedPictures);
                 }
 
                 // Only complete, unmerged cells can give an admitted outline its
@@ -156,7 +157,7 @@ internal sealed partial class DocxRenderer
                         pageNumber,
                         pageCount,
                         cancellationToken,
-                        imageCache, ref imageIndex, cellBackground);
+                        imageCache, ref imageIndex, cellBackground, paintedPictures);
                 }
 
                 graphics.RestoreState();

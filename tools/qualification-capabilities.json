@@ -1,4 +1,33 @@
 {
+  "docx-picture-paint-navigation": [
+    "DocxPictureLinksKeepPaintedRepresentationsAcrossComposedStories",
+    "DocxPictureLinksKeepHeaderVectorsAndSelectedRasterFallback",
+    "DocxPictureLinksKeepFailedZeroRotatedAndClippedVectorsUnlinked",
+    "DocxInlinePictureLinksFollowPaintedFramesAndPreserveParentContent",
+    "DocxInlinePictureLinksKeepUnsupportedActionsAndTransformsUnlinked",
+    "DocxInlinePictureLinksRequireDecodedAndUnclippedPaint",
+    "DocxStaticPictureLinksReuseIndependentCompoundFrames",
+    "DocxStaticPictureLinksKeepDeclaredClipsAndCancellation",
+    "PortableRenderingInlinePictureLinksFollowVisibleFrames",
+    "PortableRenderingStaticPictureLinksRetainComposedFrames",
+    "DocxMixedPictureRangesIncludePaintAcrossContainersAndPresets",
+    "DocxMixedPictureRangesKeepDecodeRotationClipAndChildTargetFallbacks",
+    "DocxMixedPictureRangesRetainAuthoredAfterSpacingAcrossContainers",
+    "DocxPictureOnlySourceRangesRetainUnlinkedFallback",
+    "DocxNoteCellPictureRangesFollowExistingPaintAndTargets",
+    "DocxNoteCellPictureRangesRetainClippedAndMergedFallbacks",
+    "DocxNotePictureLinksKeepClippedMissingAndActionFallbacks",
+    "DocxSvgImageKeepsMissingAndMalformedRasterFallbacks",
+    "DocxSvgImagePrefersNativeRelationshipAndPreservesInlineFlow",
+    "DocxSvgOnlyImageClipsPaintToItsViewport",
+    "DocxSvgImageRendersAnchoredPicturesAndHonorsCancellation",
+    "DocxOrdinaryPicturesKeepSourceOrderWithSeveralDrawingsInOneRun",
+    "DocxOrdinaryPicturesKeepPaintWhenFormattedRunsAreMerged",
+    "DocxPictureRotationKeepsExplicitUnresolvedFrameFallback",
+    "DocxTablePictureRotationSharesTheAlignedCellContentClip",
+    "ConvertObservesCancellationAfterWorkBegins",
+    "MemoryAdmissionRefusalLeavesFileAndStreamUntouched"
+  ],
   "pptx-hyperlink-part-ownership": [
     "PptxHyperlinkDiagnosticsKeepNodeAndRunPartOwners",
     "PptxHyperlinkDiagnosticsKeepChartOwnersAcrossTextRoles",
@@ -8213,6 +8242,7 @@
     "DocxOrdinaryKerning"
   ],
   "docx-note-picture-links": [
+    "DocxPictureLinks",
     "DocxNotePictureLinks",
     "DocxInlineCompositionNoteImageDimensionsAndVerticalFrameMatchOffice",
     "DocxInlineCompositionNoteImagesAndMathSurviveSourceSplitting",
@@ -8221,6 +8251,7 @@
     "PortableRenderingPictureNoteBatchesRetainEveryImageOnce"
   ],
   "docx-static-picture-links": [
+    "DocxPictureLinks",
     "DocxStaticPictureLinks",
     "PortableRenderingStaticPictureLinksRetainComposedFrames",
     "DocxStaticStoryInlineImagesShareTheTextBaseline",
@@ -8250,6 +8281,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "docx-inline-picture-links": [
+    "DocxPictureLinks",
     "DocxInlinePictureLinks",
     "DocxOrderedPictureRotationKeepsMeasuredFramesAcrossContainers",
     "DocxPictureRotationRetainsIndependentOfficeAnchorAcrossFonts",

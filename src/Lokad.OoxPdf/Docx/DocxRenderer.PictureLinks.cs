@@ -5,37 +5,34 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, int pageNumber, IReadOnlyList<DocxLayoutItem> staticItems,
-        IReadOnlyList<PdfImageResource> resources, IReadOnlyDictionary<string, PdfImageXObject?> imageCache,
+        IReadOnlySet<DocxInlineImage> paintedPictures,
         DocxMarkupContext context, CancellationToken token)
     {
-        foreach (var image in EnumerateLinkedPictureFrames(page, pageNumber, staticItems, resources, imageCache,
+        foreach (var image in EnumerateLinkedPictureFrames(page, pageNumber, staticItems, paintedPictures,
             context, static image => image.ClickTarget is not null, token))
             yield return PdfLinkAnnotation.ToUri(image.X, image.Y, image.Width, image.Height, image.Image.ClickTarget!);
     }
 
     // Navigation consumes the same physical frames as painting. Both drawing URI
-    // links and mixed source ranges retain decode, ownership and clipping guards.
+    // links and mixed source ranges require successful paint, source ownership
+    // and complete clips, independently of the selected image representation.
     private static IEnumerable<DocxInlineImageLayout> EnumerateLinkedPictureFrames(DocxLayoutPage page, int pageNumber,
-        IReadOnlyList<DocxLayoutItem> staticItems, IReadOnlyList<PdfImageResource> resources,
-        IReadOnlyDictionary<string, PdfImageXObject?> imageCache, DocxMarkupContext context,
+        IReadOnlyList<DocxLayoutItem> staticItems, IReadOnlySet<DocxInlineImage> paintedPictures,
+        DocxMarkupContext context,
         Func<DocxInlineImage, bool> select, CancellationToken token)
     {
-        if (resources.Count == 0) yield break;
+        if (paintedPictures.Count == 0) yield break;
         var pageClip = new PdfRectangle(0d, 0d, page.Width, page.Height);
-        HashSet<PdfImageXObject>? painted = null;
         foreach (var (image, clip) in EnumeratePlacedPictureFrames(page, pageNumber, staticItems, context, select, token))
         {
             token.ThrowIfCancellationRequested();
-            if (image.Image.RotationDegrees != 0d ||
-                GetImageCacheKey(image.Image) is not { } key || !imageCache.TryGetValue(key, out var resource) || resource is null)
+            if (image.Image.RotationDegrees != 0d || !paintedPictures.Contains(image.Image))
                 continue;
             var frame = new PdfRectangle(image.X, image.Y, image.Width, image.Height);
             if (!ContainsFrame(pageClip, frame) || !ContainsFrame(clip, frame) || image.ClipBounds is { } own && !ContainsFrame(own, frame) ||
                 image.LineFrame is { } line && !(frame.Y >= line.Bottom - 1e-6 && frame.Y + frame.Height <= line.Bottom + line.Height + 1e-6))
                 continue;
-            painted ??= new HashSet<PdfImageXObject>(resources.Select(item => item.Image), ReferenceEqualityComparer.Instance);
-            if (painted.Contains(resource))
-                yield return image;
+            yield return image;
         }
 
         static bool ContainsFrame(PdfRectangle outer, PdfRectangle frame) =>
@@ -47,7 +44,7 @@ internal sealed partial class DocxRenderer
     }
 
     // Source destinations and URI links borrow the same physical placement.
-    // URI links additionally require decoded resources and complete visible clips.
+    // URI links additionally require successful paint and complete visible clips.
     private static IEnumerable<(DocxInlineImageLayout Image, PdfRectangle Clip)> EnumeratePlacedPictureFrames(
         DocxLayoutPage page, int pageNumber, IEnumerable<DocxLayoutItem> staticItems,
         DocxMarkupContext context, Func<DocxInlineImage, bool> select, CancellationToken token)
