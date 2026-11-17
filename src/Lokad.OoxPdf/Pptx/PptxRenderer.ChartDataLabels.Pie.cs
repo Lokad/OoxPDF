@@ -345,8 +345,14 @@ internal sealed partial class PptxRenderer
                     };
                     return (Runs: wrapLine, Width: lineWidth, X: lineX);
                 }).ToArray();
-                foreach (var line in lines)
-                    clipBox = ExpandChartLabelClipToText(clipBox, line.X, line.Width);
+                for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                {
+                    var line = lines[lineIndex];
+                    double baseline = y - lineIndex * style.FontSize * PptxChartMetricRules.PieDataLabelLinePitchFactor;
+                    foreach (var part in line.Runs)
+                        clipBox = await AdmitChartLabelInkAsync(clipBox, part.Text, part.Style,
+                            line.X, baseline, line.Width, textMeasurer).ConfigureAwait(false);
+                }
                 double lineY = y;
                 foreach (var line in lines)
                 {
@@ -370,7 +376,9 @@ internal sealed partial class PptxRenderer
                 _ => x
             };
 
-            clipBox = ExpandChartLabelClipToText(clipBox, cursor, totalWidth);
+            foreach (var run in labelRuns)
+                clipBox = await AdmitChartLabelInkAsync(clipBox, run.Text, run.Style,
+                    cursor, y, totalWidth, textMeasurer).ConfigureAwait(false);
             foreach (ChartTextRunLayout run in labelRuns)
             {
                 double runWidth = Math.Max(0.1d, run.Width);

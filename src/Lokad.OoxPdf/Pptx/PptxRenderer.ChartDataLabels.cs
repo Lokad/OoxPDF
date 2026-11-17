@@ -277,12 +277,25 @@ internal sealed partial class PptxRenderer
 
     // Admit the actual measured paint extent. Whole and split text have distinct
     // existing overflow alignment; placement supplies its resolved origin here.
-    private static ChartLayoutBox ExpandChartLabelClipToText(ChartLayoutBox clip, double textX, double textWidth)
+    private static ChartLayoutBox ExpandChartLabelClipToText(ChartLayoutBox clip, ChartLayoutBox text)
     {
-        double left = Math.Min(clip.X, textX);
-        double right = Math.Max(clip.X + clip.Width, textX + textWidth);
-        if (left == clip.X && right == clip.X + clip.Width) return clip;
-        return new ChartLayoutBox(left, clip.Y, Math.Max(1d, right - left), clip.Height);
+        double left = Math.Min(clip.X, text.X), bottom = Math.Min(clip.Y, text.Y);
+        double right = Math.Max(clip.X + clip.Width, text.X + text.Width);
+        double top = Math.Max(clip.Y + clip.Height, text.Y + text.Height);
+        if (left == clip.X && bottom == clip.Y && right == clip.X + clip.Width && top == clip.Y + clip.Height) return clip;
+        return new ChartLayoutBox(left, bottom, Math.Max(1d, right - left), Math.Max(1d, top - bottom));
+    }
+
+    private static async ValueTask<ChartLayoutBox> AdmitChartLabelInkAsync(ChartLayoutBox clip,
+        string text, ChartTextStyle style, double x, double baseline, double width, ChartTextMeasurer measurer)
+    {
+        // The same resolved outlines and emission size own vertical paint bounds
+        // for whole, rich and wrapped labels. Unknown bounds keep the old frame.
+        var emission = style with { FontSize = OfficePdfTextEmissionProfile.FontSize(style.FontSize) };
+        var ink = await measurer.TryMeasureInkBoundsAsync(text, emission).ConfigureAwait(false);
+        double bottom = ink is { } bounds ? baseline + bounds.Bottom : clip.Y;
+        double top = ink is { } measured ? baseline + measured.Top : clip.Y + clip.Height;
+        return ExpandChartLabelClipToText(clip, new(x, bottom, width, top - bottom));
     }
 
     private static async ValueTask AddChartRichTextRunsAsync(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver, List<ChartTextRunLink>? links = null, bool admitTextOverflow = false)
@@ -314,7 +327,19 @@ internal sealed partial class PptxRenderer
                 TextAlignment.Right => x + free,
                 _ => x
             };
-            ChartLayoutBox clip = ExpandChartLabelClipToText(new(clipX, clipY, clipWidth, clipHeight), textX, totalWidth);
+            ChartLayoutBox clip = new(clipX, clipY, clipWidth, clipHeight);
+            if (richRuns.Length == 0)
+                clip = await AdmitChartLabelInkAsync(clip, fallbackText, style, textX, y, totalWidth, textMeasurer).ConfigureAwait(false);
+            else
+            {
+                double textCursor = textX;
+                foreach (var run in richRuns)
+                {
+                    double runWidth = Math.Max(0.1d, run.Width);
+                    clip = await AdmitChartLabelInkAsync(clip, run.Text, run.Style, textCursor, y, runWidth, textMeasurer).ConfigureAwait(false);
+                    textCursor += runWidth;
+                }
+            }
             (clipX, clipY, clipWidth, clipHeight) = (clip.X, clip.Y, clip.Width, clip.Height);
         }
         if (richRuns.Length == 0)

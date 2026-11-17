@@ -312,10 +312,10 @@ internal static partial class PptxChartsTests
             TestAssert.True(left > previousRight, "Legend names keep their source order without overlapping each other.");
             previousRight = glyphs.Max(glyph => glyph.Ink.X + glyph.Ink.Width);
         }
-        foreach (string caption in new[] { "Primary A | 2", "Primary A | 4", "Primary B | 1", "Primary B | 3", "Secondary | 20" })
+        foreach (string caption in new[] { "Primary A | 2", "Primary A | 4", "Primary B | 1", "Primary B | 3", "Secondary | 0", "Secondary | 20" })
             PortableRenderingTests.ReadPaintedSourceLabel(page, caption, fontPrefix: "CBD");
-        // This incomplete-axis recovery fixture still has a separately retained
-        // zero-caption/legend overlap. Complete legend ink does not waive it.
+        // Complete ink containment does not resolve this incomplete-axis recovery
+        // fixture's separately retained zero-caption/legend overlap.
         using var output = new MemoryStream();
         PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]),
             new OoxConversionLimits(), collector.Add, default).GetAwaiter().GetResult();
@@ -1833,18 +1833,20 @@ internal static partial class PptxChartsTests
         var renderer = typeof(PptxRenderer);
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
         var method = renderer.GetMethod("ExpandChartLabelClipToText", flags);
-        TestAssert.True(method is not null, "Expected shared label clip helper to remain inspectable by the Office evidence guard.");
+        TestAssert.True(method is not null, "Expected the shared automatic-label clip union.");
         var boxType = renderer.GetNestedType("ChartLayoutBox", System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected layout box.");
         object box = System.Activator.CreateInstance(boxType, [136d, 100d, 80d, 24d])!;
-        object fitting = method!.Invoke(null, [box, 136d, 62d])!;
+        object fitting = method!.Invoke(null, [box, System.Activator.CreateInstance(boxType, [136d, 104d, 62d, 12d])!])!;
         (double fx, double fy) = ReadLayoutBoxXY(fitting);
         TestAssert.True(Math.Abs(fx - 136d) < 0.0001d, "Fitting text should keep the clip. Got " + fx);
-        object wide = method.Invoke(null, [box, 126d, 100d])!;
+        object wide = method.Invoke(null, [box, System.Activator.CreateInstance(boxType, [126d, 94d, 100d, 40d])!])!;
         (double wx, double wy) = ReadLayoutBoxXY(wide);
-        TestAssert.True(Math.Abs(wx - 126d) < 0.0001d, "Overflowing text should expand the clip symmetrically. Got " + wx);
+        TestAssert.True(Math.Abs(wx - 126d) < 0.0001d && Math.Abs(wy - 94d) < .0001d &&
+            Math.Abs((double)boxType.GetProperty("Height")!.GetValue(wide)! - 40d) < .0001d,
+            "Overflowing ink extends both dimensions without moving its source frame.");
         foreach (double expectedX in new[] { 136d, 116d })
         {
-            object aligned = method.Invoke(null, [box, expectedX, 100d])!;
+            object aligned = method.Invoke(null, [box, System.Activator.CreateInstance(boxType, [expectedX, 100d, 100d, 24d])!])!;
             (double ax, _) = ReadLayoutBoxXY(aligned);
             double width = (double)boxType.GetProperty("Width")!.GetValue(aligned)!;
             TestAssert.True(Math.Abs(ax - expectedX) < .0001d && Math.Abs(width - 100d) < .0001d,

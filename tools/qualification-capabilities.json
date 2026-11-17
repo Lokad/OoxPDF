@@ -1,4 +1,14 @@
 {
+  "pptx-label-ink": [
+    "PptxDataLabelInkSurvivesFontsRichRunsAndRangeMinima",
+    "PptxDataLabelInkPreservesManualTitleAndPageClips",
+    "PptxSyntheticBarChartsRenderNativeCharts",
+    "PptxChartTextConversionUsesCustomFontResolver",
+    "PptxChartCoverageSplitsKeepMeasuredAlignmentTrackingAndStyle",
+    "CffChartUnresolvableRunesSubstituteQuestionMark",
+    "MissingFontsPreservePptxText",
+    "PageMemoryPublicRefusalAndCancellationPreserveDestinations"
+  ],
   "pptx-effect-color-owners": [
     "PptxEffectColorFormsKeepPaintAcrossSupportedOwners",
     "PptxEffectColorFallbacksPreserveMissingPaintAndRecolorPolicy",
