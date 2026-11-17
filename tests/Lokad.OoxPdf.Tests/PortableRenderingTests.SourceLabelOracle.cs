@@ -77,6 +77,36 @@ internal static partial class PortableRenderingTests
         }
     }
 
+    public static void PortableRenderingSourceLabelOracleChecksPaintAndRestoredState()
+    {
+        var font = TestAssert.NotNull(FontProgramLoader.Load(new PinnedResolver().Resolve(new FontRequest("DejaVu Sans")), default));
+        var source = SourceLabelOraclePage(font, "A");
+        PdfExtGStateResource[] states = [new("Off", 0d, 1d), new("Dim", .5d, .5d), new("Tiny", .0004d, 1d)];
+        foreach (var (prefix, mode, visible) in new (string, int, bool)[]
+        {
+            ("", 0, true), ("", 3, false), ("/Off gs\n", 0, false), ("/Tiny gs\n", 0, false),
+            ("/Dim gs\n", 0, true), ("q\n/Off gs\nQ\n", 0, true), ("q\n3 Tr\nQ\n", 0, true),
+            ("/Off gs\nq\n/Dim gs\nQ\n", 0, false), ("3 Tr\nq\n0 Tr\nQ\n", 0, false),
+            ("BT\n3 Tr\nET\n", 0, false), ("", 1, false), ("", 2, false), ("", 7, false)
+        })
+        {
+            // Mode 0 here leaves the inherited state alone, as ordinary generated
+            // text does. Tr persists across BT/ET and belongs to the q/Q state.
+            string content = prefix + (mode == 0 ? source.Content : source.Content.Replace("BT", $"BT\n{mode} Tr", StringComparison.Ordinal));
+            var page = new PdfPage(200, 200, content, source.Fonts, [], states, []);
+            PdfContentValidator.ValidatePage(page, 0, default);
+            if (visible) TestAssert.Equal(1, ReadPaintedSourceLabel(page, "A").Count);
+            else TestAssert.Contains("known visible fill paint", TestAssert.Throws<InvalidOperationException>(() =>
+                ReadPaintedSourceLabel(page, "A")).Message);
+        }
+        var mask = new PdfTransparencyGroup(new PdfRectangle(0, 0, 200, 200), "", [], [], [], []);
+        var masked = new PdfPage(200, 200, "/Masked gs\n/Dim gs\n" + source.Content, source.Fonts, [],
+            [.. states, new("Masked", 1d, 1d, "Mask")], [], [], [], groups: [new("Mask", mask)]);
+        PdfContentValidator.ValidatePage(masked, 0, default);
+        TestAssert.Contains("known visible fill paint", TestAssert.Throws<InvalidOperationException>(() =>
+            ReadPaintedSourceLabel(masked, "A")).Message);
+    }
+
     private static PdfPage SourceLabelOraclePage(OpenTypeFont font, string text, bool clipped = false)
     {
         var embedded = PdfEmbeddedFont.Create(font, text.EnumerateRunes().Select(rune => rune.Value), default);

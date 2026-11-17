@@ -176,11 +176,11 @@ internal static partial class PortableRenderingTests
         // Match source characters across text-show boundaries, then check their
         // font ink against each physical paint frame. Existing readers own PDF syntax.
         var characters = new List<(int Offset, int Length, ushort Glyph, OpenTypeFont Font, double Size,
-            PdfRectangle Clip, Matrix3x2 Transform)>();
+            PdfRectangle Clip, Matrix3x2 Transform, bool? VisiblePaint)>();
         var bindings = new Dictionary<PdfEmbeddedFont, (OpenTypeFont Program, Dictionary<ushort, ushort> Glyphs)>();
         var text = new StringBuilder();
-        foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
-        foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts),
+        foreach (var frame in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
+        foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, frame.Block, page.Fonts),
             usePageCoordinates: false, includeTextTransforms: true, honorActualText: false,
             fontResourceFilter: mathOnly ? name => name.StartsWith("Eq", StringComparison.Ordinal) :
                 fontPrefix is not null ? name => name.StartsWith(fontPrefix, StringComparison.Ordinal) : null,
@@ -209,7 +209,8 @@ internal static partial class PortableRenderingTests
             if (!Rune.IsWhiteSpace(rune))
             {
                 string normalized = rune.ToString().Normalize(NormalizationForm.FormKC);
-                characters.Add((text.Length, normalized.Length, glyph, binding.Program, paint.Size, clip, paint.Matrix * transform));
+                characters.Add((text.Length, normalized.Length, glyph, binding.Program, paint.Size, frame.Clip,
+                    paint.Matrix * frame.Transform, frame.VisibleTextPaint));
                 text.Append(normalized);
             }
             return Math.Round(binding.Program.GetAdvanceWidth(glyph) * 1000d / binding.Program.UnitsPerEm) * paint.Size / 1000d;
@@ -223,6 +224,8 @@ internal static partial class PortableRenderingTests
         int covered = start;
         foreach (var character in characters.Where(c => c.Offset >= start && c.Offset < start + wanted.Length))
         {
+            TestAssert.True(character.VisiblePaint is true,
+                "Every source glyph must have known visible fill paint: " + label);
             // A normalized UTF-16 span can belong to one supplementary scalar
             // or compatibility glyph. Require complete span ownership rather
             // than equating UTF-16 length with the number of painted glyphs.

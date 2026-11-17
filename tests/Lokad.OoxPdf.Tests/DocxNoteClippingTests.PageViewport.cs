@@ -65,21 +65,31 @@ internal static partial class DocxNoteClippingTests
             ReadPhysicalPaintFrames(new PdfPage(100d, 100d, oblique, [])).ToArray());
     }
 
+    internal readonly record struct PhysicalPaintFrame(string Block, PdfRectangle Clip, Matrix3x2 Transform)
+    {
+        // Only normal fill text without a soft mask is qualified here. Geometry
+        // callers can still inspect other paint; visibility callers must retain unknowns.
+        public bool? VisibleTextPaint { get; init; }
+    }
+
     // Read only generated q/Q, rectangle clips/strokes, matrices and text/image paints for these
     // fixtures. CID decoding stays in the existing glyph-show reader; standard
     // affine matrices map clips and glyph ink into physical page coordinates.
-    internal static IEnumerable<(string Block, PdfRectangle Clip, Matrix3x2 Transform)> ReadPhysicalPaintFrames(PdfPage page)
+    internal static IEnumerable<PhysicalPaintFrame> ReadPhysicalPaintFrames(PdfPage page)
     {
         const string number = @"[-+\d.eE]+";
         string rectangle = number + @"(?: " + number + @"){3}";
-        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<text>BT)|(?<image>/[A-Za-z0-9_]+ Do)|(?<stroke>" + rectangle + @" re S))\r?$";
-        var saved = new Stack<(PdfRectangle Clip, Matrix3x2 Transform)>();
+        const string paintPattern = @"(?m)^(?:(?<state>/\S+) gs|(?<mode>[0-7]) Tr)\r?$";
+        string pattern = @"(?m)^(?:(?<save>q)|(?<restore>Q)|(?<clip>" + rectangle + @") re W\*? n|(?<matrix>" + number + @"(?: " + number + @"){5}) cm|(?<state>/\S+) gs|(?<mode>[0-7]) Tr|(?<text>BT)|(?<image>/[A-Za-z0-9_]+ Do)|(?<stroke>" + rectangle + @" re S))\r?$";
+        var saved = new Stack<(PdfRectangle Clip, Matrix3x2 Transform, (bool? FillVisible, bool Mask, int Mode) Paint)>();
         var clip = new PdfRectangle(0d, 0d, page.Width, page.Height);
         var transform = Matrix3x2.Identity;
+        (bool? FillVisible, bool Mask, int Mode) paint = (true, false, 0);
         foreach (Match operation in Regex.Matches(page.Content, pattern))
         {
-            if (operation.Groups["save"].Success) saved.Push((clip, transform));
-            else if (operation.Groups["restore"].Success) (clip, transform) = saved.Pop();
+            if (operation.Groups["save"].Success) saved.Push((clip, transform, paint));
+            else if (operation.Groups["restore"].Success) (clip, transform, paint) = saved.Pop();
+            else if (operation.Groups["state"].Success || operation.Groups["mode"].Success) ApplyPaint(operation, ref paint);
             else if (operation.Groups["matrix"].Success)
             {
                 float[] v = operation.Groups["matrix"].Value.Split(' ').Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
@@ -101,10 +111,35 @@ internal static partial class DocxNoteClippingTests
             {
                 int end = page.Content.IndexOf("\nET", operation.Index, StringComparison.Ordinal);
                 TestAssert.True(end >= 0, "Every generated text object terminates.");
-                yield return (page.Content[operation.Index..(end + 3)], clip, transform);
+                string block = page.Content[operation.Index..(end + 3)];
+                var shows = Regex.Matches(block, @"(?:>\s*Tj|\]\s*TJ)");
+                var atShow = paint;
+                bool changingPaint = false;
+                foreach (Match change in Regex.Matches(block, paintPattern))
+                {
+                    if (shows.Count != 0 && change.Index < shows[0].Index) ApplyPaint(change, ref atShow);
+                    else if (shows.Count != 0 && change.Index < shows[^1].Index) changingPaint = true;
+                }
+                bool? visible = shows.Count == 0 || changingPaint ? null :
+                    atShow.Mode == 3 ? false : atShow.Mode != 0 || atShow.Mask ? null : atShow.FillVisible;
+                yield return new(block, clip, transform) { VisibleTextPaint = visible };
             }
-            else yield return (operation.Value.TrimEnd('\r'), clip, transform);
+            else yield return new(operation.Value.TrimEnd('\r'), clip, transform);
         }
         TestAssert.Equal(0, saved.Count);
+
+        void ApplyPaint(Match operation, ref (bool? FillVisible, bool Mask, int Mode) state)
+        {
+            if (operation.Groups["mode"].Success) state.Mode = int.Parse(operation.Groups["mode"].Value, CultureInfo.InvariantCulture);
+            else
+            {
+                string name = operation.Groups["state"].Value[1..];
+                var resource = page.ExtGStates.SingleOrDefault(item => PdfEmbeddedFont.SanitizeName(item.ResourceName) == name);
+                state.FillVisible = resource.ResourceName is null ? null :
+                    double.Parse(PdfDocumentWriter.FormatNumber(resource.FillAlpha), CultureInfo.InvariantCulture) > 0d;
+                // A graphics state without /SMask does not reset an existing mask.
+                state.Mask |= resource.ResourceName is null || resource.LuminosityGroupName is not null;
+            }
+        }
     }
 }

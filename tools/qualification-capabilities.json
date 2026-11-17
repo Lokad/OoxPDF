@@ -94,6 +94,7 @@
     "PortableRenderingSectionRecordsKeepContentAndPageOwners",
     "PortableRenderingSourceLabelOracleKeepsEmittedAdvancesAndTextTransforms",
     "PortableRenderingSourceLabelOracleKeepsScalarAndGlyphUnits",
+    "PortableRenderingSourceLabelOracleChecksPaintAndRestoredState",
     "PortableRenderingSourceLabelOracleRejectsDisplacedAndAlternateGlyphs",
     "PortableRenderingSourceLabelOracleRejectsMissingClippedAndPartialGlyphs",
     "PortableRenderingStaticFallbackKeepsItsCounterpartVisible",
