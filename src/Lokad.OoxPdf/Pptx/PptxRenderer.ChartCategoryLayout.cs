@@ -405,7 +405,8 @@ internal sealed partial class PptxRenderer
         category.SceneAxis is { AxisKind: PptxSceneChartAxisKind.Category } ordinal &&
         value.SceneAxis is { AxisKind: PptxSceneChartAxisKind.Value, HasLogarithmicScale: false } numeric &&
         !string.IsNullOrEmpty(ordinal.Id) && !string.IsNullOrEmpty(numeric.Id) &&
-        ordinal.CrossAxisId == numeric.Id && numeric.CrossAxisId == ordinal.Id;
+        PptxChartAxisIdComparer.Instance.Equals(ordinal.CrossAxisId, numeric.Id) &&
+        PptxChartAxisIdComparer.Instance.Equals(numeric.CrossAxisId, ordinal.Id);
 
     private static ChartAxisPlacement? ReadHorizontalBarCategoryPlacement(PptxSceneChart chart,
         ChartAxisSource category, ChartAxisSource value, ChartValueExtents extents, bool reversed)
@@ -417,7 +418,8 @@ internal sealed partial class PptxRenderer
             category.SceneAxis is not { AxisKind: PptxSceneChartAxisKind.Category } ordinal ||
             value.SceneAxis is not { HasScaling: true, HasLogarithmicScale: false } numeric ||
             string.IsNullOrEmpty(ordinal.Id) || string.IsNullOrEmpty(numeric.Id) ||
-            ordinal.CrossAxisId != numeric.Id || numeric.CrossAxisId != ordinal.Id) return null;
+            !PptxChartAxisIdComparer.Instance.Equals(ordinal.CrossAxisId, numeric.Id) ||
+            !PptxChartAxisIdComparer.Instance.Equals(numeric.CrossAxisId, ordinal.Id)) return null;
         return ReadChartAxisPlacement(category.SceneAxis, extents, reversed, horizontal: false);
     }
 

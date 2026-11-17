@@ -206,7 +206,7 @@ internal sealed partial class PptxRenderer
         // Preserve declared order and duplicates. Missing IDs stay missing;
         // neither source XML nor another plot supplies a replacement axis.
         return plot.AxisIds.Select(id => chart.Axes.FirstOrDefault(axis =>
-                string.Equals(axis.Id, id, StringComparison.Ordinal) && matches(axis)))
+                PptxChartAxisIdComparer.Instance.Equals(axis.Id, id) && matches(axis)))
             .OfType<PptxSceneChartAxis>().ToArray();
     }
 
@@ -230,7 +230,7 @@ internal sealed partial class PptxRenderer
         string? primaryId = primary.SceneAxis?.Id;
         PptxSceneChartAxis? selected = !string.IsNullOrWhiteSpace(primaryId)
             ? chart.Axes.FirstOrDefault(axis => axis.AxisKind == PptxSceneChartAxisKind.Value &&
-                !string.Equals(axis.Id, primaryId, StringComparison.Ordinal) && axis.IsDeleted != true)
+                !PptxChartAxisIdComparer.Instance.Equals(axis.Id, primaryId) && axis.IsDeleted != true)
             : chart.Axes.FirstOrDefault(axis => axis.AxisKind == PptxSceneChartAxisKind.Value &&
                 axis.IsDeleted != true && axis.PositionKind == PptxSceneChartAxisPosition.Right);
         return ReadChartAxisSource(chart, selected);

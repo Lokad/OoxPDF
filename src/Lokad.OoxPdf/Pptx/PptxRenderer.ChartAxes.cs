@@ -262,8 +262,8 @@ internal sealed partial class PptxRenderer
         bool hasLines = false;
         foreach (var plot in chart.Plots)
         {
-            if (plot.AxisIds.Count != 2 || !plot.AxisIds.Contains(axis.Id, StringComparer.Ordinal) ||
-                !plot.AxisIds.Contains(category.Id, StringComparer.Ordinal)) return false;
+            if (plot.AxisIds.Count != 2 || !plot.AxisIds.Contains(axis.Id, PptxChartAxisIdComparer.Instance) ||
+                !plot.AxisIds.Contains(category.Id, PptxChartAxisIdComparer.Instance)) return false;
             if (plot is { PlotKind: PptxSceneChartPlotKind.Bar,
                 BarDirectionKind: PptxSceneChartBarDirection.Column or PptxSceneChartBarDirection.Bar,
                 GroupingKind: PptxSceneChartGrouping.Clustered })
@@ -465,7 +465,7 @@ internal sealed partial class PptxRenderer
     {
         string? firstId = first.SceneAxis?.Id;
         string? secondId = second.SceneAxis?.Id;
-        return !string.IsNullOrWhiteSpace(firstId) && string.Equals(firstId, secondId, StringComparison.Ordinal);
+        return !string.IsNullOrWhiteSpace(firstId) && PptxChartAxisIdComparer.Instance.Equals(firstId, secondId);
     }
 
     private static bool IsSceneVisibleValueAxis(PptxSceneChartAxis? sceneAxis)
@@ -627,7 +627,8 @@ internal sealed partial class PptxRenderer
         string? crossId = sceneAxis?.CrossAxisId;
         if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(crossId)) return null;
         return chart?.Axes.FirstOrDefault(candidate => candidate.AxisKind == PptxSceneChartAxisKind.Category &&
-            candidate.Id == crossId && candidate.CrossAxisId == id);
+            PptxChartAxisIdComparer.Instance.Equals(candidate.Id, crossId) &&
+            PptxChartAxisIdComparer.Instance.Equals(candidate.CrossAxisId, id));
     }
 
     private static bool ResolveSceneValueAxisBottomSide(PptxSceneChartAxis? sceneAxis, bool defaultBottomSide)

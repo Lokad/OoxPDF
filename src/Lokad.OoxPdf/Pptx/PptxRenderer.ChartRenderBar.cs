@@ -316,7 +316,7 @@ internal sealed partial class PptxRenderer
         // Match the bar painter's order: columns first, then line overlays.
         // Retain each owning plot instead of rediscovering it from an ID.
         var visibleValueAxes = new List<(ChartAxisSource Axis, PptxSceneChartPlot Owner)>();
-        var visibleValueAxisIds = new HashSet<string>(StringComparer.Ordinal);
+        var visibleValueAxisIds = new HashSet<string>(PptxChartAxisIdComparer.Instance);
         foreach (var owner in ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Bar)
             .Concat(ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Line)))
         {

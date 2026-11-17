@@ -352,7 +352,7 @@ internal sealed partial class PptxRenderer
     private static async ValueTask RenderSecondaryChartValueAxisLabelsAsync(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart sceneChart, ChartValueExtents fallback, PresentationFontResolver fontResolver, List<PdfFontResource> chartFonts, Action<OoxPdfDiagnostic>? diagnosticSink = null, PptxSceneChartAxis? primarySceneAxis = null, PptxRenderContext? context = null)
     {
         ChartAxisSource rightValueAxisSource = ReadSceneSecondaryRightValueAxis(sceneChart);
-        if (primarySceneAxis is not null && rightValueAxisSource.SceneAxis is not null && string.Equals(primarySceneAxis.Id, rightValueAxisSource.SceneAxis.Id, StringComparison.Ordinal))
+        if (primarySceneAxis is not null && rightValueAxisSource.SceneAxis is not null && PptxChartAxisIdComparer.Instance.Equals(primarySceneAxis.Id, rightValueAxisSource.SceneAxis.Id))
         {
             return;
         }

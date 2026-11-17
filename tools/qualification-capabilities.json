@@ -20298,6 +20298,8 @@
     "PortablePptxInspectionUsesTheRenderingFontSource"
   ],
   "pptx-composed-axis-identity": [
+    "PptxChartAxisNumericSpellingsPreserveScaleAndGeometry",
+    "PptxChartAxisIdentityPreservesRawAndMalformedRecovery",
       "PortableRenderingComposedPlotsShareOnePrimaryAxisLabelStrip",
       "PortableRenderingComposedAxisLabelsRetainSourceVisibility",
       "PptxPrimaryValueAxisLabelsPaintOnceOnTheirSelectedSide",
