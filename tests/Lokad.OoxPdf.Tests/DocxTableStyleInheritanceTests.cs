@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxTableStyleInheritanceTests
+internal static partial class DocxTableStyleInheritanceTests
 {
     public static void DocxTableInheritanceMatchesIndependentWordProperties()
     {

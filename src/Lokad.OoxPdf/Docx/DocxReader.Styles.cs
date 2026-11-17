@@ -141,14 +141,16 @@ internal sealed partial class DocxReader
         DocxResolvedParagraphProperties? tableStyleProperties)
     {
         DocxResolvedParagraphProperties result = styles.ParagraphDefaults;
-        foreach (DocxStyle style in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
-        {
-            result = result.Merge(style.Paragraph);
-        }
-
+        // Table formatting supplies defaults below the paragraph's named style,
+        // just as it does for run properties. Direct properties remain last.
         if (tableStyleProperties is { } tableProperties)
         {
             result = result.Merge(tableProperties);
+        }
+
+        foreach (DocxStyle style in EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles))
+        {
+            result = result.Merge(style.Paragraph);
         }
 
         return result.Merge(ReadParagraphProperties(directProperties));

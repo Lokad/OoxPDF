@@ -6556,6 +6556,23 @@
     "DocxMissingPicturePreserves",
     "DiagnosticCancellationPreservesCallerToken"
   ],
+  "docx-table-paragraph-styles": [
+    "DocxTableParagraphStyles",
+    "DocxReaderTableStyleAppliesParagraphAndRunProperties",
+    "DocxReaderTableStyleRunPropertiesStayBelowParagraphAndCharacterStyles",
+    "DocxReaderTableStyleCascadesBasedOnProperties",
+    "DocxTableStyleParagraphSpacingCollapsesInCellLayout",
+    "DocxReaderCascadesParagraphSpacingAndRunSizeThroughBasedOnStyles",
+    "DocxLineSpacingInheritance",
+    "DocxConditionalTableStyles",
+    "DocxTableInheritanceMatchesIndependentWordProperties",
+    "DocxNormalTableIdentityAndOverridesMatchIndependentWord",
+    "DocxStyleToggles",
+    "DocxInlineCompositionMixedObjectsSurviveBodyCellHeaderAndFooterPlacement",
+    "PortableRenderingStaticTableOriginsRetainSourceContent",
+    "PortableRenderingDocxFinalPreservesMixedContent",
+    "PortableRenderingDocxAllMarkupPreservesMixedContent"
+  ],
   "docx-table-style-margins": [
     "DocxNormalTableIdentityAndOverridesMatchIndependentWord",
     "DocxTableNormal",
