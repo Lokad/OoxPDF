@@ -80,7 +80,8 @@ internal static class PptxSeriesOrderTests
         TestAssert.Equal(Names[index], series.Name);
         TestAssert.Equal(Ids[index], series.Index!.Value);
         TestAssert.Equal(Colors[index], series.Fill.Color);
-        TestAssert.Equal((double)index + 1, (kind == "scatterChart" ? series.YValues : series.Values).Single());
+        TestAssert.Equal<double?>((double)index + 1,
+            (kind == "scatterChart" ? series.YValuePoints : series.ValuePoints).Single().Value);
     }
 
     private static void Reorder(XDocument chart, int[] permutation)

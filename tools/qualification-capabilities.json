@@ -1,6 +1,14 @@
 {
   "pptx-indexed-cache-ownership": [
     "PptxSceneBuilderBuildsResolvedNodeLists",
+    "PptxScenePreservesChartNumericPointIndicesAndBlanks",
+    "PptxSceneMarksFallbackChartPointIndices",
+    "PptxScenePreservesChartMultiLevelCategoryPoints",
+    "PptxScenePreservesChartNumberFormatMetadata",
+    "PptxSceneInspectionSummarizesChartDataSourceStructure",
+    "PptxSeriesOrderAutomaticDefaultsFollowResolvedOrder",
+    "PptxSeriesOrderPermutationsKeepAutomaticPaintAndVisibleNames",
+    "PptxSeriesOrderExplicitAndInvalidDeclarationsRetainOwners",
     "PptxChartParsedVectorsPreserveWorkbookSidecarPoints",
     "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
     "PptxChartSeriesNamesPreserveWorkbookSidecarPoints",

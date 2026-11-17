@@ -1154,7 +1154,7 @@ internal static partial class PptxChartLegendsTests
             """);
 
         PptxSceneChartSeries lineSeries = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected line chart series.");
-        TestAssert.Equal(2, lineSeries.Categories.Count);
+        TestAssert.Equal(2, lineSeries.CategoryPoints.Count(point => !string.IsNullOrWhiteSpace(point.Text)));
         TestAssert.Equal(4, lineSeries.CategoryPoints.Count);
         TestAssert.Equal(6, lineSeries.CategoryPointCount ?? 0);
         TestAssert.Equal("6", lineSeries.CategoryPointCountValue);
@@ -1173,7 +1173,7 @@ internal static partial class PptxChartLegendsTests
         TestAssert.True(!lineSeries.CategoryPoints[2].HasText, "Expected missing category value element to remain distinguishable from an empty value.");
         TestAssert.Equal(5, lineSeries.CategoryPoints[3].Index);
         TestAssert.Equal("Omega", lineSeries.CategoryPoints[3].Text);
-        TestAssert.Equal(2, lineSeries.Values.Count);
+        TestAssert.Equal(2, lineSeries.ValuePoints.Count(point => point.Value is { } value && !double.IsNaN(value)));
         TestAssert.Equal(5, lineSeries.ValuePoints.Count);
         TestAssert.Equal(6, lineSeries.ValuePointCount ?? 0);
         TestAssert.Equal("6", lineSeries.ValuePointCountValue);
