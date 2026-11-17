@@ -1,5 +1,5 @@
 # Shared OOXML fixture packaging (T04): New-ZipPackage writes a hashtable of
-# UTF-8 entries into a fresh zip package. Dot-source this file instead of
+# UTF-8 entries with ordinal names and a fixed ZIP epoch. Dot-source this file instead of
 # copying the function into fixture generators.
 
 function New-ZipPackage {
@@ -19,8 +19,11 @@ function New-ZipPackage {
     try {
         $archive = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create, $true)
         try {
-            foreach ($name in $Entries.Keys) {
+            [string[]] $names = @($Entries.Keys)
+            [Array]::Sort($names, [StringComparer]::Ordinal)
+            foreach ($name in $names) {
                 $entry = $archive.CreateEntry($name)
+                $entry.LastWriteTime = [DateTimeOffset]::new(1980, 1, 1, 0, 0, 0, [TimeSpan]::Zero)
                 $entryStream = $entry.Open()
                 try {
                     $bytes = [System.Text.Encoding]::UTF8.GetBytes($Entries[$name])

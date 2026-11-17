@@ -77,6 +77,7 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/ClassifyPdfChartText.ps1`: classify inspected PDF text operations relative to derived chart plot boxes.
 - `tools/NewOfficeVisualFixtures.ps1`: regenerate Office-authored public fixtures.
 - `tools/NewSyntheticFixtures.ps1`: regenerate synthetic fixtures.
+- `tools/TestZipPackage.ps1`: check fixture ZIP identity, ordinal names and UTF-8 payloads; no build or render.
 - `tools/NewVisualCase.ps1`: scaffold a visual case.
 - `tools/CheckPrivateDocxMarkup.ps1`: candidate-only DOCX markup check for private cases (no Office/COM).
 - `tools/InspectDocx.ps1`: dump DOCX layout/mode inspection JSON; accepts InspectorPath/SkipBuild and an expected library hash.

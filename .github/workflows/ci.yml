@@ -109,6 +109,8 @@ jobs:
         run: |
           pwsh -NoProfile -File tools/TestQualificationFreeze.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestZipPackage.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestWorkspaceFootprint.ps1
       - name: Qualification build workspace checks
         run: |
