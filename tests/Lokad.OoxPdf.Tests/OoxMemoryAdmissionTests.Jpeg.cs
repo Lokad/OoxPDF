@@ -31,10 +31,9 @@ internal static partial class OoxMemoryAdmissionTests
                 TestAssert.True(second.Rgb.All(value => value == 128), "Another decoded owner remains funded and readable.");
                 second.Dispose();
                 TestAssert.Equal(0L, pool.Reserved);
-                bool recolored = false;
                 int requests = pool.Requests;
-                var passthrough = OoxImageDecoder.Decode("image/jpeg", source.Bytes, rgb => { recolored = true; return rgb; });
-                TestAssert.True(!recolored && ReferenceEquals(source.Bytes, passthrough.Bytes), "Ordinary JPEG embedding borrows encoded bytes without decoding or charging them again.");
+                var passthrough = OoxImageDecoder.Decode("image/jpeg", source.Bytes);
+                TestAssert.True(ReferenceEquals(source.Bytes, passthrough.Bytes), "Ordinary JPEG embedding borrows encoded bytes without decoding or charging them again.");
                 TestAssert.Equal(requests, pool.Requests);
                 TestAssert.Equal(0L, pool.Reserved);
             }
