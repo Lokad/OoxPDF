@@ -551,16 +551,8 @@ internal sealed partial class DocxRenderer
 
     private static bool IsBehindDocument(DocxFloatingDrawing drawing)
     {
-        return IsOnOffTrue(drawing.BehindDocumentValue);
-
-        bool IsOnOffTrue(string? value)
-        {
-            return value is not null &&
-                (value.Length == 0 ||
-                value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-                value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                value.Equals("on", StringComparison.OrdinalIgnoreCase));
-        }
+        // Keep the legacy empty-attribute default; share XML lexical normalization.
+        return drawing.BehindDocumentValue is { } value && (value.Length == 0 || OoxBoolean.IsTrue(value));
     }
 
     private static long ReadZOrder(string? value)

@@ -1,4 +1,18 @@
 {
+  "docx-floating-picture-layers": [
+    "PortableRenderingFloatingPictureLayersPreserveBooleanLexicalEquivalence",
+    "PortableRenderingRelatedPictureLayersShareSourceBooleanSemantics",
+    "XmlBooleanWhitespacePreservesSchemaValues",
+    "BooleanReadersPreserveVocabularyUnknownsAndMissingValues",
+    "FloatingDrawingPageIndexMatchesLegacyFiltering",
+    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames",
+    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
+    "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
+    "DocxSvgImageRendersAnchoredPicturesAndHonorsCancellation",
+    "PortableRenderingStaticPictureLinksRetainComposedFrames",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "pptx-chart-coverage-fallback": [
     "PptxChartCoverageFallbackKeepsShapeTitleAndLegendContent",
     "PptxChartCoverageSplitsKeepMeasuredAlignmentTrackingAndStyle",
