@@ -1,4 +1,11 @@
 {
+  "pptx-scalar-caps": [
+    "PptxScalarCaps",
+    "PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns",
+    "PptxSlideNumbersPreserveSourceOrderAndNumberingOrigin",
+    "PptxSlideNumbersKeepOriginFallbackAndCancellation",
+    "PdfSourceUnicodeAliasesHaveDistinctCidsAndSharedOutlines"
+  ],
   "pptx-linear-source-colors": [
     "PptxScRgb",
     "PptxSyntheticTextBoxResolvesDrawingMlColorForms",

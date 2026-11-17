@@ -286,12 +286,7 @@ internal sealed partial class PptxRenderer
             return slideNumber.ToString(CultureInfo.InvariantCulture);
         }
 
-        return NormalizeText((string?)element.Element(DrawingNamespace + "t") ?? string.Empty);
-    }
-
-    private static string NormalizeText(string text)
-    {
-        return text;
+        return (string?)element.Element(DrawingNamespace + "t") ?? string.Empty;
     }
 
     private static IReadOnlyList<TextCapsFragment> ApplyTextCaps(string text, XElement? runProperties, XElement? defaultRunProperties)
@@ -314,10 +309,11 @@ internal sealed partial class PptxRenderer
 
         var fragments = new List<TextCapsFragment>();
         var builder = new StringBuilder();
+        Span<char> uppercase = stackalloc char[2];
         bool? currentSmall = null;
-        foreach (char character in text)
+        foreach (Rune character in text.EnumerateRunes())
         {
-            bool isSmall = char.IsLetter(character) && char.IsLower(character);
+            bool isSmall = Rune.IsLetter(character) && Rune.IsLower(character);
             if (currentSmall is not null && currentSmall != isSmall)
             {
                 fragments.Add(new TextCapsFragment(builder.ToString(), currentSmall.Value ? PptxTextMetricRules.SmallCapsFontScale() : 1d));
@@ -325,7 +321,8 @@ internal sealed partial class PptxRenderer
             }
 
             currentSmall = isSmall;
-            builder.Append(char.ToUpperInvariant(character));
+            int length = Rune.ToUpperInvariant(character).EncodeToUtf16(uppercase);
+            builder.Append(uppercase[..length]);
         }
 
         if (builder.Length > 0 && currentSmall is not null)
