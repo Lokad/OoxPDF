@@ -3,7 +3,7 @@ using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxMathCenterGroupTests
+internal static partial class DocxMathCenterGroupTests
 {
     public static void DocxMathCenterGroupRetainsLocalAndGlobalAlignmentSources()
     {
@@ -94,7 +94,8 @@ internal static class DocxMathCenterGroupTests
     }
 
     private static DocxParagraph Paragraph(DocxDocument document) =>
-        DocxBlockTraversal.EnumerateBodyParagraphs(document.BodyElements).Concat(document.FooterParagraphs)
+        DocxBlockTraversal.EnumerateSourceParagraphs(document)
+            .Distinct<DocxParagraph>(ReferenceEqualityComparer.Instance)
             .Single(paragraph => paragraph.Equations.Count == 3);
 
     private static Dictionary<DocxEquation, DocxPreparedMathParagraph> Prepare(DocxParagraph paragraph) =>
@@ -117,23 +118,45 @@ internal static class DocxMathCenterGroupTests
         string paragraph = "<w:p>" + Equation("a") + Equation("b") + "<w:r><w:br/></w:r>" +
             (prose ? "<w:r><w:t>Between groups.</w:t><w:br/></w:r>" : "") + Equation("c") +
             (counter ? "<w:r><w:br/></w:r><w:fldSimple w:instr=\"PAGE\"><w:r><w:t>1</w:t></w:r></w:fldSimple>" : "") + "</w:p>";
-        const string namespaces = "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
+        const string namespaces = "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"";
+        bool staticStory = container is "header" or "footer" or "header-cell";
+        string story = container == "header-cell" ? "header" : container;
+        bool note = container is "footnote" or "endnote";
+        string Cell(string content) => "<w:tbl><w:tblPr><w:tblW w:w=\"9360\" w:type=\"dxa\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"9360\"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"9360\" w:type=\"dxa\"/></w:tcPr>" + content + "</w:tc></w:tr></w:tbl>";
+        string Box(bool floating)
+        {
+            string properties = floating ? "<wp:positionH relativeFrom=\"margin\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"margin\"><wp:posOffset>0</wp:posOffset></wp:positionV>" : "";
+            string tag = floating ? "anchor" : "inline";
+            return "<w:p><w:r><w:drawing><wp:" + tag + " distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">" + properties +
+                "<wp:extent cx=\"5080000\" cy=\"1270000\"/>" + (floating ? "<wp:wrapNone/>" : "") +
+                "<wp:docPr id=\"1\" name=\"Math box\"/><a:graphic><a:graphicData><wps:wsp><wps:txbx><w:txbxContent>" + paragraph +
+                "</w:txbxContent></wps:txbx><wps:bodyPr lIns=\"0\" tIns=\"0\" rIns=\"0\" bIns=\"0\"/></wps:wsp></a:graphicData></a:graphic></wp:" + tag + "></w:drawing></w:r></w:p>";
+        }
         var parts = new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
             ["_rels/.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
             ["word/_rels/document.xml.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"settings\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>" +
-                (container == "footer" ? "<Relationship Id=\"footer\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/>" : "") + "</Relationships>",
-            ["word/settings.xml"] = $"<w:settings {namespaces}><m:mathPr>" + (global is null ? "" : $"<m:defJc m:val=\"{global}\"/>") + "</m:mathPr></w:settings>",
+                (staticStory ? $"<Relationship Id=\"{story}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/{story}\" Target=\"{story}1.xml\"/>" : "") +
+                (note ? $"<Relationship Id=\"{story}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/{story}s\" Target=\"{story}s.xml\"/>" : "") + "</Relationships>",
+            ["word/settings.xml"] = $"<w:settings {namespaces}><m:mathPr><m:intLim m:val=\"subSup\"/><m:naryLim m:val=\"undOvr\"/>" + (global is null ? "" : $"<m:defJc m:val=\"{global}\"/>") + "</m:mathPr></w:settings>",
             ["word/document.xml"] = $"<w:document {namespaces}><w:body>" + (container switch
             {
-                "cell" => "<w:tbl><w:tblPr><w:tblW w:w=\"9360\" w:type=\"dxa\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"9360\"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"9360\" w:type=\"dxa\"/></w:tcPr>" + paragraph + "</w:tc></w:tr></w:tbl>",
-                "footer" => "<w:p><w:r><w:t>Body</w:t></w:r></w:p>",
+                "cell" => Cell(paragraph),
+                "footer" or "header" or "header-cell" => "<w:p><w:r><w:t>Body</w:t></w:r></w:p>",
+                "footnote" or "endnote" => $"<w:p><w:r><w:t>Body</w:t><w:{story}Reference w:id=\"1\"/></w:r></w:p>",
+                "inlinebox" => Box(false),
+                "floatingbox" => Box(true),
                 _ => paragraph
-            }) + "<w:sectPr>" + (container == "footer" ? "<w:footerReference w:type=\"default\" r:id=\"footer\"/>" : "") +
+            }) + "<w:sectPr>" + (staticStory ? $"<w:{story}Reference w:type=\"default\" r:id=\"{story}\"/>" : "") +
                 "<w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>"
         };
-        if (container == "footer") parts["word/footer1.xml"] = $"<w:ftr {namespaces}>{paragraph}</w:ftr>";
+        if (staticStory)
+        {
+            string tag = story == "header" ? "hdr" : "ftr";
+            parts[$"word/{story}1.xml"] = $"<w:{tag} {namespaces}>" + (container == "header-cell" ? Cell(paragraph) : paragraph) + $"</w:{tag}>";
+        }
+        if (note) parts[$"word/{story}s.xml"] = $"<w:{story}s {namespaces}><w:{story} w:id=\"1\">{paragraph}</w:{story}></w:{story}s>";
         using var stream = TestFixtures.CreateZipPackage(parts);
         using var package = OoxPackage.Open(stream, default);
         return new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final);

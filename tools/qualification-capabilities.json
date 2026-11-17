@@ -1,4 +1,23 @@
 {
+  "docx-source-default-composition": [
+    "DocxMathDocumentDefaultsReachStoryAndTextboxSources",
+    "DocxMathInheritedAlignmentMatchesLocalPaintAcrossContainers",
+    "DocxMathLocalAlignmentOverridesDocumentDefaultsAcrossContainers",
+    "DocxTabCascade",
+    "DocxMathCenterGroup",
+    "DocxParagraphLayoutUsesAuthoredLeftTabStopsBeforeDefaultGrid",
+    "DocxParagraphLayoutUsesAuthoredRightTabStops",
+    "DocxParagraphLayoutUsesAuthoredCenterTabStops",
+    "DocxParagraphLayoutUsesAuthoredDecimalTabStops",
+    "DocxParagraphLayoutDoesNotUseBarOrClearTabsAsPositioningStops",
+    "DocxInlineCompositionInheritedIntegralLimitsKeepWordContainerPlacement",
+    "PortableRenderingInheritedIntegralLimitsKeepContentDefaultsAndNeutralOrigins",
+    "DocxContainerTableGrids",
+    "DocxInlineBoxMathPreparationRetainsChildAndSiblingSourceIdentity",
+    "DocxStaticTabsShareBodyFieldOffsetsWithoutEquations",
+    "DocxStaticTabsKeepFieldsLinksHiddenOwnersAndCancellation",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "docx-note-paragraph-publication": [
     "DocxPlainFootnoteKerning",
     "DocxWrappedCalibriKerning",

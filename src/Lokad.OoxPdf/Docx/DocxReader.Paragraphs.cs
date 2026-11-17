@@ -816,7 +816,7 @@ internal sealed partial class DocxReader
 
         IReadOnlyList<DocxInlineTextBox> ReadRunTextBoxes(XElement run, int index, bool hidden, DocxRevisionInfo? revision)
         {
-            if (!hidden) return ReadInlineTextBoxes(run, styles, numbering, package, relationships,
+            if (!hidden) return ReadInlineTextBoxes(run, styles, numbering, documentSettings, package, relationships,
                 markupMode, revision, cancellationToken, index);
             foreach (var inline in EnumerateRunOwnedDrawings(run, WordprocessingDrawingNamespace + "inline", cancellationToken))
                 hiddenDrawingEquationSourceCount += CountSelectedEquationSources(inline, markupMode, cancellationToken, out _);

@@ -65,6 +65,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken)
     {
@@ -92,6 +93,7 @@ internal sealed partial class DocxReader
                 relationships,
                 styles,
                 numbering,
+                documentSettings,
                 FindSourceParagraphIndex(anchor, paragraphs),
                 FindSourceBlockIndex(anchor, bodyBlocks),
                 revision,
@@ -109,6 +111,7 @@ internal sealed partial class DocxReader
         DocxNumberingCounters numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         bool retainBalloonParagraphMark = false)
@@ -121,7 +124,7 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
-                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: null, documentSettings: null, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken, retainBalloonParagraphMark: retainBalloonParagraphMark);
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships, tableCellStyle: null, inlineReferenceCounters: null, documentSettings: documentSettings, inheritedRevision: inheritedRevision, markupMode: markupMode, cancellationToken: cancellationToken, retainBalloonParagraphMark: retainBalloonParagraphMark);
                 if (paragraph is not null)
                 {
                     bodyElements.Add(DocxBodyElementFactory.CreateParagraph(paragraph));
@@ -129,7 +132,7 @@ internal sealed partial class DocxReader
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
             {
-                DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: null, markupMode: markupMode, cancellationToken: cancellationToken, fragments: tableFragments);
+                DocxTable? table = ReadTable(scopedElement, styles, numbering, numberingCounters, package, relationships, inlineReferenceCounters: null, documentSettings: documentSettings, markupMode: markupMode, cancellationToken: cancellationToken, fragments: tableFragments);
                 if (table is not null)
                 {
                     bodyElements.Add(DocxBodyElementFactory.CreateTable(table));
@@ -210,6 +213,7 @@ internal sealed partial class DocxReader
         XElement run,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings? documentSettings,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPdfDocxMarkupMode markupMode,
@@ -265,6 +269,7 @@ internal sealed partial class DocxReader
                     new DocxNumberingCounters(),
                     package,
                     relationships,
+                    documentSettings,
                     markupMode,
                     cancellationToken)
             });

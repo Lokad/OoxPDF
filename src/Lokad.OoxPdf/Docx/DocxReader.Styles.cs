@@ -662,7 +662,7 @@ internal sealed partial class DocxReader
                 Spacing.Merge(other.Spacing),
                 KeepRules.Merge(other.KeepRules),
                 Indent.Merge(other.Indent),
-                other.TabStops.Count != 0 ? other.TabStops : TabStops,
+                MergeTabStops(TabStops, other.TabStops),
                 other.SnapToGrid ?? SnapToGrid,
                 other.SnapToGridValue ?? SnapToGridValue,
                 other.PageBreakBefore ?? PageBreakBefore,
@@ -674,6 +674,20 @@ internal sealed partial class DocxReader
                 NumberingId = other.NumberingId ?? NumberingId,
                 NumberingLevel = other.NumberingLevel ?? NumberingLevel
             };
+        }
+
+        private static IReadOnlyList<DocxTabStop> MergeTabStops(
+            IReadOnlyList<DocxTabStop> inherited, IReadOnlyList<DocxTabStop> current)
+        {
+            if (current.Count == 0) return inherited;
+            if (inherited.Count == 0) return current;
+            // Tabs are additive across the property cascade. A higher stop,
+            // including clear, replaces only the inherited stop at its position.
+            // Keep the authored records (and clear markers) for inspection.
+            var positions = current.Where(stop => stop.PositionPoints is not null)
+                .Select(stop => stop.PositionPoints!.Value).ToHashSet();
+            return inherited.Where(stop => stop.PositionPoints is not { } position || !positions.Contains(position))
+                .Concat(current).ToArray();
         }
     }
 }

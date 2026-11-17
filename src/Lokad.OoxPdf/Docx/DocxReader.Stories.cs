@@ -14,12 +14,13 @@ internal sealed partial class DocxReader
     // separately and repeated across references and sections. One entry per unique
     // part per Read: XML comes from the shared package cache, body elements and
     // drawings are each built once, and every referencing type reuses them. Results
-    // are deterministic functions of (part bytes, styles, numbering, markup mode),
+    // are deterministic functions of (part bytes, styles, numbering, document settings, markup mode),
     // all constant within a Read, so sharing is exact. Diagnostics still fire once
     // per part via the shared warned-parts set.
-    private sealed class RelatedStoryPartCache(IMemoryReservation? modelStorage)
+    private sealed class RelatedStoryPartCache(IMemoryReservation? modelStorage, DocxDocumentSettings documentSettings)
     {
         private readonly Dictionary<string, ParsedRelatedStoryPart> parts = new(StringComparer.OrdinalIgnoreCase);
+        public DocxDocumentSettings DocumentSettings => documentSettings;
 
         public IEnumerable<DocxEquationPartSource> EnumerateEquationParts(OoxPdfDocxMarkupMode mode, CancellationToken token)
         {
@@ -132,6 +133,7 @@ internal sealed partial class DocxReader
                 new DocxNumberingCounters(),
                 package,
                 parsed.Relationships,
+                storyCache.DocumentSettings,
                 markupMode,
                 cancellationToken);
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
@@ -184,7 +186,7 @@ internal sealed partial class DocxReader
             WarnStoryMustUnderstandOnce(parsed, part.Name, diagnosticSink, warnedParts);
             parsed.Relationships ??= package.GetRelationships(part.Name, cancellationToken)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
-            parsed.Drawings ??= ReadFloatingDrawings(parsed.Xml, package, parsed.Relationships, styles, numbering, markupMode, cancellationToken);
+            parsed.Drawings ??= ReadFloatingDrawings(parsed.Xml, package, parsed.Relationships, styles, numbering, storyCache.DocumentSettings, markupMode, cancellationToken);
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";
             drawings[type] = parsed.Drawings;
         }
@@ -204,6 +206,7 @@ internal sealed partial class DocxReader
         string documentPartName,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
@@ -236,9 +239,9 @@ internal sealed partial class DocxReader
                 }
             }
         }
-        return ReadCommentStories(package, documentPartName, styles, numbering, markupMode, cancellationToken, diagnosticSink, warnedParts, modelStorage)
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, FootnotesRelationshipType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings, modelStorage))
-            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, EndnotesRelationshipType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings, modelStorage))
+        return ReadCommentStories(package, documentPartName, styles, numbering, documentSettings, markupMode, cancellationToken, diagnosticSink, warnedParts, modelStorage)
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, documentSettings, FootnotesRelationshipType, DocxRelatedStoryKind.Footnote, "footnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings, modelStorage))
+            .Concat(ReadRelatedStories(package, documentPartName, styles, numbering, documentSettings, EndnotesRelationshipType, DocxRelatedStoryKind.Endnote, "endnote", markupMode, cancellationToken, null, diagnosticSink, warnedParts, noteReferences, settings, modelStorage))
             .ToArray();
     }
 
@@ -247,6 +250,7 @@ internal sealed partial class DocxReader
         string documentPartName,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
@@ -259,6 +263,7 @@ internal sealed partial class DocxReader
             documentPartName,
             styles,
             numbering,
+            documentSettings,
             CommentsRelationshipType,
             DocxRelatedStoryKind.Comment,
             "comment",
@@ -275,6 +280,7 @@ internal sealed partial class DocxReader
         string documentPartName,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings documentSettings,
         string relationshipType,
         DocxRelatedStoryKind kind,
         string storyElementName,
@@ -372,7 +378,7 @@ internal sealed partial class DocxReader
                 effectiveStory = new XElement(storyElement.Name, storyElement.Attributes(),
                     CreateDefaultNoteSeparatorParagraph(type));
             }
-            DocxRelatedStory story = ReadRelatedStory(kind, part.Name, effectiveStory, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
+            DocxRelatedStory story = ReadRelatedStory(kind, part.Name, effectiveStory, styles, numbering, numberingCounters, package, relationships, documentSettings, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
             if (story.Id is { } storyId && literalTargetIds?.Contains(storyId) == true && noteReferences is not null &&
                 noteReferences.TryGetValue((kind, storyId), out var literalReference) &&
                 literalReference.CustomMark is { } literalMark &&
@@ -426,7 +432,7 @@ internal sealed partial class DocxReader
                 new XAttribute(WordprocessingNamespace + "type", "separator"),
                 new XAttribute(WordprocessingNamespace + "id", "0"),
                 CreateDefaultNoteSeparatorParagraph("separator"));
-            DocxRelatedStory defaultSeparator = ReadRelatedStory(kind, part.Name, syntheticSeparator, styles, numbering, numberingCounters, package, relationships, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
+            DocxRelatedStory defaultSeparator = ReadRelatedStory(kind, part.Name, syntheticSeparator, styles, numbering, numberingCounters, package, relationships, documentSettings, markupMode, cancellationToken, commentThreadMetadataByParagraphId);
             defaultSeparator = defaultSeparator with { IsSynthetic = true };
             if (defaultSeparator.BodyElements.Count > 0)
             {
@@ -461,6 +467,7 @@ internal sealed partial class DocxReader
         DocxNumberingCounters numberingCounters,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxDocumentSettings documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken,
         IReadOnlyDictionary<string, DocxCommentThreadMetadata>? commentThreadMetadataByParagraphId)
@@ -481,6 +488,7 @@ internal sealed partial class DocxReader
             numberingCounters,
             package,
             relationships,
+            documentSettings,
             markupMode,
             cancellationToken,
             retainBalloonParagraphMark: kind == DocxRelatedStoryKind.Comment && markupMode == OoxPdfDocxMarkupMode.AllMarkup &&
@@ -496,7 +504,7 @@ internal sealed partial class DocxReader
                 ? paragraph with { Paragraph = paragraph.Paragraph with { ParagraphMarkRun = null } }
                 : element).ToArray();
         }
-        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships, styles, numbering, markupMode, cancellationToken);
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships, styles, numbering, documentSettings, markupMode, cancellationToken);
         string? paragraphId = kind == DocxRelatedStoryKind.Comment ? ReadCommentParagraphId(story) : null;
         DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
             ? metadata

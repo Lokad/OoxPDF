@@ -84,7 +84,7 @@ internal sealed partial class DocxReader
             cancellationToken.ThrowIfCancellationRequested();
             // one related-story cache per Read, shared by document headers/footers,
             // body section breaks, and every section's page settings.
-            var storyCache = new RelatedStoryPartCache(modelStorage);
+            var storyCache = new RelatedStoryPartCache(modelStorage, documentSettings);
             DocxSectionBreakElement? finalSectionBreak = sectionProperties is null
                 ? null
                 : ReadSectionBreak(sectionProperties, package, internalRelationships, styles, numbering, settings, revisionFilteringMarkupMode, cancellationToken, storyCache, null);
@@ -105,8 +105,8 @@ internal sealed partial class DocxReader
             IReadOnlyDictionary<string, IReadOnlyList<DocxFloatingDrawing>> footerDrawingsByType = ReadReferencedHeaderFooterFloatingDrawingsByType(document, package, internalRelationships, styles, numbering, FooterRelationshipType, "footerReference", revisionFilteringMarkupMode, cancellationToken, storyCache, diagnosticSink, warnedMustUnderstandParts);
             IReadOnlyList<DocxParagraph> headers = SelectDefaultHeaderFooterParagraphs(headersByType);
             IReadOnlyList<DocxParagraph> footers = SelectDefaultHeaderFooterParagraphs(footersByType);
-            IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts, bodyElements, settings, modelStorage);
-            IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, styles, numbering, revisionFilteringMarkupMode, cancellationToken);
+            IReadOnlyList<DocxRelatedStory> relatedStories = ReadRelatedStories(package, documentPart.Name, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken, diagnosticSink, warnedMustUnderstandParts, bodyElements, settings, modelStorage);
+            IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document, package, relationships, styles, numbering, documentSettings, revisionFilteringMarkupMode, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
             IReadOnlyList<DocxEquationPartSource> ReadEquationParts()
@@ -365,6 +365,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
         CancellationToken cancellationToken)
     {
@@ -399,6 +400,7 @@ internal sealed partial class DocxReader
                 relationships,
                 styles,
                 numbering,
+                documentSettings,
                 FindSourceParagraphIndex(anchor, paragraphs),
                 FindSourceBlockIndex(anchor, bodyBlocks),
                 revision,
@@ -415,6 +417,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings? documentSettings,
         int? sourceParagraphIndex,
         int? sourceBlockIndex,
         DocxRevisionInfo? revision,
@@ -444,6 +447,7 @@ internal sealed partial class DocxReader
             anchor,
             styles,
             numbering,
+            documentSettings,
             package,
             relationships,
             markupMode,
@@ -517,6 +521,7 @@ internal sealed partial class DocxReader
         XElement anchor,
         DocxStyleSet styles,
         DocxNumberingSet numbering,
+        DocxDocumentSettings? documentSettings,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPdfDocxMarkupMode markupMode,
@@ -536,6 +541,7 @@ internal sealed partial class DocxReader
             new DocxNumberingCounters(),
             package,
             relationships,
+            documentSettings,
             markupMode,
             cancellationToken);
     }
