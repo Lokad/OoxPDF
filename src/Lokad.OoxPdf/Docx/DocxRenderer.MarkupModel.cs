@@ -13,7 +13,7 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    private readonly record struct DocxMarkupBalloonRgb(byte Red, byte Green, byte Blue);
+    internal readonly record struct DocxMarkupBalloonRgb(byte Red, byte Green, byte Blue);
 
     private readonly record struct DocxRevisionMarkupPalette(
         DocxMarkupBalloonRgb FillRgb,

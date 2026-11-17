@@ -2149,7 +2149,7 @@ internal static class DocxMarkupTests
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "rg"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((75, 172, 198), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
     }
 
@@ -2175,7 +2175,7 @@ internal static class DocxMarkupTests
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((112, 173, 71), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
     }
 
@@ -2241,7 +2241,7 @@ internal static class DocxMarkupTests
         TestAssert.True(
             layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
             "Simple-markup layout should retain placed footnote revision candidates for margin change bars.");
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((112, 173, 71), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
     }
 
@@ -2287,7 +2287,7 @@ internal static class DocxMarkupTests
         TestAssert.True(
             layout.Pages.SelectMany(page => page.PlacedRelatedItems).Any(item => item.RevisionCount != 0),
             "Simple-markup layout should retain placed endnote revision candidates for margin change bars.");
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((112, 173, 71), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
     }
 
@@ -2316,7 +2316,7 @@ internal static class DocxMarkupTests
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((112, 173, 71), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
     }
 
@@ -2349,7 +2349,7 @@ internal static class DocxMarkupTests
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot([revision]), "rg"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((112, 173, 71), "rg"), page.Content);
         TestAssert.Contains(" 1.5 ", page.Content);
     }
 

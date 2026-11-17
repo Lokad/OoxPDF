@@ -44,7 +44,7 @@ internal static partial class DocxCommentsTests
         var source = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.AllMarkup);
         var comments = new[] { (Id: (string?)"1", Author: (string?)"Public reviewer") };
         var slots = DocxRenderer.BuildWordReviewAuthorPalette(source, comments, default).CommentSlots;
-        TestAssert.Equal(((byte)213, (byte)237, (byte)255), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(213, 237, 255), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")));
         var owner = DocxBlockTraversal.EnumerateBodyParagraphs(source).First(p => p.Runs.Any(r => r.Revision is not null));
         var unowned = owner with { Runs = owner.Runs.Select(r => r with { Revision = null, Revisions = [] }).ToArray() };
         var changed = source with
@@ -53,7 +53,7 @@ internal static partial class DocxCommentsTests
                 ? new DocxParagraphElement(unowned) : element).ToArray()
         };
         slots = DocxRenderer.BuildWordReviewAuthorPalette(changed, comments, default).CommentSlots;
-        TestAssert.Equal(((byte)248, (byte)220, (byte)221), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(248, 220, 221), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")));
         TestAssert.True(unowned.Revisions.Count != 0, "Unowned paragraph metadata cannot invent a text-author slot.");
         slots = DocxRenderer.BuildCommentAuthorPaletteSlots([("1", "Reviewer"), ("2", "reviewer"), ("3", "Reviewer")]);
         TestAssert.Equal(0, slots["1"]);

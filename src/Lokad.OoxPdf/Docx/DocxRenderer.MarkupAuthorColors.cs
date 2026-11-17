@@ -195,30 +195,14 @@ internal sealed partial class DocxRenderer
         return commentId is not null && slotsById.TryGetValue(commentId, out int slot) ? slot : 0;
     }
 
-    private static DocxMarkupBalloonRgb CommentAuthorFillRgb(int slot)
+    internal static DocxMarkupBalloonRgb CommentAuthorFillRgb(int slot)
     {
         return CommentAuthorFillPalette[PositivePaletteIndex(slot, CommentAuthorFillPalette.Length)];
     }
 
-    private static DocxMarkupBalloonRgb CommentAuthorStrokeRgb(int slot)
+    internal static DocxMarkupBalloonRgb CommentAuthorStrokeRgb(int slot)
     {
         return CommentAuthorStrokePalette[PositivePaletteIndex(slot, CommentAuthorStrokePalette.Length)];
-    }
-
-    internal static (byte Red, byte Green, byte Blue) ResolveCommentAuthorFillSnapshot(
-        IReadOnlyDictionary<string, int> slotsById,
-        string? commentId)
-    {
-        DocxMarkupBalloonRgb color = CommentAuthorFillRgb(ResolveCommentAuthorSlot(slotsById, commentId));
-        return (color.Red, color.Green, color.Blue);
-    }
-
-    internal static (byte Red, byte Green, byte Blue) ResolveCommentAuthorStrokeSnapshot(
-        IReadOnlyDictionary<string, int> slotsById,
-        string? commentId)
-    {
-        DocxMarkupBalloonRgb color = CommentAuthorStrokeRgb(ResolveCommentAuthorSlot(slotsById, commentId));
-        return (color.Red, color.Green, color.Blue);
     }
 
     private static bool TryParseCommentAuthorPaletteId(string? id, out int numericId)

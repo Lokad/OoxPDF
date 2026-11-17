@@ -1190,15 +1190,15 @@ internal static partial class DocxCommentsTests
             ("4", "Mango"),
         ]);
 
-        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "3"));
-        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "3"));
-        TestAssert.Equal(((byte)248, (byte)220, (byte)221), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"));
-        TestAssert.Equal(((byte)209, (byte)52, (byte)56), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "1"));
-        TestAssert.Equal(((byte)213, (byte)237, (byte)255), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "2"));
-        TestAssert.Equal(((byte)0, (byte)120, (byte)212), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "2"));
-        TestAssert.Equal(((byte)234, (byte)223, (byte)244), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "4"));
-        TestAssert.Equal(((byte)236, (byte)253, (byte)215), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "5"));
-        TestAssert.Equal(((byte)248, (byte)220, (byte)221), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "unknown"));
+        TestAssert.Equal(DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "3")));
+        TestAssert.Equal(DocxRenderer.CommentAuthorStrokeRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")), DocxRenderer.CommentAuthorStrokeRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "3")));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(248, 220, 221), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(209, 52, 56), DocxRenderer.CommentAuthorStrokeRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(213, 237, 255), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "2")));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(0, 120, 212), DocxRenderer.CommentAuthorStrokeRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "2")));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(234, 223, 244), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "4")));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(236, 253, 215), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "5")));
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(248, 220, 221), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "unknown")));
     }
 
     public static void DocxCommentAuthorPaletteCyclesAfterTwentyDistinctAuthors()
@@ -1211,10 +1211,10 @@ internal static partial class DocxCommentsTests
 
         IReadOnlyDictionary<string, int> slots = DocxRenderer.BuildCommentAuthorPaletteSlots(comments);
 
-        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "21"));
-        TestAssert.Equal(DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "1"), DocxRenderer.ResolveCommentAuthorStrokeSnapshot(slots, "21"));
+        TestAssert.Equal(DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")), DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "21")));
+        TestAssert.Equal(DocxRenderer.CommentAuthorStrokeRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "1")), DocxRenderer.CommentAuthorStrokeRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "21")));
         TestAssert.True(
-            !DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "2").Equals(DocxRenderer.ResolveCommentAuthorFillSnapshot(slots, "21")),
+            !DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "2")).Equals(DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots, "21"))),
             "The twenty-first distinct author should cycle back to the first palette entry.");
     }
 
@@ -1981,7 +1981,7 @@ internal static partial class DocxCommentsTests
 
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Paragraphs.Single().Revisions), "RG"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((75, 172, 198), "RG"), page.Content); // Fixture's tied authors select A.
         TestAssert.Contains(" re B*", page.Content);
         TestAssert.Contains(" l S", page.Content);
         TestAssert.Contains("Inserted text", DocxRenderer.BuildRevisionBalloonPreview(document.Paragraphs.Single().Revisions));
@@ -2121,32 +2121,34 @@ internal static partial class DocxCommentsTests
 
     public static void DocxMarkupRevisionColorsUseStableAuthorBuckets()
     {
-        (byte Red, byte Green, byte Blue) first = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var first = DocxRenderer.ResolveRevisionAuthorColor(
         [
             new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins", null, [])
         ]);
-        (byte Red, byte Green, byte Blue) firstAgain = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var firstAgain = DocxRenderer.ResolveRevisionAuthorColor(
         [
             new DocxRevisionInfo(DocxRevisionKind.Deletion, "2", "Reviewer A", "2026-06-11T00:00:00Z", "del", null, [])
         ]);
-        (byte Red, byte Green, byte Blue) second = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var second = DocxRenderer.ResolveRevisionAuthorColor(
         [
             new DocxRevisionInfo(DocxRevisionKind.Insertion, "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins", null, [])
         ]);
-        (byte Red, byte Green, byte Blue) firstWithEquivalentWhitespace = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var firstWithEquivalentWhitespace = DocxRenderer.ResolveRevisionAuthorColor(
         [
             new DocxRevisionInfo(DocxRevisionKind.Deletion, "4", "  reviewer\t  a  ", "2026-06-12T00:00:00Z", "del", null, [])
         ]);
-        (byte Red, byte Green, byte Blue) composedUnicode = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var composedUnicode = DocxRenderer.ResolveRevisionAuthorColor(
         [
             new DocxRevisionInfo(DocxRevisionKind.Insertion, "5", "JOS\u00c9", "2026-06-12T00:00:00Z", "ins", null, [])
         ]);
-        (byte Red, byte Green, byte Blue) decomposedUnicode = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var decomposedUnicode = DocxRenderer.ResolveRevisionAuthorColor(
         [
             new DocxRevisionInfo(DocxRevisionKind.Deletion, "6", "Jose\u0301", "2026-06-12T00:00:00Z", "del", null, [])
         ]);
-        (byte Red, byte Green, byte Blue) fallback = DocxRenderer.ResolveRevisionAuthorColorSnapshot([]);
+        var fallback = DocxRenderer.ResolveRevisionAuthorColor([]);
 
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(247, 150, 70), first);
+        TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(75, 172, 198), second);
         TestAssert.Equal(first, firstAgain);
         TestAssert.Equal(first, firstWithEquivalentWhitespace);
         TestAssert.Equal(composedUnicode, decomposedUnicode);
@@ -2159,14 +2161,14 @@ internal static partial class DocxCommentsTests
         var reviewerAInsertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "1", "Reviewer A", "2026-06-10T00:00:00Z", "ins", null, []);
         var reviewerADeletion = new DocxRevisionInfo(DocxRevisionKind.Deletion, "2", "Reviewer A", "2026-06-11T00:00:00Z", "del", null, []);
         var reviewerBInsertion = new DocxRevisionInfo(DocxRevisionKind.Insertion, "3", "Reviewer B", "2026-06-12T00:00:00Z", "ins", null, []);
-        (byte Red, byte Green, byte Blue) reviewerA = DocxRenderer.ResolveRevisionAuthorColorSnapshot([reviewerAInsertion]);
-        (byte Red, byte Green, byte Blue) dominantA = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var reviewerA = DocxRenderer.ResolveRevisionAuthorColor([reviewerAInsertion]);
+        var dominantA = DocxRenderer.ResolveRevisionAuthorColor(
             [reviewerBInsertion, reviewerAInsertion, reviewerADeletion]);
-        (byte Red, byte Green, byte Blue) dominantAReordered = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var dominantAReordered = DocxRenderer.ResolveRevisionAuthorColor(
             [reviewerADeletion, reviewerBInsertion, reviewerAInsertion]);
-        (byte Red, byte Green, byte Blue) tiedAuthors = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var tiedAuthors = DocxRenderer.ResolveRevisionAuthorColor(
             [reviewerBInsertion, reviewerAInsertion]);
-        (byte Red, byte Green, byte Blue) tiedAuthorsReordered = DocxRenderer.ResolveRevisionAuthorColorSnapshot(
+        var tiedAuthorsReordered = DocxRenderer.ResolveRevisionAuthorColor(
             [reviewerAInsertion, reviewerBInsertion]);
 
         TestAssert.Equal(reviewerA, dominantA);

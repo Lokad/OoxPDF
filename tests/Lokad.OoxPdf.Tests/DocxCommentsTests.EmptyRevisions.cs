@@ -75,7 +75,8 @@ internal static partial class DocxCommentsTests
                 TestAssert.Contains(DocxTests.FormatPdfRgb(fill, "rg"), page.Content);
                 var comment = document.RelatedStories.Single(story => story.Kind == DocxRelatedStoryKind.Comment && story.Id == "0");
                 var slots = DocxRenderer.BuildWordReviewAuthorPalette(document, [("0", comment.CommentMetadata!.Author)], default);
-                TestAssert.Equal(fill, DocxRenderer.ResolveCommentAuthorFillSnapshot(slots.CommentSlots, "0"));
+                TestAssert.Equal(new DocxRenderer.DocxMarkupBalloonRgb(fill.Red, fill.Green, fill.Blue),
+                    DocxRenderer.CommentAuthorFillRgb(DocxRenderer.ResolveCommentAuthorSlot(slots.CommentSlots, "0")));
             }
             TestAssert.True(runs.SequenceEqual(paragraph.Runs, ReferenceEqualityComparer.Instance),
                 "Author registration cannot replace visible source runs or add layout content.");

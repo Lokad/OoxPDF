@@ -12,12 +12,12 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class DocxTests
 {
-    internal static void AssertSimpleMarkupTableRowChangeBarRendered(DocxDocument document, DocxTable table, string flowName)
+    internal static void AssertSimpleMarkupTableRowChangeBarRendered(DocxDocument document, string flowName)
     {
         string content = string.Concat(new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable()
             .Select(page => page.Content));
-        string color = FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(table.Rows.Single().Revisions), "rg");
+        string color = FormatPdfRgb((112, 173, 71), "rg"); // The table controls use author Reviewer.
         TestAssert.True(content.Contains(color, StringComparison.Ordinal), "Simple-markup should draw a row revision color for " + flowName + ".");
         TestAssert.True(content.Contains(" 1.5 ", StringComparison.Ordinal), "Simple-markup should draw a narrow row change bar for " + flowName + ".");
     }

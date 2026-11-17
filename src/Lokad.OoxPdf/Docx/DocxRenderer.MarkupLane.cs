@@ -604,16 +604,10 @@ internal sealed partial class DocxRenderer
             TitleRgb: MixRgb(stroke, new DocxMarkupBalloonRgb(0, 0, 0), 0.35d));
     }
 
-    private static DocxMarkupBalloonRgb ResolveRevisionAuthorColor(IReadOnlyList<DocxRevisionInfo> revisions)
+    internal static DocxMarkupBalloonRgb ResolveRevisionAuthorColor(IReadOnlyList<DocxRevisionInfo> revisions)
     {
         int bucket = ResolveRevisionAuthorBucket(ResolveRevisionAuthorBucketKey(revisions));
         return RevisionAuthorColorPalette[bucket];
-    }
-
-    internal static (byte Red, byte Green, byte Blue) ResolveRevisionAuthorColorSnapshot(IReadOnlyList<DocxRevisionInfo> revisions)
-    {
-        DocxMarkupBalloonRgb color = ResolveRevisionAuthorColor(revisions);
-        return (color.Red, color.Green, color.Blue);
     }
 
     private static string ResolveRevisionAuthorBucketKey(IReadOnlyList<DocxRevisionInfo> revisions)

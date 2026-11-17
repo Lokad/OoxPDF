@@ -1337,7 +1337,7 @@ internal static class DocxTablesMarkupTests
         PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.SimpleMarkup, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.True(layout.Pages.SelectMany(page => page.Items).Any(item => item.Kind == "TableRow" && item.RevisionCount != 0), "Simple-markup layout should treat structural table-row revisions as changed items.");
-        TestAssert.Contains(DocxTests.FormatPdfRgb(DocxRenderer.ResolveRevisionAuthorColorSnapshot(document.Tables.Single().Rows.Single().Revisions), "rg"), page.Content);
+        TestAssert.Contains(DocxTests.FormatPdfRgb((247, 150, 70), "rg"), page.Content); // Row author B.
         TestAssert.Contains(" 1.5 ", page.Content);
     }
 
@@ -1352,7 +1352,7 @@ internal static class DocxTablesMarkupTests
             FloatingDrawings = [floatingDrawing],
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
-        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(floatingDocument, floatingTable, "floating text-box table");
+        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(floatingDocument, "floating text-box table");
 
         DocxTable staticTable = DocxTests.CreateTableRevisionBalloonProbeTable("Static header table", "ss");
         DocxPageSettings staticSettings = DocxPageSettings.Empty with
@@ -1369,7 +1369,7 @@ internal static class DocxTablesMarkupTests
             PageSettings = staticSettings,
             MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
         };
-        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(staticDocument, staticTable, "static header table");
+        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(staticDocument, "static header table");
 
         DocxParagraph bodyParagraph = DocxTests.CreateDocxLayoutParagraph("Body note marker", 10d, 12d) with
         {
@@ -1399,7 +1399,7 @@ internal static class DocxTablesMarkupTests
                 RelatedStories = [footnoteStory],
                 MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
             };
-        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(footnoteDocument, footnoteTable, "placed footnote table");
+        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(footnoteDocument, "placed footnote table");
 
         DocxParagraph endnoteAnchor = DocxTests.CreateDocxLayoutParagraph("Body endnote marker", 10d, 12d) with
         {
@@ -1429,7 +1429,7 @@ internal static class DocxTablesMarkupTests
                 RelatedStories = [endnoteStory],
                 MarkupMode = OoxPdfDocxMarkupMode.SimpleMarkup
             };
-        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(endnoteDocument, endnoteTable, "placed endnote table");
+        DocxTests.AssertSimpleMarkupTableRowChangeBarRendered(endnoteDocument, "placed endnote table");
     }
 
     public static void DocxAllMarkupRendererPlacesFloatingTextBoxTableRevisionBalloons()
