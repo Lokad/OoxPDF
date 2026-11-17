@@ -292,6 +292,17 @@ internal static partial class PptxChartsTests
             .RenderPagesAsync(new PptxReader().Read(package, default, collector.Add), package, collector.Add, default)
             .ToBlockingEnumerable().Single();
 
+        string legendText = ReadRoleText("CL");
+        string[] legendNames = Regex.Matches(legendText, "PrimaryA|PrimaryB|Secondary").Select(match => match.Value).ToArray();
+        TestAssert.Equal(legendText, string.Concat(legendNames));
+        TestAssert.True(legendNames.Order(StringComparer.Ordinal).SequenceEqual(new[] { "PrimaryA", "PrimaryB", "Secondary" }),
+            "Every complete legend name appears once, without added or missing characters.");
+        string captionText = ReadRoleText("CBD");
+        string[] captions = Regex.Matches(captionText, @"(?:PrimaryA|PrimaryB|Secondary)\|[0-9]+").Select(match => match.Value).ToArray();
+        TestAssert.Equal(captionText, string.Concat(captions));
+        TestAssert.True(captions.Order(StringComparer.Ordinal).SequenceEqual(new[]
+            { "PrimaryA|2", "PrimaryA|4", "PrimaryB|1", "PrimaryB|3", "Secondary|0", "Secondary|20" }),
+            "Every source caption keeps its exact name and complete numeric value.");
         var names = new[] { "Primary A", "Primary B", "Secondary" };
         double previousRight = double.NegativeInfinity;
         foreach (string name in names)
@@ -325,6 +336,10 @@ internal static partial class PptxChartsTests
         TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 17, "Combo bar charts should emit text for primary and secondary labels, axes, and legend entries.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Supported bar charts should not emit unsupported chart diagnostics.");
+
+        string ReadRoleText(string prefix) => string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, false,
+            fontResourceFilter: name => name.StartsWith(prefix, StringComparison.Ordinal))
+            .SelectMany(show => show.Text).Where(character => !char.IsWhiteSpace(character)));
     }
 
     public static void PptxSyntheticChartAxisTickLabelOptionsRender()
