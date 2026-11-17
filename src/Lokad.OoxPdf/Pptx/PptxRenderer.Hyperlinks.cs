@@ -114,7 +114,7 @@ internal sealed partial class PptxRenderer
 
         if (!renderedFonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered) ||
             (rendered.Font is null && rendered.FallbackFace is null) ||
-            !TryGetSpanLinkRect(run, rendered.Font, out double x, out double y, out double width, out double height))
+            !TryGetSpanLinkRect(run, rendered.Font, context.Document, out double x, out double y, out double width, out double height))
         {
             return;
         }

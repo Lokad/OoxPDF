@@ -1,4 +1,22 @@
 {
+  "pptx-text-link-clipping": [
+    "PptxRunHyperlinksKeepVisibleHorizontalAndSlideCrops",
+    "PptxTransformedRunHyperlinksStayInsidePhysicalPaintClips",
+    "PptxRunExternalHyperlinkEmitsUriAnnotation",
+    "PptxRunHyperlinkBoundaryKeepsAdjacentLinksSeparate",
+    "PptxRunInternalSlideHyperlinkEmitsDestination",
+    "PptxRunHyperlinkMissingRelationshipEmitsSingleDiagnostic",
+    "PptxRunHyperlinkActionWithoutTargetEmitsDiagnostic",
+    "PptxTableCellRunHyperlinkEmitsUriAnnotation",
+    "PptxRotatedRunHyperlinkUsesTransformedBox",
+    "PptxFallbackRunHyperlinksFollowClippedText",
+    "PptxFallbackTextKeepsMeasuredAdvances",
+    "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
+    "PptxRotatedTextPaintKeepsDeclaredDeviceClip",
+    "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation"
+  ],
   "managed-source-label-geometry": [
     "PortableRenderingBlankLeadingPageKeepsContinuationFooters",
     "PortableRenderingColumnFallbackKeepsBodyAndFooterInk",

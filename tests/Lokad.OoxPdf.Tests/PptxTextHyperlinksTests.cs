@@ -9,7 +9,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxTextHyperlinksTests
+internal static partial class PptxTextHyperlinksTests
 {
     public static void PptxFallbackTextKeepsMeasuredAdvances()
     {
@@ -301,7 +301,12 @@ internal static class PptxTextHyperlinksTests
     }
     private static string WriteRunLinkPackage(string paragraphXml, string slideRelsXml, string bodyProperties = "<a:bodyPr/>")
     {
-        return TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        return TestFixtures.WriteTempPackage(".pptx", RunLinkPackageParts(paragraphXml, slideRelsXml, bodyProperties));
+    }
+
+    private static Dictionary<string, string> RunLinkPackageParts(string paragraphXml, string slideRelsXml, string bodyProperties)
+    {
+        return new Dictionary<string, string>
         {
             ["[Content_Types].xml"] = PptxTests.BasicContentTypes(),
             ["_rels/.rels"] = PptxTests.PackageRelationship(),
@@ -329,7 +334,7 @@ internal static class PptxTextHyperlinksTests
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
-        });
+        };
     }
 
     private sealed class LinkTestFontResolver : IFontResolver

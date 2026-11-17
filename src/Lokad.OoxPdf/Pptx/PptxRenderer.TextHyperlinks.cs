@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        if (!TryGetSpanLinkRect(run, embedded, out double x, out double y, out double width, out double height))
+        if (!TryGetSpanLinkRect(run, embedded, scope.Context.Document, out double x, out double y, out double width, out double height))
         {
             return;
         }
@@ -78,6 +78,7 @@ internal sealed partial class PptxRenderer
     private static bool TryGetSpanLinkRect(
         TextRun run,
         PdfEmbeddedFont? embedded,
+        PptxDocument document,
         out double x,
         out double y,
         out double width,
@@ -116,15 +117,15 @@ internal sealed partial class PptxRenderer
             y1 = frame.Y + frame.Height;
         }
 
-        if (x1 - x0 <= 0d || y1 - y0 <= 0d)
-        {
-            return false;
-        }
-
-        x = x0;
-        y = y0;
-        width = x1 - x0;
-        height = y1 - y0;
-        return true;
+        // Paint clips precede rotation, while unrotated flips transform the
+        // local clip. Navigation uses that same physical frame and slide crop.
+        var clip = new PdfRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+        if (!TextClipUsesPhysicalCoordinates(run) && HasTextTransform(run))
+            clip = TransformedRectangleBounds(clip, TextTransformMatrix(run));
+        x0 = Math.Max(x0, clip.X);
+        y0 = Math.Max(y0, clip.Y);
+        x1 = Math.Min(x1, clip.X + clip.Width);
+        y1 = Math.Min(y1, clip.Y + clip.Height);
+        return TryIntersectWithSlideBounds(x0, y0, x1 - x0, y1 - y0, document, out x, out y, out width, out height);
     }
 }

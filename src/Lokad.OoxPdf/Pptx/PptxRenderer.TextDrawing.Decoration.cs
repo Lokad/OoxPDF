@@ -163,11 +163,14 @@ internal sealed partial class PptxRenderer
         // Rotated runs carry a device-space clip. Establish it before changing
         // coordinates so an inverse bounding box cannot enlarge its footprint.
         // Preserve the existing local-clip convention for unrotated flips.
-        bool deviceClip = Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance;
+        bool deviceClip = TextClipUsesPhysicalCoordinates(run);
         if (deviceClip) graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         if (HasTextTransform(run)) ApplyTextTransform(graphics, run);
         if (!deviceClip) graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
     }
+
+    private static bool TextClipUsesPhysicalCoordinates(TextRun run) =>
+        Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance;
 
     private static (double A, double B, double C, double D, double E, double F) TextTransformMatrix(TextRun run) =>
         CenteredTransformMatrix(run.RotationDegrees, run.RotationCenterX, run.RotationCenterY, run.FlipHorizontal, run.FlipVertical);
