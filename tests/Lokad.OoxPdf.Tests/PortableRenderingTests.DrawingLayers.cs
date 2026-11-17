@@ -87,6 +87,15 @@ internal static partial class PortableRenderingTests
             </w:p>
             """);
         paragraph.Descendants(wp + "anchor").Single().SetAttributeValue("behindDoc", token);
+        if (owner is "header" or "footer")
+        {
+            // Static drawings have no body paragraph anchor; use their supported page frame.
+            var anchor = paragraph.Descendants(wp + "anchor").Single();
+            anchor.Element(wp + "positionH")!.SetAttributeValue("relativeFrom", "page");
+            anchor.Element(wp + "positionH")!.Element(wp + "posOffset")!.Value = "914400";
+            anchor.Element(wp + "positionV")!.SetAttributeValue("relativeFrom", "page");
+            anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.Value = owner == "header" ? "457200" : "9144000";
+        }
         XElement section = new(w + "sectPr", new XElement(w + "pgSz", new XAttribute(w + "w", 12240), new XAttribute(w + "h", 15840)),
             new XElement(w + "pgMar", new XAttribute(w + "top", 1440), new XAttribute(w + "bottom", 1440),
                 new XAttribute(w + "left", 1440), new XAttribute(w + "right", 1440),
