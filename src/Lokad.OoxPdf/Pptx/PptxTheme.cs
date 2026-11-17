@@ -64,7 +64,10 @@ internal sealed class PptxTheme
             foreach (XElement colorElement in colorScheme.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (TryReadColorElement(colorElement, out RgbColor color))
+                // Theme slots use the same supported base colors/transforms as
+                // direct paint. Empty deliberately leaves scheme references
+                // unresolved rather than recursively resolving the theme being built.
+                if (PptxColorResolver.TryReadSolidColor(colorElement, Empty, PptxColorMap.Default, out RgbColor color))
                 {
                     colors[colorElement.Name.LocalName] = color;
                 }
@@ -177,18 +180,6 @@ internal sealed class PptxTheme
 
         effectStyle = null;
         return false;
-    }
-
-    private static bool TryReadColorElement(XElement colorElement, out RgbColor color)
-    {
-        XElement? srgb = colorElement.Element(DrawingNamespace + "srgbClr");
-        string? hex = (string?)srgb?.Attribute("val");
-        if (hex is null)
-        {
-            hex = (string?)colorElement.Element(DrawingNamespace + "sysClr")?.Attribute("lastClr");
-        }
-
-        return RgbColor.TryParse(hex, out color);
     }
 
 }

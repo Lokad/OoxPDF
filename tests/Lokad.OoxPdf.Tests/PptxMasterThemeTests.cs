@@ -96,6 +96,77 @@ internal static class PptxMasterThemeTests
         }
     }
 
+    public static void PptxThemeSlotsKeepSupportedBaseColorForms()
+    {
+        (string Slot, string Color, RgbColor Expected)[] colors =
+        [
+            ("accent1", "<a:scrgbClr r=\"50000\" g=\"50000\" b=\"50000\"/>", new(188, 188, 188)),
+            ("accent2", "<a:hslClr hue=\"7200000\" sat=\"100000\" lum=\"50000\"/>", new(0, 255, 0)),
+            ("accent3", "<a:prstClr val=\"red\"/>", new(255, 0, 0)),
+            ("accent4", "<a:srgbClr val=\"BCBCBC\"/>", new(188, 188, 188)),
+            ("accent5", "<a:sysClr val=\"windowText\" lastClr=\"123456\"/>", new(18, 52, 86)),
+            ("accent6", "<a:srgbClr val=\"0000FF\"><a:shade val=\"50000\"/></a:srgbClr>", new(0, 0, 188))
+        ];
+        var parts = Parts();
+        Edit(parts, "ppt/theme/theme1.xml", xml =>
+        {
+            var scheme = xml.Descendants(A + "clrScheme").Single();
+            foreach (var color in colors)
+                scheme.Element(A + color.Slot)!.ReplaceNodes(ReadColor(color.Color));
+            // Preserve the existing unresolved-reference fallback, including a
+            // self-reference. Loading a theme is not a recursive scheme evaluator.
+            scheme.Element(A + "hlink")!.ReplaceNodes(new XElement(A + "schemeClr", new XAttribute("val", "hlink")));
+        });
+        Edit(parts, "ppt/slides/slide1.xml", xml =>
+        {
+            var tree = xml.Descendants(P + "spTree").Single();
+            tree.RemoveNodes();
+            for (int owner = 0; owner < 2; owner++)
+            for (int index = 0; index < colors.Length; index++)
+            {
+                var color = colors[index];
+                tree.Add(new XElement(P + "sp",
+                    new XElement(P + "nvSpPr", new XElement(P + "cNvPr",
+                        new XAttribute("id", 2 + owner * colors.Length + index),
+                        new XAttribute("name", (owner == 0 ? "Direct " : "Theme ") + color.Slot)),
+                        new XElement(P + "cNvSpPr"), new XElement(P + "nvPr")),
+                    new XElement(P + "spPr",
+                        new XElement(A + "xfrm",
+                            new XElement(A + "off", new XAttribute("x", (72 + index * 88) * 12700),
+                                new XAttribute("y", (72 + owner * 88) * 12700)),
+                            new XElement(A + "ext", new XAttribute("cx", 60 * 12700), new XAttribute("cy", 60 * 12700))),
+                        new XElement(A + "prstGeom", new XAttribute("prst", "rect")),
+                        new XElement(A + "solidFill", owner == 0 ? ReadColor(color.Color)
+                            : new XElement(A + "schemeClr", new XAttribute("val", color.Slot))),
+                        new XElement(A + "ln", new XElement(A + "noFill")))));
+            }
+        });
+        WithDeck(parts, (document, package) =>
+        {
+            var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().ToArray();
+            // Two literal gray columns, each painted through both owners. A
+            // direct-only control must not conceal the missing themed rectangle.
+            TestAssert.Equal(4, PptxTests.CountOccurrences(pages[0].Content, "0.737 0.737 0.737 rg"));
+            TestAssert.Contains("0 0 1 rg", pages[1].Content);
+            var scene = new PptxSceneBuilder().Build(document, package, default);
+            TestAssert.True(!scene.Slides[0].Theme.Colors.ContainsKey("hlink"), "Unresolved theme references stay unresolved.");
+            for (int index = 0; index < colors.Length; index++)
+            {
+                var color = colors[index];
+                TestAssert.Equal(color.Expected, scene.Slides[0].Theme.Colors[color.Slot]);
+                foreach (int offset in new[] { 0, colors.Length })
+                {
+                    var fill = scene.Slides[0].SlideNodes[index + offset].Shape!.Fill;
+                    TestAssert.True(fill.HasFill, "Every supported direct/theme source color retains a painted fill.");
+                    TestAssert.Equal(color.Expected, fill.Color);
+                }
+            }
+        });
+
+        XElement ReadColor(string source) => XElement.Parse($"<a:color xmlns:a=\"{A}\">{source}</a:color>").Elements().Single();
+    }
+
     private static bool IsTheme(XElement element) => ((string?)element.Attribute("Type"))?.EndsWith("/theme", StringComparison.Ordinal) == true;
     private static Dictionary<string, byte[]> Parts(string? path = null)
     {
@@ -111,7 +182,7 @@ internal static class PptxMasterThemeTests
     private static void WithDeck(Dictionary<string, byte[]> parts, Action<PptxDocument, OoxPackage> check)
     {
         using var stream = TestFixtures.CreateZipPackage(parts);
-        var package = OoxPackage.Open(stream, default);
+        using var package = OoxPackage.Open(stream, default);
         check(new PptxReader().Read(package, default), package);
     }
     private static string Case(string name) => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", name));

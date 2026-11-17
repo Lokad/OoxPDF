@@ -238,6 +238,10 @@
   ],
   "pptx-linear-source-colors": [
     "PptxScRgb",
+    "PptxThemeSlotsKeepSupportedBaseColorForms",
+    "PptxMasterThemes",
+    "PptxThemeColorMap",
+    "PptxSyntheticTheme",
     "PptxSyntheticTextBoxResolvesDrawingMlColorForms",
     "PptxAuthoredTintShadeChartsMatchIndependentOfficePaints",
     "PptxAuthoredTintShadeShapesMatchOfficeAndPreserveOrder",
