@@ -510,11 +510,7 @@ internal sealed partial class DocxReader
             ? metadata
             : null;
         int sourceEquationCount = CountSelectedEquationSources(story, markupMode, cancellationToken, out _);
-        string? storyId = (string?)story.Attribute(WordprocessingNamespace + "id");
-        if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
-        {
-            storyId = NormalizeDecimalId(storyId);
-        }
+        string? storyId = NormalizeDecimalId((string?)story.Attribute(WordprocessingNamespace + "id"));
         return new DocxRelatedStory(
             kind,
             partName,

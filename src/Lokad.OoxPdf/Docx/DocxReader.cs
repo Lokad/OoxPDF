@@ -26,7 +26,7 @@ internal sealed partial class DocxReader
     // explicit/inherited line tokens resolve before either fallback.
     private const double WordImplicitNormalAutoLineSpacingFactor = 278d / 240d;
 
-    // Used only for numeric note/numbering identities. Opaque OOXML identifiers
+    // Numeric note, comment and numbering identities. Opaque OOXML identifiers
     // retain their own comparison rules; malformed decimal spellings stay intact.
     private static string? NormalizeDecimalId(string? value)
     {

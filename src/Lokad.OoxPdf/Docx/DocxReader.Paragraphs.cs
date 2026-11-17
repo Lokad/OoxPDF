@@ -1341,7 +1341,7 @@ internal sealed partial class DocxReader
         int inlineItemIndex)
     {
         openCommentRanges.Add(new DocxCommentRangeStart(
-            (string?)rangeStart.Attribute(WordprocessingNamespace + "id"),
+            NormalizeDecimalId((string?)rangeStart.Attribute(WordprocessingNamespace + "id")),
             sourceRunIndex,
             RelativeRunTextOffset(runs, sourceRunIndex)) { InlineItemIndex = inlineItemIndex });
     }
@@ -1354,7 +1354,7 @@ internal sealed partial class DocxReader
         List<DocxTextRun> runs,
         int inlineItemIndex)
     {
-        string? id = (string?)rangeEnd.Attribute(WordprocessingNamespace + "id");
+        string? id = NormalizeDecimalId((string?)rangeEnd.Attribute(WordprocessingNamespace + "id"));
         int startIndex = openCommentRanges.FindLastIndex(start => string.Equals(start.Id, id, StringComparison.Ordinal));
         DocxCommentRangeStart? start = startIndex < 0 ? null : openCommentRanges[startIndex];
         if (startIndex >= 0)
@@ -1599,11 +1599,7 @@ internal sealed partial class DocxReader
             ? (string?)child.Attribute(WordprocessingNamespace + "customMarkFollows")
             : null;
         string? displayText = ResolveInlineReferenceDisplayText(kind, customMarkFollows);
-        string? referenceId = (string?)child.Attribute(WordprocessingNamespace + "id");
-        if (kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
-        {
-            referenceId = NormalizeDecimalId(referenceId);
-        }
+        string? referenceId = NormalizeDecimalId((string?)child.Attribute(WordprocessingNamespace + "id"));
         inlineReferences.Add(new DocxInlineReference(
             kind,
             referenceId,
