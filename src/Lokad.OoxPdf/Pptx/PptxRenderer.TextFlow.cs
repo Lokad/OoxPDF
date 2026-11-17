@@ -830,8 +830,14 @@ internal sealed partial class PptxRenderer
         // physical rectangle for rotated text. Resolve that contract here when
         // the transformed crop is still exactly a rectangle. Oblique source
         // clipping retains its existing fallback rather than enlarging a polygon.
-        if (!TextClipUsesPhysicalCoordinates(run)) return run;
-        var matrix = TextTransformMatrix(run);
+        // This is the container transform. A bodyPr rotation or a vertical
+        // writing mode can rotate glyphs independently of the authored frame.
+        var bounds = frame.Bounds;
+        double frameHeight = OoxUnits.EmuToPoints(bounds.Height);
+        var matrix = ShapeTransformMatrix(OoxUnits.EmuToPoints(bounds.X),
+            document.SlideHeightPoints - OoxUnits.EmuToPoints(bounds.Y) - frameHeight,
+            OoxUnits.EmuToPoints(bounds.Width), frameHeight, bounds);
+        if (matrix == (1d, 0d, 0d, 1d, 0d, 0d)) return run;
         const double roundoff = 1e-12;
         bool rectangle = Math.Abs(matrix.B) < roundoff && Math.Abs(matrix.C) < roundoff ||
             Math.Abs(matrix.A) < roundoff && Math.Abs(matrix.D) < roundoff;

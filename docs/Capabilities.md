@@ -62,6 +62,8 @@ usable stored results rather than executing arbitrary instructions.
   placement retain their constraints and clipping.
 - Font metrics, text overflow, automatic chart scales, point colors, dense/manual
   charts, rich label wrapping and exact Office geometry remain approximate.
+- Source text clips follow shape placement when the transformed frame remains an
+  exact rectangle. General oblique text crops retain approximate placement.
 - Stock/surface/3D charts, SmartArt, OLE, audio/video, animation and transitions
   are unsupported and may be omitted with diagnostics.
 
