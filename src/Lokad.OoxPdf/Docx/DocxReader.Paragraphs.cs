@@ -1618,7 +1618,7 @@ internal sealed partial class DocxReader
         });
         if (kind == DocxRelatedStoryKind.Comment)
         {
-            AddCommentReferenceRange((string?)child.Attribute(WordprocessingNamespace + "id"), currentSourceRunIndex, textOffset);
+            AddCommentReferenceRange(referenceId, currentSourceRunIndex, textOffset);
         }
 
         if (emitDisplayRun && displayText is not null)

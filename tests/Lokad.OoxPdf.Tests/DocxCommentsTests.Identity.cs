@@ -23,6 +23,7 @@ internal static partial class DocxCommentsTests
             var document = ReadCommentIdentitySource(ids[0], ids[1], ids[2], ids[3]);
             var paragraph = DocxBlockTraversal.EnumerateBodyParagraphs(document).Single();
             var reference = paragraph.InlineReferences.Single();
+            TestAssert.Equal(1, paragraph.CommentRanges.Count);
             var range = paragraph.CommentRanges.Single();
             TestAssert.Equal(canonical, reference.Id!);
             TestAssert.Equal(canonical, range.Id!);
