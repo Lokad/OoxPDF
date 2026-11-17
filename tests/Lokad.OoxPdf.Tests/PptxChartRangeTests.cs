@@ -92,10 +92,10 @@ internal static class PptxChartRangeTests
         object workbook = ReadWorkbookFromSheetXml(
             "<cols><col min=\"1\" max=\"2147483647\" hidden=\"1\"/></cols>" +
             "<sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c><c r=\"B1\"><v>6</v></c></row></sheetData>");
-        Array cells = ReadRangeCells(workbook, "Sheet1!$A$1:$B$1");
+        var cells = ReadRangeCells(workbook, "Sheet1!$A$1:$B$1");
         TestAssert.Equal(2, cells.Length);
-        TestAssert.True(ReadColumnHidden(cells, 1, 1), "Column A must report hidden.");
-        TestAssert.True(ReadColumnHidden(cells, 1, 2), "Column B must report hidden.");
+        TestAssert.True(cells[0].ColumnHidden, "Column A must report hidden.");
+        TestAssert.True(cells[1].ColumnHidden, "Column B must report hidden.");
     }
 
     public static void NarrowHiddenColumnRunPreservesSemantics()
@@ -103,11 +103,11 @@ internal static class PptxChartRangeTests
         object workbook = ReadWorkbookFromSheetXml(
             "<cols><col min=\"1\" max=\"1\" hidden=\"1\"/></cols>" +
             "<sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c><c r=\"B1\"><v>6</v></c><c r=\"C1\"><v>7</v></c></row></sheetData>");
-        Array cells = ReadRangeCells(workbook, "Sheet1!$A$1:$C$1");
+        var cells = ReadRangeCells(workbook, "Sheet1!$A$1:$C$1");
         TestAssert.Equal(3, cells.Length);
-        TestAssert.True(ReadColumnHidden(cells, 1, 1), "Column A must report hidden.");
-        TestAssert.True(!ReadColumnHidden(cells, 1, 2), "Column B must report visible.");
-        TestAssert.True(!ReadColumnHidden(cells, 1, 3), "Column C must report visible.");
+        TestAssert.True(cells[0].ColumnHidden, "Column A must report hidden.");
+        TestAssert.True(!cells[1].ColumnHidden, "Column B must report visible.");
+        TestAssert.True(!cells[2].ColumnHidden, "Column C must report visible.");
     }
 
     public static void OutOfGridHiddenRowIsIgnored()
@@ -116,10 +116,10 @@ internal static class PptxChartRangeTests
             "<sheetData><row r=\"1\"><c r=\"A1\"><v>1</v></c></row>" +
             "<row r=\"2\" hidden=\"1\"><c r=\"A2\"><v>2</v></c></row>" +
             "<row r=\"99999999\" hidden=\"1\"/></sheetData>");
-        Array cells = ReadRangeCells(workbook, "Sheet1!$A$1:$A$2");
+        var cells = ReadRangeCells(workbook, "Sheet1!$A$1:$A$2");
         TestAssert.Equal(2, cells.Length);
-        TestAssert.True(!ReadRowHidden(cells, 1, 1), "Row 1 must report visible.");
-        TestAssert.True(ReadRowHidden(cells, 2, 1), "Row 2 must report hidden.");
+        TestAssert.True(!cells[0].RowHidden, "Row 1 must report visible.");
+        TestAssert.True(cells[1].RowHidden, "Row 2 must report hidden.");
     }
 
     public static void HiddenColumnStorageStaysBoundedAcrossWideRuns()
@@ -149,9 +149,9 @@ internal static class PptxChartRangeTests
         {
             object workbook = ReadWorkbookFromSheetXml("<cols>" + declaration +
                 "</cols><sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>");
-            TestAssert.True(!ReadColumnHidden(ReadRangeCells(workbook, "Sheet1!A1"), 1, 1),
+            TestAssert.True(!ReadRangeCells(workbook, "Sheet1!A1").Single().ColumnHidden,
                 "Absent, visible and invalid runs preserve a visible first column.");
-            TestAssert.True(!ReadColumnHidden(ReadRangeCells(workbook, "Sheet1!XFD1"), 1, 16_384),
+            TestAssert.True(!ReadRangeCells(workbook, "Sheet1!XFD1").Single().ColumnHidden,
                 "Absent, visible and invalid runs preserve a visible last column.");
         }
     }
@@ -362,45 +362,6 @@ internal static class PptxChartRangeTests
         }
     }
 
-    private static Array ReadRangeCells(object workbook, string formula)
-    {
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null) ?? throw new InvalidOperationException("Expected range reader.");
-        try
-        {
-            return (Array)read.Invoke(workbook, [formula])!;
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static object FindRangeCell(Array cells, int row, int column)
-    {
-        foreach (object? item in cells)
-        {
-            object cell = item ?? throw new InvalidOperationException("Expected range cell.");
-            int cellRow = (int)(cell.GetType().GetProperty("SheetRow")?.GetValue(cell) ?? throw new InvalidOperationException("Expected sheet row."));
-            int cellColumn = (int)(cell.GetType().GetProperty("SheetColumn")?.GetValue(cell) ?? throw new InvalidOperationException("Expected sheet column."));
-            if (cellRow == row && cellColumn == column)
-            {
-                return cell;
-            }
-        }
-
-        throw new InvalidOperationException("Range cell was not found.");
-    }
-
-    private static bool ReadRowHidden(Array cells, int row, int column)
-    {
-        object cell = FindRangeCell(cells, row, column);
-        return (bool)(cell.GetType().GetProperty("RowHidden")?.GetValue(cell) ?? throw new InvalidOperationException("Expected row-hidden flag."));
-    }
-
-    private static bool ReadColumnHidden(Array cells, int row, int column)
-    {
-        object cell = FindRangeCell(cells, row, column);
-        return (bool)(cell.GetType().GetProperty("ColumnHidden")?.GetValue(cell) ?? throw new InvalidOperationException("Expected column-hidden flag."));
-    }
+    private static PptxRenderer.ChartWorkbookRangeCell[] ReadRangeCells(object workbook, string formula) =>
+        ((PptxRenderer.ChartWorkbookData)workbook).ReadRangeCells(formula);
 }
-

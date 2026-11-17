@@ -409,6 +409,11 @@
   ],
   "pptx-workbook-source-semantics": [
     "PptxWorkbook",
+    "HiddenColumnRunBeyondGridIsClamped",
+    "NarrowHiddenColumnRunPreservesSemantics",
+    "OutOfGridHiddenRowIsIgnored",
+    "HiddenColumnRunsIgnoreInvalidAndVisibleRanges",
+    "HiddenColumnStorageStaysBoundedAcrossWideRuns",
     "WorkbookTotalCellsBeyondLimitThrows",
     "CancelledRangeExpansionObservesCancellation",
     "SmallRangeReadsCells",
