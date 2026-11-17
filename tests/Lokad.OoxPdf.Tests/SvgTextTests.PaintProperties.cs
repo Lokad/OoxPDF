@@ -101,7 +101,8 @@ internal static partial class SvgTextTests
                 var diagnostics = new List<OoxPdfDiagnostic>();
                 using var package = OoxPackage.Open(input, default);
                 var page = docx
-                    ? new DocxRenderer(resolver).RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), diagnostics.Add, default).ToBlockingEnumerable().Single()
+                    ? new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                        .RenderPagesAsync(DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final), diagnostics.Add, default).ToBlockingEnumerable().Single()
                     : new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, default), package,
                         diagnostics.Add, default).ToBlockingEnumerable().Single();
                 TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT"), "Supported paint must reach both containers.");
