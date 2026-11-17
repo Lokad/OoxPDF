@@ -29,6 +29,15 @@ foreach ($name in @('affected-tests.json', 'evidence.json', 'catalog.txt')) {
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $temporaryDirectory = Join-Path $output 'temporary-files'
+function Assert-PhysicalDirectory([string] $Path) {
+    $directory = Get-Item -LiteralPath $Path -Force
+    while ($null -ne $directory) {
+        if ($directory -isnot [IO.DirectoryInfo] -or ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw 'Qualification temporary storage requires physical directories.'
+        }
+        $directory = $directory.Parent
+    }
+}
 function Assert-FrozenAssembly {
     if ((Get-FileHash -LiteralPath $runner).Hash -ne $runnerHash -or
         (Get-FileHash -LiteralPath $library).Hash -ne $libraryHash) {
@@ -39,7 +48,9 @@ function Assert-FrozenAssembly {
     }
 }
 function Invoke-FrozenTests([string[]] $Arguments, [string] $Log) {
-    New-Item -ItemType Directory -Force -Path $temporaryDirectory | Out-Null
+    Assert-PhysicalDirectory $output
+    # One test-set invocation owns this fresh leaf; existing files are never ours.
+    New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
     $previousTmp = [Environment]::GetEnvironmentVariable('TMP')
     $previousTemp = [Environment]::GetEnvironmentVariable('TEMP')
     $previousTmpDir = [Environment]::GetEnvironmentVariable('TMPDIR')
@@ -184,6 +195,21 @@ if ($FastGroup.Count) {
     } | ForEach-Object name)
 }
 $inventory.GatePassed = $exitCode -eq 0 -and $report.failed -eq 0 -and !$inventory.UnexpectedSkips.Count
+$inventory.TemporaryFilesRetained = Test-Path -LiteralPath $temporaryDirectory
+if ($inventory.GatePassed -and $inventory.TemporaryFilesRetained) {
+    try {
+        $owned = [IO.Path]::GetFullPath($temporaryDirectory)
+        if ([IO.Path]::GetDirectoryName($owned) -cne $output) { throw 'Temporary storage escaped its declared output directory.' }
+        Assert-PhysicalDirectory $owned
+        Remove-Item -LiteralPath $owned -Recurse -Force
+        $inventory.TemporaryFilesRetained = $false
+    }
+    catch {
+        # Cleanup does not reclassify semantic results or discard their reports.
+        $inventory.TemporaryCleanupError = $_.Exception.Message
+        Write-Warning ('Passing test temporary files were retained: ' + $_.Exception.Message)
+    }
+}
 $reportPath = Join-Path $output 'affected-tests.json'
 [ordered]@{
     passed = $report.passed; failed = $report.failed; skipped = $report.skipped; tests = @($rows)

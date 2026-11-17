@@ -39,7 +39,10 @@ The console runner accepts `--group`, `--test`, or `--test-set <file.json>` (an 
 of exact method names). `tools/RunDocxAffectedTests.ps1` selects capabilities from
 `tools/qualification-capabilities.json` and runs each selected method once.
 `-FastGroup` unions portable groups; declare understood environment skips explicitly.
-Keep runner TMP/TEMP in its ignored artifact directory.
+Keep runner TMP/TEMP in its ignored artifact directory. The qualification command
+owns a fresh physical temporary leaf and removes it after complete passing results;
+failed runs and cleanup refusals retain it. Keep useful inputs/references outside
+that disposable leaf. Direct console runs need caller-owned temporary storage.
 
 ## Frozen qualification
 

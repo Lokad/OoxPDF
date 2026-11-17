@@ -23,6 +23,8 @@ function dotnet {
     $global:ooxPdfAffectedReportCalls++
     $report=$args[[Array]::IndexOf([object[]]$args,'--report')+1]
     if([IO.Path]::GetFileName($env:TMPDIR) -ne 'temporary-files') {throw 'Runner temp path escaped its output directory'}
+    $scratch=New-Item -ItemType Directory -Path (Join-Path $env:TMPDIR 'nested')
+    [IO.File]::WriteAllText((Join-Path $scratch.FullName 'transient.bin'),'Disposable runner data')
     $selection=$args[[Array]::IndexOf([object[]]$args,'--test-set')+1]
     $methods=@(Get-Content -LiteralPath $selection -Raw | ConvertFrom-Json)
     $rows=@(foreach($method in $methods) {
@@ -39,6 +41,19 @@ function dotnet {
     $skipped=@($rows | Where-Object outcome -EQ 'skipped').Count
     if($global:ooxPdfAffectedReportFault -eq 'miscount') {$passed=999}
     @{passed=$passed;failed=$failed;skipped=$skipped;tests=$rows} | ConvertTo-Json -Depth 5 | Set-Content $report -Encoding utf8
+    if($global:ooxPdfAffectedReportFault -in @('cleanup-link','cleanup-child-link')) {
+        $target=Join-Path (Split-Path $env:TMPDIR) 'unowned-target'
+        New-Item -ItemType Directory -Path $target | Out-Null
+        [IO.File]::WriteAllText((Join-Path $target 'keep.txt'),'Keep this target')
+        $link=Join-Path $env:TMPDIR 'nested/link'
+        if($global:ooxPdfAffectedReportFault -eq 'cleanup-link') {
+            $retained=$env:TMPDIR+'.retained'
+            if([IO.Path]::GetDirectoryName($retained) -ne [IO.Path]::GetDirectoryName($env:TMPDIR)) {throw 'Fixture paths escaped their owner'}
+            Move-Item -LiteralPath $env:TMPDIR -Destination $retained
+            $link=$env:TMPDIR
+        }
+        New-Item -ItemType $(if($IsWindows){'Junction'}else{'SymbolicLink'}) -Path $link -Target $target | Out-Null
+    }
     $global:LASTEXITCODE=if($failed) {1} else {0}
 }
 $checks=@()
@@ -64,6 +79,11 @@ try {
             if($report.provenance.GatePassed -ne $shouldPass -or $report.tests.Count -ne 2 -or
                 $report.failed -ne $(if($case -eq 'failed') {1} else {0}) -or
                 $report.skipped -ne $(if($case -in @('expected-skip','unexpected-skip')) {1} else {0})) {throw 'Reported outcomes were reclassified'}
+            if($report.provenance.TemporaryFilesRetained -eq $shouldPass) {throw 'Passing and failed temporary ownership changed'}
+        }
+        if($global:ooxPdfAffectedReportCalls -gt 0 -and
+            (Test-Path -LiteralPath (Join-Path $output 'temporary-files/nested/transient.bin')) -eq $shouldPass) {
+            throw 'Disposable data cleanup did not follow the complete passing gate'
         }
         $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;ReportRetained=$retained}
     }
@@ -165,6 +185,43 @@ try {
         }
     }
     finally {[Environment]::SetEnvironmentVariable('OOXPDF_TEST_CLI_ASSEMBLY', $(if ($null -eq $priorCli) {[NullString]::Value} else {$priorCli}))}
+
+    foreach($case in @('temp-existing','temp-linked-output','cleanup-link','cleanup-child-link')) {
+        $global:ooxPdfAffectedReportFault=$case
+        $global:ooxPdfAffectedReportCalls=0
+        $directory=Join-Path $root $case
+        New-Item -ItemType Directory -Path $directory | Out-Null
+        $output=Join-Path $directory 'output'
+        if($case -eq 'temp-existing') {
+            New-Item -ItemType Directory -Path (Join-Path $output 'temporary-files') | Out-Null
+            [IO.File]::WriteAllText((Join-Path $output 'temporary-files/keep.txt'),'Keep existing storage')
+        }
+        if($case -eq 'temp-linked-output') {
+            $target=Join-Path $directory 'physical-target'
+            New-Item -ItemType Directory -Path $target | Out-Null
+            [IO.File]::WriteAllText((Join-Path $target 'keep.txt'),'Keep linked output')
+            New-Item -ItemType $(if($IsWindows){'Junction'}else{'SymbolicLink'}) -Path $output -Target $target | Out-Null
+        }
+        $caught=$null
+        try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter ReportAlpha *> (Join-Path $directory 'run.log')}
+        catch {$caught=$_.Exception.Message}
+        if($case -in @('cleanup-link','cleanup-child-link')) {
+            $report=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
+            $rootLink=$case -eq 'cleanup-link'
+            if($caught -or !$report.provenance.GatePassed -or $report.provenance.TemporaryFilesRetained -ne $rootLink -or
+                [bool]$report.provenance.TemporaryCleanupError -ne $rootLink -or $global:ooxPdfAffectedReportCalls -ne 1 -or
+                [IO.File]::ReadAllText((Join-Path $output 'unowned-target/keep.txt')) -ne 'Keep this target') {
+                throw 'Cleanup refusal lost results or changed the unowned target'
+            }
+        }
+        else {
+            $keep=if($case -eq 'temp-existing'){Join-Path $output 'temporary-files/keep.txt'}else{Join-Path $target 'keep.txt'}
+            if(!$caught -or $global:ooxPdfAffectedReportCalls -ne 0 -or !(Test-Path -LiteralPath $keep)) {
+                throw 'Preexisting or linked temporary storage was not refused before test execution'
+            }
+        }
+        $checks+=@{Case=$case;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls;UnownedTargetRetained=$true}
+    }
 }
 finally {Remove-Item Function:dotnet; Remove-Variable ooxPdfAffectedReportFault,ooxPdfAffectedReportCalls -Scope Global}
 @{Checks=$checks;Builds=0;Conversions=0;RealTestsReplayed=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
