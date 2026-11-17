@@ -12,7 +12,7 @@ internal static partial class PptxFontCacheTests
 {
     public static void PptxChartCoverageFallbackKeepsShapeTitleAndLegendContent()
     {
-        foreach (string kind in new[] { "partial", "full", "cff", "unresolved" })
+        foreach (string kind in new[] { "partial", "full", "cff", "unresolved", "all-fallback" })
         {
             byte[] primaryBytes = kind switch
             {
@@ -24,7 +24,9 @@ internal static partial class PptxFontCacheTests
                 ? new SingleProgramResolver(new MemoryFontProgramSource("coverage-primary", primaryBytes))
                 : new CatalogResolver(FontFace("Primary", "coverage-primary", primaryBytes),
                     FontFace("Fallback", "coverage-fallback", CoverageFont()));
-            using var source = TestFixtures.CreateZipPackage(CoverageParts());
+            var parts = CoverageParts();
+            if (kind == "all-fallback") parts["ppt/charts/chart1.xml"] = parts["ppt/charts/chart1.xml"].Replace("Title AŁB", "Ł", StringComparison.Ordinal);
+            using var source = TestFixtures.CreateZipPackage(parts);
             using var package = OoxPackage.Open(source, default);
             var diagnostics = new List<OoxPdfDiagnostic>();
             PdfPage page = new PptxRenderer(resolver).RenderPagesAsync(new PptxReader().Read(package, default),
@@ -34,7 +36,7 @@ internal static partial class PptxFontCacheTests
             {
                 string painted = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, true,
                     fontResourceFilter: name => name.StartsWith(owner.Prefix, StringComparison.Ordinal)).Select(show => show.Text));
-                TestAssert.Equal(owner.Label + value, painted);
+                TestAssert.Equal(kind == "all-fallback" && owner.Prefix == "CT" ? "Ł" : owner.Label + value, painted);
             }
             TestAssert.Equal("https://example.invalid/coverage", page.Annotations.Single().Uri);
             TestAssert.True(page.Annotations[0].Width > 0 && page.Annotations[0].Height > 0, "The linked title retains its measured frame.");

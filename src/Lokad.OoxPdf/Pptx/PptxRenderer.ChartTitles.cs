@@ -83,7 +83,7 @@ internal sealed partial class PptxRenderer
         {
             foreach (ChartTextRunLink titleLink in titleLinks)
             {
-                AddChartTextRunHyperlinkAnnotation(titleLink, sceneChart.Relationships, context, sceneChart.TargetPartName, linkAnnotations, reportedHyperlinkIds, titleFonts.Fonts);
+                await AddChartTextRunHyperlinkAnnotationAsync(titleLink, sceneChart.Relationships, context, sceneChart.TargetPartName, linkAnnotations, reportedHyperlinkIds, titleFonts.Fonts).ConfigureAwait(false);
             }
         }
     }
@@ -365,7 +365,7 @@ internal sealed partial class PptxRenderer
             fontResolver,
             axisLinks).ConfigureAwait(false);
         RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        AddChartTextRunHyperlinkAnnotations(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds);
+        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
     }
 
     private static async ValueTask RenderDefaultVerticalChartAxisTitleAsync(
@@ -470,7 +470,7 @@ internal sealed partial class PptxRenderer
         }
 
         RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        AddChartTextRunHyperlinkAnnotations(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds);
+        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
     }
 
     private static async ValueTask RenderManualChartAxisTitleAsync(
@@ -524,7 +524,7 @@ internal sealed partial class PptxRenderer
             fontResolver,
             axisLinks).ConfigureAwait(false);
         RenderedFonts axisFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CAT", fontResolver, diagnosticSink).ConfigureAwait(false));
-        AddChartTextRunHyperlinkAnnotations(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds);
+        await AddChartTextRunHyperlinkAnnotationsAsync(axisLinks, chart, context, axisFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
     }
 
     private static ChartAxisTitleReserveSides ReadDefaultAxisTitleReserveSides(PptxSceneChart sceneChart)

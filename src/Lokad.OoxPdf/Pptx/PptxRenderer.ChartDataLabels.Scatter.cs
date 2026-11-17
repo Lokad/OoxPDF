@@ -134,7 +134,7 @@ internal sealed partial class PptxRenderer
         }
 
         RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CSD", fontResolver, diagnosticSink).ConfigureAwait(false));
-        AddChartTextRunHyperlinkAnnotations(labelLinks, chart, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
+        await AddChartTextRunHyperlinkAnnotationsAsync(labelLinks, chart, context, labelFonts, linkAnnotations, reportedHyperlinkIds).ConfigureAwait(false);
 
         double GetFillDataLabelLegendKeyWidth(double fontSize)
         {

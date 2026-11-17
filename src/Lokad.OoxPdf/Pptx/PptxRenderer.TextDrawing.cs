@@ -214,6 +214,15 @@ internal sealed partial class PptxRenderer
         foreach (PptxPositionedTextSpan span in textSpans)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // Measurement has prepared the source face. Keep CFF source uses
+            // with the existing substitution owner so its warning is retained.
+            FontFaceResolution source = fontResolver.Resolve(FontRequestForRun(span.Run));
+            if (fontResolver.GetPreparedOpenTypeFont(source, cancellationToken) is { HasTrueTypeOutlines: false })
+            {
+                uses.Add(new TextFontUse(PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily),
+                    span.Run.Bold, span.Run.Italic, span.Run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
+                continue;
+            }
             foreach (IGrouping<string, PptxTextGlyphLayout> group in span.GlyphSpan.Glyphs.GroupBy(
                         glyph => string.IsNullOrWhiteSpace(glyph.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : glyph.Typeface,
                          StringComparer.OrdinalIgnoreCase))

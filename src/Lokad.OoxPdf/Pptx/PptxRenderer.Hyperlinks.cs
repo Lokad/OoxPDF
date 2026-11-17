@@ -78,7 +78,7 @@ internal sealed partial class PptxRenderer
     // Chart-title run clicks resolve against the chart part's own relationships so
     // title links navigate independently of the whole-frame link (S08). Run boxes
     // reuse the shared span-box math; chart layout space is already PDF-flipped.
-    private static void AddChartTextRunHyperlinkAnnotation(
+    private static async ValueTask AddChartTextRunHyperlinkAnnotationAsync(
         ChartTextRunLink link,
         IReadOnlyDictionary<string, OoxRelationship> chartRelationships,
         PptxRenderContext context,
@@ -113,21 +113,33 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        if (!renderedFonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered) ||
-            (rendered.Font is null && rendered.FallbackFace is null) ||
-            !TryGetSpanLinkRect(run, rendered.Font, context.Document, out double x, out double y, out double width, out double height))
+        if (renderedFonts.ContainsKey(FontRequestForRun(run)))
         {
-            return;
+            AddPaintedRun(run);
+        }
+        else if (renderedFonts.Count != 0)
+        {
+            // A completely substituted run has no resource under its requested
+            // family. Navigation consumes the same split and prepared faces as paint.
+            foreach (TextRun part in await SplitRunsByResolvedTypefaceAsync([run], context.FontResolver, null,
+                context.CancellationToken).ConfigureAwait(false)) AddPaintedRun(part);
         }
 
-        annotations.Add(resolution.Uri is not null
-            ? PdfLinkAnnotation.ToUri(x, y, width, height, resolution.Uri)
-            : PdfLinkAnnotation.ToDestination(x, y, width, height, resolution.Destination!.Value));
+        void AddPaintedRun(TextRun painted)
+        {
+            if (!renderedFonts.TryGetValue(FontRequestForRun(painted), out RenderedFont rendered) ||
+                (rendered.Font is null && rendered.FallbackFace is null) ||
+                !TryGetSpanLinkRect(painted, rendered.Font, context.Document, out double x, out double y, out double width, out double height)) return;
+
+            annotations.Add(resolution.Uri is not null
+                ? PdfLinkAnnotation.ToUri(x, y, width, height, resolution.Uri)
+                : PdfLinkAnnotation.ToDestination(x, y, width, height, resolution.Destination!.Value));
+        }
     }
 
     // One annotation per linked chart-text run for axis titles and data labels (S08).
     // Null relationships (scene-less fallback rendering) skip emission silently.
-    private static void AddChartTextRunHyperlinkAnnotations(
+    private static async ValueTask AddChartTextRunHyperlinkAnnotationsAsync(
         List<ChartTextRunLink>? links,
         PptxSceneChart? chart,
         PptxRenderContext context,
@@ -142,7 +154,8 @@ internal sealed partial class PptxRenderer
 
         foreach (ChartTextRunLink link in links)
         {
-            AddChartTextRunHyperlinkAnnotation(link, chartRelationships, context, chart.TargetPartName, annotations, reportedIds, renderedFonts.Fonts);
+            await AddChartTextRunHyperlinkAnnotationAsync(link, chartRelationships, context, chart.TargetPartName,
+                annotations, reportedIds, renderedFonts.Fonts).ConfigureAwait(false);
         }
     }
 
