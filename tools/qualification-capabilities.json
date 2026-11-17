@@ -6600,6 +6600,17 @@
     "PortableRenderingRevisionAuthorInkMatchesWordSourceOrder",
     "DocxWordCompatibleBalloonsUseFirstSeenAuthorColors"
   ],
+  "pptx-chart-cached-fields": [
+    "PptxChartCachedFieldsKeepOrderedTextStyleAndLinkOwners",
+    "PortableRenderingChartCachedFieldsKeepWordsAndHyperlinksAcrossTextOwners",
+    "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation",
+    "PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine",
+    "PptxHorizontalTitleMetricsFollowRichRunsAndPreserveSplits",
+    "PptxSyntheticTransparentChartTitleRichRunUsesGlyphOutlinePaths",
+    "FieldRunsAgreeBetweenSceneAndSpans"
+  ],
   "docx-comment-identity": [
     "DocxCommentNumericIdentity",
     "PortableRenderingCommentNumericIdentityKeepsVisibleBalloonBodies",

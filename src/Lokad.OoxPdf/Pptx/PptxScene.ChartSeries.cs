@@ -362,11 +362,16 @@ internal sealed partial class PptxSceneBuilder
             return literal;
         }
 
-        string? richText = text?
-            .Descendants(DrawingNamespace + "t")
-            .Aggregate(string.Empty, (current, textElement) => current + textElement.Value);
+        string richText = string.Concat(EnumerateChartRichRuns(text?.Element(ChartNamespace + "rich"))
+            .Select(run => (string?)run.Element(DrawingNamespace + "t")));
         return string.IsNullOrWhiteSpace(richText) ? null : richText;
     }
+
+    // Cached fields carry authored text/style just like ordinary runs. Plain
+    // text and styled fragments visit those same owners in source order.
+    private static IEnumerable<XElement> EnumerateChartRichRuns(XElement? rich) =>
+        rich?.Elements(DrawingNamespace + "p").Elements().Where(element =>
+            element.Name == DrawingNamespace + "r" || element.Name == DrawingNamespace + "fld") ?? [];
 
     private static string? ReadChartHyperlinkClickId(XElement? runProperties)
     {
@@ -397,7 +402,7 @@ internal sealed partial class PptxSceneBuilder
         }
 
         var runs = new List<PptxSceneChartTextRun>();
-        foreach (XElement run in rich.Descendants(DrawingNamespace + "r"))
+        foreach (XElement run in EnumerateChartRichRuns(rich))
         {
             string runText = run.Element(DrawingNamespace + "t")?.Value ?? string.Empty;
             if (runText.Length == 0)

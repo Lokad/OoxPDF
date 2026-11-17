@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxChartTextHyperlinksTests
+internal static partial class PptxChartTextHyperlinksTests
 {
     public static void PptxAutomaticChartTitlePlacementKeepsWholeLinkedLine()
     {
@@ -199,7 +199,7 @@ internal static class PptxChartTextHyperlinksTests
         }
     }
 
-    private static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null, IFontResolver? fontResolver = null, bool? autoTitleDeleted = null)
+    internal static (List<PdfPage> Pages, List<OoxPdfDiagnostic> Diagnostics) RenderChartTitlePage(string titleRunXml, string? chartRelsXml, string? chartXmlOverride = null, IFontResolver? fontResolver = null, bool? autoTitleDeleted = null)
     {
         string contentTypes = PptxTests.BasicContentTypes().Replace(
             "</Types>",
