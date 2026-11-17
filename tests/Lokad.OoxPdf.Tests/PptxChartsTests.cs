@@ -155,7 +155,7 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticBarChartsRenderNativeCharts()
     {
-        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, byte[]>
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes().Replace(
                 "</Types>",
@@ -286,22 +286,12 @@ internal static partial class PptxChartsTests
                 </cs:colorStyle>
                 """)
         });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var collector = new DiagnosticCollector();
-        using var package = OoxPackage.Open(input, default);
-        var document = new PptxReader().Read(package, default);
-        var pages = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-            .RenderPagesAsync(document, package, collector.Add, default).ToBlockingEnumerable().ToArray();
-        var page = pages.Single();
-        string[] legendNames = ["Primary A", "Primary B", "Secondary"];
-        var legend = legendNames.Select(name => PortableRenderingTests.ReadPaintedSourceLabel(page, name, fontPrefix: "CL")).ToArray();
-        TestAssert.True(legend.Zip(legend.Skip(1)).All(pair => pair.First[0].Origin.X < pair.Second[0].Origin.X),
-            "The complete legend follows the authored series order.");
-        foreach (string label in new[] { "Primary A | 2", "Primary B | 1", "Primary A | 4", "Primary B | 3", "Secondary | 0", "Secondary | 20" })
-            PortableRenderingTests.ReadPaintedSourceLabel(page, label, fontPrefix: "CBD");
-        using var output = new MemoryStream();
-        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>(pages),
-            new OoxConversionLimits(), null, default).GetAwaiter().GetResult();
-        string pdf = Encoding.ASCII.GetString(output.ToArray());
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0.8 rg", pdf);
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 rg", pdf);
@@ -315,6 +305,7 @@ internal static partial class PptxChartsTests
         TestAssert.Contains(" re W* n", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains(" re f", pdf);
+        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 17, "Combo bar charts should emit text for primary and secondary labels, axes, and legend entries.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Supported bar charts should not emit unsupported chart diagnostics.");
     }

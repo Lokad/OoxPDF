@@ -170,7 +170,7 @@ internal static partial class PortableRenderingTests
         TestAssert.True(Vector2.Distance(before.Origin, after.Origin) < .002f && Math.Abs(before.Size - after.Size) < .001d,
             "The equivalent single-line alignment keeps its source origin and physical font size.");
 
-    internal static IReadOnlyList<(Vector2 Origin, double Size, PdfRectangle Ink)> ReadPaintedSourceLabel(PdfPage page,
+    private static IReadOnlyList<(Vector2 Origin, double Size, PdfRectangle Ink)> ReadPaintedSourceLabel(PdfPage page,
         string label, bool mathOnly = false, string? fontPrefix = null)
     {
         // Match source characters across text-show boundaries, then check their
