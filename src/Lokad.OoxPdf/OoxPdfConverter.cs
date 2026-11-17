@@ -16,8 +16,8 @@ namespace Lokad.OoxPdf;
 /// <list type="bullet">
 /// <item>Synchronous and asynchronous overloads perform the same conversion. The Async
 /// variants await bounded package input, staged/output I/O and owned storage disposal.
-/// DOCX awaits font acquisition; PPTX acquisition and initial local discovery remain
-/// synchronous. CPU rendering remains synchronous. Synchronous convenience
+/// Both renderers await font acquisition and initial local discovery.
+/// CPU rendering remains synchronous. Synchronous convenience
 /// methods block on the same pipeline; matching inputs produce identical PDFs.</item>
 /// <item>File paths are resolved against the working directory at invocation,
 /// before asynchronous reads or host callbacks can change that directory.</item>

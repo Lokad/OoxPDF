@@ -43,27 +43,22 @@ internal sealed partial class PptxSceneBuilder
                 source.OrderValue,
                 ReadChartSeriesName(seriesElement),
                 ReadChartSeriesDataSources(seriesElement),
-                ReadChartSeriesValues(seriesElement),
                 ReadChartSeriesNumberPoints(seriesElement, "val"),
                 valuePointCount,
                 valuePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "val"),
-                ReadChartSeriesCategories(seriesElement),
                 ReadChartSeriesStringPoints(seriesElement, "cat"),
                 categoryPointCount,
                 categoryPointCountValue,
                 ReadChartSeriesStringLevels(seriesElement, "cat"),
-                ReadChartSeriesNumbers(seriesElement, "xVal"),
                 ReadChartSeriesNumberPoints(seriesElement, "xVal"),
                 xValuePointCount,
                 xValuePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "xVal"),
-                ReadChartSeriesNumbers(seriesElement, "yVal"),
                 ReadChartSeriesNumberPoints(seriesElement, "yVal"),
                 yValuePointCount,
                 yValuePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "yVal"),
-                ReadChartSeriesNumbers(seriesElement, "bubbleSize"),
                 ReadChartSeriesNumberPoints(seriesElement, "bubbleSize"),
                 bubbleSizePointCount,
                 bubbleSizePointCountValue,
@@ -426,11 +421,6 @@ internal sealed partial class PptxSceneBuilder
         return runs;
     }
 
-    private static IReadOnlyList<double> ReadChartSeriesValues(XElement series)
-    {
-        return ReadChartSeriesNumbers(series, "val");
-    }
-
     private static IReadOnlyList<PptxSceneChartNumberPoint> ReadChartSeriesNumberPoints(XElement series, string elementName)
     {
         return ReadChartNumberPoints(series
@@ -487,29 +477,6 @@ internal sealed partial class PptxSceneBuilder
                 (child.Name.LocalName == "numLit" ||
                  child.Name.LocalName == "numCache"));
         return (string?)cache?.Element(ChartNamespace + "formatCode");
-    }
-
-    private static IReadOnlyList<double> ReadChartSeriesNumbers(XElement series, string elementName)
-    {
-        return series
-            .Elements(ChartNamespace + elementName)
-            .Descendants(ChartNamespace + "pt")
-            .Select(point => (string?)point.Element(ChartNamespace + "v"))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) ? parsed : double.NaN)
-            .Where(value => !double.IsNaN(value))
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> ReadChartSeriesCategories(XElement series)
-    {
-        return series
-            .Elements(ChartNamespace + "cat")
-            .Descendants(ChartNamespace + "pt")
-            .Select(point => (string?)point.Element(ChartNamespace + "v"))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .OfType<string>()
-            .ToArray();
     }
 
     private static IReadOnlyList<PptxSceneChartStringPoint> ReadChartSeriesStringPoints(XElement series, string elementName)

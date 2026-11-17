@@ -1301,20 +1301,15 @@ internal static class PptxChartRenderingTests
             }
         };
         object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        var source = new PptxSceneChartDataSource(
-            "Sheet1!$B$2:$B$3",
-            PptxSceneChartDataSourceReferenceKind.NumberReference,
-            "numRef",
-            PptxSceneChartDataSourceCacheKind.NumberCache,
-            "numCache",
-            HasCachedPoints: true);
-        System.Reflection.MethodInfo buildVector = typeof(PptxRenderer)
-            .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "BuildChartIndexedNumberVector" && method.GetParameters().Length == 7);
-
-        object vector = buildVector.Invoke(
-            null,
-            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 1, "General", source, workbook, true]) ?? throw new InvalidOperationException("Expected indexed chart vector.");
+        var cachedPlot = ReadPointSourcePlot("""
+            <c:val><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f><c:numCache><c:formatCode>General</c:formatCode>
+            <c:ptCount val="1"/><c:pt idx="0"><c:v>99</c:v></c:pt></c:numCache></c:numRef></c:val>
+            """);
+        var readNumbers = typeof(PptxRenderer).GetMethod("ReadSceneChartSeriesVectors",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        object NumberVector(PptxSceneChartPlot plot, object? book) =>
+            ((System.Collections.IEnumerable)readNumbers.Invoke(null, [plot, book, true])!).Cast<object>().Single();
+        object vector = NumberVector(cachedPlot, workbook);
 
         object[] activePoints = (((System.Collections.IEnumerable?)vector.GetType().GetProperty("Points")?.GetValue(vector)) ?? throw new InvalidOperationException("Expected active chart points.")).Cast<object>().ToArray();
         object[] workbookPoints = (((System.Collections.IEnumerable?)vector.GetType().GetProperty("WorkbookPoints")?.GetValue(vector)) ?? throw new InvalidOperationException("Expected workbook sidecar points.")).Cast<object>().ToArray();
@@ -1333,10 +1328,10 @@ internal static class PptxChartRenderingTests
         TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected workbook sidecar point cell provenance.");
         TestAssert.Equal("B2", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
-        var noCacheSource = source with { HasCachedPoints = false };
-        object noCacheVector = buildVector.Invoke(
-            null,
-            [Array.Empty<double>(), Array.Empty<PptxSceneChartNumberPoint>(), null, "General", noCacheSource, workbook, true]) ?? throw new InvalidOperationException("Expected formula-only indexed chart vector.");
+        var noCachePlot = ReadPointSourcePlot("""
+            <c:val><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f></c:numRef></c:val>
+            """);
+        object noCacheVector = NumberVector(noCachePlot, workbook);
         object[] noCacheActivePoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetProperty("Points")?.GetValue(noCacheVector)) ?? throw new InvalidOperationException("Expected formula-only active chart points.")).Cast<object>().ToArray();
         object[] noCacheWorkbookPoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetProperty("WorkbookPoints")?.GetValue(noCacheVector)) ?? throw new InvalidOperationException("Expected formula-only workbook sidecar points.")).Cast<object>().ToArray();
         object[] noCacheDensePoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetMethod("DenseValues")?.Invoke(noCacheVector, [])) ?? throw new InvalidOperationException("Expected formula-only dense active point projection.")).Cast<object>().ToArray();
@@ -1366,9 +1361,11 @@ internal static class PptxChartRenderingTests
         object radarSource = radarSeries[0].GetType().GetProperty("Source")?.GetValue(radarSeries[0]) ?? throw new InvalidOperationException("Expected radar series to preserve its source vector.");
         object[] radarWorkbookPoints = (((System.Collections.IEnumerable?)radarSource.GetType().GetProperty("WorkbookPoints")?.GetValue(radarSource)) ?? throw new InvalidOperationException("Expected radar source vector workbook sidecar points.")).Cast<object>().ToArray();
         TestAssert.True((double?)radarWorkbookPoints[0].GetType().GetProperty("Value")?.GetValue(radarWorkbookPoints[0]) == 8.2d, "Expected radar series source to preserve workbook sidecar values.");
-        object sparseRadarVector = buildVector.Invoke(
-            null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 44d, "44", true) }, 3, "General", source, null, true]) ?? throw new InvalidOperationException("Expected sparse indexed chart vector.");
+        var sparseRadarPlot = ReadPointSourcePlot("""
+            <c:val><c:numLit><c:formatCode>General</c:formatCode><c:ptCount val="3"/>
+            <c:pt idx="2"><c:v>44</c:v></c:pt></c:numLit></c:val>
+            """);
+        object sparseRadarVector = NumberVector(sparseRadarPlot, null);
         Array sparseRadarVectors = Array.CreateInstance(vector.GetType(), 1);
         sparseRadarVectors.SetValue(sparseRadarVector, 0);
         object[] sparseRadarSeries = (((System.Collections.IEnumerable?)buildRadarSeries.Invoke(null, [sparseRadarVectors])) ?? throw new InvalidOperationException("Expected sparse radar series.")).Cast<object>().ToArray();
@@ -1376,10 +1373,19 @@ internal static class PptxChartRenderingTests
         TestAssert.True(sparseRadarValues.Length == 3, "Expected radar geometry projection to preserve sparse point slots.");
         TestAssert.True(sparseRadarValues[0] is null && sparseRadarValues[1] is null, "Expected missing radar point slots to remain explicit gaps.");
         TestAssert.True((double?)sparseRadarValues[2] == 44d, "Expected sparse radar value to keep its source value.");
-        Type scatterSeriesType = typeof(PptxRenderer).GetNestedType(
-            "ChartIndexedScatterSeries",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected indexed scatter-series type.");
-        object scatterSeries = Activator.CreateInstance(scatterSeriesType, [vector, vector, vector, true]) ?? throw new InvalidOperationException("Expected indexed scatter-series instance.");
+        var readScatter = typeof(PptxRenderer).GetMethod("ReadSceneScatterSeriesVectors",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        object ScatterVector(PptxSceneChartPlot plot, object? book) =>
+            ((System.Collections.IEnumerable)readScatter.Invoke(null, [plot, true, book, true])!).Cast<object>().Single();
+        var bubblePlot = ReadPointSourcePlot("""
+            <c:xVal><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f><c:numCache><c:ptCount val="1"/>
+            <c:pt idx="0"><c:v>99</c:v></c:pt></c:numCache></c:numRef></c:xVal>
+            <c:yVal><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f><c:numCache><c:ptCount val="1"/>
+            <c:pt idx="0"><c:v>99</c:v></c:pt></c:numCache></c:numRef></c:yVal>
+            <c:bubbleSize><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f><c:numCache><c:ptCount val="1"/>
+            <c:pt idx="0"><c:v>99</c:v></c:pt></c:numCache></c:numRef></c:bubbleSize>
+            """, "bubbleChart");
+        object scatterSeries = ScatterVector(bubblePlot, workbook);
         System.Reflection.MethodInfo buildScatterSeries = typeof(PptxRenderer).GetMethod(
             "BuildScatterSeries",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter-series projection.");
@@ -1392,25 +1398,22 @@ internal static class PptxChartRenderingTests
         object scatterXWorkbookPoint = scatterPoints[0].GetType().GetProperty("XWorkbookPoint")?.GetValue(scatterPoints[0]) ?? throw new InvalidOperationException("Expected scatter point to preserve matching workbook X point.");
         TestAssert.True((double?)scatterXPoint.GetType().GetProperty("Value")?.GetValue(scatterXPoint) == 99d, "Expected scatter active point to preserve the rendered cache value.");
         TestAssert.True((double?)scatterXWorkbookPoint.GetType().GetProperty("Value")?.GetValue(scatterXWorkbookPoint) == 8.2d, "Expected scatter workbook sidecar point to preserve the workbook source value.");
-        object sparseScatterXVector = buildVector.Invoke(
-            null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 12d, "12", true) }, 3, "General", source, null, true]) ?? throw new InvalidOperationException("Expected sparse scatter X vector.");
-        object sparseScatterYVector = buildVector.Invoke(
-            null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 34d, "34", true) }, 3, "General", source, null, true]) ?? throw new InvalidOperationException("Expected sparse scatter Y vector.");
-        object sparseScatterSizeVector = buildVector.Invoke(
-            null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 5d, "5", true) }, 3, "General", source, null, true]) ?? throw new InvalidOperationException("Expected sparse scatter bubble-size vector.");
-        object sparseScatterSeriesRecord = Activator.CreateInstance(scatterSeriesType, [sparseScatterXVector, sparseScatterYVector, sparseScatterSizeVector, true]) ?? throw new InvalidOperationException("Expected sparse indexed scatter-series instance.");
+        var sparseBubblePlot = ReadPointSourcePlot("""
+            <c:xVal><c:numLit><c:ptCount val="3"/><c:pt idx="2"><c:v>12</c:v></c:pt></c:numLit></c:xVal>
+            <c:yVal><c:numLit><c:ptCount val="3"/><c:pt idx="2"><c:v>34</c:v></c:pt></c:numLit></c:yVal>
+            <c:bubbleSize><c:numLit><c:ptCount val="3"/><c:pt idx="2"><c:v>5</c:v></c:pt></c:numLit></c:bubbleSize>
+            """, "bubbleChart");
+        object sparseScatterSeriesRecord = ScatterVector(sparseBubblePlot, null);
         object sparseRenderedScatter = buildScatterSeries.Invoke(null, [sparseScatterSeriesRecord]) ?? throw new InvalidOperationException("Expected sparse rendered scatter-series.");
         object[] sparseScatterPoints = (((System.Collections.IEnumerable?)sparseRenderedScatter.GetType().GetProperty("Points")?.GetValue(sparseRenderedScatter)) ?? throw new InvalidOperationException("Expected sparse rendered scatter points.")).Cast<object>().ToArray();
         TestAssert.True(sparseScatterPoints.Length == 1, "Expected sparse scatter channels to pair by source index.");
         TestAssert.True((int?)sparseScatterPoints[0].GetType().GetProperty("Index")?.GetValue(sparseScatterPoints[0]) == 2, "Expected sparse scatter point to preserve the paired source index.");
         TestAssert.True((double?)sparseScatterPoints[0].GetType().GetProperty("Size")?.GetValue(sparseScatterPoints[0]) == 5d, "Expected sparse bubble-size channel to pair by source index.");
-        var blankSource = source with { Formula = "Sheet1!$B$2:$B$4" };
-        object blankVector = buildVector.Invoke(
-            null,
-            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 3, "General", blankSource, workbook, true]) ?? throw new InvalidOperationException("Expected blank-aware indexed chart vector.");
+        var threeSlotPlot = ReadPointSourcePlot("""
+            <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:formatCode>General</c:formatCode>
+            <c:ptCount val="3"/><c:pt idx="0"><c:v>99</c:v></c:pt></c:numCache></c:numRef></c:val>
+            """);
+        object blankVector = NumberVector(threeSlotPlot, workbook);
         object[] blankAwareWorkbookPoints = (((System.Collections.IEnumerable?)blankVector.GetType().GetProperty("WorkbookPoints")?.GetValue(blankVector)) ?? throw new InvalidOperationException("Expected blank-aware workbook sidecar points.")).Cast<object>().ToArray();
         TestAssert.True(blankAwareWorkbookPoints.Length == 3, "Expected workbook sidecar points to preserve missing cells inside the source range.");
         TestAssert.True(blankAwareWorkbookPoints[2].GetType().GetProperty("Value")?.GetValue(blankAwareWorkbookPoints[2]) is null, "Expected missing workbook source cells to remain nullable sidecar points.");
@@ -1423,64 +1426,53 @@ internal static class PptxChartRenderingTests
             "ReadWorkbookDataCore",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
         object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage, CancellationToken.None]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
-        var hiddenColumnSource = source with { Formula = "Sheet1!$B$2:$B$4" };
-        object hiddenColumnVector = buildVector.Invoke(
-            null,
-            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 3, "General", hiddenColumnSource, parsedWorkbook, true]) ?? throw new InvalidOperationException("Expected hidden-column indexed chart vector.");
+        object hiddenColumnVector = NumberVector(threeSlotPlot, parsedWorkbook);
         object[] allHiddenColumnWorkbookPoints = (((System.Collections.IEnumerable?)hiddenColumnVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(hiddenColumnVector, [false])) ?? throw new InvalidOperationException("Expected unfiltered workbook points.")).Cast<object>().ToArray();
         object[] visibleHiddenColumnWorkbookPoints = (((System.Collections.IEnumerable?)hiddenColumnVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(hiddenColumnVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered workbook points.")).Cast<object>().ToArray();
         TestAssert.True(allHiddenColumnWorkbookPoints.Length == 3, "Expected plot visibility projection to start from the full workbook source vector.");
         TestAssert.True(visibleHiddenColumnWorkbookPoints.Length == 0, "Expected plot-visible-only projection to exclude workbook points from a hidden source column.");
         object? hiddenWorkbookPoint = hiddenColumnVector.GetType().GetMethod("WorkbookPointForIndex")?.Invoke(hiddenColumnVector, [0]);
         TestAssert.True(hiddenWorkbookPoint is null, "Expected indexed workbook source lookup to honor the vector's plot-visible-only policy.");
-        object noCacheHiddenColumnVector = buildVector.Invoke(
-            null,
-            [Array.Empty<double>(), Array.Empty<PptxSceneChartNumberPoint>(), null, "General", hiddenColumnSource, parsedWorkbook, true]) ?? throw new InvalidOperationException("Expected no-cache hidden-column indexed chart vector.");
+        var threeSlotNoCachePlot = ReadPointSourcePlot("""
+            <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f></c:numRef></c:val>
+            """);
+        object noCacheHiddenColumnVector = NumberVector(threeSlotNoCachePlot, parsedWorkbook);
         object[] noCacheHiddenDensePoints = (((System.Collections.IEnumerable?)noCacheHiddenColumnVector.GetType().GetMethod("DenseValues")?.Invoke(noCacheHiddenColumnVector, [])) ?? throw new InvalidOperationException("Expected visibility-filtered no-cache dense points.")).Cast<object>().ToArray();
         TestAssert.True(noCacheHiddenDensePoints.Length == 0, "Expected no-cache dense projection to honor plot-visible-only when the workbook source column is hidden.");
 
-        var labelSource = new PptxSceneChartDataSource(
-            "Sheet1!$A$2:$A$4",
-            PptxSceneChartDataSourceReferenceKind.StringReference,
-            "strRef",
-            PptxSceneChartDataSourceCacheKind.StringCache,
-            "strCache",
-            HasCachedPoints: true);
-        System.Reflection.MethodInfo buildTextVector = typeof(PptxRenderer)
-            .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "BuildChartIndexedTextVector" && method.GetParameters().Length == 7);
-        object textVector = buildTextVector.Invoke(
-            null,
-            [
-                new[] { "Cached" },
-                Array.Empty<PptxSceneChartStringPoint>(),
-                3,
-                new List<IReadOnlyList<PptxSceneChartStringPoint>>(),
-                labelSource,
-                parsedWorkbook,
-                true
-            ]) ?? throw new InvalidOperationException("Expected indexed chart text vector.");
+        var labelPlot = ReadPointSourcePlot("""
+            <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f><c:strCache><c:ptCount val="3"/>
+            <c:pt idx="0"><c:v>Cached</c:v></c:pt></c:strCache></c:strRef></c:cat>
+            """);
+        var readText = typeof(PptxRenderer).GetMethod("BuildChartIndexedTextVector",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        object TextVector(PptxSceneChartPlot plot)
+        {
+            var series = plot.Series.Single();
+            return readText.Invoke(null, [series.CategoryPoints, series.CategoryPointCount, series.CategoryLevels,
+                series.DataSources.Categories, parsedWorkbook, true])!;
+        }
+        object textVector = TextVector(labelPlot);
         object[] visibleLabelWorkbookPoints = (((System.Collections.IEnumerable?)textVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(textVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered text workbook points.")).Cast<object>().ToArray();
         TestAssert.True(visibleLabelWorkbookPoints.Length == 2, "Expected plot-visible-only projection to exclude the hidden worksheet row while preserving visible label points.");
         object visibleLabelCell = visibleLabelWorkbookPoints[1].GetType().GetProperty("WorkbookCell")?.GetValue(visibleLabelWorkbookPoints[1]) ?? throw new InvalidOperationException("Expected visible text point cell provenance.");
         TestAssert.Equal("A4", (string?)visibleLabelCell.GetType().GetProperty("Reference")?.GetValue(visibleLabelCell) ?? string.Empty);
-        var noCacheLabelSource = labelSource with { HasCachedPoints = false };
-        object noCacheTextVector = buildTextVector.Invoke(
-            null,
-            [
-                Array.Empty<string>(),
-                Array.Empty<PptxSceneChartStringPoint>(),
-                null,
-                new List<IReadOnlyList<PptxSceneChartStringPoint>>(),
-                noCacheLabelSource,
-                parsedWorkbook,
-                true
-            ]) ?? throw new InvalidOperationException("Expected formula-only indexed chart text vector.");
+        var noCacheLabelPlot = ReadPointSourcePlot("""
+            <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f></c:strRef></c:cat>
+            """);
+        object noCacheTextVector = TextVector(noCacheLabelPlot);
         object[] noCacheTextActivePoints = (((System.Collections.IEnumerable?)noCacheTextVector.GetType().GetProperty("Points")?.GetValue(noCacheTextVector)) ?? throw new InvalidOperationException("Expected formula-only active text points.")).Cast<object>().ToArray();
         object[] noCacheTextWorkbookPoints = (((System.Collections.IEnumerable?)noCacheTextVector.GetType().GetProperty("WorkbookPoints")?.GetValue(noCacheTextVector)) ?? throw new InvalidOperationException("Expected formula-only text workbook sidecar points.")).Cast<object>().ToArray();
         TestAssert.True(noCacheTextActivePoints.Length == 0, "Expected formula-only workbook text values to remain inactive when chart caches are absent.");
         TestAssert.True(noCacheTextWorkbookPoints.Length == 3, "Expected formula-only workbook text values to remain available as sidecar points.");
     }
+
+    private static PptxSceneChartPlot ReadPointSourcePlot(string channels, string kind = "barChart") =>
+        TestAssert.NotNull(PptxTests.BuildSingleChartScene($$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chart><c:plotArea><c:{{kind}}><c:ser>{{channels}}</c:ser></c:{{kind}}></c:plotArea></c:chart>
+            </c:chartSpace>
+            """)).Plots.Single();
 
     public static void PptxChartSeriesNamesPreserveWorkbookSidecarPoints()
     {

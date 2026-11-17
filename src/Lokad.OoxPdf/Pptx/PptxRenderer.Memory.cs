@@ -50,8 +50,8 @@ internal sealed partial class PptxRenderer
                         foreach (var series in plot.Series)
                         {
                             token.ThrowIfCancellationRequested();
-                            vertices = Math.Max(vertices, CountChartSlots(series.CategoryPointCount, series.Categories.Count, series.CategoryPoints, static p => p.Index, token));
-                            vertices = Math.Max(vertices, CountChartSlots(series.ValuePointCount, series.Values.Count, series.ValuePoints, static p => p.Index, token));
+                            vertices = Math.Max(vertices, CountChartSlots(series.CategoryPointCount, series.CategoryPoints, static p => p.Index, token));
+                            vertices = Math.Max(vertices, CountChartSlots(series.ValuePointCount, series.ValuePoints, static p => p.Index, token));
                         }
                         axisSites = checked(axisSites + vertices);
                     }
@@ -93,17 +93,17 @@ internal sealed partial class PptxRenderer
             foreach (var series in plot.Series)
             {
                 token.ThrowIfCancellationRequested();
-                if (!categorySource && (series.CategoryPointCount is not null || series.CategoryPoints.Count != 0 || series.Categories.Count != 0 || series.CategoryLevels.Any(level => level.Count != 0)))
+                if (!categorySource && (series.CategoryPointCount is not null || series.CategoryPoints.Count != 0 || series.CategoryLevels.Any(level => level.Count != 0)))
                 {
                     categorySource = true;
-                    categories = CountChartSlots(series.CategoryPointCount, series.Categories.Count, series.CategoryPoints, static p => p.Index, token);
+                    categories = CountChartSlots(series.CategoryPointCount, series.CategoryPoints, static p => p.Index, token);
                     foreach (var level in series.CategoryLevels)
-                        categories = Math.Max(categories, CountChartSlots(null, 0, level, static p => p.Index, token));
+                        categories = Math.Max(categories, CountChartSlots(null, level, static p => p.Index, token));
                 }
-                if (series.Values.Count == 0 && !series.ValuePoints.Any(point => point.Value is not null)) continue;
+                if (!series.ValuePoints.Any(point => point.Value is not null)) continue;
                 renderable = true;
                 if (numericSlots)
-                    values = checked(values + CountChartSlots(series.ValuePointCount, series.Values.Count, series.ValuePoints, static p => p.Index, token));
+                    values = checked(values + CountChartSlots(series.ValuePointCount, series.ValuePoints, static p => p.Index, token));
             }
             // Coarse construction headroom for nullable values, coordinate/stack
             // buffers and reference category slots. Source markup already funds
@@ -113,9 +113,11 @@ internal sealed partial class PptxRenderer
         return capacity;
     }
 
-    private static int CountChartSlots<T>(int? declared, int ordinalCount, IReadOnlyList<T> points, Func<T, int> index, CancellationToken token)
+    private static int CountChartSlots<T>(int? declared, IReadOnlyList<T> points, Func<T, int> index, CancellationToken token)
     {
-        int count = Math.Clamp(Math.Max(declared ?? 0, ordinalCount), 0, MaxChartDensePoints);
+        // Dense buffers follow declared/source indices. Duplicate or invalid
+        // source records already have model storage; they do not add dense slots.
+        int count = Math.Clamp(declared ?? 0, 0, MaxChartDensePoints);
         foreach (T point in points)
         {
             token.ThrowIfCancellationRequested();

@@ -793,8 +793,8 @@ internal static class PptxModelTests
         TestAssert.Equal("t", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Position ?? string.Empty);
         TestAssert.Equal(PptxSceneChartDataLabelPosition.Top, slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.PositionKind);
         TestAssert.Equal(" + ", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Separator ?? string.Empty);
-        TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);
-        TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Categories[1] ?? string.Empty);
+        TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].ValuePoints[0].Value ?? 0d);
+        TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].CategoryPoints[1].Text ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Fill.HasFill == true, "Expected chart series fill in the scene model.");
         TestAssert.Equal(new RgbColor(170, 85, 0), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Fill.Color ?? default);
         TestAssert.Equal(0.7d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Fill.Alpha ?? 0d);
@@ -832,9 +832,9 @@ internal static class PptxModelTests
         TestAssert.Equal("pct25", slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Preset ?? string.Empty);
         TestAssert.Equal(new RgbColor(17, 34, 51), slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Foreground ?? default);
         TestAssert.Equal(new RgbColor(240, 224, 208), slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Background ?? default);
-        TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].XValues[1] ?? 0d);
-        TestAssert.Equal(3.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].YValues[0] ?? 0d);
-        TestAssert.Equal(16d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].BubbleSizes[1] ?? 0d);
+        TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].XValuePoints[1].Value ?? 0d);
+        TestAssert.Equal(3.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].YValuePoints[0].Value ?? 0d);
+        TestAssert.Equal(16d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].BubbleSizePoints[1].Value ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].VaryColors is null, "Expected missing varyColors metadata to remain distinct from the effective default.");
         TestAssert.Equal(string.Empty, slide.SlideNodes[4].Chart?.Plots[1].VaryColorsValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].Series[0].Marker.IsDefined == false, "Expected a missing marker element to remain distinct from the effective marker default.");

@@ -185,8 +185,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartPlotKind.Radar or PptxSceneChartPlotKind.Scatter;
 
     private static bool HasRenderableCachedValues(PptxSceneChartSeries series) =>
-        series.Values.Count != 0 || series.ValuePoints.Any(point => point.Value is not null) ||
-        series.XValues.Count != 0 && series.YValues.Count != 0 ||
+        series.ValuePoints.Any(point => point.Value is not null) ||
         series.XValuePoints.Any(point => point.Value is not null) && series.YValuePoints.Any(point => point.Value is not null);
 
     private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
@@ -316,7 +315,6 @@ internal sealed partial class PptxRenderer
     {
         return plot.Series
             .Select(series => BuildChartIndexedNumberVector(
-                series.Values,
                 series.ValuePoints,
                 series.ValuePointCount,
                 series.ValueFormatCode,
@@ -339,7 +337,6 @@ internal sealed partial class PptxRenderer
         return plot.Series
             .Select(item => new ChartIndexedScatterSeries(
                 BuildChartIndexedNumberVector(
-                    item.XValues,
                     item.XValuePoints,
                     item.XValuePointCount,
                     item.XValueFormatCode,
@@ -347,7 +344,6 @@ internal sealed partial class PptxRenderer
                     workbook,
                     plotVisibleOnly),
                 BuildChartIndexedNumberVector(
-                    item.YValues,
                     item.YValuePoints,
                     item.YValuePointCount,
                     item.YValueFormatCode,
@@ -355,7 +351,6 @@ internal sealed partial class PptxRenderer
                     workbook,
                     plotVisibleOnly),
                 BuildChartIndexedNumberVector(
-                    item.BubbleSizes,
                     item.BubbleSizePoints,
                     item.BubbleSizePointCount,
                     item.BubbleSizeFormatCode,
@@ -370,7 +365,6 @@ internal sealed partial class PptxRenderer
     {
         return plot.Series
             .Select(series => BuildChartIndexedTextVector(
-                series.Categories,
                 series.CategoryPoints,
                 series.CategoryPointCount,
                 series.CategoryLevels,
@@ -581,7 +575,6 @@ internal sealed partial class PptxRenderer
     }
 
     private static ChartIndexedNumberVector BuildChartIndexedNumberVector(
-        IReadOnlyList<double> compactValues,
         IReadOnlyList<PptxSceneChartNumberPoint> scenePoints,
         int? pointCount,
         string? formatCode,
@@ -590,13 +583,7 @@ internal sealed partial class PptxRenderer
         bool plotVisibleOnly)
     {
         IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, source);
-        IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Count != 0
-            ? scenePoints
-                .Select(ToChartIndexedNumberPoint)
-                .ToArray()
-            : compactValues
-                .Select((value, index) => new ChartIndexedNumberPoint(index, ChartPointIndexSource.OrdinalFallback, value, value.ToString(CultureInfo.InvariantCulture), true, default))
-                .ToArray();
+        IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Select(ToChartIndexedNumberPoint).ToArray();
         return new ChartIndexedNumberVector(points, pointCount ?? InferPointCount(points), source.Formula, formatCode, source, workbookPoints, plotVisibleOnly);
     }
 
@@ -612,7 +599,6 @@ internal sealed partial class PptxRenderer
     }
 
     private static ChartIndexedTextVector BuildChartIndexedTextVector(
-        IReadOnlyList<string> compactValues,
         IReadOnlyList<PptxSceneChartStringPoint> scenePoints,
         int? pointCount,
         IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> categoryLevels,
@@ -621,25 +607,19 @@ internal sealed partial class PptxRenderer
         bool plotVisibleOnly)
     {
         IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
-        IReadOnlyList<ChartIndexedTextPoint> points = scenePoints.Count != 0
-            ? scenePoints
-                .Select(point => ToChartIndexedTextPoint(point, trimText: false))
-                .ToArray()
-            : compactValues
-                .Select((value, index) => new ChartIndexedTextPoint(index, ChartPointIndexSource.OrdinalFallback, value, true, default))
-                .ToArray();
+        IReadOnlyList<ChartIndexedTextPoint> points = scenePoints.Select(ToChartIndexedTextPoint).ToArray();
         IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> levels = categoryLevels
-            .Select(level => level.Select(point => ToChartIndexedTextPoint(point, trimText: false)).ToArray())
+            .Select(level => level.Select(ToChartIndexedTextPoint).ToArray())
             .ToArray();
         return new ChartIndexedTextVector(points, pointCount ?? InferPointCount(points), levels, source.Formula, source, workbookPoints, plotVisibleOnly);
     }
 
-    private static ChartIndexedTextPoint ToChartIndexedTextPoint(PptxSceneChartStringPoint point, bool trimText)
+    private static ChartIndexedTextPoint ToChartIndexedTextPoint(PptxSceneChartStringPoint point)
     {
         return new ChartIndexedTextPoint(
             point.Index,
             point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
-            trimText ? point.Text.Trim() : point.Text,
+            point.Text,
             point.HasText,
             default);
     }
@@ -785,7 +765,6 @@ internal sealed partial class PptxRenderer
             int ResolveSceneChartSeriesPointCount()
             {
                 ChartIndexedNumberVector values = BuildChartIndexedNumberVector(
-                    series.Values,
                     series.ValuePoints,
                     series.ValuePointCount,
                     series.ValueFormatCode,
@@ -793,7 +772,6 @@ internal sealed partial class PptxRenderer
                     workbook,
                     plotVisibleOnly: true);
                 ChartIndexedTextVector categories = BuildChartIndexedTextVector(
-                    series.Categories,
                     series.CategoryPoints,
                     series.CategoryPointCount,
                     series.CategoryLevels,
