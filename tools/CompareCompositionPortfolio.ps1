@@ -28,6 +28,23 @@ $thresholdHashes = @{
     docx=(Get-FileHash $docxThresholdSource).Hash
     pptx=(Get-FileHash $pptxThresholdSource).Hash
 }
+$VisualDiffPath = (Resolve-Path -LiteralPath $VisualDiffPath).Path
+$rasterizerDll = if ($RasterizerPath) {(Resolve-Path -LiteralPath $RasterizerPath).Path}
+    else {Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"}
+function Get-PortfolioRasterizerId {
+    $identity = [ordered]@{
+        SourceAndNativeId = Get-RasterizerId
+        WrapperSha256 = (Get-FileHash (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1')).Hash
+        AssemblySha256 = if (Test-Path -LiteralPath $rasterizerDll) { (Get-FileHash $rasterizerDll).Hash } else { $null }
+    }
+    Get-ShortSha256 ([Text.Encoding]::UTF8.GetBytes(($identity | ConvertTo-Json -Compress))) 32
+}
+$rasterizerId = Get-PortfolioRasterizerId
+# Schema 1 means whole-page VisualDiff defaults, with no region specifications.
+# A future change to those invocation semantics must change this schema.
+$comparisonPolicy = [ordered]@{
+    Schema=1;VisualDiffSha256=(Get-FileHash -LiteralPath $VisualDiffPath).Hash;RasterizerId=$rasterizerId
+}
 function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string] $Id) {
     $incomplete = 'Comparison page metrics incomplete: ' + $Id
     if (!$Metrics.Count) { throw $incomplete }
@@ -75,13 +92,18 @@ function Get-ComparisonFailures([object[]] $Metrics, $Limits, $Outcome, [string]
         ($null -ne $Outcome.InspectedPages -and $candidatePages -ne $Outcome.InspectedPages)) { throw $incomplete }
     return @($failures | Sort-Object -Unique)
 }
+$historical = @()
 $cached = @(foreach ($directory in $ReuseComparisonDirectory) {
     $path = Join-Path (Resolve-Path -LiteralPath $directory).Path $reportName
     $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-    if ($report.DocxThresholdSourceSha256 -eq $thresholdHashes.docx -and
+    if ($report.ComparisonPolicy.Schema -eq $comparisonPolicy.Schema -and
+        $report.ComparisonPolicy.VisualDiffSha256 -eq $comparisonPolicy.VisualDiffSha256 -and
+        $report.ComparisonPolicy.RasterizerId -eq $comparisonPolicy.RasterizerId -and
+        $report.DocxThresholdSourceSha256 -eq $thresholdHashes.docx -and
         $report.PptxThresholdSourceSha256 -eq $thresholdHashes.pptx) {
         foreach ($prior in $report.Rows) { [pscustomobject]@{Path=$path;Row=$prior} }
     }
+    else { $historical += [ordered]@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash;Reason='Unbound or different comparison policy/thresholds; historical metrics only'} }
 })
 $ids = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 # Validate the complete batch before raster/diff stages create any output. A
@@ -143,7 +165,8 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
     $reuse = @($cached | Where-Object {
         $_.Row.Id -eq $row.Id -and $_.Row.Mode -eq $row.Mode -and
         $_.Row.CandidatePdfSha256 -eq $row.PdfSha256 -and $_.Row.ReferencePdfSha256 -eq $referenceHash -and
-        [string]$_.Row.ReferenceImageMetadataSha256 -eq $selected.ImageHash
+        [string]$_.Row.ReferenceImageMetadataSha256 -eq $selected.ImageHash -and
+        $_.Row.ReferenceKind -eq $ReferenceKind -and $_.Row.RasterDpi -eq $selected.Dpi
     } | Select-Object -First 1)
     $limits = if ($row.Mode -eq 'presentation') {$thresholds.pptx} else {$thresholds.docx}
     $reuseFailures = @(if ($reuse.Count) {
@@ -158,14 +181,6 @@ $jobs = @(foreach ($row in $outcomes.Rows) {
 })
 # Match the reference cache's PDF/DPI/tool/page-hash convention. Legacy raster
 # folders stay untouched: only derivatives completed by this command may be reused.
-$rasterizerDll = if ($RasterizerPath) {(Resolve-Path -LiteralPath $RasterizerPath).Path}
-    else {Join-Path $ValidationToolsDirectory "Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/$Framework/Lokad.OoxPdf.PdfiumRasterizer.dll"}
-$rasterizerIdentity = [ordered]@{
-    SourceAndNativeId = Get-RasterizerId
-    WrapperSha256 = (Get-FileHash (Join-Path $ValidationToolsDirectory 'RasterizePdf.ps1')).Hash
-    AssemblySha256 = if (Test-Path -LiteralPath $rasterizerDll) { (Get-FileHash $rasterizerDll).Hash } else { $null }
-}
-$rasterizerId = Get-ShortSha256 ([Text.Encoding]::UTF8.GetBytes(($rasterizerIdentity | ConvertTo-Json -Compress))) 32
 function Get-PortfolioRaster([string] $Pdf, [string] $Folder, [int] $Dpi=144) {
     $pdfHash = (Get-FileHash -LiteralPath $Pdf).Hash
     $identityPath = Join-Path $Folder 'raster-identity.json'
@@ -222,10 +237,11 @@ foreach ($job in $jobs) {
             CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;
             ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;
             ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;
+            RasterDpi=$job.Dpi;
             Failures=$job.ReuseFailures;Metrics=$prior.Metrics;Thresholds=$job.Limits;
             ContentSeverity=$row.Severity;ReusedComparison=$reuse[0].Path;
             ReusedComparisonSha256=(Get-FileHash $reuse[0].Path).Hash}
-        Write-Output ($id + ': reused identical PDFs and threshold sources')
+        Write-Output ($id + ': reused identical PDFs, comparison policy and threshold sources')
         continue
     }
     $rasterFolder=if ($job.Dpi -eq 144) {'portfolio-raster'} else {'portfolio-raster-dpi'+$job.Dpi}
@@ -237,7 +253,7 @@ foreach ($job in $jobs) {
     $metrics = @(Get-Content (Join-Path $diff 'metrics.json') -Raw | ConvertFrom-Json)
     $limits = $job.Limits
     $failures = @(Get-ComparisonFailures -Metrics $metrics -Limits $limits -Outcome $row -Id $id)
-    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$row.Severity}
+    $rows += [ordered]@{Id=$row.Id;Mode=$row.Mode;HeldOut=$row.HeldOut;CandidatePdfSha256=$row.PdfSha256;ReferencePdfSha256=$referenceHash;ReferenceSourceDirectory=$source;ReferenceIdentitySha256=$job.IdentityHash;ReferenceExportLogSha256=$job.ExportLogHash;ReferenceKind=$ReferenceKind;ReferenceImageMetadataSha256=$job.ImageHash;ReferenceCalibrationStatus=$job.Calibration;RasterDpi=$job.Dpi;Failures=@($failures | Sort-Object -Unique);Metrics=$metrics;Thresholds=$limits;ContentSeverity=$row.Severity}
     if ($ReferenceKind -eq 'OfficeImage') {
         if ((Get-FileHash $job.ImagePath).Hash -ne $job.ImageHash) { throw ('Image reference metadata changed: '+$id) }
         $null=Test-OfficeImageReference $source $row.InputSha256
@@ -246,9 +262,13 @@ foreach ($job in $jobs) {
         (Get-FileHash -LiteralPath $referencePdf).Hash -ne $referenceHash) { throw ('Comparison input changed: ' + $id) }
     Write-Output ($id + ': ' + ($failures | Sort-Object -Unique) -join ', ')
 }
+if ((Get-FileHash -LiteralPath $VisualDiffPath).Hash -ne $comparisonPolicy.VisualDiffSha256 -or
+    (Get-PortfolioRasterizerId) -ne $comparisonPolicy.RasterizerId) { throw 'Comparison tools changed during the batch; retained attempts are not a qualified report' }
 [ordered]@{
     CandidateLibrarySha256=$outcomes.LibrarySha256
     ReferenceKind=$ReferenceKind
+    ComparisonPolicy=$comparisonPolicy
+    HistoricalComparisonReports=$historical
     DocxThresholdSourceSha256=$thresholdHashes.docx
     PptxThresholdSourceSha256=$thresholdHashes.pptx
     Scope='Existing numerical visual thresholds retained; no claim of complete content or layout fidelity'

@@ -16,6 +16,9 @@ New-Item -ItemType Directory -Path $tools -Force | Out-Null
 $script = Join-Path $tools 'CompareCompositionPortfolio.ps1'
 Copy-Item -LiteralPath $ComparisonScript -Destination $script
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ReferenceCache.ps1') -Destination $tools
+. (Join-Path $tools 'ReferenceCache.ps1')
+$visualDiff = Join-Path $tools 'comparison-engine.dll'
+Set-Content -LiteralPath $visualDiff -Value 'Synthetic comparison engine A; never executed'
 @'
 param($InputPdf, $OutputDirectory, $Dpi, [switch]$SkipBuild)
 'Unexpected raster stage' | Set-Content -LiteralPath ($OutputDirectory + '.called')
@@ -84,7 +87,7 @@ foreach ($fault in @('missing-reference', 'candidate-hash', 'existing-comparison
     $rejected = $false
     try {
         & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
-            -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null
+            -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
     }
     catch {
         $expected = switch ($fault) {
@@ -105,7 +108,7 @@ function New-ReuseCache($case) {
     $cache = Join-Path $case.Directory 'prior'
     New-Item -ItemType Directory -Path $cache | Out-Null
     $priorRows = @($case.Rows | ForEach-Object {
-        @{Id=$_.Id;Mode=$_.Mode;CandidatePdfSha256=$_.PdfSha256;
+        @{Id=$_.Id;Mode=$_.Mode;CandidatePdfSha256=$_.PdfSha256;ReferenceKind='OfficePdf';RasterDpi=144;
             ReferencePdfSha256=(Get-FileHash -LiteralPath $(
                 $relative = $_.Id+'-'+$_.Mode+'/reference.pdf'
                 $path = Join-Path $case.ReferenceDirectory $relative
@@ -118,13 +121,21 @@ function New-ReuseCache($case) {
     })
     @{DocxThresholdSourceSha256=(Get-FileHash (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[0]+'/case.json'))).Hash;
         PptxThresholdSourceSha256=(Get-FileHash (Join-Path $repo ('visual-cases/cases/'+$thresholdNames[1]+'/case.json'))).Hash;
-        Rows=$priorRows} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $cache 'office-comparisons.json')
+        ComparisonPolicy=(Test-ComparisonPolicyFixture);Rows=$priorRows} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $cache 'office-comparisons.json')
     return $cache
+}
+function Test-ComparisonPolicyFixture {
+    # A valid wire-format fixture; the checks below independently change its tools,
+    # policy and DPI rather than accepting a cached pass/fail summary.
+    $identity=[ordered]@{SourceAndNativeId=(Get-RasterizerId);
+        WrapperSha256=(Get-FileHash (Join-Path $tools 'RasterizePdf.ps1')).Hash;AssemblySha256=$null}
+    @{Schema=1;VisualDiffSha256=(Get-FileHash $visualDiff).Hash;
+        RasterizerId=(Get-ShortSha256 ([Text.Encoding]::UTF8.GetBytes(($identity | ConvertTo-Json -Compress))) 32)}
 }
 $case = New-Case 'identity-reuse' 'legacy'
 $cache = New-ReuseCache $case
 & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
-    -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+    -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
 $report = Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
 if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
     !$_.ReusedComparison -or $_.Failures.Count -ne 1 -or $_.Failures[0] -ne 'ForegroundRecall'
@@ -152,6 +163,7 @@ function New-ImageCase([string] $Name) {
     $cache=New-ReuseCache $case
     $prior=Get-Content (Join-Path $cache 'office-comparisons.json') -Raw | ConvertFrom-Json -AsHashtable
     foreach ($row in $prior.Rows) {
+        $row.ReferenceKind='OfficeImage'
         $row.ReferenceImageMetadataSha256=(Get-FileHash (Join-Path $case.ReferenceDirectory ($row.Id+'-'+$row.Mode+'/reference-image-metadata.json'))).Hash
     }
     $prior | ConvertTo-Json -Depth 9 | Set-Content (Join-Path $cache 'office-image-comparisons.json')
@@ -159,7 +171,7 @@ function New-ImageCase([string] $Name) {
     return $case
 }
 $case=New-ImageCase 'image-identity-reuse'
-& $script -ReferenceKind OfficeImage -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $case.Cache | Out-Null
+& $script -ReferenceKind OfficeImage -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $case.Cache | Out-Null
 $report=Get-Content (Join-Path $case.CandidateDirectory 'office-image-comparisons.json') -Raw | ConvertFrom-Json
 if ($report.ReferenceKind -ne 'OfficeImage' -or @($report.Rows | Where-Object {
     !$_.ReusedComparison -or !$_.ReferenceImageMetadataSha256 -or $_.Failures -notcontains 'ForegroundRecall' -or
@@ -175,7 +187,7 @@ foreach ($fault in @('image-as-pdf','changed-image-metadata')) {
         [IO.File]::AppendAllText($path,' ')
     }
     $before=Snapshot $case.Directory;$rejected=$false
-    try {& $script @arguments -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null}
+    try {& $script @arguments -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null}
     catch {if ($_.Exception.Message -notmatch 'Reference kind differs|Image reference metadata differs') {throw};$rejected=$true}
     if (!$rejected -or (Snapshot $case.Directory) -cne $before) {throw 'Image reference mismatch mutated comparison stages'}
     $passed+=$fault
@@ -210,7 +222,7 @@ foreach ($fault in @('empty-metrics','missing-metric','null-error','nonfinite-me
     $before=Snapshot $case.Directory;$rejected=$false
     try {
         & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
-            -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+            -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
     }
     catch {
         if ($_.Exception.Message -notlike 'Comparison page metrics incomplete: second-final-preserve*') { throw }
@@ -267,7 +279,7 @@ foreach ($control in @('cleared-summary','obsolete-failure','blank-reference','d
     $prior | ConvertTo-Json -Depth 10 | Set-Content $path
     $before=Snapshot $case.ReferenceDirectory
     & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
-        -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+        -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
     $result=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
     $actual=$result.Rows[1]
     if ((@($actual.Failures) -join ',') -cne ($expectedFailures -join ',') -or !$actual.ReusedComparison -or
@@ -292,7 +304,7 @@ foreach ($fault in @('multi-missing-pin','multi-source','multi-mode','multi-refe
     $before = Snapshot $case.Directory; $rejected = $false
     try {
         & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory @($case.ReferenceDirectory,$case.SecondReferenceDirectory) `
-            -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null
+            -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
     }
     catch {
         $expected = switch ($fault) {
@@ -318,7 +330,7 @@ Copy-Item -LiteralPath (Join-Path $case.ReferenceDirectory 'first-final-preserve
     -Destination (Join-Path $case.SecondReferenceDirectory 'first-final-preserve') -Recurse
 $referenceBefore = @((Snapshot $case.ReferenceDirectory),(Snapshot $case.SecondReferenceDirectory)) -join "`n"
 & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory @($case.ReferenceDirectory,$case.SecondReferenceDirectory) `
-    -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+    -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
 $report = Get-Content -LiteralPath (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
 if ($report.Rows.Count -ne 2 -or @($report.Rows | Where-Object {
     !$_.ReferenceIdentitySha256 -or !$_.ReferenceExportLogSha256 -or !$_.ReusedComparison -or
@@ -338,7 +350,7 @@ $count=if ([IO.File]::ReadAllText($InputPdf).Contains('two pages')) {2} else {1}
 for ($i=1;$i -le $count;$i++) { [IO.File]::WriteAllText((Join-Path $OutputDirectory ('page-{0:000}.png' -f $i)),('owned page '+$i)) }
 $global:LASTEXITCODE=0
 '@ | Set-Content -LiteralPath (Join-Path $tools 'RasterizePdf.ps1')
-$comparisonProbeState=@{DiffCalls=0}
+$comparisonProbeState=@{DiffCalls=0;AfterDiff=$null}
 function dotnet {
     $comparisonProbeState.DiffCalls++
     $reference=$args[1];$candidate=$args[2];$diff=$args[3]
@@ -351,11 +363,77 @@ function dotnet {
           DimensionsMatch=$true;MeanAbsoluteError=0;ChangedPixelRatioAtThreshold16=0;ForegroundRecall=1;StructuralSimilarity=1}
     })
     ConvertTo-Json -InputObject $metrics -Depth 5 | Set-Content (Join-Path $diff 'metrics.json')
+    if ($comparisonProbeState.AfterDiff) { & $comparisonProbeState.AfterDiff }
     $global:LASTEXITCODE=0
 }
 try {
+    foreach ($control in @('matching-policy','legacy-policy','different-schema','changed-engine',
+        'changed-wrapper','changed-rasterizer','different-dpi','missing-dpi','different-kind')) {
+        $case=New-Case ('metric-policy-'+$control) 'legacy'
+        $cache=New-ReuseCache $case
+        $path=Join-Path $cache 'office-comparisons.json'
+        $prior=Get-Content $path -Raw | ConvertFrom-Json -AsHashtable
+        $engineBytes=[IO.File]::ReadAllBytes($visualDiff)
+        $wrapper=Join-Path $tools 'RasterizePdf.ps1';$wrapperBytes=[IO.File]::ReadAllBytes($wrapper)
+        $rasterizer=Join-Path $tools 'Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net11.0/Lokad.OoxPdf.PdfiumRasterizer.dll'
+        $expectedCalls=2;$expectedHistorical=1
+        switch ($control) {
+            'matching-policy' { $expectedCalls=0;$expectedHistorical=0 }
+            'legacy-policy' { $prior.Remove('ComparisonPolicy') }
+            'different-schema' { $prior.ComparisonPolicy.Schema=0 }
+            'changed-engine' { [IO.File]::AppendAllText($visualDiff,'different engine bytes') }
+            'changed-wrapper' { [IO.File]::AppendAllText($wrapper,"`n# different raster wrapper bytes") }
+            'changed-rasterizer' {
+                New-Item -ItemType Directory -Path (Split-Path $rasterizer) -Force | Out-Null
+                [IO.File]::WriteAllText($rasterizer,'different rasterizer bytes; never executed')
+            }
+            'different-dpi' { $prior.Rows[0].RasterDpi=72;$expectedCalls=1;$expectedHistorical=0 }
+            'missing-dpi' { $prior.Rows[0].Remove('RasterDpi');$expectedCalls=1;$expectedHistorical=0 }
+            'different-kind' { $prior.Rows[0].ReferenceKind='OfficeImage';$expectedCalls=1;$expectedHistorical=0 }
+        }
+        $prior | ConvertTo-Json -Depth 10 | Set-Content $path
+        $priorHash=(Get-FileHash $path).Hash;$beforeCalls=$comparisonProbeState.DiffCalls
+        try {
+            & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+                -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+            $report=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
+            if ($comparisonProbeState.DiffCalls -ne $beforeCalls+$expectedCalls -or
+                @($report.Rows | Where-Object ReusedComparison).Count -ne 2-$expectedCalls -or
+                @($report.HistoricalComparisonReports).Count -ne $expectedHistorical -or
+                $report.ComparisonPolicy.Schema -ne 1 -or
+                $report.ComparisonPolicy.VisualDiffSha256 -ne (Get-FileHash $visualDiff).Hash -or
+                @($report.Rows | Where-Object {$_.RasterDpi -ne 144 -or $_.ReferenceKind -ne 'OfficePdf'}).Count -or
+                @($report.Rows | Where-Object {$_.ReusedComparison -and $_.Failures -notcontains 'ForegroundRecall'}).Count -or
+                (Get-FileHash $path).Hash -ne $priorHash) { throw ('Incorrect metric-policy reuse: '+$control) }
+            if ($expectedHistorical -and $report.HistoricalComparisonReports[0].Sha256 -ne $priorHash) {
+                throw 'Historical metrics must retain their exact report identity'
+            }
+        }
+        finally {
+            [IO.File]::WriteAllBytes($visualDiff,$engineBytes)
+            [IO.File]::WriteAllBytes($wrapper,$wrapperBytes)
+            if ($control -eq 'changed-rasterizer') { Remove-Item -LiteralPath $rasterizer }
+        }
+        $passed+=('metric-policy-'+$control)
+    }
+    foreach ($control in @('engine','wrapper')) {
+        $case=New-Case ('tool-change-during-'+$control) 'legacy'
+        $tool=if ($control -eq 'engine') {$visualDiff} else {Join-Path $tools 'RasterizePdf.ps1'}
+        $original=[IO.File]::ReadAllBytes($tool);$rejected=$false
+        $comparisonProbeState.AfterDiff={ [IO.File]::AppendAllText($tool,"`n# changed during comparison") }
+        try {
+            & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory `
+                -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
+        }
+        catch { if ($_.Exception.Message -notlike 'Comparison tools changed during the batch*') {throw};$rejected=$true }
+        finally { $comparisonProbeState.AfterDiff=$null;[IO.File]::WriteAllBytes($tool,$original) }
+        if (!$rejected -or (Test-Path (Join-Path $case.CandidateDirectory 'office-comparisons.json'))) {
+            throw 'A changed tool cannot publish qualified metrics'
+        }
+        $passed+=('tool-change-during-'+$control)
+    }
     $baseline=New-Case 'complete-raster-baseline' 'legacy'
-    & $script -CandidateDirectory $baseline.CandidateDirectory -ReferenceDirectory $baseline.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null
+    & $script -CandidateDirectory $baseline.CandidateDirectory -ReferenceDirectory $baseline.ReferenceDirectory -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
     foreach ($id in @('first','second')) {
         # Preserve the completed attempt while testing derivative reuse separately
         # from the existing-comparison refusal. All paths belong to this fixture.
@@ -364,6 +442,28 @@ try {
         if (!$diff.StartsWith($ownedRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Fixture move outside test directory' }
         [IO.Directory]::Move($diff,$diff+'.completed')
     }
+    $directory=Join-Path $OutputDirectory 'changed-engine-reuses-pinned-rasters'
+    Copy-Item -LiteralPath $baseline.Directory -Destination $directory -Recurse
+    $candidate=Join-Path $directory 'candidate';$reference=Join-Path $directory 'reference'
+    $cache=Join-Path $directory 'prior';New-Item -ItemType Directory -Path $cache | Out-Null
+    Copy-Item -LiteralPath (Join-Path $candidate 'office-comparisons.json') -Destination $cache
+    $rasters=@(foreach ($parent in @($candidate,$reference)) {
+        foreach ($id in @('first','second')) {Join-Path $parent ($id+'-final-preserve/portfolio-raster')}
+    })
+    $beforeRasters=@($rasters | ForEach-Object {Snapshot $_}) -join "`n"
+    $engineBytes=[IO.File]::ReadAllBytes($visualDiff);$beforeCalls=$comparisonProbeState.DiffCalls
+    try {
+        [IO.File]::AppendAllText($visualDiff,'new metric implementation, same rasterization')
+        & $script -CandidateDirectory $candidate -ReferenceDirectory $reference -VisualDiffPath $visualDiff `
+            -ValidationToolsDirectory $tools -ReuseComparisonDirectory $cache | Out-Null
+        $report=Get-Content (Join-Path $candidate 'office-comparisons.json') -Raw | ConvertFrom-Json
+        if ($comparisonProbeState.DiffCalls -ne $beforeCalls+2 -or @($report.Rows | Where-Object ReusedComparison).Count -or
+            (@($rasters | ForEach-Object {Snapshot $_}) -join "`n") -cne $beforeRasters) {
+            throw 'A metric-only tool change must recompare existing pinned rasters'
+        }
+    }
+    finally {[IO.File]::WriteAllBytes($visualDiff,$engineBytes)}
+    $passed+='changed-engine-reuses-pinned-rasters'
     foreach ($fault in @('valid-raster-reuse','stale-pdf','missing-page','changed-page','extra-page','wrong-dpi','wrong-tool','missing-pin')) {
         $directory=Join-Path $OutputDirectory $fault
         Copy-Item -LiteralPath $baseline.Directory -Destination $directory -Recurse
@@ -385,7 +485,7 @@ try {
             'missing-pin' { Remove-Item -LiteralPath $pinPath }
         }
         $before=Snapshot $directory;$beforeCalls=$comparisonProbeState.DiffCalls;$rejected=$false
-        try { & $script -CandidateDirectory $candidate -ReferenceDirectory $reference -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null }
+        try { & $script -CandidateDirectory $candidate -ReferenceDirectory $reference -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null }
         catch {
             if ($fault -eq 'valid-raster-reuse' -or $_.Exception.Message -notmatch '[Pp]ortfolio raster') { throw }
             $rejected=$true
@@ -407,7 +507,7 @@ try {
     $outcomes | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $case.CandidateDirectory 'outcomes.json')
     New-Item -ItemType Directory -Path (Join-Path $run 'raster') | Out-Null
     Set-Content (Join-Path $run 'raster/page-001.png') 'stale one-page legacy raster'
-    & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath 'unused.dll' -ValidationToolsDirectory $tools | Out-Null
+    & $script -CandidateDirectory $case.CandidateDirectory -ReferenceDirectory $case.ReferenceDirectory -VisualDiffPath $visualDiff -ValidationToolsDirectory $tools | Out-Null
     $result=Get-Content (Join-Path $case.CandidateDirectory 'office-comparisons.json') -Raw | ConvertFrom-Json
     if ($result.Rows[0].Failures -notcontains 'Pagination') { throw 'Stale legacy raster concealed the second page' }
     $passed+='legacy-raster-cannot-conceal-pagination'
