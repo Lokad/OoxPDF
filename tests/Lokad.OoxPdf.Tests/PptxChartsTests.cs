@@ -155,7 +155,7 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticBarChartsRenderNativeCharts()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes().Replace(
                 "</Types>",
@@ -286,12 +286,27 @@ internal static partial class PptxChartsTests
                 </cs:colorStyle>
                 """)
         });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var collector = new DiagnosticCollector();
+        using var package = OoxPackage.Open(input, default);
+        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, collector.Add, default)
+            .ToBlockingEnumerable().Single();
 
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        var names = new[] { "Primary A", "Primary B", "Secondary" };
+        double previousRight = double.NegativeInfinity;
+        foreach (string name in names)
+        {
+            var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, name, fontPrefix: "CL");
+            double left = glyphs.Min(glyph => glyph.Ink.X);
+            TestAssert.True(left > previousRight, "Legend names keep their source order without overlapping each other.");
+            previousRight = glyphs.Max(glyph => glyph.Ink.X + glyph.Ink.Width);
+        }
+        // This incomplete-axis recovery fixture still has a separately retained
+        // zero-caption/legend overlap. Complete legend ink does not waive it.
+        using var output = new MemoryStream();
+        PdfDocumentWriter.WriteStagedAsync(output, AsyncEnumerable.ToAsyncEnumerable<PdfPage>([page]),
+            new OoxConversionLimits(), collector.Add, default).GetAwaiter().GetResult();
+        string pdf = Encoding.ASCII.GetString(output.ToArray());
         TestAssert.Contains("1 0 0.8 rg", pdf);
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 rg", pdf);
