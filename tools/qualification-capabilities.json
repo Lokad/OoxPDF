@@ -2,10 +2,12 @@
   "docx-shared-inspection": [
     "DocxCombinedInspection",
     "DocxMarkupInspection",
-    "DocxWordCompatibleInspection",
-    "DocxPageFootnoteNumbering",
+    "DocxFallbackInspectionReportsEmittedFontSizeAndSpacing",
+    "DocxPageFootnoteNumbersRestartWithoutChangingAuthoredDigits",
+    "DocxPageFootnoteNumbersRenderLabelsAndDistinctDestinationsTogether",
+    "DocxPageFootnoteNumbersUseCompleteCellOwnershipAndKeepTypographyScope",
     "DocxCffFontSubstitutesFallbackWithDiagnostic",
-    "DocxSyntheticTextEmissionSnapshotExposes",
+    "DocxTextEmissionSnapshot",
     "MemoryBudgetFontProgram",
     "MemoryBudgetGrowthRefusalIsTerminalAndRefundsAcquiredStorage"
   ],

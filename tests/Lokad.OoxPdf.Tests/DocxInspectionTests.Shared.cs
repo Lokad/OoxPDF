@@ -16,7 +16,10 @@ internal static partial class DocxInspectionTests
                 ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
         }
         // Numbering can change the prepared document and the final font plan.
-        Compare(DocxPageFootnoteNumberingTests.ReadFixture(), OoxPdfDocxMarkupMode.AllMarkup,
+        var notes = DocxPageFootnoteNumberingTests.ReadFixture();
+        TestAssert.True(DocxPageFootnoteNumbering.IsEligibleDocument(notes),
+            "The note witness must exercise inspection of the final prepared font plan.");
+        Compare(notes, OoxPdfDocxMarkupMode.AllMarkup,
             OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
 
         static void Compare(DocxDocument document, OoxPdfDocxMarkupMode mode, OoxPdfDocxMarkupGeometryMode geometry)
@@ -108,7 +111,7 @@ internal static partial class DocxInspectionTests
         JsonSerializer.Serialize(expected) == JsonSerializer.Serialize(actual), "Shared inspection preserves the independent " + view + " snapshot.");
 
     private static DocxDocument InspectionDocument(string family = "InspectionFamily") => DocxTests.CreateFontPlanDocument(
-        new DocxTextRun("AV Alpha Beta", null, null, null, new(null, 12d, false, false))
+        new DocxTextRun("AV Alpha Beta", 12d, null, false, false, false, null, family)
         { Fonts = new DocxRunFonts(family, null, null, null, null, null, null, null) }, new DocxFontCatalog([], DocxThemeFonts.Empty));
 
     private sealed class InspectionResolver : IFontResolver
