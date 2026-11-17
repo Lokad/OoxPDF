@@ -1,4 +1,28 @@
 {
+  "svg-inherited-paint": [
+    "SvgInheritedPaintPropertiesKeepNearestAndLocalOwners",
+    "SvgInheritedOpacityPreservesTransparentOverlayContent",
+    "SvgZeroWidthStrokesKeepTheirIndependentFill",
+    "SvgInheritedGradientStrokeOpacityKeepsNumericFallbackContract",
+    "SvgInheritedPaintSurvivesDocxAndPptxContainers",
+    "PptxSyntheticSvgGroupStrokeWidthInherits",
+    "PptxSyntheticSvgGroupFillInheritsToPath",
+    "PptxSyntheticSvgGroupStrokeInheritsToPath",
+    "PptxSyntheticSvgSelfAttributeBeatsInheritedStyle",
+    "PptxSyntheticSvgFillOpacityEmitsTransparency",
+    "PptxSvgCombinedPaintViewportPreservesStrokeWidthsAndAlpha",
+    "PptxSvgElementStrokeUsesOfficeUniformTransformWidth",
+    "PptxSvgFilledElementStrokeUsesOfficeTransformWidth",
+    "PptxSvgNonScalingElementStrokeRetainsViewportWidths",
+    "PptxSvgDashOffsetUsesOfficeStrokeWidthUnits",
+    "PptxSvgNumericContainerOpacityIsolatesOverlappingChildren",
+    "PptxSvgNestedAndSiblingContainerOpacityPreservesPaintOrder",
+    "PptxSvgPictureOpacityComposesWithRootAndNestedGroups",
+    "PptxSvgLinearGradientStrokeUsesNativePatternAndMultipliesAlpha",
+    "PptxSvgLinearGradientStrokeRetainsBoundedFallbackPaint",
+    "SvgLabelFontPreparationRefundsScratchOnRefusalAndCancellation",
+    "SvgSampledPageConstructionCoversReturnedPaintAndOpacityGroups"
+  ],
   "pptx-series-default-order": [
     "PptxSeriesOrder",
     "PortableRenderingChartSeriesOrderSurvivesXmlReordering",

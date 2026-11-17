@@ -610,7 +610,9 @@ internal sealed partial class PptxRenderer
     {
         foreach (string name in new[] { "opacity", "stroke-opacity" })
         {
-            string? text = ReadSvgPresentationAttribute(element, style, name);
+            string? text = name == "stroke-opacity"
+                ? ReadSvgInheritedAttribute(element, style, name)
+                : ReadSvgPresentationAttribute(element, style, name);
             if (!string.IsNullOrWhiteSpace(text) && (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
                 || !double.IsFinite(value) || value < 0d || value > 1d)) { return false; }
         }
@@ -1230,8 +1232,8 @@ internal sealed partial class PptxRenderer
         radial = null;
         IReadOnlyDictionary<string, string> style = ReadSvgStyleDeclarations(path);
         string? fill = ReadSvgInheritedAttribute(path, style, "fill");
-        double opacity = ReadSvgOpacityValue(style.TryGetValue("fill-opacity", out string? styleFillOpacity) ? styleFillOpacity : (string?)path.Attribute("fill-opacity"))
-            * ReadSvgOpacityValue(style.TryGetValue("opacity", out string? styleOpacity) ? styleOpacity : (string?)path.Attribute("opacity"));
+        double opacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(path, style, "fill-opacity"))
+            * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
         if (fill is null)
         {
             // SVG initial value: a path without fill paints black instead of vanishing.
@@ -1307,9 +1309,17 @@ internal sealed partial class PptxRenderer
         {
             return default;
         }
-        double opacity = ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "stroke-opacity"))
+        double opacity = ReadSvgOpacityValue(ReadSvgInheritedAttribute(path, style, "stroke-opacity"))
             * ReadSvgOpacityValue(ReadSvgPresentationAttribute(path, style, "opacity"));
         Match gradient = Regex.Match(strokePaint, @"url\(#(?<id>[^)]+)\)");
+        if (!TryReadSvgStrokeWidth(style, path, out double width))
+        {
+            failure = gradient.Success ? SvgStrokeFailure.UnresolvedGradient : SvgStrokeFailure.UnparsableWidth;
+            return default;
+        }
+        // Zero means no stroke, before paint-server lookup or any positive PDF
+        // width clamp. A fill on the same source remains independently paintable.
+        if (width == 0d) { return default; }
         SvgGradient? strokeGradient = null;
         string? gradientId = null;
         RgbColor? color = null;
@@ -1336,23 +1346,18 @@ internal sealed partial class PptxRenderer
             failure = SvgStrokeFailure.UnparsableColor;
             return default;
         }
-        if (!TryReadSvgStrokeWidth(style, path, out double width))
-        {
-            failure = gradient.Success ? SvgStrokeFailure.UnresolvedGradient : SvgStrokeFailure.UnparsableWidth;
-            return default;
-        }
-        int lineCap = ReadSvgLineCap(ReadSvgPresentationAttribute(path, style, "stroke-linecap"), out bool capInvalid);
-        int lineJoin = ReadSvgLineJoin(ReadSvgPresentationAttribute(path, style, "stroke-linejoin"), out bool joinInvalid);
-        double[]? dash = ReadSvgDashPattern(ReadSvgPresentationAttribute(path, style, "stroke-dasharray"), out bool dashInvalid);
+        int lineCap = ReadSvgLineCap(ReadSvgInheritedAttribute(path, style, "stroke-linecap"), out bool capInvalid);
+        int lineJoin = ReadSvgLineJoin(ReadSvgInheritedAttribute(path, style, "stroke-linejoin"), out bool joinInvalid);
+        double[]? dash = ReadSvgDashPattern(ReadSvgInheritedAttribute(path, style, "stroke-dasharray"), out bool dashInvalid);
         double offset = 0d;
-        if (dash is not null && !TryReadSvgStrokeOffset(ReadSvgPresentationAttribute(path, style, "stroke-dashoffset"), out offset))
+        if (dash is not null && !TryReadSvgStrokeOffset(ReadSvgInheritedAttribute(path, style, "stroke-dashoffset"), out offset))
         {
             dash = null;
             dashInvalid = true;
         }
         invalidPresentation = capInvalid || joinInvalid || dashInvalid;
         double miterLimit = 4d;
-        if (!TryReadSvgMiterLimit(ReadSvgPresentationAttribute(path, style, "stroke-miterlimit"), out miterLimit))
+        if (!TryReadSvgMiterLimit(ReadSvgInheritedAttribute(path, style, "stroke-miterlimit"), out miterLimit))
         {
             invalidPresentation = true;
             miterLimit = 4d;
@@ -1362,7 +1367,7 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgStrokeWidth(IReadOnlyDictionary<string, string> style, XElement path, out double width)
     {
         width = 1d;
-        string? text = ReadSvgPresentationAttribute(path, style, "stroke-width");
+        string? text = ReadSvgInheritedAttribute(path, style, "stroke-width");
         if (string.IsNullOrWhiteSpace(text))
         {
             return true;
@@ -1374,9 +1379,9 @@ internal sealed partial class PptxRenderer
         }
         return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out width) && double.IsFinite(width) && width >= 0d;
     }
-    // RV07: fill and stroke inherit through groups in cascade order (element
-    // style, element attribute, then each ancestor outward the same way).
-    // Widths, opacities and presentations stay element-local per SVG.
+    // Inherited paint properties resolve element style/attribute, then each
+    // ancestor outward in the same order. Whole-element opacity stays local;
+    // container opacity belongs to group isolation rather than this lookup.
     private static string? ReadSvgInheritedAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {
         if (style.TryGetValue(name, out string? styleValue) && !string.IsNullOrWhiteSpace(styleValue))

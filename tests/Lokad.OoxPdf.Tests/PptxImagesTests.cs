@@ -1790,8 +1790,8 @@ internal static partial class PptxImagesTests
         TestAssert.Contains("1 0 0 rg", pdf);
     }
 
-    // RV07: stroke widths do not inherit from groups (SVG non-inherited property).
-    public static void PptxSyntheticSvgGroupStrokeWidthDoesNotInherit()
+    // SVG stroke width inherits; the source value 3 scales by this viewport's 1.44.
+    public static void PptxSyntheticSvgGroupStrokeWidthInherits()
     {
         string input = WriteSvgGradientDeck("""
             <svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
@@ -1803,7 +1803,7 @@ internal static partial class PptxImagesTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1.44 w", pdf);
+        TestAssert.Contains("4.32 w", pdf);
     }
 
     // RV07: CSS named fills resolve instead of diagnosing.
