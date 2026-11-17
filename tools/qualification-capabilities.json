@@ -20,6 +20,28 @@
     "RejectsUnbalancedTextState",
     "RejectsDanglingGraphicsStateReference"
   ],
+  "docx-static-token-wrapping": [
+    "DocxStaticTokenWrappingMatchesBodyAcrossZeroAndTinyInsets",
+    "DocxLayoutStageWrapsStaticHeaderLines",
+    "DocxLayoutStageOwnsSelectedStaticHeaderFooterLines",
+    "DocxStaticHeaderMixedSizePitchTransitionsScaleWithPrintScale",
+    "DocxStaticHeaderAutoAdvanceFollowsSingleLineFactor",
+    "DocxStaticFooterAutoAdvanceBottomAnchorsBlock",
+    "DocxHeaderTrailingLinesShareDrawableLinePositions",
+    "DocxParagraphLayoutKeepsNonbreakingSpacesInsideWrapTokens",
+    "DocxParagraphLayoutBreaksOverwideSoftHyphenatedTokens",
+    "DocxParagraphLayoutBreaksOverlongTokenAfterHyphenWhenPrefixFits",
+    "DocxParagraphLayoutSuppressesUnbrokenSoftHyphens",
+    "DocxParagraphLayoutPreservesSourceOffsetsAfterHiddenSoftHyphens",
+    "DocxParagraphLayoutBreaksAtHiddenZeroWidthSpaces",
+    "DocxParagraphLayoutDoesNotBreakAtNoBreakHyphen",
+    "DocxEmergencyWrappingBreaksOrdinaryWordsWithoutChangingProtectedSpans",
+    "DocxParagraphLayoutWordWrapOffBreaksOverwideLatinTokens",
+    "DocxLayoutStageResolvesStaticHeaderFloatingTextBoxNumPagesFieldFromPageCount",
+    "DocxLayoutStageOwnsStaticHeaderInlineImages",
+    "DocxInlineCompositionWordWrappingSharesBreakRulesAcrossRunSplits",
+    "PortableRenderingStaticPictureLinksRetainComposedFrames"
+  ],
   "svg-fill-winding": [
     "SvgFillRulesFollowTheSourcePathAcrossPaintAndDocumentKinds",
     "PptxSyntheticSvgEvenOddFillRulePunchesHole",

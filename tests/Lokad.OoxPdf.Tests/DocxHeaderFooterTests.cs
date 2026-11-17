@@ -10,7 +10,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxHeaderFooterTests
+internal static partial class DocxHeaderFooterTests
 {
     public static void DocxLayoutStageOwnsSelectedStaticHeaderFooterLines()
     {

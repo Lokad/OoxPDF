@@ -414,7 +414,12 @@ internal sealed partial class DocxLayoutEngine
             var placedStaticImages = new List<DocxInlineImage>();
             if (spans.Length != 0)
             {
-                DocxWrappedTextLine[] staticLines = WrapStaticTextLines(spans, width, textMeasurer, ResolveInlineImageWrapWidths(paragraph, spans), paragraph).ToArray();
+                // Token admission is shared with flowing/ordered inline content;
+                // the static story still owns its metrics, placement and alignment.
+                DocxWrappedTextLine[] staticLines = WrapTextLines(spans, width, width,
+                    GetParagraphFontSize(paragraph), textMeasurer, paragraph.EffectiveProperties.TabStops,
+                    defaultTabStopPoints, ShouldAllowCharacterLevelWordWrap(paragraph), pageNumber,
+                    cancellationToken, ResolveInlineImageWrapWidths(paragraph, spans), sourceParagraph: paragraph).ToArray();
                 // RV05: ordered inline atoms (static header/footer path). Affined images in
                 // text-mixed paragraphs attach to wrapped lines at run position.
                 DocxMidLinePlan? staticMidLinePlan = CreateStaticMidLinePlan(paragraph, spans, staticLines, width, isHeader, staticMetrics, unscaledLineMetrics, paragraphSpacingScale, cancellationToken);
@@ -550,7 +555,7 @@ internal sealed partial class DocxLayoutEngine
                         SourceParagraph: paragraph,
                         SourceParagraphIndex: paragraphIndex,
                         Story: DocxStoryId.HeaderOrFooter(isHeader, story.VariantType),
-                        LineHeightSource: staticLineHeightSource, SourceBlockIndex: null, EndsWithIntraTokenBreak: false, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false)
+                        LineHeightSource: staticLineHeightSource, SourceBlockIndex: null, EndsWithIntraTokenBreak: line.EndsWithIntraTokenBreak, SingleLineHeight: staticSingleLineHeight, ListLabelSingleLineHeight: null, BodyWindowsLineHeight: null, ListLabelWindowsLineHeight: null, EffectiveLineSpacingFactor: null, LineSpacingFactorFloorApplied: null, EmitsTerminalParagraphMark: false)
                     { OccupiedLineBox = staticOccupiedLineBox,
                         ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(story.BodyElements, elementIndex), x, width, lineX,
                             cursorY - staticBaselineY + extraAbove, staticLineHeight + extraAbove,
@@ -857,144 +862,6 @@ internal sealed partial class DocxLayoutEngine
         }
     }
 
-    private static IEnumerable<DocxWrappedTextLine> WrapStaticTextLines(
-        IReadOnlyList<DocxTextSpan> spans,
-        double maxWidth,
-        IDocxTextMeasurer textMeasurer,
-        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null)
-    {
-        string text = string.Concat(spans.Select(span => span.Text));
-        int segmentStart = 0;
-        while (segmentStart <= text.Length)
-        {
-            int breakIndex = text.IndexOf('\n', segmentStart);
-            int segmentLength = breakIndex < 0 ? text.Length - segmentStart : breakIndex - segmentStart;
-            bool yielded = false;
-            foreach (DocxWrappedTextLine line in WrapStaticWords(text, spans, segmentStart, segmentLength, maxWidth, textMeasurer, inlineImageWidths, sourceParagraph))
-            {
-                yielded = true;
-                yield return line;
-            }
-
-            if (!yielded && segmentLength == 0)
-            {
-                yield return new DocxWrappedTextLine(string.Empty, [], false) { SourceTextStart = segmentStart };
-            }
-
-            if (breakIndex < 0)
-            {
-                yield break;
-            }
-
-            segmentStart = breakIndex + 1;
-        }
-    }
-
-    private static IEnumerable<DocxWrappedTextLine> WrapStaticWords(
-        string text,
-        IReadOnlyList<DocxTextSpan> spans,
-        int segmentStart,
-        int segmentLength,
-        double maxWidth,
-        IDocxTextMeasurer textMeasurer,
-        IReadOnlyList<(int CharOffset, double Width)>? inlineImageWidths = null, DocxParagraph? sourceParagraph = null)
-    {
-        IReadOnlyList<TextToken> tokens = TokenizeSpaces(text, segmentStart, segmentLength);
-        if (tokens.Count == 0)
-        {
-            yield break;
-        }
-
-        // RV13: index span starts once so slice lookups seek instead of
-        // restarting from the first span on every measure and line build.
-        int[] spanStarts = new int[spans.Count + 1];
-        for (int spanIndex = 0; spanIndex < spans.Count; spanIndex++)
-        {
-            spanStarts[spanIndex + 1] = spanStarts[spanIndex] + spans[spanIndex].Text.Length;
-        }
-
-        // RV13: memoize static slice widths by text coordinates; repeated
-        // measures of the same slice shape once.
-        var measureMemo = new Dictionary<(int Start, int Length), double>();
-        var imageWrapIndex = BuildInlineImageWrapIndex(inlineImageWidths);
-        int lineStart = tokens[0].Start;
-        int lineLength = 0;
-        Func<int, double>? measureImagePrefix = imageWrapIndex.Offsets.Length == 0 ? null : offset =>
-            MeasureStaticSlice(measureMemo, spans, lineStart, offset - lineStart, textMeasurer, spanStarts);
-        // RV13: maintain whitespace presence incrementally instead of
-        // rescanning the whole line per token. Added extents chain
-        // contiguously from lineStart, so the running OR equals a fresh scan.
-        bool lineHasNonWhitespace = false;
-        for (int tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
-        {
-            TextToken token = tokens[tokenIndex];
-            int candidateLength = token.Start + token.Length - lineStart;
-            if (lineLength > 0 &&
-                lineHasNonWhitespace &&
-                !token.IsBreakableWhitespace &&
-                MeasureStaticSlice(measureMemo, spans, lineStart, candidateLength, textMeasurer, spanStarts) + ImageWidthInRange(imageWrapIndex, lineStart, lineStart + candidateLength) > maxWidth)
-            {
-                int imageBreakOffset = measureImagePrefix is null ? -1 : FindInlineImageWrapBreak(imageWrapIndex,
-                    lineStart, lineStart + candidateLength, maxWidth, maxWidth, measureImagePrefix);
-
-                if (imageBreakOffset > lineStart)
-                {
-                    yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
-                    lineStart = imageBreakOffset;
-                    lineLength = 0;
-                    lineHasNonWhitespace = false;
-                    tokenIndex--;
-                    continue;
-                }
-
-                yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
-                lineStart = token.Start;
-                lineLength = token.Length;
-                lineHasNonWhitespace = HasNonWhitespace(text, lineStart, lineLength);
-            }
-            else
-            {
-                int addedStart = Math.Max(token.Start, lineStart);
-                lineHasNonWhitespace = lineHasNonWhitespace || HasNonWhitespace(text, addedStart, token.Start + token.Length - addedStart);
-                lineLength = candidateLength;
-            }
-        }
-
-        if (lineLength > 0)
-        {
-            while (measureImagePrefix is not null)
-            {
-                int imageBreakOffset = FindInlineImageWrapBreak(imageWrapIndex, lineStart, lineStart + lineLength,
-                    maxWidth, maxWidth, measureImagePrefix, includeEnd: true, sourceParagraph: sourceParagraph);
-                if (imageBreakOffset <= lineStart) break;
-                yield return CreateWrappedTextLine(text, spans, lineStart, imageBreakOffset - lineStart, false, spanStarts);
-                lineLength -= imageBreakOffset - lineStart;
-                lineStart = imageBreakOffset;
-            }
-            yield return CreateWrappedTextLine(text, spans, lineStart, lineLength, false, spanStarts);
-        }
-    }
-
-    // RV13: memoized static slice measurement by text coordinates for one
-    // segment; identical slices measure once.
-    private static double MeasureStaticSlice(
-        Dictionary<(int Start, int Length), double> measureMemo,
-        IReadOnlyList<DocxTextSpan> spans,
-        int start,
-        int length,
-        IDocxTextMeasurer textMeasurer,
-        int[] spanStarts)
-    {
-        if (measureMemo.TryGetValue((start, length), out double cached))
-        {
-            return cached;
-        }
-
-        double width = MeasureStaticTextSpansForWrapping(SliceTextSpans(spans, start, length, spanStarts), textMeasurer);
-        measureMemo[(start, length)] = width;
-        return width;
-    }
-
     private static double MeasureStaticTextSpans(IReadOnlyList<DocxTextSpan> spans, IDocxTextMeasurer textMeasurer)
     {
         double width = 0d;
@@ -1010,11 +877,6 @@ internal sealed partial class DocxLayoutEngine
         }
 
         return width;
-    }
-
-    private static double MeasureStaticTextSpansForWrapping(IReadOnlyList<DocxTextSpan> spans, IDocxTextMeasurer textMeasurer)
-    {
-        return MeasureStaticTextSpans(NormalizeHiddenBreakSpans(spans, preserveTerminalSoftHyphen: false), textMeasurer);
     }
 
     private static double MeasureStaticMinimumDescender(DocxTextRun run, IDocxStaticTextMetricsProvider metrics)
