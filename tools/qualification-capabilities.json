@@ -6556,6 +6556,21 @@
     "DocxMissingPicturePreserves",
     "DiagnosticCancellationPreservesCallerToken"
   ],
+  "docx-paragraph-spacing-precedence": [
+    "DocxParagraphSpacingSelectsOneEffectiveUnitAcrossOwners",
+    "DocxParagraphAutomaticSpacingKeepsOnePageAndVisibleWords",
+    "DocxReaderPreservesParagraphSpacingAndKeepTokens",
+    "DocxReaderAppliesParagraphLineBasedSpacing",
+    "DocxReaderCascadesParagraphSpacingAndRunSizeThroughBasedOnStyles",
+    "DocxLineSpacingInheritance",
+    "DocxExplicitPageStart",
+    "DocxContextualContributionSpacing",
+    "DocxSyntheticContextualSpacing",
+    "DocxSyntheticParagraphKeepNextEstimateHonorsContextualSpacing",
+    "DocxLayoutStageAppliesStaticHeaderParagraphSpacing",
+    "DocxTableStyleParagraphSpacingCollapsesInCellLayout",
+    "DocxOrdinaryMinimumSpacing"
+  ],
   "docx-table-paragraph-styles": [
     "DocxTableParagraphStyles",
     "DocxReaderTableStyleAppliesParagraphAndRunProperties",

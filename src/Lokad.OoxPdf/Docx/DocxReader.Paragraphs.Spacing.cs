@@ -1,58 +1,28 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Text;
-using System.Xml.Linq;
-using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
-using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxReader
 {
-    private static double ResolveSpacingBeforePoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
+    private static double ResolveParagraphSpacingPoints(DocxResolvedParagraphProperties paragraph,
+        double lineHeight, bool before)
     {
-        if (paragraph.SpacingBeforePoints is { } points)
-        {
-            return points;
-        }
-
-        if (OoxBoolean.IsTrue(paragraph.Spacing.BeforeAutoSpacingValue))
+        var spacing = paragraph.Spacing;
+        // Select one effective unit after inheritance. Enabled automatic spacing
+        // supersedes line and absolute values; line units supersede absolute ones.
+        if (OoxBoolean.IsTrue(before ? spacing.BeforeAutoSpacingValue : spacing.AfterAutoSpacingValue))
         {
             return WordAutomaticParagraphSpacingPoints;
         }
 
-        return TryReadLineBasedSpacing(paragraph.Spacing.BeforeLinesValue, lineHeight, out double linePoints)
-            ? linePoints
-            : 0d;
-    }
-
-    private static double ResolveSpacingAfterPoints(DocxResolvedParagraphProperties paragraph, double lineHeight)
-    {
-        if (paragraph.SpacingAfterPoints is { } points)
+        if (int.TryParse(before ? spacing.BeforeLinesValue : spacing.AfterLinesValue,
+            NumberStyles.Integer, CultureInfo.InvariantCulture, out int hundredthsOfLine))
         {
-            return points;
+            return lineHeight * hundredthsOfLine / 100d;
         }
 
-        if (OoxBoolean.IsTrue(paragraph.Spacing.AfterAutoSpacingValue))
-        {
-            return WordAutomaticParagraphSpacingPoints;
-        }
-
-        return TryReadLineBasedSpacing(paragraph.Spacing.AfterLinesValue, lineHeight, out double linePoints)
-            ? linePoints
-            : DocxDefaults.DefaultParagraphAfterSpacingPoints;
-    }
-
-    private static bool TryReadLineBasedSpacing(string? value, double lineHeight, out double points)
-    {
-        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int hundredthsOfLine))
-        {
-            points = lineHeight * hundredthsOfLine / 100d;
-            return true;
-        }
-
-        points = 0d;
-        return false;
+        return (before ? paragraph.SpacingBeforePoints : paragraph.SpacingAfterPoints) ??
+            (before ? 0d : DocxDefaults.DefaultParagraphAfterSpacingPoints);
     }
 }

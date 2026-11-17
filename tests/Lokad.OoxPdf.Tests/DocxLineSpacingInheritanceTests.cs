@@ -5,7 +5,7 @@ using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxLineSpacingInheritanceTests
+internal static partial class DocxLineSpacingInheritanceTests
 {
     public static void DocxLineSpacingInheritanceAutomaticOverridesReplacePointHeights()
     {
