@@ -206,7 +206,9 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<TextRun> legacyTextRuns,
         PresentationFontResolver fontResolver,
         string resourcePrefix,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null,
+        bool includeFallbackFaces = true)
     {
         var uses = new List<TextFontUse>();
         foreach (PptxPositionedTextSpan span in textSpans)
@@ -228,7 +230,8 @@ internal sealed partial class PptxRenderer
             uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
         }
 
-        return await CreateRenderedFontsAsync(uses, fontResolver, resourcePrefix, cancellationToken).ConfigureAwait(false);
+        return await CreateRenderedFontsAsync(uses, fontResolver, resourcePrefix, cancellationToken,
+            diagnosticSink, includeFallbackFaces: includeFallbackFaces).ConfigureAwait(false);
     }
 
 

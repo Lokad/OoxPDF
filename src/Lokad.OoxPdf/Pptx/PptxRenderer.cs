@@ -81,8 +81,10 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = (await ReadSceneTableTextSpansAsync(context, includeMasterNodes: context.SceneSlide.ShowMasterShapes).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
-            // RV01: emission looks up split-run families, so cover families that only appear after the glyph-typeface split.
-            RenderedFonts renderedFonts = await CreateRenderedFontsAsync(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver, "F", cancellationToken, diagnosticSink, includeFallbackFaces: false).ConfigureAwait(false);
+            // Prepare the faces used by measured glyphs, rather than reporting a
+            // primary-face gap for text that already has an allowed fallback.
+            RenderedFonts renderedFonts = await CreateRenderedFontsAsync(shapeTextSpans.Concat(tableTextSpans).ToArray(), [],
+                fontResolver, "F", cancellationToken, diagnosticSink, includeFallbackFaces: false).ConfigureAwait(false);
             Dictionary<FontRequest, RenderedFont> slideFonts = new(renderedFonts.Fonts, FontRequestKeyComparer.OrdinalIgnoreCaseFamily);
             var slideResources = new List<PdfFontResource>(renderedFonts.Resources);
             await AddSplitFallbackFacesAsync(slideFonts, shapeTextSpans.Concat(tableTextSpans), fontResolver, diagnosticSink, cancellationToken, slideResources, "F").ConfigureAwait(false);

@@ -38,7 +38,8 @@ internal static partial class PptxFontCacheTests
             }
             TestAssert.Equal("https://example.invalid/coverage", page.Annotations.Single().Uri);
             TestAssert.True(page.Annotations[0].Width > 0 && page.Annotations[0].Height > 0, "The linked title retains its measured frame.");
-            TestAssert.Equal(kind == "unresolved", diagnostics.Any(d => d.Id == "FONT_MISSING_GLYPHS"));
+            TestAssert.True((kind == "unresolved") == diagnostics.Any(d => d.Id == "FONT_MISSING_GLYPHS"),
+                $"{kind} coverage: only genuinely unavailable glyphs receive a substitution diagnostic.");
             if (kind == "unresolved") TestAssert.Equal("Primary", diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS").Feature);
             TestAssert.Equal(kind == "cff", diagnostics.Any(d => d.Id == "FONT_UNSUPPORTED_OUTLINES"));
             TestAssert.True(diagnostics.All(d => d.Id != "PPTX_NODE_RENDER_FAILED"), "Font fallback must preserve the complete chart.");
