@@ -633,22 +633,19 @@ internal sealed partial class PptxRenderer
             foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
                 ResolvedRunTextStyle runStyle = flowRun.Style;
-                if (flowRun.Source.Kind == PptxTextRunKind.Break)
-                {
-                    height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, bodyProperties, advanceEstimator);
-                    maxFontSize = 0d;
-                    lineTypeface = null;
-                    lineBold = false;
-                    lineItalic = false;
-                    lineWidth = 0d;
-                    hasLineContent = false;
-                    continue;
-                }
-
                 foreach (PptxTextFlowSegment segment in flowRun.Segments)
                 {
                     if (segment.Kind == PptxTextFlowSegmentKind.Break)
                     {
+                        // Flow already represents both a:br and literal line
+                        // breaks. Both end an estimated line before anchoring.
+                        height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, bodyProperties, advanceEstimator);
+                        maxFontSize = 0d;
+                        lineTypeface = null;
+                        lineBold = false;
+                        lineItalic = false;
+                        lineWidth = 0d;
+                        hasLineContent = false;
                         continue;
                     }
 

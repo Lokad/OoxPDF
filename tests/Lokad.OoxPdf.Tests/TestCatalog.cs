@@ -12,6 +12,7 @@ internal static class TestCatalog
         .. FromType("api", typeof(TestRunnerTests)),
         .. FromType("rendering-portable", typeof(PortableRenderingTests)),
         .. FromType("rendering-portable", typeof(PptxScalarCapsTests)),
+        .. FromType("rendering-portable", typeof(PptxBreakCompositionTests)),
         .. FromType("rendering-portable", typeof(SvgTextTests)),
         .. FromType("rendering-portable", typeof(DocxMathCenterGroupTests)),
         .. FromType("rendering-portable", typeof(DocxTabCascadeTests)),
