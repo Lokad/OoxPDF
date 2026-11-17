@@ -41,7 +41,7 @@ internal sealed partial class PptxRenderer
             {
                 token.ThrowIfCancellationRequested();
                 if (string.IsNullOrWhiteSpace(source.Formula)) return;
-                string[] areas = SplitRangeAreas(ResolveRangeFormula(source.Formula).ResolvedFormula);
+                string[] areas = SplitRangeAreas(ResolveRangeFormula(source.Formula));
                 long count = 0;
                 foreach (string area in areas.Take(MaxChartRangeAreas))
                 {
@@ -58,13 +58,11 @@ internal sealed partial class PptxRenderer
 
         private void AddRangeAreaCells(
             List<ChartWorkbookRangeCell> values,
-            ChartWorkbookRangeResolution resolution,
-            int rangeAreaIndex,
-            int rangeAreaCount,
+            string formula,
             ref int index,
             CancellationToken cancellationToken)
         {
-            if (!TryParseRange(resolution.ResolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
+            if (!TryParseRange(formula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
                 !sheets.TryGetValue(sheetName, out ChartWorksheetData? worksheet))
             {
                 return;
@@ -93,9 +91,6 @@ internal sealed partial class PptxRenderer
             }
 
             values.EnsureCapacity(values.Count + (int)areaCells);
-            ChartWorkbookTable sourceTable = default;
-            bool hasSourceTable = !string.IsNullOrWhiteSpace(resolution.TableName) &&
-                tables.TryGetValue(resolution.TableName, out sourceTable);
             for (int row = minRow; row <= maxRow; row++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -104,85 +99,12 @@ internal sealed partial class PptxRenderer
                     string reference = ToCellReference(column, row);
                     bool hasCell = worksheet.Cells.TryGetValue(reference, out ChartWorkbookCell cell);
                     ChartWorkbookCellFormat format = hasCell ? styles.ResolveCellFormat(cell.StyleIndex) : default;
-                    int? tableRowIndex = hasSourceTable ? row - sourceTable.FirstRow : null;
-                    bool tableHeaderRow = hasSourceTable && tableRowIndex >= 0 && tableRowIndex < Math.Max(0, sourceTable.HeaderRowCount);
-                    bool tableTotalsRow = hasSourceTable && sourceTable.TotalsRowCount > 0 && row > sourceTable.LastRow - sourceTable.TotalsRowCount && row <= sourceTable.LastRow;
-                    bool tableDataRow = hasSourceTable && !tableHeaderRow && !tableTotalsRow && row >= sourceTable.FirstRow && row <= sourceTable.LastRow;
-                    int? tableCellColumnIndex = null;
-                    string tableCellColumnName = string.Empty;
-                    int? tableCellColumnId = null;
-                    string tableCellTotalsRowFunction = string.Empty;
-                    string tableCellTotalsRowFormula = string.Empty;
-                    string tableCellCalculatedColumnFormula = string.Empty;
-                    if (hasSourceTable)
-                    {
-                        int columnIndex = column - sourceTable.FirstColumn;
-                        if (columnIndex >= 0 && columnIndex < sourceTable.Columns.Count)
-                        {
-                            ChartWorkbookTableColumn tableCellColumn = sourceTable.Columns[columnIndex];
-                            tableCellColumnIndex = columnIndex;
-                            tableCellColumnName = tableCellColumn.Name;
-                            tableCellColumnId = tableCellColumn.Id;
-                            tableCellTotalsRowFunction = tableCellColumn.TotalsRowFunction;
-                            tableCellTotalsRowFormula = tableCellColumn.TotalsRowFormula;
-                            tableCellCalculatedColumnFormula = tableCellColumn.CalculatedColumnFormula;
-                        }
-                    }
-
                     values.Add(new ChartWorkbookRangeCell(
                         index,
-                        rangeAreaIndex,
-                        rangeAreaCount,
-                        row - minRow,
-                        column - minColumn,
-                        rangeRowCount,
-                        rangeColumnCount,
-                        row,
-                        column,
-                        reference,
-                        sheetName,
-                        resolution.SourceFormula,
-                        resolution.ResolvedFormula,
-                        resolution.SourceKind,
-                        resolution.DefinedName,
-                        resolution.DefinedNameSheetName,
-                        resolution.DefinedNameLocalSheetId,
-                        resolution.TableName,
-                        resolution.TableColumnName,
-                        resolution.TableColumnId,
-                        resolution.TableFirstColumnName,
-                        resolution.TableFirstColumnId,
-                        resolution.TableLastColumnName,
-                        resolution.TableLastColumnId,
-                        tableRowIndex,
-                        tableHeaderRow,
-                        tableDataRow,
-                        tableTotalsRow,
-                        tableCellColumnIndex,
-                        tableCellColumnName,
-                        tableCellColumnId,
-                        tableCellTotalsRowFunction,
-                        tableCellTotalsRowFormula,
-                        tableCellCalculatedColumnFormula,
                         hasCell ? cell.Text : string.Empty,
-                        hasCell ? cell.RawValue : string.Empty,
-                        hasCell,
                         hasCell && cell.HasValue,
-                        hasCell && cell.HasValueElement,
-                        hasCell ? cell.SharedStringIndex : null,
-                        hasCell ? cell.SharedStringRunCount : 0,
-                        hasCell && cell.SharedStringHasRichText,
-                        hasCell && cell.SharedStringHasPhoneticText,
-                        hasCell && cell.SharedStringPreserveSpace,
-                        hasCell ? cell.StyleIndex : null,
-                        hasCell ? cell.CellType : string.Empty,
-                        hasCell ? cell.ValueKind : ChartWorkbookCellValueKind.Blank,
-                        hasCell ? cell.Formula : string.Empty,
-                        hasCell ? cell.FormulaType : string.Empty,
-                        format.NumberFormatId,
                         format.NumberFormatCode,
                         format.ApplyNumberFormat,
-                        format.NumberFormatIsDateLike,
                         worksheet.HiddenRows.Contains(row),
                         worksheet.IsColumnHidden(column)));
                     index++;
@@ -190,68 +112,19 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        private ChartWorkbookRangeResolution ResolveRangeFormula(string? formula)
+        private string ResolveRangeFormula(string? formula)
         {
-            string sourceFormula = formula?.Trim() ?? string.Empty;
-            if (sourceFormula.Length == 0)
-            {
-                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown, string.Empty, string.Empty, null, string.Empty, string.Empty, null, string.Empty, null, string.Empty, null);
-            }
-
-            string resolvedFormula = sourceFormula;
-            string definedNameName = string.Empty;
-            string definedNameSheetName = string.Empty;
-            int? definedNameLocalSheetId = null;
-            bool fromDefinedName = false;
-            if (!sourceFormula.Contains('!', StringComparison.Ordinal) &&
-                definedNames.TryGetValue(sourceFormula, out string? definedFormula))
+            string resolvedFormula = formula?.Trim() ?? string.Empty;
+            if (!resolvedFormula.Contains('!', StringComparison.Ordinal) &&
+                definedNames.TryGetValue(resolvedFormula, out string? definedFormula))
             {
                 resolvedFormula = definedFormula;
-                definedNameName = sourceFormula;
-                fromDefinedName = true;
             }
-            else if (TryResolveQualifiedLocalDefinedName(sourceFormula, out ChartWorkbookDefinedName localDefinedName))
+            else if (TryResolveQualifiedLocalDefinedName(resolvedFormula, out ChartWorkbookDefinedName localDefinedName))
             {
                 resolvedFormula = localDefinedName.Formula;
-                definedNameName = localDefinedName.Name;
-                definedNameSheetName = localDefinedName.SheetName;
-                definedNameLocalSheetId = localDefinedName.LocalSheetId;
-                fromDefinedName = true;
             }
-
-            string structuredResolvedFormula = ResolveStructuredReferenceFormula(
-                resolvedFormula,
-                out string tableName,
-                out string tableColumnName,
-                out int? tableColumnId,
-                out string tableFirstColumnName,
-                out int? tableFirstColumnId,
-                out string tableLastColumnName,
-                out int? tableLastColumnId) ?? string.Empty;
-            bool fromStructuredReference = !string.Equals(structuredResolvedFormula, resolvedFormula, StringComparison.Ordinal);
-            resolvedFormula = structuredResolvedFormula;
-
-            ChartWorkbookRangeSourceKind sourceKind = (fromDefinedName, fromStructuredReference) switch
-            {
-                (true, true) => ChartWorkbookRangeSourceKind.DefinedNameStructuredReference,
-                (true, false) => ChartWorkbookRangeSourceKind.DefinedName,
-                (false, true) => ChartWorkbookRangeSourceKind.StructuredReference,
-                _ => ChartWorkbookRangeSourceKind.DirectRange
-            };
-            return new ChartWorkbookRangeResolution(
-                sourceFormula,
-                resolvedFormula,
-                sourceKind,
-                definedNameName,
-                definedNameSheetName,
-                definedNameLocalSheetId,
-                tableName,
-                tableColumnName,
-                tableColumnId,
-                tableFirstColumnName,
-                tableFirstColumnId,
-                tableLastColumnName,
-                tableLastColumnId);
+            return ResolveStructuredReferenceFormula(resolvedFormula);
         }
 
         private bool TryResolveQualifiedLocalDefinedName(string sourceFormula, out ChartWorkbookDefinedName definedName)
@@ -287,23 +160,8 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        private string? ResolveStructuredReferenceFormula(
-            string? formula,
-            out string tableName,
-            out string tableColumnName,
-            out int? tableColumnId,
-            out string tableFirstColumnName,
-            out int? tableFirstColumnId,
-            out string tableLastColumnName,
-            out int? tableLastColumnId)
+        private string ResolveStructuredReferenceFormula(string formula)
         {
-            tableName = string.Empty;
-            tableColumnName = string.Empty;
-            tableColumnId = null;
-            tableFirstColumnName = string.Empty;
-            tableFirstColumnId = null;
-            tableLastColumnName = string.Empty;
-            tableLastColumnId = null;
             if (string.IsNullOrWhiteSpace(formula))
             {
                 return formula;
@@ -337,9 +195,6 @@ internal sealed partial class PptxRenderer
 
             int firstColumn = table.FirstColumn;
             int lastColumn = table.LastColumn;
-            ChartWorkbookTableColumn tableColumn = default;
-            ChartWorkbookTableColumn firstTableColumn = table.Columns.Count > 0 ? table.Columns[0] : default;
-            ChartWorkbookTableColumn lastTableColumn = table.Columns.Count > 0 ? table.Columns[^1] : default;
             if (!wholeTable)
             {
                 if (string.IsNullOrWhiteSpace(firstColumnName))
@@ -350,14 +205,14 @@ internal sealed partial class PptxRenderer
                 lastColumnName = string.IsNullOrWhiteSpace(lastColumnName) ? firstColumnName : lastColumnName;
                 int firstColumnOffset = -1;
                 int lastColumnOffset = -1;
-                for (int i = 0; i < table.Columns.Count; i++)
+                for (int i = 0; i < table.ColumnNames.Count; i++)
                 {
-                    if (string.Equals(table.Columns[i].Name, firstColumnName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(table.ColumnNames[i], firstColumnName, StringComparison.OrdinalIgnoreCase))
                     {
                         firstColumnOffset = i;
                     }
 
-                    if (string.Equals(table.Columns[i].Name, lastColumnName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(table.ColumnNames[i], lastColumnName, StringComparison.OrdinalIgnoreCase))
                     {
                         lastColumnOffset = i;
                     }
@@ -372,12 +227,6 @@ internal sealed partial class PptxRenderer
                 int maxColumnOffset = Math.Max(firstColumnOffset, lastColumnOffset);
                 firstColumn = table.FirstColumn + minColumnOffset;
                 lastColumn = table.FirstColumn + maxColumnOffset;
-                firstTableColumn = table.Columns[minColumnOffset];
-                lastTableColumn = table.Columns[maxColumnOffset];
-                if (minColumnOffset == maxColumnOffset)
-                {
-                    tableColumn = firstTableColumn;
-                }
             }
 
             int headerRowCount = Math.Max(0, table.HeaderRowCount);
@@ -401,14 +250,6 @@ internal sealed partial class PptxRenderer
                 return trimmed;
             }
 
-            tableName = table.Name;
-            bool singleColumn = !wholeTable && firstColumn == lastColumn;
-            tableColumnName = singleColumn ? tableColumn.Name : string.Empty;
-            tableColumnId = singleColumn ? tableColumn.Id : null;
-            tableFirstColumnName = firstTableColumn.Name;
-            tableFirstColumnId = firstTableColumn.Id;
-            tableLastColumnName = lastTableColumn.Name;
-            tableLastColumnId = lastTableColumn.Id;
             return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(firstColumn, firstRow)}:{ToCellReference(lastColumn, lastRow)}");
         }
 

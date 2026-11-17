@@ -18,14 +18,12 @@ internal static partial class PptxWorkbookOwnershipTests
             RemoveRelationship(parts, kind);
             parts["xl/" + kind + ".xml"] = TestFixtures.Utf8("<unreferenced-broken-xml");
             var workbook = Read(parts);
-            TestAssert.True(workbook.Date1904, "The related workbook's date system remains available.");
             var value = workbook.ReadRangeCells("Sheet1!$B$2").Single();
-            TestAssert.Equal("8.2", value.RawValue);
+            TestAssert.Equal("8.2", value.Text);
             TestAssert.True(value.ColumnHidden, "Related worksheet visibility must survive orphan metadata.");
-            TestAssert.Equal(kind == "styles" ? (int?)null : 165, value.StyleNumberFormatId);
+            TestAssert.Equal(kind == "styles" ? null : "m/d/yy", value.StyleNumberFormatCode);
             var label = workbook.ReadRangeCells("Sheet1!$A$2").Single();
-            TestAssert.Equal(kind == "sharedStrings" ? 0 : 2, label.SharedStringRunCount);
-            if (kind == "styles") TestAssert.Equal("North", label.Text);
+            TestAssert.Equal(kind == "sharedStrings" ? "0" : "North", label.Text);
         }
     }
 
@@ -54,9 +52,8 @@ internal static partial class PptxWorkbookOwnershipTests
             }
             var workbook = Read(parts);
             var value = workbook.ReadRangeCells("Sheet1!$B$2").Single();
-            TestAssert.Equal(165, value.StyleNumberFormatId);
             TestAssert.Equal("m/d/yy", value.StyleNumberFormatCode);
-            TestAssert.True(value.StyleNumberFormatIsDateLike && value.StyleAppliesNumberFormat == true,
+            TestAssert.True(value.StyleAppliesNumberFormat == true,
                 "Owned custom date formatting must remain intact.");
             TestAssert.True(value.ColumnHidden && workbook.ReadRangeCells("Sheet1!$B$3").Single().RowHidden,
                 "Related row/column visibility remains available.");
@@ -113,7 +110,7 @@ internal static partial class PptxWorkbookOwnershipTests
             TestAssert.True(!values[0].ColumnHidden && values[1].ColumnHidden,
                 "Repeating a hidden range preserves adjacent visible and hidden columns.");
             TestAssert.Equal("North", values[0].Text);
-            TestAssert.Equal("8.2", values[1].RawValue);
+            TestAssert.Equal("8.2", values[1].Text);
             var lastColumns = workbook.ReadRangeCells("Sheet1!XFC2:XFD2");
             TestAssert.True(lastColumns[0].ColumnHidden && !lastColumns[1].ColumnHidden,
                 "The last declared column is hidden; the next grid column remains visible.");

@@ -1,52 +1,11 @@
-using System.Globalization;
-using System.Text;
 using System.Xml.Linq;
-using Lokad.OoxPdf.Diagnostics;
-using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Ooxml;
-using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
-using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
 // SpreadsheetML workbook data model backing chart series resolution.
-// First split from the chart renderer file: pure data types, no drawing.
 internal sealed partial class PptxRenderer
 {
-    internal readonly record struct ChartWorkbookCell(
-        string Text,
-        string RawValue,
-        bool HasValue,
-        bool HasValueElement,
-        int? SharedStringIndex,
-        int SharedStringRunCount,
-        bool SharedStringHasRichText,
-        bool SharedStringHasPhoneticText,
-        bool SharedStringPreserveSpace,
-        int? StyleIndex,
-        string CellType,
-        ChartWorkbookCellValueKind ValueKind,
-        string Formula,
-        string FormulaType);
-
-    private readonly record struct ChartWorkbookSharedString(
-        string Text,
-        int RunCount,
-        bool HasRichText,
-        bool HasPhoneticText,
-        bool PreserveSpace);
-
-    internal enum ChartWorkbookCellValueKind
-    {
-        Blank,
-        Number,
-        SharedString,
-        InlineString,
-        FormulaString,
-        Boolean,
-        Error,
-        Other
-    }
+    internal readonly record struct ChartWorkbookCell(string Text, bool HasValue, int? StyleIndex);
 
     internal sealed class ChartWorksheetData
     {
@@ -70,11 +29,7 @@ internal sealed partial class PptxRenderer
             column > 0 && column < hiddenColumns.Length && hiddenColumns[column];
     }
 
-    internal readonly record struct ChartWorkbookCellFormat(
-        int? NumberFormatId,
-        string NumberFormatCode,
-        bool? ApplyNumberFormat,
-        bool NumberFormatIsDateLike);
+    internal readonly record struct ChartWorkbookCellFormat(string NumberFormatCode, bool? ApplyNumberFormat);
 
     internal readonly record struct ChartWorkbookTable(
         string Name,
@@ -85,17 +40,8 @@ internal sealed partial class PptxRenderer
         int LastColumn,
         int LastRow,
         IReadOnlyList<string> ColumnNames,
-        IReadOnlyList<ChartWorkbookTableColumn> Columns,
         int HeaderRowCount,
-        int TotalsRowCount,
-        bool TotalsRowShown);
-
-    internal readonly record struct ChartWorkbookTableColumn(
-        int? Id,
-        string Name,
-        string TotalsRowFunction,
-        string TotalsRowFormula,
-        string CalculatedColumnFormula);
+        int TotalsRowCount);
 
     private readonly record struct ChartWorkbookStructuredReferenceBody(
         string FirstColumnName,
@@ -118,19 +64,14 @@ internal sealed partial class PptxRenderer
 
     internal sealed class ChartWorkbookStyles
     {
-        public ChartWorkbookStyles(
-            IReadOnlyDictionary<int, string> customNumberFormats,
-            IReadOnlyList<ChartWorkbookCellFormat> cellFormats)
+        public ChartWorkbookStyles(IReadOnlyList<ChartWorkbookCellFormat> cellFormats)
         {
-            CustomNumberFormats = customNumberFormats;
             CellFormats = cellFormats;
         }
 
-        public static ChartWorkbookStyles Empty { get; } = new(new Dictionary<int, string>(), []);
+        public static ChartWorkbookStyles Empty { get; } = new([]);
 
-        public IReadOnlyDictionary<int, string> CustomNumberFormats { get; }
-
-        public IReadOnlyList<ChartWorkbookCellFormat> CellFormats { get; }
+        private IReadOnlyList<ChartWorkbookCellFormat> CellFormats { get; }
 
         public ChartWorkbookCellFormat ResolveCellFormat(int? styleIndex)
         {
@@ -142,84 +83,12 @@ internal sealed partial class PptxRenderer
 
     internal readonly record struct ChartWorkbookRangeCell(
         int Index,
-        int RangeAreaIndex,
-        int RangeAreaCount,
-        int RangeRowIndex,
-        int RangeColumnIndex,
-        int RangeRowCount,
-        int RangeColumnCount,
-        int SheetRow,
-        int SheetColumn,
-        string Reference,
-        string SheetName,
-        string SourceFormula,
-        string ResolvedFormula,
-        ChartWorkbookRangeSourceKind SourceKind,
-        string DefinedName,
-        string DefinedNameSheetName,
-        int? DefinedNameLocalSheetId,
-        string TableName,
-        string TableColumnName,
-        int? TableColumnId,
-        string TableFirstColumnName,
-        int? TableFirstColumnId,
-        string TableLastColumnName,
-        int? TableLastColumnId,
-        int? TableRowIndex,
-        bool TableHeaderRow,
-        bool TableDataRow,
-        bool TableTotalsRow,
-        int? TableCellColumnIndex,
-        string TableCellColumnName,
-        int? TableCellColumnId,
-        string TableCellTotalsRowFunction,
-        string TableCellTotalsRowFormula,
-        string TableCellCalculatedColumnFormula,
         string Text,
-        string RawValue,
-        bool HasCell,
         bool HasValue,
-        bool HasValueElement,
-        int? SharedStringIndex,
-        int SharedStringRunCount,
-        bool SharedStringHasRichText,
-        bool SharedStringHasPhoneticText,
-        bool SharedStringPreserveSpace,
-        int? StyleIndex,
-        string CellType,
-        ChartWorkbookCellValueKind ValueKind,
-        string Formula,
-        string FormulaType,
-        int? StyleNumberFormatId,
         string StyleNumberFormatCode,
         bool? StyleAppliesNumberFormat,
-        bool StyleNumberFormatIsDateLike,
         bool RowHidden,
         bool ColumnHidden);
-
-    internal enum ChartWorkbookRangeSourceKind
-    {
-        Unknown,
-        DirectRange,
-        DefinedName,
-        StructuredReference,
-        DefinedNameStructuredReference
-    }
-
-    private readonly record struct ChartWorkbookRangeResolution(
-        string SourceFormula,
-        string ResolvedFormula,
-        ChartWorkbookRangeSourceKind SourceKind,
-        string DefinedName,
-        string DefinedNameSheetName,
-        int? DefinedNameLocalSheetId,
-        string TableName,
-        string TableColumnName,
-        int? TableColumnId,
-        string TableFirstColumnName,
-        int? TableFirstColumnId,
-        string TableLastColumnName,
-        int? TableLastColumnId);
 
     // Conversion-owned workbook model shared by chart frames.
     internal sealed partial class ChartWorkbookData
@@ -234,7 +103,6 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookData(
             IReadOnlyDictionary<string, ChartWorksheetData> sheets,
-            bool date1904,
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames,
             IReadOnlyDictionary<string, ChartWorkbookTable> tables,
@@ -247,15 +115,7 @@ internal sealed partial class PptxRenderer
             this.definedNameRecords = definedNameRecords;
             this.tables = tables;
             this.cancellationToken = cancellationToken;
-            Date1904 = date1904;
         }
-
-        public bool Date1904 { get; }
-
-        public IReadOnlyDictionary<string, string> DefinedNames => definedNames;
-
-        public IReadOnlyDictionary<string, ChartWorkbookTable> Tables => tables;
-
 
         // numeric/category/title/label paths expand the same ranges repeatedly
         // within one chart frame. Memoize expansions per frame (keyed by the raw formula;
@@ -390,8 +250,7 @@ internal sealed partial class PptxRenderer
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            ChartWorkbookRangeResolution resolution = ResolveRangeFormula(formula);
-            string[] rangeAreas = SplitRangeAreas(resolution.ResolvedFormula);
+            string[] rangeAreas = SplitRangeAreas(ResolveRangeFormula(formula));
             if (rangeAreas.Length == 0)
             {
                 return [];
@@ -408,7 +267,7 @@ internal sealed partial class PptxRenderer
             for (int areaIndex = 0; areaIndex < rangeAreas.Length; areaIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                AddRangeAreaCells(values, resolution with { ResolvedFormula = rangeAreas[areaIndex] }, areaIndex, rangeAreas.Length, ref index, cancellationToken);
+                AddRangeAreaCells(values, rangeAreas[areaIndex], ref index, cancellationToken);
             }
 
             ChartWorkbookRangeCell[] result = values.ToArray();

@@ -44,7 +44,7 @@ internal sealed partial class PptxRenderer
         ChartWorkbookData? result = null;
         try
         {
-            ChartWorkbookSharedString[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart, cancellationToken, modelStorage);
+            string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart, cancellationToken, modelStorage);
             ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart, cancellationToken, modelStorage);
             IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
                 .GetRelationships(workbookPart.Name, cancellationToken)
@@ -103,7 +103,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            result = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, definedNameRecords, cancellationToken);
+            result = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, styles, definedNames, tables, definedNameRecords, cancellationToken);
             return result;
         }
         finally
@@ -113,15 +113,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool ReadWorkbookDate1904(XDocument workbookXml)
-    {
-        return IsOoxmlTrue((string?)workbookXml
-            .Root?
-            .Element(SpreadsheetNamespace + "workbookPr")
-            ?.Attribute("date1904"));
-    }
-
-    private static ChartWorkbookSharedString[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
+    private static string[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OoxPart? sharedStringsPart = workbookPackage
@@ -136,7 +128,7 @@ internal sealed partial class PptxRenderer
 
         XDocument document = workbookPackage.LoadXml(sharedStringsPart, cancellationToken);
         OoxMemory.GrowModel(modelStorage, document, cancellationToken);
-        var sharedStrings = new List<ChartWorkbookSharedString>();
+        var sharedStrings = new List<string>();
         foreach (XElement item in document.Descendants(SpreadsheetNamespace + "si"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -144,22 +136,10 @@ internal sealed partial class PptxRenderer
             {
                 throw new OoxPdfLimitExceededException("Chart workbook declares more shared strings than the maximum supported count.");
             }
-            sharedStrings.Add(ReadWorkbookSharedString(item));
+            sharedStrings.Add(string.Concat(ReadWorkbookBaseTextElements(item).Select(text => text.Value)));
         }
 
         return sharedStrings.ToArray();
-    }
-
-    private static ChartWorkbookSharedString ReadWorkbookSharedString(XElement item)
-    {
-        XElement[] textElements = ReadWorkbookBaseTextElements(item).ToArray();
-        int runCount = item.Elements(SpreadsheetNamespace + "r").Count();
-        return new ChartWorkbookSharedString(
-            string.Concat(textElements.Select(text => text.Value)),
-            runCount,
-            runCount != 0,
-            item.Descendants(SpreadsheetNamespace + "rPh").Any(),
-            textElements.Any(text => string.Equals((string?)text.Attribute(XNamespace.Xml + "space"), "preserve", StringComparison.Ordinal)));
     }
 
     // Shared and inline strings use the same base-text owners. Phonetic runs
@@ -279,89 +259,10 @@ internal sealed partial class PptxRenderer
             string numberFormatCode = numberFormatId is { } id && customNumberFormats.TryGetValue(id, out string? customCode)
                 ? customCode
                 : string.Empty;
-            cellFormats.Add(new ChartWorkbookCellFormat(
-                numberFormatId,
-                numberFormatCode,
-                applyNumberFormat,
-                IsWorkbookDateLikeNumberFormat(numberFormatId, numberFormatCode)));
+            cellFormats.Add(new ChartWorkbookCellFormat(numberFormatCode, applyNumberFormat));
         }
 
-        return new ChartWorkbookStyles(customNumberFormats, cellFormats);
-    }
-
-    private static bool IsWorkbookDateLikeNumberFormat(int? numberFormatId, string formatCode)
-    {
-        if (numberFormatId is { } id && IsBuiltInWorkbookDateLikeNumberFormatId(id))
-        {
-            return true;
-        }
-
-        return ContainsWorkbookDateTimeFormatToken();
-
-        bool ContainsWorkbookDateTimeFormatToken()
-        {
-            if (string.IsNullOrWhiteSpace(formatCode) ||
-                string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            for (int i = 0; i < formatCode.Length; i++)
-            {
-                char c = formatCode[i];
-                if (c == '"')
-                {
-                    i++;
-                    while (i < formatCode.Length && formatCode[i] != '"')
-                    {
-                        i++;
-                    }
-
-                    continue;
-                }
-
-                if (c == '\\' || c == '_' || c == '*')
-                {
-                    i++;
-                    continue;
-                }
-
-                if (c == '[')
-                {
-                    int closingBracket = formatCode.IndexOf(']', i + 1);
-                    if (closingBracket < 0)
-                    {
-                        closingBracket = formatCode.Length - 1;
-                    }
-
-                    string bracketToken = formatCode.Substring(i + 1, Math.Max(0, closingBracket - i - 1)).Trim();
-                    if (bracketToken.Length > 0 &&
-                        bracketToken.All(c => c == 'h' || c == 'H' || c == 'm' || c == 'M' || c == 's' || c == 'S'))
-                    {
-                        return true;
-                    }
-
-                    i = closingBracket;
-                    continue;
-                }
-
-                char lower = char.ToLowerInvariant(c);
-                if (lower == 'y' || lower == 'd' || lower == 'h' || lower == 's')
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        bool IsBuiltInWorkbookDateLikeNumberFormatId(int numberFormatId)
-        {
-            return (numberFormatId >= 14 && numberFormatId <= 22) ||
-                (numberFormatId >= 27 && numberFormatId <= 36) ||
-                (numberFormatId >= 45 && numberFormatId <= 47) ||
-                (numberFormatId >= 50 && numberFormatId <= 58);
-        }
+        return new ChartWorkbookStyles(cellFormats);
     }
 
     // Spreadsheet grid bounds (columns A..XFD, rows 1..1048576). Hidden markers
@@ -414,7 +315,7 @@ internal sealed partial class PptxRenderer
     private const long MaxWorkbookDefinedNames = 100_000;
     private const long MaxWorkbookStyleRecords = 100_000;
 
-    private static ChartWorksheetData ReadWorksheetData(OoxPackage workbookPackage, OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
+    private static ChartWorksheetData ReadWorksheetData(OoxPackage workbookPackage, OoxPart worksheetPart, IReadOnlyList<string> sharedStrings, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
     {
         XDocument document = workbookPackage.LoadXml(worksheetPart, cancellationToken);
         OoxMemory.GrowModel(modelStorage, document, cancellationToken);
@@ -488,24 +389,11 @@ internal sealed partial class PptxRenderer
             }
 
             value ??= string.Empty;
-            int? sharedStringIndexValue = null;
-            int sharedStringRunCount = 0;
-            bool sharedStringHasRichText = false;
-            bool sharedStringHasPhoneticText = false;
-            bool sharedStringPreserveSpace = false;
             if (string.Equals(cellType, "s", StringComparison.Ordinal) &&
-                int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sharedStringIndex))
+                int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sharedStringIndex) &&
+                sharedStringIndex >= 0 && sharedStringIndex < sharedStrings.Count)
             {
-                sharedStringIndexValue = sharedStringIndex;
-                if (sharedStringIndex >= 0 && sharedStringIndex < sharedStrings.Count)
-                {
-                    ChartWorkbookSharedString sharedString = sharedStrings[sharedStringIndex];
-                    value = sharedString.Text;
-                    sharedStringRunCount = sharedString.RunCount;
-                    sharedStringHasRichText = sharedString.HasRichText;
-                    sharedStringHasPhoneticText = sharedString.HasPhoneticText;
-                    sharedStringPreserveSpace = sharedString.PreserveSpace;
-                }
+                value = sharedStrings[sharedStringIndex];
             }
 
             if (!cells.ContainsKey(reference) && cells.Count >= MaxWorksheetCells)
@@ -513,45 +401,10 @@ internal sealed partial class PptxRenderer
                 throw new OoxPdfLimitExceededException("Chart worksheet declares more cells than the maximum supported count.");
             }
 
-            cells[reference] = new ChartWorkbookCell(
-                value,
-                rawValue,
-                hasValue,
-                valueElement is not null,
-                sharedStringIndexValue,
-                sharedStringRunCount,
-                sharedStringHasRichText,
-                sharedStringHasPhoneticText,
-                sharedStringPreserveSpace,
-                styleIndex,
-                cellType ?? string.Empty,
-                ReadWorkbookCellValueKind(cellType, value, hasValue),
-                formula?.Value ?? string.Empty,
-                (string?)formula?.Attribute("t") ?? string.Empty);
+            cells[reference] = new ChartWorkbookCell(value, hasValue, styleIndex);
         }
 
         return new ChartWorksheetData(cells, hiddenRows, hiddenColumns);
-    }
-
-    private static ChartWorkbookCellValueKind ReadWorkbookCellValueKind(string? cellType, string value, bool hasValue)
-    {
-        if (!hasValue)
-        {
-            return ChartWorkbookCellValueKind.Blank;
-        }
-
-        return cellType switch
-        {
-            null or "" => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _)
-                ? ChartWorkbookCellValueKind.Number
-                : ChartWorkbookCellValueKind.Other,
-            "s" => ChartWorkbookCellValueKind.SharedString,
-            "inlineStr" => ChartWorkbookCellValueKind.InlineString,
-            "str" => ChartWorkbookCellValueKind.FormulaString,
-            "b" => ChartWorkbookCellValueKind.Boolean,
-            "e" => ChartWorkbookCellValueKind.Error,
-            _ => ChartWorkbookCellValueKind.Other
-        };
     }
 
     private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName, CancellationToken cancellationToken, IMemoryReservation? modelStorage = null)
@@ -591,26 +444,18 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            ChartWorkbookTableColumn[] columns = tableElement
+            string[] columnNames = tableElement
                 .Element(SpreadsheetNamespace + "tableColumns")?
                 .Elements(SpreadsheetNamespace + "tableColumn")
-                .Select(column => new ChartWorkbookTableColumn(
-                    ReadSpreadsheetIntegerAttribute(column, "id"),
-                    (string?)column.Attribute("name") ?? string.Empty,
-                    (string?)column.Attribute("totalsRowFunction") ?? string.Empty,
-                    column.Element(SpreadsheetNamespace + "totalsRowFormula")?.Value ?? string.Empty,
-                    column.Element(SpreadsheetNamespace + "calculatedColumnFormula")?.Value ?? string.Empty))
+                .Select(column => (string?)column.Attribute("name") ?? string.Empty)
                 .ToArray() ?? [];
-            if (columns.Length == 0)
+            if (columnNames.Length == 0)
             {
                 continue;
             }
 
-            string[] columnNames = columns.Select(column => column.Name).ToArray();
-
             int headerRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "headerRowCount") ?? 1;
             int totalsRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "totalsRowCount") ?? 0;
-            bool totalsRowShown = IsOoxmlTrue((string?)tableElement.Attribute("totalsRowShown"));
 
             tables.Add(new ChartWorkbookTable(
                 name,
@@ -621,10 +466,8 @@ internal sealed partial class PptxRenderer
                 lastColumn,
                 lastRow,
                 columnNames,
-                columns,
                 headerRowCount,
-                totalsRowCount,
-                totalsRowShown));
+                totalsRowCount));
         }
 
         return tables;

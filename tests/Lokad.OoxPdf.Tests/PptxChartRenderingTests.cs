@@ -1023,268 +1023,53 @@ internal static class PptxChartRenderingTests
         TestAssert.Equal("West", (string?)workbookTextPoints[2].GetType().GetProperty("Text")?.GetValue(workbookTextPoints[2]) ?? string.Empty);
     }
 
-    public static void PptxChartWorkbookParsingPreservesRangeMetadata()
+    public static void PptxChartWorkbookRangesPreserveValuesVisibilityAndFormats()
     {
-        Type workbookType = typeof(PptxRenderer).GetNestedType(
-            "ChartWorkbookData",
-            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
-        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        using var input = new MemoryStream(PptxTests.EmbeddedChartWorkbook());
+        using var package = OoxPackage.Open(input, default);
+        var read = typeof(PptxRenderer).GetMethod("ReadWorkbookDataCore",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var workbook = (PptxRenderer.ChartWorkbookData)read.Invoke(null, [package, CancellationToken.None])!;
+        string[] amounts = ["8.2", "3.2", "1.4"];
+        foreach (var (formula, expected) in new (string, string[])[] {
+            ("Sheet1!$B$2:$B$4", amounts), ("'[Book.xlsx]Sheet1'!$B$2:$B$4", amounts),
+            ("Sheet1!$B$2:$B$2,$B$4:$B$4", ["8.2", "1.4"]),
+            ("SalesValues", amounts), ("SalesUnionValues", ["8.2", "1.4"]),
+            ("SalesLabels", ["North", "South", "West"]),
+            ("Sheet1!SheetLocalValues", amounts), ("SheetLocalValues", []),
+            ("SalesTable[Amount]", amounts), ("Sales_Table[Amount]", amounts),
+            ("SalesTable[#Data]", ["North", "8.2", "", "South", "3.2", "7.5", "West", "1.4", "9.1"]),
+            ("SalesTable[#Headers]", ["", "Share", "Quoted ] Amount"]),
+            ("SalesTotalsTable[#All]", ["", "Share", "North", "8.2", "South", "3.2", "West", "1.4"]),
+            ("SalesTable[[Region]:[Amount]]", ["North", "8.2", "South", "3.2", "West", "1.4"]),
+            ("SalesTable[Quoted ']' Amount]", ["", "7.5", "9.1"]),
+            ("SalesTotalsTable[[#Totals],[Amount]]", ["1.4"]),
+            ("Sheet1!$C$2:$C$2", [""]), ("UnknownTable[Amount]", []), ("", []) })
         {
-            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            var cells = workbook.ReadRangeCells(formula);
+            TestAssert.Equal(string.Join("|", expected), string.Join("|", cells.Select(cell => cell.Text)));
+            TestAssert.Equal(expected.Length, cells.Length);
+            for (int index = 0; index < cells.Length; index++)
             {
-                ["A2"] = "North",
-                ["A4"] = "West",
-                ["B2"] = "8.2",
-                ["B4"] = "1.4"
+                TestAssert.Equal(index, cells[index].Index);
+                TestAssert.Equal(expected[index].Length > 0, cells[index].HasValue);
             }
-        };
-        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        System.Reflection.PropertyInfo date1904Property = workbookType.GetProperty("Date1904") ?? throw new InvalidOperationException("Expected workbook date1904 property.");
-        TestAssert.True((bool?)date1904Property.GetValue(workbook) == false, "Expected workbook date1904 metadata to default to false.");
-        object date1904Workbook = PptxChartRangeTests.ReadWorkbookCells(sheets, true);
-        TestAssert.True((bool?)date1904Property.GetValue(date1904Workbook) == true, "Expected workbook date1904 metadata to survive construction.");
-        using MemoryStream embeddedWorkbookStream = new(PptxTests.EmbeddedChartWorkbook());
-        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
-        var readWorkbookData = typeof(PptxRenderer).GetMethod(
-            "ReadWorkbookDataCore",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
-        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage, CancellationToken.None]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
-        TestAssert.True((bool?)date1904Property.GetValue(parsedWorkbook) == true, "Expected parsed workbookPr/date1904 to survive workbook parsing.");
-        var readRangeCells = workbookType.GetMethod("ReadRangeCells", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, [typeof(string)], null) ?? throw new InvalidOperationException("Expected range-cell reader.");
-        Array parsedCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected parsed workbook range cells."));
-        object firstParsedCell = parsedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first parsed workbook range cell.");
-        System.Reflection.PropertyInfo sheetNameProperty = firstParsedCell.GetType().GetProperty("SheetName") ?? throw new InvalidOperationException("Expected range-cell sheet name.");
-        TestAssert.Equal("Sheet1", (string?)sheetNameProperty.GetValue(firstParsedCell) ?? string.Empty);
-        TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedCell) ?? string.Empty);
-        TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedCell) ?? string.Empty);
-        TestAssert.Equal("DirectRange", firstParsedCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal(string.Empty, (string?)firstParsedCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeRowIndex")?.GetValue(firstParsedCell) == 0, "Expected range-local row index to survive range-cell projection.");
-        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeColumnIndex")?.GetValue(firstParsedCell) == 0, "Expected range-local column index to survive range-cell projection.");
-        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeRowCount")?.GetValue(firstParsedCell) == 3, "Expected range row count to survive range-cell projection.");
-        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeColumnCount")?.GetValue(firstParsedCell) == 1, "Expected range column count to survive range-cell projection.");
-        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("SheetRow")?.GetValue(firstParsedCell) == 2, "Expected absolute worksheet row to survive range-cell projection.");
-        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("SheetColumn")?.GetValue(firstParsedCell) == 2, "Expected absolute worksheet column to survive range-cell projection.");
-        TestAssert.Equal("Number", firstParsedCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal("8.2", (string?)firstParsedCell.GetType().GetProperty("RawValue")?.GetValue(firstParsedCell) ?? string.Empty);
-        TestAssert.True((bool?)firstParsedCell.GetType().GetProperty("HasValueElement")?.GetValue(firstParsedCell) == true, "Expected numeric worksheet cell to preserve its cached value element.");
-        System.Reflection.PropertyInfo styleIndexProperty = firstParsedCell.GetType().GetProperty("StyleIndex") ?? throw new InvalidOperationException("Expected range-cell style index.");
-        TestAssert.True((int?)styleIndexProperty.GetValue(firstParsedCell) == 5, "Expected worksheet cell style index to survive workbook parsing.");
-        System.Reflection.PropertyInfo styleNumberFormatIdProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatId") ?? throw new InvalidOperationException("Expected range-cell style number-format ID.");
-        TestAssert.True((int?)styleNumberFormatIdProperty.GetValue(firstParsedCell) == 165, "Expected worksheet cell style to resolve its number-format ID.");
-        System.Reflection.PropertyInfo styleNumberFormatCodeProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatCode") ?? throw new InvalidOperationException("Expected range-cell style number-format code.");
-        TestAssert.Equal("m/d/yy", (string?)styleNumberFormatCodeProperty.GetValue(firstParsedCell) ?? string.Empty);
-        System.Reflection.PropertyInfo styleAppliesNumberFormatProperty = firstParsedCell.GetType().GetProperty("StyleAppliesNumberFormat") ?? throw new InvalidOperationException("Expected range-cell style number-format apply flag.");
-        TestAssert.True((bool?)styleAppliesNumberFormatProperty.GetValue(firstParsedCell) == true, "Expected worksheet cell style to preserve applyNumberFormat.");
-        System.Reflection.PropertyInfo styleNumberFormatIsDateLikeProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatIsDateLike") ?? throw new InvalidOperationException("Expected range-cell style date-like number-format flag.");
-        TestAssert.True((bool?)styleNumberFormatIsDateLikeProperty.GetValue(firstParsedCell) == true, "Expected worksheet cell style to classify its date-like number format before chart formatting consumes it.");
-        System.Reflection.PropertyInfo rowHiddenProperty = firstParsedCell.GetType().GetProperty("RowHidden") ?? throw new InvalidOperationException("Expected range-cell row-hidden flag.");
-        System.Reflection.PropertyInfo columnHiddenProperty = firstParsedCell.GetType().GetProperty("ColumnHidden") ?? throw new InvalidOperationException("Expected range-cell column-hidden flag.");
-        TestAssert.True((bool?)rowHiddenProperty.GetValue(firstParsedCell) == false, "Expected visible worksheet row to remain visible in range metadata.");
-        TestAssert.True((bool?)columnHiddenProperty.GetValue(firstParsedCell) == true, "Expected hidden worksheet column to survive workbook parsing.");
-        Array parsedExternalQuotedCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["'[Book.xlsx]Sheet1'!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected parsed external-workbook-qualified range cells."));
-        object firstParsedExternalQuotedCell = parsedExternalQuotedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first external-workbook-qualified range cell.");
-        TestAssert.Equal("Sheet1", (string?)sheetNameProperty.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
-        TestAssert.Equal("'[Book.xlsx]Sheet1'!$B$2:$B$4", (string?)firstParsedExternalQuotedCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
-        TestAssert.Equal("'[Book.xlsx]Sheet1'!$B$2:$B$4", (string?)firstParsedExternalQuotedCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
-        Array parsedUnionCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$2,$B$4:$B$4"]) ?? throw new InvalidOperationException("Expected parsed multi-area workbook range cells."));
-        object firstParsedUnionCell = parsedUnionCells.GetValue(0) ?? throw new InvalidOperationException("Expected first multi-area workbook range cell.");
-        object secondParsedUnionCell = parsedUnionCells.GetValue(1) ?? throw new InvalidOperationException("Expected second multi-area workbook range cell.");
-        TestAssert.True(parsedUnionCells.Length == 2, "Expected multi-area workbook range to preserve cells from both areas.");
-        TestAssert.True((int?)firstParsedUnionCell.GetType().GetProperty("Index")?.GetValue(firstParsedUnionCell) == 0, "Expected multi-area range to preserve global point order.");
-        TestAssert.True((int?)firstParsedUnionCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(firstParsedUnionCell) == 0, "Expected first multi-area cell to preserve its range-area index.");
-        TestAssert.True((int?)secondParsedUnionCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(secondParsedUnionCell) == 1, "Expected second multi-area cell to preserve its range-area index.");
-        TestAssert.True((int?)secondParsedUnionCell.GetType().GetProperty("RangeAreaCount")?.GetValue(secondParsedUnionCell) == 2, "Expected multi-area cells to preserve the total range-area count.");
-        TestAssert.True((int?)secondParsedUnionCell.GetType().GetProperty("Index")?.GetValue(secondParsedUnionCell) == 1, "Expected multi-area range to keep point indices continuous across areas.");
-        TestAssert.Equal("Sheet1!$B$2:$B$2,$B$4:$B$4", (string?)secondParsedUnionCell.GetType().GetProperty("SourceFormula")?.GetValue(secondParsedUnionCell) ?? string.Empty);
-        TestAssert.Equal("Sheet1!$B$4:$B$4", (string?)secondParsedUnionCell.GetType().GetProperty("ResolvedFormula")?.GetValue(secondParsedUnionCell) ?? string.Empty);
-        TestAssert.Equal("1.4", (string?)secondParsedUnionCell.GetType().GetProperty("RawValue")?.GetValue(secondParsedUnionCell) ?? string.Empty);
-        var commaSheetSheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Q,1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["A1"] = "3",
-                ["A2"] = "5"
-            }
-        };
-        object commaSheetWorkbook = PptxChartRangeTests.ReadWorkbookCells(commaSheetSheets);
-        Array commaSheetUnionCells = (Array)(readRangeCells.Invoke(commaSheetWorkbook, ["'Q,1'!$A$1:$A$1,$A$2:$A$2"]) ?? throw new InvalidOperationException("Expected quoted comma-sheet multi-area range cells."));
-        object firstCommaSheetUnionCell = commaSheetUnionCells.GetValue(0) ?? throw new InvalidOperationException("Expected first quoted comma-sheet multi-area range cell.");
-        object secondCommaSheetUnionCell = commaSheetUnionCells.GetValue(1) ?? throw new InvalidOperationException("Expected second quoted comma-sheet multi-area range cell.");
-        TestAssert.True(commaSheetUnionCells.Length == 2, "Expected multi-area range parsing not to split commas inside quoted sheet names.");
-        TestAssert.Equal("Q,1", (string?)sheetNameProperty.GetValue(firstCommaSheetUnionCell) ?? string.Empty);
-        TestAssert.Equal("'Q,1'!$A$1:$A$1,$A$2:$A$2", (string?)secondCommaSheetUnionCell.GetType().GetProperty("SourceFormula")?.GetValue(secondCommaSheetUnionCell) ?? string.Empty);
-        TestAssert.Equal("'Q,1'!$A$2:$A$2", (string?)secondCommaSheetUnionCell.GetType().GetProperty("ResolvedFormula")?.GetValue(secondCommaSheetUnionCell) ?? string.Empty);
-        TestAssert.True((int?)secondCommaSheetUnionCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(secondCommaSheetUnionCell) == 1, "Expected quoted comma-sheet range unions to preserve area ownership.");
-        Array parsedNumericCells = (Array)readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"])!;
-        object firstParsedNumericCell = parsedNumericCells.GetValue(0)!;
-        TestAssert.Equal("8.2", (string?)firstParsedNumericCell.GetType().GetProperty("Text")!.GetValue(firstParsedNumericCell) ?? string.Empty);
-        TestAssert.True((bool?)columnHiddenProperty.GetValue(firstParsedNumericCell) == true, "Live range expansion must preserve hidden-column metadata.");
-        Array parsedUnionNumericCells = (Array)readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$2,$B$4:$B$4"])!;
-        TestAssert.Equal(2, parsedUnionNumericCells.Length);
-        object secondParsedUnionNumericCell = parsedUnionNumericCells.GetValue(1)!;
-        TestAssert.Equal("1.4", (string?)secondParsedUnionNumericCell.GetType().GetProperty("Text")!.GetValue(secondParsedUnionNumericCell) ?? string.Empty);
-        TestAssert.True((int?)secondParsedUnionNumericCell.GetType().GetProperty("RangeAreaIndex")!.GetValue(secondParsedUnionNumericCell) == 1, "Live expansion must preserve union ownership.");
-        Array parsedTextCells = (Array)readRangeCells.Invoke(parsedWorkbook, ["SalesLabels"])!;
-        object firstParsedTextCell = parsedTextCells.GetValue(0)!;
-        TestAssert.Equal("North", (string?)firstParsedTextCell.GetType().GetProperty("Text")!.GetValue(firstParsedTextCell) ?? string.Empty);
-        TestAssert.Equal("SalesLabels", (string?)firstParsedTextCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedTextCell) ?? string.Empty);
-        TestAssert.Equal("Sheet1!$A$2:$A$4", (string?)firstParsedTextCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedTextCell) ?? string.Empty);
-        TestAssert.Equal("DefinedName", firstParsedTextCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal("SalesLabels", (string?)firstParsedTextCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedTextCell) ?? string.Empty);
-        TestAssert.Equal("SharedString", firstParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal("0", (string?)firstParsedTextCell.GetType().GetProperty("RawValue")?.GetValue(firstParsedTextCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedTextCell.GetType().GetProperty("SharedStringIndex")?.GetValue(firstParsedTextCell) == 0, "Expected shared-string index to survive workbook parsing.");
-        TestAssert.True((int?)firstParsedTextCell.GetType().GetProperty("SharedStringRunCount")?.GetValue(firstParsedTextCell) == 2, "Expected shared-string rich-text run count to survive workbook parsing.");
-        TestAssert.True((bool?)firstParsedTextCell.GetType().GetProperty("SharedStringHasRichText")?.GetValue(firstParsedTextCell) == true, "Expected shared-string rich-text presence to survive workbook parsing.");
-        TestAssert.True((bool?)firstParsedTextCell.GetType().GetProperty("SharedStringPreserveSpace")?.GetValue(firstParsedTextCell) == true, "Expected shared-string xml:space metadata to survive workbook parsing.");
-        object lastParsedTextCell = parsedTextCells.GetValue(2) ?? throw new InvalidOperationException("Expected inline-string range cell.");
-        TestAssert.Equal("InlineString", lastParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(lastParsedTextCell)?.ToString() ?? string.Empty);
-        TestAssert.True((bool?)lastParsedTextCell.GetType().GetProperty("HasValueElement")?.GetValue(lastParsedTextCell) == false, "Expected inline string cells to remain distinguishable from cached <v> cells.");
-        Array parsedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Amount]"]) ?? throw new InvalidOperationException("Expected parsed structured-reference range cells."));
-        object firstParsedStructuredCell = parsedStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first structured-reference range cell.");
-        TestAssert.Equal("SalesTable[Amount]", (string?)firstParsedStructuredCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        TestAssert.Equal("Sheet1!B2:B4", (string?)firstParsedStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        TestAssert.Equal("StructuredReference", firstParsedStructuredCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedStructuredCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal("SalesTable", (string?)firstParsedStructuredCell.GetType().GetProperty("TableName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference source column id to survive resolution.");
-        TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableFirstColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableFirstColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference first source column id to survive resolution.");
-        TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableLastColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableLastColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference last source column id to survive resolution.");
-        TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableRowIndex")?.GetValue(firstParsedStructuredCell) == 1, "Expected structured-reference table row index to survive resolution.");
-        TestAssert.True((bool?)firstParsedStructuredCell.GetType().GetProperty("TableDataRow")?.GetValue(firstParsedStructuredCell) == true, "Expected structured-reference data row role to survive resolution.");
-        TestAssert.True((bool?)firstParsedStructuredCell.GetType().GetProperty("TableHeaderRow")?.GetValue(firstParsedStructuredCell) == false, "Expected structured-reference data row not to be classified as a header row.");
-        TestAssert.True((bool?)firstParsedStructuredCell.GetType().GetProperty("TableTotalsRow")?.GetValue(firstParsedStructuredCell) == false, "Expected structured-reference data row not to be classified as a totals row.");
-        TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableCellColumnIndex")?.GetValue(firstParsedStructuredCell) == 1, "Expected structured-reference cell column index to survive resolution.");
-        TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableCellColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableCellColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference cell column id to survive resolution.");
-        TestAssert.Equal("B2", (string?)firstParsedStructuredCell.GetType().GetProperty("TableCellCalculatedColumnFormula")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
-        Array parsedWholeTableCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[#Data]"]) ?? throw new InvalidOperationException("Expected parsed whole-table structured-reference range cells."));
-        object firstParsedWholeTableCell = parsedWholeTableCells.GetValue(0) ?? throw new InvalidOperationException("Expected first whole-table structured-reference range cell.");
-        TestAssert.True(parsedWholeTableCells.Length == 9, "Expected whole-table data-body structured reference to hydrate the complete data-body rectangle.");
-        TestAssert.Equal("Sheet1!A2:C4", (string?)firstParsedWholeTableCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
-        TestAssert.Equal("SalesTable", (string?)firstParsedWholeTableCell.GetType().GetProperty("TableName")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
-        TestAssert.Equal(string.Empty, (string?)firstParsedWholeTableCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
-        TestAssert.True(firstParsedWholeTableCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedWholeTableCell) is null, "Expected whole-table structured references to keep column id empty.");
-        TestAssert.Equal("Region", (string?)firstParsedWholeTableCell.GetType().GetProperty("TableFirstColumnName")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedWholeTableCell.GetType().GetProperty("TableFirstColumnId")?.GetValue(firstParsedWholeTableCell) == 1, "Expected whole-table first source column id to survive resolution.");
-        TestAssert.Equal("Quoted ] Amount", (string?)firstParsedWholeTableCell.GetType().GetProperty("TableLastColumnName")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedWholeTableCell.GetType().GetProperty("TableLastColumnId")?.GetValue(firstParsedWholeTableCell) == 3, "Expected whole-table last source column id to survive resolution.");
-        Array parsedHeaderStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[#Headers]"]) ?? throw new InvalidOperationException("Expected parsed header structured-reference range cells."));
-        object firstParsedHeaderStructuredCell = parsedHeaderStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first header structured-reference range cell.");
-        TestAssert.True(parsedHeaderStructuredCells.Length == 3, "Expected header-only structured reference to hydrate the complete header row.");
-        TestAssert.Equal("Sheet1!A1:C1", (string?)firstParsedHeaderStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedHeaderStructuredCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedHeaderStructuredCell.GetType().GetProperty("RangeRowCount")?.GetValue(firstParsedHeaderStructuredCell) == 1, "Expected header-only structured reference row count to survive range projection.");
-        TestAssert.True((int?)firstParsedHeaderStructuredCell.GetType().GetProperty("RangeColumnCount")?.GetValue(firstParsedHeaderStructuredCell) == 3, "Expected header-only structured reference column count to survive range projection.");
-        TestAssert.True((int?)firstParsedHeaderStructuredCell.GetType().GetProperty("TableRowIndex")?.GetValue(firstParsedHeaderStructuredCell) == 0, "Expected header-only structured reference table row index to survive resolution.");
-        TestAssert.True((bool?)firstParsedHeaderStructuredCell.GetType().GetProperty("TableHeaderRow")?.GetValue(firstParsedHeaderStructuredCell) == true, "Expected header-only structured reference row role to survive resolution.");
-        TestAssert.True((bool?)firstParsedHeaderStructuredCell.GetType().GetProperty("TableDataRow")?.GetValue(firstParsedHeaderStructuredCell) == false, "Expected header-only structured reference not to be classified as a data row.");
-        TestAssert.True((bool?)firstParsedHeaderStructuredCell.GetType().GetProperty("TableTotalsRow")?.GetValue(firstParsedHeaderStructuredCell) == false, "Expected header-only structured reference not to be classified as a totals row.");
-        TestAssert.Equal("Region", (string?)firstParsedHeaderStructuredCell.GetType().GetProperty("TableCellColumnName")?.GetValue(firstParsedHeaderStructuredCell) ?? string.Empty);
-        Array parsedAllStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTotalsTable[#All]"]) ?? throw new InvalidOperationException("Expected parsed all-row structured-reference range cells."));
-        object firstParsedAllStructuredCell = parsedAllStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first all-row structured-reference range cell.");
-        object lastParsedAllStructuredCell = parsedAllStructuredCells.GetValue(parsedAllStructuredCells.Length - 1) ?? throw new InvalidOperationException("Expected last all-row structured-reference range cell.");
-        TestAssert.True(parsedAllStructuredCells.Length == 8, "Expected all-row structured reference to hydrate header, data, and totals rows.");
-        TestAssert.Equal("Sheet1!A1:B4", (string?)firstParsedAllStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedAllStructuredCell) ?? string.Empty);
-        TestAssert.True((bool?)firstParsedAllStructuredCell.GetType().GetProperty("TableHeaderRow")?.GetValue(firstParsedAllStructuredCell) == true, "Expected all-row structured reference to preserve header row role.");
-        TestAssert.True((bool?)lastParsedAllStructuredCell.GetType().GetProperty("TableTotalsRow")?.GetValue(lastParsedAllStructuredCell) == true, "Expected all-row structured reference to preserve totals row role.");
-        TestAssert.True((int?)lastParsedAllStructuredCell.GetType().GetProperty("TableRowIndex")?.GetValue(lastParsedAllStructuredCell) == 3, "Expected all-row structured reference totals row index to survive resolution.");
-        TestAssert.Equal("Amount", (string?)lastParsedAllStructuredCell.GetType().GetProperty("TableCellColumnName")?.GetValue(lastParsedAllStructuredCell) ?? string.Empty);
-        Array parsedColumnSpanCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[[Region]:[Amount]]"]) ?? throw new InvalidOperationException("Expected parsed structured-reference column-span range cells."));
-        object firstParsedColumnSpanCell = parsedColumnSpanCells.GetValue(0) ?? throw new InvalidOperationException("Expected first structured-reference column-span range cell.");
-        object secondParsedColumnSpanCell = parsedColumnSpanCells.GetValue(1) ?? throw new InvalidOperationException("Expected second structured-reference column-span range cell.");
-        TestAssert.True(parsedColumnSpanCells.Length == 6, "Expected structured-reference column span to hydrate the selected data-body rectangle.");
-        TestAssert.Equal("Sheet1!A2:B4", (string?)firstParsedColumnSpanCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedColumnSpanCell.GetType().GetProperty("RangeRowCount")?.GetValue(firstParsedColumnSpanCell) == 3, "Expected structured-reference column span row count to survive range projection.");
-        TestAssert.True((int?)firstParsedColumnSpanCell.GetType().GetProperty("RangeColumnCount")?.GetValue(firstParsedColumnSpanCell) == 2, "Expected structured-reference column span column count to survive range projection.");
-        TestAssert.True((int?)secondParsedColumnSpanCell.GetType().GetProperty("RangeColumnIndex")?.GetValue(secondParsedColumnSpanCell) == 1, "Expected structured-reference column span to preserve range-local column coordinates.");
-        TestAssert.True((int?)secondParsedColumnSpanCell.GetType().GetProperty("SheetColumn")?.GetValue(secondParsedColumnSpanCell) == 2, "Expected structured-reference column span to preserve absolute worksheet column coordinates.");
-        TestAssert.Equal("Region", (string?)firstParsedColumnSpanCell.GetType().GetProperty("TableCellColumnName")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
-        TestAssert.Equal("Amount", (string?)secondParsedColumnSpanCell.GetType().GetProperty("TableCellColumnName")?.GetValue(secondParsedColumnSpanCell) ?? string.Empty);
-        TestAssert.True((int?)secondParsedColumnSpanCell.GetType().GetProperty("TableCellColumnId")?.GetValue(secondParsedColumnSpanCell) == 2, "Expected structured-reference column span to preserve each cell's table column id.");
-        TestAssert.Equal("SalesTable", (string?)firstParsedColumnSpanCell.GetType().GetProperty("TableName")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
-        TestAssert.Equal(string.Empty, (string?)firstParsedColumnSpanCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
-        TestAssert.True(firstParsedColumnSpanCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedColumnSpanCell) is null, "Expected multi-column structured references to keep single column id empty.");
-        TestAssert.Equal("Region", (string?)firstParsedColumnSpanCell.GetType().GetProperty("TableFirstColumnName")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedColumnSpanCell.GetType().GetProperty("TableFirstColumnId")?.GetValue(firstParsedColumnSpanCell) == 1, "Expected structured-reference column span first id to survive resolution.");
-        TestAssert.Equal("Amount", (string?)firstParsedColumnSpanCell.GetType().GetProperty("TableLastColumnName")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedColumnSpanCell.GetType().GetProperty("TableLastColumnId")?.GetValue(firstParsedColumnSpanCell) == 2, "Expected structured-reference column span last id to survive resolution.");
-        Array parsedEscapedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Quoted ']' Amount]"]) ?? throw new InvalidOperationException("Expected parsed escaped structured-reference range cells."));
-        object firstParsedEscapedStructuredCell = parsedEscapedStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first escaped structured-reference range cell.");
-        TestAssert.Equal("Sheet1!C2:C4", (string?)firstParsedEscapedStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedEscapedStructuredCell) ?? string.Empty);
-        TestAssert.Equal("Quoted ] Amount", (string?)firstParsedEscapedStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedEscapedStructuredCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedEscapedStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedEscapedStructuredCell) == 3, "Expected escaped structured-reference source column id to survive resolution.");
-        Array parsedTotalsStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTotalsTable[[#Totals],[Amount]]"]) ?? throw new InvalidOperationException("Expected parsed totals structured-reference range cells."));
-        object firstParsedTotalsStructuredCell = parsedTotalsStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first totals structured-reference range cell.");
-        TestAssert.True(parsedTotalsStructuredCells.Length == 1, "Expected totals-only structured reference to hydrate only the declared totals row.");
-        TestAssert.Equal("Sheet1!B4:B4", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
-        TestAssert.Equal("Amount", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedTotalsStructuredCell) == 2, "Expected totals structured-reference source column id to survive resolution.");
-        TestAssert.True((int?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableRowIndex")?.GetValue(firstParsedTotalsStructuredCell) == 3, "Expected totals structured-reference table row index to survive resolution.");
-        TestAssert.True((bool?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableTotalsRow")?.GetValue(firstParsedTotalsStructuredCell) == true, "Expected totals structured-reference row role to survive resolution.");
-        TestAssert.True((bool?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableDataRow")?.GetValue(firstParsedTotalsStructuredCell) == false, "Expected totals structured-reference not to be classified as a data row.");
-        TestAssert.Equal("sum", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableCellTotalsRowFunction")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
-        TestAssert.Equal("SUBTOTAL(109,[Amount])", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableCellTotalsRowFormula")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
-        Array parsedBlankCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$C$2:$C$2"]) ?? throw new InvalidOperationException("Expected parsed blank workbook range cell."));
-        object parsedBlankCell = parsedBlankCells.GetValue(0) ?? throw new InvalidOperationException("Expected blank workbook range cell.");
-        TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasCell")?.GetValue(parsedBlankCell) == true, "Expected styled formula blank cell to remain a physical cell.");
-        TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasValue")?.GetValue(parsedBlankCell) == false, "Expected formula blank cell without cached value to preserve missing value state.");
-        TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasValueElement")?.GetValue(parsedBlankCell) == false, "Expected formula blank cell without cached <v> to preserve value-element absence.");
-        TestAssert.Equal("Blank", parsedBlankCell.GetType().GetProperty("ValueKind")?.GetValue(parsedBlankCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal("NA()", (string?)parsedBlankCell.GetType().GetProperty("Formula")?.GetValue(parsedBlankCell) ?? string.Empty);
-        TestAssert.Equal("array", (string?)parsedBlankCell.GetType().GetProperty("FormulaType")?.GetValue(parsedBlankCell) ?? string.Empty);
-        object secondParsedCell = parsedCells.GetValue(1) ?? throw new InvalidOperationException("Expected second parsed workbook range cell.");
-        TestAssert.True((bool?)rowHiddenProperty.GetValue(secondParsedCell) == true, "Expected hidden worksheet row to survive workbook parsing.");
-        object thirdParsedCell = parsedCells.GetValue(2) ?? throw new InvalidOperationException("Expected third parsed workbook range cell.");
-        System.Reflection.PropertyInfo formulaProperty = thirdParsedCell.GetType().GetProperty("Formula") ?? throw new InvalidOperationException("Expected range-cell formula metadata.");
-        TestAssert.Equal("B2-B3", (string?)formulaProperty.GetValue(thirdParsedCell) ?? string.Empty);
-        TestAssert.Equal("shared", (string?)thirdParsedCell.GetType().GetProperty("FormulaType")?.GetValue(thirdParsedCell) ?? string.Empty);
-        System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
-        var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
-        TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
-        TestAssert.True(definedNames.TryGetValue("SalesUnionValues", out string? salesUnionValuesFormula) && salesUnionValuesFormula == "Sheet1!$B$2:$B$2,$B$4:$B$4", "Expected workbook-level multi-area defined name to survive parsing.");
-        TestAssert.True(!definedNames.ContainsKey("SheetLocalValues"), "Expected sheet-local defined names to stay out of workbook-level name resolution.");
-        Array parsedLocalDefinedNameCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!SheetLocalValues"]) ?? throw new InvalidOperationException("Expected parsed sheet-local defined-name range cells."));
-        object firstParsedLocalDefinedNameCell = parsedLocalDefinedNameCells.GetValue(0) ?? throw new InvalidOperationException("Expected first sheet-local defined-name range cell.");
-        TestAssert.Equal("Sheet1!SheetLocalValues", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
-        TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
-        TestAssert.Equal("DefinedName", firstParsedLocalDefinedNameCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedLocalDefinedNameCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal("SheetLocalValues", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
-        TestAssert.Equal("Sheet1", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedNameSheetName")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
-        TestAssert.True((int?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedNameLocalSheetId")?.GetValue(firstParsedLocalDefinedNameCell) == 0, "Expected sheet-local defined-name source scope to survive range resolution.");
-        Array parsedBareLocalDefinedNameCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SheetLocalValues"]) ?? throw new InvalidOperationException("Expected bare sheet-local defined-name lookup to return an empty range."));
-        TestAssert.True(parsedBareLocalDefinedNameCells.Length == 0, "Expected bare sheet-local names to remain unresolved without an explicit sheet scope.");
-        Array parsedUnionDefinedNameValues = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesUnionValues"]) ?? throw new InvalidOperationException("Expected multi-area defined-name range cells."));
-        TestAssert.True(parsedUnionDefinedNameValues.Length == 2, "Expected multi-area defined-name formula to hydrate both workbook areas.");
-        object secondParsedUnionDefinedNameValue = parsedUnionDefinedNameValues.GetValue(1) ?? throw new InvalidOperationException("Expected second multi-area defined-name cell.");
-        object secondParsedUnionDefinedNameCell = secondParsedUnionDefinedNameValue;
-        TestAssert.Equal("1.4", (string?)secondParsedUnionDefinedNameCell.GetType().GetProperty("Text")!.GetValue(secondParsedUnionDefinedNameCell) ?? string.Empty);
-        TestAssert.Equal("DefinedName", secondParsedUnionDefinedNameCell.GetType().GetProperty("SourceKind")?.GetValue(secondParsedUnionDefinedNameCell)?.ToString() ?? string.Empty);
-        TestAssert.Equal("SalesUnionValues", (string?)secondParsedUnionDefinedNameCell.GetType().GetProperty("DefinedName")?.GetValue(secondParsedUnionDefinedNameCell) ?? string.Empty);
-        TestAssert.True((int?)secondParsedUnionDefinedNameCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(secondParsedUnionDefinedNameCell) == 1, "Expected multi-area defined-name cell to preserve its range-area index.");
-        System.Reflection.PropertyInfo tablesProperty = workbookType.GetProperty("Tables") ?? throw new InvalidOperationException("Expected workbook tables.");
-        object tables = tablesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook tables.");
-        System.Reflection.PropertyInfo tableCountProperty = tables.GetType().GetProperty("Count") ?? throw new InvalidOperationException("Expected workbook table count.");
-        TestAssert.True((int?)tableCountProperty.GetValue(tables) == 4, "Expected table names and display names to index the parsed workbook tables.");
-        System.Reflection.PropertyInfo tableValuesProperty = tables.GetType().GetProperty("Values") ?? throw new InvalidOperationException("Expected workbook table values.");
-        object salesTable = (((System.Collections.IEnumerable?)tableValuesProperty.GetValue(tables)) ?? throw new InvalidOperationException("Expected workbook table values."))
-            .Cast<object>()
-            .First(table => (string?)table.GetType().GetProperty("Name")?.GetValue(table) == "SalesTable");
-        TestAssert.Equal(1, (int?)salesTable.GetType().GetProperty("HeaderRowCount")?.GetValue(salesTable) ?? 0);
-        object[] salesTableColumns = (((System.Collections.IEnumerable?)salesTable.GetType().GetProperty("Columns")?.GetValue(salesTable)) ?? throw new InvalidOperationException("Expected table column records.")).Cast<object>().ToArray();
-        TestAssert.True(salesTableColumns.Length == 3, "Expected table column records to survive workbook parsing.");
-        object amountColumn = salesTableColumns[1];
-        TestAssert.True((int?)amountColumn.GetType().GetProperty("Id")?.GetValue(amountColumn) == 2, "Expected table column id metadata to survive workbook parsing.");
-        TestAssert.Equal("Amount", (string?)amountColumn.GetType().GetProperty("Name")?.GetValue(amountColumn) ?? string.Empty);
-        TestAssert.Equal("B2", (string?)amountColumn.GetType().GetProperty("CalculatedColumnFormula")?.GetValue(amountColumn) ?? string.Empty);
-        object escapedColumn = salesTableColumns[2];
-        TestAssert.True((int?)escapedColumn.GetType().GetProperty("Id")?.GetValue(escapedColumn) == 3, "Expected escaped table column id metadata to survive workbook parsing.");
-        TestAssert.Equal("Quoted ] Amount", (string?)escapedColumn.GetType().GetProperty("Name")?.GetValue(escapedColumn) ?? string.Empty);
-        // D01: reference-cache hydration was retired with its only production
-        // caller (the unconstructible XML-only render retry). Workbook range reading
-        // stays live and covered above plus the sidecar test below.
+        }
+        var values = workbook.ReadRangeCells("SalesValues");
+        TestAssert.True(values.All(cell => cell.ColumnHidden), "Column B is authored hidden.");
+        TestAssert.True(!values[0].RowHidden && values[1].RowHidden && !values[2].RowHidden,
+            "Only the authored third row is hidden.");
+        TestAssert.Equal("m/d/yy", values[0].StyleNumberFormatCode);
+        TestAssert.Equal(true, values[0].StyleAppliesNumberFormat);
+        var labels = workbook.ReadRangeCells("SalesLabels");
+        TestAssert.True(labels.All(cell => !cell.ColumnHidden), "Column A stays visible beside the hidden column.");
+        var blank = workbook.ReadRangeCells("Sheet1!C2").Single();
+        TestAssert.True(!blank.HasValue && blank.Text == "", "A formula without a stored result is not recalculated.");
+        TestAssert.True(ReferenceEquals(values, workbook.ReadRangeCells("SalesValues")), "Range memoization retains the owned immutable result.");
+        var empty = (PptxRenderer.ChartWorkbookData)PptxChartRangeTests.ReadWorkbookCells(
+            new Dictionary<string, Dictionary<string, string>> { ["Sheet1"] = new() { ["A1"] = "" } });
+        TestAssert.True(empty.ReadRangeCells("Sheet1!A1").Single().HasValue,
+            "An authored empty stored value differs from a missing result.");
     }
 
     public static void PptxChartIndexedVectorsPreserveWorkbookSidecarPoints()
