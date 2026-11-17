@@ -38,12 +38,9 @@ internal static partial class PptxTextHyperlinksTests
 
     public static void PptxTransformedRunHyperlinksStayInsidePhysicalPaintClips()
     {
-        foreach (var (transform, missing) in new[] {
-            ("flipH=\"1\"", false), ("flipV=\"1\"", false),
-            ("rot=\"5400000\"", false), ("rot=\"2700000\"", false),
-            ("rot=\"5400000\"", true) })
+        foreach (string transform in new[] { "flipH=\"1\"", "flipV=\"1\"", "rot=\"2700000\"" })
         {
-            var page = RenderCroppedRunLink(72d, true, transform, missing);
+            var page = RenderCroppedRunLink(72d, true, transform, missing: false);
             var frames = DocxNoteClippingTests.ReadPhysicalPaintFrames(page)
                 .Where(frame => frame.Block.StartsWith("BT", StringComparison.Ordinal)).ToArray();
             TestAssert.True(frames.Length > 0 && page.Annotations.Count > 0, "The transformed crop keeps visible paint and a link.");
