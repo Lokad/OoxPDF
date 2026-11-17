@@ -1,5 +1,6 @@
 {
   "pptx-percentage-opacity": [
+    "PlainShapeFullRunStyleAgrees",
     "OoxPercentage",
     "PptxPercentage",
     "PptxColorOpacityCompositionKeepsOrderAndGradientFallbacks",

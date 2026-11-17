@@ -484,7 +484,8 @@ internal static class PptxSceneTextAgreementTests
         }
         TestAssert.Equal("allCaps", spanRuns[0].Style.CapsValue);
         TestAssert.Equal(2d, spanRuns[0].Style.CharacterSpacing);
-        TestAssert.Equal(5.4d, spanRuns[1].Style.BaselineOffset);
+        TestAssert.True(Math.Abs(5.4d - spanRuns[1].Style.BaselineOffset) < 1e-12,
+            "An 18pt run with 30% baseline retains its 5.4pt offset within floating-point precision.");
         TestAssert.True(spanRuns[1].Style.Underline, "B retains double underline.");
         TestAssert.Equal("dbl", spanRuns[1].Style.UnderlineValue);
         TestAssert.True(spanRuns[2].Style.Strike, "C retains double strike.");
