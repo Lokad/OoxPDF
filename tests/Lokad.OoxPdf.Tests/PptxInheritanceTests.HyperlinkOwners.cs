@@ -83,7 +83,10 @@ internal static partial class PptxInheritanceTests
         for (int index = 1; index <= 2; index++)
         {
             string word = index == 1 ? "CHARTONE" : "CHARTTWO";
-            string rich = "<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz='1200'><a:latin typeface='DejaVu Sans'/><a:hlinkClick " + Click(word) +
+            // This ownership control pins the regular face. Synthetic bold's
+            // fill-and-stroke mode has separate native coverage; the shared
+            // managed source-label oracle deliberately accepts fill-only text.
+            string rich = "<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz='1200' b='0'><a:latin typeface='DejaVu Sans'/><a:hlinkClick " + Click(word) +
                 "/></a:rPr><a:t>" + word + "</a:t></a:r></a:p></c:rich></c:tx>";
             string title = "<c:title>" + rich + "<c:overlay val='0'/></c:title>";
             string chart = $$"""
