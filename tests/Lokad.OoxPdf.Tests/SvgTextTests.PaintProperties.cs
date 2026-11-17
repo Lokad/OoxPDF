@@ -71,7 +71,7 @@ internal static partial class SvgTextTests
     {
         const string definitions = "<defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"red\"/>" +
             "<stop offset=\"1\" stop-color=\"blue\"/></linearGradient></defs>";
-        const string path = "<path d=\"M20 20H120\" fill=\"none\" stroke=\"url(#g)\" stroke-width=\"4\" {0}/>";
+        const string path = "<path d=\"M20 20H120V80H20Z\" fill=\"none\" stroke=\"url(#g)\" stroke-width=\"4\" {0}/>";
         foreach (string opacity in new[] { ".25", "50%", "bad" })
         {
             var directDiagnostics = new List<OoxPdfDiagnostic>();
