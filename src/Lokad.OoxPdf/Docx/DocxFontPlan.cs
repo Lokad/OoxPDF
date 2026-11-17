@@ -552,8 +552,9 @@ internal sealed record DocxFontPlanSnapshot(
     int DistinctResolvedFamilyCount,
     IReadOnlyList<DocxFontMetricBucketSnapshot> MetricBuckets)
 {
-    public static DocxFontPlanSnapshot FromPlan(DocxFontPlan plan)
+    public static DocxFontPlanSnapshot FromPlan(DocxFontPlan plan, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<DocxFontMetricBucketSnapshot> ToMetricBuckets(DocxFontPlan plan)
         {
             string? HashFamily(string? family)
@@ -583,7 +584,8 @@ internal sealed record DocxFontPlanSnapshot(
                     group.Key.FontSize,
                     group.Key.ResolvedFamilyHash,
                     group.Count(),
-                    group.FirstOrDefault()?.Resolution))
+                    group.FirstOrDefault()?.Resolution,
+                    cancellationToken))
                 .ToArray();
         }
 
@@ -616,9 +618,10 @@ internal sealed record DocxFontPlanSnapshot(
         double fontSize,
         string? resolvedFamilyHash,
         int runCount,
-        FontFaceResolution? resolution)
+        FontFaceResolution? resolution,
+        CancellationToken cancellationToken)
     {
-        OpenTypeFont? font = FontProgramLoader.Load(resolution, CancellationToken.None);
+        OpenTypeFont? font = FontProgramLoader.Load(resolution, cancellationToken);
         if (font is null)
         {
             return new DocxFontMetricBucketSnapshot(

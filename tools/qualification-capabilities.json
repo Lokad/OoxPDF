@@ -1,4 +1,14 @@
 {
+  "docx-shared-inspection": [
+    "DocxCombinedInspection",
+    "DocxMarkupInspection",
+    "DocxWordCompatibleInspection",
+    "DocxPageFootnoteNumbering",
+    "DocxCffFontSubstitutesFallbackWithDiagnostic",
+    "DocxSyntheticTextEmissionSnapshotExposes",
+    "MemoryBudgetFontProgram",
+    "MemoryBudgetGrowthRefusalIsTerminalAndRefundsAcquiredStorage"
+  ],
   "pptx-label-ink": [
     "PptxDataLabelInkSurvivesFontsRichRunsAndRangeMinima",
     "PptxDataLabelInkPreservesManualTitleAndPageClips",

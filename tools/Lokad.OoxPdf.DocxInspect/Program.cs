@@ -47,7 +47,7 @@ for (int i = 2; i < args.Length; i++)
 Directory.CreateDirectory(outputDirectory);
 
 using FileStream stream = File.OpenRead(inputPath);
-OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
 DocxDocument document = new DocxReader().Read(package, diagnosticSink: null, CancellationToken.None, markupMode: markupMode);
 var renderer = new DocxRenderer(fontResolver: null, markupMode: markupMode, markupGeometryMode: markupGeometryMode);
 
@@ -57,11 +57,8 @@ var options = new JsonSerializerOptions
     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 };
 
-DocxLayoutSnapshot layout = renderer.InspectLayout(document);
-DocxFontPlanSnapshot fontPlan = renderer.InspectFontPlan(document);
+var (layout, fontPlan, textEmission, markupBalloons) = await renderer.InspectAsync(document);
 DocxStructureSnapshot structure = renderer.InspectStructure(document);
-DocxTextEmissionSnapshot textEmission = renderer.InspectTextEmission(document);
-DocxMarkupBalloonPlacementSnapshot[] markupBalloons = renderer.InspectMarkupBalloons(document).ToArray();
 File.WriteAllText(
     Path.Combine(outputDirectory, "layout-snapshot.json"),
     JsonSerializer.Serialize(layout, options));

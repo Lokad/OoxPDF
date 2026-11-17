@@ -10,7 +10,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxInspectionTests
+internal static partial class DocxInspectionTests
 {
     public static void DocxMarkupInspectionSnapshotsExposePrivateSafeRevisionCounts()
     {

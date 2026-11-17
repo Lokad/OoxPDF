@@ -173,6 +173,30 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    internal async ValueTask<(DocxLayoutSnapshot Layout, DocxFontPlanSnapshot FontPlan,
+        DocxTextEmissionSnapshot TextEmission, IReadOnlyList<DocxMarkupBalloonPlacementSnapshot> MarkupBalloons)>
+        InspectAsync(DocxDocument document, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var context = ResolveEffectiveMarkupContext(document, cancellationToken);
+        var geometry = ResolveEffectiveMarkupGeometryMode(context);
+        var prepared = await PreparePageNumberedLayoutAsync(document, fontResolver, context, geometry,
+            null, cancellationToken).ConfigureAwait(false);
+        var layout = DocxLayoutSnapshot.FromLayout(prepared.Layout, prepared.Document.MarkupMode, geometry);
+        cancellationToken.ThrowIfCancellationRequested();
+        // Ordinary font-plan inspection describes source requests before font
+        // substitution. Page-numbered notes instead describe the final plan.
+        var fontPlan = DocxPageFootnoteNumbering.IsEligibleDocument(document)
+            ? DocxFontPlanSnapshot.FromPlan(prepared.FontResources.Plan, cancellationToken)
+            : InspectSourceFontPlan(document, context, geometry, cancellationToken);
+        var textEmission = CreateTextEmissionSnapshot(prepared.Document, prepared.FontResources,
+            prepared.Layout, context, cancellationToken);
+        var balloons = await CreateMarkupBalloonSnapshotsAsync(prepared.Document, prepared.FontResources,
+            prepared.Layout, context, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return (layout, fontPlan, textEmission, balloons);
+    }
+
     internal DocxLayoutSnapshot InspectLayout(DocxDocument document)
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
@@ -187,25 +211,32 @@ internal sealed partial class DocxRenderer
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None).GetAwaiter().GetResult();
-        document = prepared.Document;
-        DocxFontResources fontResources = prepared.FontResources;
-        DocxLayout layout = prepared.Layout;
+        return CreateMarkupBalloonSnapshotsAsync(prepared.Document, prepared.FontResources, prepared.Layout,
+            effectiveMarkupContext, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    private async ValueTask<IReadOnlyList<DocxMarkupBalloonPlacementSnapshot>> CreateMarkupBalloonSnapshotsAsync(
+        DocxDocument document, DocxFontResources fontResources, DocxLayout layout,
+        DocxMarkupContext effectiveMarkupContext, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         if (UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext) && HasWordCompatibleBalloonContent(document, effectiveMarkupContext))
         {
-            effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFace = ResolveBalloonTitleFaceAsync(fontResolver, effectiveMarkupContext, CancellationToken.None).GetAwaiter().GetResult() };
+            effectiveMarkupContext = effectiveMarkupContext with { BalloonTitleFace = await ResolveBalloonTitleFaceAsync(fontResolver, effectiveMarkupContext, cancellationToken).ConfigureAwait(false) };
         }
         (DocxRunFontResource? _, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource,
-            DocxRunFontResource? revisionBodyResource) = EnsureMarkupBalloonTextResourcesAsync(
-                layout, fontResources, effectiveMarkupContext, fontResolver, CancellationToken.None).GetAwaiter().GetResult();
+            DocxRunFontResource? revisionBodyResource) = await EnsureMarkupBalloonTextResourcesAsync(
+                layout, fontResources, effectiveMarkupContext, fontResolver, cancellationToken).ConfigureAwait(false);
         effectiveMarkupContext = effectiveMarkupContext with { RevisionBalloonBodyResource = revisionBodyResource };
         var snapshots = new List<DocxMarkupBalloonPlacementSnapshot>();
         DocxRunFontResource? balloonLabelResource = ResolveMarkupLabelFontResource(fontResources);
         PdfEmbeddedFont? balloonLabelEmbedded = balloonTitleResource?.Embedded ?? balloonLabelResource?.Embedded;
         PdfEmbeddedFont? balloonBodyEmbedded = (balloonBodyResource ?? ResolveMarkupBodyFontResource(fontResources) ?? balloonLabelResource)?.Embedded;
-        FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, CancellationToken.None);
+        FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             foreach (DocxMarkupBalloonPlacement placement in BuildMarkupBalloonPlacements(
                 layout.Pages[pageIndex],
                 layout.RelatedStories,
@@ -215,6 +246,7 @@ internal sealed partial class DocxRenderer
                 balloonBodyEmbedded,
                 fontResources))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 snapshots.Add(placement.ToSnapshot(pageIndex));
             }
         }
@@ -231,28 +263,41 @@ internal sealed partial class DocxRenderer
             var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, context, geometry, null, CancellationToken.None).GetAwaiter().GetResult();
             return DocxFontPlanSnapshot.FromPlan(prepared.FontResources.Plan);
         }
-        document = DocxFinalSectionParagraph.Materialize(document, CancellationToken.None,
+        return InspectSourceFontPlan(document, context, geometry, CancellationToken.None);
+    }
+
+    private DocxFontPlanSnapshot InspectSourceFontPlan(DocxDocument document, DocxMarkupContext context,
+        OoxPdfDocxMarkupGeometryMode geometry, CancellationToken cancellationToken)
+    {
+        document = DocxFinalSectionParagraph.Materialize(document, cancellationToken,
             geometry == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup ? context.WordCompatiblePrintScale : 1d);
-        return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, CancellationToken.None,
-            context.CommentMarkerLabels is not null));
+        return DocxFontPlanSnapshot.FromPlan(DocxFontPlan.Create(document, fontResolver, cancellationToken,
+            context.CommentMarkerLabels is not null), cancellationToken);
     }
 
     internal DocxTextEmissionSnapshot InspectTextEmission(DocxDocument document)
     {
         DocxMarkupContext effectiveMarkupContext = ResolveEffectiveMarkupContext(document);
         var prepared = PreparePageNumberedLayoutAsync(document, fontResolver, effectiveMarkupContext, ResolveEffectiveMarkupGeometryMode(effectiveMarkupContext), null, CancellationToken.None).GetAwaiter().GetResult();
-        document = prepared.Document;
-        DocxFontResources fontResources = prepared.FontResources;
-        DocxLayout layout = prepared.Layout;
+        return CreateTextEmissionSnapshot(prepared.Document, prepared.FontResources, prepared.Layout,
+            effectiveMarkupContext, CancellationToken.None);
+    }
+
+    private static DocxTextEmissionSnapshot CreateTextEmissionSnapshot(DocxDocument document,
+        DocxFontResources fontResources, DocxLayout layout, DocxMarkupContext effectiveMarkupContext,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         double textEmissionFontScale = ResolveTextEmissionFontScale(effectiveMarkupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(effectiveMarkupContext);
         double textEmissionXOffset = ResolveTextEmissionXOffset(effectiveMarkupContext);
         bool useWordCompatibleTextProfile = UsesWordCompatibleAllMarkupTextProfile(effectiveMarkupContext);
         var lines = new List<DocxTextEmissionLineSnapshot>();
-        FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, CancellationToken.None);
+        FloatingDrawingPageIndex.PageIndexPair drawingPages = FloatingDrawingPageIndex.BuildPair(layout, cancellationToken);
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DocxLayoutPage page = layout.Pages[pageIndex];
             int pageNumber = pageIndex + 1;
             effectiveMarkupContext = WithPageTextEmissionOffsets(effectiveMarkupContext, layout, pageIndex, separatePlainHeaderOrigins);
@@ -265,6 +310,7 @@ internal sealed partial class DocxRenderer
                 string? containerStoryKind,
                 string? containerStoryVariantType)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 string ResolveTextEmissionStoryKind()
                 {
                     // T03: unstoried lines take the enumeration-group fallback.
@@ -327,6 +373,7 @@ internal sealed partial class DocxRenderer
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return new DocxTextEmissionSnapshot(
             document.MarkupMode.ToString(),
             lines.Count,

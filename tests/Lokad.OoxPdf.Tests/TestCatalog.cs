@@ -179,7 +179,8 @@ internal static class TestCatalog
         .. FromType("docx-core", typeof(DocxRevisionsTests)),
         .. FromType("docx-core", typeof(DocxMarkupTests)),
         .. FromType("docx-core", typeof(DocxCommentsTests)),
-        .. FromType("docx-core", typeof(DocxInspectionTests)),
+        .. FromType(name => name.StartsWith("DocxCombinedInspection", StringComparison.Ordinal)
+            ? "rendering-portable" : "docx-core", typeof(DocxInspectionTests)),
         .. FromType("pptx-composition", typeof(PptxCompositionTests)),
         .. FromType("pptx-core", typeof(PptxCoreTests)),
         .. FromType("pptx-tables", typeof(PptxTablesTests)),
