@@ -4,7 +4,7 @@ using Lokad.OoxPdf.Imaging;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class JpegPassthroughTests
+internal static partial class JpegPassthroughTests
 {
     // Existing 2x1 RGB baseline fixture and equivalent grayscale, CMYK and
     // progressive encodings. Fixtures only; no image library is needed at runtime.

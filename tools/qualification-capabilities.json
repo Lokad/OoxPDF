@@ -1,4 +1,23 @@
 {
+  "jpeg-sample-interpretation": [
+    "JpegPixelDecodeKeepsRgbAndYCbCrAcrossMarkerPlacement",
+    "PptxJpegCropAndRecolorKeepSampleInterpretation",
+    "JpegPixelDecodeRejectsUnsupportedAndConflictingAdobeInterpretation",
+    "JpegImageDecodesBaselineDctPixels",
+    "JpegPassthroughKeepsSupportedFramesAndBytes",
+    "JpegPassthroughRejectsMalformedFrameMetadata",
+    "JpegCmykInterpretationFollowsAdobeMarkersAcrossFrameOrder",
+    "JpegSampleMappingParticipatesInImageIdentity",
+    "CmykJpegMappingSurvivesDocxAndPptxCropRecolorFallbacks",
+    "DocxMalformedJpegReportsErrorWithoutInvalidImageDictionary",
+    "PptxMalformedJpegReportsErrorIncludingRecolorFallback",
+    "MemoryBudgetJpegPlanesFundPaddedComponentsAndRgbUntilDisposal",
+    "MemoryBudgetJpegRefusalTruncationAndCancellationRefundConstruction",
+    "MemoryBudgetJpegRefusalRemainsTerminalForRecolorAndCrop",
+    "SharedDecoderRejectsPreCancelledCalls",
+    "PptxSyntheticBaselineJpegPictureAppliesDuotoneRecolor",
+    "PptxPictureRecolorKeepsPixelsAcrossPictureAndFillOwners"
+  ],
   "pptx-resolved-shape-style": [
     "PptxSyntheticShapesProduceDrawingOperators",
     "PptxSyntheticFilledStrokedShapeRepeatsSlideClipBeforeFill",

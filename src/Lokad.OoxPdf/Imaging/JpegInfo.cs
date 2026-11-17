@@ -62,16 +62,8 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
                 break;
             }
 
-            if (marker == 0xEE && length >= 7 && bytes.Slice(offset + 2, 5).SequenceEqual("Adobe"u8))
-            {
-                if (length < 14) { throw new InvalidDataException("JPEG Adobe marker is truncated."); }
-                byte transform = bytes[offset + 13];
-                if (adobeTransform is { } prior && prior != transform)
-                {
-                    throw new InvalidDataException("JPEG Adobe markers have conflicting color transforms.");
-                }
-                adobeTransform = transform;
-            }
+            if (marker == 0xEE)
+                adobeTransform = ReadAdobeTransform(bytes.Slice(offset + 2, length - 2), adobeTransform);
 
             if (marker is >= 0xC0 and <= 0xC3 or >= 0xC5 and <= 0xC7 or >= 0xC9 and <= 0xCB or >= 0xCD and <= 0xCF)
             {
@@ -112,5 +104,17 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
         // Adobe CMYK and YCCK use inverted ink components. The PDF DCT filter
         // handles the encoded transform; Decode maps its samples to DeviceCMYK.
         return info with { InvertedCmyk = info.ComponentCount == 4 && adobeTransform is 0 or 2 };
+    }
+
+    // Both passthrough inspection and pixel decoding must interpret the same
+    // marker, including one placed after the frame header and before its scan.
+    internal static byte? ReadAdobeTransform(ReadOnlySpan<byte> segment, byte? previous)
+    {
+        if (!segment.StartsWith("Adobe"u8)) return previous;
+        if (segment.Length < 12) throw new InvalidDataException("JPEG Adobe marker is truncated.");
+        byte transform = segment[11];
+        if (previous is { } prior && prior != transform)
+            throw new InvalidDataException("JPEG Adobe markers have conflicting color transforms.");
+        return transform;
     }
 }

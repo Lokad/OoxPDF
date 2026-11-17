@@ -48,6 +48,7 @@ internal static class JpegImage
         private int height;
         private int maxHorizontal = 1;
         private int maxVertical = 1;
+        private byte? adobeTransform;
 
         public Decoder(byte[] bytes, CancellationToken cancellationToken = default)
         {
@@ -108,6 +109,9 @@ internal static class JpegImage
                         break;
                     case 0xC4:
                         ReadHuffmanTables(segment);
+                        break;
+                    case 0xEE:
+                        adobeTransform = JpegInfo.ReadAdobeTransform(segment, adobeTransform);
                         break;
                 }
                 offset += length;
@@ -525,9 +529,19 @@ internal static class JpegImage
                 return rgb;
             }
 
-            Component yComponent = components[0];
-            Component cbComponent = components[1];
-            Component crComponent = components[2];
+            Component first = components[0];
+            Component second = components[1];
+            Component third = components[2];
+            // An explicit Adobe transform owns sample interpretation. Untagged
+            // RGB components identify themselves; ordinary numeric IDs remain
+            // YCbCr. Unsupported transforms retain the caller's existing fallback.
+            bool rgbSamples = adobeTransform switch
+            {
+                0 => true,
+                1 => false,
+                null => first.Id == 'R' && second.Id == 'G' && third.Id == 'B',
+                _ => throw new NotSupportedException("Unsupported three-component JPEG Adobe color transform.")
+            };
             int offset = 0;
             for (int y = 0; y < height; y++)
             {
@@ -538,9 +552,16 @@ internal static class JpegImage
 
                 for (int x = 0; x < width; x++)
                 {
-                    double luma = Sample(yComponent, x, y);
-                    double cb = Sample(cbComponent, x, y) - 128d;
-                    double cr = Sample(crComponent, x, y) - 128d;
+                    if (rgbSamples)
+                    {
+                        rgb[offset++] = Sample(first, x, y);
+                        rgb[offset++] = Sample(second, x, y);
+                        rgb[offset++] = Sample(third, x, y);
+                        continue;
+                    }
+                    double luma = Sample(first, x, y);
+                    double cb = Sample(second, x, y) - 128d;
+                    double cr = Sample(third, x, y) - 128d;
                     rgb[offset++] = ToByte(luma + 1.402d * cr);
                     rgb[offset++] = ToByte(luma - 0.344136d * cb - 0.714136d * cr);
                     rgb[offset++] = ToByte(luma + 1.772d * cb);
