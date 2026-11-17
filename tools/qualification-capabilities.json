@@ -409,6 +409,7 @@
   ],
   "pptx-workbook-source-semantics": [
     "PptxWorkbook",
+    "WorkbookTotalCellsBeyondLimitThrows",
     "CancelledRangeExpansionObservesCancellation",
     "SmallRangeReadsCells",
     "RangeAtCellBudgetBoundaryPasses",

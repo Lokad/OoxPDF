@@ -850,7 +850,7 @@ internal static partial class OoxLimitsTests
             ["Second"] = Enumerable.Range(1, 50_000).ToDictionary(row => "A" + row, _ => "2")
         };
         var workbook = (PptxRenderer.ChartWorkbookData)PptxChartRangeTests.ReadWorkbookCells(sheets);
-        TestAssert.Equal("2", workbook.ReadRangeCells("Second!A50000").Single().RawValue);
+        TestAssert.Equal("2", workbook.ReadRangeCells("Second!A50000").Single().Text);
         // Both sheets stay below their individual limit; only the workbook total changes.
         sheets["Second"].Add("A50001", "2");
         TestAssert.Throws<OoxPdfLimitExceededException>(() => PptxChartRangeTests.ReadWorkbookCells(sheets));
