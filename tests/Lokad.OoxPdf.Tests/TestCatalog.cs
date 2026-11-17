@@ -15,6 +15,7 @@ internal static class TestCatalog
         .. FromType("rendering-portable", typeof(PptxBreakCompositionTests)),
         .. FromType("rendering-portable", typeof(PptxPictureRecolorTests)),
         .. FromType("rendering-portable", typeof(PptxAxisIdentityTests)),
+        .. FromType("rendering-portable", typeof(PptxEffectColorTests)),
         .. FromType("rendering-portable", typeof(SvgTextTests)),
         .. FromType("rendering-portable", typeof(DocxMathCenterGroupTests)),
         .. FromType("rendering-portable", typeof(DocxTabCascadeTests)),

@@ -1,4 +1,19 @@
 {
+  "pptx-effect-color-owners": [
+    "PptxEffectColorFormsKeepPaintAcrossSupportedOwners",
+    "PptxEffectColorFallbacksPreserveMissingPaintAndRecolorPolicy",
+    "PptxSyntheticOuterShadowRendersOffsetShape",
+    "PptxSyntheticShapeRectGlowUsesRasterSoftMask",
+    "PptxSyntheticPngPictureOuterShadowUsesRasterSoftMask",
+    "PptxPictureRecolorKeepsPixelsAcrossPictureAndFillOwners",
+    "PptxThemeSlotsKeepSupportedBaseColorForms",
+    "PptxScRgb",
+    "MemoryBudgetImageTransformsKeepSourcePixelsAndRefundTemporaryPlanes",
+    "MemoryBudgetImageTransformsRefusalAndCancellationDoNotRecoverOrLeak",
+    "MemoryBudgetImageTransformsPreservePublicationAndCallerStreams",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "docx-floating-picture-layers": [
     "PortableRenderingFloatingPictureLayersPreserveBooleanLexicalEquivalence",
     "PortableRenderingRelatedPictureLayersShareSourceBooleanSemantics",

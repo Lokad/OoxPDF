@@ -38,16 +38,13 @@ internal sealed partial class PptxSceneBuilder
             return false;
         }
 
-        XElement? colorElement = glowElement.Elements().FirstOrDefault(element =>
-            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
-        if (colorElement is not null &&
-            TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
+        if (PptxColorResolver.TryReadSolidColorWithAlpha(glowElement, theme, colorMap, out RgbColor color, out double alpha))
         {
             double radius = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(glowElement, "rad", 0));
             glow = new PptxSceneGlow(
                 true,
                 color,
-                PptxColorResolver.ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement))),
+                alpha,
                 radius);
             return radius > SceneEffectTolerance;
         }
@@ -67,12 +64,8 @@ internal sealed partial class PptxSceneBuilder
             return false;
         }
 
-        XElement? colorElement = outerShadow.Elements().FirstOrDefault(element =>
-            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
-        if (colorElement is not null &&
-            TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
+        if (PptxColorResolver.TryReadSolidColorWithAlpha(outerShadow, theme, colorMap, out RgbColor color, out double alpha))
         {
-            double alpha = PptxColorResolver.ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
             double blurRadius = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(outerShadow, "blurRad", 0));
             double distance = OoxUnits.EmuToPoints(OoxXml.ParseOptionalLong(outerShadow, "dist", 0));
             double direction = OoxXml.ParseOptionalLong(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
