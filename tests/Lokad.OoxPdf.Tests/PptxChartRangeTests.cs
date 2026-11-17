@@ -267,7 +267,8 @@ internal static class PptxChartRangeTests
             sharedStringsBody, null);
     }
 
-    internal static object ReadWorkbookCells(IReadOnlyDictionary<string, Dictionary<string, string>> sheets, bool date1904 = false)
+    internal static object ReadWorkbookCells(IReadOnlyDictionary<string, Dictionary<string, string>> sheets, bool date1904 = false,
+        CancellationToken cancellationToken = default)
     {
         XNamespace spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
         XNamespace officeRels = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -287,10 +288,12 @@ internal static class PptxChartRangeTests
                 new XElement(spreadsheet+"row", new XAttribute("r", new string(cell.Key.Where(char.IsDigit).ToArray())),
                     new XElement(spreadsheet+"c", new XAttribute("r", cell.Key), new XElement(spreadsheet+"v", cell.Value))))).ToString();
         }
-        return ReadWorkbookPackage(sheetList.ToString(), string.Concat(relationships), bodies, null, date1904: date1904);
+        return ReadWorkbookPackage(sheetList.ToString(), string.Concat(relationships), bodies, null, date1904: date1904,
+            cancellationToken: cancellationToken);
     }
 
-    private static object ReadWorkbookPackage(string sheetsFragment, string workbookRelsFragment, IReadOnlyDictionary<string, string> sheetBodies, string? sharedStringsBody, string? stylesBody = null, bool date1904 = false)
+    private static object ReadWorkbookPackage(string sheetsFragment, string workbookRelsFragment, IReadOnlyDictionary<string, string> sheetBodies, string? sharedStringsBody, string? stylesBody = null, bool date1904 = false,
+        CancellationToken cancellationToken = default)
     {
         const string spreadsheet = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
         const string officeRels = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -350,7 +353,7 @@ internal static class PptxChartRangeTests
             BindingFlags.NonPublic | BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader.");
         try
         {
-            return read.Invoke(null, [package, CancellationToken.None])
+            return read.Invoke(null, [package, cancellationToken])
                 ?? throw new InvalidOperationException("Expected workbook data.");
         }
         catch (TargetInvocationException ex)

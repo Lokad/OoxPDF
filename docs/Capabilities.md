@@ -49,8 +49,10 @@ usable stored results rather than executing arbitrary instructions.
   slide/layout/master inheritance, themes, text, bullets, tables, pictures,
   fills, strokes, transparency and external/internal hyperlinks.
 - Renders cached-data bar/column, line, area, pie/doughnut, scatter, bubble and radar
-  charts, including supported axes, labels, legends and explicit styles. Embedded
-  workbooks supply supported data when available; this is not an Excel engine.
+  charts, including supported axes, labels, legends and explicit styles. Numeric
+  chart-side caches are required. Embedded workbooks provide source provenance and
+  row/column visibility; formulas are not recalculated and formula-only series
+  do not fall back to workbook values.
 - Complete unique nonnegative series orders resolve within a plot. Missing,
   negative, duplicate or malformed orders retain XML sibling order, preserving
   series identities, explicit styles and data.

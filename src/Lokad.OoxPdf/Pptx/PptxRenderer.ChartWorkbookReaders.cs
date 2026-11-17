@@ -103,7 +103,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            result = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, definedNameRecords);
+            result = sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, definedNameRecords, cancellationToken);
             return result;
         }
         finally
@@ -152,7 +152,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartWorkbookSharedString ReadWorkbookSharedString(XElement item)
     {
-        XElement[] textElements = item.Descendants(SpreadsheetNamespace + "t").ToArray();
+        XElement[] textElements = ReadWorkbookBaseTextElements(item).ToArray();
         int runCount = item.Elements(SpreadsheetNamespace + "r").Count();
         return new ChartWorkbookSharedString(
             string.Concat(textElements.Select(text => text.Value)),
@@ -160,6 +160,18 @@ internal sealed partial class PptxRenderer
             runCount != 0,
             item.Descendants(SpreadsheetNamespace + "rPh").Any(),
             textElements.Any(text => string.Equals((string?)text.Attribute(XNamespace.Xml + "space"), "preserve", StringComparison.Ordinal)));
+    }
+
+    // Shared and inline strings use the same base-text owners. Phonetic runs
+    // annotate that text and must not be appended to the cell value.
+    private static IEnumerable<XElement> ReadWorkbookBaseTextElements(XElement? item)
+    {
+        foreach (XElement child in item?.Elements() ?? [])
+        {
+            if (child.Name == SpreadsheetNamespace + "t") yield return child;
+            else if (child.Name == SpreadsheetNamespace + "r")
+                foreach (XElement text in child.Elements(SpreadsheetNamespace + "t")) yield return text;
+        }
     }
 
     private static ChartWorkbookSheet[] ReadWorkbookSheetRecords(XDocument workbookXml)
@@ -466,7 +478,7 @@ internal sealed partial class PptxRenderer
             bool hasValue = valueElement is not null;
             if (string.Equals(cellType, "inlineStr", StringComparison.Ordinal))
             {
-                value = string.Concat(cell.Descendants(SpreadsheetNamespace + "t").Select(text => text.Value));
+                value = string.Concat(ReadWorkbookBaseTextElements(cell.Element(SpreadsheetNamespace + "is")).Select(text => text.Value));
                 hasValue = cell.Element(SpreadsheetNamespace + "is") is not null;
             }
 

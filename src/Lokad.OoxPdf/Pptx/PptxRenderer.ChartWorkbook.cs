@@ -229,6 +229,8 @@ internal sealed partial class PptxRenderer
         private readonly IReadOnlyDictionary<string, string> definedNames;
         private readonly IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords;
         private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
+        // The same conversion owns initial loading and later frame expansions.
+        private readonly CancellationToken cancellationToken;
 
         public ChartWorkbookData(
             IReadOnlyDictionary<string, ChartWorksheetData> sheets,
@@ -236,13 +238,15 @@ internal sealed partial class PptxRenderer
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames,
             IReadOnlyDictionary<string, ChartWorkbookTable> tables,
-            IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords)
+            IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords,
+            CancellationToken cancellationToken)
         {
             this.sheets = sheets;
             this.styles = styles;
             this.definedNames = definedNames;
             this.definedNameRecords = definedNameRecords;
             this.tables = tables;
+            this.cancellationToken = cancellationToken;
             Date1904 = date1904;
         }
 
@@ -379,17 +383,13 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
-            return ReadRangeCells(formula, CancellationToken.None);
-        }
-
-        public ChartWorkbookRangeCell[] ReadRangeCells(string? formula, CancellationToken cancellationToken)
-        {
             string key = formula ?? string.Empty;
             if (rangeMemo.TryGetValue(key, out ChartWorkbookRangeCell[]? cached))
             {
                 return cached;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             ChartWorkbookRangeResolution resolution = ResolveRangeFormula(formula);
             string[] rangeAreas = SplitRangeAreas(resolution.ResolvedFormula);
             if (rangeAreas.Length == 0)

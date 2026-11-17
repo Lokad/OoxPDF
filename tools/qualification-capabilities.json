@@ -1,4 +1,17 @@
 {
+  "pptx-workbook-source-semantics": [
+    "PptxWorkbook",
+    "CancelledRangeExpansionObservesCancellation",
+    "SmallRangeReadsCells",
+    "RangeAtCellBudgetBoundaryPasses",
+    "RangeBeyondCellBudgetThrows",
+    "WorkbookSharedStringsBeyondBudgetThrow",
+    "PptxChartEmbeddedWorkbookFormulaOnlyReferencesReportMissingCachedData",
+    "PptxChartParsedVectorsPreserveWorkbookSidecarPoints",
+    "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
+    "PptxChartSeriesNamesPreserveWorkbookSidecarPoints",
+    "PptxChartWorkbookParsingPreservesRangeMetadata"
+  ],
   "docx-source-default-composition": [
     "DocxMathDocumentDefaultsReachStoryAndTextboxSources",
     "DocxMathInheritedAlignmentMatchesLocalPaintAcrossContainers",

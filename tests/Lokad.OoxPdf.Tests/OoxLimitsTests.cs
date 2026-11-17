@@ -257,14 +257,14 @@ internal static partial class OoxLimitsTests
 
     public static void CancelledRangeExpansionObservesCancellation()
     {
-        object workbook = ChartWorkbookWithCells();
         using var cts = new CancellationTokenSource();
+        object workbook = ChartWorkbookWithCells(cts.Token);
         cts.Cancel();
-        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string), typeof(CancellationToken)], null)
+        MethodInfo read = workbook.GetType().GetMethod("ReadRangeCells", BindingFlags.Public | BindingFlags.Instance, null, [typeof(string)], null)
             ?? throw new InvalidOperationException("Expected cancellable range reader.");
         try
         {
-            read.Invoke(workbook, ["Sheet1!$A$1:$A$10", cts.Token]);
+            read.Invoke(workbook, ["Sheet1!$A$1:$A$10"]);
         }
         catch (TargetInvocationException ex) when (ex.InnerException is OperationCanceledException)
         {
@@ -301,7 +301,7 @@ internal static partial class OoxLimitsTests
         }
     }
 
-    private static object ChartWorkbookWithCells()
+    private static object ChartWorkbookWithCells(CancellationToken cancellationToken = default)
     {
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -310,7 +310,7 @@ internal static partial class OoxLimitsTests
                 ["A1"] = "5",
             },
         };
-        return PptxChartRangeTests.ReadWorkbookCells(sheets);
+        return PptxChartRangeTests.ReadWorkbookCells(sheets, cancellationToken: cancellationToken);
     }
 
     private static string DocxContentTypes()
