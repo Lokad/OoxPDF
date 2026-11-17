@@ -21,6 +21,8 @@ $library = Join-Path (Split-Path $runner) 'Lokad.OoxPdf.dll'
 if (!(Test-Path -LiteralPath $library)) { throw 'Runner library is missing' }
 $runnerHash = (Get-FileHash -LiteralPath $runner).Hash
 $libraryHash = (Get-FileHash -LiteralPath $library).Hash
+$cliPath = $null
+$cliHash = $null
 foreach ($name in @('affected-tests.json', 'evidence.json', 'catalog.txt')) {
     if (Test-Path -LiteralPath (Join-Path $OutputDirectory $name)) { throw 'Output directory already contains qualification reports' }
 }
@@ -31,6 +33,9 @@ function Assert-FrozenAssembly {
     if ((Get-FileHash -LiteralPath $runner).Hash -ne $runnerHash -or
         (Get-FileHash -LiteralPath $library).Hash -ne $libraryHash) {
         throw 'The test assembly or library changed during qualification'
+    }
+    if ($cliPath -and (Get-FileHash -LiteralPath $cliPath).Hash -ne $cliHash) {
+        throw 'The frozen CLI changed during qualification'
     }
 }
 function Invoke-FrozenTests([string[]] $Arguments, [string] $Log) {
@@ -130,6 +135,20 @@ if ($FastGroup.Count) {
     $inventory.SkipValidationMethods = @($skipValidated | Sort-Object)
 }
 if ($ListOnly) { $inventory | ConvertTo-Json -Depth 5; return }
+if (@($catalog | Where-Object { $_.Group -eq 'cli' -and $selected.Contains($_.Name) }).Count) {
+    if ([string]::IsNullOrWhiteSpace($env:OOXPDF_TEST_CLI_ASSEMBLY)) {
+        throw 'CLI tests require OOXPDF_TEST_CLI_ASSEMBLY bound to the matching frozen CLI; implicit CLI builds are not qualification.'
+    }
+    $cliPath = (Resolve-Path -LiteralPath $env:OOXPDF_TEST_CLI_ASSEMBLY).Path
+    $cliLibrary = Join-Path (Split-Path -Parent $cliPath) 'Lokad.OoxPdf.dll'
+    if (!(Test-Path -LiteralPath $cliLibrary -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $cliLibrary).Hash -ne $libraryHash) {
+        throw 'The frozen CLI and test runner must use the same qualified library.'
+    }
+    $cliHash = (Get-FileHash -LiteralPath $cliPath).Hash
+    $inventory.CliPath = $cliPath
+    $inventory.CliSha256 = $cliHash
+}
 $sources = [Collections.Generic.List[object]]::new()
 $rows = [Collections.Generic.List[object]]::new()
 $path = Join-Path $output ('selection-{0:D3}.json' -f $sources.Count)

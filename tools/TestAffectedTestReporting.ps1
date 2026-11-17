@@ -17,6 +17,7 @@ function dotnet {
         'FAST selection SelectionAlpha';'FAST selection SelectionAlphaNeighbor';'FAST selection Outer.SelectionAlpha'
         'FAST selection SelectionOther';'FAST selection Selection[Literal]';'FAST selection SelectionL'
         'FAST selection item';'FAST selection İtemNeighbor'
+        'FAST cli CliFixture'
         $global:LASTEXITCODE=0;return
     }
     $global:ooxPdfAffectedReportCalls++
@@ -135,6 +136,35 @@ try {
         }
     }
     finally {[Globalization.CultureInfo]::CurrentCulture=$previousCulture}
+
+    $priorCli = [Environment]::GetEnvironmentVariable('OOXPDF_TEST_CLI_ASSEMBLY')
+    try {
+        foreach ($case in @('cli-unbound','cli-mismatched','cli-bound','cli-list-only')) {
+            $global:ooxPdfAffectedReportFault=''
+            $global:ooxPdfAffectedReportCalls=0
+            $output=Join-Path $root $case
+            $cliDirectory=(New-Item -ItemType Directory -Path (Join-Path $root ($case+'-cli'))).FullName
+            $cli=Join-Path $cliDirectory 'Lokad.OoxPdf.Cli.dll'
+            [IO.File]::WriteAllText($cli,'Fake frozen CLI')
+            [IO.File]::WriteAllText((Join-Path $cliDirectory 'Lokad.OoxPdf.dll'),
+                $(if ($case -eq 'cli-mismatched') {'Another library'} else {'Fake library identity'}))
+            $env:OOXPDF_TEST_CLI_ASSEMBLY=if ($case -in @('cli-unbound','cli-list-only')) {$null} else {$cli}
+            $caught=$null
+            try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') -RunnerPath $runner -OutputDirectory $output -TestFilter CliFixture -ListOnly:($case -eq 'cli-list-only') *> (Join-Path $root ($case+'.log'))}
+            catch {$caught=$_.Exception.Message}
+            $shouldPass=$case -in @('cli-bound','cli-list-only')
+            $calls=[int]($case -eq 'cli-bound')
+            if ($shouldPass -eq ($null -ne $caught) -or $global:ooxPdfAffectedReportCalls -ne $calls) {
+                throw ($case+': incorrect frozen CLI admission '+$caught)
+            }
+            if ($case -eq 'cli-bound') {
+                $report=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
+                if ($report.provenance.CliSha256 -ne (Get-FileHash -LiteralPath $cli).Hash) {throw 'CLI identity is missing from qualification'}
+            }
+            $checks+=@{Case=$case;GatePassed=$shouldPass;Error=$caught;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
+        }
+    }
+    finally {[Environment]::SetEnvironmentVariable('OOXPDF_TEST_CLI_ASSEMBLY', $(if ($null -eq $priorCli) {[NullString]::Value} else {$priorCli}))}
 }
 finally {Remove-Item Function:dotnet; Remove-Variable ooxPdfAffectedReportFault,ooxPdfAffectedReportCalls -Scope Global}
 @{Checks=$checks;Builds=0;Conversions=0;RealTestsReplayed=0} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $root 'evidence.json') -Encoding utf8
