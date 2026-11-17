@@ -1451,7 +1451,7 @@ internal static class PptxSceneTextAgreementTests
                 return ReferenceEquals(model.GetType().GetProperty("Shape")!.GetValue(model), node.Source);
             }), "The XML agreement fixture must contain only the selected text shape.");
             MethodInfo flatten = typeof(PptxRenderer).GetMethod("FlattenTextLayoutToSpansAsync", flags)!;
-            var spans = ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)flatten.Invoke(null, [layout, resolver])!).GetAwaiter().GetResult();
+            var spans = ((ValueTask<IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>>)flatten.Invoke(null, [layout, resolver, document])!).GetAwaiter().GetResult();
             MethodInfo remap = typeof(PptxRenderer).GetMethod("RemapMongolianVerticalSpans", flags)!;
             return (IReadOnlyList<PptxRenderer.PptxPositionedTextSpan>)remap.Invoke(null, [spans, node.Source])!;
         }
