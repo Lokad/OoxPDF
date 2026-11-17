@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxTableDefaultTests
+internal static partial class PptxTableDefaultTests
 {
     private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly (string Id, bool Bold, RgbColor Color)[] Controls =

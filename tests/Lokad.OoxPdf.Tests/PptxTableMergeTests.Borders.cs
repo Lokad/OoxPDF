@@ -37,25 +37,57 @@ internal static partial class PptxTableMergeTests
         }
     }
 
+    public static void PptxTableBordersKeepPaintedDashStylesAndState()
+    {
+        foreach (bool vertical in new[] { false, true })
+        {
+            PdfPage separated = RenderBorderIntervals(vertical, null, ["dash", "solid", "dash"]);
+            TestAssert.Equal(2, BorderStrokes(separated).Length);
+            TestAssert.Contains("[3 2.25 ] 0 d", separated.Content);
+            TestAssert.Contains("[] 0 d", separated.Content);
+            CheckBorderContent(separated);
+
+            PdfPage aliases = RenderBorderIntervals(vertical, "FF0000", ["dash", "sysDash", "dash"]);
+            TestAssert.Equal(vertical ? "180 252 m 180 468 l S" : "72 468 m 396 468 l S", BorderStrokes(aliases).Single());
+            TestAssert.Equal(1, aliases.Content.Split("[3 2.25 ] 0 d", StringSplitOptions.None).Length - 1);
+            CheckBorderContent(aliases);
+
+            PdfPage mixed = RenderBorderIntervals(vertical, "FF0000", ["dash", "dot", "solid"], round: true);
+            TestAssert.Equal(3, BorderStrokes(mixed).Length);
+            TestAssert.Contains("[3 2.25 ] 0 d", mixed.Content);
+            TestAssert.Contains("[0.75 1.5 ] 0 d", mixed.Content);
+            TestAssert.Equal(3, mixed.Content.Split("1 J", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(3, mixed.Content.Split("0 J", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(3, mixed.Content.Split("1 j", StringSplitOptions.None).Length - 1);
+            TestAssert.Equal(3, mixed.Content.Split("0 j", StringSplitOptions.None).Length - 1);
+            CheckBorderContent(mixed);
+        }
+    }
+
     private static string[] BorderStrokes(PdfPage page) => Regex.Matches(page.Content, @"(?m)^[^\r\n]+ m [^\r\n]+ l S\r?$")
         .Select(match => match.Value.TrimEnd('\r')).ToArray();
 
     private static void CheckBorderContent(PdfPage page)
     {
         string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).Select(show => show.Text));
-        foreach (string label in new[] { "ONE", "GAP", "THREE" }) TestAssert.Contains(label, text);
+        foreach (string label in new[] { "ONE", "GAP", "THREE" })
+        {
+            TestAssert.Contains(label, text);
+            TestAssert.Equal(label.Length, PortableRenderingTests.ReadPaintedSourceLabel(page, label).Count);
+        }
         TestAssert.True(page.ExtGStates.Any(state => state.StrokeAlpha == .5d), "Union keeps the authored border opacity.");
         PdfContentValidator.ValidatePage(page, 0, default);
     }
 
-    private static PdfPage RenderBorderIntervals(bool vertical, string? middleColor)
+    private static PdfPage RenderBorderIntervals(bool vertical, string? middleColor, string[]? dashPresets = null, bool round = false)
     {
         string Cell(int index)
         {
             string? color = index == 1 ? middleColor : "FF0000";
             string border = string.Concat(new[] { "L", "R", "T", "B" }.Select(side =>
-                "<a:ln" + side + ">" + (color is not null && side == (vertical ? "R" : "T")
-                    ? "<a:solidFill><a:srgbClr val=\"" + color + "\"><a:alpha val=\"50000\"/></a:srgbClr></a:solidFill>"
+                "<a:ln" + side + (round ? " cap=\"rnd\"" : "") + ">" + (color is not null && side == (vertical ? "R" : "T")
+                    ? "<a:solidFill><a:srgbClr val=\"" + color + "\"><a:alpha val=\"50000\"/></a:srgbClr></a:solidFill>" +
+                        (dashPresets is null ? "" : "<a:prstDash val=\"" + dashPresets[index] + "\"/>") + (round ? "<a:round/>" : "")
                     : "<a:noFill/>") + "</a:ln" + side + ">"));
             string text = new[] { "ONE", "GAP", "THREE" }[index];
             return "<a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz=\"1800\"><a:latin typeface=\"DejaVu Sans\"/></a:rPr><a:t>" +

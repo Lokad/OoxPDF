@@ -148,7 +148,10 @@ internal sealed partial class PptxSceneBuilder
             verticalAnchorSource,
             ReadTableCellFill(cell, theme, colorMap),
             ReadTableCellBorders(cell, theme, colorMap),
-            PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
+            // Explicit no-fill blocks the inherited fill for both placement and paint.
+            cell.Element(DrawingNamespace + "tcPr")?.Element(DrawingNamespace + "noFill") is not null
+                ? default
+                : PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, colorMap),
             textBody,
             BuildTableCellLayoutTextBody(),

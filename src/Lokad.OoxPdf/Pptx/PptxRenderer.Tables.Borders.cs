@@ -133,7 +133,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        borders.Add(new TableBorderLine(x1, y1, x2, y2, border.Line.Width, border.Line.Color, border.Line.Alpha));
+        borders.Add(new TableBorderLine(x1, y1, x2, y2, border.Line));
     }
 
     private static void StrokeTableBorders(PdfGraphicsBuilder graphics, IReadOnlyList<TableBorderLine> borders, double tableLeft, double tableBottom, double tableRight, double tableTop)
@@ -143,15 +143,19 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<TableBorderLine> ordered = group
                 .OrderBy(border => group.Key.Vertical ? Math.Min(border.Y1, border.Y2) : Math.Min(border.X1, border.X2))
                 .ToArray();
-            bool transparentStroke = group.Key.Alpha < 0.999d;
+            PptxSceneLineStyle style = group.Key.Style;
+            bool transparentStroke = style.Alpha < 0.999d;
             if (transparentStroke)
             {
                 graphics.SaveState();
-                graphics.SetAlpha(1d, group.Key.Alpha);
+                graphics.SetAlpha(1d, style.Alpha);
             }
 
-            graphics.SetStrokeRgb(group.Key.Color.Red, group.Key.Color.Green, group.Key.Color.Blue);
-            graphics.SetLineWidth(group.Key.LineWidth);
+            graphics.SetStrokeRgb(style.Color.Red, style.Color.Green, style.Color.Blue);
+            graphics.SetLineWidth(style.Width);
+            if (style.HasDash) graphics.SetLineDash(style.DashPattern);
+            if (style.Cap is { } cap) graphics.SetLineCap(cap);
+            if (style.Join is { } join) graphics.SetLineJoin(join);
             double start = group.Key.Vertical ? Math.Min(ordered[0].Y1, ordered[0].Y2) : Math.Min(ordered[0].X1, ordered[0].X2);
             double end = group.Key.Vertical ? Math.Max(ordered[0].Y1, ordered[0].Y2) : Math.Max(ordered[0].X1, ordered[0].X2);
             for (int index = 1; index < ordered.Count; index++)
@@ -170,6 +174,9 @@ internal sealed partial class PptxRenderer
                 else end = Math.Max(end, nextEnd);
             }
             StrokeInterval(start, end);
+            if (style.HasDash) graphics.ClearLineDash();
+            if (style.Cap is not null) graphics.SetLineCap(0);
+            if (style.Join is not null) graphics.SetLineJoin(0);
             if (transparentStroke)
             {
                 graphics.RestoreState();
@@ -177,7 +184,7 @@ internal sealed partial class PptxRenderer
 
             void StrokeInterval(double first, double last)
             {
-                double halfWidth = group.Key.LineWidth / 2d;
+                double halfWidth = style.Width / 2d;
                 double x1 = group.Key.Vertical ? group.Key.FixedCoordinate : ExtendTableBorderEndpoint(first, -halfWidth, tableLeft);
                 double y1 = group.Key.Vertical ? ExtendTableBorderEndpoint(first, -halfWidth, tableBottom) : group.Key.FixedCoordinate;
                 double x2 = group.Key.Vertical ? group.Key.FixedCoordinate : ExtendTableBorderEndpoint(last, halfWidth, tableRight);
@@ -197,15 +204,33 @@ internal sealed partial class PptxRenderer
         return coordinate + extension;
     }
 
-    internal readonly record struct TableBorderLine(double X1, double Y1, double X2, double Y2, double LineWidth, RgbColor Color, double Alpha);
+    internal readonly record struct TableBorderLine(double X1, double Y1, double X2, double Y2, PptxSceneLineStyle Style);
 
-    private readonly record struct TableBorderKey(bool Vertical, double FixedCoordinate, double LineWidth, RgbColor Color, double Alpha)
+    private readonly record struct TableBorderKey(bool Vertical, double FixedCoordinate, PptxSceneLineStyle Style)
     {
+        // Array identity and lexical aliases do not distinguish the same painted dash.
+        public bool Equals(TableBorderKey other) => Vertical == other.Vertical && FixedCoordinate == other.FixedCoordinate &&
+            Style.Width == other.Style.Width && Style.Color == other.Style.Color && Style.Alpha == other.Style.Alpha &&
+            Style.Cap == other.Style.Cap && Style.Join == other.Style.Join && Style.Compound == other.Style.Compound &&
+            (Style.DashPattern ?? []).SequenceEqual(other.Style.DashPattern ?? []);
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            hash.Add(HashCode.Combine(Vertical, FixedCoordinate, Style.Width, Style.Color, Style.Alpha, Style.Cap, Style.Join, Style.Compound));
+            foreach (double dash in Style.DashPattern ?? []) hash.Add(dash);
+            return hash.ToHashCode();
+        }
+
         public static TableBorderKey From(TableBorderLine border)
         {
             bool vertical = Math.Abs(border.X1 - border.X2) < 0.001d;
             double fixedCoordinate = vertical ? border.X1 : border.Y1;
-            return new TableBorderKey(vertical, Math.Round(fixedCoordinate, 3), Math.Round(border.LineWidth, 3), border.Color, Math.Round(border.Alpha, 5));
+            return new TableBorderKey(vertical, Math.Round(fixedCoordinate, 3), border.Style with
+            {
+                Width = Math.Round(border.Style.Width, 3),
+                Alpha = Math.Round(border.Style.Alpha, 5)
+            });
         }
     }
 }

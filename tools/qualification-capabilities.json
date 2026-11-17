@@ -375,6 +375,21 @@
     "PptxMergedTableNeighborsKeepAllSourceContent",
     "PptxMergedTableColumnsKeepStyleAndLinkOwnership"
   ],
+  "pptx-table-paint-ownership": [
+    "PptxTableCellFillsKeepExplicitRemovalAndDirectAlpha",
+    "PptxTableParagraphDefaults",
+    "PptxTableBorders",
+    "PptxSyntheticExplicitTableBordersClampAtOuterEdges",
+    "PptxSyntheticTableRendersGridAndText",
+    "PptxSyntheticUnsupportedTableStyleEmitsDiagnosticUntilCascadeExists",
+    "UnsupportedTableStyleEmitsOnce",
+    "TableFrameComputedOncePerNode",
+    "PptxMergedTableNeighborsKeepAllSourceContent",
+    "PptxMergedTableColumnsKeepStyleAndLinkOwnership",
+    "PptxMergedTableHeightMatchesCompactRecovery",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "font-source-unicode-identity": [
     "PdfSourceUnicodeAliases",
     "PdfEmbeddedFontMapsSharedSpaceGlyphToPlainSpace",

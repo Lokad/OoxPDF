@@ -156,7 +156,7 @@ internal sealed partial class PptxRenderer
     {
         if (context.TableFrameMemo is null || node.Table is null)
         {
-            return (await BuildTableFrameLayoutAsync(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap).ConfigureAwait(false));
+            return (await BuildTableFrameLayoutAsync(context, bounds, node.Table, colorMap).ConfigureAwait(false));
         }
 
         var key = new PptxTableFrameMemoKey(node, bounds, colorMap);
@@ -165,7 +165,7 @@ internal sealed partial class PptxRenderer
             return cached;
         }
 
-        TableFrameLayout? layout = (await BuildTableFrameLayoutAsync(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap).ConfigureAwait(false));
+        TableFrameLayout? layout = (await BuildTableFrameLayoutAsync(context, bounds, node.Table, colorMap).ConfigureAwait(false));
         context.TableFrameMemo[key] = layout;
         return layout;
     }
@@ -212,7 +212,7 @@ internal sealed partial class PptxRenderer
         return layout.TextSpans;
     }
 
-    private static async ValueTask<TableFrameLayout?> BuildTableFrameLayoutAsync(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, bool emitUnsupportedStyleDiagnostic, PptxColorMap colorMap)
+    private static async ValueTask<TableFrameLayout?> BuildTableFrameLayoutAsync(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, PptxColorMap colorMap)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         var textFrames = new List<PptxTableCellTextFrame>();
@@ -220,11 +220,6 @@ internal sealed partial class PptxRenderer
         if (bounds is null || sceneTable is not { } table)
         {
             return null;
-        }
-
-        if (emitUnsupportedStyleDiagnostic)
-        {
-            EmitUnsupportedTableStyleDiagnostic(context, table);
         }
 
         IReadOnlyList<double> rawColumnWidths = table.ColumnWidths;
