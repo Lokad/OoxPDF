@@ -207,7 +207,10 @@ internal sealed partial class PptxRenderer
         await textMeasurer.PrepareAsync(entries.Select(entry => entry.Name), style).ConfigureAwait(false);
         ChartLegendBox legendBox = preparedBox ?? ResolveChartLegendBox(frame, plotBox, entries, layout, style, textMeasurer, placement, legendLeadExtra, doughnutRightLegend, doughnutLeftLegend, doughnutRingCenterY, scatterLegend);
         int admittedEntryCount = legendBox.EntryFrames?.Count ?? entries.Count;
-        if (!legendBox.Horizontal && !layout.Layout.HasGeometryValues)
+        // Placement owns its row budget. Growing the automatic paint clip must
+        // not admit an entry that placement rejected for insufficient height.
+        ChartLegendBox admissionBox = legendBox;
+        if (!layout.Layout.HasGeometryValues)
         {
             // Nominal font boxes allocate rows; actual resolved glyphs can
             // extend beyond them. Their ink shares the automatic viewport.
@@ -216,7 +219,8 @@ internal sealed partial class PptxRenderer
             double bottom = legendBox.ClipY, top = bottom + legendBox.ClipHeight;
             for (int i = 0; i < admittedEntryCount; i++)
             {
-                double baseline = legendBox.EntryFrames is { } frames ? frames[i].Y : legendBox.FirstY - i * legendBox.LineHeight;
+                double baseline = ResolveLegendEntryBaseline(admissionBox, i);
+                if (admissionBox.EntryFrames is not null && IsLegendBaselineClipped(admissionBox, baseline)) { continue; }
                 double textBottom = baseline - line.Descent, textTop = baseline + line.Ascent;
                 if (await textMeasurer.TryMeasureInkBoundsAsync(entries[i].Name, emissionStyle).ConfigureAwait(false) is { } ink)
                 {
@@ -253,8 +257,8 @@ internal sealed partial class PptxRenderer
             ChartLegendEntryFrame? entryFrame = legendBox.EntryFrames is { } frames ? frames[i] : null;
             double entryX = entryFrame?.X ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(legendBox.MarkerWidth, legendBox.X, i) : legendBox.X);
             double entryWidth = entryFrame?.Width ?? (legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, textMeasurer, legendBox.MarkerWidth, emitTextGap, emitEntryPadding) : legendBox.Width);
-            double y = entryFrame?.Y ?? (legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight);
-            if (entryFrame is not null && IsLegendBaselineClipped(legendBox, y)) { continue; }
+            double y = ResolveLegendEntryBaseline(admissionBox, i);
+            if (entryFrame is not null && IsLegendBaselineClipped(admissionBox, y)) { continue; }
             double markerBaselineFactor = legendBox.Horizontal || legendBox.SideStrokeLegend
                 ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
                 : entry.Fill is not null
@@ -367,6 +371,10 @@ internal sealed partial class PptxRenderer
 
         await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CL", fontResolver, diagnosticSink).ConfigureAwait(false);
     }
+
+    private static double ResolveLegendEntryBaseline(ChartLegendBox box, int index) =>
+        box.EntryFrames is { } frames ? frames[index].Y :
+        box.Horizontal ? box.FirstY : box.FirstY - index * box.LineHeight;
 
     // Fill-swatch side keys share the 4.66pt Office entry text gap: area right legends
     // measure 4.65-4.67 on five references, doughnut 4.58-4.66 on eleven renders, and the

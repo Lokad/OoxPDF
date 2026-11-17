@@ -14,7 +14,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxChartLegendsTests
+internal static partial class PptxChartLegendsTests
 {
     public static void PptxSyntheticChartLegendManualBoxDrivesPlacement()
     {
