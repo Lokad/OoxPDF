@@ -66,7 +66,8 @@ internal sealed partial class DocxReader
         // Resolve the mark once, then publish the same typed revision objects
         // through its actual source owner and aggregate inspection metadata.
         DocxResolvedRunProperties paragraphMarkRun = ResolveRunProperties(
-            paragraphMarkRunProperties, paragraphStyleId, characterStyleId: null, styles, tableCellStyle?.Run);
+            paragraphMarkRunProperties, paragraphStyleId, characterStyleId: null, styles, tableCellStyle?.Run,
+            out DocxRunStyleResolution paragraphMarkStyleResolution);
         IReadOnlyList<DocxRevisionInfo> paragraphMarkRevisions = ReadRunPropertyChangeRevisions(
             paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run, paragraphMarkRun);
         DocxRevisionInfo? numberingMarkInsertion = null;
@@ -226,12 +227,6 @@ internal sealed partial class DocxReader
         // (spill probes 2026-09-28), so every paragraph carries it even when runs exist.
         if (runs.Count == 0 && images.Count == 0 && inlineTextBoxes.Count == 0)
         {
-            DocxRunStyleResolution paragraphMarkStyleResolution = CreateRunStyleResolution(
-                paragraphMarkRunProperties,
-                paragraphStyleId,
-                characterStyleId: null,
-                styles,
-                tableCellStyle?.Run);
             AddResolvedTextRun(
                 runs,
                 string.Empty,
@@ -385,7 +380,7 @@ internal sealed partial class DocxReader
             ? result with { ParagraphMarkRun = CreateParagraphMark(string.Empty) } : result;
 
         DocxTextRun CreateParagraphMark(string text) => CreateResolvedTextRun(text, paragraphMarkRun,
-            CreateRunStyleResolution(paragraphMarkRunProperties, paragraphStyleId, null, styles, tableCellStyle?.Run),
+            paragraphMarkStyleResolution,
             false, -1, 0, inheritedRevision, MergeRevisionLists(inheritedRevision, paragraphMarkRevisions));
 
         void EnsureInlineContent()
@@ -462,7 +457,7 @@ internal sealed partial class DocxReader
                     (string?)properties?.Element(MathNamespace + "jc")?.Attribute(MathNamespace + "val"),
                     properties?.ToString(SaveOptions.DisableFormatting), equationRevision)
                 {
-                    ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run).FontSize
+                    ParentFontSize = ResolveRunProperties(null, paragraphStyleId, null, styles, tableCellStyle?.Run, out _).FontSize
                         ?? DocxDefaults.UnstyledRunFontSizePoints,
                     LimitSettings = (documentSettings ?? DocxDocumentSettings.Empty).MathLimitSettings,
                     DefaultAlignmentValue = documentSettings?.MathParagraphAlignmentValue,
@@ -495,9 +490,8 @@ internal sealed partial class DocxReader
                 XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
                 string? characterStyleId = ReadCharacterStyleId(run);
                 DocxResolvedRunProperties resolved = ResolveRunProperties(runProperties, paragraphStyleId,
-                    characterStyleId, styles, tableCellStyle?.Run);
-                return CreateResolvedTextRun(text, resolved,
-                    CreateRunStyleResolution(runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run),
+                    characterStyleId, styles, tableCellStyle?.Run, out DocxRunStyleResolution resolution);
+                return CreateResolvedTextRun(text, resolved, resolution,
                     complexScript: false, sourceRunIndex, sourceTextOffsetInRun: 0, owner, RevisionList(owner));
             }
         }
@@ -533,7 +527,7 @@ internal sealed partial class DocxReader
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     bool hidden = ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
-                        paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run).Hidden == true;
+                        paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run, out _).Hidden == true;
                     var boxes = ReadRunTextBoxes(resultRun, fieldSourceRunIndex, hidden, revision);
                     if (!hidden)
                     {
@@ -648,13 +642,8 @@ internal sealed partial class DocxReader
                 paragraphStyleId,
                 characterStyleId,
                 styles,
-                tableCellStyle?.Run);
-            DocxRunStyleResolution runStyleResolution = CreateRunStyleResolution(
-                runProperties,
-                paragraphStyleId,
-                characterStyleId,
-                styles,
-                tableCellStyle?.Run);
+                tableCellStyle?.Run,
+                out DocxRunStyleResolution runStyleResolution);
             IReadOnlyList<DocxRevisionInfo> runRevisions = ReadRunPropertyChangeRevisions(runProperties,
                 paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);
@@ -672,7 +661,8 @@ internal sealed partial class DocxReader
             XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
             string? characterStyleId = ReadCharacterStyleId(run);
             DocxResolvedRunProperties resolvedRun = ResolveRunProperties(
-                runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run);
+                runProperties, paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run,
+                out DocxRunStyleResolution runStyleResolution);
             string text = ReadRunText(run);
             string? fieldInstruction = run
                 .Elements(WordprocessingNamespace + "instrText")
@@ -682,12 +672,6 @@ internal sealed partial class DocxReader
             DocxFieldKind? placeholderKind = placeholder is null ? null : ResolveFieldKind(fieldInstruction);
             int fieldTextRunIndex = runs.Count;
             int fieldTextLengthStart = runs.Sum(run => run.Text.Length);
-            DocxRunStyleResolution runStyleResolution = CreateRunStyleResolution(
-                runProperties,
-                paragraphStyleId,
-                characterStyleId,
-                styles,
-                tableCellStyle?.Run);
             IReadOnlyList<DocxRevisionInfo> runRevisions = ReadRunPropertyChangeRevisions(runProperties,
                 paragraphStyleId, characterStyleId, styles, tableCellStyle?.Run, resolvedRun);
             AddRevisions(paragraphRevisions, runRevisions);

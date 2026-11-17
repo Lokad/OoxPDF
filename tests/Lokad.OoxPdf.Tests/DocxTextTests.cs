@@ -10,7 +10,7 @@ using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class DocxTextTests
+internal static partial class DocxTextTests
 {
     public static void DocxReaderPreservesParagraphSnapToGridTokens()
     {

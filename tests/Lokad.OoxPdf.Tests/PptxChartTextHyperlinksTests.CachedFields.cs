@@ -6,6 +6,33 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxChartTextHyperlinksTests
 {
+    public static void PptxChartRichTextAssemblyKeepsLinearAllocationAndWhitespace()
+    {
+        XNamespace chart = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XNamespace drawing = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        const string fragment = " a \t";
+        foreach (int count in new[] { 2048, 4096, 8192 })
+        {
+            var text = new XElement(chart + "tx", new XElement(chart + "rich",
+                new XElement(drawing + "p", Enumerable.Range(0, count).Select(_ =>
+                    new XElement(drawing + "r", new XElement(drawing + "t", fragment))))));
+            string expected = string.Concat(Enumerable.Repeat(fragment, count));
+            _ = PptxSceneBuilder.ReadChartText(text, false); // Exclude first-use/JIT setup and XML construction.
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            string actual = PptxSceneBuilder.ReadChartText(text, false)!;
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestAssert.Equal(expected, actual);
+            TestAssert.True(allocated < 65536L + 32L * expected.Length,
+                $"Rich-text assembly must not copy a growing prefix: {count} runs / {allocated} bytes.");
+            Console.WriteLine($"Chart rich text: {count} runs / {actual.Length} chars / {allocated} bytes.");
+        }
+        var literal = new XElement(chart + "tx", new XElement(chart + "strRef",
+            new XElement(chart + "strCache", new XElement(chart + "pt", new XAttribute("idx", 0),
+                new XElement(chart + "v", "  alpha beta  ")))));
+        TestAssert.Equal("  alpha beta  ", PptxSceneBuilder.ReadChartText(literal, false)!);
+        TestAssert.Equal("alpha beta", PptxSceneBuilder.ReadChartText(literal, true)!);
+    }
+
     public static void PptxChartCachedFieldsKeepOrderedTextStyleAndLinkOwners()
     {
         foreach (bool inheritParagraphFormatting in new[] { false, true })

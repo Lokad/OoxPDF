@@ -6600,6 +6600,23 @@
     "PortableRenderingRevisionAuthorInkMatchesWordSourceOrder",
     "DocxWordCompatibleBalloonsUseFirstSeenAuthorColors"
   ],
+  "docx-run-style-provenance": [
+    "DocxRunStyleProvenanceKeepsEffectiveAndAuthoredOwners",
+    "PortableRenderingRunProvenanceKeepsBodyCellAndHeaderInk",
+    "DocxReaderCascadesRunFontTokensFromStyles",
+    "DocxReaderCascadesRunFontTokensThroughBasedOnStyles",
+    "DocxReaderCascadesParagraphSpacingAndRunSizeThroughBasedOnStyles",
+    "DocxStyleToggles",
+    "DocxReviewEmptyRunOwnersKeepActualSourceMetadata",
+    "DocxReviewEmptyRunOwnersComposeWithMathematics",
+    "PortableRenderingEmptyRunOwnersKeepMathAndAuthorOrder",
+    "DocxDynamicFieldFormatUsesSourceOwnersAcrossSimpleComplexAndPreservedResults",
+    "PortableRenderingRevisionAuthorInkMatchesWordSourceOrder",
+    "DocxInlineHiddenBreaksKeepFittingWordsAndComposedObjects",
+    "DocxInlineHiddenBreaksRetainWrappingAndSourceProgress",
+    "PptxChartRichTextAssemblyKeepsLinearAllocationAndWhitespace",
+    "PptxChartCachedFieldsKeepOrderedTextStyleAndLinkOwners"
+  ],
   "pptx-chart-cached-fields": [
     "PptxChartCachedFieldsKeepOrderedTextStyleAndLinkOwners",
     "PortableRenderingChartCachedFieldsKeepWordsAndHyperlinksAcrossTextOwners",

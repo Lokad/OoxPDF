@@ -32,7 +32,7 @@ internal sealed partial class DocxReader
 
                 // Office sizes the terminal mark like unsized runs (edge-mark14c: Normal
                 // 14pt wins over hardcoded 11; style-less docs fall back to 12pt).
-                double markFontSize = ResolveRunProperties(null, null, null, styles, null).FontSize
+                double markFontSize = ResolveRunProperties(null, null, null, styles, null, out _).FontSize
                     ?? DocxDefaults.UnstyledRunFontSizePoints;
                 elements.Add(new DocxImplicitParagraphElement(DocxBreakSourceKind.TerminalTable)
                 {
@@ -651,7 +651,7 @@ internal sealed partial class DocxReader
         XElement? properties = run.Ancestors(WordprocessingNamespace + "p").FirstOrDefault()?
             .Element(WordprocessingNamespace + "pPr");
         return ResolveRunProperties(run.Element(WordprocessingNamespace + "rPr"),
-            ReadEffectiveParagraphStyleId(properties, styles), ReadCharacterStyleId(run), styles, tableStyle?.Run).Hidden == true;
+            ReadEffectiveParagraphStyleId(properties, styles), ReadCharacterStyleId(run), styles, tableStyle?.Run, out _).Hidden == true;
     }
 
     private static bool IsRunBreakOnlyParagraph(XElement paragraph, Func<XElement, bool> isBreak, OoxPdfDocxMarkupMode markupMode)

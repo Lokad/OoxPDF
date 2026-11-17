@@ -36,7 +36,7 @@ internal sealed partial class DocxReader
                     element.Name.LocalName is not ("b" or "i" or "bCs" or "iCs" or "caps" or "smallCaps" or
                     "vanish" or "strike" or "dstrike" or "spacing" or "vertAlign" or "highlight" or "shd" or
                     "u" or "sz" or "color" or "rFonts" or "kern" or "rPrChange"))) return null;
-            var before = ResolveRunProperties(previous, paragraphStyleId, null, styles, tableStyle);
+            var before = ResolveRunProperties(previous, paragraphStyleId, null, styles, tableStyle, out _);
             if ((before with { Bold = null, Italic = null }) != (current with { Bold = null, Italic = null })) return null;
             bool? bold = (before.Bold == true) == (current.Bold == true) ? null : current.Bold == true;
             bool? italic = (before.Italic == true) == (current.Italic == true) ? null : current.Italic == true;

@@ -184,7 +184,8 @@ internal sealed partial class DocxReader
         string? paragraphStyleId,
         string? characterStyleId,
         DocxStyleSet styles,
-        DocxResolvedRunProperties? tableStyleProperties)
+        DocxResolvedRunProperties? tableStyleProperties,
+        out DocxRunStyleResolution resolution)
     {
         DocxResolvedRunProperties result = styles.RunDefaults;
         if (tableStyleProperties is { } tableProperties)
@@ -192,43 +193,38 @@ internal sealed partial class DocxReader
             result = result.MergeStyleLevel(tableProperties, styles.RunDefaults);
         }
 
-        // Unstyled paragraphs inherit through Normal like numbering does (bodysize-normal11 probe 2026-09-07:
-        // Normal-11pt unsized runs resolve 11pt in Word, not the unstyled fallback).
+        // Unstyled runs inherit Normal without rewriting the authored paragraph
+        // style. Derive provenance while resolving those same effective owners.
         DocxResolvedRunProperties? paragraphLevel = null;
+        bool hasParagraphRunProperties = false;
         foreach (DocxStyle paragraphStyle in EnumerateStyleInheritance(paragraphStyleId ?? "Normal", styles.ParagraphStyles))
         {
+            hasParagraphRunProperties |= paragraphStyle.Run != DocxResolvedRunProperties.Empty;
             paragraphLevel = paragraphLevel is { } inherited ? inherited.Merge(paragraphStyle.Run) : paragraphStyle.Run;
         }
         if (paragraphLevel is { } paragraphProperties) result = result.MergeStyleLevel(paragraphProperties, styles.RunDefaults);
 
         DocxResolvedRunProperties? characterLevel = null;
+        int characterDepth = 0;
+        bool hasCharacterRunProperties = false;
         foreach (DocxStyle characterStyle in EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles))
         {
+            characterDepth++;
+            hasCharacterRunProperties |= characterStyle.Run != DocxResolvedRunProperties.Empty;
             characterLevel = characterLevel is { } inherited ? inherited.Merge(characterStyle.Run) : characterStyle.Run;
         }
         if (characterLevel is { } characterProperties) result = result.MergeStyleLevel(characterProperties, styles.RunDefaults);
 
-        return result.Merge(ReadRunProperties(directProperties));
-    }
-
-    private static DocxRunStyleResolution CreateRunStyleResolution(
-        XElement? directProperties,
-        string? paragraphStyleId,
-        string? characterStyleId,
-        DocxStyleSet styles,
-        DocxResolvedRunProperties? tableStyleProperties)
-    {
-        DocxStyle[] paragraphStyleChain = EnumerateStyleInheritance(paragraphStyleId, styles.ParagraphStyles).ToArray();
-        DocxStyle[] characterStyleChain = EnumerateStyleInheritance(characterStyleId, styles.CharacterStyles).ToArray();
-        return new DocxRunStyleResolution(
+        resolution = new DocxRunStyleResolution(
             characterStyleId,
-            characterStyleId is not null && characterStyleChain.Length != 0,
-            characterStyleChain.Length,
+            characterStyleId is not null && characterDepth != 0,
+            characterDepth,
             styles.RunDefaults != DocxResolvedRunProperties.Empty,
-            paragraphStyleChain.Any(style => style.Run != DocxResolvedRunProperties.Empty),
-            characterStyleChain.Any(style => style.Run != DocxResolvedRunProperties.Empty),
+            hasParagraphRunProperties,
+            hasCharacterRunProperties,
             HasDirectRunProperties(directProperties),
             tableStyleProperties is not null && tableStyleProperties.Value != DocxResolvedRunProperties.Empty);
+        return result.Merge(ReadRunProperties(directProperties));
     }
 
     private static bool HasDirectRunProperties(XElement? properties)
