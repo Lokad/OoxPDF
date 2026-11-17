@@ -289,7 +289,7 @@ internal static partial class PptxChartsTests
         var collector = new DiagnosticCollector();
         using var package = OoxPackage.Open(input, default);
         PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-            .RenderPagesAsync(new PptxReader().Read(package, default), package, collector.Add, default)
+            .RenderPagesAsync(new PptxReader().Read(package, default, collector.Add), package, collector.Add, default)
             .ToBlockingEnumerable().Single();
 
         var names = new[] { "Primary A", "Primary B", "Secondary" };
@@ -301,6 +301,8 @@ internal static partial class PptxChartsTests
             TestAssert.True(left > previousRight, "Legend names keep their source order without overlapping each other.");
             previousRight = glyphs.Max(glyph => glyph.Ink.X + glyph.Ink.Width);
         }
+        foreach (string caption in new[] { "Primary A | 2", "Primary A | 4", "Primary B | 1", "Primary B | 3", "Secondary | 20" })
+            PortableRenderingTests.ReadPaintedSourceLabel(page, caption, fontPrefix: "CBD");
         // This incomplete-axis recovery fixture still has a separately retained
         // zero-caption/legend overlap. Complete legend ink does not waive it.
         using var output = new MemoryStream();
