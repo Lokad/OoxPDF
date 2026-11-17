@@ -988,7 +988,7 @@ internal static class PptxTypographyTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0.647 0 rg", pdf);
         TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
-        TestAssert.Contains("0.502 0.251 0 rg", pdf);
+        TestAssert.Contains("0.737 0.537 0 rg", pdf);
         TestAssert.Contains("0 1 0 rg", pdf);
     }
 

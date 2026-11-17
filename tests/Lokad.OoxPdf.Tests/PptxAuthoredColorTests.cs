@@ -6,7 +6,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxAuthoredColorTests
+internal static partial class PptxAuthoredColorTests
 {
     public static void PptxAuthoredTintShadeChartsMatchIndependentOfficePaints() => Check("Chart");
 

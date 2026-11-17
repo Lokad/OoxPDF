@@ -1,4 +1,11 @@
 {
+  "pptx-linear-source-colors": [
+    "PptxScRgb",
+    "PptxSyntheticTextBoxResolvesDrawingMlColorForms",
+    "PptxAuthoredTintShadeChartsMatchIndependentOfficePaints",
+    "PptxAuthoredTintShadeShapesMatchOfficeAndPreserveOrder",
+    "PptxAutomaticBarPalettesMatchIndependentOfficeAcrossCountsAndThemes"
+  ],
   "svg-inherited-paint": [
     "SvgInheritedPaintPropertiesKeepNearestAndLocalOwners",
     "SvgInheritedOpacityPreservesTransparentOverlayContent",

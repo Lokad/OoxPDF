@@ -96,9 +96,9 @@ internal static class PptxColorResolver
         if (scRgbColor is not null)
         {
             color = new RgbColor(
-                ReadPercentageByte(scRgbColor, "r"),
-                ReadPercentageByte(scRgbColor, "g"),
-                ReadPercentageByte(scRgbColor, "b"));
+                ReadLinearChannelByte(scRgbColor, "r"),
+                ReadLinearChannelByte(scRgbColor, "g"),
+                ReadLinearChannelByte(scRgbColor, "b"));
             color = ApplyColorTransforms(scRgbColor, color);
             return true;
         }
@@ -206,10 +206,10 @@ internal static class PptxColorResolver
             255d * LinearLightColor.ToSrgb(LinearLightColor.ToLinear(channel) * scale + offset);
     }
 
-    private static byte ReadPercentageByte(XElement element, string attributeName)
+    private static byte ReadLinearChannelByte(XElement element, string attributeName)
     {
         double ratio = OoxXml.ReadOptionalLong(element, attributeName, 0) / 100000d;
-        return ToByte(255d * ratio);
+        return LinearLightColor.ToSrgbByte(ratio);
     }
 
     private static RgbColor ReadHslColor(XElement element)
