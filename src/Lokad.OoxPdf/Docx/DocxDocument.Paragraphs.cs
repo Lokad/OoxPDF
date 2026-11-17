@@ -270,7 +270,7 @@ internal sealed record DocxParagraphSpacing(
             hasOtherAfterSide ? other.AfterAutoSpacingValue : AfterAutoSpacingValue,
             other.LineValue ?? LineValue,
             // A local numeric line value with no rule uses automatic spacing.
-            // Standalone rule tokens retain their established metadata/geometry.
+            // A rule-only override reinterprets the inherited numeric value.
             other.LineValue is not null ? other.LineRuleValue : other.LineRuleValue ?? LineRuleValue,
             other.ContextualSpacing ?? ContextualSpacing);
     }

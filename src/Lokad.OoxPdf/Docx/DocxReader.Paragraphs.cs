@@ -259,9 +259,10 @@ internal sealed partial class DocxReader
         }
 
         double paragraphFontSize = runs.Count == 0 ? DocxDefaults.FontSizePoints : runs.Max(run => run.FontSize);
-        double lineSpacingFactor = resolvedParagraph.LineSpacingFactor ??
+        var lineSpacing = ResolveLineSpacing(resolvedParagraph);
+        double lineSpacingFactor = lineSpacing.Factor ??
             (styles.HasParagraphDefaultOwner ? 1d : WordImplicitNormalAutoLineSpacingFactor);
-        double paragraphLineHeight = resolvedParagraph.LineSpacingPoints ?? paragraphFontSize * lineSpacingFactor;
+        double paragraphLineHeight = lineSpacing.Points ?? paragraphFontSize * lineSpacingFactor;
         // A page/column split creates placement fragments, not additional list
         // items. Only the first parsed fragment advances either numbering timeline.
         DocxListLabel? listLabel = isContinuationFragment ? null : ResolveParagraphListLabel();
@@ -337,7 +338,7 @@ internal sealed partial class DocxReader
             ResolveParagraphSpacingPoints(resolvedParagraph, paragraphLineHeight, before: true),
             ResolveParagraphSpacingPoints(resolvedParagraph, paragraphLineHeight, before: false),
             lineSpacingFactor,
-            resolvedParagraph.LineSpacingPoints,
+            lineSpacing.Points,
             resolvedParagraph.Spacing,
             resolvedParagraph.KeepRules,
             listLabel)

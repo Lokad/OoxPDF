@@ -265,20 +265,15 @@ internal sealed partial class DocxReader
         XElement? spacing = properties?.Element(WordprocessingNamespace + "spacing");
         double? before = ReadTwipsAttribute(spacing, WordprocessingNamespace + "before");
         double? after = ReadTwipsAttribute(spacing, WordprocessingNamespace + "after");
-        double? lineFactor = null;
-        double? linePoints = null;
+        long? lineValue = null;
         if (spacing?.Attribute(WordprocessingNamespace + "line") is { } line)
         {
-            string? lineRule = (string?)spacing.Attribute(WordprocessingNamespace + "lineRule");
-            if (string.Equals(lineRule, "exact", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(lineRule, "atLeast", StringComparison.OrdinalIgnoreCase))
-            {
-                linePoints = OoxUnits.TwipsToPoints(long.Parse(line.Value, CultureInfo.InvariantCulture));
-            }
-            else
-            {
-                lineFactor = int.Parse(line.Value, CultureInfo.InvariantCulture) / 240d;
-            }
+            // Validate every source declaration, including unused styles, under
+            // its existing numeric policy. Inheritance carries the number;
+            // paragraph publication interprets its final effective rule once.
+            lineValue = UsesPointLineSpacing((string?)spacing.Attribute(WordprocessingNamespace + "lineRule"))
+                ? long.Parse(line.Value, CultureInfo.InvariantCulture)
+                : int.Parse(line.Value, CultureInfo.InvariantCulture);
         }
 
         DocxParagraphSpacing paragraphSpacing = new(
@@ -311,8 +306,7 @@ internal sealed partial class DocxReader
             alignmentValue,
             before,
             after,
-            lineFactor,
-            linePoints,
+            lineValue,
             paragraphSpacing,
             keepRules,
             indent,
@@ -338,6 +332,18 @@ internal sealed partial class DocxReader
                     (string?)shading.Attribute(WordprocessingNamespace + "val"),
                     (string?)shading.Attribute(WordprocessingNamespace + "color"))
         };
+    }
+
+    private static bool UsesPointLineSpacing(string? rule) =>
+        string.Equals(rule, "exact", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(rule, "atLeast", StringComparison.OrdinalIgnoreCase);
+
+    private static (double? Factor, double? Points) ResolveLineSpacing(DocxResolvedParagraphProperties paragraph)
+    {
+        if (paragraph.LineSpacingValue is not { } value) return default;
+        return UsesPointLineSpacing(paragraph.Spacing.LineRuleValue)
+            ? (null, OoxUnits.TwipsToPoints(value))
+            : (checked((int)value) / 240d, null);
     }
 
     private static IReadOnlyList<DocxTabStop> ReadParagraphTabStops(XElement? properties)
@@ -574,7 +580,7 @@ internal sealed partial class DocxReader
         public string? ContextualSpacingDefaultStyleId { get; init; }
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null, null, null, null, DocxRunFonts.Empty, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxTableStyle>(),
@@ -629,8 +635,7 @@ internal sealed partial class DocxReader
         string? AlignmentValue,
         double? SpacingBeforePoints,
         double? SpacingAfterPoints,
-        double? LineSpacingFactor,
-        double? LineSpacingPoints,
+        long? LineSpacingValue,
         DocxParagraphSpacing Spacing,
         DocxParagraphKeepRules KeepRules,
         DocxParagraphIndent Indent,
@@ -645,22 +650,18 @@ internal sealed partial class DocxReader
         public string? NumberingId { get; init; }
         public int? NumberingLevel { get; init; }
         public DocxParagraphShading? Shading { get; init; }
-        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null);
+        public static DocxResolvedParagraphProperties Empty { get; } = new(null, null, null, null, null, DocxParagraphSpacing.Empty, DocxParagraphKeepRules.Empty, DocxParagraphIndent.Empty, [], null, null, null, null, null, null);
 
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
             bool hasOtherBeforeSide = DocxParagraphSpacing.HasBeforeSpacingSide(other.Spacing);
             bool hasOtherAfterSide = DocxParagraphSpacing.HasAfterSpacingSide(other.Spacing);
-            bool hasOtherLineValue = other.Spacing.LineValue is not null;
             return new DocxResolvedParagraphProperties(
                 other.Alignment ?? Alignment,
                 other.AlignmentValue ?? AlignmentValue,
                 hasOtherBeforeSide ? other.SpacingBeforePoints : other.SpacingBeforePoints ?? SpacingBeforePoints,
                 hasOtherAfterSide ? other.SpacingAfterPoints : other.SpacingAfterPoints ?? SpacingAfterPoints,
-                // A local line value replaces both derived units together.
-                // Automatic spacing must not retain an inherited point height.
-                hasOtherLineValue ? other.LineSpacingFactor : LineSpacingFactor,
-                hasOtherLineValue ? other.LineSpacingPoints : LineSpacingPoints,
+                other.LineSpacingValue ?? LineSpacingValue,
                 Spacing.Merge(other.Spacing),
                 KeepRules.Merge(other.KeepRules),
                 Indent.Merge(other.Indent),

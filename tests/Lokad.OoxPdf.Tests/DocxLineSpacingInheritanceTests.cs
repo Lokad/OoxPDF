@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -25,23 +26,66 @@ internal static partial class DocxLineSpacingInheritanceTests
         }
     }
 
-    public static void DocxLineSpacingInheritanceRuleOnlyLeavesRetainUnitsAndRawTokens()
+    public static void DocxLineSpacingInheritanceRuleOnlyLeavesResolveEffectiveUnits()
     {
         foreach (string origin in Origins)
         foreach (string parent in new[] { "exact", "atLeast", "auto" })
+        foreach (string rule in new[] { "auto", "exact", "atLeast" })
         foreach (bool table in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
-            var actual = Read(origin, parent, "w:lineRule=\"auto\"", table);
-            var control = Read(origin, parent, "", table);
+            var actual = Read(origin, parent, $"w:lineRule=\"{rule}\"", table, mode: mode);
+            int inheritedValue = parent == "auto" ? 480 : 320;
             foreach (var paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(actual))
             {
-                TestAssert.Equal("auto", paragraph.Spacing.LineRuleValue ?? "");
+                TestAssert.Equal(rule, paragraph.Spacing.LineRuleValue);
                 TestAssert.Equal(parent == "auto" ? "480" : "320", paragraph.Spacing.LineValue ?? "");
-                TestAssert.Equal(parent == "auto" ? null : (double?)16d, paragraph.LineSpacingPoints);
+                TestAssert.Equal(rule == "auto" ? null : (double?)(inheritedValue / 20d), paragraph.LineSpacingPoints);
+                TestAssert.Equal(rule == "auto" ? inheritedValue / 240d : origin == "default" ? 1d : 278d / 240d,
+                    paragraph.LineSpacingFactor);
             }
-            if (parent != "atLeast")
-                TestAssert.Equal(LayoutSignature(control), LayoutSignature(actual));
         }
+    }
+
+    public static void DocxLineSpacingInheritanceRuleOnlyLeavesKeepVisibleRows()
+    {
+        foreach (bool table in new[] { false, true })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            // A 24pt font makes the stale 12pt exact projection visibly overlap.
+            // The inherited numeric 240 becomes one natural line under auto.
+            var source = Read("style", "exact", "w:lineRule=\"auto\"", table,
+                mode: mode, parentLineValue: "240", fontSizeHalfPoints: 48);
+            var renderer = new DocxRenderer(new PortableRenderingTests.PinnedResolver(), mode,
+                mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                    OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+            double? previousBottom = null;
+            for (int index = 0; index < 3; index++)
+            {
+                var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, $"Public spacing {index}.");
+                double top = glyphs.Max(glyph => glyph.Ink.Y + glyph.Ink.Height);
+                double bottom = glyphs.Min(glyph => glyph.Ink.Y);
+                TestAssert.True(previousBottom is null || previousBottom > top,
+                    "The authored rows retain complete, nonoverlapping physical glyph ink.");
+                previousBottom = bottom;
+            }
+            PdfContentValidator.ValidatePage(page, 0, default);
+        }
+    }
+
+    public static void DocxLineSpacingInheritanceRetainsSourceNumericValidation()
+    {
+        foreach (string pointRule in new[] { "exact", "atLeast" })
+        {
+            var source = Read("style", pointRule, "", parentLineValue: "2147483648");
+            TestAssert.Equal(2147483648d / 20d, source.Paragraphs[0].LineSpacingPoints);
+            TestAssert.Throws<OverflowException>(() => Read("style", pointRule,
+                "w:lineRule=\"auto\"", parentLineValue: "2147483648"));
+            TestAssert.Throws<FormatException>(() => Read("unused", pointRule, "", parentLineValue: "invalid"));
+            TestAssert.Throws<OverflowException>(() => Read("unused", pointRule, "", parentLineValue: "9223372036854775808"));
+        }
+        TestAssert.Throws<OverflowException>(() => Read("unused", "auto", "", parentLineValue: "2147483648"));
     }
 
     public static void DocxLineSpacingInheritancePointOverridesReplaceAutomaticFactors()
@@ -113,16 +157,17 @@ internal static partial class DocxLineSpacingInheritanceTests
             .Where(item => item.Kind == "TextLine").Select(item => new { item.X, item.Y, item.Width, item.Height, item.LineHeightPoints, item.LineHeightSource, item.SingleLineHeightPoints }));
     }
 
-    private static DocxDocument Read(string origin, string parent, string leaf, bool table = false, bool lineBasedSpacing = false)
+    private static DocxDocument Read(string origin, string parent, string leaf, bool table = false, bool lineBasedSpacing = false,
+        OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup, string? parentLineValue = null, int fontSizeHalfPoints = 24)
     {
-        string parentSpacing = $"<w:spacing w:line=\"{(parent == "auto" ? "480" : "320")}\" w:lineRule=\"{parent}\"/>";
+        string parentSpacing = $"<w:spacing w:line=\"{parentLineValue ?? (parent == "auto" ? "480" : "320")}\" w:lineRule=\"{parent}\"/>";
         string leafSpacing = lineBasedSpacing ? $"<w:spacing w:beforeLines=\"50\" w:afterLines=\"100\" {leaf}/>" : $"<w:spacing w:before=\"0\" w:after=\"0\" {leaf}/>";
         string styles = origin == "default"
             ? $"<w:docDefaults><w:pPrDefault><w:pPr>{parentSpacing}</w:pPr></w:pPrDefault></w:docDefaults>"
             : $"<w:style w:type=\"paragraph\" w:styleId=\"Parent\"><w:pPr>{parentSpacing}</w:pPr></w:style>";
         if (origin == "chain") styles += $"<w:style w:type=\"paragraph\" w:styleId=\"Child\"><w:basedOn w:val=\"Parent\"/><w:pPr>{leafSpacing}</w:pPr></w:style>";
-        string style = origin == "default" ? "" : $"<w:pStyle w:val=\"{(origin == "chain" ? "Child" : "Parent")}\"/>";
-        string paragraphs = string.Concat(Enumerable.Range(0, 3).Select(i => $"<w:p><w:pPr>{style}{(origin == "chain" ? "" : leafSpacing)}</w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"24\"/></w:rPr><w:t>Public spacing {i}.</w:t></w:r></w:p>"));
+        string style = origin is "default" or "unused" ? "" : $"<w:pStyle w:val=\"{(origin == "chain" ? "Child" : "Parent")}\"/>";
+        string paragraphs = string.Concat(Enumerable.Range(0, 3).Select(i => $"<w:p><w:pPr>{style}{(origin == "chain" ? "" : leafSpacing)}</w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"{fontSizeHalfPoints}\"/></w:rPr><w:t>Public spacing {i}.</w:t></w:r></w:p>"));
         if (table) paragraphs = $"<w:tbl><w:tblPr><w:tblW w:w=\"8640\" w:type=\"dxa\"/></w:tblPr><w:tblGrid><w:gridCol w:w=\"8640\"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"8640\" w:type=\"dxa\"/></w:tcPr>{paragraphs}</w:tc></w:tr></w:tbl>";
         return ReadParts(new Dictionary<string, string>
         {
@@ -131,13 +176,14 @@ internal static partial class DocxLineSpacingInheritanceTests
             ["word/_rels/document.xml.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdStyles\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/></Relationships>",
             ["word/styles.xml"] = $"<w:styles xmlns:w=\"{Word}\">{styles}</w:styles>",
             ["word/document.xml"] = $"<w:document xmlns:w=\"{Word}\"><w:body>{paragraphs}<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>"
-        });
+        }, mode);
     }
 
-    private static DocxDocument ReadParts(Dictionary<string, string> parts)
+    private static DocxDocument ReadParts(Dictionary<string, string> parts,
+        OoxPdfDocxMarkupMode mode = OoxPdfDocxMarkupMode.AllMarkup)
     {
         string path = TestFixtures.WriteTempPackage(".docx", parts);
-        try { return DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.AllMarkup); }
+        try { return DocxTests.ReadDocx(path, mode); }
         finally { File.Delete(path); }
     }
 }
