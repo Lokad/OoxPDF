@@ -48,8 +48,6 @@ internal sealed partial class OpenTypeFont
 
     public bool HasTrueTypeOutlines => tables.ContainsKey("glyf") && tables.ContainsKey("loca");
 
-    public bool HasCffOutlines => tables.ContainsKey("CFF ") || tables.ContainsKey("CFF2");
-
     public string FamilyName { get; }
 
     public ushort UnitsPerEm { get; }

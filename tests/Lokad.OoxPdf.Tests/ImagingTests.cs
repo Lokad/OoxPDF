@@ -129,7 +129,6 @@ internal static class ImagingTests
         TestAssert.Equal(3, info.ComponentCount);
         TestAssert.Equal(0xC0, info.FrameMarker);
         TestAssert.True(info.IsBaselineDct, "SOF0 should be classified as baseline DCT.");
-        TestAssert.True(!info.IsProgressiveDct, "SOF0 should not be classified as progressive DCT.");
         TestAssert.Equal("baseline DCT", info.FrameProfileName);
     }
 
@@ -181,7 +180,6 @@ internal static class ImagingTests
         TestAssert.Equal(2, info.Height);
         TestAssert.Equal(0xC2, info.FrameMarker);
         TestAssert.True(!info.IsBaselineDct, "SOF2 should not be classified as baseline DCT.");
-        TestAssert.True(info.IsProgressiveDct, "SOF2 should be classified as progressive DCT.");
         TestAssert.Equal("progressive DCT", info.FrameProfileName);
     }
 

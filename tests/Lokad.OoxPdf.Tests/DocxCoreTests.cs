@@ -122,10 +122,6 @@ internal static class DocxCoreTests
         TestAssert.Equal("TextBox", DocxStoryId.Related(DocxRelatedStoryKind.TextBox).ToKindString());
         TestAssert.Equal("first", DocxStoryId.HeaderOrFooter(true, "first").VariantType);
         TestAssert.Equal(DocxStoryKind.Footer, DocxStoryId.HeaderOrFooter(false, null).Kind);
-        TestAssert.True(DocxStoryId.Header(null).IsHeaderOrFooter, "Headers must report header-or-footer.");
-        TestAssert.True(DocxStoryId.Footer("default").IsHeaderOrFooter, "Footers must report header-or-footer.");
-        TestAssert.True(!DocxStoryId.Body().IsHeaderOrFooter, "Body must not report header-or-footer.");
-        TestAssert.True(!DocxStoryId.Related(DocxRelatedStoryKind.Footnote).IsHeaderOrFooter, "Related stories must not report header-or-footer.");
     }
 
     public static void DocxReaderParsesOnOffRunProperties()

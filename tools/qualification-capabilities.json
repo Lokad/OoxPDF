@@ -3587,7 +3587,6 @@
   "pptx-empty-caption-frames": [
     "ConvertPptxObservesCancellationAfterWorkBegins",
     "FontLeasesAdmissionRefusalNeverRetriesOrBecomesFontFallback",
-    "PortableRenderingEmptyChartCaptionsKeepTheirSpacing",
     "PptxCategoryFrameAdmissionPreservesManualAndVerticalOwners",
     "PptxCategoryLabelRotationPreservesContentAcrossPlotKinds",
     "PptxCategoryOverflowPreservesManualTextOrigins",

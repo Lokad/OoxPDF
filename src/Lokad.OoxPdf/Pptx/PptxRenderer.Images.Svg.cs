@@ -2039,9 +2039,8 @@ internal sealed partial class PptxRenderer
         static byte ToByte(double value) => (byte)Math.Clamp((int)Math.Round(value), byte.MinValue, byte.MaxValue);
     }
 
-    // RV18: one shared path representation for bounds and emission. The parser
-    // resolves relative coordinates once, so both consumers walk the same
-    // absolute commands instead of tokenizing the path data separately.
+    // Bounds and emission share the absolute-command representation and parser;
+    // each consumer currently parses its own result.
     private readonly record struct SvgPathCommand(char Kind, double[] Arguments);
 
     // Parses the longest supported prefix of SVG path data into absolute

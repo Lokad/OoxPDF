@@ -15,7 +15,6 @@ internal static class FontFormatTests
         TestAssert.Equal(TestFontBuilder.GlyphCount, (int)font.GlyphCount);
         TestAssert.Equal(TestFontBuilder.UnitsPerEm, (int)font.UnitsPerEm);
         TestAssert.True(font.HasTrueTypeOutlines, "Synthetic font must report TrueType outlines.");
-        TestAssert.True(!font.HasCffOutlines, "Synthetic font must not report CFF outlines.");
         TestAssert.Equal(34, (int)font.MapCodePoint(65));
     }
 
@@ -75,7 +74,6 @@ internal static class FontFormatTests
         OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.CreateCffKindFont());
 
         TestAssert.True(!font.HasTrueTypeOutlines, "CFF-kind fixture must lack TrueType outlines.");
-        TestAssert.True(font.HasCffOutlines, "CFF-kind fixture must report CFF outlines.");
         TestAssert.True(
             !OpenTypeFontSubsetter.TryCreate(font, new[] { 65 }.ToDictionary(codePoint => font.MapCodePoint(codePoint), codePoint => codePoint), CancellationToken.None, out _, out string? reason) && reason is not null,
             "Subsetter must explain CFF refusal.");

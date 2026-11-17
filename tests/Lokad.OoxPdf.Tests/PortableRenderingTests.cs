@@ -16,13 +16,6 @@ namespace Lokad.OoxPdf.Tests;
 // resource checks on both platforms; Office visual comparisons remain separate.
 internal static partial class PortableRenderingTests
 {
-    public static void PortableRenderingEmptyChartCaptionsKeepTheirSpacing()
-    {
-        PptxColumnIntervalTests.PptxManualOuterEmptyCaptionsRemoveOnlyTheirTextLine();
-        PptxColumnIntervalTests.PptxManualOuterRotatedEmptyCaptionsKeepTheirMinimumBand();
-        PptxColumnIntervalTests.PptxManualOuterWhitespaceCaptionsReserveMeasuredLines();
-    }
-
     public static void PortableRenderingAutomaticColumnLabelsWrapInsideChartFrames() =>
         PptxColumnLabelWrappingTests.CheckAutomatic();
 

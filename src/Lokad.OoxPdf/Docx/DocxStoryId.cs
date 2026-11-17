@@ -46,8 +46,6 @@ internal readonly record struct DocxStoryId(DocxStoryKind Kind, string? VariantT
 
     public static DocxStoryId Related(DocxRelatedStoryKind kind) => new(ToStoryKind(kind), null);
 
-    public bool IsHeaderOrFooter => Kind is DocxStoryKind.Header or DocxStoryKind.Footer;
-
     /// <summary>
     /// Historical spelling used by inspection snapshots. Every kind maps to the
     /// exact string the layout strings previously carried.

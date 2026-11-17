@@ -4,8 +4,6 @@ internal readonly record struct JpegInfo(int Width, int Height, int BitsPerCompo
 {
     public bool IsBaselineDct => FrameMarker == 0xC0;
 
-    public bool IsProgressiveDct => FrameMarker == 0xC2;
-
     public string FrameProfileName => FrameMarker switch
     {
         0xC0 => "baseline DCT",

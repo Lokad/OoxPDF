@@ -11,11 +11,8 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    // Chart text parts render through separate calls whose resources merge into
-
-    // one page-level list, so per-call numbering would collide (duplicate /Font
-    // keys, last wins). Callers pass that shared list for page-unique sequencing;
-    // the appended slice is already in the list, so callers must not re-add it.
+    // Chart text calls share a page-level name scope for unique font names.
+    // Font preparation returns its new resources; this caller appends them once.
     private static async ValueTask<RenderedFonts> RenderChartTextRunsAsync(
         List<TextRun> runs,
         PdfGraphicsBuilder graphics,
@@ -643,9 +640,8 @@ internal sealed partial class PptxRenderer
             graphics.RestoreState();
         }
 
-        // RV01: fallback legacy runs distribute runes evenly across the label box
-        // (these runs carry box geometry, not measured advances), encoding WinAnsi
-        // with question-mark substitution for unencodable runes.
+        // Fallback glyphs use face metrics within the allocated label width,
+        // with WinAnsi question-mark substitution for unencodable runes.
         void DrawFallbackWrappedRun(PdfFallbackFontResource fallback, TextRun run)
         {
             graphics.SaveState();
@@ -773,9 +769,8 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        // RV01: fallback spans distribute runes across the layout span width in
-        // UTF-16 proportion (layout measured these spans without per-rune advances),
-        // encoding WinAnsi with question-mark substitution for unencodable runes.
+        // Fallback glyphs use the same face metrics within the allocated span
+        // width, with WinAnsi question-mark substitution for unencodable runes.
         void DrawFallbackWrappedSpan(PdfFallbackFontResource fallback, PptxPositionedTextSpan span)
         {
             TextRun run = span.Run;
