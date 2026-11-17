@@ -11,7 +11,7 @@ internal static partial class OoxmlTests
         foreach (var (integer, literal, expected) in new[]
         {
             ("0", "0%", 0d), ("30000", "30%", .3d), ("-12500", "-12.5%", -.125d),
-            ("1", "0.001%", .00001d), ("125000", "+125%", 1.25d),
+            ("1", "0.001%", .00001d), ("38970", "38.97%", .3897d), ("125000", "+125%", 1.25d),
             (" 50000 ", " 50% ", .5d)
         })
         {
@@ -29,6 +29,7 @@ internal static partial class OoxmlTests
         }
         TestAssert.True(!OoxXml.TryParsePercentage(null, out _), "A missing percentage has no value.");
         TestAssert.True(!OoxXml.TryParsePercentage("2147483648", out _), "The Int32 caller contract is retained.");
+        TestAssert.True(!OoxXml.TryParsePercentage("2147483.648%", out _), "Literal units retain the same numeric boundary.");
         TestAssert.Throws<OverflowException>(() => OoxXml.ParsePercentage("2147483648"));
         TestAssert.Equal(int.MinValue / 100000d, OoxXml.ParsePercentage(int.MinValue.ToString(CultureInfo.InvariantCulture)));
         TestAssert.Equal(int.MaxValue / 100000d, OoxXml.ParsePercentage(int.MaxValue.ToString(CultureInfo.InvariantCulture)));

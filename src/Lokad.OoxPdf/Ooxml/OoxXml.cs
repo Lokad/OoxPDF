@@ -18,10 +18,12 @@ internal static class OoxXml
         ReadOnlySpan<char> text = value.AsSpan().Trim();
         if (!text.IsEmpty && text[^1] == '%')
         {
-            if (double.TryParse(text[..^1], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
-                CultureInfo.InvariantCulture, out double percent) && double.IsFinite(percent))
+            if (decimal.TryParse(text[..^1], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture, out decimal percent) &&
+                percent >= int.MinValue / 1000m && percent <= int.MaxValue / 1000m)
             {
-                ratio = percent / 100d;
+                // Decimal source units give both spellings the same rounded ratio.
+                ratio = (double)(percent / 100m);
                 return true;
             }
         }
