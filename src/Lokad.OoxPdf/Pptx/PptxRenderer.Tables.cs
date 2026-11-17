@@ -81,7 +81,8 @@ internal sealed partial class PptxRenderer
     private static async ValueTask<IReadOnlyList<PptxTableCellTextFrame>> ReadSceneTableTextFramesAsync(PptxRenderContext context)
     {
         var textFrames = new List<PptxTableCellTextFrame>();
-        await AddSceneTableTextFramesAsync(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.MasterColorMap).ConfigureAwait(false);
+        if (context.SceneSlide.ShowMasterShapes)
+            await AddSceneTableTextFramesAsync(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.MasterColorMap).ConfigureAwait(false);
         await AddSceneTableTextFramesAsync(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity, context.LayoutColorMap).ConfigureAwait(false);
         await AddSceneTableTextFramesAsync(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity, context.SlideColorMap).ConfigureAwait(false);
 

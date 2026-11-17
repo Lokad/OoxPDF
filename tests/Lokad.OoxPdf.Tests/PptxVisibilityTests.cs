@@ -1,6 +1,9 @@
+using System.IO.Compression;
 using System.Text;
+using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Pptx;
@@ -50,15 +53,17 @@ internal static class PptxVisibilityTests
             {
                 TestAssert.Equal(0, PptxRenderer.InspectTextGlyphRuns(document, package, 0).Count);
                 if (kind is "shape" or "group")
-                    TestAssert.Equal(1, PptxRenderer.InspectTextLayout(document, package, 0).Frames.Count);
+                {
+                    TestAssert.Equal(0, PptxRenderer.InspectTextFrameModels(document, package, 0).Count);
+                    TestAssert.Equal(0, PptxRenderer.InspectTextLayout(document, package, 0).Frames.Count);
+                    TestAssert.Equal(0, PptxRenderer.InspectTextFlow(document, package, 0).Frames.Count);
+                }
             }
         }
     }
 
     public static void PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission()
     {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial)) TestAssert.Skip("Glyph emission inspection requires the installed Arial control.");
         foreach (bool showMaster in new[] { false, true })
         foreach (bool hidden in new[] { false, true })
         {
@@ -73,14 +78,77 @@ internal static class PptxVisibilityTests
                 using var writer = new StreamWriter(zip.CreateEntry("ppt/slides/slide1.xml").Open());
                 writer.Write(xml.Replace("<p:sp>", "<p:sp><p:nvSpPr><p:cNvPr id=\"9\" name=\"Hidden\" hidden=\"1\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>", StringComparison.Ordinal));
             }
-            using FileStream stream = File.OpenRead(input);
-            OoxPackage package = OoxPackage.Open(stream, default);
-            PptxDocument document = new PptxReader().Read(package, default);
-            string emitted = string.Concat(PptxRenderer.InspectTextGlyphRuns(document, package, 0).Select(run => run.Text));
-            TestAssert.Equal(showMaster, emitted.Contains("Master text", StringComparison.Ordinal));
-            TestAssert.Equal(!hidden, emitted.Contains("Slide text", StringComparison.Ordinal));
-            TestAssert.True(emitted.Contains("Layout text", StringComparison.Ordinal), "Admitted layout text remains in emission inspection.");
-            TestAssert.Equal(3, PptxRenderer.InspectTextLayout(document, package, 0).Frames.Count);
+            try
+            {
+                using OoxPackage package = OoxPackage.Open(input, default);
+                PptxDocument document = new PptxReader().Read(package, default);
+                var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
+                var models = PptxRenderer.InspectTextFrameModels(document, package, 0, inspectionFonts: fonts);
+                var layout = PptxRenderer.InspectTextLayout(document, package, 0, inspectionFonts: fonts);
+                var flow = PptxRenderer.InspectTextFlow(document, package, 0, inspectionFonts: fonts);
+                var glyphs = PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: fonts);
+                int admittedFrames = 1 + (showMaster ? 1 : 0) + (hidden ? 0 : 1);
+                TestAssert.Equal(admittedFrames, models.Count);
+                TestAssert.Equal(admittedFrames, layout.Frames.Count);
+                TestAssert.Equal(admittedFrames, flow.Frames.Count);
+                PdfPage painted = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                    .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+                foreach (string text in new[]
+                {
+                    string.Concat(models.SelectMany(frame => frame.Paragraphs).SelectMany(p => p.Runs).Select(run => run.Text)),
+                    string.Concat(layout.Frames.SelectMany(frame => frame.Paragraphs).SelectMany(p => p.Lines).SelectMany(line => line.Spans).Select(span => span.Text)),
+                    string.Concat(flow.Frames.SelectMany(frame => frame.Paragraphs).SelectMany(p => p.Runs).Select(run => run.SourceText)),
+                    string.Concat(glyphs.Select(run => run.Text)),
+                    DocxPageFootnoteNumberingTests.DecodeText(painted)
+                })
+                {
+                    TestAssert.Equal(showMaster, text.Contains("Master text", StringComparison.Ordinal));
+                    TestAssert.Equal(!hidden, text.Contains("Slide text", StringComparison.Ordinal));
+                    TestAssert.Contains("Layout text", text);
+                }
+            }
+            finally { File.Delete(input); }
+        }
+    }
+
+    public static void PptxTableInspectionUsesMasterAdmission()
+    {
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "pptx-table.pptx"));
+        XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XElement table;
+        using (var source = ZipFile.OpenRead(fixture))
+        using (var reader = new StreamReader(source.GetEntry("ppt/slides/slide1.xml")!.Open()))
+            table = new XElement(XDocument.Load(reader).Descendants(p + "graphicFrame").First());
+        table.Descendants(a + "t").First().Value = "Master cell";
+        foreach (bool showMaster in new[] { false, true })
+        {
+            string input = WriteMasterShapePackage(showMaster ? "1" : "0", withText: true);
+            try
+            {
+                using (var zip = ZipFile.Open(input, ZipArchiveMode.Update))
+                {
+                    var entry = zip.GetEntry("ppt/slideMasters/slideMaster1.xml")!;
+                    XDocument master;
+                    using (var reader = new StreamReader(entry.Open())) master = XDocument.Load(reader);
+                    master.Descendants(p + "sp").Single().ReplaceWith(new XElement(table));
+                    entry.Delete();
+                    using var writer = new StreamWriter(zip.CreateEntry("ppt/slideMasters/slideMaster1.xml").Open());
+                    master.Save(writer);
+                }
+                using OoxPackage package = OoxPackage.Open(input, default);
+                PptxDocument document = new PptxReader().Read(package, default);
+                var fonts = new PresentationFontResolver(new PortableRenderingTests.PinnedResolver());
+                var models = PptxRenderer.InspectTableTextFrameModels(document, package, 0, inspectionFonts: fonts);
+                TestAssert.Equal(showMaster, models.Count > 0);
+                string modelText = string.Concat(models.SelectMany(frame => frame.Paragraphs).SelectMany(paragraph => paragraph.Runs).Select(run => run.Text));
+                string glyphText = string.Concat(PptxRenderer.InspectTextGlyphRuns(document, package, 0, inspectionFonts: fonts).Select(run => run.Text));
+                PdfPage painted = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+                    .RenderPagesAsync(document, package, null, default).ToBlockingEnumerable().Single();
+                foreach (string text in new[] { modelText, glyphText, DocxPageFootnoteNumberingTests.DecodeText(painted) })
+                    TestAssert.Equal(showMaster, text.Contains("Master cell", StringComparison.Ordinal));
+            }
+            finally { File.Delete(input); }
         }
     }
 

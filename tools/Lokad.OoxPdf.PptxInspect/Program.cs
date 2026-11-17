@@ -49,7 +49,7 @@ File.WriteAllText(Path.Combine(outputDirectory, "inspection-font-source.json"),
     JsonSerializer.Serialize(new { FontDirectory = fontDirectory, Source = fontDirectory is null ? "Host default" : "Explicit directory" }), Encoding.UTF8);
 
 using FileStream stream = File.OpenRead(inputPath);
-OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
+using OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
 PptxDocument document = new PptxReader().Read(package, CancellationToken.None);
 // one shared inspection scene per conversion. Each Inspect* entry point
 // used to rebuild the whole scene per slide, multiplying master/layout parses by

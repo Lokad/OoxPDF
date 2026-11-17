@@ -65,11 +65,11 @@ internal sealed partial class PptxRenderer
             return new PptxTextLayoutSnapshot([]);
         }
 
-        PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(context.InheritedSources, context);
+        PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(EnumerateInheritedPaintSources(context), context);
         PptxTextLayoutModel slideLayout = (BuildTextLayoutModelAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult());
         return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
 
-        PptxTextLayoutModel BuildTextLayoutModelForSources(IReadOnlyList<PptxRenderSource> sources, PptxRenderContext context)
+        PptxTextLayoutModel BuildTextLayoutModelForSources(IEnumerable<PptxRenderSource> sources, PptxRenderContext context)
         {
             var frames = new List<PptxTextFrameLayout>();
             foreach (PptxRenderSource source in sources)
@@ -89,11 +89,11 @@ internal sealed partial class PptxRenderer
             return new PptxTextFlowSnapshot([]);
         }
 
-        PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(context.InheritedSources, context);
+        PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(EnumerateInheritedPaintSources(context), context);
         PptxTextFlowModel slideFlow = (BuildTextFlowModelAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult());
         return ToSnapshot(new PptxTextFlowModel(inheritedFlow.Frames.Concat(slideFlow.Frames).ToArray()));
 
-        PptxTextFlowModel BuildTextFlowModelForSources(IReadOnlyList<PptxRenderSource> sources, PptxRenderContext context)
+        PptxTextFlowModel BuildTextFlowModelForSources(IEnumerable<PptxRenderSource> sources, PptxRenderContext context)
         {
             var frames = new List<PptxTextFlowFrame>();
             foreach (PptxRenderSource source in sources)

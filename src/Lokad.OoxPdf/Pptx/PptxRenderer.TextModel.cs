@@ -19,12 +19,17 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        return context.InheritedSources
+        return EnumerateInheritedPaintSources(context)
             .SelectMany(source => (BuildTextFrameModelsAsync(context, source, includePlaceholders: false, placeholderSources: []).GetAwaiter().GetResult()))
             .Concat((BuildTextFrameModelsAsync(context, context.SlideSource, includePlaceholders: true, context.InheritedXml).GetAwaiter().GetResult()))
             .Select(ToSnapshot)
             .ToArray();
     }
+
+    // Inherited XML still supplies placeholder defaults when master paint is
+    // suppressed. Only placed inspection content follows the paint selection.
+    private static IEnumerable<PptxRenderSource> EnumerateInheritedPaintSources(PptxRenderContext context) =>
+        context.InheritedSources.Where(source => source.Kind != PptxRenderSourceKind.Master || context.SceneSlide.ShowMasterShapes);
 
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex, PptxScene? sharedScene = null, PresentationFontResolver? inspectionFonts = null)
     {
@@ -209,6 +214,7 @@ internal sealed partial class PptxRenderer
         var frames = new List<PptxTextFrameModel>();
         foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
         {
+            if (!PptxSceneBuilder.IsVisibleDrawingContent(shape)) continue;
             PptxTextFrameModel? frame = (await BuildTextFrameModelAsync(shape, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver, cancellationToken).ConfigureAwait(false));
             if (frame is not null)
             {
@@ -662,6 +668,7 @@ internal sealed partial class PptxRenderer
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade,
+                shapeFontColor, theme, colorMap, fontScale, slideNumber, tableStyleTextStyle,
                 disableZeroKerning && paragraphStyle.Alignment == TextAlignment.Left && bullet.Kind == PptxParagraphBulletKind.None);
             XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
             ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale);
@@ -730,45 +737,6 @@ internal sealed partial class PptxRenderer
         }
 
 
-        IReadOnlyList<PptxTextRunModel> BuildRunModels(XElement paragraph, ResolvedParagraphTextStyle paragraphStyle, PptxParagraphStyleCascade resolvedParagraphStyleCascade, bool disableParagraphZeroKerning)
-        {
-            var runs = new List<PptxTextRunModel>();
-            foreach (XElement child in paragraph.Elements())
-            {
-                if (child.Name == DrawingNamespace + "br")
-                {
-                    XElement? breakProperties = child.Element(DrawingNamespace + "rPr");
-                    PptxRunStyleCascade breakCascade = BuildRunStyleCascade("break.rPr", breakProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
-                    runs.Add(new PptxTextRunModel(
-                        runs.Count,
-                        PptxTextRunKind.Break,
-                        child,
-                        breakProperties,
-                        breakCascade,
-                        "\n",
-                        ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle, disableParagraphZeroKerning)));
-                    continue;
-                }
-
-                if (!IsTextRunElement(child))
-                {
-                    continue;
-                }
-
-                XElement? runProperties = child.Element(DrawingNamespace + "rPr");
-                PptxRunStyleCascade textRunCascade = BuildRunStyleCascade("run.rPr", runProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
-                runs.Add(new PptxTextRunModel(
-                    runs.Count,
-                    child.Name == DrawingNamespace + "fld" ? PptxTextRunKind.Field : PptxTextRunKind.Text,
-                    child,
-                    runProperties,
-                    textRunCascade,
-                    ReadTextElementText(child, slideNumber),
-                    ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle, disableParagraphZeroKerning)));
-            }
-
-            return runs;
-        }
     }
 
     // R14-deeper: scene-fed paragraph models reuse the retained cascade defaults
@@ -803,7 +771,7 @@ internal sealed partial class PptxRenderer
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, frameModel.FontScale, frameModel.LineSpacingScale, frameModel.BodyProperties.CompatibleLineSpacing, ResolveCompatibleDefaultLineSpacingFactor(frameModel.BodyProperties));
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
-            IReadOnlyList<PptxTextRunModel> runs = BuildSceneFedRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, colorMap, frameModel.FontScale, slideNumber, tableStyleTextStyle,
+            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, colorMap, frameModel.FontScale, slideNumber, tableStyleTextStyle,
                 disableZeroKerning: frameModel.TableRowIndex is null && paragraphStyle.Alignment == TextAlignment.Left &&
                     bullet.Kind == PptxParagraphBulletKind.None && UsesNoWrapZeroKerning(frameModel.BodyProperties, frameModel.TextRotationDegrees));
             XElement? endParagraphProperties = sceneParagraph.EndParagraphProperties;
@@ -831,7 +799,7 @@ internal sealed partial class PptxRenderer
         return paragraphs;
     }
 
-    private static IReadOnlyList<PptxTextRunModel> BuildSceneFedRunModels(
+    private static IReadOnlyList<PptxTextRunModel> BuildRunModels(
         XElement paragraph,
         ResolvedParagraphTextStyle paragraphStyle,
         PptxParagraphStyleCascade resolvedParagraphStyleCascade,

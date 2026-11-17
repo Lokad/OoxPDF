@@ -190,7 +190,10 @@ internal static class TestCatalog
         .. FromType("pptx-model", typeof(PptxDiagnosticsTests)),
         .. FromType("pptx-shapes", typeof(PptxShapesTests)),
         .. FromType("pptx-shapes", typeof(PptxSceneTextAgreementTests)),
-        .. FromType("pptx-composition", typeof(PptxVisibilityTests)),
+        .. FromType(name => name is nameof(PptxVisibilityTests.PptxHiddenObjectsLeaveNoPaintResourcesOrLinks)
+            or nameof(PptxVisibilityTests.PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission)
+            or nameof(PptxVisibilityTests.PptxTableInspectionUsesMasterAdmission)
+            ? "rendering-portable" : "pptx-composition", typeof(PptxVisibilityTests)),
         .. FromType("pptx-shapes", typeof(PptxHyperlinksTests)),
         .. FromType("pptx-shapes", typeof(PptxTextHyperlinksTests)),
         .. FromType("pptx-shapes", typeof(PptxFrameHyperlinksTests)),

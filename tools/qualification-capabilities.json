@@ -1,4 +1,23 @@
 {
+  "pptx-inspection-visibility": [
+    "PptxHiddenObjectsLeaveNoPaintResourcesOrLinks",
+    "PptxGlyphEmissionInspectionUsesSceneVisibilityAndMasterAdmission",
+    "PptxTableInspectionUsesMasterAdmission",
+    "PptxHiddenObjectsAreExcludedFromEverySceneSource",
+    "PptxHiddenMasterShapesStayUnpainted",
+    "PptxShownMasterShapesPaintByDefault",
+    "PptxExplicitShownMasterShapesPaint",
+    "SceneFedSpansMatchXmlPath",
+    "SceneCascadeLayersMatchRendererSnapshot",
+    "PortablePptxInspectionUsesTheRenderingFontSource",
+    "PptxScalarCaps",
+    "PptxManualBreaksKeepAnchoredTextboxContent",
+    "PptxManualBreaksKeepBlankAndSplitRunFrames",
+    "PptxTextManualBreakSameStyleLineCoalesces",
+    "PptxNumberedAutofitRunSplitUsesContinuationCharacterSpacingTextState",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "docx-shared-inspection": [
     "DocxCombinedInspection",
     "DocxMarkupInspection",
