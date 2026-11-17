@@ -17,14 +17,18 @@ internal static class PptxPictureRecolorTests
             ("<a:biLevel thresh=\"50000\"/>", [0, 0, 0, 0, 0, 0]),
             ("<a:duotone><a:srgbClr val=\"000000\"/><a:srgbClr val=\"FFFFFF\"/></a:duotone>", [54, 54, 54, 18, 18, 18]),
             ("<a:lum bright=\"100000\"/>", [255, 255, 255, 255, 255, 255]),
-            ("<a:grayscl/><a:alphaModFix amt=\"50000\"/>", [54, 54, 54, 18, 18, 18])
+            ("<a:grayscl/><a:alphaModFix amt=\"50000\"/>", [54, 54, 54, 18, 18, 18]),
+            ("<a:biLevel thresh=\"50%\"/>", [0, 0, 0, 0, 0, 0]),
+            ("<a:lum bright=\"100%\"/>", [255, 255, 255, 255, 255, 255]),
+            ("<a:lum bright=\"0%\" contrast=\"0%\"/>", [255, 0, 0, 0, 0, 255]),
+            ("<a:grayscl/><a:alphaModFix amt=\"50%\"/>", [54, 54, 54, 18, 18, 18])
         ];
         var nodes = new System.Text.StringBuilder();
         foreach (bool fill in new[] { false, true })
         for (int i = 0; i < treatments.Length; i++)
         {
             int id = 2 + (fill ? treatments.Length : 0) + i;
-            string geometry = $"<a:xfrm><a:off x=\"{(10 + i * 110) * 12700}\" y=\"{(fill ? 180 : 72) * 12700}\"/><a:ext cx=\"914400\" cy=\"457200\"/></a:xfrm><a:prstGeom prst=\"rect\"/>";
+            string geometry = $"<a:xfrm><a:off x=\"{(10 + i % 6 * 110) * 12700}\" y=\"{(72 + (i / 6 + (fill ? 2 : 0)) * 88) * 12700}\"/><a:ext cx=\"914400\" cy=\"457200\"/></a:xfrm><a:prstGeom prst=\"rect\"/>";
             string blip = $"<a:blip r:embed=\"image\">{treatments[i].Effect}</a:blip><a:stretch><a:fillRect/></a:stretch>";
             nodes.Append(fill
                 ? $"<p:sp><p:nvSpPr><p:cNvPr id=\"{id}\" name=\"Fill {i}\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>{geometry}<a:blipFill>{blip}</a:blipFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>"

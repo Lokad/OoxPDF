@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -113,9 +112,9 @@ internal sealed partial class PptxSceneBuilder
         XElement? blip = ReadPictureBlip(picture);
         XElement? alphaModFix = blip?.Element(DrawingNamespace + "alphaModFix");
         if (alphaModFix?.Attribute("amt") is { } amount &&
-            int.TryParse(amount.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedAmount))
+            OoxXml.TryParsePercentage(amount.Value, out double parsedAmount))
         {
-            return Math.Clamp(parsedAmount / 100000d, 0d, 1d);
+            return Math.Clamp(parsedAmount, 0d, 1d);
         }
 
         return 1d;
@@ -155,7 +154,7 @@ internal sealed partial class PptxSceneBuilder
         {
             string? thresholdValue = (string?)biLevel.Attribute("thresh");
             double threshold = thresholdValue is not null
-                ? Math.Clamp(int.Parse(thresholdValue, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
+                ? Math.Clamp(OoxXml.ParsePercentage(thresholdValue), 0d, 1d)
                 : 0.5d;
             return PptxSceneImageRecolor.BiLevel(threshold, biLevel.Name.LocalName, thresholdValue);
         }
@@ -166,10 +165,10 @@ internal sealed partial class PptxSceneBuilder
             string? brightnessValue = (string?)luminance.Attribute("bright");
             string? contrastValue = (string?)luminance.Attribute("contrast");
             double brightness = brightnessValue is not null
-                ? Math.Clamp(int.Parse(brightnessValue, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
+                ? Math.Clamp(OoxXml.ParsePercentage(brightnessValue), -1d, 1d)
                 : 0d;
             double contrast = contrastValue is not null
-                ? Math.Clamp(int.Parse(contrastValue, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
+                ? Math.Clamp(OoxXml.ParsePercentage(contrastValue), -1d, 1d)
                 : 0d;
             return PptxSceneImageRecolor.Luminance(brightness, contrast, luminance.Name.LocalName, brightnessValue, contrastValue);
         }
@@ -227,7 +226,7 @@ internal sealed partial class PptxSceneBuilder
     private static double ParsePercentage(string? value)
     {
         return value is not null
-            ? Math.Clamp(int.Parse(value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.999d)
+            ? Math.Clamp(OoxXml.ParsePercentage(value), 0d, 0.999d)
             : 0d;
     }
 }

@@ -97,19 +97,16 @@ internal sealed partial class PptxSceneBuilder
 
     internal static bool HasUnsupportedAlpha(XElement? container)
     {
-        return container?.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedAlpha) == true;
+        return container?.Descendants().Where(PptxColorResolver.IsDrawingColorElement).Any(IsUnsupportedColorAlpha) == true;
     }
 
-    internal static bool IsUnsupportedAlpha(XElement alpha)
+    internal static bool IsUnsupportedColorAlpha(XElement color)
     {
-        if (alpha.Attribute("val") is not { } value ||
-            !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ||
-            parsed >= 100000)
+        if (PptxColorResolver.ReadAlpha(color) >= 1d)
         {
             return false;
         }
 
-        XElement? color = alpha.Parent;
         XElement? fill = color?.Parent;
         XElement? owner = fill?.Parent;
         XElement? lineOwner = owner?.Parent;

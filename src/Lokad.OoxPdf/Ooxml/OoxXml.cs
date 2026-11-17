@@ -10,6 +10,44 @@ namespace Lokad.OoxPdf.Ooxml;
 // fall back to the default.
 internal static class OoxXml
 {
+    // DrawingML accepts thousandths of a percent or a decimal percent literal.
+    // Keep the existing Int32 policy for strict/try readers; color channels and
+    // transforms below retain their existing Int64 fallback policy separately.
+    public static bool TryParsePercentage(string? value, out double ratio)
+    {
+        ReadOnlySpan<char> text = value.AsSpan().Trim();
+        if (!text.IsEmpty && text[^1] == '%')
+        {
+            if (double.TryParse(text[..^1], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture, out double percent) && double.IsFinite(percent))
+            {
+                ratio = percent / 100d;
+                return true;
+            }
+        }
+        else if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int thousandths))
+        {
+            ratio = thousandths / 100000d;
+            return true;
+        }
+        ratio = 0d;
+        return false;
+    }
+
+    public static double ParsePercentage(string value) =>
+        TryParsePercentage(value, out double ratio) ? ratio
+            // Retain the strict readers' established format/overflow failures.
+            : int.Parse(value, CultureInfo.InvariantCulture) / 100000d;
+
+    public static double ReadOptionalPercentage(XElement? element, string name, double defaultValue)
+    {
+        string? value = (string?)element?.Attribute(name);
+        return value.AsSpan().TrimEnd().EndsWith("%")
+            ? TryParsePercentage(value, out double ratio) ? ratio : defaultValue
+            : long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long thousandths)
+                ? thousandths / 100000d : defaultValue;
+    }
+
     public static long ParseRequiredLong(XElement element, XName name, string feature)
     {
         string? value = (string?)element.Attribute(name);

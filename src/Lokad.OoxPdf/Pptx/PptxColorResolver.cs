@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Ooxml;
@@ -116,17 +115,32 @@ internal static class PptxColorResolver
 
     public static double ReadAlpha(XElement? colorContainer)
     {
-        XElement? alpha = colorContainer?
-            .Elements()
-            .FirstOrDefault(element => element.Name.LocalName is "srgbClr" or "schemeClr" or "sysClr" or "prstClr" or "scrgbClr" or "hslClr")
-            ?.Element(DrawingNamespace + "alpha");
-        if (alpha?.Attribute("val") is { } value &&
-            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+        XElement? color = colorContainer is not null && IsDrawingColorElement(colorContainer)
+            ? colorContainer : colorContainer?.Elements().FirstOrDefault(IsDrawingColorElement);
+        double alpha = 1d;
+        foreach (XElement transform in color?.Elements() ?? [])
         {
-            return Math.Clamp(parsed / 100000d, 0d, 1d);
+            if (transform.Name.Namespace != DrawingNamespace) continue;
+            // Each operation consumes the preceding effective opacity. Malformed
+            // absolute alpha retains the old opaque fallback; malformed mod/off
+            // retain their neutral effects rather than corrupting prior state.
+            switch (transform.Name.LocalName)
+            {
+                case "alpha":
+                    alpha = Math.Clamp(OoxXml.TryParsePercentage((string?)transform.Attribute("val"), out double value)
+                        ? value : 1d, 0d, 1d);
+                    break;
+                case "alphaMod":
+                    alpha = Math.Clamp(alpha * (OoxXml.TryParsePercentage((string?)transform.Attribute("val"), out value)
+                        ? value : 1d), 0d, 1d);
+                    break;
+                case "alphaOff":
+                    alpha = Math.Clamp(alpha + (OoxXml.TryParsePercentage((string?)transform.Attribute("val"), out value)
+                        ? value : 0d), 0d, 1d);
+                    break;
+            }
         }
-
-        return 1d;
+        return alpha;
     }
 
     public static byte ToByte(double value)
@@ -157,7 +171,7 @@ internal static class PptxColorResolver
         double blue = color.Blue;
         foreach (XElement transform in colorElement.Elements())
         {
-            double value = OoxXml.ReadOptionalLong(transform, "val", 100000) / 100000d;
+            double value = OoxXml.ReadOptionalPercentage(transform, "val", 1d);
             switch (transform.Name.LocalName)
             {
                 case "lumMod":
@@ -208,15 +222,15 @@ internal static class PptxColorResolver
 
     private static byte ReadLinearChannelByte(XElement element, string attributeName)
     {
-        double ratio = OoxXml.ReadOptionalLong(element, attributeName, 0) / 100000d;
+        double ratio = OoxXml.ReadOptionalPercentage(element, attributeName, 0d);
         return LinearLightColor.ToSrgbByte(ratio);
     }
 
     private static RgbColor ReadHslColor(XElement element)
     {
         double hue = (OoxXml.ReadOptionalLong(element, "hue", 0) / 60000d) % 360d;
-        double saturation = Math.Clamp(OoxXml.ReadOptionalLong(element, "sat", 0) / 100000d, 0d, 1d);
-        double luminosity = Math.Clamp(OoxXml.ReadOptionalLong(element, "lum", 0) / 100000d, 0d, 1d);
+        double saturation = Math.Clamp(OoxXml.ReadOptionalPercentage(element, "sat", 0d), 0d, 1d);
+        double luminosity = Math.Clamp(OoxXml.ReadOptionalPercentage(element, "lum", 0d), 0d, 1d);
         double chroma = (1d - Math.Abs(2d * luminosity - 1d)) * saturation;
         double segment = hue / 60d;
         double second = chroma * (1d - Math.Abs(segment % 2d - 1d));
@@ -246,22 +260,9 @@ internal static class PptxColorResolver
         return element.Name.LocalName is "srgbClr" or "schemeClr" or "scrgbClr" or "prstClr" or "sysClr" or "hslClr";
     }
 
-    public static int ReadGradientStopAlpha(XElement stop)
-    {
-        XElement? alpha = stop
-            .Elements()
-            .FirstOrDefault(IsDrawingColorElement)
-            ?.Element(DrawingNamespace + "alpha");
-        return alpha?.Attribute("val") is { } value &&
-            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
-            ? Math.Clamp(parsed, 0, 100000)
-            : 100000;
-    }
-
     public static bool HasSupportedGradientStopAlpha(IReadOnlyList<XElement> stops)
     {
-        int first = ReadGradientStopAlpha(stops[0]);
-        return stops.All(stop => Math.Abs(ReadGradientStopAlpha(stop) - first) <= 100);
+        return HasUniformGradientAlpha(stops, ReadAlpha);
     }
 
     public static bool HasUniformGradientAlpha<T>(IReadOnlyList<T> stops, Func<T, double> alpha)

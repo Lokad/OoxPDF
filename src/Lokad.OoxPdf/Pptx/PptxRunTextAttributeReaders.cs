@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -36,7 +37,7 @@ internal static class PptxRunTextAttributeReaders
     internal static double ReadBaselineOffset(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
     {
         return (runProperties?.Attribute("baseline") ?? defaultRunProperties?.Attribute("baseline")) is { } baseline
-            ? fontSize * int.Parse(baseline.Value, CultureInfo.InvariantCulture) / 100000d
+            ? fontSize * OoxXml.ParsePercentage(baseline.Value)
             : 0d;
     }
 

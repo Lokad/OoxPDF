@@ -126,7 +126,8 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
         if (VisibleSlideElements(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextVerticalOverflow))
             EmitTextOverflow();
-        if (VisibleSlideElements(DrawingNamespace + "alpha").Any(IsUnsupportedNonShapeAlpha))
+        if (slideXml.Descendants().Where(PptxColorResolver.IsDrawingColorElement)
+            .Where(PptxSceneBuilder.IsVisibleDrawingContent).Any(IsUnsupportedNonShapeAlpha))
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
 
         IEnumerable<XElement> VisibleSlideElements(XName name) =>
@@ -622,13 +623,13 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool IsUnsupportedNonShapeAlpha(XElement alpha)
+    private static bool IsUnsupportedNonShapeAlpha(XElement color)
     {
-        return !IsShapeAlpha() && PptxSceneBuilder.IsUnsupportedAlpha(alpha);
+        return !IsShapeAlpha() && PptxSceneBuilder.IsUnsupportedColorAlpha(color);
 
         bool IsShapeAlpha()
         {
-            return alpha.Ancestors().Any(ancestor =>
+            return color.Ancestors().Any(ancestor =>
                 ancestor.Name == PresentationNamespace + "sp" ||
                 ancestor.Name == PresentationNamespace + "cxnSp");
         }

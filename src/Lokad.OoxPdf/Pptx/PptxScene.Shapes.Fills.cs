@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -60,14 +59,9 @@ internal sealed partial class PptxSceneBuilder
             return false;
         }
 
-        double ParseGradientPercentage(XElement element, string attribute)
-        {
-            return element.Attribute(attribute) is { } value
-                ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
-                : 0d;
-        }
-
-        stop = new PptxSceneGradientStop(ParseGradientPercentage(gradientStop, "pos"), color, alpha);
+        double offset = gradientStop.Attribute("pos") is { } position
+            ? Math.Clamp(OoxXml.ParsePercentage(position.Value), 0d, 1d) : 0d;
+        stop = new PptxSceneGradientStop(offset, color, alpha);
         return true;
     }
 

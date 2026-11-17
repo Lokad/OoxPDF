@@ -7,7 +7,8 @@
   fields, review markup, numbering, static stories and navigation; fixes lost
   content, clipping and overlap in supported combinations.
 - PPTX: improves chart data, axes, labels, legends, series order, merged tables,
-  theme colors, font fallback and text/link geometry. SVG pictures preserve authored fallbacks
+  theme colors, percentage values, opacity, font fallback and text/link geometry.
+  SVG pictures preserve authored fallbacks
   and supported opacity; text renders as glyph outlines and unsupported recoloring
   reports its fallback.
 - Hosting: awaits I/O, uses immutable font leases, explicit stream staging and

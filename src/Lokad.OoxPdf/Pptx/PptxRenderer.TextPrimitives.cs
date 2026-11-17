@@ -141,13 +141,13 @@ internal sealed partial class PptxRenderer
             return (1d, PptxTextBodyPropertySource.DefaultValue, null);
         }
 
-        if (!int.TryParse(fontScale.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fontScaleValue))
+        if (!OoxXml.TryParsePercentage(fontScale.Value, out double fontScaleValue))
         {
             return (1d, autofitSource, fontScale.Value);
         }
 
         double scale = Math.Clamp(
-            fontScaleValue / 100000d,
+            fontScaleValue,
             PptxTextMetricRules.MinimumAutofitScale,
             PptxTextMetricRules.MaximumAutofitScale);
         return (scale, autofitSource, fontScale.Value);
@@ -163,12 +163,12 @@ internal sealed partial class PptxRenderer
             return (1d, PptxTextBodyPropertySource.DefaultValue, null);
         }
 
-        if (!int.TryParse(reduction.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int reductionValue))
+        if (!OoxXml.TryParsePercentage(reduction.Value, out double reductionValue))
         {
             return (1d, autofitSource, reduction.Value);
         }
 
-        double reductionRatio = Math.Clamp(reductionValue / 100000d, 0d, PptxTextMetricRules.MaximumLineSpacingReduction);
+        double reductionRatio = Math.Clamp(reductionValue, 0d, PptxTextMetricRules.MaximumLineSpacingReduction);
         return (1d - reductionRatio, autofitSource, reduction.Value);
     }
 
@@ -260,7 +260,7 @@ internal sealed partial class PptxRenderer
 
         if (spacing?.Element(DrawingNamespace + "spcPct")?.Attribute("val") is { } percent)
         {
-            return referenceFontSize * PptxTextMetricRules.ClampNonNegative(int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d);
+            return referenceFontSize * PptxTextMetricRules.ClampNonNegative(OoxXml.ParsePercentage(percent.Value));
         }
 
         return 0d;
@@ -328,7 +328,7 @@ internal sealed partial class PptxRenderer
 
         if (spacing?.Element(DrawingNamespace + "spcPct")?.Attribute("val") is { } percent)
         {
-            return LineSpacing.Multiple(Math.Max(PptxTextMetricRules.MinimumLineSpacing, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d), true, true);
+            return LineSpacing.Multiple(Math.Max(PptxTextMetricRules.MinimumLineSpacing, OoxXml.ParsePercentage(percent.Value)), true, true);
         }
 
         return LineSpacing.Multiple(1d, false, true);
@@ -537,9 +537,9 @@ internal sealed partial class PptxRenderer
         RgbColor color = bullet.Color ?? textColor;
         double fontSize = textFontSize;
         if (bullet.SizeKind == PptxParagraphBulletSizeKind.Percent &&
-            int.TryParse(bullet.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizePercent))
+            OoxXml.TryParsePercentage(bullet.SizeValue, out double sizePercent))
         {
-            fontSize = textFontSize * Math.Max(0.1d, sizePercent / 100000d);
+            fontSize = textFontSize * Math.Max(0.1d, sizePercent);
         }
         else if (bullet.SizeKind == PptxParagraphBulletSizeKind.Points &&
             int.TryParse(bullet.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizePoints))
