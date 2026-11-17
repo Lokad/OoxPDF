@@ -235,17 +235,10 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
         XElement? textBody = shape.Element(PresentationNamespace + "txBody");
         IReadOnlyList<XElement> inheritedPlaceholders = FindInheritedPlaceholderShapes(shape, placeholderSources);
-        XElement? inheritedPlaceholder = inheritedPlaceholders.LastOrDefault();
         XElement? inheritedTextBody = BuildEffectiveInheritedTextBody();
-        ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
-        bool usesInheritedShapeBounds = bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is not null;
-        if (bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties)
-        {
-            bounds = ReadBounds(inheritedProperties);
-        }
+        ShapeBounds? bounds = ReadShapeBounds(shape, inheritedPlaceholders, out bool usesInheritedShapeBounds);
         if (bounds is null || textBody is null)
         {
             return null;

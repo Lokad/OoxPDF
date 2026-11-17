@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
@@ -21,6 +22,8 @@ internal static class PptxPlaceholderMatcher
         var matches = new List<XElement>();
         string? type = (string?)placeholder.Attribute("type");
         string? index = (string?)placeholder.Attribute("idx");
+        bool hasNumericIndex = uint.TryParse(index.AsSpan().Trim(), NumberStyles.None,
+            CultureInfo.InvariantCulture, out uint numericIndex);
         foreach (XDocument source in placeholderSources)
         {
             XElement[] candidates = source.Descendants(PresentationNamespace + "sp").ToArray();
@@ -51,7 +54,11 @@ internal static class PptxPlaceholderMatcher
 
                 string? candidateType = (string?)candidatePlaceholder.Attribute("type");
                 string? candidateIndex = (string?)candidatePlaceholder.Attribute("idx");
-                bool sameIndex = index is not null && candidateIndex == index;
+                // Keep absent/malformed recovery unchanged. Valid unsigned
+                // indices compare by value; their authored spelling survives.
+                bool sameIndex = index is not null && (candidateIndex == index ||
+                    hasNumericIndex && uint.TryParse(candidateIndex.AsSpan().Trim(), NumberStyles.None,
+                        CultureInfo.InvariantCulture, out uint candidateNumericIndex) && candidateNumericIndex == numericIndex);
                 bool exactType = type is not null && candidateType == type;
                 bool sameType = NormalizePlaceholderType(candidateType) == normalizedType;
                 if (sameIndex && exactType)

@@ -1,4 +1,23 @@
 {
+  "pptx-placeholder-frames": [
+    "PptxPlaceholderFramesKeepInkAndLinksAcrossEmptyOwners",
+    "PptxPlaceholderIndicesKeepNumericOwnersAndExplicitFallbacks",
+    "PptxSyntheticSlidePlaceholderTextUsesInheritedBounds",
+    "PptxSyntheticInheritedPlaceholderTextIsSkipped",
+    "PptxTextModelDirectTopAnchorOverridesInheritedBottomAnchor",
+    "PptxTextModelPreservesInvalidNumericBodyPropertyTokens",
+    "PptxInheritancePresentationDefaultsReachShapesAndCells",
+    "PptxInheritanceOfficeLayoutAndSlideMasterPermissions",
+    "PptxInheritanceLayoutPermissionReachesGroupsLinksAndDiagnostics",
+    "PptxNodeHyperlinkBoundsFollowLeafPaintTransforms",
+    "PptxNodeHyperlinkBoundsComposeGroupScaleAndLeafRotation",
+    "PptxShapeExternalHyperlinkEmitsUriAnnotation",
+    "PptxGroupedShapeHyperlinkUsesTransformedBounds",
+    "PptxShapeHyperlinkMissingRelationshipEmitsDiagnostic",
+    "PptxNodeHyperlinkMissingRelationshipAggregatesPerSlide",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "RejectsUnbalancedTextState"
+  ],
   "pptx-percentage-opacity": [
     "PlainShapeFullRunStyleAgrees",
     "OoxPercentage",

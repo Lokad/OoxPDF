@@ -192,10 +192,26 @@ internal sealed partial class PptxRenderer
             sceneSlide.LayoutColorMap);
     }
 
-    private static ShapeBounds? ReadBounds(XElement shapeProperties)
+    private static ShapeBounds? ReadShapeBounds(XElement shape, IReadOnlyList<XElement> inheritedPlaceholders,
+        out bool usesInheritedShapeBounds)
     {
-        XElement? transform = shapeProperties.Element(DrawingNamespace + "xfrm");
-        return transform is null ? null : ReadBoundsFromTransform(transform);
+        usesInheritedShapeBounds = false;
+        if (ReadOwnerBounds(shape) is { } direct) return direct;
+        // Inherited sources are ordered master then layout. An empty nearer
+        // placeholder does not erase a usable frame supplied by a lower owner.
+        for (int index = inheritedPlaceholders.Count - 1; index >= 0; index--)
+        {
+            if (ReadOwnerBounds(inheritedPlaceholders[index]) is { } inherited)
+            {
+                usesInheritedShapeBounds = true;
+                return inherited;
+            }
+        }
+        return null;
+
+        static ShapeBounds? ReadOwnerBounds(XElement owner) =>
+            owner.Element(PresentationNamespace + "spPr")?.Element(DrawingNamespace + "xfrm") is { } transform
+                ? ReadBoundsFromTransform(transform) : null;
     }
 
     private static ShapeBounds? ReadBoundsFromTransform(XElement transform)

@@ -19,13 +19,17 @@ internal sealed partial class PptxRenderer
         HashSet<string> reportedIds)
     {
         if (!node.HyperlinkClick.IsDefined ||
-            node.Kind is PptxSceneNodeKind.Unknown ||
-            node.Bounds is not { } bounds)
+            node.Kind is PptxSceneNodeKind.Unknown)
         {
             return;
         }
 
-        ShapeBounds mapped = transform.Apply(ToShapeBounds(bounds));
+        ShapeBounds? sourceBounds = node.Bounds is { } bounds ? ToShapeBounds(bounds)
+            : node.Kind == PptxSceneNodeKind.Shape
+                ? ReadShapeBounds(node.Source, FindInheritedPlaceholderShapes(node.Source, context.InheritedXml), out _)
+                : null;
+        if (sourceBounds is null) return;
+        ShapeBounds mapped = transform.Apply(sourceBounds.Value);
         double x = OoxUnits.EmuToPoints(mapped.X);
         double yTop = OoxUnits.EmuToPoints(mapped.Y);
         double width = OoxUnits.EmuToPoints(mapped.Width);
