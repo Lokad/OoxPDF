@@ -1112,7 +1112,8 @@ internal static class PptxChartRenderingTests
         TestAssert.True((int?)workbookPoints[0].GetType().GetProperty("Index")?.GetValue(workbookPoints[0]) == 0, "Expected workbook sidecar point index to preserve range order.");
         TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected workbook sidecar point cell provenance.");
-        TestAssert.Equal("B2", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+        TestAssert.Equal("8.2", ((PptxRenderer.ChartWorkbookRangeCell)workbookCell).Text);
+        TestAssert.Equal(0, ((PptxRenderer.ChartWorkbookRangeCell)workbookCell).Index);
         var noCachePlot = ReadPointSourcePlot("""
             <c:val><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f></c:numRef></c:val>
             """);
@@ -1203,7 +1204,8 @@ internal static class PptxChartRenderingTests
         TestAssert.True(blankAwareWorkbookPoints.Length == 3, "Expected workbook sidecar points to preserve missing cells inside the source range.");
         TestAssert.True(blankAwareWorkbookPoints[2].GetType().GetProperty("Value")?.GetValue(blankAwareWorkbookPoints[2]) is null, "Expected missing workbook source cells to remain nullable sidecar points.");
         object blankWorkbookCell = blankAwareWorkbookPoints[2].GetType().GetProperty("WorkbookCell")?.GetValue(blankAwareWorkbookPoints[2]) ?? throw new InvalidOperationException("Expected blank workbook cell provenance.");
-        TestAssert.True((bool?)blankWorkbookCell.GetType().GetProperty("HasCell")?.GetValue(blankWorkbookCell) == false, "Expected missing workbook source cells to preserve HasCell=false.");
+        TestAssert.True(!((PptxRenderer.ChartWorkbookRangeCell)blankWorkbookCell).HasValue,
+            "Missing workbook source cells cannot supply a stored value.");
 
         using MemoryStream embeddedWorkbookStream = new(PptxTests.EmbeddedChartWorkbook());
         OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream, CancellationToken.None);
@@ -1241,7 +1243,8 @@ internal static class PptxChartRenderingTests
         object[] visibleLabelWorkbookPoints = (((System.Collections.IEnumerable?)textVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(textVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered text workbook points.")).Cast<object>().ToArray();
         TestAssert.True(visibleLabelWorkbookPoints.Length == 2, "Expected plot-visible-only projection to exclude the hidden worksheet row while preserving visible label points.");
         object visibleLabelCell = visibleLabelWorkbookPoints[1].GetType().GetProperty("WorkbookCell")?.GetValue(visibleLabelWorkbookPoints[1]) ?? throw new InvalidOperationException("Expected visible text point cell provenance.");
-        TestAssert.Equal("A4", (string?)visibleLabelCell.GetType().GetProperty("Reference")?.GetValue(visibleLabelCell) ?? string.Empty);
+        TestAssert.Equal("West", ((PptxRenderer.ChartWorkbookRangeCell)visibleLabelCell).Text);
+        TestAssert.Equal(2, ((PptxRenderer.ChartWorkbookRangeCell)visibleLabelCell).Index);
         var noCacheLabelPlot = ReadPointSourcePlot("""
             <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f></c:strRef></c:cat>
             """);
@@ -1296,7 +1299,8 @@ internal static class PptxChartRenderingTests
         TestAssert.True(workbookPoints.Length == 1, "Expected series-name sidecar to preserve the workbook source name.");
         TestAssert.Equal("Workbook Name", (string?)workbookPoints[0].GetType().GetProperty("Text")?.GetValue(workbookPoints[0]) ?? string.Empty);
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected series-name workbook cell provenance.");
-        TestAssert.Equal("B1", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+        TestAssert.Equal("Workbook Name", ((PptxRenderer.ChartWorkbookRangeCell)workbookCell).Text);
+        TestAssert.Equal(0, ((PptxRenderer.ChartWorkbookRangeCell)workbookCell).Index);
         Array typedRecords = Array.CreateInstance(records[0].GetType(), records.Length);
         typedRecords.SetValue(records[0], 0);
         System.Reflection.MethodInfo getActiveSeriesName = typeof(PptxRenderer).GetMethod(
