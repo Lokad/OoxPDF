@@ -73,8 +73,11 @@ internal static partial class PptxChartLabelDefaultsTests
             var moved = Render(sized ? SizedFrameLayout(.08d, .1d) : ManualFrameLayout("factor", .08d, .1d));
             var before = plain.Annotations.Single(); var after = moved.Annotations.Single();
             TestAssert.Equal("https://example.invalid/manual-label", after.Uri);
+            double expectedX = before.X + 57.6d;
+            double expectedRight = Math.Min(moved.Width, before.X + before.Width + 57.6d);
             TestAssert.True(Math.Abs(after.X - before.X - 57.6d) < .002d && Math.Abs(after.Y - before.Y + 43.2d) < .002d &&
-                before.Width == after.Width && before.Height == after.Height, "Link geometry follows the same admitted translation as painted text.");
+                Math.Abs(after.Width - (expectedRight - expectedX)) < .002d && Math.Abs(before.Height - after.Height) < .002d,
+                "Link geometry follows painted text translation while retaining the physical page crop.");
         }
     }
 

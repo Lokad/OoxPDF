@@ -1,5 +1,25 @@
 {
+  "pptx-source-text-clip-placement": [
+    "PptxOrthogonalTextClipsKeepAuthoredSourceInkAndLinks",
+    "PptxRunHyperlinksKeepVisibleHorizontalAndSlideCrops",
+    "PptxTransformedRunHyperlinksStayInsidePhysicalPaintClips",
+    "PptxRotatedRunHyperlinkUsesTransformedBox",
+    "PptxRotatedTextPaintKeepsDeclaredDeviceClip",
+    "PptxHorizontalClipPreservesVerticalOverflowInShapesAndCells",
+    "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
+    "PptxTextFrameVerticalClipDropsLinesWithBaselineOutsideClip",
+    "SceneFedSpansMatchXmlPathForPlainShape",
+    "PlainShapeFullRunStyleAgrees",
+    "TableCellTextMatchesShapeText",
+    "PptxSyntheticTransformedVerticalTextDoesNotDropPreclipBaselines",
+    "PptxSyntheticBodyPrRotationOverridesShapeTextTransform",
+    "PptxSyntheticTextOrientationVariantsProduceTransforms",
+    "PptxMongolianVerticalEmitsClockwiseRowMatrices",
+    "PptxSyntheticVerticalShapeAutoFitPrefersSingleLine",
+    "PptxPointLabelManualLinksTranslateWithPaint"
+  ],
   "pptx-text-link-clipping": [
+    "PptxPointLabelManualLinksTranslateWithPaint",
     "PptxRunHyperlinksKeepVisibleHorizontalAndSlideCrops",
     "PptxTransformedRunHyperlinksStayInsidePhysicalPaintClips",
     "PptxRunExternalHyperlinkEmitsUriAnnotation",

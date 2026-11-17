@@ -953,7 +953,7 @@ internal sealed partial class PptxRenderer
         var estimator = new TextAdvanceEstimator(fontResolver, cancellationToken);
         PptxTextFlowFrame fedFlow = await BuildTextFlowFrameAsync(fedFrame, document, estimator).ConfigureAwait(false);
         PptxTextFrameLayout fedLayout = (await BuildTextFrameLayoutAsync(fedFlow, document, estimator, allowWrapping: true).ConfigureAwait(false));
-        return RemapMongolianVerticalSpans(await FlattenTextLayoutToSpansAsync(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver).ConfigureAwait(false), node.Source);
+        return RemapMongolianVerticalSpans(await FlattenTextLayoutToSpansAsync(new PptxTextLayoutModel(new[] { fedLayout }), fontResolver, document).ConfigureAwait(false), node.Source);
     }
     private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)
     {

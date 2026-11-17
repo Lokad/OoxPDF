@@ -663,7 +663,7 @@ internal sealed partial class PptxRenderer
         return segments.Any(static segment => segment.Draw && segment.Kind == PptxTextFlowSegmentKind.Text && segment.Text.Length != 0);
     }
 
-    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> FlattenTextLayoutToSpansAsync(PptxTextLayoutModel layout, PresentationFontResolver fontResolver)
+    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> FlattenTextLayoutToSpansAsync(PptxTextLayoutModel layout, PresentationFontResolver fontResolver, PptxDocument document)
     {
         PptxPositionedTextSpan[] spans = layout.Frames
             .SelectMany((frame, frameIndex) => frame.Paragraphs.Select((paragraph, paragraphIndex) => new
@@ -725,7 +725,7 @@ internal sealed partial class PptxRenderer
                 lineState.Frame.Model.ColumnCount,
                 lineState.Frame.Model.ColumnSpacing,
                 lineState.Line.Alignment,
-                span.Run,
+                PlaceTextClip(span.Run, lineState.Frame.Model, document),
                 span.EndX,
                 span.Atoms,
                 span.GlyphSpan,
@@ -822,6 +822,37 @@ internal sealed partial class PptxRenderer
                 };
             }
         }
+    }
+
+    private static TextRun PlaceTextClip(TextRun run, PptxTextFrameModel frame, PptxDocument document)
+    {
+        // Source frames describe local crop axes; the paint primitive accepts a
+        // physical rectangle for rotated text. Resolve that contract here when
+        // the transformed crop is still exactly a rectangle. Oblique source
+        // clipping retains its existing fallback rather than enlarging a polygon.
+        if (!TextClipUsesPhysicalCoordinates(run)) return run;
+        var matrix = TextTransformMatrix(run);
+        const double roundoff = 1e-12;
+        bool rectangle = Math.Abs(matrix.B) < roundoff && Math.Abs(matrix.C) < roundoff ||
+            Math.Abs(matrix.A) < roundoff && Math.Abs(matrix.D) < roundoff;
+        if (!rectangle) return run;
+        bool localX = frame.BodyProperties.ClipsTextHorizontally || frame.TableRowIndex.HasValue;
+        bool localY = ClipsTextVerticalOverflow(frame.BodyProperties.VerticalOverflow) || frame.TableRowIndex.HasValue;
+        if (!localX && !localY) return run; // A slide viewport already uses physical coordinates.
+
+        double determinant = matrix.A * matrix.D - matrix.B * matrix.C;
+        var inverse = (matrix.D / determinant, -matrix.B / determinant, -matrix.C / determinant, matrix.A / determinant,
+            (matrix.C * matrix.F - matrix.D * matrix.E) / determinant,
+            (matrix.B * matrix.E - matrix.A * matrix.F) / determinant);
+        var viewport = TransformedRectangleBounds(new PdfRectangle(0, 0, document.SlideWidthPoints, document.SlideHeightPoints), inverse);
+        // Overflow on an unconstrained source axis must cover the inverse slide
+        // viewport, not the old unrotated page extent on that axis.
+        var local = new PdfRectangle(localX ? run.ClipX : viewport.X, localY ? run.ClipY : viewport.Y,
+            localX ? run.ClipWidth : viewport.Width, localY ? run.ClipHeight : viewport.Height);
+        var physical = TransformedRectangleBounds(local, matrix);
+        TryIntersectWithSlideBounds(physical.X, physical.Y, physical.Width, physical.Height, document,
+            out double x, out double y, out double width, out double height);
+        return run with { ClipX = x, ClipY = y, ClipWidth = width, ClipHeight = height };
     }
 
 }
