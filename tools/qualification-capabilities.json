@@ -1,4 +1,10 @@
 {
+  "pptx-native-chart-content": [
+    "PptxSyntheticBarChartsRenderNativeCharts",
+    "PortableRenderingSourceLabelOracleKeepsScalarAndGlyphUnits",
+    "PortableRenderingSourceLabelOracleRejectsMissingClippedAndPartialGlyphs",
+    "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures"
+  ],
   "pptx-workbook-source-semantics": [
     "PptxWorkbook",
     "CancelledRangeExpansionObservesCancellation",
