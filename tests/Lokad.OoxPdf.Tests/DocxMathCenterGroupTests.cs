@@ -111,7 +111,7 @@ internal static partial class DocxMathCenterGroupTests
     }
 
     private static DocxDocument Read(string? local, string? global = null, bool prose = false,
-        string container = "body", bool counter = false)
+        string container = "body", bool counter = false, OoxPdfDocxMarkupMode markupMode = OoxPdfDocxMarkupMode.Final)
     {
         string Equation(string text) => "<m:oMathPara>" + (local is null ? "" : $"<m:oMathParaPr><m:jc m:val=\"{local}\"/></m:oMathParaPr>") +
             $"<m:oMath><m:r><m:t>{text}</m:t></m:r></m:oMath></m:oMathPara>";
@@ -159,6 +159,6 @@ internal static partial class DocxMathCenterGroupTests
         if (note) parts[$"word/{story}s.xml"] = $"<w:{story}s {namespaces}><w:{story} w:id=\"1\">{paragraph}</w:{story}></w:{story}s>";
         using var stream = TestFixtures.CreateZipPackage(parts);
         using var package = OoxPackage.Open(stream, default);
-        return new DocxReader().Read(package, null, default, OoxPdfDocxMarkupMode.Final);
+        return new DocxReader().Read(package, null, default, markupMode);
     }
 }

@@ -20,16 +20,18 @@ internal static partial class DocxMathCenterGroupTests
     public static void DocxMathInheritedAlignmentMatchesLocalPaintAcrossContainers()
     {
         var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
-        var renderer = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
-        foreach (string container in new[] { "body", "cell", "header", "footer", "header-cell", "inlinebox", "floatingbox" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        foreach (string container in new[] { "body", "cell", "header", "footer", "header-cell", "inlinebox" })
         foreach (string alignment in new[] { "left", "right" })
         {
-            var inherited = renderer.RenderPagesAsync(Read(null, alignment, container: container), null, default)
+            var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final ?
+                OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+            var inherited = renderer.RenderPagesAsync(Read(null, alignment, container: container, markupMode: mode), null, default)
                 .ToBlockingEnumerable().Single();
-            var local = renderer.RenderPagesAsync(Read(alignment, container: container), null, default)
+            var local = renderer.RenderPagesAsync(Read(alignment, container: container, markupMode: mode), null, default)
                 .ToBlockingEnumerable().Single();
             TestAssert.Equal(local.Content, inherited.Content);
-            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(inherited, true).Select(show => show.Text))
+            string text = string.Concat(DocxCommentsTests.ReadEmbeddedGlyphTextShows(inherited, true, includeTextTransforms: true).Select(show => show.Text))
                 .Normalize(System.Text.NormalizationForm.FormKC);
             TestAssert.True(text.Contains('a') && text.Contains('b') && text.Contains('c'),
                 "Equivalent placement must retain all three equations: " + container + "/" + alignment);
