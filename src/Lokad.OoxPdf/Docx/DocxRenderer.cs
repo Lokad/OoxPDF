@@ -454,9 +454,9 @@ internal sealed partial class DocxRenderer
         if (plainNotes ||
             context.GeometryMode == OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup && context.WordCompatiblePrintScale == 1d &&
             fonts.TextMeasurer is not null && fonts.FallbackFaces.Count == 0 &&
-            (DocxPlainFootnoteKerning.TryCreateDocument(document, first, out adjusted, out originalPages) ||
+            (DocxPlainFootnoteKerning.TryCreateDocument(document, first, out adjusted, out originalPages, cancellationToken) ||
                 DocxWrappedCalibriKerning.TryCreateDocument(document, first, out adjusted, out originalPages,
-                    DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences)))
+                    DocxWrappedCalibriPolicy.SourceThresholds, DocxFootnoteOwnerScope.AllSourceReferences, cancellationToken)))
         {
             var adjustedFonts = await PrepareFontResourcesCoreAsync(adjusted, resolver, diagnostics, cancellationToken, context.CommentMarkerLabels is not null, pageCount, fontCache).ConfigureAwait(false);
             var adjustedLayout = CreatePlainFootnoteTextLayout(adjusted, adjustedFonts, context, geometry, cancellationToken, pageCount);

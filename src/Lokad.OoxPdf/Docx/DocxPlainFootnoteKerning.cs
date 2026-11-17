@@ -3,8 +3,9 @@ namespace Lokad.OoxPdf.Docx;
 internal static class DocxPlainFootnoteKerning
 {
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
-        out DocxDocument adjusted, out IReadOnlyDictionary<string, int> pages)
+        out DocxDocument adjusted, out IReadOnlyDictionary<string, int> pages, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         adjusted = source;
         pages = new Dictionary<string, int>();
         bool ordinary = DocxPlainBodyFrame.IsOrdinaryBody(source);
@@ -84,14 +85,12 @@ internal static class DocxPlainFootnoteKerning
         }
         if (replacements.Count == 0 ||
             !ordinary && !DocxPageFootnoteNumbering.TryGetReferencePages(source, layout, out pages)) return false;
-        DocxParagraph Replace(DocxParagraph p) => replacements.GetValueOrDefault(p, p);
-        IReadOnlyList<DocxBodyElement> ReplaceElements(IReadOnlyList<DocxBodyElement> elements) =>
-            elements.Select(e => e is DocxParagraphElement p ? p with { Paragraph = Replace(p.Paragraph) } : e).ToArray();
+        var publication = new DocxParagraphReplacements(replacements, cancellationToken);
         adjusted = source with {
-            BodyElements = ReplaceElements(source.BodyElements),
-            FallbackParagraphs = source.FallbackParagraphs.Select(Replace).ToArray(),
+            BodyElements = publication.ReplaceElements(source.BodyElements),
+            FallbackParagraphs = source.FallbackParagraphs.Select(publication.Replace).ToArray(),
             RelatedStories = source.RelatedStories.Select(s => s with {
-                BodyElements = ReplaceElements(s.BodyElements), FallbackParagraphs = s.FallbackParagraphs.Select(Replace).ToArray()
+                BodyElements = publication.ReplaceElements(s.BodyElements), FallbackParagraphs = s.FallbackParagraphs.Select(publication.Replace).ToArray()
             }).ToArray()
         };
         return true;

@@ -5,8 +5,10 @@ internal static class DocxWrappedCalibriKerning
     internal static bool TryCreateDocument(DocxDocument source, DocxLayout layout,
         out DocxDocument adjusted, out IReadOnlyDictionary<string, int> pages,
         DocxWrappedCalibriPolicy policy = DocxWrappedCalibriPolicy.SourceNominal,
-        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs)
+        DocxFootnoteOwnerScope ownerScope = DocxFootnoteOwnerScope.SingleReferenceParagraphs,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         adjusted = source;
         if (!DocxPageFootnoteNumbering.TryGetWrappedCalibriPages(source, layout, out pages, policy, ownerScope)) return false;
         var replacements = new Dictionary<DocxParagraph, DocxParagraph>(ReferenceEqualityComparer.Instance);
@@ -25,14 +27,12 @@ internal static class DocxWrappedCalibriKerning
             if (changed) replacements.Add(paragraph, paragraph with { Runs = runs });
         }
         if (replacements.Count == 0) return policy == DocxWrappedCalibriPolicy.SourceThresholds;
-        DocxParagraph Replace(DocxParagraph p) => replacements.GetValueOrDefault(p, p);
-        IReadOnlyList<DocxBodyElement> ReplaceElements(IReadOnlyList<DocxBodyElement> elements) =>
-            elements.Select(e => e is DocxParagraphElement p ? p with { Paragraph = Replace(p.Paragraph) } : e).ToArray();
+        var publication = new DocxParagraphReplacements(replacements, cancellationToken);
         adjusted = source with {
-            BodyElements = ReplaceElements(source.BodyElements),
-            FallbackParagraphs = source.FallbackParagraphs.Select(Replace).ToArray(),
+            BodyElements = publication.ReplaceElements(source.BodyElements),
+            FallbackParagraphs = source.FallbackParagraphs.Select(publication.Replace).ToArray(),
             RelatedStories = source.RelatedStories.Select(s => s with {
-                BodyElements = ReplaceElements(s.BodyElements), FallbackParagraphs = s.FallbackParagraphs.Select(Replace).ToArray()
+                BodyElements = publication.ReplaceElements(s.BodyElements), FallbackParagraphs = s.FallbackParagraphs.Select(publication.Replace).ToArray()
             }).ToArray()
         };
         return true;

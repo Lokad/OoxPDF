@@ -1,4 +1,18 @@
 {
+  "docx-note-paragraph-publication": [
+    "DocxPlainFootnoteKerning",
+    "DocxWrappedCalibriKerning",
+    "DocxMultipleWrappedCalibri",
+    "DocxCompleteEndnoteKerningProtectsOwnedCustomBaselinePrefixes",
+    "DocxCompleteEndnoteKerningResolvesThresholdsWithoutRewritingOwners",
+    "DocxCompleteEndnoteKerningRetainsMalformedAndUnqualifiedFallbacks",
+    "DocxContinuedEndnoteKerningPreservesSourceMarkersAndPageRanges",
+    "DocxCompleteFootnoteKerningProtectsOwnedCustomBaselinePrefixes",
+    "DocxCompleteFootnoteKerningRejectsAmbiguousCustomSourceOwners",
+    "DocxJointMixedNoteTypographyPreservesTypedOwnersAndSourceMetadata",
+    "DocxJointMixedNoteTypographyRetainsSingleKindAndIncompleteOwnerFallbacks",
+    "ConvertObservesCancellationAfterWorkBegins"
+  ],
   "pptx-scalar-caps": [
     "PptxScalarCaps",
     "PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns",

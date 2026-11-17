@@ -127,14 +127,13 @@ internal static class DocxNoteKerning
         }
         if (pageById.Count == 0) return false;
         if (replacements.Count == 0) return true;
-        DocxParagraph Replace(DocxParagraph p) => replacements.GetValueOrDefault(p, p);
+        var publication = new DocxParagraphReplacements(replacements, cancellationToken);
         adjusted = source with
         {
             RelatedStories = source.RelatedStories.Select(s => s with
             {
-                BodyElements = s.BodyElements.Select(e => e is DocxParagraphElement p
-                    ? p with { Paragraph = Replace(p.Paragraph) } : e).ToArray(),
-                FallbackParagraphs = s.FallbackParagraphs.Select(Replace).ToArray(),
+                BodyElements = publication.ReplaceElements(s.BodyElements),
+                FallbackParagraphs = s.FallbackParagraphs.Select(publication.Replace).ToArray(),
             }).ToArray(),
         };
         return true;
