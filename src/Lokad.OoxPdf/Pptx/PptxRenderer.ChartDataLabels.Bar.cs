@@ -3,7 +3,6 @@ using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
@@ -68,7 +67,7 @@ internal sealed partial class PptxRenderer
         PresentationFontResolver? fontResolver,
         List<PdfFontResource> chartFonts,
         PptxRenderContext context,
-        IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
+        PptxSceneChart? chart,
         List<PdfLinkAnnotation> linkAnnotations,
         HashSet<string> reportedHyperlinkIds,
         Action<OoxPdfDiagnostic>? diagnosticSink = null,
@@ -113,7 +112,7 @@ internal sealed partial class PptxRenderer
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
         var textMeasurer = new ChartTextMeasurer(fontResolver);
-        List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
+        List<ChartTextRunLink>? labelLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
         bool stacked = IsStackedChartGrouping(grouping);
         bool percentStacked = IsPercentStackedChartGrouping(grouping);
         if (horizontalBars)
@@ -362,6 +361,6 @@ internal sealed partial class PptxRenderer
         }
 
         RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CBD", fontResolver, diagnosticSink).ConfigureAwait(false));
-        AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chart, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
     }
 }

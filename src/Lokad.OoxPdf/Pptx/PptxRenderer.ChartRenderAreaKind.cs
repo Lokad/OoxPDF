@@ -153,7 +153,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneSeriesDataLabelOptions(sceneChart, areaPlot),
                     ReadSceneCategoryLabelVector(areaPlot, workbook, plotVisibleOnly),
                     ReadSharedChartSeriesNames(areaPlot, workbook), fontResolver, fonts, context,
-                    sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
+                    sceneChart, linkAnnotations, reportedHyperlinkIds,
                     categoryAxisReversed: categoryAxisReversed, areaOptions: areaOptions,
                     areaSeriesFills: seriesFills, areaCrossingValue: valueAxisOptions.CrossingValue).ConfigureAwait(false);
                 return true;

@@ -1,4 +1,21 @@
 {
+  "pptx-hyperlink-part-ownership": [
+    "PptxHyperlinkDiagnosticsKeepNodeAndRunPartOwners",
+    "PptxHyperlinkDiagnosticsKeepChartOwnersAcrossTextRoles",
+    "PptxShapeHyperlinkMissingRelationshipEmitsDiagnostic",
+    "PptxNodeHyperlinkMissingRelationshipAggregatesPerSlide",
+    "PptxShapeHyperlinkActionWithoutTargetEmitsDiagnostic",
+    "PptxChartTitleHyperlinkActionIsDiagnosed",
+    "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartAxisTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation",
+    "PortableRenderingChartCachedFieldsKeepWordsAndHyperlinksAcrossTextOwners",
+    "PptxShapeExternalHyperlinkEmitsUriAnnotation",
+    "PptxShapeInternalSlideHyperlinkEmitsDestination",
+    "PptxInheritanceLayoutPermissionReachesGroupsLinksAndDiagnostics",
+    "PptxPlaceholderFramesKeepInkAndLinksAcrossEmptyOwners",
+    "ConvertPptxObservesCancellationAfterWorkBegins"
+  ],
   "pptx-placeholder-frames": [
     "PptxPlaceholderFramesKeepInkAndLinksAcrossEmptyOwners",
     "PptxPlaceholderIndicesKeepNumericOwnersAndExplicitFallbacks",

@@ -283,7 +283,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneDataLabelOptions(sceneChart, extraBarPlot),
                         ReadSceneSeriesDataLabelOptions(sceneChart, extraBarPlot),
                         ReadSceneCategoryLabelVector(extraBarPlot, workbook, plotVisibleOnly),
-                        ReadSharedChartSeriesNames(extraBarPlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds,
+                        ReadSharedChartSeriesNames(extraBarPlot, workbook), fontResolver, fonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds,
                         categoryPlacement: sharedValueAxis && extraHorizontalBars ? resolvedCategory : null).ConfigureAwait(false);
                 }
 
@@ -350,7 +350,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneDataLabelOptions(sceneChart, linePlot),
                         ReadSceneSeriesDataLabelOptions(sceneChart, linePlot),
                         ReadSceneCategoryLabelVector(linePlot, workbook, plotVisibleOnly),
-                        ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
+                        ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
                 }
 
                 if (axesStyle.CategoryAxisVisible && IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
@@ -511,7 +511,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneDataLabelOptions(sceneChart, barPlot),
                     ReadSceneSeriesDataLabelOptions(sceneChart, barPlot),
                     ReadSceneCategoryLabelVector(barPlot, workbook, plotVisibleOnly),
-                    ReadSharedChartSeriesNames(barPlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, categoryPlacement: resolvedCategory).ConfigureAwait(false);
+                    ReadSharedChartSeriesNames(barPlot, workbook), fontResolver, fonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds, categoryPlacement: resolvedCategory).ConfigureAwait(false);
                 return true;
             }
         }

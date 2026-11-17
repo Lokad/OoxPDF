@@ -32,15 +32,17 @@ internal sealed partial class PptxRenderer
         string? relationshipId = emissionSpan.SourceRun?.Style.HyperlinkClickId;
         if (string.IsNullOrEmpty(relationshipId))
         {
+            string? action = emissionSpan.SourceRun?.Style.HyperlinkClickAction;
             if (emissionSpan.SourceRun?.Style.HasHyperlinkClick == true &&
-                !string.IsNullOrEmpty(emissionSpan.SourceRun?.Style.HyperlinkClickAction) &&
-                scope.ReportedIds.Add("action:" + emissionSpan.SourceRun?.Style.HyperlinkClickAction))
+                !string.IsNullOrEmpty(action))
             {
                 EmitHyperlinkDiagnostic(
                     scope.Context,
                     scope.SourcePartName ?? scope.Context.SlidePartName,
+                    scope.ReportedIds,
+                    action,
                     "PPTX_UNSUPPORTED_HYPERLINK_ACTION",
-                    $"Hyperlink action '{emissionSpan.SourceRun?.Style.HyperlinkClickAction}' is not supported and was ignored.");
+                    $"Hyperlink action '{action}' is not supported and was ignored.");
             }
 
             return;
@@ -49,14 +51,8 @@ internal sealed partial class PptxRenderer
         PptxHyperlinkResolution resolution = ResolveHyperlink(scope.Context, scope.SourcePartName, relationshipId);
         if (!resolution.Resolved)
         {
-            if (scope.ReportedIds.Add(resolution.FailureId + "\0" + relationshipId))
-            {
-                EmitHyperlinkDiagnostic(
-                    scope.Context,
-                    scope.SourcePartName ?? scope.Context.SlidePartName,
-                    resolution.FailureId,
-                    resolution.FailureMessage);
-            }
+            EmitHyperlinkDiagnostic(scope.Context, scope.SourcePartName ?? scope.Context.SlidePartName,
+                scope.ReportedIds, relationshipId, resolution.FailureId, resolution.FailureMessage);
 
             return;
         }

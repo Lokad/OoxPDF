@@ -3,7 +3,6 @@ using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
-using Lokad.OoxPdf.Ooxml;
 using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 using Lokad.OoxPdf.Pdf;
 
@@ -25,7 +24,7 @@ internal sealed partial class PptxRenderer
         return startAngleRadians - sliceValue / total * Math.PI;
     }
 
-    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, ChartPlotBox placementBox, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, IReadOnlyDictionary<string, OoxRelationship>? chartRelationships, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
+    private static async ValueTask RenderPieDataLabelsAsync(PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ChartColorPalette chartPalette, ChartPolarLayout layout, ChartPlotBox placementBox, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames, PresentationFontResolver? fontResolver, List<PdfFontResource> chartFonts, PptxRenderContext context, PptxSceneChart? chart, List<PdfLinkAnnotation> linkAnnotations, HashSet<string> reportedHyperlinkIds, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (!labelOptions.HasVisibleText || slices.Count == 0)
         {
@@ -44,7 +43,7 @@ internal sealed partial class PptxRenderer
         double labelWidth = Math.Max(PptxChartMetricRules.PieDataLabelMinimumWidth, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(slices.Count);
         var paints = new List<PolarLabelPaint>(slices.Count);
-        List<ChartTextRunLink>? labelLinks = chartRelationships is null ? null : new List<ChartTextRunLink>();
+        List<ChartTextRunLink>? labelLinks = chart?.Relationships is null ? null : new List<ChartTextRunLink>();
         Dictionary<int, string> categoryLabelIndex = BuildCategoryLabelIndex(categoryLabels);
         double angle = GetPieDataLabelStartAngle(firstSliceAngle);
         // Office draws leader lines only for same-side narrow manual pie labels (the
@@ -252,7 +251,7 @@ internal sealed partial class PptxRenderer
                 }
         }
         RenderedFonts labelFonts = (await RenderChartTextRunsAsync(runs, graphics, chartFonts, "CP", fontResolver, diagnosticSink).ConfigureAwait(false));
-        AddChartTextRunHyperlinkAnnotations(labelLinks, chartRelationships, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
+        AddChartTextRunHyperlinkAnnotations(labelLinks, chart, context, labelFonts, linkAnnotations, reportedHyperlinkIds);
 
         IReadOnlyList<string> FormatPieDataLabelParts(double value, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, ChartDataLabelOptions options)
         {

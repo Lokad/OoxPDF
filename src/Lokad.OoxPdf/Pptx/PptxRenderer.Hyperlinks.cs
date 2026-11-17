@@ -53,9 +53,10 @@ internal sealed partial class PptxRenderer
         string? relationshipId = node.HyperlinkClick.RelationshipId;
         if (string.IsNullOrEmpty(relationshipId))
         {
-            if (!string.IsNullOrEmpty(node.HyperlinkClick.Action) && reportedIds.Add("action:" + node.HyperlinkClick.Action))
+            if (!string.IsNullOrEmpty(node.HyperlinkClick.Action))
             {
-                EmitHyperlinkDiagnostic(context, partName, "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{node.HyperlinkClick.Action}' is not supported and was ignored.");
+                EmitHyperlinkDiagnostic(context, partName, reportedIds, node.HyperlinkClick.Action,
+                    "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{node.HyperlinkClick.Action}' is not supported and was ignored.");
             }
 
             return;
@@ -64,10 +65,7 @@ internal sealed partial class PptxRenderer
         PptxHyperlinkResolution resolution = ResolveHyperlink(context, sourcePartName, relationshipId);
         if (!resolution.Resolved)
         {
-            if (reportedIds.Add(resolution.FailureId + "\u0000" + relationshipId))
-            {
-                EmitHyperlinkDiagnostic(context, partName, resolution.FailureId, resolution.FailureMessage);
-            }
+            EmitHyperlinkDiagnostic(context, partName, reportedIds, relationshipId, resolution.FailureId, resolution.FailureMessage);
 
             return;
         }
@@ -97,9 +95,10 @@ internal sealed partial class PptxRenderer
 
         if (string.IsNullOrEmpty(link.RelationshipId))
         {
-            if (!string.IsNullOrEmpty(link.Action) && reportedIds.Add("action:" + link.Action))
+            if (!string.IsNullOrEmpty(link.Action))
             {
-                EmitHyperlinkDiagnostic(context, chartPartName ?? context.SlidePartName, "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{link.Action}' is not supported and was ignored.");
+                EmitHyperlinkDiagnostic(context, chartPartName ?? context.SlidePartName, reportedIds, link.Action,
+                    "PPTX_UNSUPPORTED_HYPERLINK_ACTION", $"Hyperlink action '{link.Action}' is not supported and was ignored.");
             }
 
             return;
@@ -108,10 +107,8 @@ internal sealed partial class PptxRenderer
         PptxHyperlinkResolution resolution = ResolveHyperlink(context, chartRelationships, link.RelationshipId);
         if (!resolution.Resolved)
         {
-            if (reportedIds.Add(resolution.FailureId + "\u0000" + link.RelationshipId))
-            {
-                EmitHyperlinkDiagnostic(context, chartPartName ?? context.SlidePartName, resolution.FailureId, resolution.FailureMessage);
-            }
+            EmitHyperlinkDiagnostic(context, chartPartName ?? context.SlidePartName, reportedIds, link.RelationshipId,
+                resolution.FailureId, resolution.FailureMessage);
 
             return;
         }
@@ -132,20 +129,20 @@ internal sealed partial class PptxRenderer
     // Null relationships (scene-less fallback rendering) skip emission silently.
     private static void AddChartTextRunHyperlinkAnnotations(
         List<ChartTextRunLink>? links,
-        IReadOnlyDictionary<string, OoxRelationship>? chartRelationships,
+        PptxSceneChart? chart,
         PptxRenderContext context,
         RenderedFonts renderedFonts,
         List<PdfLinkAnnotation> annotations,
         HashSet<string> reportedIds)
     {
-        if (links is null || chartRelationships is null)
+        if (links is null || chart?.Relationships is not { } chartRelationships)
         {
             return;
         }
 
         foreach (ChartTextRunLink link in links)
         {
-            AddChartTextRunHyperlinkAnnotation(link, chartRelationships, context, null, annotations, reportedIds, renderedFonts.Fonts);
+            AddChartTextRunHyperlinkAnnotation(link, chartRelationships, context, chart.TargetPartName, annotations, reportedIds, renderedFonts.Fonts);
         }
     }
 
@@ -225,8 +222,12 @@ internal sealed partial class PptxRenderer
         return context.SlideRelationships;
     }
 
-    private static void EmitHyperlinkDiagnostic(PptxRenderContext context, string partName, string id, string message)
+    private static void EmitHyperlinkDiagnostic(PptxRenderContext context, string partName,
+        HashSet<string> reportedIds, string localIdentity, string id, string message)
     {
+        // Relationship IDs and actions belong to their source part, even when
+        // node, run and chart painters share one reporting set for the slide.
+        if (!reportedIds.Add(partName + "\0" + id + "\0" + localIdentity)) return;
         context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
             id,
             OoxPdfSeverity.Warning,

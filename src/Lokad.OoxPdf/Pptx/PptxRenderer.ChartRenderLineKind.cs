@@ -146,7 +146,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneDataLabelOptions(sceneChart, linePlot),
                     ReadSceneSeriesDataLabelOptions(sceneChart, linePlot),
                     ReadSceneCategoryLabelVector(linePlot, workbook, plotVisibleOnly),
-                    ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart.Relationships, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointLegend ? pointAppearance : null, seriesAppearance: seriesAppearance, categoryAxisReversed: categoryAxisReversed, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
+                    ReadSharedChartSeriesNames(linePlot, workbook), fontResolver, fonts, context, sceneChart, linkAnnotations, reportedHyperlinkIds, pointAppearance: pointLegend ? pointAppearance : null, seriesAppearance: seriesAppearance, categoryAxisReversed: categoryAxisReversed, chartRootFontSize: sceneChart.TextStyle.FontSize).ConfigureAwait(false);
                 return true;
             }
         }
