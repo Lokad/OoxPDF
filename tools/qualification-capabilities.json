@@ -1,4 +1,25 @@
 {
+  "managed-source-label-geometry": [
+    "PortableRenderingBlankLeadingPageKeepsContinuationFooters",
+    "PortableRenderingColumnFallbackKeepsBodyAndFooterInk",
+    "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
+    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
+    "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
+    "PortableRenderingJustifiedStaticParagraphsKeepFooterInkAndPhysicalFrames",
+    "PortableRenderingLeadingBodyContainersKeepStaticFooterInk",
+    "PortableRenderingLeadingEmptyAndEquationPagesKeepStaticInk",
+    "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
+    "PortableRenderingPictureOnlyNestedTablesKeepTheirBodyOrigin",
+    "PortableRenderingPlainStaticCountersKeepFooterInkAndIndependentFrames",
+    "PortableRenderingSectionRecordsKeepContentAndPageOwners",
+    "PortableRenderingSourceLabelOracleKeepsEmittedAdvancesAndTextTransforms",
+    "PortableRenderingSourceLabelOracleKeepsScalarAndGlyphUnits",
+    "PortableRenderingSourceLabelOracleRejectsDisplacedAndAlternateGlyphs",
+    "PortableRenderingSourceLabelOracleRejectsMissingClippedAndPartialGlyphs",
+    "PortableRenderingStaticFallbackKeepsItsCounterpartVisible",
+    "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk",
+    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames"
+  ],
   "pptx-workbook-source-semantics": [
     "PptxWorkbook",
     "CancelledRangeExpansionObservesCancellation",

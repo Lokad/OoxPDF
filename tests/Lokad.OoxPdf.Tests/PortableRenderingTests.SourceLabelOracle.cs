@@ -33,6 +33,50 @@ internal static partial class PortableRenderingTests
         TestAssert.Contains("A source label must own complete glyphs", partial.Message);
     }
 
+    public static void PortableRenderingSourceLabelOracleRejectsDisplacedAndAlternateGlyphs()
+    {
+        var font = TestAssert.NotNull(FontProgramLoader.Load(new PinnedResolver().Resolve(new FontRequest("DejaVu Sans")), default));
+        var embedded = PdfEmbeddedFont.Create(font, ['A', 'B'], default);
+        string hex = embedded.EncodeGlyphHex("AB");
+        foreach (var (spacing, show) in new[] { (100, $"<{hex}> Tj"), (0, $"[<{hex[..4]}> -10000 <{hex[4..]}>] TJ") })
+        {
+            var page = new PdfPage(100, 100,
+                $"q\n0 0 70 100 re W n\nBT\n/F1 12 Tf\n{spacing} Tc\n1 0 0 1 10 50 Tm\n{show}\nET\nQ\n",
+                [new PdfFontResource("F1", embedded)]);
+            PdfContentValidator.ValidatePage(page, 0, default);
+            var failure = TestAssert.Throws<InvalidOperationException>(() => ReadPaintedSourceLabel(page, "AB"));
+            TestAssert.Contains("Every source glyph must remain inside the paper and effective clips", failure.Message);
+        }
+        // The logical I has the physical W outline; cmap(I) cannot certify its ink.
+        var alternate = PdfEmbeddedFont.CreateForGlyphMappings(font, [(font.MapCodePoint('W'), (int)'I')], default);
+        TestAssert.True(alternate.TryGetEncodedCid(font.MapCodePoint('W'), out ushort cid), "The authored alternate outline is embedded.");
+        var variant = new PdfPage(100, 100,
+            $"q\n0 0 16 100 re W n\nBT\n/F1 24 Tf\n0 Tc\n1 0 0 1 10 50 Tm\n<{cid:X4}> Tj\nET\nQ\n",
+            [new PdfFontResource("F1", alternate)]);
+        PdfContentValidator.ValidatePage(variant, 0, default);
+        var clipped = TestAssert.Throws<InvalidOperationException>(() => ReadPaintedSourceLabel(variant, "I"));
+        TestAssert.Contains("Every source glyph must remain inside the paper and effective clips", clipped.Message);
+    }
+
+    public static void PortableRenderingSourceLabelOracleKeepsEmittedAdvancesAndTextTransforms()
+    {
+        var font = TestAssert.NotNull(FontProgramLoader.Load(new PinnedResolver().Resolve(new FontRequest("DejaVu Sans")), default));
+        var embedded = PdfEmbeddedFont.Create(font, ['A', 'B'], default);
+        string hex = embedded.EncodeGlyphHex("AB");
+        foreach (var (spacing, show) in new[] { (3, $"<{hex}> Tj"), (0, $"[<{hex[..4]}> -250 <{hex[4..]}>] TJ") })
+        {
+            var page = new PdfPage(200, 200,
+                $"BT\n/F1 12 Tf\n{spacing} Tc\n1 0.5 0 1 10 50 Tm\n{show}\nET\n",
+                [new PdfFontResource("F1", embedded)]);
+            PdfContentValidator.ValidatePage(page, 0, default);
+            var glyphs = ReadPaintedSourceLabel(page, "AB");
+            TestAssert.Equal(2, glyphs.Count);
+            // Pinned DejaVu Sans A: emitted /W 684, 12pt, plus 3pt tracking.
+            TestAssert.True(Math.Abs(glyphs[1].Origin.X - 21.208d) < .001d && Math.Abs(glyphs[1].Origin.Y - 55.604d) < .001d,
+                "The second glyph uses emitted PDF width, spacing and the authored text matrix.");
+        }
+    }
+
     private static PdfPage SourceLabelOraclePage(OpenTypeFont font, string text, bool clipped = false)
     {
         var embedded = PdfEmbeddedFont.Create(font, text.EnumerateRunes().Select(rune => rune.Value), default);

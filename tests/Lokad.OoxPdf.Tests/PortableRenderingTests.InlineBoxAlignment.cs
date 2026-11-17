@@ -175,28 +175,45 @@ internal static partial class PortableRenderingTests
     {
         // Match source characters across text-show boundaries, then check their
         // font ink against each physical paint frame. Existing readers own PDF syntax.
-        var characters = new List<(int Offset, int Length, ushort Glyph, PdfEmbeddedFont Font, double Size,
-            double X, double Y, PdfRectangle Clip, Matrix3x2 Transform)>();
+        var characters = new List<(int Offset, int Length, ushort Glyph, OpenTypeFont Font, double Size,
+            PdfRectangle Clip, Matrix3x2 Transform)>();
+        var bindings = new Dictionary<PdfEmbeddedFont, (OpenTypeFont Program, Dictionary<ushort, ushort> Glyphs)>();
         var text = new StringBuilder();
         foreach (var (block, clip, transform) in DocxNoteClippingTests.ReadPhysicalPaintFrames(page))
         foreach (var show in DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, block, page.Fonts),
-            usePageCoordinates: false, honorActualText: false,
+            usePageCoordinates: false, includeTextTransforms: true, honorActualText: false,
             fontResourceFilter: mathOnly ? name => name.StartsWith("Eq", StringComparison.Ordinal) :
-                fontPrefix is not null ? name => name.StartsWith(fontPrefix, StringComparison.Ordinal) : null))
+                fontPrefix is not null ? name => name.StartsWith(fontPrefix, StringComparison.Ordinal) : null,
+            glyphPaint: paint =>
         {
-            double x = show.X, scale = show.Size / show.Font.Font.UnitsPerEm;
-            foreach (var rune in show.Text.EnumerateRunes())
+            if (!bindings.TryGetValue(paint.Font, out var binding))
             {
-                ushort glyph = show.Font.Font.MapCodePoint(rune.Value);
-                if (!Rune.IsWhiteSpace(rune))
+                var glyphs = new Dictionary<ushort, ushort>();
+                foreach (ushort original in paint.Font.UnicodeByOriginalGlyph.Keys)
                 {
-                    string normalized = rune.ToString().Normalize(NormalizationForm.FormKC);
-                    characters.Add((text.Length, normalized.Length, glyph, show.Font, show.Size, x, show.Y, clip, transform));
-                    text.Append(normalized);
+                    TestAssert.True(paint.Font.TryGetEncodedCid(original, out ushort cid), "Every source outline has an embedded CID.");
+                    glyphs[cid] = cid; // Canonical subset/whole-font CIDs address their program directly.
                 }
-                x += show.Font.Font.GetAdvanceWidth(glyph) * scale;
+                foreach (var alias in paint.Font.UnicodeByCid.Where(pair => !glyphs.ContainsKey(pair.Key)))
+                {
+                    ushort original = paint.Font.UnicodeByOriginalGlyph.Keys.Single(glyph =>
+                        paint.Font.TryGetEncodedCid(glyph, alias.Value, out ushort cid) && cid == alias.Key);
+                    TestAssert.True(paint.Font.TryGetEncodedCid(original, out ushort canonical), "Source aliases keep a canonical outline.");
+                    glyphs.Add(alias.Key, canonical);
+                }
+                binding = (OpenTypeFont.Load(paint.Font.FontProgramBytes.ToArray()), glyphs);
+                bindings.Add(paint.Font, binding);
             }
-        }
+            ushort glyph = binding.Glyphs[paint.Cid];
+            var rune = new Rune(paint.Unicode);
+            if (!Rune.IsWhiteSpace(rune))
+            {
+                string normalized = rune.ToString().Normalize(NormalizationForm.FormKC);
+                characters.Add((text.Length, normalized.Length, glyph, binding.Program, paint.Size, clip, paint.Matrix * transform));
+                text.Append(normalized);
+            }
+            return Math.Round(binding.Program.GetAdvanceWidth(glyph) * 1000d / binding.Program.UnitsPerEm) * paint.Size / 1000d;
+        })) { }
         string wanted = string.Concat(label.Where(c => !char.IsWhiteSpace(c))).Normalize(NormalizationForm.FormKC);
         string actual = text.ToString();
         int start = actual.IndexOf(wanted, StringComparison.Ordinal);
@@ -212,7 +229,7 @@ internal static partial class PortableRenderingTests
             TestAssert.Equal(covered, character.Offset);
             covered += character.Length;
             TestAssert.True(covered <= start + wanted.Length, "A source label must own complete glyphs: " + label);
-            var font = character.Font.Font;
+            var font = character.Font;
             TestAssert.True(font.TryGetGlyphBounds(character.Glyph, out var ink), "Pinned fonts supply the source glyph ink.");
             double scale = character.Size / font.UnitsPerEm;
             double left = double.PositiveInfinity, bottom = double.PositiveInfinity;
@@ -220,14 +237,14 @@ internal static partial class PortableRenderingTests
             foreach (double x in new[] { ink.XMin, ink.XMax })
             foreach (double y in new[] { ink.YMin, ink.YMax })
             {
-                var point = Vector2.Transform(new((float)(character.X + x * scale), (float)(character.Y + y * scale)), character.Transform);
+                var point = Vector2.Transform(new((float)(x * scale), (float)(y * scale)), character.Transform);
                 left = Math.Min(left, point.X); right = Math.Max(right, point.X);
                 bottom = Math.Min(bottom, point.Y); top = Math.Max(top, point.Y);
                 TestAssert.True(point.X >= character.Clip.X - .01d && point.X <= character.Clip.X + character.Clip.Width + .01d &&
                     point.Y >= character.Clip.Y - .01d && point.Y <= character.Clip.Y + character.Clip.Height + .01d,
                     "Every source glyph must remain inside the paper and effective clips: " + label);
             }
-            result.Add((Vector2.Transform(new((float)character.X, (float)character.Y), character.Transform), character.Size,
+            result.Add((Vector2.Transform(Vector2.Zero, character.Transform), character.Size,
                 new PdfRectangle(left, bottom, right - left, top - bottom)));
         }
         TestAssert.Equal(start + wanted.Length, covered);

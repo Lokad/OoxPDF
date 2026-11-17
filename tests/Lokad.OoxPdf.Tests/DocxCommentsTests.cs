@@ -3827,7 +3827,8 @@ internal static partial class DocxCommentsTests
 
     internal static IEnumerable<(PdfEmbeddedFont Font, string Text, double Size, double X, double Y)> ReadEmbeddedGlyphTextShows(
         PdfPage page, bool usePageCoordinates, bool includeTextTransforms = false, bool honorActualText = true,
-        Func<string, bool>? fontResourceFilter = null)
+        Func<string, bool>? fontResourceFilter = null,
+        Func<(PdfEmbeddedFont Font, ushort Cid, int Unicode, double Size, System.Numerics.Matrix3x2 Matrix), double>? glyphPaint = null)
     {
         // Only the generated graphics-state operators are needed here. Keep
         // the default raw-Tm view for existing emission-contract assertions.
@@ -3838,14 +3839,15 @@ internal static partial class DocxCommentsTests
         Stack<(double A, double B, double C, double D, double E, double F)>? saved = null;
         // A text matrix's linear part (including synthetic slant) leaves its
         // origin at x/y. Existing callers retain their identity-matrix view.
-        string linearTextMatrix = includeTextTransforms ? @"[-+\d.eE]+(?: [-+\d.eE]+){3}" : "1 0 0 1";
+        string linearTextMatrix = includeTextTransforms
+            ? @"(?<a>[-+\d.eE]+) (?<b>[-+\d.eE]+) (?<c>[-+\d.eE]+) (?<d>[-+\d.eE]+)" : "1 0 0 1";
         var actualMarkers = honorActualText ? Regex.Matches(page.Content,
             @"(?m)^(?:/Span << /ActualText <(?<actual>[0-9A-F]+)> >> BDC|(?<end>EMC))\r?$") : null;
         int actualIndex = 0;
         string? actualText = null;
         bool actualEmitted = false;
         foreach (Match show in Regex.Matches(page.Content,
-            @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+\S+ Tc\s+" + linearTextMatrix + @" (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
+            @"/(?<font>\S+) (?<size>[\d.]+) Tf\s+(?<spacing>[-+\d.eE]+) Tc\s+" + linearTextMatrix + @" (?<x>[-\d.]+) (?<y>[-\d.]+) Tm\s*(?<show><[0-9A-F]+> Tj|\[.*?\] TJ)",
             RegexOptions.Singleline))
         {
             if (fontResourceFilter is not null && !fontResourceFilter(show.Groups["font"].Value)) continue;
@@ -3872,18 +3874,41 @@ internal static partial class DocxCommentsTests
             }
             PdfEmbeddedFont font = page.Fonts.Single(resource => resource.ResourceName == show.Groups["font"].Value).Font;
             var text = new StringBuilder();
-            foreach (Match chunk in Regex.Matches(show.Groups["show"].Value, @"<(?<hex>[0-9A-F]+)>"))
+            double x = double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture);
+            double y = double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture);
+            double size = double.Parse(show.Groups["size"].Value, CultureInfo.InvariantCulture);
+            double spacing = double.Parse(show.Groups["spacing"].Value, CultureInfo.InvariantCulture);
+            double advance = 0d;
+            var textMatrix = includeTextTransforms
+                ? new System.Numerics.Matrix3x2(float.Parse(show.Groups["a"].Value, CultureInfo.InvariantCulture),
+                    float.Parse(show.Groups["b"].Value, CultureInfo.InvariantCulture),
+                    float.Parse(show.Groups["c"].Value, CultureInfo.InvariantCulture),
+                    float.Parse(show.Groups["d"].Value, CultureInfo.InvariantCulture), (float)x, (float)y)
+                : System.Numerics.Matrix3x2.CreateTranslation((float)x, (float)y);
+            var pageMatrix = new System.Numerics.Matrix3x2((float)matrix.A, (float)matrix.B, (float)matrix.C,
+                (float)matrix.D, (float)matrix.E, (float)matrix.F);
+            foreach (Match chunk in Regex.Matches(show.Groups["show"].Value,
+                @"<(?<hex>[0-9A-F]+)>|(?<adjust>[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)"))
             {
+                if (chunk.Groups["adjust"].Success)
+                {
+                    advance -= double.Parse(chunk.Groups["adjust"].Value, CultureInfo.InvariantCulture) * size / 1000d;
+                    continue;
+                }
                 string hex = chunk.Groups["hex"].Value;
                 for (int offset = 0; offset < hex.Length; offset += 4)
                 {
                     ushort cid = ushort.Parse(hex.AsSpan(offset, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
                     TestAssert.True(font.UnicodeByCid.TryGetValue(cid, out int codePoint), "Every emitted CID must have a Unicode mapping.");
                     text.Append(char.ConvertFromUtf32(codePoint));
+                    // The physical-ink consumer binds this CID to its embedded
+                    // outline and returns the emitted width in points. Text-only
+                    // callers retain their existing show-origin/logical-text view.
+                    if (glyphPaint is not null)
+                        advance += glyphPaint((font, cid, codePoint, size,
+                            System.Numerics.Matrix3x2.CreateTranslation((float)advance, 0) * textMatrix * pageMatrix)) + spacing;
                 }
             }
-            double x = double.Parse(show.Groups["x"].Value, CultureInfo.InvariantCulture);
-            double y = double.Parse(show.Groups["y"].Value, CultureInfo.InvariantCulture);
             // All physical CIDs were validated above. One assembly span owns
             // one logical symbol, even when several mapped pieces are painted.
             if (actualText is not null)
@@ -3892,7 +3917,7 @@ internal static partial class DocxCommentsTests
                 text.Clear().Append(actualText);
                 actualEmitted = true;
             }
-            yield return (font, text.ToString(), double.Parse(show.Groups["size"].Value, CultureInfo.InvariantCulture),
+            yield return (font, text.ToString(), size,
                 matrix.A * x + matrix.C * y + matrix.E, matrix.B * x + matrix.D * y + matrix.F);
         }
     }
