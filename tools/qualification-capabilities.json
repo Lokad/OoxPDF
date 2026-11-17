@@ -1,4 +1,25 @@
 {
+  "pptx-chart-coverage-fallback": [
+    "PptxChartCoverageFallbackKeepsShapeTitleAndLegendContent",
+    "PptxChartCoverageSplitsKeepMeasuredAlignmentTrackingAndStyle",
+    "PptxFallbackPreservesCaseDistinctProgramIdentities",
+    "PptxCustomResolverDoesNotAddAmbientGlyphFallback",
+    "PptxSharedCatalogReusesPrimaryProgram",
+    "PptxSharedResolverDeduplicatesIdenticalSubsets",
+    "CffChartUnresolvableRunesSubstituteQuestionMark",
+    "PptxChartCffTextSubstitutesFallbackWithDiagnostic",
+    "PptxChartTextConversionUsesCustomFontResolver",
+    "PptxCffSubstitutionMatchesTrueTypeRendering",
+    "PptxChartTitleExternalHyperlinkEmitsUriAnnotation",
+    "PptxChartDataLabelCustomTextHyperlinkEmitsUriAnnotation",
+    "PptxFallbackGlyphPaintUsesDeclaredFaceWidths",
+    "ConvertAsyncPptxChartReturnsWhileFontAcquisitionIsPending",
+    "ConvertAsyncPptxChartCancellationWaitsForTheAcquisitionBorrow",
+    "ConvertAsyncPptxChartCopyRefusalPreservesPublication",
+    "PdfSourceUnicodeAliasesSurviveDocxAndPptxPaintPaths",
+    "RejectsUnbalancedTextState",
+    "RejectsDanglingGraphicsStateReference"
+  ],
   "svg-fill-winding": [
     "SvgFillRulesFollowTheSourcePathAcrossPaintAndDocumentKinds",
     "PptxSyntheticSvgEvenOddFillRulePunchesHole",

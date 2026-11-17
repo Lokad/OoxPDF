@@ -5,7 +5,7 @@ using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
-internal static class PptxFontCacheTests
+internal static partial class PptxFontCacheTests
 {
     public static void PptxEstimatorsSharingResolverReuseLoadedPrograms()
     {

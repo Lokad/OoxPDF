@@ -38,12 +38,9 @@ internal sealed partial class PptxRenderer
         return renderedFonts;
     }
 
-    // Legacy runs address embedded fonts by requested family, but CFF substitution
-    // embeds fallback faces under fallback keys: without rewriting, substituted runs
-    // would miss the lookup and vanish. Rewrite CFF-family runs through the same
-    // per-glyph fallback the estimator measured with (F03). Families resolving to
-    // embeddable-or-missing fonts keep legacy behavior exactly (missing fonts stay
-    // invisible, as before).
+    // Chart measurement and paint must use the same allowed per-glyph face.
+    // Rewrite CFF and incomplete TrueType runs through the existing estimator;
+    // fully covered or unavailable primary faces retain their original handling.
     private static async ValueTask<List<TextRun>> SplitRunsByResolvedTypefaceAsync(
         IReadOnlyList<TextRun> runs,
         PresentationFontResolver fontResolver,
@@ -68,7 +65,8 @@ internal sealed partial class PptxRenderer
                 verdicts[familyKey] = primary;
             }
 
-            if (primary is null || primary.HasTrueTypeOutlines)
+            if (primary is null || primary.HasTrueTypeOutlines &&
+                FontCoverageFallback.IsFullyCovered(run.Text, primary, cancellationToken))
             {
                 rewritten.Add(run);
                 continue;
@@ -76,16 +74,28 @@ internal sealed partial class PptxRenderer
 
             estimator ??= new TextAdvanceEstimator(fontResolver, cancellationToken);
             await estimator.PrepareAsync(run.FontFamily, run.Bold, run.Italic, run.Text).ConfigureAwait(false);
-            List<(string? Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken);
+            // An unresolved glyph in a usable primary keeps that family's existing
+            // diagnosed substitution, including when another glyph needs a fallback.
+            List<(string? Typeface, string Text)> segments = SplitRunByFallbackTypeface(run, estimator, cancellationToken,
+                primary.HasTrueTypeOutlines ? requestedFamily : null);
             if (segments.Count == 1)
             {
                 rewritten.Add(run with { FontFamily = segments[0].Typeface });
             }
             else
             {
-                double cursorX = run.X;
+                double naturalWidth = estimator.Measure(run.Text, run.FontSize, run.FontFamily,
+                    run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
+                double cursorX = run.X + (run.Alignment switch
+                {
+                    TextAlignment.Center => Math.Max(0d, run.Width - naturalWidth) / 2d,
+                    TextAlignment.Right => Math.Max(0d, run.Width - naturalWidth),
+                    _ => 0d
+                });
+                bool first = true;
                 foreach ((string? typeface, string text) in segments)
                 {
+                    if (!first) cursorX += run.CharacterSpacing;
                     double width = estimator.Measure(text, run.FontSize, typeface, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
                     rewritten.Add(run with
                     {
@@ -97,10 +107,11 @@ internal sealed partial class PptxRenderer
                         PreventCoalesce = true
                     });
                     cursorX += width;
+                    first = false;
                 }
             }
 
-            if (reported.Add(familyKey))
+            if (!primary.HasTrueTypeOutlines && reported.Add(familyKey))
             {
                 diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                     "FONT_UNSUPPORTED_OUTLINES",
@@ -117,7 +128,8 @@ internal sealed partial class PptxRenderer
         return rewritten;
     }
 
-    private static List<(string? Typeface, string Text)> SplitRunByFallbackTypeface(TextRun run, TextAdvanceEstimator estimator, CancellationToken cancellationToken)
+    private static List<(string? Typeface, string Text)> SplitRunByFallbackTypeface(TextRun run, TextAdvanceEstimator estimator,
+        CancellationToken cancellationToken, string? unresolvedTypeface)
     {
         var segments = new List<(string? Typeface, string Text)>();
         string? segmentTypeface = null;
@@ -126,8 +138,8 @@ internal sealed partial class PptxRenderer
         {
             if (segmentText.Length != 0)
             {
-                // RV01 residual: estimator-unresolvable runes keep a null-typeface segment so
-                // downstream default-family handling substitutes a diagnosed question mark.
+                // Unresolved CFF text keeps its default-family substitution; a
+                // usable TrueType primary retains its own substitution and identity.
                 segments.Add((segmentTypeface, segmentText.ToString()));
                 segmentText.Clear();
             }
@@ -136,7 +148,7 @@ internal sealed partial class PptxRenderer
         foreach (Rune rune in run.Text.EnumerateRunes())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string? typeface = estimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, rune.Value)?.Typeface;
+            string? typeface = estimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, rune.Value)?.Typeface ?? unresolvedTypeface;
             bool sameFamily = segmentTypeface is null ? typeface is null : typeface is not null && typeface.Equals(segmentTypeface, StringComparison.OrdinalIgnoreCase);
             if (!sameFamily)
             {
@@ -208,9 +220,10 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        foreach (TextRun run in CoalesceUnderlineRuns(CoalesceAdjacentTextRuns(legacyTextRuns, compareHighlight: false)))
+        foreach (TextRun run in legacyTextRuns)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (run.Text.Length == 0) continue;
             string familyName = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
             uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
         }
@@ -226,9 +239,8 @@ internal sealed partial class PptxRenderer
             return new RenderedFonts(new Dictionary<FontRequest, RenderedFont>(FontRequestKeyComparer.OrdinalIgnoreCaseFamily), []);
         }
 
-        textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
-        textRuns = CoalesceUnderlineRuns(textRuns);
         return await CreateRenderedFontsAsync(textRuns
+            .Where(run => run.Text.Length != 0)
             .Select(run => new TextFontUse(
                 PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily),
                 run.Bold,
