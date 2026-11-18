@@ -171,7 +171,8 @@ internal static class PptxChartDensifyTests
 
     public static void DuplicateCategoryCaptionsSharePlotReservationAndPaint()
     {
-        byte[] source = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Cases", "ComposedAxes", "solo-column.pptx"));
+        string fixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "ComposedAxes", "solo-column.pptx");
+        byte[] source = File.ReadAllBytes(fixture);
         foreach (bool visible in new[] { false, true })
         {
             PdfPage control = Render(visible, duplicate: false);
