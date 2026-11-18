@@ -59,51 +59,6 @@ internal sealed partial class DocxReader
             .ToArray() ?? [];
     }
 
-    private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
-        XElement story,
-        OoxPackage package,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        DocxStyleSet styles,
-        DocxNumberingSet numbering,
-        DocxDocumentSettings? documentSettings,
-        OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        XElement[] paragraphs = story
-            .Descendants(WordprocessingNamespace + "p")
-            .ToArray();
-        XElement[] bodyBlocks = story
-            .Elements()
-            .Where(IsBodyBlockElement)
-            .ToArray();
-        var drawings = new List<DocxFloatingDrawing>();
-        foreach (XElement anchor in story.Descendants(WordprocessingDrawingNamespace + "anchor"))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            DocxRevisionInfo? revision = FindInheritedRevision(anchor, markupMode);
-            if (IsInsideExcludedRevisionContainer(anchor, markupMode))
-            {
-                continue;
-            }
-
-            drawings.Add(ReadFloatingDrawing(
-                anchor,
-                package,
-                relationships,
-                styles,
-                numbering,
-                documentSettings,
-                FindSourceParagraphIndex(anchor, paragraphs),
-                FindSourceBlockIndex(anchor, bodyBlocks),
-                revision,
-                markupMode,
-                cancellationToken));
-        }
-
-        return drawings;
-    }
-
     private static IReadOnlyList<DocxBodyElement> ReadRelatedStoryBodyElements(
         IEnumerable<XElement> elements,
         DocxStyleSet styles,

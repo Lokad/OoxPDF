@@ -20440,6 +20440,8 @@
     "DocxGlyphlessPictureFilePublishesAndRefundsWithoutFonts",
     "DocxGlyphlessPictureLateCancellationPreservesPublication",
     "DocxReaderPreservesFloatingDrawingWrapTokens",
+    "=DocxMarkupModesFilterMovedAndCommentedImagesAndDrawings",
+    "=DocxReaderPreservesHeaderFloatingDrawingsByVariant",
     "DocxFloatingTextBoxAnchorRendersTextAndDoesNotEmitUnsupportedDiagnostic",
     "DocxWordCompatibleAllMarkupPlacesFloatingDrawingAnchors",
     "DocxRendererTreatsStaticHeaderFloatingImagesAsRenderableContent",

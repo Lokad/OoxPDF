@@ -1476,13 +1476,13 @@ internal static class DocxTests
                       <w:moveTo w:id="702" w:author="B" w:date="2026-06-10T00:00:00Z">
                         {{InlineDrawingXml("rIdInlineMoveTo")}}
                       </w:moveTo>
-                      <w:moveFrom w:id="703" w:author="C" w:date="2026-06-10T00:00:00Z">
-                        {{AnchorDrawingXml("rIdFloatingMoveFrom", "0")}}
-                      </w:moveFrom>
-                      <w:moveTo w:id="704" w:author="D" w:date="2026-06-10T00:00:00Z">
-                        {{AnchorDrawingXml("rIdFloatingMoveTo", "1")}}
-                      </w:moveTo>
                     </w:p>
+                    <w:moveFrom w:id="703" w:author="C" w:date="2026-06-10T00:00:00Z">
+                      <w:p>{{AnchorDrawingXml("rIdFloatingMoveFrom", "0")}}</w:p>
+                    </w:moveFrom>
+                    <w:moveTo w:id="704" w:author="D" w:date="2026-06-10T00:00:00Z">
+                      <w:p>{{AnchorDrawingXml("rIdFloatingMoveTo", "1")}}</w:p>
+                    </w:moveTo>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
                   </w:body>
                 </w:document>
@@ -1495,6 +1495,7 @@ internal static class DocxTests
                             xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
                             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <w:comment w:id="1" w:author="Reviewer" w:date="2026-06-10T00:00:00Z">
+                    <w:moveFrom w:id="706" w:author="E" w:date="2026-06-10T00:00:00Z"><w:p/></w:moveFrom>
                     <w:p>
                       <w:moveTo w:id="705" w:author="E" w:date="2026-06-10T00:00:00Z">
                         {{AnchorDrawingXml("rIdCommentAnchor", "1")}}

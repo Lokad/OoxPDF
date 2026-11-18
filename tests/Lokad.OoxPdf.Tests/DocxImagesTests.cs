@@ -738,10 +738,15 @@ internal static class DocxImagesTests
         AssertInlineImageParts(finalDocument, ["/word/media/body-commented.png", "/word/media/inline-move-to.png"], ["/word/media/inline-move-from.png"]);
         AssertInlineImageParts(originalDocument, ["/word/media/body-commented.png", "/word/media/inline-move-from.png"], ["/word/media/inline-move-to.png"]);
         AssertInlineImageParts(allDocument, ["/word/media/body-commented.png", "/word/media/inline-move-from.png", "/word/media/inline-move-to.png"], []);
-        TestAssert.True(allDocument.Paragraphs.Single().CommentRanges.Any(range => range.Id == "1") && allDocument.Paragraphs.Single().InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment && reference.Id == "1"), "Commented inline images should keep their body comment anchor metadata.");
+        DocxParagraph commentedParagraph = allDocument.Paragraphs.First();
+        TestAssert.True(commentedParagraph.CommentRanges.Any(range => range.Id == "1") && commentedParagraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Comment && reference.Id == "1"), "Commented inline images should keep their body comment anchor metadata.");
 
         TestAssert.True(finalDocument.FloatingDrawings.Single().Image?.PartName == "/word/media/floating-move-to.png", "Final view should keep moved-to floating drawings.");
         TestAssert.True(originalDocument.FloatingDrawings.Single().Image?.PartName == "/word/media/floating-move-from.png", "Original view should keep moved-from floating drawings.");
+        TestAssert.Equal((2, 2), SourceOrdinals(finalDocument.FloatingDrawings.Single()));
+        TestAssert.Equal((1, 1), SourceOrdinals(originalDocument.FloatingDrawings.Single()));
+        TestAssert.True(allDocument.FloatingDrawings.Select(SourceOrdinals).SequenceEqual(new[] { (1, 1), (2, 2) }),
+            "Body revisions preserve source order and block ownership across views.");
         TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-from.png" && drawing.Revisions.Single().Kind == DocxRevisionKind.MoveFrom), "All-markup should retain moved-from floating drawing provenance.");
         TestAssert.True(allDocument.FloatingDrawings.Any(drawing => drawing.Image?.PartName == "/word/media/floating-move-to.png" && drawing.Revisions.Single().Kind == DocxRevisionKind.MoveTo && drawing.BehindDocumentValue == "1"), "All-markup should retain moved-to behind-document floating drawing provenance.");
 
@@ -749,10 +754,14 @@ internal static class DocxImagesTests
         DocxFloatingDrawing commentDrawing = commentStory.FloatingDrawings.Single();
         TestAssert.True(commentDrawing.ImageRelationshipId == "rIdCommentAnchor" && commentDrawing.Image?.PartName == "/word/media/comment-anchor.png", "Comment story anchored drawings should resolve through comment-part relationships.");
         TestAssert.True(commentDrawing.Revisions.Single().Kind == DocxRevisionKind.MoveTo && commentDrawing.BehindDocumentValue == "1", "Revised behind-document anchored drawings inside comment stories should retain revision and geometry provenance.");
+        TestAssert.Equal((1, 0), SourceOrdinals(commentDrawing));
+
+        static (int, int) SourceOrdinals(DocxFloatingDrawing drawing) =>
+            (drawing.SourceParagraphIndex ?? -1, drawing.SourceBlockIndex ?? -1);
 
         static void AssertInlineImageParts(DocxDocument document, IReadOnlyList<string> expected, IReadOnlyList<string> unexpected)
         {
-            string[] parts = document.Paragraphs.Single().Images.Select(image => image.PartName ?? string.Empty).ToArray();
+            string[] parts = document.Paragraphs.SelectMany(paragraph => paragraph.Images).Select(image => image.PartName ?? string.Empty).ToArray();
             foreach (string part in expected)
             {
                 TestAssert.True(parts.Contains(part, StringComparer.Ordinal), "Expected inline image part was not visible in the selected markup view: " + part);

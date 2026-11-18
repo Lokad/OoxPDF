@@ -367,33 +367,39 @@ internal sealed partial class DocxReader
         DocxNumberingSet numbering,
         DocxDocumentSettings? documentSettings,
         OoxPdfDocxMarkupMode markupMode,
-        CancellationToken cancellationToken)
-    {
-            bool IsBodyBlockElementOrRevisionContainer(XElement element)
-            {
-                return IsBodyBlockElement(element) || IsRevisionContainer(element);
-            }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        XElement[] paragraphs = document
-            .Descendants(WordprocessingNamespace + "p")
-            .ToArray();
-        XElement[] bodyBlocks = document
-            .Root?
+        CancellationToken cancellationToken) =>
+        ReadFloatingDrawings(document, document.Root?
             .Element(WordprocessingNamespace + "body")?
             .Elements()
-            .Where(IsBodyBlockElementOrRevisionContainer)
-            .ToArray() ?? [];
+            .Where(static block => IsBodyBlockElement(block) || IsRevisionContainer(block)) ?? [],
+            package, relationships, styles, numbering, documentSettings, markupMode, cancellationToken);
+
+    private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(
+        XContainer source,
+        IEnumerable<XElement> sourceBlocks,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        DocxDocumentSettings? documentSettings,
+        OoxPdfDocxMarkupMode markupMode,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Dictionary<XElement, int>? paragraphIndexes = null;
+        Dictionary<XElement, int>? blockIndexes = null;
         var drawings = new List<DocxFloatingDrawing>();
-        foreach (XElement anchor in document.Descendants(WordprocessingDrawingNamespace + "anchor"))
+        foreach (XElement anchor in source.Descendants(WordprocessingDrawingNamespace + "anchor"))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DocxRevisionInfo? revision = FindInheritedRevision(anchor, markupMode);
             if (IsInsideExcludedRevisionContainer(anchor, markupMode))
             {
                 continue;
             }
 
+            // Ordinals belong to the authored source, including hidden siblings.
+            paragraphIndexes ??= IndexSources(source.Descendants(WordprocessingNamespace + "p"));
+            blockIndexes ??= IndexSources(sourceBlocks);
             drawings.Add(ReadFloatingDrawing(
                 anchor,
                 package,
@@ -401,14 +407,25 @@ internal sealed partial class DocxReader
                 styles,
                 numbering,
                 documentSettings,
-                FindSourceParagraphIndex(anchor, paragraphs),
-                FindSourceBlockIndex(anchor, bodyBlocks),
-                revision,
+                FindSourceAncestorIndex(anchor, paragraphIndexes),
+                FindSourceAncestorIndex(anchor, blockIndexes),
+                FindInheritedRevision(anchor, markupMode),
                 markupMode,
                 cancellationToken));
         }
 
         return drawings;
+
+        Dictionary<XElement, int> IndexSources(IEnumerable<XElement> elements)
+        {
+            var indexes = new Dictionary<XElement, int>(ReferenceEqualityComparer.Instance);
+            foreach (XElement element in elements)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                indexes.Add(element, indexes.Count);
+            }
+            return indexes;
+        }
     }
 
     private static DocxFloatingDrawing ReadFloatingDrawing(
@@ -554,38 +571,11 @@ internal sealed partial class DocxReader
     }
 
 
-    private static int? FindSourceParagraphIndex(XElement element, IReadOnlyList<XElement> paragraphs)
+    private static int? FindSourceAncestorIndex(XElement element, Dictionary<XElement, int> indexes)
     {
-        XElement? paragraph = element.Ancestors(WordprocessingNamespace + "p").FirstOrDefault();
-        if (paragraph is null)
+        foreach (XElement ancestor in element.Ancestors())
         {
-            return null;
-        }
-
-        for (int index = 0; index < paragraphs.Count; index++)
-        {
-            if (ReferenceEquals(paragraphs[index], paragraph))
-            {
-                return index;
-            }
-        }
-
-        return null;
-    }
-
-    private static int? FindSourceBlockIndex(XElement element, IReadOnlyList<XElement> bodyBlocks)
-    {
-        XElement? bodyChild = element
-            .Ancestors()
-            .FirstOrDefault(ancestor => bodyBlocks.Any(block => ReferenceEquals(block, ancestor)));
-        if (bodyChild is null)
-        {
-            return null;
-        }
-
-        for (int index = 0; index < bodyBlocks.Count; index++)
-        {
-            if (ReferenceEquals(bodyBlocks[index], bodyChild))
+            if (indexes.TryGetValue(ancestor, out int index))
             {
                 return index;
             }

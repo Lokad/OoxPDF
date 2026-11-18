@@ -504,7 +504,9 @@ internal sealed partial class DocxReader
                 ? paragraph with { Paragraph = paragraph.Paragraph with { ParagraphMarkRun = null } }
                 : element).ToArray();
         }
-        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(story, package, relationships, styles, numbering, documentSettings, markupMode, cancellationToken);
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(
+            story, story.Elements().Where(IsBodyBlockElement), package, relationships,
+            styles, numbering, documentSettings, markupMode, cancellationToken);
         string? paragraphId = kind == DocxRelatedStoryKind.Comment ? ReadCommentParagraphId(story) : null;
         DocxCommentThreadMetadata? threadMetadata = paragraphId is not null && commentThreadMetadataByParagraphId is not null && commentThreadMetadataByParagraphId.TryGetValue(paragraphId, out DocxCommentThreadMetadata? metadata)
             ? metadata
