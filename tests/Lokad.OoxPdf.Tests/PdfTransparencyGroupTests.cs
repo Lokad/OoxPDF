@@ -133,6 +133,12 @@ internal static class PdfTransparencyGroupTests
         TestAssert.Throws<InvalidDataException>(() => Write([GroupPage(duplicate)]));
         var duplicatePage = new PdfPage(100, 100, "/Tr1 Do\n", [], [], [], [], [], [], groups: [new("Tr1", leaf), new("Tr1", leaf)]);
         TestAssert.Throws<InvalidDataException>(() => Write([duplicatePage]));
+
+        var image = PdfImageXObject.RgbPng(1, 1, [0, 0, 0], null);
+        var collision = new PdfPage(100, 100, "/Tr-1 Do\n", [], [new("Tr-1", image)], [], [], [], [],
+            groups: [new("Tr 1", leaf)]);
+        var failure = TestAssert.Throws<InvalidDataException>(() => Write([collision]));
+        TestAssert.Contains("duplicate XObject resource name 'Tr-1'", failure.Message);
     }
 
     public static void TransparencyGroupsRejectNonFiniteOrEmptyBounds()
@@ -347,10 +353,18 @@ internal static class PdfTransparencyGroupTests
     public static void VectorSoftMasksRejectForeignBindingsBeforeOutput()
     {
         var local = new PdfTransparencyGroup(Bounds, "0 g\n", [], [], []);
+        var image = new PdfImageResource("Raster", PdfImageXObject.RgbPng(1, 1, [0, 0, 0], null));
+        PdfPage MixedPage(string mask) => new(100, 100, "/Raster Do\n/GS1 gs\n", [], [image],
+            [new("GS1", 1, 1, mask)], [], [], [], groups: [new("Tr1", local)]);
+        string mixed = Encoding.ASCII.GetString(Write([MixedPage("Tr1")]));
+        TestAssert.Contains("/Raster Do", mixed);
+        TestAssert.Contains("/S /Luminosity", mixed);
+
         foreach (PdfPage page in new[]
         {
             new PdfPage(100, 100, "/GS1 gs\n", [], [], [new("GS1", 1, 1, "Foreign")], [], [], [], groups: [new("Tr1", local)]),
-            GroupPage(new PdfTransparencyGroup(Bounds, "/GS1 gs\n", [new("GS1", 1, 1, "Tr1")], [], []))
+            GroupPage(new PdfTransparencyGroup(Bounds, "/GS1 gs\n", [new("GS1", 1, 1, "Tr1")], [], [])),
+            MixedPage("Raster")
         })
         {
             using var output = new MemoryStream();

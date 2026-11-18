@@ -15,22 +15,27 @@ internal static class PdfContentValidator
     public static void ValidatePage(PdfPage page, int pageIndex, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        RequireUniqueNames(page.Fonts.Select(font => font.ResourceName).Concat(page.FallbackFonts.Select(font => font.ResourceName)), "font", pageIndex);
-        RequireUniqueNames(page.Images.Select(image => image.ResourceName).Concat(page.Groups.Select(group => group.ResourceName)), "XObject", pageIndex);
-        RequireUniqueNames(page.ExtGStates.Select(state => state.ResourceName), "graphics-state", pageIndex);
-        RequireUniqueNames(page.Shadings.Select(shading => shading.ResourceName), "shading", pageIndex);
-        RequireUniqueNames(page.Patterns.Select(pattern => pattern.ResourceName).Concat(page.ShadingPatterns.Select(pattern => pattern.ResourceName)), "pattern", pageIndex);
-        ValidateMaskGroups(page.ExtGStates, page.Groups);
+        var fonts = IndexResourceNames(page.Fonts.Select(font => font.ResourceName)
+            .Concat(page.FallbackFonts.Select(font => font.ResourceName)), "font", pageIndex);
+        var xObjects = IndexResourceNames(page.Images.Select(image => image.ResourceName), "XObject", pageIndex);
+        // Do accepts images and Forms in one namespace. A mask binds a Form.
+        bool hasImages = page.Images.Count != 0;
+        var forms = hasImages ? new HashSet<string>(StringComparer.Ordinal) : xObjects;
+        foreach (PdfTransparencyGroupResource form in page.Groups)
+        {
+            string name = AddResourceName(xObjects, form.ResourceName, "XObject", pageIndex);
+            if (hasImages)
+            {
+                forms.Add(name);
+            }
+        }
+        var states = IndexResourceNames(page.ExtGStates.Select(state => state.ResourceName), "graphics-state", pageIndex);
+        var shadings = IndexResourceNames(page.Shadings.Select(shading => shading.ResourceName), "shading", pageIndex);
+        var patterns = IndexResourceNames(page.Patterns.Select(pattern => pattern.ResourceName)
+            .Concat(page.ShadingPatterns.Select(pattern => pattern.ResourceName)), "pattern", pageIndex);
+        ValidateMaskGroups(page.ExtGStates, forms);
 
-        ValidateContent(
-            page.Content,
-            $"PDF page {pageIndex + 1}",
-            new HashSet<string>(page.Fonts.Select(font => PdfEmbeddedFont.SanitizeName(font.ResourceName)).Concat(page.FallbackFonts.Select(font => PdfEmbeddedFont.SanitizeName(font.ResourceName))), StringComparer.Ordinal),
-            new HashSet<string>(page.Images.Select(image => PdfEmbeddedFont.SanitizeName(image.ResourceName)).Concat(page.Groups.Select(group => PdfEmbeddedFont.SanitizeName(group.ResourceName))), StringComparer.Ordinal),
-            new HashSet<string>(page.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
-            new HashSet<string>(page.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),
-            new HashSet<string>(page.Patterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)).Concat(page.ShadingPatterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName))), StringComparer.Ordinal),
-            cancellationToken);
+        ValidateContent(page.Content, $"PDF page {pageIndex + 1}", fonts, xObjects, states, shadings, patterns, cancellationToken);
 
         if (page.Groups.Count != 0)
         {
@@ -76,17 +81,13 @@ internal static class PdfContentValidator
         {
             throw new InvalidDataException("PDF transparency groups require finite positive bounds.");
         }
-        RequireUniqueNames(group.Groups.Select(child => child.ResourceName), "group XObject", pageIndex);
-        RequireUniqueNames(group.ExtGStates.Select(state => state.ResourceName), "group graphics-state", pageIndex);
-        RequireUniqueNames(group.Shadings.Select(shading => shading.ResourceName), "group shading", pageIndex);
-        RequireUniqueNames(group.ShadingPatterns.Select(pattern => pattern.ResourceName), "group pattern", pageIndex);
-        ValidateMaskGroups(group.ExtGStates, group.Groups);
+        var forms = IndexResourceNames(group.Groups.Select(child => child.ResourceName), "group XObject", pageIndex);
+        var states = IndexResourceNames(group.ExtGStates.Select(state => state.ResourceName), "group graphics-state", pageIndex);
+        var shadings = IndexResourceNames(group.Shadings.Select(shading => shading.ResourceName), "group shading", pageIndex);
+        var patterns = IndexResourceNames(group.ShadingPatterns.Select(pattern => pattern.ResourceName), "group pattern", pageIndex);
+        ValidateMaskGroups(group.ExtGStates, forms);
         ValidateContent(group.Content, $"PDF page {pageIndex + 1} transparency group",
-            new HashSet<string>(StringComparer.Ordinal),
-            new HashSet<string>(group.Groups.Select(child => PdfEmbeddedFont.SanitizeName(child.ResourceName)), StringComparer.Ordinal),
-            new HashSet<string>(group.ExtGStates.Select(state => PdfEmbeddedFont.SanitizeName(state.ResourceName)), StringComparer.Ordinal),
-            new HashSet<string>(group.Shadings.Select(shading => PdfEmbeddedFont.SanitizeName(shading.ResourceName)), StringComparer.Ordinal),
-            new HashSet<string>(group.ShadingPatterns.Select(pattern => PdfEmbeddedFont.SanitizeName(pattern.ResourceName)), StringComparer.Ordinal), cancellationToken);
+            new HashSet<string>(StringComparer.Ordinal), forms, states, shadings, patterns, cancellationToken);
         height = 1;
         foreach (PdfTransparencyGroupResource child in group.Groups)
         {
@@ -97,14 +98,11 @@ internal static class PdfContentValidator
         return height;
     }
 
-    private static void ValidateMaskGroups(IReadOnlyList<PdfExtGStateResource> states, IReadOnlyList<PdfTransparencyGroupResource> groups)
+    private static void ValidateMaskGroups(IReadOnlyList<PdfExtGStateResource> states, IReadOnlySet<string> forms)
     {
-        HashSet<string>? names = null;
         foreach (PdfExtGStateResource state in states)
         {
-            if (state.LuminosityGroupName is not { } name) { continue; }
-            names ??= new HashSet<string>(groups.Select(group => PdfEmbeddedFont.SanitizeName(group.ResourceName)), StringComparer.Ordinal);
-            if (!names.Contains(PdfEmbeddedFont.SanitizeName(name)))
+            if (state.LuminosityGroupName is { } name && !forms.Contains(PdfEmbeddedFont.SanitizeName(name)))
             {
                 throw new InvalidDataException("PDF vector soft masks require a single local transparency group resource.");
             }
@@ -125,17 +123,24 @@ internal static class PdfContentValidator
             cancellationToken);
     }
 
-    private static void RequireUniqueNames(IEnumerable<string> resourceNames, string category, int pageIndex)
+    private static HashSet<string> IndexResourceNames(IEnumerable<string> resourceNames, string category, int pageIndex)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (string resourceName in resourceNames)
         {
-            string sanitized = PdfEmbeddedFont.SanitizeName(resourceName);
-            if (!seen.Add(sanitized))
-            {
-                throw new InvalidDataException($"PDF page {pageIndex + 1} has a duplicate {category} resource name '{sanitized}'.");
-            }
+            AddResourceName(names, resourceName, category, pageIndex);
         }
+        return names;
+    }
+
+    private static string AddResourceName(HashSet<string> names, string resourceName, string category, int pageIndex)
+    {
+        string name = PdfEmbeddedFont.SanitizeName(resourceName);
+        if (!names.Add(name))
+        {
+            throw new InvalidDataException($"PDF page {pageIndex + 1} has a duplicate {category} resource name '{name}'.");
+        }
+        return name;
     }
 
     // tokens retain content offsets instead of substrings. The scan keeps at
