@@ -36,6 +36,7 @@ function dotnet {
     })
     if($global:ooxPdfAffectedReportFault -eq 'incomplete') {$rows=@($rows[0])}
     if($global:ooxPdfAffectedReportFault -eq 'duplicate') {$rows=@($rows[0],$rows[0])}
+    if($global:ooxPdfAffectedReportFault -eq 'wrong-name-case') {$rows[0].name=$rows[0].name.ToLowerInvariant()}
     $passed=@($rows | Where-Object outcome -EQ 'passed').Count
     $failed=@($rows | Where-Object outcome -EQ 'failed').Count
     $skipped=@($rows | Where-Object outcome -EQ 'skipped').Count
@@ -58,7 +59,7 @@ function dotnet {
 }
 $checks=@()
 try {
-    foreach($case in @('pass','expected-skip','unexpected-skip','failed','unknown-expected','incomplete','duplicate','miscount')) {
+    foreach($case in @('pass','expected-skip','unexpected-skip','failed','unknown-expected','incomplete','duplicate','wrong-name-case','miscount')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
         $output=Join-Path $root $case
@@ -72,6 +73,10 @@ try {
         if([Environment]::GetEnvironmentVariable('TMPDIR') -cne $beforeTmpDir) {throw 'Runner did not restore TMPDIR'}
         $shouldPass=$case -in @('pass','expected-skip')
         if($shouldPass -eq ($null -ne $caught)) {throw ($case+': unexpected gate outcome '+$caught)}
+        if($case -eq 'wrong-name-case' -and ($caught -notlike 'Incomplete affected report:*' -or
+            !(Test-Path -LiteralPath (Join-Path $output 'selection-000.json') -PathType Leaf))) {
+            throw 'A case-only method mismatch must be rejected and retain its raw report'
+        }
         $retained=Test-Path (Join-Path $output 'affected-tests.json')
         if($retained -ne ($case -in @('pass','expected-skip','unexpected-skip','failed'))) {throw ($case+': incorrect complete-report retention')}
         if($retained) {

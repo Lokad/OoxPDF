@@ -167,31 +167,29 @@ if (@($catalog | Where-Object { $_.Group -eq 'cli' -and $selected.Contains($_.Na
     $inventory.CliPath = $cliPath
     $inventory.CliSha256 = $cliHash
 }
-$sources = [Collections.Generic.List[object]]::new()
-$rows = [Collections.Generic.List[object]]::new()
-$path = Join-Path $output ('selection-{0:D3}.json' -f $sources.Count)
+$path = Join-Path $output 'selection-000.json'
 Assert-FrozenAssembly
 $exitCode = Invoke-FrozenTests @('--test-set', $selectionPath, '--report', $path) ($path + '.log')
 $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-$names = @($report.tests.name)
-if ($report.passed + $report.failed + $report.skipped -ne $selected.Count -or $names.Count -ne $selected.Count -or
-    @(Compare-Object ($names | Sort-Object) ($selected | Sort-Object)).Count -or
-    @($report.tests | Where-Object { $_.outcome -notin @('passed', 'failed', 'skipped') }).Count -or
-    @($report.tests | Where-Object outcome -EQ 'passed').Count -ne $report.passed -or
-    @($report.tests | Where-Object outcome -EQ 'failed').Count -ne $report.failed -or
-    @($report.tests | Where-Object outcome -EQ 'skipped').Count -ne $report.skipped) {
+$rows = @($report.tests)
+$seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$counts = @{ passed = 0; failed = 0; skipped = 0 }
+foreach ($row in $rows) {
+    if ($row.name -isnot [string] -or !$selected.Contains($row.name) -or !$seen.Add($row.name) -or
+        $row.outcome -isnot [string] -or !$counts.ContainsKey($row.outcome)) {
+        throw ('Incomplete affected report: ' + $path)
+    }
+    $counts[$row.outcome]++
+}
+if ($seen.Count -ne $selected.Count -or $counts.passed -ne $report.passed -or
+    $counts.failed -ne $report.failed -or $counts.skipped -ne $report.skipped) {
     throw ('Incomplete affected report: ' + $path)
 }
 Assert-FrozenAssembly
-foreach ($row in $report.tests) { $rows.Add($row) }
-$sources.Add([pscustomobject]@{ Selection = $selectionPath; Report = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash })
 
-if ($rows.Count -ne $selected.Count -or @($rows.name | Sort-Object -Unique).Count -ne $selected.Count) {
-    throw 'Affected reports do not cover each selected method exactly once'
-}
 $inventory.CompletedUtc = [DateTime]::UtcNow.ToString('o')
 $inventory.UniqueExecutedMethods = $rows.Count
-$inventory.SourceReports = @($sources)
+$inventory.SourceReports = @([pscustomobject]@{ Selection = $selectionPath; Report = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash })
 $inventory.RunnerExitCode = $exitCode
 $inventory.UnexpectedSkips = @($rows | Where-Object {
     $_.outcome -eq 'skipped' -and $skipValidated.Contains($_.name) -and $_.name -cnotin $ExpectedSkip
