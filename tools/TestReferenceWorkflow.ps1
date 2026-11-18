@@ -64,11 +64,14 @@ function New-FakeWorker([string] $Name, [string[]] $BodyLines) {
 try {
 # T03: the shared build gate records identities instead of trusting mtimes.
 if (!$CliPath) {
-$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
-& (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -OutputDll $cliDll -Description "CLI" -RecordPath (Join-Path $scratch "cli-build-info.json")
-$buildInfo = Get-Content -Raw -LiteralPath (Join-Path $scratch "cli-build-info.json") | ConvertFrom-Json
-Assert-True ((Test-Path -LiteralPath $cliDll) -and $buildInfo.OutputSha256 -eq (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant()) "T03 shared build records the real CLI binary hash"
-Assert-True (-not [string]::IsNullOrWhiteSpace([string]$buildInfo.GitCommit)) "T03 shared build records the source commit"
+    $cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
+    & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -Framework $Framework -OutputDll $cliDll -Description "CLI" -RecordPath (Join-Path $scratch "cli-build-info.json")
+    $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $scratch "cli-build-info.json") | ConvertFrom-Json
+    if ($buildInfo.Framework -cne $Framework -or $buildInfo.OutputDll -cne $cliDll) {
+        throw 'T03 shared build recorded a different framework or CLI path.'
+    }
+    Assert-True ((Test-Path -LiteralPath $cliDll) -and $buildInfo.OutputSha256 -eq (Get-FileHash -LiteralPath $cliDll -Algorithm SHA256).Hash.ToLowerInvariant()) "T03 shared build records the real CLI binary hash"
+    Assert-True (-not [string]::IsNullOrWhiteSpace([string]$buildInfo.GitCommit)) "T03 shared build records the source commit"
 } else {
     $cliDll = (Resolve-Path -LiteralPath $CliPath).Path
     Write-Host ("Using frozen CLI {0}; SHA256={1}; no build-gate replay." -f $cliDll, (Get-FileHash $cliDll).Hash)
