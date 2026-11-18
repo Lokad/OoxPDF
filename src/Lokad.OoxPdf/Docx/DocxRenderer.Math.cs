@@ -38,6 +38,7 @@ internal sealed partial class DocxRenderer
             var seen = new HashSet<DocxEquation>(ReferenceEqualityComparer.Instance);
             int hidden = 0;
             foreach (DocxParagraph paragraph in DocxBlockTraversal.EnumerateBodyParagraphs(part.BodyElements)
+                .Concat(part.FloatingDrawings.SelectMany(drawing => DocxBlockTraversal.EnumerateBodyParagraphs(drawing.TextBoxBodyElements)))
                 .SelectMany(paragraph => new[] { paragraph }.Concat(DocxBlockTraversal.EnumerateInlineTextBoxParagraphs(paragraph))))
             {
                 token.ThrowIfCancellationRequested();
@@ -87,9 +88,12 @@ internal sealed partial class DocxRenderer
 
     private static IEnumerable<DocxEquation> EnumeratePaintedEquations(DocxLayout layout, CancellationToken token)
     {
+        var floatingBoxes = layout.FloatingDrawings.Concat(layout.StaticFloatingDrawings)
+            .Concat(layout.Pages.SelectMany(page => page.PlacedRelatedStories.SelectMany(story => story.FloatingDrawings)));
         var items = layout.Pages.SelectMany(page => page.Items.Concat(page.StaticTextLines).Concat(page.StaticTableRows)
             .Concat(page.StaticInlineTextBoxes).Concat(page.PlacedRelatedStories.SelectMany(story =>
-                story.TextLines.Cast<DocxLayoutItem>().Concat(story.TableRows))));
+                story.TextLines.Cast<DocxLayoutItem>().Concat(story.TableRows))))
+            .Concat(FloatingBoxItems());
         var pending = new Stack<DocxLayoutItem>();
         foreach (var source in items)
         {
@@ -119,6 +123,20 @@ internal sealed partial class DocxRenderer
                         foreach (var cellBox in cell.InlineTextBoxes) { token.ThrowIfCancellationRequested(); pending.Push(cellBox); }
                     }
                 }
+            }
+        }
+
+        IEnumerable<DocxLayoutItem> FloatingBoxItems()
+        {
+            foreach (var drawing in floatingBoxes)
+            {
+                token.ThrowIfCancellationRequested();
+                if (drawing.AnchorPageIndex is not int page || page < 0 || page >= layout.Pages.Count ||
+                    drawing.PlacedX is null || drawing.PlacedTop is null ||
+                    drawing.ExtentWidthPoints is not > 0d || drawing.ExtentHeightPoints is not > 0d ||
+                    drawing.TextBoxLayout is not { } box) continue;
+                foreach (var line in box.TextLines) yield return line;
+                foreach (var row in box.TableRows) yield return row;
             }
         }
     }
@@ -168,6 +186,7 @@ internal sealed partial class DocxRenderer
             .Concat(DocxMathParagraphPolicy.EnumerateStaticPreparationCandidates(document, token)
                 .Select(owner => (owner.Paragraph, owner.HasPageInputs, NeedsFinalCount: false)))
             .Concat(DocxMathParagraphPolicy.EnumerateInlineBoxPreparationCandidates(document, token)
+                .Concat(DocxMathParagraphPolicy.EnumerateFloatingBoxPreparationCandidates(document, token))
                 .Select(paragraph => (Paragraph: paragraph, HasPageInputs: true, NeedsFinalCount: true))))
         {
             token.ThrowIfCancellationRequested();

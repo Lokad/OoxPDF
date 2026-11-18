@@ -2504,7 +2504,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<int, double> footerContentTopByPage = staticContent.FooterContentTopByPage;
         return new DocxLayout(
             pagesWithStaticText,
-            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, unscaledTextMeasurer),
+            CreateFloatingDrawingLayouts(document.FloatingDrawings, pagesWithStaticText, textMeasurer, defaultTabStopPoints,
+                paragraphSpacingScale, cancellationToken, unscaledTextMeasurer, mathEquations),
             staticContent.Drawings,
             relatedStoryLayouts,
             staticContent.HeaderContentBottomByPage,

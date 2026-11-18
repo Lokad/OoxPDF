@@ -21,7 +21,8 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
         int? pageCount,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        IDocxTextMeasurer? unscaledTextMeasurer,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations)
     {
         if (story.FloatingDrawings.Count == 0)
         {
@@ -51,7 +52,8 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints: defaultTabStopPoints,
                     paragraphSpacingScale: paragraphSpacingScale,
                     cancellationToken: cancellationToken,
-                    unscaledTextMeasurer: unscaledTextMeasurer);
+                    unscaledTextMeasurer: unscaledTextMeasurer,
+                    mathEquations: mathEquations);
             })
             .ToArray();
 
@@ -518,7 +520,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        IDocxTextMeasurer? unscaledTextMeasurer,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations)
     {
         var layouts = new DocxFloatingDrawingLayout[drawings.Count];
         IReadOnlyDictionary<int, DocxLayoutSourceBlockBounds>? sourceBlocks = null;
@@ -549,7 +552,8 @@ internal sealed partial class DocxLayoutEngine
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
                 cancellationToken: cancellationToken,
-                unscaledTextMeasurer: unscaledTextMeasurer);
+                unscaledTextMeasurer: unscaledTextMeasurer,
+                mathEquations: mathEquations);
         }
 
         return layouts;
@@ -565,7 +569,9 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
-        DocxStaticStoryLayoutResult? placedStory)
+        DocxStaticStoryLayoutResult? placedStory,
+        IDocxTextMeasurer? unscaledTextMeasurer,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations)
     {
         Dictionary<DocxStaticDrawingOwner, (DocxPlacedDrawingAnchor Anchor, DocxStaticAnchorY Frame, PdfRectangle Clip)>? cellAnchors = null;
         foreach (DocxFloatingDrawing drawing in selectedDrawings.Drawings)
@@ -609,7 +615,9 @@ internal sealed partial class DocxLayoutEngine
                 textMeasurer: textMeasurer,
                 defaultTabStopPoints: defaultTabStopPoints,
                 paragraphSpacingScale: paragraphSpacingScale,
-                cancellationToken: cancellationToken) with { StaticAnchorY = anchorY, StaticCellClip = cellClip };
+                cancellationToken: cancellationToken,
+                unscaledTextMeasurer: unscaledTextMeasurer,
+                mathEquations: mathEquations) with { StaticAnchorY = anchorY, StaticCellClip = cellClip };
         }
 
         void IndexCellAnchors(IReadOnlyList<DocxTableRowLayout> rows, DocxTableCellClipSnapshot? parent)
@@ -785,7 +793,8 @@ internal sealed partial class DocxLayoutEngine
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         CancellationToken cancellationToken,
-        IDocxTextMeasurer? unscaledTextMeasurer = null)
+        IDocxTextMeasurer? unscaledTextMeasurer = null,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         DocxAnchorReferenceFrame? horizontalReference = ResolveHorizontalReferenceFrame(drawing, anchorPage, sourceBlock);
         DocxAnchorReferenceFrame? verticalReference = ResolveVerticalReferenceFrame(drawing, anchorPage, sourceBlock);
@@ -877,7 +886,8 @@ internal sealed partial class DocxLayoutEngine
                 contentSpacingScale,
                 pageNumber: pageNumber,
                 pageCount: pageCount,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                mathEquations: mathEquations);
         }
 
         DocxWrapExclusionFrame? CreateWrapExclusionFrame()

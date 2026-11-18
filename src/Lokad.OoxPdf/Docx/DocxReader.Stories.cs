@@ -24,7 +24,8 @@ internal sealed partial class DocxReader
                 token.ThrowIfCancellationRequested();
                 if (part.Value.BodyElements is not { } body || part.Value.Xml is not { } xml) { continue; }
                 int count = CountSelectedEquationSources(xml, mode, token, out bool hasSource);
-                if (hasSource) { yield return new(part.Key, count, body); }
+                if (hasSource)
+                    yield return new(part.Key, count, body) { FloatingDrawings = part.Value.Drawings ?? [] };
             }
         }
 

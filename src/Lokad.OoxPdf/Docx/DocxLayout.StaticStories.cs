@@ -254,7 +254,7 @@ internal sealed partial class DocxLayoutEngine
         void AddDrawings(DocxLayoutPage page, int pageIndex, bool isHeader, DocxSelectedStaticDrawings selected,
             DocxStaticStoryLayoutResult? placedStory) => drawings.AddRange(CreateStaticFloatingDrawingLayouts(
                 selected, DocxStoryId.HeaderOrFooter(isHeader, selected.VariantType), page, pageIndex, pages.Count,
-                textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, placedStory));
+                textMeasurer, defaultTabStopPoints, paragraphSpacingScale, cancellationToken, placedStory, unscaledTextMeasurer, mathEquations));
     }
 
     private static DocxStaticStoryLayoutResult CreateStaticStoryLayout(

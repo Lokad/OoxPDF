@@ -2701,7 +2701,8 @@ internal sealed partial class DocxLayoutEngine
             paragraphSpacingScale,
             cancellationToken,
             pageCount,
-            unscaledTextMeasurer);
+            unscaledTextMeasurer,
+            mathEquations);
         return new DocxRelatedStoryLayout(story, storyIndex, textLines.ToArray(), inlineImages.ToArray(), floatingDrawings, tableRows.ToArray(), Math.Abs(cursorY))
         {
             HasResolvedCounterInputs = DocxFieldText.HasInputs(

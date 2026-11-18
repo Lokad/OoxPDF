@@ -59,7 +59,7 @@ internal static class DocxMathParagraphPolicy
 
     // Inline boxes own independent child stories. Prepare their direct children
     // independently of whether the enclosing paragraph contains mathematics.
-    // Notes/floating/nested boxes retain their existing staged placement paths.
+    // Nested boxes retain their existing staged placement paths.
     public static IEnumerable<DocxParagraph> EnumerateInlineBoxPreparationCandidates(DocxDocument document, CancellationToken token)
     {
         var parents = DocxBlockTraversal.EnumerateBodyParagraphs(document)
@@ -79,22 +79,44 @@ internal static class DocxMathParagraphPolicy
                     supportsRevisedOwner ??= DocxInlineContent.HasSupportedSourceOwner(parent, hasPageInputs: true, token: token);
                     if (supportsRevisedOwner != true) continue;
                 }
-                foreach (var element in box.BodyElements)
+                foreach (var child in EnumerateBoxParagraphs(box.BodyElements, token))
                 {
                     token.ThrowIfCancellationRequested();
-                    IEnumerable<DocxParagraph> children = element switch
-                    {
-                        DocxParagraphElement paragraph => [paragraph.Paragraph],
-                        DocxTableElement table => EnumerateSupportedTableParagraphs(table.Table, token),
-                        _ => []
-                    };
-                    foreach (var child in children)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        if (seen.Add(child)) yield return child;
-                    }
+                    if (seen.Add(child)) yield return child;
                 }
             }
+        }
+    }
+
+    public static IEnumerable<DocxParagraph> EnumerateFloatingBoxPreparationCandidates(DocxDocument document, CancellationToken token)
+    {
+        var drawings = document.FloatingDrawings
+            .Concat(DocxBlockTraversal.EnumerateStaticStorySources(document, token)
+                .Where(story => DocxLayoutEngine.IsStaticStoryVariantEnabled(story.Settings, story.Variant))
+                .SelectMany(story => story.Drawings))
+            .Concat(document.RelatedStories
+                .Where(story => story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+                .SelectMany(story => story.FloatingDrawings));
+        var seen = new HashSet<DocxParagraph>(ReferenceEqualityComparer.Instance);
+        foreach (var drawing in drawings)
+        {
+            token.ThrowIfCancellationRequested();
+            foreach (var child in EnumerateBoxParagraphs(drawing.TextBoxBodyElements, token))
+            {
+                token.ThrowIfCancellationRequested();
+                if (child.Equations.Count != 0 && seen.Add(child)) yield return child;
+            }
+        }
+    }
+
+    private static IEnumerable<DocxParagraph> EnumerateBoxParagraphs(IReadOnlyList<DocxBodyElement> elements, CancellationToken token)
+    {
+        foreach (var element in elements)
+        {
+            token.ThrowIfCancellationRequested();
+            if (element is DocxParagraphElement paragraph) yield return paragraph.Paragraph;
+            else if (element is DocxTableElement table)
+                foreach (var child in EnumerateSupportedTableParagraphs(table.Table, token)) yield return child;
         }
     }
 

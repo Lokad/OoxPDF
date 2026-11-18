@@ -4,7 +4,10 @@ namespace Lokad.OoxPdf.Docx;
 // a prose run or change ownership of fields, notes, bookmarks or pictures.
 // Expected equation payloads in the selected view, including malformed display
 // wrappers that must keep an unsupported diagnostic.
-internal sealed record DocxEquationPartSource(string PartName, int SourceCount, IReadOnlyList<DocxBodyElement> BodyElements);
+internal sealed record DocxEquationPartSource(string PartName, int SourceCount, IReadOnlyList<DocxBodyElement> BodyElements)
+{
+    public IReadOnlyList<DocxFloatingDrawing> FloatingDrawings { get; init; } = [];
+}
 
 internal enum DocxMathDisplayAlignment { CenterGroup, Center, Left, Right }
 

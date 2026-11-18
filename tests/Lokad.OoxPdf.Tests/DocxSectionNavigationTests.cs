@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -207,6 +208,97 @@ internal static class DocxSectionNavigationTests
 
     public static void DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame() =>
         CheckFloatingBoxTableRangeBookmarks(["footnote", "endnote"]);
+
+    public static void DocxFloatingBoxMathSurvivesBodyAndStoryPlacement()
+    {
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+        double finalSize = 0d;
+        foreach (string owner in new[] { "body", "header", "footer", "footnote", "endnote" })
+        foreach (var mode in Modes)
+        {
+            string label = owner + "/" + mode;
+            string partName = "floating-math-" + owner;
+            WithDocumentMutation(fixture, (parts, document) =>
+            {
+                var body = document.Descendants(W + "body").Single();
+                var drawing = body.Descendants(wp + "anchor").Single();
+                drawing.Element(wp + "extent")!.SetAttributeValue("cy", 100 * 12700);
+                var box = drawing.Descendants(W + "txbxContent").Single();
+                var fraction = new XElement(m + "oMath", new XElement(m + "f",
+                    new XElement(m + "num", new XElement(m + "r", new XElement(m + "t", "2"))),
+                    new XElement(m + "den", new XElement(m + "r", new XElement(m + "t", "7")))));
+                var caption = Paragraph("PUBLIC BOX CAPTION");
+                box.ReplaceNodes(caption, new XElement(W + "p", fraction), Paragraph("PUBLIC BOX FOLLOWING"));
+
+                if (owner == "body") return;
+                var paragraph = drawing.Ancestors(W + "p").First();
+                if (owner is "header" or "footer")
+                {
+                    var vertical = drawing.Element(wp + "positionV")!;
+                    vertical.SetAttributeValue("relativeFrom", "page");
+                    vertical.Element(wp + "posOffset")!.SetValue((owner == "header" ? 24 : 710) * 12700);
+                    body.Element(W + "sectPr")!.AddFirst(new XElement(W + (owner + "Reference"),
+                        new XAttribute(W + "type", "default"), new XAttribute(R + "id", partName)));
+                    paragraph.Remove();
+                    AddStoryPart(parts, partName, owner, new XElement(W + (owner == "header" ? "hdr" : "ftr"), paragraph));
+                }
+                else
+                {
+                    paragraph.AddBeforeSelf(new XElement(W + "p", new XElement(W + "r",
+                        new XElement(W + (owner + "Reference"), new XAttribute(W + "id", 1)))));
+                    paragraph.Remove();
+                    AddStoryPart(parts, partName, owner + "s", new XElement(W + (owner + "s"),
+                        new XElement(W + owner, new XAttribute(W + "id", 1), paragraph,
+                            Enumerable.Range(1, 8).Select(index => Paragraph("Additional note line " + index)))));
+                }
+            }, path =>
+            {
+                var source = DocxTests.ReadDocx(path, mode);
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var diagnostics = new List<OoxPdfDiagnostic>();
+                var page = new DocxRenderer(resolver, mode, geometry)
+                    .RenderPagesAsync(source, diagnostics.Add, default).ToBlockingEnumerable().Single();
+                DocxInlineCompositionTests.AssertSourceLabelsPaint(page, mode, ["PUBLIC BOX CAPTION", "PUBLIC BOX FOLLOWING"], label);
+
+                var mathFonts = page.Fonts.Where(font => font.ResourceName.StartsWith("Eq", StringComparison.Ordinal))
+                    .Select(font => font.Font).ToHashSet(ReferenceEqualityComparer.Instance);
+                var symbols = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).SelectMany(frame =>
+                    DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, frame.Block, page.Fonts))
+                        .Where(show => mathFonts.Contains(show.Font)).Select(show => (Frame: frame, Show: show))).ToArray();
+                TestAssert.Equal("27", string.Concat(symbols.Select(symbol => symbol.Show.Text)).Normalize(NormalizationForm.FormKC));
+                double printedSize = symbols[0].Frame.Transform.M11 * symbols[0].Show.Size;
+                if (mode == OoxPdfDocxMarkupMode.Final) finalSize = printedSize;
+                else
+                {
+                    double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode, geometry));
+                    TestAssert.True(scale < 1d && Math.Abs(printedSize - finalSize * scale) < .02d,
+                        "The floating equation scales once with its printed box in " + label);
+                }
+                foreach (var (frame, show) in symbols)
+                {
+                    var font = show.Font.Font;
+                    double unit = show.Size / font.UnitsPerEm;
+                    TestAssert.True(font.TryGetGlyphBounds(font.MapCodePoint(show.Text[0]), out var ink), label);
+                    var mtx = frame.Transform;
+                    double left = (show.X + ink.XMin * unit) * mtx.M11 + mtx.M31;
+                    double right = (show.X + ink.XMax * unit) * mtx.M11 + mtx.M31;
+                    double bottom = (show.Y + ink.YMin * unit) * mtx.M22 + mtx.M32;
+                    double top = (show.Y + ink.YMax * unit) * mtx.M22 + mtx.M32;
+                    TestAssert.True(left >= frame.Clip.X - .01d && right <= frame.Clip.X + frame.Clip.Width + .01d &&
+                        bottom >= frame.Clip.Y - .01d && top <= frame.Clip.Y + frame.Clip.Height + .01d,
+                        "Both fraction glyphs survive the box and story clips in " + label);
+                }
+                TestAssert.Equal(0, diagnostics.Count(item => item.Id == "DOCX_UNSUPPORTED_EQUATION"));
+                TestAssert.Equal(owner == "body" ? "/word/document.xml" : "/word/" + partName + ".xml",
+                    diagnostics.Single(item => item.Id == "DOCX_APPROXIMATED_EQUATION").PartName);
+            });
+        }
+    }
 
     public static void DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory()
     {

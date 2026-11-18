@@ -8677,6 +8677,7 @@
     "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
     "=DocxFloatingBoxTableRangeBookmarksFollowPaintedRows",
     "=DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame",
+    "=DocxFloatingBoxMathSurvivesBodyAndStoryPlacement",
     "=DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory",
     "=DocxStaticCellFloatingBoxesFollowTheirParagraphAndClip",
     "=DocxBoxedPicturesLinkWithinTheirPaintedViewports",
