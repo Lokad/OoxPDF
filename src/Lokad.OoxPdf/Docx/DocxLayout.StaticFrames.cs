@@ -366,8 +366,12 @@ internal sealed partial class DocxLayoutEngine
                 // ordered source items still own a static frame.
                 paragraph.Equations.All(equation => !mathEquations.TryGetValue(equation, out var math) || math.Box.AdvanceWidth <= width) &&
                 paragraph.Images.All(image => image.WidthPoints <= width));
+        // The uniform print map scales both the rotated rectangle and its
+        // line clip. A resolved right-angle picture can use the same map.
         return DocxMathParagraphPolicy.HasSupportedOrderedAlignment(paragraph) &&
-            paragraph.Images.All(image => image.SourceRunIndex >= 0 && image.RotationDegrees == 0d &&
+            paragraph.Images.All(image => image.SourceRunIndex >= 0 &&
+                (image.RotationDegrees == 0d ||
+                    image.RotationDegrees % 90d == 0d && image.PictureFrame is { IsUsable: true }) &&
                 double.IsFinite(image.WidthPoints) && double.IsFinite(image.HeightPoints) &&
                 image.WidthPoints > 0d && image.HeightPoints > 0d && image.WidthPoints <= width) &&
             // A finite fixed line box retains its declared advance in the same
