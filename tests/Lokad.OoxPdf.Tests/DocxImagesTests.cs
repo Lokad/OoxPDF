@@ -886,12 +886,26 @@ internal static class DocxImagesTests
         DocxFloatingDrawingLayout placedDrawing = placedStory.FloatingDrawings.Single();
         TestAssert.True(placedDrawing.PlacedX >= document.MarginLeftPoints, "Placed footnote floating drawings should be translated from note-local coordinates into the page margin frame.");
 
-        PdfPage page = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        var renderer = new DocxRenderer(null, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout);
+        PdfPage page = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single();
 
         TestAssert.Equal(1, page.Images.Count);
         TestAssert.Contains("/Im1 Do", page.Content);
-        var link = page.Annotations.Single(annotation => annotation.Uri == uri);
-        TestAssert.Equal((18d, 9d), (link.Width, link.Height));
+        TestAssert.True(page.Annotations.All(annotation => annotation.Uri != uri),
+            "The incomplete note viewport retains image paint without a link.");
+
+        var fittingStory = footnoteStory with
+        {
+            BodyElements = [.. footnoteStory.BodyElements,
+                new DocxParagraphElement(DocxTests.CreateDocxLayoutParagraph("More note text", 10d, 12d))],
+            FloatingDrawings = [footnoteDrawing with { VerticalOffsetValue = "76200" }]
+        };
+        var fittingDocument = document with { RelatedStories = [fittingStory] };
+        PdfPage fittingPage = renderer.RenderPagesAsync(fittingDocument, null, CancellationToken.None).ToBlockingEnumerable().Single();
+        TestAssert.Equal(1, fittingPage.Images.Count);
+        TestAssert.Contains("/Im1 Do", fittingPage.Content);
+        var link = fittingPage.Annotations.Single(annotation => annotation.Uri == uri);
+        TestAssert.Equal((46d, 18d, 9d), (link.X, link.Width, link.Height));
     }
 
     public static void DocxRelatedStoryLayoutOwnsInlineImages()
