@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
@@ -198,6 +199,72 @@ internal static class DocxSectionNavigationTests
             if (mode == OoxPdfDocxMarkupMode.AllMarkup)
                 TestAssert.True(block.Select(Text).Any(text => text.Contains("REVIEW COMMENT", StringComparison.Ordinal)),
                     "The Review control must exercise a printed balloon.");
+        }
+    }
+
+    public static void DocxFloatingBoxTableRangeBookmarksFollowPaintedRows() =>
+        CheckFloatingBoxTableRangeBookmarks(["body", "header", "footer"]);
+
+    public static void DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame() =>
+        CheckFloatingBoxTableRangeBookmarks(["footnote", "endnote"]);
+
+    private static void CheckFloatingBoxTableRangeBookmarks(string[] owners)
+    {
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        foreach (string owner in owners)
+        foreach (var mode in Modes)
+        {
+            string context = owner + "/" + mode;
+            WithDocumentMutation(fixture, (parts, xml) =>
+            {
+                var body = xml.Descendants(W + "body").Single();
+                var box = body.Descendants(W + "txbxContent").Single();
+                var table = box.Element(W + "tbl")!;
+                MoveBookmarkOutside(box.Descendants(W + "bookmarkStart").Single(),
+                    box.Descendants(W + "bookmarkEnd").Single(), table);
+                var firstCell = table.Element(W + "tr")!.Element(W + "tc")!;
+                if (firstCell.Element(W + "tcPr") is null) firstCell.AddFirst(new XElement(W + "tcPr"));
+                var properties = firstCell.Element(W + "tcPr")!;
+                properties.Element(W + "shd")?.Remove();
+                properties.Add(new XElement(W + "shd", new XAttribute(W + "fill", "CC9944")));
+                if (owner == "body") return;
+
+                var anchor = box.Ancestors(wp + "anchor").Single();
+                var paragraph = anchor.Ancestors(W + "p").First();
+                string name = "bookmark-floating-" + owner;
+                if (owner is "header" or "footer")
+                {
+                    var position = anchor.Element(wp + "positionV")!;
+                    position.SetAttributeValue("relativeFrom", "page");
+                    position.Element(wp + "posOffset")!.SetValue((owner == "header" ? 30 : 700) * 12700);
+                    body.Element(W + "sectPr")!.AddFirst(new XElement(W + (owner + "Reference"),
+                        new XAttribute(W + "type", "default"), new XAttribute(R + "id", name)));
+                    paragraph.Remove();
+                    AddStoryPart(parts, name, owner, new XElement(W + (owner == "header" ? "hdr" : "ftr"), paragraph));
+                }
+                else
+                {
+                    paragraph.AddBeforeSelf(new XElement(W + "p", new XElement(W + "r",
+                        new XElement(W + (owner + "Reference"), new XAttribute(W + "id", "1")))));
+                    paragraph.Remove();
+                    AddStoryPart(parts, name, owner + "s", new XElement(W + (owner + "s"),
+                        new XElement(W + owner, new XAttribute(W + "id", "1"), paragraph,
+                            Enumerable.Range(1, 11).Select(index => Paragraph("Additional related story line " + index)))));
+                }
+            }, path =>
+            {
+                var renderer = new DocxRenderer(resolver, mode, mode == OoxPdfDocxMarkupMode.Final
+                    ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
+                var page = renderer.RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().Single();
+                DocxInlineCompositionTests.AssertSourceLabelsPaint(page, mode, ["BOX TABLE NORTH", "BOX TABLE SOUTH"], context);
+                var fill = DocxParagraphShadingTests.ReadRectangles(page.Content).Single(rect => rect.Color == "CC9944");
+                TestAssert.True(page.Annotations.Any(link => link.Destination is { PageIndex: 0, Left: double x, Top: double y } &&
+                    Math.Abs(x - fill.X) < .001d && Math.Abs(y - fill.Y - fill.Height) < .001d),
+                    "The range link must reach the painted first-row corner: " + context);
+            });
         }
     }
 
@@ -404,16 +471,19 @@ internal static class DocxSectionNavigationTests
         parts["[Content_Types].xml"] = Encoding.UTF8.GetBytes(types.ToString());
     }
 
-    private static void WithMutation(string id, Action<Dictionary<string,byte[]>,XDocument> mutate, Action<string> check)
+    private static void WithMutation(string id, Action<Dictionary<string,byte[]>,XDocument> mutate, Action<string> check) =>
+        WithDocumentMutation(Case(id), mutate, check);
+
+    private static void WithDocumentMutation(string path, Action<Dictionary<string,byte[]>,XDocument> mutate, Action<string> check)
     {
-        using var archive = ZipFile.OpenRead(Case(id));
+        using var archive = ZipFile.OpenRead(path);
         var parts = archive.Entries.ToDictionary(entry => entry.FullName, entry => {
             using var source = entry.Open(); using var bytes = new MemoryStream(); source.CopyTo(bytes); return bytes.ToArray();
         });
         var xml = XDocument.Parse(Encoding.UTF8.GetString(parts["word/document.xml"]));
         mutate(parts, xml);
         parts["word/document.xml"] = Encoding.UTF8.GetBytes(xml.ToString());
-        string path = TestFixtures.WriteTempPackage(".docx", parts);
-        try { check(path); } finally { File.Delete(path); }
+        string mutated = TestFixtures.WriteTempPackage(".docx", parts);
+        try { check(mutated); } finally { File.Delete(mutated); }
     }
 }

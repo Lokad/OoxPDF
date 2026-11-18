@@ -14,6 +14,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private static PdfRectangle ResolvePlacedStoryDesignClip(DocxPlacedRelatedStoryLayout story) =>
+        new(story.X, story.TopY - story.Height, story.Width, story.Height);
+
     private static (bool Mapped, FloatingTextBoxEmissionMap Map, PdfRectangle Clip, PdfRectangle TableClip) ResolvePlacedStoryPaintFrame(
         DocxPlacedRelatedStoryLayout story, DocxMarkupContext context, double pageHeight)
     {
@@ -27,7 +30,7 @@ internal sealed partial class DocxRenderer
             var (x, y, width, height) = map.MapRectangle(story.X, story.TopY, story.Width, story.Height);
             clip = new PdfRectangle(x, y, width, height);
         }
-        else clip = new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
+        else clip = ResolvePlacedStoryDesignClip(story);
 
         // Flow admission bounds the selected text/image slice. Table cells own
         // their content clips; an unfragmented row can extend into the margin,
@@ -49,7 +52,7 @@ internal sealed partial class DocxRenderer
         token.ThrowIfCancellationRequested();
         if (map is not { } mapping || !story.StoryLayout.Story.IsNormalStoryType)
             return row;
-        var bounds = new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
+        var bounds = ResolvePlacedStoryDesignClip(story);
         return Fits(row, bounds) ? mapping.PrecompensateRow(row) : row;
 
         bool Fits(DocxTableRowLayout current, PdfRectangle parent)
@@ -271,16 +274,15 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        var storyClip = new PdfRectangle(story.X, story.TopY - story.Height, story.Width, story.Height);
-        graphics.SaveState();
-        graphics.ClipRectangle(storyClip.X, storyClip.Y, storyClip.Width, storyClip.Height);
+        var imageClip = ResolvePlacedStoryDesignClip(story);
+        // Floating boxes join the printed story frame. Floating pictures keep
+        // the viewport of their existing design-space placement.
+        var (_, _, textBoxClip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, pageClip.Height);
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref pictureLinks, storyClip);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref pictureLinks, imageClip, textBoxClip);
         }
-
-        graphics.RestoreState();
     }
 
     private static void RenderFloatingDrawing(
@@ -297,7 +299,8 @@ internal sealed partial class DocxRenderer
         ref int imageIndex,
         PdfRectangle pageClip,
         ref List<PdfLinkAnnotation>? pictureLinks,
-        PdfRectangle? storyClip = null)
+        PdfRectangle? imageClip = null,
+        PdfRectangle? textBoxClip = null)
     {
         if (drawing.PlacedX is not { } placedX ||
             drawing.PlacedTop is not { } placedTop ||
@@ -309,11 +312,17 @@ internal sealed partial class DocxRenderer
 
         if (drawing.Drawing.Image is { } image)
         {
+            if (imageClip is { } clip)
+            {
+                graphics.SaveState();
+                graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
+            }
             bool painted = RenderImage(image, placedX, placedTop - height, width, height, graphics, pageImages,
                 diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken, imageCache, ref imageIndex,
                 out PdfRectangle? axisAlignedFrame, svgTextFonts: fontResources.SvgTextFonts);
+            if (imageClip is not null) graphics.RestoreState();
             if (painted && image.ClickTarget is { } uri && axisAlignedFrame is { } frame &&
-                ContainsPictureFrame(pageClip, frame) && (storyClip is not { } clip || ContainsPictureFrame(clip, frame)))
+                ContainsPictureFrame(pageClip, frame) && (imageClip is not { } viewport || ContainsPictureFrame(viewport, frame)))
             {
                 (pictureLinks ??= []).Add(PdfLinkAnnotation.ToUri(frame.X, frame.Y, frame.Width, frame.Height, uri));
             }
@@ -321,8 +330,34 @@ internal sealed partial class DocxRenderer
 
         if (drawing.TextBoxLayout is { } textBoxLayout)
         {
-            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip.Height);
+            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip.Height, textBoxClip);
         }
+    }
+
+    private readonly record struct FloatingTextBoxPaintFrame(double X, double Top, PdfRectangle Clip, FloatingTextBoxEmissionMap? Map)
+    {
+        public DocxTableRowLayout PlaceRow(DocxTableRowLayout row)
+        {
+            var translated = DocxLayoutEngine.ShiftTableRow(row, Top, X);
+            return Map is { } map ? map.PrecompensateRow(translated) : translated;
+        }
+    }
+
+    private static FloatingTextBoxPaintFrame ResolveFloatingTextBoxPaintFrame(DocxFloatingDrawing drawing,
+        double placedX, double placedTop, double width, double height, DocxMarkupContext context, double pageHeight)
+    {
+        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing, out double left, out double top, out double right, out double bottom);
+        double contentX = placedX + left;
+        double contentTop = placedTop - top;
+        double contentWidth = Math.Max(0d, width - left - right);
+        double contentHeight = Math.Max(0d, height - top - bottom);
+        if (FloatingTextBoxEmissionMap.TryCreate(context, pageHeight, out var map))
+        {
+            var (clipX, clipY, clipWidth, clipHeight) = map.MapRectangle(contentX, contentTop, contentWidth, contentHeight);
+            return new(contentX, contentTop, new PdfRectangle(clipX, clipY, clipWidth, clipHeight), map);
+        }
+
+        return new(contentX, contentTop, new PdfRectangle(contentX, contentTop - contentHeight, contentWidth, contentHeight), null);
     }
 
     private static void RenderFloatingTextBox(
@@ -342,7 +377,8 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        double pageHeight)
+        double pageHeight,
+        PdfRectangle? storyClip)
     {
         if (textBoxLayout.TextLines.Count == 0 &&
             textBoxLayout.InlineImages.Count == 0 &&
@@ -351,17 +387,14 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        // W6-d: content sits in the inset content box (explicit bodyPr insets, else Office
-        // defaults), matching the layout content width.
-        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
-        double contentX = placedX + insetLeft;
-        double contentTop = placedTop - insetTop;
-        double contentWidth = Math.Max(0d, width - insetLeft - insetRight);
-        double contentHeight = Math.Max(0d, height - insetTop - insetBottom);
-        // Scaled WC pages map design-space content uniformly to emission space; every
-        // other mode keeps the translated layout coordinates (FloatingTextBoxEmissionMap).
-        bool uniformMap = FloatingTextBoxEmissionMap.TryCreate(markupContext, pageHeight, out FloatingTextBoxEmissionMap map);
+        var paintFrame = ResolveFloatingTextBoxPaintFrame(
+            drawing.Drawing, placedX, placedTop, width, height, markupContext, pageHeight);
+        var (contentX, contentTop, clip, mapping) = paintFrame;
+        bool uniformMap = mapping.HasValue;
+        var map = mapping.GetValueOrDefault();
         graphics.SaveState();
+        if (storyClip is { } ancestor)
+            graphics.ClipRectangle(ancestor.X, ancestor.Y, ancestor.Width, ancestor.Height);
         // The frame owns its outer stroke; only its children acquire the inset
         // content clip, as for inline text boxes. Clipping first hides the frame.
         if (TryResolveTextBoxStroke(drawing.Drawing, width, height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue))
@@ -372,15 +405,7 @@ internal sealed partial class DocxRenderer
             graphics.SetLineWidth(uniformMap ? map.ScaleExtent(strokeWidth) : strokeWidth);
             graphics.StrokeRectangle(frame.X, frame.Y, frame.Width, frame.Height);
         }
-        if (uniformMap)
-        {
-            (double clipX, double clipY, double clipWidth, double clipHeight) = map.MapRectangle(contentX, contentTop, contentWidth, contentHeight);
-            graphics.ClipRectangle(clipX, clipY, clipWidth, clipHeight);
-        }
-        else
-        {
-            graphics.ClipRectangle(contentX, contentTop - contentHeight, contentWidth, contentHeight);
-        }
+        graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
         IReadOnlyList<DocxLayoutItem> items = textBoxLayout.TextLines
             .Select(line => uniformMap
                 ? map.PrecompensateLine(line, contentX, contentTop)
@@ -389,9 +414,7 @@ internal sealed partial class DocxRenderer
             .Concat(textBoxLayout.InlineImages.Select(image => uniformMap
                 ? map.PrecompensateImage(image, contentX, contentTop, drawing.AnchorPageIndex ?? image.PageIndex)
                 : image.Relocate(contentX + image.X, contentTop + image.Y, drawing.AnchorPageIndex)))
-            .Concat(textBoxLayout.TableRows.Select(row => uniformMap
-                ? map.PrecompensateRow(DocxLayoutEngine.ShiftTableRow(row, contentTop, contentX))
-                : DocxLayoutEngine.ShiftTableRow(row, contentTop, contentX)))
+            .Concat(textBoxLayout.TableRows.Select(paintFrame.PlaceRow))
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);

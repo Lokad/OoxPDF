@@ -14,7 +14,7 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     private static void AddPlacedTableBookmarkDestinations(
-        DocxLayoutPage page, int pageIndex, DocxMarkupContext context,
+        DocxLayoutPage page, IReadOnlyList<DocxFloatingDrawingLayout> pageDrawings, int pageIndex, DocxMarkupContext context,
         Dictionary<string, PdfLinkDestination> destinations, CancellationToken token)
     {
         double xOffset = ResolveTextEmissionXOffset(context);
@@ -30,17 +30,30 @@ internal sealed partial class DocxRenderer
             if (HasTarget(row)) AddTargets(AdjustStaticTableRow(row, context), pageClip);
         foreach (var box in page.StaticInlineTextBoxes)
             AddBoxTargets(box, pageClip);
+        foreach (var drawing in pageDrawings)
+            AddFloatingBoxTargets(drawing, pageClip);
         foreach (var story in page.PlacedRelatedStories)
         {
             token.ThrowIfCancellationRequested();
-            if (story.TableRows.Count == 0 || !story.StoryLayout.Story.IsNormalStoryType ||
-                story.StoryLayout.Story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
+            bool hasNoteRows = story.TableRows.Count > 0 && story.StoryLayout.Story.IsNormalStoryType &&
+                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
+            if (!hasNoteRows && story.FloatingDrawings.Count == 0)
                 continue;
-            var (mapped, map, _, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
-            var storyClip = new DocxTableCellClipSnapshot(true, clip.X, clip.Y, clip.Width, clip.Height);
-            foreach (var row in story.TableRows)
-                if (HasTarget(row))
-                    AddTargets(ResolvePlacedStoryTablePaintFrame(story, row, mapped ? map : null, token), storyClip);
+            var (mapped, map, boxViewport, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
+            if (hasNoteRows)
+            {
+                var storyClip = new DocxTableCellClipSnapshot(true, clip.X, clip.Y, clip.Width, clip.Height);
+                foreach (var row in story.TableRows)
+                    if (HasTarget(row))
+                        AddTargets(ResolvePlacedStoryTablePaintFrame(story, row, mapped ? map : null, token), storyClip);
+            }
+            if (story.FloatingDrawings.Count > 0)
+            {
+                var storyClip = DocxTableCellClipGeometry.Intersect(
+                    new(true, boxViewport.X, boxViewport.Y, boxViewport.Width, boxViewport.Height), pageClip);
+                foreach (var drawing in story.FloatingDrawings)
+                    AddFloatingBoxTargets(drawing, storyClip);
+            }
         }
 
         bool HasTarget(DocxTableRowLayout row)
@@ -65,6 +78,30 @@ internal sealed partial class DocxRenderer
                         new(true, x, top - box.BoxHeight, box.BoxWidth, box.BoxHeight), parentClip);
                 }
                 AddTargets(AdjustStaticTableRow(row, context), clip);
+            }
+        }
+
+        void AddFloatingBoxTargets(DocxFloatingDrawingLayout drawing, DocxTableCellClipSnapshot parentClip)
+        {
+            token.ThrowIfCancellationRequested();
+            if (drawing.TextBoxLayout is not { TableRows.Count: > 0 } textBox ||
+                drawing.PlacedX is not { } placedX || drawing.PlacedTop is not { } placedTop ||
+                drawing.ExtentWidthPoints is not { } width || drawing.ExtentHeightPoints is not { } height)
+                return;
+
+            FloatingTextBoxPaintFrame? frame = null;
+            DocxTableCellClipSnapshot? clip = null;
+            foreach (var row in textBox.TableRows)
+            {
+                if (!HasTarget(row)) continue;
+                if (frame is null)
+                {
+                    frame = ResolveFloatingTextBoxPaintFrame(drawing.Drawing, placedX, placedTop, width, height, context, page.Height);
+                    PdfRectangle viewport = frame.Value.Clip;
+                    clip = DocxTableCellClipGeometry.Intersect(
+                        new(true, viewport.X, viewport.Y, viewport.Width, viewport.Height), parentClip);
+                }
+                AddTargets(frame.Value.PlaceRow(row), clip);
             }
         }
 

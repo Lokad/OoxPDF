@@ -1190,7 +1190,8 @@ internal sealed partial class DocxRenderer
                 double pageTextEmissionXOffset = ResolveTextEmissionXOffset(pageMarkupContext);
                 var bodyMath = fontResources.MathEquations.Count == 0 ? null : page.Items.OfType<DocxEquationLayout>()
                     .ToLookup(item => item.Math.Equation, ReferenceEqualityComparer.Instance);
-                foreach (var source in EnumerateRenderedPageLineSources(page, drawingPages.PageAll(pageIndex), pageMarkupContext, page.Height))
+                var pageDrawings = drawingPages.PageAll(pageIndex);
+                foreach (var source in EnumerateRenderedPageLineSources(page, pageDrawings, pageMarkupContext, page.Height))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     DocxTextLineLayout line = source.Line;
@@ -1375,7 +1376,7 @@ internal sealed partial class DocxRenderer
                             pageIndex, pageTextEmissionXOffset, pageTextEmissionBaselineOffset);
                 }
 
-                AddPlacedTableBookmarkDestinations(page, pageIndex, pageMarkupContext, destinations, cancellationToken);
+                AddPlacedTableBookmarkDestinations(page, pageDrawings, pageIndex, pageMarkupContext, destinations, cancellationToken);
             }
 
             return destinations;

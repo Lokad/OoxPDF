@@ -8679,6 +8679,8 @@
     "DocxBlockBookmarksFollowPlacedCellAndStoryParagraphs",
     "=DocxBlockBookmarksFollowPaintedTableRowsAcrossStories",
     "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
+    "=DocxFloatingBoxTableRangeBookmarksFollowPaintedRows",
+    "=DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame",
     "=DocxBodyBookmarksFollowTheirPlacedParagraph",
     "=DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",
