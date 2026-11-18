@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.Reflection;
+using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -15,32 +17,37 @@ internal static class PptxChartDensifyTests
         Type pointType = NumberPointType();
         object empty = BuildNumberVector(vectorType, pointType, [], null);
         TestAssert.True(!InvokeHasAnyValue(vectorType, empty), "Empty vectors must report no value.");
-        TestAssert.True(!InvokeHasAnyDenseSlot(vectorType, empty), "Empty vectors must report no dense slot.");
         TestAssert.Equal(0, InvokeDenseLength(vectorType, empty));
 
         object sparse = BuildNumberVector(vectorType, pointType, [(0, 5d), (2, null)], null);
         TestAssert.True(InvokeHasAnyValue(vectorType, sparse), "A sparse valued point must report a value.");
-        TestAssert.True(InvokeHasAnyDenseSlot(vectorType, sparse), "A sparse vector must report dense slots.");
         TestAssert.Equal(3, InvokeDenseLength(vectorType, sparse));
 
         object allNull = BuildNumberVector(vectorType, pointType, [(0, null), (1, null)], 5);
         TestAssert.True(!InvokeHasAnyValue(vectorType, allNull), "All-null values must report no value.");
-        TestAssert.True(InvokeHasAnyDenseSlot(vectorType, allNull), "A declared count still materializes slots.");
         TestAssert.Equal(5, InvokeDenseLength(vectorType, allNull));
     }
 
-    public static void TextPresenceChecksMatchDensifiedResults()
+    public static void TextDenseSlotsRetainDeclaredAndInferredCounts()
     {
         Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Expected text vector type.");
-        Type pointType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextPoint", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected text point type.");
-        ConstructorInfo pointCtor = pointType.GetConstructors().Single();
-        object textPoint = pointCtor.Invoke([0, Activator.CreateInstance(pointType.GetConstructors().Single().GetParameters()[1].ParameterType), "a", true, null]);
-        Array points = Array.CreateInstance(pointType, 1);
-        points.SetValue(textPoint, 0);
-        object vector = BuildVector(vectorType, points, null);
-        TestAssert.True(InvokeBool(vectorType, vector, "HasAnyDenseSlot"), "A text vector must report dense slots.");
+        MethodInfo dense = vectorType.GetMethod("DensePoints") ?? throw new InvalidOperationException("Expected dense text slots.");
+        Array Slots((int Index, string Text, bool HasText)[] points, int? count)
+        {
+            try { return (Array)dense.Invoke(BuildTextVector(vectorType, points, count), null)!; }
+            catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
+        }
+
+        TestAssert.Equal(0, Slots([(-1, "a", true)], null).Length);
+        TestAssert.Equal(4, Slots([], 4).Length);
+        var sparse = Slots([(5, "a", true)], 3);
+        TestAssert.Equal(6, sparse.Length);
+        TestAssert.True(sparse.GetValue(0) is null && sparse.GetValue(5) is not null,
+            "A smaller declared count must not truncate a later authored slot or fill the gaps before it.");
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => Slots([], -1));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => Slots([], PptxRenderer.MaxChartDensePoints + 1));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => Slots([(PptxRenderer.MaxChartDensePoints, "a", true)], null));
     }
 
     public static void SparseTextSlotsPreservePointsWithoutDuplicatingEmptyProvenance()
@@ -68,7 +75,7 @@ internal static class PptxChartDensifyTests
         Type pointType = NumberPointType();
         object huge = BuildNumberVector(vectorType, pointType, [], 200000);
         TestAssert.Throws<OoxPdfLimitExceededException>(() => InvokeHasAnyValueThrowing(vectorType, huge));
-        TestAssert.Throws<OoxPdfLimitExceededException>(() => InvokeHasAnyDenseSlotThrowing(vectorType, huge));
+        TestAssert.Throws<OoxPdfLimitExceededException>(() => ((PptxRenderer.ChartIndexedNumberVector)huge).DensePointCount());
     }
 
     public static void CountRenderableSeriesSkipsDensifyAllocation()
@@ -162,24 +169,52 @@ internal static class PptxChartDensifyTests
         }
     }
 
-    public static void VisibleTextCheckMatchesDensifiedLabels()
+    public static void DuplicateCategoryCaptionsSharePlotReservationAndPaint()
     {
-        // R15: the sparse visible-text probe must agree with the dense scan,
-        // including whitespace-only, empty, declared-empty, and out-of-range cases.
-        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected text vector type.");
-        object real = BuildTextVector(vectorType, [(0, "a", true)], null);
-        TestAssert.True(InvokeBool(vectorType, real, "HasAnyVisibleText"), "A real label must report visible text.");
-        object whitespace = BuildTextVector(vectorType, [(0, "   ", true)], null);
-        TestAssert.True(!InvokeBool(vectorType, whitespace, "HasAnyVisibleText"), "Whitespace-only labels must report no visible text.");
-        object empty = BuildTextVector(vectorType, [], null);
-        TestAssert.True(!InvokeBool(vectorType, empty, "HasAnyVisibleText"), "Empty vectors must report no visible text.");
-        object blank = BuildTextVector(vectorType, [(0, "", false)], null);
-        TestAssert.True(!InvokeBool(vectorType, blank, "HasAnyVisibleText"), "Textless points must report no visible text.");
-        object negative = BuildTextVector(vectorType, [(-1, "a", true)], null);
-        TestAssert.True(!InvokeBool(vectorType, negative, "HasAnyVisibleText"), "Negative indexes must report no visible text.");
-        object declaredExtends = BuildTextVector(vectorType, [(5, "a", true)], 3);
-        TestAssert.True(InvokeBool(vectorType, declaredExtends, "HasAnyVisibleText"), "Declared counts extend (never truncate) the inferred range.");
+        byte[] source = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Cases", "ComposedAxes", "solo-column.pptx"));
+        foreach (bool visible in new[] { false, true })
+        {
+            PdfPage control = Render(visible, duplicate: false);
+            PdfPage alternate = Render(visible, duplicate: true);
+            TestAssert.Equal(control.Content, alternate.Content);
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(alternate, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CCA", StringComparison.Ordinal));
+            string categories = string.Concat(shows.Select(show => show.Text));
+            TestAssert.Equal(visible ? "W1W2W3W4W5W6W7W8" : string.Empty, categories);
+        }
+
+        PdfPage Render(bool visible, bool duplicate)
+        {
+            using var stream = new MemoryStream();
+            stream.Write(source);
+            stream.Position = 0;
+            using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+            {
+                var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
+                XDocument chart;
+                using (var input = entry.Open()) chart = XDocument.Load(input);
+                XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+                foreach (XElement point in chart.Descendants(c + "cat").Single().Descendants(c + "pt").ToArray())
+                {
+                    XElement value = point.Element(c + "v")!;
+                    string caption = value.Value;
+                    value.Value = visible ? caption : " ";
+                    if (duplicate)
+                    {
+                        XElement predecessor = new(point);
+                        predecessor.Element(c + "v")!.Value = visible ? " " : caption;
+                        point.AddBeforeSelf(predecessor);
+                    }
+                }
+                using var output = entry.Open();
+                output.SetLength(0);
+                chart.Save(output);
+            }
+            stream.Position = 0;
+            using var package = OoxPackage.Open(stream, default);
+            return new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(
+                new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
+        }
     }
 
     public static void RadarBuildSkipsValuelessVectors()
@@ -389,11 +424,6 @@ internal static class PptxChartDensifyTests
         return InvokeBool(vectorType, vector, "HasAnyValue");
     }
 
-    private static bool InvokeHasAnyDenseSlot(Type vectorType, object vector)
-    {
-        return InvokeBool(vectorType, vector, "HasAnyDenseSlot");
-    }
-
     private static bool InvokeBool(Type vectorType, object vector, string method)
     {
         try
@@ -409,11 +439,6 @@ internal static class PptxChartDensifyTests
     private static void InvokeHasAnyValueThrowing(Type vectorType, object vector)
     {
         InvokeBool(vectorType, vector, "HasAnyValue");
-    }
-
-    private static void InvokeHasAnyDenseSlotThrowing(Type vectorType, object vector)
-    {
-        InvokeBool(vectorType, vector, "HasAnyDenseSlot");
     }
 
     private static int InvokeMaxDensePointCount(Array series)

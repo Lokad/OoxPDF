@@ -198,6 +198,7 @@ internal sealed partial class PptxRenderer
         ChartBarPlotOptions barOptions,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
+        IReadOnlyList<ChartIndexedTextPoint?> categoryLabels,
         PresentationFontResolver? fontResolver,
         ChartAxisPlacement? categoryPlacement, ChartLegendLayout legend, ChartAxisPlacement? numericPlacement,
         PptxRenderContext? context = null,
@@ -216,7 +217,7 @@ internal sealed partial class PptxRenderer
             barOptions.BarDirection == PptxSceneChartBarDirection.Bar && UsesAutomaticBarFrame(barOptions, sceneChart, legend) &&
             !axisTitles.HasHorizontalTitle && !axisTitles.HasVerticalTitle)
             titleLine = await MeasureChartTitleLineAsync(theme, sceneChart, fontResolver).ConfigureAwait(false);
-        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement, context: context, resolvedValueScale: resolvedValueScale, numericPlacement: numericPlacement).ConfigureAwait(false));
+        ChartPlotLayout plotLayout = (await GetBarChartPlotLayoutAsync(theme, colorMap, frame, chartXml, sceneChart, barPlot, barChart, title, plotLegend, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver: fontResolver, ignoreManualPlotLayout: false, measuredTitle: titleLine, categoryPlacement: categoryPlacement, context: context, resolvedValueScale: resolvedValueScale, numericPlacement: numericPlacement).ConfigureAwait(false));
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend,
             plotLayout.CategoryLabelOffsetAdjustment,
             // Resolved ranges serve admitted single/shared horizontal plots and
@@ -299,6 +300,7 @@ internal sealed partial class PptxRenderer
         ChartBarPlotOptions barOptions,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly,
+        IReadOnlyList<ChartIndexedTextPoint?> categoryLabels,
         bool ignoreManualPlotLayout,
         PresentationFontResolver? fontResolver,
         (double Ascent, double Height)? measuredTitle = null,
@@ -308,6 +310,7 @@ internal sealed partial class PptxRenderer
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
         bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
+        bool hasCategoryLabels = categoryLabels.Any(label => !string.IsNullOrWhiteSpace(label?.Text));
         double? categoryLabelOffsetAdjustment = null;
         double? categoryFittingClearance = null;
         double? categoryTopReserve = null;
@@ -388,10 +391,10 @@ internal sealed partial class PptxRenderer
         defaultPlotBox = (await AdjustHorizontalBarPlotBoxForValueLabelsAsync(defaultPlotBox).ConfigureAwait(false));
         defaultPlotBox = AdjustHorizontalBarPlotBoxForTopAndBottom(defaultPlotBox);
         if (cartesianHeader is null)
-            defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly));
+            defaultPlotBox = AdjustVerticalBarPlotBoxTopFloor(defaultPlotBox, frame, horizontalBars, hasTitle, hasLegend, hasCategoryLabels);
         ChartAxisSource rightReserveCategoryAxis = ReadChartCategoryAxisForPlot(sceneChart, barPlot);
         bool rightReserveLabelsVisible = IsSceneChartAxisLabelVisible(rightReserveCategoryAxis.SceneAxis);
-        defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly) && rightReserveLabelsVisible);
+        defaultPlotBox = AdjustVerticalBarPlotBoxRightReserve(defaultPlotBox, frame, horizontalBars, legend, hasCategoryLabels && rightReserveLabelsVisible);
         if (cartesianHeader is { } measuredHeader)
         {
             double top = frame.Y + frame.Height - Math.Max(measuredHeader.Reserve, categoryTopReserve ?? 0d);
@@ -459,7 +462,7 @@ internal sealed partial class PptxRenderer
         // Bars retain their dedicated outer-area placement and caption owner.
         if (sceneChart.PlotAreaLayout.LayoutTargetKind == PptxSceneChartManualLayoutTarget.Inner)
             manualPlotLayout = ResolveCartesianPlotPosition(sceneChart.PlotAreaLayout, frame, manualPlotLayout);
-        return (await ResolveBarManualPlotLayoutTargetAsync(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars, frame, workbook, plotVisibleOnly, fontResolver).ConfigureAwait(false));
+        return (await ResolveBarManualPlotLayoutTargetAsync(theme, sceneChart, barPlot, manualPlotLayout, horizontalBars, frame, categoryLabels, fontResolver).ConfigureAwait(false));
 
         ChartPlotBox GetHorizontalBarManualLayoutTargetDefaultPlotBox(ChartPlotBox defaultPlotBox)
         {
@@ -690,7 +693,7 @@ internal sealed partial class PptxRenderer
             var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
             double maxCategoryWidth = 0d;
             if (IsSceneChartAxisLabelVisible(categoryAxis.SceneAxis))
-            foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly))
+            foreach (ChartIndexedTextPoint? label in categoryLabels)
             {
                 string? labelText = label?.Text;
                 if (!string.IsNullOrWhiteSpace(labelText))
@@ -850,7 +853,7 @@ internal sealed partial class PptxRenderer
             else
             {
                 IReadOnlyList<ChartIndexedNumberVector> categorySeriesVectors = ReadSharedChartSeriesVectors(barPlot, workbook, plotVisibleOnly);
-                if (CountRenderableSeries(categorySeriesVectors) == 0 || !HasRenderableCategoryLabels(barPlot, barChart, workbook, plotVisibleOnly))
+                if (CountRenderableSeries(categorySeriesVectors) == 0 || !hasCategoryLabels)
                 {
                     return plotBox;
                 }
@@ -1083,15 +1086,12 @@ internal sealed partial class PptxRenderer
 
     private static async ValueTask<ChartPlotLayout> ResolveBarManualPlotLayoutTargetAsync(
         PptxTheme theme,
-        XDocument chartXml,
         PptxSceneChart sceneChart,
         PptxSceneChartPlot barPlot,
-        XElement barChart,
         ChartPlotLayout layout,
         bool horizontalBars,
         ChartFrameBox frame,
-        ChartWorkbookData? workbook,
-        bool plotVisibleOnly,
+        IReadOnlyList<ChartIndexedTextPoint?> categoryLabels,
         PresentationFontResolver? fontResolver)
     {
         if (!horizontalBars || layout.ManualLayoutTargetKind != PptxSceneChartManualLayoutTarget.Outer)
@@ -1139,7 +1139,7 @@ internal sealed partial class PptxRenderer
                 var textMeasurer = new ChartTextMeasurer(fontResolver, kerningEnabled: false);
                 double maxCategoryWidth = 0d;
                 int labelIndex = 0;
-                foreach (ChartIndexedTextPoint? label in ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly))
+                foreach (ChartIndexedTextPoint? label in categoryLabels)
                 {
                     // Mirror the emission skip logic in RenderChartCategoryLabels so the
                     // reserve covers rendered labels only.
@@ -1249,12 +1249,6 @@ internal sealed partial class PptxRenderer
         double flooredRight = frame.X + frame.Width - PptxChartMetricRules.ColumnPlotRightReserve;
         double right = Math.Min(plotBox.X + plotBox.Width, flooredRight);
         return new ChartPlotBox(plotBox.X, plotBox.Y, Math.Max(1d, right - plotBox.X), plotBox.Height);
-    }
-    // R15: existence probe over the sparse points; the dense array is only built
-    // when labels actually render.
-    private static bool HasRenderableCategoryLabels(PptxSceneChartPlot barPlot, XElement barChart, ChartWorkbookData? workbook, bool plotVisibleOnly)
-    {
-        return ReadSceneCategoryLabelVector(barPlot, workbook, plotVisibleOnly).HasAnyVisibleText();
     }
     private static ChartPlotBox AdjustStackedColumnBottomLegendPlotBox(
         ChartPlotBox plotBox,

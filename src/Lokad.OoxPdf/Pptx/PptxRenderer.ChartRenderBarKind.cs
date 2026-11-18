@@ -122,7 +122,8 @@ internal sealed partial class PptxRenderer
                     legendEntries.AddRange(BuildStrokeLegendEntries(theme, colorMap, chartPalette, plot, element,
                         strokes, markers, reverseOrder: options.Stacked, workbook: workbook, chartStyleId: barStyleId));
                 }
-                ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver, resolvedCategory, sourceLegend, numericPlacement, context: context,
+                IReadOnlyList<ChartIndexedTextPoint?> categoryLabels = ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly);
+                ChartLayout chartLayout = (await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart, colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver, resolvedCategory, sourceLegend, numericPlacement, context: context,
                     resolvedValueScale: sharedValueAxis || horizontalBars && CanOwnCartesianChartSourceRange(sceneChart, valueSceneAxis)
                         ? (valueExtents, valueAxisOptions.Units) : null).ConfigureAwait(false));
                 ChartTextStyle legendTextStyle = ReadSceneChartLegendTextStyle(theme, sceneChart);
@@ -168,7 +169,7 @@ internal sealed partial class PptxRenderer
                     // Bounds and units change numeric strip widths together. Reuse
                     // packed legend frames; only the dependent plot measurement reruns.
                     ChartLayout resized = await GetBarChartLayoutAsync(document, theme, bounds, chartXml, sceneChart,
-                        colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, fontResolver,
+                        colorMap, barPlot, barChart, barOptions, workbook, plotVisibleOnly, categoryLabels, fontResolver,
                         resolvedCategory, sourceLegend, numericPlacement, context, scale).ConfigureAwait(false);
                     chartLayout = resized with
                     {
@@ -178,7 +179,6 @@ internal sealed partial class PptxRenderer
                             Height = Math.Max(1d, resized.PlotAreaBox.Height - legendBand) }
                     };
                 }
-                var categoryLabels = ReadSharedCategoryLabels(barPlot, workbook, plotVisibleOnly);
                 var categoryPlacement = resolvedCategory is { } placed ? (placed.LabelPlotRatio, placed.LabelsHighSide) :
                     ResolveChartAxisLabelPlacement(categoryAxis.SceneAxis,
                         GetChartValuePlotRatio(valueExtents, valueAxisOptions.CrossingValue ?? 0d, valueAxisOptions.Reversed), valueAxisOptions.Reversed);

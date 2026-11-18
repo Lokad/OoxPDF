@@ -371,7 +371,7 @@ internal sealed partial class PptxRenderer
                 series.DataSources.Categories,
                 workbook,
                 plotVisibleOnly))
-            .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null || vector.HasAnyDenseSlot());
+            .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null);
     }
 
     // R15: per-frame shared dense category labels behind one call shape. Workbook-less

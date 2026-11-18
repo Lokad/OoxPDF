@@ -59,7 +59,7 @@ internal sealed partial class PptxRenderer
         public double?[] DenseValues()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
-            int pointCount = ResolveDensePointCount(PointCount, points);
+            int pointCount = ResolveDensePointCount(PointCount, points, static point => point.Index);
             if (pointCount <= 0)
             {
                 return [];
@@ -80,7 +80,7 @@ internal sealed partial class PptxRenderer
         public bool HasAnyValue()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
-            int pointCount = ResolveDensePointCount(PointCount, points);
+            int pointCount = ResolveDensePointCount(PointCount, points, static point => point.Index);
             if (pointCount <= 0)
             {
                 return false;
@@ -97,18 +97,12 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        public bool HasAnyDenseSlot()
-        {
-            IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
-            return ResolveDensePointCount(PointCount, points) > 0;
-        }
-
         // Count-only passes share slot resolution with DenseValues without
         // materializing a dense array.
         public int DensePointCount()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
-            return ResolveDensePointCount(PointCount, points);
+            return ResolveDensePointCount(PointCount, points, static point => point.Index);
         }
 
         public IReadOnlyList<ChartIndexedNumberPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)
@@ -123,9 +117,22 @@ internal sealed partial class PptxRenderer
 
     internal const int MaxChartDensePoints = 100_000;
 
-    private static int ResolveDensePointCount(int? declaredCount, IReadOnlyList<ChartIndexedNumberPoint> points)
+    private static int ResolveDensePointCount<TPoint>(int? declaredCount, IReadOnlyList<TPoint> points, Func<TPoint, int> getIndex)
     {
-        int inferred = InferCheckedPointCount(points);
+        int highestIndex = -1;
+        foreach (TPoint point in points)
+        {
+            int index = getIndex(point);
+            // Bound the index before adding one to derive the dense count.
+            if (index >= MaxChartDensePoints)
+            {
+                throw new OoxPdfLimitExceededException(
+                    "Chart point index exceeds the maximum supported point count of " + MaxChartDensePoints + ".");
+            }
+
+            highestIndex = Math.Max(highestIndex, index);
+        }
+
         int declared = declaredCount ?? 0;
         if (declared < 0)
         {
@@ -138,105 +145,7 @@ internal sealed partial class PptxRenderer
                 "Chart point count exceeds the maximum supported point count of " + MaxChartDensePoints + ".");
         }
 
-        long combined = Math.Max((long)declared, inferred);
-        if (combined > MaxChartDensePoints)
-        {
-            throw new OoxPdfLimitExceededException(
-                "Chart point index exceeds the maximum supported point count of " + MaxChartDensePoints + ".");
-        }
-
-        return (int)combined;
-    }
-
-    private static int ResolveDensePointCount(int? declaredCount, IReadOnlyList<ChartIndexedTextPoint> points)
-    {
-        int inferred = InferCheckedPointCount(points);
-        int declared = declaredCount ?? 0;
-        if (declared < 0)
-        {
-            throw new OoxPdfLimitExceededException("Chart point count is negative.");
-        }
-
-        if (declared > MaxChartDensePoints)
-        {
-            throw new OoxPdfLimitExceededException(
-                "Chart point count exceeds the maximum supported point count of " + MaxChartDensePoints + ".");
-        }
-
-        long combined = Math.Max((long)declared, inferred);
-        if (combined > MaxChartDensePoints)
-        {
-            throw new OoxPdfLimitExceededException(
-                "Chart point index exceeds the maximum supported point count of " + MaxChartDensePoints + ".");
-        }
-
-        return (int)combined;
-    }
-
-    private static int InferCheckedPointCount(IReadOnlyList<ChartIndexedNumberPoint> points)
-    {
-        int max = -1;
-        foreach (ChartIndexedNumberPoint point in points)
-        {
-            if (point.Index < 0)
-            {
-                continue;
-            }
-
-            // Checked index+1: a sparse index of int.MaxValue previously overflowed
-            // to an empty dense result (silent loss). Reject it instead (M02).
-            long candidate;
-            try
-            {
-                candidate = checked((long)point.Index + 1);
-            }
-            catch (OverflowException ex)
-            {
-                throw new OoxPdfLimitExceededException("Chart point index overflows.", ex);
-            }
-
-            if (candidate > MaxChartDensePoints)
-            {
-                throw new OoxPdfLimitExceededException(
-                    "Chart point index exceeds the maximum supported point count of " + MaxChartDensePoints + ".");
-            }
-
-            max = Math.Max(max, (int)(candidate - 1));
-        }
-
-        return max < 0 ? 0 : checked(max + 1);
-    }
-
-    private static int InferCheckedPointCount(IReadOnlyList<ChartIndexedTextPoint> points)
-    {
-        int max = -1;
-        foreach (ChartIndexedTextPoint point in points)
-        {
-            if (point.Index < 0)
-            {
-                continue;
-            }
-
-            long candidate;
-            try
-            {
-                candidate = checked((long)point.Index + 1);
-            }
-            catch (OverflowException ex)
-            {
-                throw new OoxPdfLimitExceededException("Chart point index overflows.", ex);
-            }
-
-            if (candidate > MaxChartDensePoints)
-            {
-                throw new OoxPdfLimitExceededException(
-                    "Chart point index exceeds the maximum supported point count of " + MaxChartDensePoints + ".");
-            }
-
-            max = Math.Max(max, (int)(candidate - 1));
-        }
-
-        return max < 0 ? 0 : checked(max + 1);
+        return Math.Max(declared, highestIndex + 1);
     }
 
     internal readonly record struct ChartIndexedNumberPoint(
@@ -259,7 +168,7 @@ internal sealed partial class PptxRenderer
         public IReadOnlyList<ChartIndexedTextPoint?> DensePoints()
         {
             IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
-            int pointCount = ResolveDensePointCount(PointCount, points);
+            int pointCount = ResolveDensePointCount(PointCount, points, static point => point.Index);
             if (pointCount <= 0)
             {
                 return [];
@@ -277,35 +186,6 @@ internal sealed partial class PptxRenderer
             return values;
         }
 
-
-        public bool HasAnyDenseSlot()
-        {
-            IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
-            return ResolveDensePointCount(PointCount, points) > 0;
-        }
-
-        // R15: sparse existence check for label rendering probes. Matches the dense
-        // scan exactly (in-range indexes, text-bearing points, non-whitespace text)
-        // without materializing the slot array.
-        public bool HasAnyVisibleText()
-        {
-            IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
-            int pointCount = ResolveDensePointCount(PointCount, points);
-            if (pointCount <= 0)
-            {
-                return false;
-            }
-
-            foreach (ChartIndexedTextPoint point in points)
-            {
-                if (point.Index >= 0 && point.Index < pointCount && point.HasText && !string.IsNullOrWhiteSpace(point.Text))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
 
         public IReadOnlyList<ChartIndexedTextPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)
         {
