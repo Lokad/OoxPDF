@@ -2393,6 +2393,6 @@ internal sealed partial class DocxLayoutEngine
             row.CantSplitValue,
             RevisionCount: CountTableRowSourceRevisions(row),
             Revisions: CollectTableRowSourceRevisions(row),
-            Story: Story);
+            Story: Story) { BookmarkAnchors = row.BookmarkAnchors };
     }
 }

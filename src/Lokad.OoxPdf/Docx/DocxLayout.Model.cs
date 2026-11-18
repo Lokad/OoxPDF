@@ -274,6 +274,7 @@ internal sealed record DocxTableRowLayout(
     // already in printed coordinates; border widths still need this scale.
     public double ReviewBorderPrintScale { get; init; } = 1d;
     public IReadOnlyList<DocxFootnoteHeadReservation> FootnoteReservations { get; init; } = [];
+    public IReadOnlyList<DocxBookmarkAnchor>? BookmarkAnchors { get; init; }
 }
 
 // Cell content measurements are retained from the existing row-height pass;

@@ -185,24 +185,40 @@ internal static class DocxSectionNavigationTests
             TestAssert.Equal(0, original[0].Annotations.Count);
         });
 
+        foreach (var mode in Modes)
         WithMutation("bookmark-before", (_, xml) => {
             (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+            target.ElementsBeforeSelf(W + "p").Last().Remove();
             MoveBookmarkOutside(start, end, target);
             start.AddBeforeSelf(Table("FIRST ROW"));
             start.AddAfterSelf(Table("SECOND ROW"));
+            end.Remove();
+            target.AddBeforeSelf(end);
+            XElement section = xml.Descendants(W + "sectPr").Single();
+            section.Element(W + "pgSz")!.SetAttributeValue(W + "w", "10000");
+            section.Element(W + "pgSz")!.SetAttributeValue(W + "h", "8000");
+            foreach (string side in new[] { "top", "bottom", "left", "right" })
+                section.Element(W + "pgMar")!.SetAttributeValue(W + side, "800");
         }, path => {
-            var document = DocxTests.ReadDocx(path, OoxPdfDocxMarkupMode.Final);
+            var document = DocxTests.ReadDocx(path, mode);
             TestAssert.Equal(2, document.Tables.Single().Rows.Count);
-            var pages = Renderer(OoxPdfDocxMarkupMode.Final).RenderPagesAsync(document, null, default)
+            var pages = Renderer(mode).RenderPagesAsync(document, null, default)
                 .ToBlockingEnumerable().ToArray();
             TestAssert.Equal(2, pages.Length);
-            TestAssert.Contains("TARGET PARAGRAPH", Text(pages[1]));
-            TestAssert.Equal(0, pages[0].Annotations.Count);
+            TestAssert.Contains("FIRST ROW", Text(pages[0]));
+            TestAssert.DoesNotContain("SECOND ROW", Text(pages[0]));
+            TestAssert.Contains("SECOND ROW", Text(pages[1]));
+            var destination = pages[0].Annotations.Single().Destination;
+            TestAssert.True(destination is { PageIndex: 1, Left: > 0d, Top: > 0d } && destination.Value.Top <= pages[1].Height,
+                "The joined result retains the start of the second authored table on its own page.");
         });
 
         static XElement Table(string caption) => new(W + "tbl",
-            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "1440"))),
-            new XElement(W + "tr", new XElement(W + "tc", Paragraph(caption))));
+            new XElement(W + "tblPr", new XElement(W + "tblLayout", new XAttribute(W + "type", "fixed"))),
+            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "3000"))),
+            new XElement(W + "tr", new XElement(W + "trPr", new XElement(W + "cantSplit"),
+                new XElement(W + "trHeight", new XAttribute(W + "val", "4400"), new XAttribute(W + "hRule", "exact"))),
+                new XElement(W + "tc", Paragraph(caption))));
     }
 
     private static (XElement Start, XElement End, XElement Target) BookmarkSource(XDocument xml)

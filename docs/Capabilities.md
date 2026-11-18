@@ -26,7 +26,7 @@ fallbacks, but visible content and geometry must also be checked independently.
 | Pictures and boxes | Supported inline/anchored pictures and text boxes, transforms, clipping and first-pass wrap exclusions | Nested inline boxes are unsupported. Complex floating overlap/wrap remains approximate. |
 | Stories | Section-selected headers/footers, footnotes/endnotes, supported fields and navigation | Note continuation/numbering eligibility is restricted; general note-row fragmentation is unsupported. |
 | Review | Final, Original, SimpleMarkup and AllMarkup, supported revisions, comment indicators and balloons | Word print fitting, mixed balloon collision and custom-paper Review placement remain approximate. |
-| Navigation | External links and supported bookmark/note targets using placed content, including body-level bookmarks around paragraphs | Block-level table targets and some unplaced or fragmented owners remain unsupported. |
+| Navigation | External links and supported bookmark/note targets using placed content, including body-level bookmarks around paragraphs and tables | Some unplaced or fragmented owners remain unsupported. |
 
 Supported inline text, equations and pictures retain source order through body,
 table and supported static-story containers. Bookmarks, links and supported

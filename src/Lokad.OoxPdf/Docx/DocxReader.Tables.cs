@@ -61,6 +61,7 @@ internal sealed partial class DocxReader
         var parts = (fragments ?? [source]).Select(fragment => (
             Properties: fragment.Element.Element(WordprocessingNamespace + "tblPr"),
             Grid: ReadTableGrid(fragment.Element, cancellationToken),
+            fragment.LeadingBookmarks,
             Rows: EnumerateRevisionScopedChildren(fragment.Element.Elements(), markupMode, cancellationToken,
                 [WordprocessingNamespace + "tr"], fragment.Revision == inheritedRevision ? null : fragment.Revision)
                 .Where(row => IsIncludedTableRow(row.Element, markupMode, cancellationToken)).ToArray())).ToArray();
@@ -90,6 +91,7 @@ internal sealed partial class DocxReader
         {
             cancellationToken.ThrowIfCancellationRequested();
             var part = parts[sourceIndex];
+            var leadingBookmarks = part.LeadingBookmarks;
             DocxTableCellMargins partMargins = ReadTableStyleCellMargins(part.Properties);
             IReadOnlyList<DocxTableCellBorder> partBorders = ReadTableBorders(part.Properties);
             foreach (var rowElement in part.Rows)
@@ -246,8 +248,10 @@ internal sealed partial class DocxReader
                         (string?)cantSplit?.Attribute(WordprocessingNamespace + "val"))
                     {
                         Revisions = rowRevisions,
-                        GridBefore = gridBefore
+                        GridBefore = gridBefore,
+                        BookmarkAnchors = leadingBookmarks
                     });
+                    leadingBookmarks = null;
                 }
                 rowIndex++;
             }
@@ -377,7 +381,7 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision)
     {
         var elements = new List<DocxBodyElement>();
-        foreach (var (scopedChild, tableFragments, _) in EnumerateLogicalTableBlocks(cell.Elements(), styles, markupMode, cancellationToken, inheritedRevision))
+        foreach (var (scopedChild, tableFragments) in EnumerateLogicalTableBlocks(cell.Elements(), styles, markupMode, cancellationToken, inheritedRevision))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement child = scopedChild.Element;

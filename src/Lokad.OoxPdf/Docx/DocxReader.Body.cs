@@ -49,8 +49,8 @@ internal sealed partial class DocxReader
         documentSettings = ResolveSingleSectionNoteReferenceSettings(document, documentSettings);
         IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(document, authoredSettings, documentSettings);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
-        foreach (var (scopedElement, tableFragments, leadingBookmarks) in EnumerateLogicalTableBlocks(
-            bodyChildren, styles, markupMode, cancellationToken, readParagraphBookmarks: true))
+        foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(
+            bodyChildren, styles, markupMode, cancellationToken, readBlockBookmarks: true))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;
@@ -62,6 +62,7 @@ internal sealed partial class DocxReader
             DocxRevisionInfo? inheritedRevision = scopedElement.Revision;
             if (element.Name == WordprocessingNamespace + "p")
             {
+                var leadingBookmarks = scopedElement.LeadingBookmarks;
                 bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) &&
                     !IsHiddenRunBreak(source, styles, null);
                 bool VisiblePageBreak(XElement source) => IsPageBreak(source) && VisibleBreak(source);
