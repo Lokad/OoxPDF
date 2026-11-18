@@ -100,7 +100,9 @@ internal static partial class PptxInheritanceTests
             if (fontReference.Length != 0)
                 shape.Element(P + "spPr")!.AddAfterSelf(XElement.Parse($"<p:style xmlns:p='{P}' xmlns:a='{A}'><a:fontRef idx='minor'>{fontReference}</a:fontRef></p:style>"));
             if (paragraph.Length != 0)
-                shape.Descendants(A + "p").Single().AddFirst(XElement.Parse($"<a:pPr xmlns:a='{A}'><a:defRPr>{paragraph}</a:defRPr></a:pPr>"));
+                // Paint controls hold size fixed; partial-default metric
+                // inheritance has its own independent shape/cell control.
+                shape.Descendants(A + "p").Single().AddFirst(XElement.Parse($"<a:pPr xmlns:a='{A}'><a:defRPr sz='2400'>{paragraph}</a:defRPr></a:pPr>"));
             shape.Descendants(A + "t").Single().Value = "OWNER_PROBE";
         });
         PdfPage? result = null;
