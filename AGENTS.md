@@ -38,7 +38,9 @@ validation tools, including the PDFium rasterizer, remain outside the library.
 - `tools/BuildQualificationArtifact.ps1`: build/freeze an explicit committed linked worktree and revision; absolute projects prevent accidental root builds. Reuse the frozen artifact for qualification and transfer.
 - Its `-ReuseRuntimeDirectory` mode builds only the updated harness with unchanged production/build inputs and existing public fixtures. Added fixtures enter a new snapshot; qualified runtime assets stay byte-identical and report joins still require identical complete input sets.
 - `tools/TestQualificationTransfer.ps1`: check transfer alias ownership, preflight and failure cleanup with synthetic files; never builds or converts.
-- `tools/NewFrozenAllocationRuntime.ps1`: build/self-test the existing allocation probe against a frozen library without rebuilding the library.
+- `tools/NewFrozenAllocationRuntime.ps1`: self-test the probe with a frozen library
+  and font. Use `-ProbePath` for an existing build or derive a probe for a separately
+  frozen library.
 - `tools/AuditCompositionContent.py`: screen frozen public portfolio prose and simple math against Office; retain unresolved extraction and visual failures.
 - `tools/ScreenPdfInk.py`: screen pinned PDF glyph ink with exact native font-program binding and rectangle clips; retain unknowns. PyMuPDF/fontTools validation only; no builds, conversions or Office. `tools/TestPdfInk.py` checks font-name collisions and clip/identity handling.
 - `tools/CompareCompositionPortfolio.ps1`: compare frozen outputs against pinned Office caches; reuse identical comparisons or verified complete raster derivatives.

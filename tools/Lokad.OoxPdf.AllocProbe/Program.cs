@@ -710,6 +710,11 @@ static int ReadPageCount(byte[] pdfBytes)
 
 static int RunSelfTest(ProbeFont? probeFont)
 {
+    using (FileStream library = File.OpenRead(typeof(OoxPdfConverter).Assembly.Location))
+    {
+        Console.WriteLine("Self-test library SHA256: " + Convert.ToHexString(SHA256.HashData(library)));
+    }
+
     var cases = new (string Name, byte[] Package)[]
     {
         ("self-test.pptx", BuildMinimalPptx()),
