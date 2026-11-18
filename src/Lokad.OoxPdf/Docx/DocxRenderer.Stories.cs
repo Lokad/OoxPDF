@@ -102,15 +102,14 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        double pageHeight,
-        HashSet<DocxInlineImage> paintedPictures)
+        PictureNavigation navigation)
     {
         // RV06 anchor probe (edge-footanchor-5, Word 16.0): footnote and endnote
         // stories lay out unscaled in design space while emission maps uniformly
         // (WC first baseline 236.62 = affine-mapped design). Other stories keep
         // the body-shift path. Complete fitting table subtrees join this map;
         // their unsupported ownership/overflow cases retain the legacy frame.
-        var (mapStory, storyMap, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
+        var (mapStory, storyMap, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
         if (story.SeparatorY is { } separatorY)
         {
             graphics.SetFillRgb(0, 0, 0);
@@ -152,7 +151,8 @@ internal sealed partial class DocxRenderer
                 diagnosticSink(new OoxPdfDiagnostic("DOCX_CLIPPED_NOTE_TABLE_ROW", OoxPdfSeverity.Warning,
                     "A note-table row exceeds its available frame; content is clipped. Row fragmentation for this content is unsupported.",
                     story.StoryLayout.Story.PartName, PageIndex: pageNumber, Feature: "note table row", Fallback: "Clipped"));
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, paintedPictures: paintedPictures);
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
+                navigation.ClipTo(tableViewport ? tableClip : clip));
             if (tableViewport) SetClip(clip);
         }
 
@@ -237,15 +237,14 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        PdfRectangle pageClip,
-        ref List<PdfLinkAnnotation>? pictureLinks)
+        PictureNavigation navigation)
     {
         // R12: pageDrawings arrives pre-filtered by page/layer and pre-sorted by
         // z-order from the once-per-render page index.
         foreach (DocxFloatingDrawingLayout drawing in pageDrawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref pictureLinks);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
         }
     }
 
@@ -262,8 +261,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        PdfRectangle pageClip,
-        ref List<PdfLinkAnnotation>? pictureLinks)
+        PictureNavigation navigation)
     {
         DocxFloatingDrawingLayout[] drawings = story.FloatingDrawings
             .Where(drawing => IsBehindDocument(drawing.Drawing) == behindDocument)
@@ -277,11 +275,11 @@ internal sealed partial class DocxRenderer
         var imageClip = ResolvePlacedStoryDesignClip(story);
         // Floating boxes join the printed story frame. Floating pictures keep
         // the viewport of their existing design-space placement.
-        var (_, _, textBoxClip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, pageClip.Height);
+        var (_, _, textBoxClip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref pictureLinks, imageClip, textBoxClip);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, imageClip, textBoxClip);
         }
     }
 
@@ -303,8 +301,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        PdfRectangle pageClip,
-        ref List<PdfLinkAnnotation>? pictureLinks,
+        PictureNavigation navigation,
         PdfRectangle? imageClip = null,
         PdfRectangle? textBoxClip = null)
     {
@@ -329,23 +326,20 @@ internal sealed partial class DocxRenderer
                 graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
             }
             var pictureFrame = drawing.StaticAnchorY is not null &&
-                FloatingTextBoxEmissionMap.TryCreate(markupContext, pageClip.Height, out var pictureMap)
+                FloatingTextBoxEmissionMap.TryCreate(markupContext, navigation.Viewport.Height, out var pictureMap)
                 ? pictureMap.MapRectangle(placedX, placedTop, width, height)
                 : (X: placedX, Y: placedTop - height, Width: width, Height: height);
             bool painted = RenderImage(image, pictureFrame.X, pictureFrame.Y, pictureFrame.Width, pictureFrame.Height, graphics, pageImages,
                 diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken, imageCache, ref imageIndex,
                 out PdfRectangle? axisAlignedFrame, svgTextFonts: fontResources.SvgTextFonts);
             if (imageClip is not null) graphics.RestoreState();
-            if (painted && image.ClickTarget is { } uri && axisAlignedFrame is { } frame &&
-                ContainsPictureFrame(pageClip, frame) && (imageClip is not { } viewport || ContainsPictureFrame(viewport, frame)))
-            {
-                (pictureLinks ??= []).Add(PdfLinkAnnotation.ToUri(frame.X, frame.Y, frame.Width, frame.Height, uri));
-            }
+            if (painted)
+                (imageClip is { } viewport ? navigation.ClipTo(viewport) : navigation).RecordUri(image, axisAlignedFrame);
         }
 
         if (drawing.TextBoxLayout is { } textBoxLayout)
         {
-            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip.Height, textBoxClip);
+            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, textBoxClip);
         }
     }
 
@@ -392,7 +386,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        double pageHeight,
+        PictureNavigation navigation,
         PdfRectangle? storyClip)
     {
         if (textBoxLayout.TextLines.Count == 0 &&
@@ -403,8 +397,9 @@ internal sealed partial class DocxRenderer
         }
 
         var paintFrame = ResolveFloatingTextBoxPaintFrame(
-            drawing.Drawing, placedX, placedTop, width, height, markupContext, pageHeight);
+            drawing.Drawing, placedX, placedTop, width, height, markupContext, navigation.Viewport.Height);
         var (contentX, contentTop, clip, mapping) = paintFrame;
+        var boxNavigation = (storyClip is { } viewport ? navigation.ClipTo(viewport) : navigation).EnterTextBox(clip);
         bool uniformMap = mapping.HasValue;
         var map = mapping.GetValueOrDefault();
         graphics.SaveState();
@@ -439,7 +434,7 @@ internal sealed partial class DocxRenderer
             DocxLayoutItem item = items[itemIndex];
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex);
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, boxNavigation);
         }
 
         graphics.RestoreState();
@@ -500,6 +495,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
+        PictureNavigation navigation,
         DocxTableCellClipSnapshot? cellClip = null,
         RgbColor? background = null)
     {
@@ -554,7 +550,9 @@ internal sealed partial class DocxRenderer
         if (cellClip is not null) graphics.ClipRectangle(cellClip.X, cellClip.Y, cellClip.Width, cellClip.Height);
         // The containing drawing viewport owns the outline. Only children
         // acquire this interior clip; clipping before stroking halves the border.
-        graphics.ClipRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
+        var clip = new PdfRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
+        graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
+        var boxNavigation = navigation.EnterTextBox(clip);
         IReadOnlyList<DocxLayoutItem> items = box.TextLines
             .Cast<DocxLayoutItem>()
             .Concat(box.InlineImages)
@@ -570,7 +568,7 @@ internal sealed partial class DocxRenderer
             DocxLayoutItem item = items[itemIndex];
             DocxTableRowLayout? previousRow = itemIndex > 0 ? items[itemIndex - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = itemIndex + 1 < items.Count ? items[itemIndex + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, background);
+            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, boxNavigation, background);
         }
 
         graphics.RestoreState();

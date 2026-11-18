@@ -1056,9 +1056,8 @@ internal sealed partial class DocxRenderer
             // Source identities record successful inline paint on this page.
             // Vectors and selected previews need the same navigation contract
             // as raster resources; no payload or decode result is copied here.
-            var paintedPictures = new HashSet<DocxInlineImage>(ReferenceEqualityComparer.Instance);
-            var pageClip = new PdfRectangle(0d, 0d, layoutPage.Width, layoutPage.Height);
-            List<PdfLinkAnnotation>? floatingPictureLinks = null;
+            var navigation = new PictureNavigation(new PdfRectangle(0d, 0d, layoutPage.Width, layoutPage.Height),
+                new HashSet<DocxInlineImage>(ReferenceEqualityComparer.Instance), []);
             int pageNumber = pageIndex + 1;
             RenderWordCompatibleMarkupLaneBackground(layoutPage, graphics, markupContext);
             RenderFloatingDrawings(
@@ -1072,7 +1071,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                pageClip, ref floatingPictureLinks);
+                navigation);
             RenderFloatingDrawings(
                 drawingPages.Static.Get(pageIndex).Behind,
                 graphics,
@@ -1084,7 +1083,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                pageClip, ref floatingPictureLinks);
+                navigation);
 
             IReadOnlyList<DocxLayoutItem> staticItems = EnumerateStaticLayoutItems(layoutPage, markupContext).ToArray();
             RenderParagraphBackgrounds(staticItems, graphics, markupContext, cancellationToken);
@@ -1094,7 +1093,7 @@ internal sealed partial class DocxRenderer
                 DocxLayoutItem staticItem = staticItems[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? staticItems[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < staticItems.Count ? staticItems[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(staticItem, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, paintedPictures: paintedPictures);
+                RenderLayoutItem(staticItem, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
             }
 
             RenderParagraphBackgrounds(layoutPage.Items, graphics, markupContext, cancellationToken);
@@ -1104,7 +1103,7 @@ internal sealed partial class DocxRenderer
                 DocxLayoutItem item = layoutPage.Items[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageIndex + 1, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, paintedPictures: paintedPictures);
+                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
             }
 
             RenderWordCompatibleRevisionBar(drawingPages, layoutPage, pageIndex, graphics, markupContext, cancellationToken);
@@ -1124,9 +1123,9 @@ internal sealed partial class DocxRenderer
             foreach (DocxPlacedRelatedStoryLayout story in layoutPage.PlacedRelatedStories)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref floatingPictureLinks);
-                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, layoutPage.Height, paintedPictures);
-                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, pageClip, ref floatingPictureLinks);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: true, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
+                RenderPlacedRelatedStory(story, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
+                RenderPlacedRelatedStoryDrawings(story, behindDocument: false, graphics, pageImages, fontResources, markupContext, pageNumber, layout.Pages.Count, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation);
             }
 
             RenderFloatingDrawings(
@@ -1140,7 +1139,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                pageClip, ref floatingPictureLinks);
+                navigation);
             RenderFloatingDrawings(
                 drawingPages.Static.Get(pageIndex).Ahead,
                 graphics,
@@ -1152,9 +1151,10 @@ internal sealed partial class DocxRenderer
                 diagnosticSink,
                 cancellationToken,
                 imageCache, ref imageIndex,
-                pageClip, ref floatingPictureLinks);
+                navigation);
 
-            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(layoutPage, pageIndex, pageNumber, layout.Pages.Count, paintedPictures, staticItems, floatingPictureLinks);
+            IReadOnlyList<PdfLinkAnnotation> annotations = CreateHyperlinkAnnotations(
+                layoutPage, pageIndex, pageNumber, layout.Pages.Count, navigation.InlinePictures, staticItems, navigation.DrawingUris);
             string content = graphics.ToString();
             // RV11: admit the emitted content bytes before yielding, so a small
             // content budget rejects before the writer encodes or stores the page.
@@ -1424,7 +1424,7 @@ internal sealed partial class DocxRenderer
 
         IReadOnlyList<PdfLinkAnnotation> CreateHyperlinkAnnotations(DocxLayoutPage page, int pageIndex, int pageNumber, int pageCount,
             IReadOnlySet<DocxInlineImage> paintedPictures, IReadOnlyList<DocxLayoutItem> staticItems,
-            IReadOnlyList<PdfLinkAnnotation>? floatingPictureLinks)
+            IReadOnlyList<PdfLinkAnnotation> drawingUris)
         {
             var annotations = new List<PdfLinkAnnotation>();
             Dictionary<DocxInlineImage, DocxInlineImageLayout?>? linkedPictures = null;
@@ -1673,7 +1673,7 @@ internal sealed partial class DocxRenderer
                 EmitMathLinks(equation.Math, equation.X, equation.BaselineY, equation.Scale, rootMathLink);
             }
             annotations.AddRange(CreateInlinePictureAnnotations(page, pageNumber, staticItems, paintedPictures, markupContext, cancellationToken));
-            if (floatingPictureLinks is not null) annotations.AddRange(floatingPictureLinks);
+            annotations.AddRange(drawingUris);
             annotations.AddRange(CreateNoteReferenceAnnotations(page, pageNumber, pageCount, fontResources,
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;
@@ -1943,8 +1943,8 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        RgbColor? background = null,
-        HashSet<DocxInlineImage>? paintedPictures = null)
+        PictureNavigation navigation,
+        RgbColor? background = null)
     {
         // emission helpers observe the conversion token so a
         // cancelled conversion fails fast inside large pages, not just between them.
@@ -1958,13 +1958,13 @@ internal sealed partial class DocxRenderer
                     ResolveParagraphBackground(equation, background));
                 break;
             case DocxInlineImageLayout image:
-                RenderInlineImage(PlaceInlineImageForPaint(image, markupContext), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext, paintedPictures);
+                RenderInlineImage(PlaceInlineImageForPaint(image, markupContext), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext, navigation);
                 break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, background, paintedPictures);
+                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, navigation, background);
                 break;
             case DocxInlineTextBoxLayout textBox:
-                RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, background: background);
+                RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, navigation, background: background);
                 break;
         }
     }

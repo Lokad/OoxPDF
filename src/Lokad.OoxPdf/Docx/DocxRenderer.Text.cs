@@ -105,7 +105,7 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex, DocxFontResources fontResources, DocxMarkupContext markupContext,
-        HashSet<DocxInlineImage>? paintedPictures = null)
+        PictureNavigation navigation)
     {
         cancellationToken.ThrowIfCancellationRequested();
         // A resolved rotation uses the whole paragraph line frame, rather than
@@ -118,9 +118,9 @@ internal sealed partial class DocxRenderer
         {
             if (clipped && image.ClipBounds is { } clip) graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
             if (RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
-                diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex, out _,
+                diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex, out var paintedFrame,
                 image.LineFrame, requireLineFrame: true, svgTextFonts: fontResources.SvgTextFonts))
-                paintedPictures?.Add(image.Image);
+                navigation.RecordInline(image, paintedFrame, clipped);
         }
         finally { if (clipped) graphics.RestoreState(); }
         // Review ink sits outside the picture clip, within its container's clip.

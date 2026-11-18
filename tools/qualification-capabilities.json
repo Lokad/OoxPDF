@@ -8680,6 +8680,7 @@
     "=DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame",
     "=DocxParagraphRelativeStaticBoxesFollowTheirSelectedStory",
     "=DocxStaticCellFloatingBoxesFollowTheirParagraphAndClip",
+    "=DocxBoxedPicturesLinkWithinTheirPaintedViewports",
     "=DocxBodyBookmarksFollowTheirPlacedParagraph",
     "=DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",

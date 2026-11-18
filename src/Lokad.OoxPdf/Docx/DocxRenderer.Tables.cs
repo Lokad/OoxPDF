@@ -162,8 +162,8 @@ internal sealed partial class DocxRenderer
         CancellationToken cancellationToken,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
-        RgbColor? background = null,
-        HashSet<DocxInlineImage>? paintedPictures = null)
+        PictureNavigation navigation,
+        RgbColor? background = null)
     {
         // Office A/B (comment-table and w6-celltuckborders probes, Word-COM rendered):
         // the first-pin emission shift moves text but table geometry was painted raw, so
@@ -243,6 +243,7 @@ internal sealed partial class DocxRenderer
                 graphics.SaveState();
                 DocxTableCellClipSnapshot clip = ResolveTableCellContentClip(geometryRow, geometryCell);
                 graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
+                var cellNavigation = navigation.ClipTo(new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height));
                 RenderParagraphBackgrounds(cellLayout.TextLines.Cast<DocxLayoutItem>().Concat(cellLayout.InlineImages), graphics, markupContext, cancellationToken);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
@@ -255,7 +256,7 @@ internal sealed partial class DocxRenderer
                     // Pictures share the cell clip used by text, including aligned
                     // and repeated paragraphs.
                     DocxInlineImageLayout placedImage = PlaceCellImageForPaint(image, geometryXOffset, geometryYOffset, clip);
-                    RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext, paintedPictures);
+                    RenderInlineImage(placedImage, graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext, cellNavigation);
                 }
 
                 // Only complete, unmerged cells can give an admitted outline its
@@ -267,7 +268,7 @@ internal sealed partial class DocxRenderer
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
                 {
                     RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
-                        separateBoxClip ? clip : null, cellBackground);
+                        cellNavigation, separateBoxClip ? clip : null, cellBackground);
                 }
                 if (separateBoxClip)
                 {
@@ -292,7 +293,7 @@ internal sealed partial class DocxRenderer
                         pageNumber,
                         pageCount,
                         cancellationToken,
-                        imageCache, ref imageIndex, cellBackground, paintedPictures);
+                        imageCache, ref imageIndex, cellNavigation, cellBackground);
                 }
 
                 graphics.RestoreState();

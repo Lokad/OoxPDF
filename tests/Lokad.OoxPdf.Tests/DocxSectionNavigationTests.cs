@@ -358,6 +358,109 @@ internal static class DocxSectionNavigationTests
         }
     }
 
+    public static void DocxBoxedPicturesLinkWithinTheirPaintedViewports()
+    {
+        const string uri = "https://example.invalid/boxed-picture";
+        const int emuPerPoint = 12700;
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "InlineBoxMath", "inline-box-mixed-source-report.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        foreach (var (floating, cell, height) in new[] { (false, false, 72), (false, true, 72), (true, false, 72), (true, false, 34) })
+        foreach (var mode in Modes)
+        {
+            string context = $"floating={floating}, cell={cell}, height={height}, {mode}";
+            WithDocumentMutation(fixture, (parts, xml) =>
+            {
+                var body = xml.Descendants(W + "body").Single();
+                var box = body.Descendants(W + "txbxContent").Single();
+                var inner = box.Descendants(wp + "inline").Single(drawing => drawing.Descendants(a + "blip").Any());
+                var props = inner.Element(wp + "docPr");
+                if (props is null)
+                {
+                    props = new XElement(wp + "docPr", new XAttribute("id", "9101"), new XAttribute("name", "Public linked picture"));
+                    inner.Element(wp + "extent")!.AddAfterSelf(props);
+                }
+                props.Add(new XElement(a + "hlinkClick", new XAttribute(R + "id", "rIdPublicBoxPicture")));
+                var relationships = XDocument.Parse(Encoding.UTF8.GetString(parts["word/_rels/document.xml.rels"]));
+                relationships.Root!.Add(new XElement(relationships.Root.Name.Namespace + "Relationship",
+                    new XAttribute("Id", "rIdPublicBoxPicture"), new XAttribute("Type", R.NamespaceName + "/hyperlink"),
+                    new XAttribute("Target", uri), new XAttribute("TargetMode", "External")));
+                parts["word/_rels/document.xml.rels"] = Encoding.UTF8.GetBytes(relationships.ToString());
+
+                var outer = box.Ancestors(wp + "inline").First();
+                var extent = outer.Element(wp + "extent")!;
+                extent.SetAttributeValue("cy", height * emuPerPoint);
+                if (floating)
+                {
+                    outer.Name = wp + "anchor";
+                    outer.SetAttributeValue("simplePos", "0");
+                    outer.SetAttributeValue("relativeHeight", "1");
+                    outer.SetAttributeValue("layoutInCell", "1");
+                    outer.AddFirst(new XElement(wp + "simplePos", new XAttribute("x", "0"), new XAttribute("y", "0")),
+                        Position("H", 80), Position("V", 155));
+                    extent.AddAfterSelf(new XElement(wp + "wrapNone"));
+                }
+                if (cell)
+                {
+                    var owner = outer.Ancestors(W + "p").First();
+                    owner.ReplaceWith(new XElement(W + "tbl", new XElement(W + "tblPr"),
+                        new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "9000"))),
+                        new XElement(W + "tr", new XElement(W + "tc", new XElement(owner)))));
+                }
+
+                var comment = Paragraph("PUBLIC PICTURE REVIEW");
+                comment.AddFirst(new XElement(W + "commentRangeStart", new XAttribute(W + "id", "7")));
+                comment.Add(new XElement(W + "commentRangeEnd", new XAttribute(W + "id", "7")),
+                    new XElement(W + "r", new XElement(W + "commentReference", new XAttribute(W + "id", "7"))));
+                body.Element(W + "sectPr")!.AddBeforeSelf(comment);
+                const string commentsPart = "word/comments.xml";
+                var comments = XDocument.Parse(Encoding.UTF8.GetString(parts[commentsPart]));
+                comments.Root!.Add(new XElement(W + "comment", new XAttribute(W + "id", "7"),
+                    new XAttribute(W + "author", "Public"), Paragraph("REVIEW COMMENT")));
+                parts[commentsPart] = Encoding.UTF8.GetBytes(comments.ToString());
+
+                XElement Position(string axis, int offset) => new(wp + "position" + axis, new XAttribute("relativeFrom", "page"),
+                    new XElement(wp + "posOffset", offset * emuPerPoint));
+            }, path =>
+            {
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var source = DocxTests.ReadDocx(path, mode);
+                TestAssert.True(DocxBlockTraversal.EnumerateResourceImages(source, default).Any(image => image.ClickTarget == uri),
+                    "The reader retained the authored picture target.");
+                if (mode == OoxPdfDocxMarkupMode.AllMarkup)
+                    TestAssert.True(DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode, geometry)) < 1d,
+                        "The Review control has a printed markup scale: " + context);
+                var page = new DocxRenderer(resolver, mode, geometry)
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+                string imagePaint = "/" + page.Images.Single().ResourceName + " Do";
+                var paint = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).Single(frame => frame.Block == imagePaint);
+                var frame = new PdfRectangle(paint.Transform.M31, paint.Transform.M32, paint.Transform.M11, paint.Transform.M22);
+                var links = page.Annotations.Where(link => link.Uri == uri).ToArray();
+                if (height > 34)
+                {
+                    TestAssert.True(frame.X >= paint.Clip.X - .002d && frame.Y >= paint.Clip.Y - .002d &&
+                        frame.X + frame.Width <= paint.Clip.X + paint.Clip.Width + .002d &&
+                        frame.Y + frame.Height <= paint.Clip.Y + paint.Clip.Height + .002d,
+                        "The complete picture is inside the active PDF clip: " + context);
+                    TestAssert.True(links.Length == 1, "The complete boxed picture has one URI annotation: " + context);
+                    var link = links[0];
+                    TestAssert.True(Math.Abs(link.X - frame.X) < .002d && Math.Abs(link.Y - frame.Y) < .002d &&
+                        Math.Abs(link.Width - frame.Width) < .002d && Math.Abs(link.Height - frame.Height) < .002d,
+                        "The link rectangle matches the emitted image placement: " + context);
+                }
+                else
+                {
+                    TestAssert.True(frame.Y < paint.Clip.Y - .002d && frame.Y + frame.Height > paint.Clip.Y,
+                        "The short box clips part of the picture: " + context);
+                    TestAssert.Equal(0, links.Length);
+                }
+            });
+        }
+    }
+
     private static void CheckFloatingBoxTableRangeBookmarks(string[] owners)
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",

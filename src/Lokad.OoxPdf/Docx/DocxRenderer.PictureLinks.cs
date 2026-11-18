@@ -4,6 +4,39 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    // The box painter already knows the placed image and every active clip.
+    // Share that viewport with child paint calls so URI annotations can use
+    // successful image emission directly.
+    private readonly record struct PictureNavigation(
+        PdfRectangle Viewport, HashSet<DocxInlineImage> InlinePictures, List<PdfLinkAnnotation> DrawingUris,
+        bool InsideTextBox = false)
+    {
+        public PictureNavigation ClipTo(PdfRectangle clip) => this with
+        {
+            Viewport = IntersectPictureViewports(Viewport, clip)
+        };
+
+        public PictureNavigation EnterTextBox(PdfRectangle clip) => ClipTo(clip) with { InsideTextBox = true };
+
+        public void RecordInline(DocxInlineImageLayout image, PdfRectangle? frame, bool usesImageClip)
+        {
+            if (!InsideTextBox)
+            {
+                InlinePictures.Add(image.Image);
+            }
+            else if (frame is { } painted && ContainsInlinePictureFrame(image, painted, usesImageClip))
+            {
+                RecordUri(image.Image, painted);
+            }
+        }
+
+        public void RecordUri(DocxInlineImage image, PdfRectangle? frame)
+        {
+            if (image.ClickTarget is { } uri && frame is { } painted && ContainsPictureFrame(Viewport, painted))
+                DrawingUris.Add(PdfLinkAnnotation.ToUri(painted.X, painted.Y, painted.Width, painted.Height, uri));
+        }
+    }
+
     private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, int pageNumber, IReadOnlyList<DocxLayoutItem> staticItems,
         IReadOnlySet<DocxInlineImage> paintedPictures,
         DocxMarkupContext context, CancellationToken token)
@@ -30,11 +63,23 @@ internal sealed partial class DocxRenderer
                 continue;
             var frame = new PdfRectangle(image.X, image.Y, image.Width, image.Height);
             if (!ContainsPictureFrame(pageClip, frame) || !ContainsPictureFrame(clip, frame) ||
-                image.ClipBounds is { } own && !ContainsPictureFrame(own, frame) ||
-                image.LineFrame is { } line && !(frame.Y >= line.Bottom - 1e-6 && frame.Y + frame.Height <= line.Bottom + line.Height + 1e-6))
+                !ContainsInlinePictureFrame(image, frame, usesImageClip: true))
                 continue;
             yield return image;
         }
+    }
+
+    private static bool ContainsInlinePictureFrame(
+        DocxInlineImageLayout image, PdfRectangle frame, bool usesImageClip) =>
+        (!usesImageClip || image.ClipBounds is not { } own || ContainsPictureFrame(own, frame)) &&
+        (image.LineFrame is not { } line ||
+            frame.Y >= line.Bottom - 1e-6 && frame.Y + frame.Height <= line.Bottom + line.Height + 1e-6);
+
+    private static PdfRectangle IntersectPictureViewports(PdfRectangle parent, PdfRectangle viewport)
+    {
+        double x = Math.Max(parent.X, viewport.X), y = Math.Max(parent.Y, viewport.Y);
+        return new PdfRectangle(x, y, Math.Min(parent.X + parent.Width, viewport.X + viewport.Width) - x,
+            Math.Min(parent.Y + parent.Height, viewport.Y + viewport.Height) - y);
     }
 
     private static bool ContainsPictureFrame(PdfRectangle outer, PdfRectangle frame) =>
@@ -93,9 +138,7 @@ internal sealed partial class DocxRenderer
                 if (!cell.InlineImages.Any(image => select(image.Image)) && cell.NestedRows.Count == 0) continue;
                 geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
                 var cellClip = ResolveTableCellContentClip(geometryRow, geometryRow.Cells[index]);
-                double left = Math.Max(parent.X, cellClip.X), bottom = Math.Max(parent.Y, cellClip.Y);
-                var clip = new PdfRectangle(left, bottom, Math.Min(parent.X + parent.Width, cellClip.X + cellClip.Width) - left,
-                    Math.Min(parent.Y + parent.Height, cellClip.Y + cellClip.Height) - bottom);
+                var clip = IntersectPictureViewports(parent, new PdfRectangle(cellClip.X, cellClip.Y, cellClip.Width, cellClip.Height));
                 foreach (var image in cell.InlineImages)
                 {
                     token.ThrowIfCancellationRequested();
