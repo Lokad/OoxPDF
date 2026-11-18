@@ -1,4 +1,27 @@
 {
+  "pptx-scene-text-storage": [
+    "PptxSceneBuilderBuildsResolvedNodeLists",
+    "SceneParagraphRetainsCascadeDefaults",
+    "SceneCascadeLayersMatchRendererSnapshot",
+    "SceneFedSpansMatchXmlPath",
+    "TableCellSpansPreserveSourceContentAndDeclaredFrame",
+    "PlainShapeRunTextAndStyleAgree",
+    "PlainShapeFullRunStyleAgrees",
+    "BreakRunsAgreeBetweenSceneAndSpans",
+    "FieldRunsAgreeBetweenSceneAndSpans",
+    "PlaceholderTextAgreesBetweenSceneAndSpans",
+    "MatchedPlaceholderInheritanceAgrees",
+    "HyperlinkRunAgreesBetweenSceneAndSpans",
+    "UnstyledRunsInherit",
+    "TableCellTextMatchesShapeText",
+    "GroupedShapeTextAgreesBetweenSceneAndSpans",
+    "SchemeColorRunsAgreeBetweenSceneAndSpans",
+    "PptxSparseChart",
+    "ConvertPptxObservesCancellationAfterWorkBegins",
+    "PortableRenderingOperationsDecksKeepCompleteLegendsAndPictures",
+    "StreamLengthsMatchPayloads",
+    "XrefTablePointsAtObjectHeaders"
+  ],
   "test-temporary-ownership": [
     "TestTemporaryDirectory",
     "TestRunnerRejects",

@@ -94,18 +94,7 @@ internal sealed record PptxSceneTextParagraph(
     IReadOnlyList<PptxSceneCascadeLayer> CascadeLayers,
     XElement? Source);
 
-internal sealed record PptxSceneTextRun(
-    PptxSceneTextRunKind Kind,
-    string Text,
-    XElement? Properties,
-    XElement Source);
-
-internal enum PptxSceneTextRunKind
-{
-    Text,
-    Break,
-    Field
-}
+internal sealed record PptxSceneTextRun(string Text);
 
 internal sealed record PptxSceneBounds(
     long XEmu,

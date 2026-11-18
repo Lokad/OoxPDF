@@ -399,7 +399,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
@@ -418,6 +417,7 @@ internal static class PptxSceneTextAgreementTests
             }
         }
 
+        TestAssert.Equal("Alpha |Beta|Gamma", string.Join("|", sceneRuns.Select(run => run.Text)));
         TestAssert.Equal(sceneRuns.Length, chunks.Count);
         for (int i = 0; i < sceneRuns.Length; i++)
         {
@@ -464,7 +464,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(5, sceneRuns.Length);
 
@@ -527,7 +526,7 @@ internal static class PptxSceneTextAgreementTests
             .SelectMany(paragraph => paragraph.Runs)
             .ToArray();
         TestAssert.Equal(3, sceneRuns.Length);
-        TestAssert.Equal(PptxSceneTextRunKind.Break, sceneRuns[1].Kind);
+        TestAssert.Equal("\n", sceneRuns[1].Text);
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
         var lines = new List<(string Text, int Line)>();
@@ -580,7 +579,7 @@ internal static class PptxSceneTextAgreementTests
             .SelectMany(paragraph => paragraph.Runs)
             .ToArray();
         TestAssert.Equal(3, sceneRuns.Length);
-        TestAssert.Equal(PptxSceneTextRunKind.Field, sceneRuns[1].Kind);
+        TestAssert.Equal("1", sceneRuns[1].Text);
 
         IReadOnlyList<PptxRenderer.PptxPositionedTextSpan> positioned = ReadXmlSpans(node, document, scene);
         var chunks = new List<(PptxRenderer.PptxTextRunModel Model, StringBuilder Text)>();
@@ -720,7 +719,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
         string sceneText = string.Concat(sceneRuns.Select(run => run.Text));
@@ -824,7 +822,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
         TestAssert.Equal(0, body.Paragraphs[0].Level);
@@ -883,7 +880,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(2, sceneRuns.Length);
 
@@ -935,7 +931,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
 
@@ -982,7 +977,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
 
@@ -1066,7 +1060,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
 
@@ -1136,7 +1129,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody shapeBody = TestAssert.NotNull(shapeNode.TextBody);
         PptxSceneTextRun[] shapeRuns = shapeBody.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(2, shapeRuns.Length);
 
@@ -1218,7 +1210,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(1, sceneRuns.Length);
 
@@ -1407,7 +1398,6 @@ internal static class PptxSceneTextAgreementTests
         PptxSceneTextBody body = TestAssert.NotNull(node.TextBody);
         PptxSceneTextRun[] sceneRuns = body.Paragraphs
             .SelectMany(paragraph => paragraph.Runs)
-            .Where(run => run.Kind == PptxSceneTextRunKind.Text)
             .ToArray();
         TestAssert.Equal(2, sceneRuns.Length);
 

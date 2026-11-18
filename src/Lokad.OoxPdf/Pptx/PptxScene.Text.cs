@@ -99,30 +99,14 @@ internal sealed partial class PptxSceneBuilder
 
     private static PptxSceneTextRun? ReadRun(XElement element)
     {
-        if (element.Name == DrawingNamespace + "r")
+        if (element.Name == DrawingNamespace + "r" || element.Name == DrawingNamespace + "fld")
         {
-            XElement? runProperties = element.Element(DrawingNamespace + "rPr");
-            return new PptxSceneTextRun(
-                PptxSceneTextRunKind.Text,
-                (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
-                runProperties,
-                element);
+            return new PptxSceneTextRun((string?)element.Element(DrawingNamespace + "t") ?? string.Empty);
         }
 
         if (element.Name == DrawingNamespace + "br")
         {
-            XElement? runProperties = element.Element(DrawingNamespace + "rPr");
-            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", runProperties, element);
-        }
-
-        if (element.Name == DrawingNamespace + "fld")
-        {
-            XElement? runProperties = element.Element(DrawingNamespace + "rPr");
-            return new PptxSceneTextRun(
-                PptxSceneTextRunKind.Field,
-                (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
-                runProperties,
-                element);
+            return new PptxSceneTextRun("\n");
         }
 
         return null;
