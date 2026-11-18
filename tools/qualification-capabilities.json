@@ -21,7 +21,7 @@
     "PptxRunHyperlinksKeepVisibleHorizontalAndSlideCrops",
     "PptxTransformedRunHyperlinksStayInsidePhysicalPaintClips",
     "AlphaRegistrationUsesEmittedPairsAndRetainsRawValues",
-    "RejectsDanglingGraphicsStateReference",
+    "PptxChartCoverageSplitsKeepMeasuredAlignmentTrackingAndStyle",
     "PptxSyntheticTextBoxRendersTextHighlight",
     "PptxSyntheticTextBoxHonorsBulletColorAndSize"
   ],

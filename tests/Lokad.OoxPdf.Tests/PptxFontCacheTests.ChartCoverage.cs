@@ -57,7 +57,7 @@ internal static partial class PptxFontCacheTests
         foreach (double tracking in new[] { 0d, 1.25d })
         {
             var run = new PptxRenderer.TextRun("A\u0141B", 20, 100, 90, 24, 0, 0, 200, 200, 12, tracking, 2,
-                new RgbColor(24, 80, 160), .6, new RgbColor(255, 255, 0), false, false, true, true, false,
+                new RgbColor(24, 80, 160), .6, (new RgbColor(255, 255, 0), .3), false, false, true, true, false,
                 alignment, "Primary", 0, 0, 0, false, false, false, null, false);
             var resolver = new PresentationFontResolver(new CatalogResolver(
                 FontFace("Primary", "coverage-primary", TestFontBuilder.CreateTestFont()),
