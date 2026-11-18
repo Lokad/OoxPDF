@@ -263,14 +263,18 @@ internal static class PptxChartDensifyTests
         object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         MethodInfo memo = workbookType.GetMethod("GetOrAddSeriesNames", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected series-name memo.");
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayA = [];
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayB = [];
-        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryA = () => arrayA;
-        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryB = () => arrayB;
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayA = [new("First", "First", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayB = [new("Second", "Second", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
+        TestAssert.True(!ReferenceEquals(arrayA, arrayB), "Different factory results must be independently distinguishable.");
+        int computations = 0;
+        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryA = () => { computations++; return arrayA; };
+        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryB = () => { computations++; return arrayB; };
         object first = InvokeUntyped(memo, workbook, "k", null, factoryA);
         object second = InvokeUntyped(memo, workbook, "k", null, factoryB);
         TestAssert.True(ReferenceEquals(first, second), "Same key must share one name list.");
         TestAssert.True(ReferenceEquals(first, arrayA), "First computation must win.");
+        TestAssert.Equal("First", ((IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>)second).Single().ActiveName);
+        TestAssert.Equal(1, computations);
         try
         {
             workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
@@ -282,6 +286,8 @@ internal static class PptxChartDensifyTests
 
         object third = InvokeUntyped(memo, workbook, "k", null, factoryB);
         TestAssert.True(ReferenceEquals(third, arrayB), "Cleared memo must recompute on next access.");
+        TestAssert.Equal("Second", ((IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>)third).Single().ActiveName);
+        TestAssert.Equal(2, computations);
     }
 
     private static object InvokeUntyped(MethodInfo memo, object workbook, object? first, object? second, object factory)
@@ -310,14 +316,20 @@ internal static class PptxChartDensifyTests
         object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
         MethodInfo memo = workbookType.GetMethod("GetOrAddSeriesVectors", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Expected series-vectors memo.");
-        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> arrayA = [];
-        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> arrayB = [];
-        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> factoryA = () => arrayA;
-        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> factoryB = () => arrayB;
+        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> arrayA =
+            [(PptxRenderer.ChartIndexedNumberVector)BuildNumberVector(NumberVectorType(), NumberPointType(), [(0, 5d)], 1)];
+        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> arrayB =
+            [(PptxRenderer.ChartIndexedNumberVector)BuildNumberVector(NumberVectorType(), NumberPointType(), [(0, 9d)], 1)];
+        TestAssert.True(!ReferenceEquals(arrayA, arrayB), "Different factory results must be independently distinguishable.");
+        int computations = 0;
+        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> factoryA = () => { computations++; return arrayA; };
+        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> factoryB = () => { computations++; return arrayB; };
         object first = InvokeUntyped4(memo, workbook, "k", null, false, factoryA);
         object second = InvokeUntyped4(memo, workbook, "k", null, false, factoryB);
         TestAssert.True(ReferenceEquals(first, second), "Same key must share one vector list.");
         TestAssert.True(ReferenceEquals(first, arrayA), "First computation must win.");
+        TestAssert.Equal<double?>(5d, ((IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>)second).Single().DenseValues().Single());
+        TestAssert.Equal(1, computations);
         try
         {
             workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
@@ -329,6 +341,8 @@ internal static class PptxChartDensifyTests
 
         object third = InvokeUntyped4(memo, workbook, "k", null, false, factoryB);
         TestAssert.True(ReferenceEquals(third, arrayB), "Cleared memo must recompute on next access.");
+        TestAssert.Equal<double?>(9d, ((IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>)third).Single().DenseValues().Single());
+        TestAssert.Equal(2, computations);
     }
 
     public static void ValueExtentsMemoSharesResultsWithinFrame()
