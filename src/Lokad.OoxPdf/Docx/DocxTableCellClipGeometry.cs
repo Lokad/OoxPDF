@@ -131,7 +131,11 @@ internal static class DocxTableCellClipGeometry
         DocxTableCellClipSnapshot? parent)
     {
         var clip = Resolve(row, cell);
-        if (parent is null) return clip;
+        return parent is null ? clip : Intersect(clip, parent);
+    }
+
+    internal static DocxTableCellClipSnapshot Intersect(DocxTableCellClipSnapshot clip, DocxTableCellClipSnapshot parent)
+    {
         double x = Math.Max(clip.X, parent.X), y = Math.Max(clip.Y, parent.Y);
         return new(true, x, y, Math.Min(clip.X + clip.Width, parent.X + parent.Width) - x,
             Math.Min(clip.Y + clip.Height, parent.Y + parent.Height) - y);

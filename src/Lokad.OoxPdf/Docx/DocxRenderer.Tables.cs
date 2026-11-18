@@ -20,10 +20,16 @@ internal sealed partial class DocxRenderer
         double xOffset = ResolveTextEmissionXOffset(context);
         double yOffset = ResolveTextEmissionBaselineOffset(context);
         var pageClip = new DocxTableCellClipSnapshot(true, 0d, 0d, page.Width, page.Height);
-        foreach (var row in page.Items.OfType<DocxTableRowLayout>())
-            if (HasTarget(row)) AddTargets(row, null);
+        foreach (var item in page.Items)
+        {
+            token.ThrowIfCancellationRequested();
+            if (item is DocxTableRowLayout row && HasTarget(row)) AddTargets(row, null);
+            if (item is DocxInlineTextBoxLayout box) AddBoxTargets(box, pageClip);
+        }
         foreach (var row in page.StaticTableRows)
             if (HasTarget(row)) AddTargets(AdjustStaticTableRow(row, context), pageClip);
+        foreach (var box in page.StaticInlineTextBoxes)
+            AddBoxTargets(box, pageClip);
         foreach (var story in page.PlacedRelatedStories)
         {
             token.ThrowIfCancellationRequested();
@@ -41,7 +47,25 @@ internal sealed partial class DocxRenderer
         {
             token.ThrowIfCancellationRequested();
             return row.BookmarkAnchors is { Count: > 0 } ||
-                row.Cells.Any(cell => cell.NestedRows.Any(HasTarget));
+                row.Cells.Any(cell => cell.NestedRows.Any(HasTarget) ||
+                    cell.InlineTextBoxes.Any(box => box.TableRows.Any(HasTarget)));
+        }
+
+        void AddBoxTargets(DocxInlineTextBoxLayout box, DocxTableCellClipSnapshot parentClip)
+        {
+            token.ThrowIfCancellationRequested();
+            DocxTableCellClipSnapshot? clip = null;
+            foreach (var row in box.TableRows)
+            {
+                if (!HasTarget(row)) continue;
+                if (clip is null)
+                {
+                    var (x, top) = ResolveInlineTextBoxPaintOrigin(box, context);
+                    clip = DocxTableCellClipGeometry.Intersect(
+                        new(true, x, top - box.BoxHeight, box.BoxWidth, box.BoxHeight), parentClip);
+                }
+                AddTargets(AdjustStaticTableRow(row, context), clip);
+            }
         }
 
         void AddTargets(DocxTableRowLayout row, DocxTableCellClipSnapshot? parentClip)
@@ -70,13 +94,16 @@ internal sealed partial class DocxRenderer
             {
                 token.ThrowIfCancellationRequested();
                 var cell = row.Cells[i];
-                if (cell.NestedRows.Count == 0 || cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell ||
+                if ((cell.NestedRows.Count == 0 && cell.InlineTextBoxes.Count == 0) ||
+                    cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell ||
                     cell.Cell.HasVerticalMerge)
                     continue;
                 geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
                 var clip = DocxTableCellClipGeometry.Resolve(geometryRow, geometryRow.Cells[i], parentClip ?? pageClip);
                 foreach (var nested in cell.NestedRows)
                     AddTargets(nested, clip);
+                foreach (var box in cell.InlineTextBoxes)
+                    AddBoxTargets(box, clip);
             }
         }
     }

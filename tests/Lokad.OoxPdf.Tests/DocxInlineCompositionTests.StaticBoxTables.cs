@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
@@ -18,6 +19,53 @@ internal static partial class DocxInlineCompositionTests
         foreach (var row in cases.RootElement.EnumerateArray())
         foreach (var mode in Enum.GetValues<OoxPdfDocxMarkupMode>())
             CheckStaticBoxTablePaint(RenderStaticBoxTable(row, mode, resolver), row.GetProperty("Id").GetString() + "/" + mode);
+    }
+
+    public static void DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows()
+    {
+        using var cases = ReadStaticBoxTableCases();
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        foreach (var row in cases.RootElement.EnumerateArray())
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string context = row.GetProperty("Id").GetString() + "/" + mode;
+            PdfPage Render(bool range) => RenderStaticBoxTable(row, mode, resolver, (xml, w, _) =>
+            {
+                var box = xml.Descendants(w + "txbxContent").Single();
+                var table = box.Elements(w + "tbl").Single();
+                var cell = table.Elements(w + "tr").First().Elements(w + "tc").First();
+                var cellProperties = cell.Element(w + "tcPr");
+                if (cellProperties is null)
+                {
+                    cellProperties = new XElement(w + "tcPr");
+                    cell.AddFirst(cellProperties);
+                }
+                cellProperties.Element(w + "shd")?.Remove();
+                cellProperties.Add(new XElement(w + "shd", new XAttribute(w + "fill", "CC9944")));
+                if (!range) return;
+                var start = box.Descendants(w + "bookmarkStart").Single();
+                var end = box.Descendants(w + "bookmarkEnd").Single();
+                start.Remove();
+                end.Remove();
+                table.AddBeforeSelf(start);
+                table.AddAfterSelf(end);
+            });
+
+            var paragraph = Render(range: false);
+            var range = Render(range: true);
+            TestAssert.True(paragraph.Content == range.Content, "Moving the bookmark keeps the same paint: " + context);
+            var previousLink = paragraph.Annotations.Single(link => link.IsDestination);
+            var rangeLinks = range.Annotations.Where(link => link.IsDestination).ToArray();
+            TestAssert.True(rangeLinks.Length == 1, "The table range must retain its incoming link: " + context);
+            var restoredLink = rangeLinks[0];
+            TestAssert.Equal((previousLink.X, previousLink.Y, previousLink.Width, previousLink.Height),
+                (restoredLink.X, restoredLink.Y, restoredLink.Width, restoredLink.Height));
+            var destination = restoredLink.Destination!.Value;
+            var fill = DocxParagraphShadingTests.ReadRectangles(range.Content).Single(rect => rect.Color == "CC9944");
+            TestAssert.True(destination.PageIndex == 0 && destination.Left is double x && destination.Top is double y &&
+                Math.Abs(x - fill.X) < .001d && Math.Abs(y - fill.Y - fill.Height) < .001d,
+                "The boxed table bookmark follows the painted first-row corner: " + context);
+        }
     }
 
     public static void DocxStaticBoxTablesKeepIndependentWordVerticalOrigins()
@@ -98,12 +146,13 @@ internal static partial class DocxInlineCompositionTests
             $"The first legacy inset follows the printed frame: final={final.Depth}, review={review.Depth}, scale={scale}.");
     }
 
-    private static PdfPage RenderStaticBoxTable(JsonElement row, OoxPdfDocxMarkupMode mode, IFontResolver? resolver)
+    private static PdfPage RenderStaticBoxTable(JsonElement row, OoxPdfDocxMarkupMode mode, IFontResolver? resolver,
+        Action<XDocument, XNamespace, XNamespace>? change = null)
     {
         var geometry = mode == OoxPdfDocxMarkupMode.AllMarkup
             ? OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup : OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout;
         return new DocxRenderer(resolver, mode, geometry)
-            .RenderPagesAsync(ReadStaticBoxTableSource(row, mode), null, default).ToBlockingEnumerable().Single();
+            .RenderPagesAsync(ReadStaticBoxTableSource(row, mode, change), null, default).ToBlockingEnumerable().Single();
     }
 
     private static void CheckStaticBoxTablePaint(PdfPage page, string context)
@@ -138,11 +187,12 @@ internal static partial class DocxInlineCompositionTests
             "; destination=" + destination + "; box=" + string.Join(",", box));
     }
 
-    private static DocxDocument ReadStaticBoxTableSource(JsonElement row, OoxPdfDocxMarkupMode mode)
+    private static DocxDocument ReadStaticBoxTableSource(JsonElement row, OoxPdfDocxMarkupMode mode,
+        Action<XDocument, XNamespace, XNamespace>? change = null)
     {
         string id = row.GetProperty("Id").GetString()!;
         TestAssert.Equal(row.GetProperty("Sha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(StaticBoxTablePath(id + ".docx")))));
-        return ReadMutation("InlineBoxMath/" + id, mode, false, false, partOverride: row.GetProperty("MathPart").GetString());
+        return ReadMutation("InlineBoxMath/" + id, mode, false, false, change, partOverride: row.GetProperty("MathPart").GetString());
     }
 
     private static JsonDocument ReadStaticBoxTableCases() => JsonDocument.Parse(File.ReadAllText(StaticBoxTablePath("static-box-tables.json")));

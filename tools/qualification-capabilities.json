@@ -8678,6 +8678,7 @@
   "docx-bookmark-ownership": [
     "DocxBlockBookmarksFollowPlacedCellAndStoryParagraphs",
     "=DocxBlockBookmarksFollowPaintedTableRowsAcrossStories",
+    "=DocxStaticBoxTablesResolveRangeBookmarksOnPaintedRows",
     "=DocxBodyBookmarksFollowTheirPlacedParagraph",
     "=DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",

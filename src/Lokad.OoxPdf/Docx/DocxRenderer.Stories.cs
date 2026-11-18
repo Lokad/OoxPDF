@@ -444,6 +444,12 @@ internal sealed partial class DocxRenderer
         return strokeWidth > 0d;
     }
 
+    // Body boxes use the body emission offset. Physical static boxes already own their Y.
+    private static (double X, double Top) ResolveInlineTextBoxPaintOrigin(
+        DocxInlineTextBoxLayout box, DocxMarkupContext context) =>
+        (box.BoxX + ResolveTextEmissionXOffset(context),
+            box.BoxTop - (box.StaticStoryUsesPhysicalY ? 0d : ResolveTextEmissionBaselineOffset(context)));
+
     private static void RenderInlineTextBox(
         DocxInlineTextBoxLayout box,
         PdfGraphicsBuilder graphics,
@@ -477,10 +483,7 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        // Body boxes carry the body emission offset. Mapped static boxes already
-        // own physical Y; their children consume that same frame when painting.
-        double clipX = box.BoxX + ResolveTextEmissionXOffset(markupContext);
-        double clipTop = box.BoxTop - (box.StaticStoryUsesPhysicalY ? 0d : ResolveTextEmissionBaselineOffset(markupContext));
+        var (clipX, clipTop) = ResolveInlineTextBoxPaintOrigin(box, markupContext);
         graphics.SaveState();
         // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
         // frames paint their outline under the text like floating boxes.
