@@ -75,7 +75,9 @@ jobs:
           pwsh -NoProfile -File tools/TestCliDiagnosticsPublication.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll
       - name: Text content gate
         if: runner.os == 'Windows'
-        run: pwsh -NoProfile -File tools/CheckPdfTextContent.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net11.0/Lokad.OoxPdf.PdfInspect.dll -SkipBuild
+        run: |
+          & ./tools/TestTextContentCases.ps1
+          & ./tools/CheckPdfTextContent.ps1 -CliPath artifacts/ci-candidate/src/Lokad.OoxPdf.Cli/bin/Release/net11.0/Lokad.OoxPdf.Cli.dll -InspectorPath tools/Lokad.OoxPdf.PdfInspect/bin/Release/net11.0/Lokad.OoxPdf.PdfInspect.dll -SkipBuild
       - name: Raster wrapper paths and failures
         if: runner.os == 'Windows'
         run: |
