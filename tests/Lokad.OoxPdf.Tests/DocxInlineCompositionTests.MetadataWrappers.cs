@@ -64,10 +64,7 @@ internal static partial class DocxInlineCompositionTests
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent wrapper geometry uses installed Windows fonts.");
         const string golden = "inline-metadata-wrappers-office.json";
-        CheckInlineBoxMath(null, golden);
-        CheckInlineBoxWordOrigins(golden);
-        CheckInlineBoxProseOrigins(golden);
-        CheckInlineBoxFollowingOrigins(golden);
+        CheckInlineBoxReference(golden, InlineBoxChecks.All);
     }
 
     public static void DocxInlineMetadataWrappersKeepRevisionFieldAndLinkOwners()

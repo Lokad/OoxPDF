@@ -15,7 +15,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineSiblingFrameOriginsMatchIndependentWord()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent sibling-frame origins use installed Windows fonts.");
-        CheckInlineBoxWordOrigins("inline-sibling-frames-office.json");
+        CheckInlineBoxReference("inline-sibling-frames-office.json", InlineBoxChecks.MathOrigins);
     }
 
     public static void DocxInlineSiblingSourceItemsRetainBoxOrderAndOwners()

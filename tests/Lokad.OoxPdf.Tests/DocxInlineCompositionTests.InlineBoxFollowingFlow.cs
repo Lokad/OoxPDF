@@ -7,32 +7,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxInlineBoxFollowingFlowMatchesIndependentWord()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent following-flow origins use installed Windows fonts.");
-        CheckInlineBoxFollowingOrigins("inline-box-following-flow-office.json");
-    }
-
-    private static void CheckInlineBoxFollowingOrigins(string goldenFile)
-    {
-        using var gold = ReadInlineBoxMathGold(goldenFile);
-        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
-        {
-            if (!row.TryGetProperty("WordFollowingAnchor", out var expected)) continue;
-            string id = row.GetProperty("Id").GetString()!;
-            bool final = row.GetProperty("Mode").GetString() == "final-preserve";
-            var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-            var source = ReadMutation("InlineBoxMath/" + id, mode, false, false);
-            var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
-            string followingText = row.TryGetProperty("FollowingText", out var text) ? text.GetString()! : "After public math table.";
-            var following = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
-                usePageCoordinates: true).GroupBy(show => show.Y).Select(line =>
-                    (Page: index + 1, Height: page.Height, Y: line.Key, X: line.Min(show => show.X),
-                    Text: string.Concat(line.OrderBy(show => show.X).Select(show => show.Text)).Trim())))
-                .Single(line => line.Text == followingText);
-            TestAssert.Equal(expected.GetProperty("Page").GetInt32(), following.Page);
-            TestAssert.True(Math.Abs(following.X - expected.GetProperty("X").GetDouble()) < 1d &&
-                Math.Abs(following.Height - following.Y - expected.GetProperty("Y").GetDouble()) < 1d,
-                id + "/" + row.GetProperty("Mode").GetString() + ": following prose retains one-point independent Word origins.");
-        }
+        CheckInlineBoxReference("inline-box-following-flow-office.json", InlineBoxChecks.FollowingOrigins);
     }
 
     public static void DocxInlineBoxOccupiedFramesOwnZeroSpacingAdmissionInBodyAndCells()

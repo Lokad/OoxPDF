@@ -101,10 +101,7 @@ internal static partial class DocxInlineCompositionTests
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent ordinary picture/box origins use installed Windows fonts.");
         const string golden = "inline-box-ordinary-pictures-office.json";
-        CheckInlineBoxMath(null, golden);
-        CheckInlineBoxWordOrigins(golden);
-        CheckInlineBoxFollowingOrigins(golden);
-        CheckInlineBoxProseOrigins(golden);
+        CheckInlineBoxReference(golden, InlineBoxChecks.All);
     }
 
     private static DocxParagraph ReadOrdinaryPictureBox(string container) =>

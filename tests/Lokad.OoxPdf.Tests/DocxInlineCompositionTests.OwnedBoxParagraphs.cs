@@ -107,9 +107,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxOwnedBoxParagraphsMatchIndependentWordFramesAndFollowingText()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent owned-box geometry uses installed Windows fonts.");
-        CheckInlineBoxMath(null, "inline-box-owned-paragraphs-office.json");
-        CheckInlineBoxWordOrigins("inline-box-owned-paragraphs-office.json");
-        CheckInlineBoxFollowingOrigins("inline-box-owned-paragraphs-office.json");
+        CheckInlineBoxReference("inline-box-owned-paragraphs-office.json", InlineBoxChecks.Content | InlineBoxChecks.MathOrigins | InlineBoxChecks.FollowingOrigins);
     }
 
     private static DocxParagraph ReadOwnedBoxParagraph(string id) =>

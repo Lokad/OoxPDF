@@ -17,10 +17,7 @@ internal static partial class DocxInlineCompositionTests
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent structural metadata geometry uses installed Windows fonts.");
         const string golden = "structural-metadata-wrappers-office.json";
-        CheckInlineBoxMath(null, golden);
-        CheckInlineBoxWordOrigins(golden);
-        CheckInlineBoxProseOrigins(golden);
-        CheckInlineBoxFollowingOrigins(golden);
+        CheckInlineBoxReference(golden, InlineBoxChecks.All);
     }
 
     public static void DocxStructuralMetadataWrappersKeepNestedRevisionAndSourceOwners()

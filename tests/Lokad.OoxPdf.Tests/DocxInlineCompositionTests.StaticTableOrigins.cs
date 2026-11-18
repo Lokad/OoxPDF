@@ -53,10 +53,7 @@ internal static partial class DocxInlineCompositionTests
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent static-table origins use installed Windows fonts.");
         const string golden = "static-table-origins-office.json";
-        CheckInlineBoxMath(null, golden);
-        CheckInlineBoxWordOrigins(golden);
-        CheckInlineBoxProseOrigins(golden);
-        CheckInlineBoxFollowingOrigins(golden);
+        CheckInlineBoxReference(golden, InlineBoxChecks.All);
     }
 
     private static DocxLayoutPage LayoutSharedTable(DocxTable table)

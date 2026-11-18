@@ -1,4 +1,3 @@
-using System.Text;
 using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -29,45 +28,12 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxPlainBoxChildFramesPreserveIndependentContentAndGeometry()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent child-frame geometry uses installed Windows fonts.");
-        CheckInlineBoxMath(null, "inline-box-plain-child-frames-office.json");
-        CheckInlineBoxWordOrigins("inline-box-plain-child-frames-office.json");
-        CheckInlineBoxFollowingOrigins("inline-box-plain-child-frames-office.json");
+        CheckInlineBoxReference("inline-box-plain-child-frames-office.json", InlineBoxChecks.Content | InlineBoxChecks.MathOrigins | InlineBoxChecks.FollowingOrigins);
     }
 
     public static void DocxPlainBoxChildTextOriginsMatchIndependentWord()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent ordinary child origins use installed Windows fonts.");
-        CheckInlineBoxProseOrigins("inline-box-plain-child-frames-office.json");
-    }
-
-    private static void CheckInlineBoxProseOrigins(string goldenFile)
-    {
-        using var gold = ReadInlineBoxMathGold(goldenFile);
-        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
-        {
-            if (!row.TryGetProperty("WordProseAnchors", out var expected)) continue;
-            string id = row.GetProperty("Id").GetString()!;
-            bool final = row.GetProperty("Mode").GetString() == "final-preserve";
-            var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-            var source = ReadMutation("InlineBoxMath/" + id, mode, false, false,
-                partOverride: row.GetProperty("MathPart").GetString());
-            var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
-                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
-            var lines = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page,
-                usePageCoordinates: true).GroupBy(show => show.Y).Select(line =>
-                    (Page: index + 1, Height: page.Height, Y: line.Key, X: line.Min(show => show.X),
-                    Text: string.Concat(line.OrderBy(show => show.X).Select(show => show.Text)).Normalize(NormalizationForm.FormKC).Trim()))).ToArray();
-            foreach (var anchor in expected.EnumerateArray())
-            {
-                var actual = lines.Single(line => line.Text.StartsWith(anchor.GetProperty("Text").GetString()!, StringComparison.Ordinal));
-                TestAssert.Equal(anchor.GetProperty("Page").GetInt32(), actual.Page);
-                foreach (var axis in row.GetProperty("ProseGeometryAxes").EnumerateArray().Select(axis => axis.GetString()))
-                {
-                    double position = axis == "X" ? actual.X : actual.Height - actual.Y;
-                    TestAssert.True(Math.Abs(position - anchor.GetProperty(axis!).GetDouble()) < 1d,
-                        id + "/" + row.GetProperty("Mode").GetString() + ": ordinary child " + axis + " retains the one-point independent Word gate.");
-                }
-            }
-        }
+        CheckInlineBoxReference("inline-box-plain-child-frames-office.json", InlineBoxChecks.ProseOrigins);
     }
 }

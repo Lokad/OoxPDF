@@ -35,8 +35,6 @@ internal static partial class DocxInlineCompositionTests
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent ordinary static origins use installed Windows fonts.");
         const string golden = "static-inline-ordinary-office.json";
-        CheckInlineBoxMath(null, golden);
-        CheckInlineBoxProseOrigins(golden);
-        CheckInlineBoxFollowingOrigins(golden);
+        CheckInlineBoxReference(golden, InlineBoxChecks.Content | InlineBoxChecks.ProseOrigins | InlineBoxChecks.FollowingOrigins);
     }
 }

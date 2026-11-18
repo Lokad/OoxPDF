@@ -116,9 +116,7 @@ internal static partial class DocxInlineCompositionTests
     public static void DocxIntrinsicFrameEndsRetainIndependentWordContentAndOrigins()
     {
         if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent frame-end geometry uses installed Windows fonts.");
-        CheckInlineBoxMath(null, "inline-frame-ends-office.json");
-        CheckInlineBoxWordOrigins("inline-frame-ends-office.json");
-        CheckInlineBoxFollowingOrigins("inline-frame-ends-office.json");
+        CheckInlineBoxReference("inline-frame-ends-office.json", InlineBoxChecks.Content | InlineBoxChecks.MathOrigins | InlineBoxChecks.FollowingOrigins);
     }
 
     private static DocxMeasuredInlineAtoms MakeIntrinsicFrameAtoms(bool picture)
