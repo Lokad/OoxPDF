@@ -53,8 +53,7 @@ internal sealed partial class PptxRenderer
                 Fallback: "Local clip"));
         }
 
-        if (sceneSlide.HasTransition ||
-            slideXml.Descendants(PresentationNamespace + "transition").Any())
+        if (sceneSlide.HasTransition)
         {
             Emit("PPTX_UNSUPPORTED_TRANSITION", "transition");
         }
@@ -71,8 +70,7 @@ internal sealed partial class PptxRenderer
             OoxMarkupCompatibility.WarnMustUnderstandOnce(sceneSlide.LayoutXml, sceneSlide.LayoutPartName ?? partName, diagnosticSink, warnedParts, slideIndex);
         }
 
-        if (sceneSlide.HasTiming ||
-            slideXml.Descendants(PresentationNamespace + "timing").Any())
+        if (sceneSlide.HasTiming)
         {
             Emit("PPTX_UNSUPPORTED_ANIMATION", "animation");
         }
@@ -91,8 +89,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_AUDIO", "audio");
         }
 
-        if (sceneSlide.HasOleObject ||
-            VisibleSlideElements(PresentationNamespace + "oleObj").Any())
+        if (sceneSlide.HasOleObject)
         {
             Emit("PPTX_UNSUPPORTED_OLE_OBJECT", "OLE object");
         }
