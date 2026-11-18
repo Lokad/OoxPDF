@@ -251,8 +251,8 @@ internal static partial class DocxParagraphShadingTests
     private static int ImagePaintCount(PdfPage page) => Regex.Matches(page.Content, @"/(?<name>[^\s/]+) Do")
         .Count(match => page.Images.Any(image => image.ResourceName == match.Groups["name"].Value));
 
-    private sealed record PaintRectangle(string Color, double X, double Y, double Width, double Height, int Position);
-    private static IEnumerable<PaintRectangle> ReadRectangles(string content)
+    internal sealed record PaintRectangle(string Color, double X, double Y, double Width, double Height, int Position);
+    internal static IEnumerable<PaintRectangle> ReadRectangles(string content)
     {
         foreach (Match match in Regex.Matches(content,
             @"(?m)^(?<r>[\d.]+)(?: (?<g>[\d.]+) (?<b>[\d.]+))? (?<op>rg|g)\r?\n(?<x>[-\d.]+) (?<y>[-\d.]+) (?<w>[-\d.]+) (?<h>[-\d.]+) re f\r?$"))

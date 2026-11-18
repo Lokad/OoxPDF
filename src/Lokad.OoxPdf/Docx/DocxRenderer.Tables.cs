@@ -13,6 +13,74 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
+    private static void AddPlacedTableBookmarkDestinations(
+        DocxLayoutPage page, int pageIndex, DocxMarkupContext context,
+        Dictionary<string, PdfLinkDestination> destinations, CancellationToken token)
+    {
+        double xOffset = ResolveTextEmissionXOffset(context);
+        double yOffset = ResolveTextEmissionBaselineOffset(context);
+        var pageClip = new DocxTableCellClipSnapshot(true, 0d, 0d, page.Width, page.Height);
+        foreach (var row in page.Items.OfType<DocxTableRowLayout>())
+            if (HasTarget(row)) AddTargets(row, null);
+        foreach (var row in page.StaticTableRows)
+            if (HasTarget(row)) AddTargets(AdjustStaticTableRow(row, context), pageClip);
+        foreach (var story in page.PlacedRelatedStories)
+        {
+            token.ThrowIfCancellationRequested();
+            if (story.TableRows.Count == 0 || !story.StoryLayout.Story.IsNormalStoryType ||
+                story.StoryLayout.Story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
+                continue;
+            var (mapped, map, _, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
+            var storyClip = new DocxTableCellClipSnapshot(true, clip.X, clip.Y, clip.Width, clip.Height);
+            foreach (var row in story.TableRows)
+                if (HasTarget(row))
+                    AddTargets(ResolvePlacedStoryTablePaintFrame(story, row, mapped ? map : null, token), storyClip);
+        }
+
+        bool HasTarget(DocxTableRowLayout row)
+        {
+            token.ThrowIfCancellationRequested();
+            return row.BookmarkAnchors is { Count: > 0 } ||
+                row.Cells.Any(cell => cell.NestedRows.Any(HasTarget));
+        }
+
+        void AddTargets(DocxTableRowLayout row, DocxTableCellClipSnapshot? parentClip)
+        {
+            token.ThrowIfCancellationRequested();
+            if (row.Cells.Count == 0 || parentClip is { Width: <= 0d } or { Height: <= 0d })
+                return;
+            if (row.FragmentIndex == 0 && row.BookmarkAnchors is { } bookmarks)
+            {
+                // Use the same precompensated row origin and paint offsets as
+                // the cell fill. A nested target also needs its ancestor clip.
+                double x = row.Cells[0].X + xOffset;
+                double top = row.Y + row.Height - yOffset;
+                if (DocxTableCellClipGeometry.ContainsHorizontalRange(parentClip, x, 0d) &&
+                    DocxTableCellClipGeometry.ContainsVerticalRange(parentClip, top, top))
+                    foreach (var bookmark in bookmarks)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (!string.IsNullOrEmpty(bookmark.Name))
+                            destinations.TryAdd(bookmark.Name, new PdfLinkDestination(pageIndex, x, top, Zoom: null));
+                    }
+            }
+
+            DocxTableRowLayout? geometryRow = null;
+            for (int i = 0; i < row.Cells.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                var cell = row.Cells[i];
+                if (cell.NestedRows.Count == 0 || cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell ||
+                    cell.Cell.HasVerticalMerge)
+                    continue;
+                geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
+                var clip = DocxTableCellClipGeometry.Resolve(geometryRow, geometryRow.Cells[i], parentClip ?? pageClip);
+                foreach (var nested in cell.NestedRows)
+                    AddTargets(nested, clip);
+            }
+        }
+    }
+
     private static void RenderTableRow(
         DocxTableRowLayout row,
         DocxTableRowLayout? previousRow,

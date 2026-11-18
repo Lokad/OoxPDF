@@ -1179,7 +1179,6 @@ internal sealed partial class DocxRenderer
         {
             var destinations = new Dictionary<string, PdfLinkDestination>(StringComparer.Ordinal);
             Dictionary<DocxMathBox, Dictionary<DocxMathBookmark, DocxMathBookmarkPoint>>? mathBookmarkIndexes = null;
-            bool hasTableBookmarks = document.Tables.Any(table => table.Rows.Any(row => row.BookmarkAnchors is not null));
             const double viewportContextPoints = 3d;
             for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
             {
@@ -1376,20 +1375,7 @@ internal sealed partial class DocxRenderer
                             pageIndex, pageTextEmissionXOffset, pageTextEmissionBaselineOffset);
                 }
 
-                if (hasTableBookmarks)
-                foreach (var row in page.Items.OfType<DocxTableRowLayout>())
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (row.BookmarkAnchors is not { } bookmarks || row.FragmentIndex != 0 || row.Cells.Count == 0) continue;
-                    // Match the page projection used to paint the row's own frame.
-                    var destination = new PdfLinkDestination(pageIndex, row.Cells[0].X + pageTextEmissionXOffset,
-                        row.Y + row.Height - pageTextEmissionBaselineOffset, Zoom: null);
-                    foreach (var bookmark in bookmarks)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (!string.IsNullOrEmpty(bookmark.Name)) destinations.TryAdd(bookmark.Name, destination);
-                    }
-                }
+                AddPlacedTableBookmarkDestinations(page, pageIndex, pageMarkupContext, destinations, cancellationToken);
             }
 
             return destinations;

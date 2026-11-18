@@ -175,55 +175,100 @@ internal static class DocxSectionNavigationTests
             TestAssert.Equal(inline[0].Annotations.Single().Destination, block[0].Annotations.Single().Destination);
             TestAssert.Contains("TARGET PARAGRAPH", Text(block[destination.PageIndex]));
         }
+    }
 
-        static PdfPage[] RenderTarget(string container, bool blockMarkers, OoxPdfDocxMarkupMode mode)
+    public static void DocxBlockBookmarksFollowPaintedTableRowsAcrossStories()
+    {
+        foreach (var mode in Modes)
+        foreach (string container in new[] { "nested-cell", "header", "footer", "footnote", "endnote" })
         {
-            PdfPage[] pages = [];
-            WithMutation("bookmark-before", (parts, xml) =>
-            {
-                (XElement start, XElement end, XElement target) = BookmarkSource(xml);
-                XElement section = target.ElementsAfterSelf(W + "sectPr").Single();
-                switch (container)
-                {
-                    case "nested-cell":
-                    {
-                        target.Remove();
-                        section.AddBeforeSelf(Table(Table(target), Paragraph(string.Empty)));
-                        break;
-                    }
-                    case "header":
-                    {
-                        target.Remove();
-                        var header = new XElement(W + "hdr", target);
-                        if (blockMarkers) MoveBookmarkOutside(start, end, target);
-                        section.Elements(W + "headerReference").Remove();
-                        section.Element(W + "titlePg")?.Remove();
-                        section.AddFirst(new XElement(W + "headerReference",
-                            new XAttribute(W + "type", "default"), new XAttribute(R + "id", "bookmark-header")));
-                        section.AddBeforeSelf(Paragraph("SECOND PAGE"));
-                        AddStoryPart(parts, "bookmark-header", "header", header);
-                        return;
-                    }
-                    case "footnote":
-                    {
-                        target.ReplaceWith(new XElement(W + "p", new XElement(W + "r",
-                            new XElement(W + "footnoteReference", new XAttribute(W + "id", "1")))));
-                        var note = new XElement(W + "footnote", new XAttribute(W + "id", "1"), target);
-                        if (blockMarkers) MoveBookmarkOutside(start, end, target);
-                        AddStoryPart(parts, "bookmark-footnote", "footnotes", new XElement(W + "footnotes", note));
-                        return;
-                    }
-                }
-
-                if (blockMarkers) MoveBookmarkOutside(start, end, target);
-            }, path => pages = Render(path, mode));
-            return pages;
+            PdfPage[] inline = RenderTarget(container, blockMarkers: false, mode, tableTarget: true);
+            PdfPage[] block = RenderTarget(container, blockMarkers: true, mode, tableTarget: true);
+            TestAssert.True(inline.Select(page => page.Content).SequenceEqual(block.Select(page => page.Content)),
+                $"Moving the {container} table bookmark must retain the same page paint in {mode}.");
+            var links = block[0].Annotations.Where(annotation => annotation.IsDestination).ToArray();
+            TestAssert.Equal(1, links.Length);
+            PdfLinkDestination destination = links[0].Destination!.Value;
+            PdfPage targetPage = block[destination.PageIndex];
+            TestAssert.Contains("TARGET PARAGRAPH", Text(targetPage));
+            var fill = DocxParagraphShadingTests.ReadRectangles(targetPage.Content).Single(rect => rect.Color == "CC9944");
+            TestAssert.True(Math.Abs(destination.Left!.Value - fill.X) < .001d &&
+                Math.Abs(destination.Top!.Value - fill.Y - fill.Height) < .001d,
+                $"The {container} destination tracks the painted upper-left row corner in {mode}.");
+            if (mode == OoxPdfDocxMarkupMode.AllMarkup)
+                TestAssert.True(block.Select(Text).Any(text => text.Contains("REVIEW COMMENT", StringComparison.Ordinal)),
+                    "The Review control must exercise a printed balloon.");
         }
+    }
+
+    private static PdfPage[] RenderTarget(string container, bool blockMarkers, OoxPdfDocxMarkupMode mode, bool tableTarget = false)
+    {
+        PdfPage[] pages = [];
+        WithMutation("bookmark-before", (parts, xml) =>
+        {
+            XElement target = BookmarkSource(xml).Target;
+            XElement section = target.ElementsAfterSelf(W + "sectPr").Single();
+            if (tableTarget) AddReviewComment(parts, target.Parent!.Elements(W + "p").First());
+            var content = new XElement(target);
+            var start = content.Element(W + "bookmarkStart")!;
+            var end = content.Element(W + "bookmarkEnd")!;
+            if (tableTarget)
+            {
+                content = Table(content);
+                content.Descendants(W + "tc").Single().AddFirst(new XElement(W + "tcPr",
+                    new XElement(W + "shd", new XAttribute(W + "fill", "CC9944"))));
+            }
+            switch (container)
+            {
+                case "nested-cell":
+                    target.ReplaceWith(Table(tableTarget ? content : Table(content), Paragraph(string.Empty)));
+                    break;
+                case "header":
+                case "footer":
+                {
+                    var part = new XElement(W + (container == "header" ? "hdr" : "ftr"), content);
+                    section.Elements(W + (container + "Reference")).Remove();
+                    section.Element(W + "titlePg")?.Remove();
+                    string name = "bookmark-" + container;
+                    section.AddFirst(new XElement(W + (container + "Reference"),
+                        new XAttribute(W + "type", "default"), new XAttribute(R + "id", name)));
+                    target.ReplaceWith(Paragraph("SECOND PAGE"));
+                    if (blockMarkers) MoveBookmarkOutside(start, end, content);
+                    AddStoryPart(parts, name, container, part);
+                    return;
+                }
+                case "footnote":
+                case "endnote":
+                {
+                    target.ReplaceWith(new XElement(W + "p", new XElement(W + "r",
+                        new XElement(W + (container + "Reference"), new XAttribute(W + "id", "1")))));
+                    var note = new XElement(W + container, new XAttribute(W + "id", "1"), content);
+                    if (blockMarkers) MoveBookmarkOutside(start, end, content);
+                    AddStoryPart(parts, "bookmark-" + container, container + "s", new XElement(W + (container + "s"), note));
+                    return;
+                }
+            }
+
+            if (blockMarkers) MoveBookmarkOutside(start, end, content);
+        }, path => pages = Render(path, mode));
+        return pages;
 
         static XElement Table(params XElement[] content) => new(W + "tbl",
             new XElement(W + "tblPr"),
             new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "4800"))),
             new XElement(W + "tr", new XElement(W + "tc", content)));
+
+        static void AddReviewComment(Dictionary<string, byte[]> parts, XElement first)
+        {
+            XElement anchor = Paragraph("COMMENT ANCHOR");
+            anchor.AddFirst(new XElement(W + "commentRangeStart", new XAttribute(W + "id", "7")));
+            anchor.Add(new XElement(W + "commentRangeEnd", new XAttribute(W + "id", "7")),
+                new XElement(W + "r", new XElement(W + "commentReference", new XAttribute(W + "id", "7"))));
+            first.AddAfterSelf(anchor);
+            AddStoryPart(parts, "bookmark-comment", "comments", new XElement(W + "comments",
+                new XElement(W + "comment", new XAttribute(W + "id", "7"), new XAttribute(W + "author", "Public"),
+                    Paragraph("REVIEW COMMENT"))));
+        }
     }
 
     public static void DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries()

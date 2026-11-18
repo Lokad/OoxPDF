@@ -351,10 +351,12 @@ internal sealed partial class DocxRenderer
     private static DocxLayoutItem AdjustStaticLayoutItem(DocxLayoutItem item, DocxMarkupContext markupContext) => item switch
     {
         DocxTextLineLayout line => AdjustStaticTextLine(line, markupContext),
-        DocxTableRowLayout { StaticStoryUsesPhysicalY: true } row =>
-            PrecompensateStaticTableRow(row, markupContext.WordCompatibleTextYOffset),
+        DocxTableRowLayout row => AdjustStaticTableRow(row, markupContext),
         _ => item
     };
+
+    private static DocxTableRowLayout AdjustStaticTableRow(DocxTableRowLayout row, DocxMarkupContext markupContext) =>
+        row.StaticStoryUsesPhysicalY ? PrecompensateStaticTableRow(row, markupContext.WordCompatibleTextYOffset) : row;
 
     private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextLines(DocxLayoutPage page, DocxMarkupContext? markupContext = null)
     {

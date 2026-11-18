@@ -10,8 +10,7 @@ internal sealed partial class DocxReader
     // drawings, references or revision owners. Only joined tables need a list.
     private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables)>
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
-            OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
-            bool bindTableBookmarks = false)
+            OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null)
     {
         XName paragraphName = WordprocessingNamespace + "p";
         XName tableName = WordprocessingNamespace + "tbl";
@@ -38,10 +37,9 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            // Paragraphs own their placed source lines across stories. Body
-            // table bookmarks also bind before joining authored fragments.
+            // Bind each table bookmark before joining authored fragments.
             var block = bookmarkStarts is { Count: > 0 } &&
-                (scope.Element.Name == paragraphName || bindTableBookmarks && scope.Element.Name == tableName)
+                (scope.Element.Name == paragraphName || scope.Element.Name == tableName)
                 ? scope with { LeadingBookmarks = bookmarkStarts.Values.ToArray() }
                 : scope;
             bookmarkStarts = null;
