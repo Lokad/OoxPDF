@@ -208,55 +208,8 @@ internal static class DocxTableCellsTests
         }
     }
 
-    public static void DocxTableOneColumnMixedTopRowsReuseQualifiedGeometryAndFollowingFlow()
-    {
-        var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (string? automaticRule in new string?[] { null, "auto" })
-        foreach (string declaredRule in new[] { "exact", "atLeast" })
-        foreach (int automaticIndex in new[] { 0, 1 })
-        foreach (double minimum in new[] { 12d, 14d, 24d })
-        foreach ((double top, double bottom) in new[] { (0d, 0d), (6d, 12d), (12d, 6d) })
-        {
-            var margins = DocxTableCellMargins.Empty with { TopPoints = top, BottomPoints = bottom };
-            var heights = new (double? Height, string? Rule)[2];
-            heights[automaticIndex] = (automaticRule is null ? null : 320d, automaticRule);
-            heights[1 - automaticIndex] = (180d, declaredRule);
-            var automatic = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
-                cellMargins: margins, rowCount: 2, columnCount: 1, minimumSpacing: minimum, borderSize: "8");
-            var declared = CreateParagraphMinimumLayout("min-single", full, rowHeight: 180d, rowRule: declaredRule,
-                verticalAlignment: "top", cellMargins: margins, rowCount: 2, columnCount: 1,
-                minimumSpacing: minimum, borderSize: "8");
-            var mixed = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
-                cellMargins: margins, rowCount: 2, columnCount: 1, minimumSpacing: minimum,
-                borderSize: "8", rowHeightRules: heights);
-            var mixedRows = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
-            for (int i = 0; i < 2; i++)
-            {
-                var expected = (i == automaticIndex ? automatic : declared).Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(i);
-                var actual = mixedRows[i];
-                TestAssert.Equal(expected.Height, actual.Height);
-                TestAssert.True(!actual.Table.AutomaticMinimumRowPlacement,
-                    "Mixed top rows must retain their first-baseline slot placement.");
-                for (int c = 0; c < 1; c++)
-                {
-                    var before = expected.Cells[c]; var after = actual.Cells[c];
-                    TestAssert.True(Math.Abs((before.TextLines.Single().BaselineY - before.Y - before.Height) -
-                        (after.TextLines.Single().BaselineY - after.Y - after.Height)) < .000001d,
-                        "Each row keeps its accepted paragraph baseline relative to the top of its content slot.");
-                    var clip = DocxRenderer.ResolveTableCellContentClip(actual, after);
-                    double terminalBand = i == 1 ? .96d : 0d;
-                    TestAssert.True(clip.Admitted && Math.Abs(clip.Y - after.Y - bottom - terminalBand) < .000001d &&
-                        Math.Abs(clip.Height - after.Height + top + .96d + bottom + terminalBand) < .000001d,
-                        "Both row kinds use the independently measured margin and border insets.");
-                }
-            }
-            double extraHeight = mixedRows.Sum(r => r.Height) - automatic.Pages[0].Items.OfType<DocxTableRowLayout>().Sum(r => r.Height);
-            double followingDelta = automatic.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY -
-                mixed.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
-            TestAssert.True(Math.Abs(extraHeight - followingDelta) < .000001d,
-                "Following body flow includes exactly the admitted declared-row advance.");
-        }
-    }
+    public static void DocxTableOneColumnMixedTopRowsReuseQualifiedGeometryAndFollowingFlow() =>
+        CheckMixedTopRowsReuseQualifiedGeometryAndFollowingFlow(1);
 
     public static void DocxTableOneColumnMixedTopRetainsExcludedShapesRulesAndFrames()
     {
@@ -300,53 +253,66 @@ internal static class DocxTableCellsTests
         }
     }
 
-    public static void DocxTableMixedTopRowsReuseQualifiedGeometryAndFollowingFlow()
+    public static void DocxTableMixedTopRowsReuseQualifiedGeometryAndFollowingFlow() =>
+        CheckMixedTopRowsReuseQualifiedGeometryAndFollowingFlow(2);
+
+    private static void CheckMixedTopRowsReuseQualifiedGeometryAndFollowingFlow(int columnCount)
     {
         var full = new CellBoxTextMeasurer(new DocxTests.FamilyWidthTextMeasurer());
-        foreach (string? automaticRule in new string?[] { null, "auto" })
-        foreach (string declaredRule in new[] { "exact", "atLeast" })
-        foreach (int automaticIndex in new[] { 0, 1 })
         foreach (double minimum in new[] { 12d, 14d, 24d })
         foreach ((double top, double bottom) in new[] { (0d, 0d), (6d, 12d), (12d, 6d) })
         {
             var margins = DocxTableCellMargins.Empty with { TopPoints = top, BottomPoints = bottom };
-            var heights = new (double? Height, string? Rule)[2];
-            heights[automaticIndex] = (automaticRule is null ? null : 320d, automaticRule);
-            heights[1 - automaticIndex] = (180d, declaredRule);
             var automatic = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
-                cellMargins: margins, rowCount: 2, columnCount: 2, minimumSpacing: minimum, borderSize: "8");
-            var declared = CreateParagraphMinimumLayout("min-single", full, rowHeight: 180d, rowRule: declaredRule,
-                verticalAlignment: "top", cellMargins: margins, rowCount: 2, columnCount: 2,
-                minimumSpacing: minimum, borderSize: "8");
-            var mixed = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
-                cellMargins: margins, rowCount: 2, columnCount: 2, minimumSpacing: minimum,
-                borderSize: "8", rowHeightRules: heights);
-            var mixedRows = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
-            for (int i = 0; i < 2; i++)
+                cellMargins: margins, rowCount: 2, columnCount: columnCount, minimumSpacing: minimum, borderSize: "8");
+            var automaticRows = automatic.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+            double automaticHeight = automaticRows.Sum(row => row.Height);
+            double automaticFollowingY = automatic.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+
+            foreach (string declaredRule in new[] { "exact", "atLeast" })
             {
-                var expected = (i == automaticIndex ? automatic : declared).Pages[0].Items.OfType<DocxTableRowLayout>().ElementAt(i);
-                var actual = mixedRows[i];
-                TestAssert.Equal(expected.Height, actual.Height);
-                TestAssert.True(!actual.Table.AutomaticMinimumRowPlacement,
-                    "Mixed top rows must retain their first-baseline slot placement.");
-                for (int c = 0; c < 2; c++)
+                var declared = CreateParagraphMinimumLayout("min-single", full, rowHeight: 180d, rowRule: declaredRule,
+                    verticalAlignment: "top", cellMargins: margins, rowCount: 2, columnCount: columnCount,
+                    minimumSpacing: minimum, borderSize: "8");
+                var declaredRows = declared.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+                foreach (string? automaticRule in new string?[] { null, "auto" })
+                foreach (int automaticIndex in new[] { 0, 1 })
                 {
-                    var before = expected.Cells[c]; var after = actual.Cells[c];
-                    TestAssert.True(Math.Abs((before.TextLines.Single().BaselineY - before.Y - before.Height) -
-                        (after.TextLines.Single().BaselineY - after.Y - after.Height)) < .000001d,
-                        "Each row keeps its accepted paragraph baseline relative to the top of its content slot.");
-                    var clip = DocxRenderer.ResolveTableCellContentClip(actual, after);
-                    double terminalBand = i == 1 ? .96d : 0d;
-                    TestAssert.True(clip.Admitted && Math.Abs(clip.Y - after.Y - bottom - terminalBand) < .000001d &&
-                        Math.Abs(clip.Height - after.Height + top + .96d + bottom + terminalBand) < .000001d,
-                        "Both row kinds use the independently measured margin and border insets.");
+                    var heights = new (double? Height, string? Rule)[2];
+                    heights[automaticIndex] = (automaticRule is null ? null : 320d, automaticRule);
+                    heights[1 - automaticIndex] = (180d, declaredRule);
+                    var mixed = CreateParagraphMinimumLayout("min-single", full, verticalAlignment: "top",
+                        cellMargins: margins, rowCount: 2, columnCount: columnCount, minimumSpacing: minimum,
+                        borderSize: "8", rowHeightRules: heights);
+                    var mixedRows = mixed.Pages[0].Items.OfType<DocxTableRowLayout>().ToArray();
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var expected = i == automaticIndex ? automaticRows[i] : declaredRows[i];
+                        var actual = mixedRows[i];
+                        TestAssert.Equal(expected.Height, actual.Height);
+                        TestAssert.True(!actual.Table.AutomaticMinimumRowPlacement,
+                            "Mixed top rows must retain their first-baseline slot placement.");
+                        for (int c = 0; c < columnCount; c++)
+                        {
+                            var before = expected.Cells[c];
+                            var after = actual.Cells[c];
+                            TestAssert.True(Math.Abs((before.TextLines.Single().BaselineY - before.Y - before.Height) -
+                                (after.TextLines.Single().BaselineY - after.Y - after.Height)) < .000001d,
+                                "Each row keeps its accepted paragraph baseline relative to the top of its content slot.");
+                            var clip = DocxRenderer.ResolveTableCellContentClip(actual, after);
+                            double terminalBand = i == 1 ? .96d : 0d;
+                            TestAssert.True(clip.Admitted && Math.Abs(clip.Y - after.Y - bottom - terminalBand) < .000001d &&
+                                Math.Abs(clip.Height - after.Height + top + .96d + bottom + terminalBand) < .000001d,
+                                "Both row kinds use the independently measured margin and border insets.");
+                        }
+                    }
+
+                    double extraHeight = mixedRows.Sum(row => row.Height) - automaticHeight;
+                    double followingDelta = automaticFollowingY - mixed.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
+                    TestAssert.True(Math.Abs(extraHeight - followingDelta) < .000001d,
+                        "Following body flow includes exactly the admitted declared-row advance.");
                 }
             }
-            double extraHeight = mixedRows.Sum(r => r.Height) - automatic.Pages[0].Items.OfType<DocxTableRowLayout>().Sum(r => r.Height);
-            double followingDelta = automatic.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY -
-                mixed.Pages[0].Items.OfType<DocxTextLineLayout>().Single().BaselineY;
-            TestAssert.True(Math.Abs(extraHeight - followingDelta) < .000001d,
-                "Following body flow includes exactly the admitted declared-row advance.");
         }
     }
 
