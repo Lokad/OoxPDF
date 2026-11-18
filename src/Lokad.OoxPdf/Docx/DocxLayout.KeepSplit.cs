@@ -494,9 +494,10 @@ internal sealed partial class DocxLayoutEngine
         return profile.LineHeight > renderedFontSize;
     }
 
-    private static DocxKeepBlockEstimate EstimateKeptParagraphBlock(
+    private static double EstimateKeepChainHeight(
         IReadOnlyList<DocxBodyElement> elements,
-        int elementIndex,
+        IReadOnlyList<int> keepBlocks,
+        DocxParagraph paragraph,
         double availableWidth,
         IDocxTextMeasurer textMeasurer,
         double defaultTabStopPoints,
@@ -508,21 +509,13 @@ internal sealed partial class DocxLayoutEngine
         bool allowAutomaticMinimumGridPlacement,
         CancellationToken cancellationToken,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null, int? pageCount = null,
-        bool scaleMinimumBodyAdvances = false, bool includeFollowingBlocks = true)
+        bool scaleMinimumBodyAdvances = false)
     {
-        if (elements[elementIndex] is not DocxParagraphElement paragraphElement)
-        {
-            return new DocxKeepBlockEstimate(0d, 0, 0);
-        }
-
-        DocxParagraph paragraph = paragraphElement.Paragraph;
         double height = ParagraphHeight(paragraph);
-        int paragraphCount = 1;
-        int firstTableRowCount = 0;
-        int nextSearchIndex = elementIndex + 1;
-        while (includeFollowingBlocks && paragraph.EffectiveProperties.KeepRules.KeepNext == true &&
-            TryFindNextKeepTarget(elements, nextSearchIndex, out int nextIndex, out DocxBodyElement? next))
+        for (int index = 1; index < keepBlocks.Count; index++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            DocxBodyElement next = elements[keepBlocks[index]];
             if (next is DocxParagraphElement nextParagraph)
             {
                 DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(
@@ -532,9 +525,7 @@ internal sealed partial class DocxLayoutEngine
                     paragraphSpacingScale);
                 height += spacingProfile.AppliedBeforeSpacing;
                 height += ParagraphHeight(nextParagraph.Paragraph);
-                paragraphCount++;
                 paragraph = nextParagraph.Paragraph;
-                nextSearchIndex = nextIndex + 1;
                 continue;
             }
 
@@ -542,13 +533,12 @@ internal sealed partial class DocxLayoutEngine
             {
                 height += paragraph.EffectiveProperties.SpacingAfterPoints * paragraphSpacingScale;
                 height += EstimateFirstTableRowHeight(nextTable.Table, availableHeight - height, pageContentHeight - height);
-                firstTableRowCount++;
             }
 
             break;
         }
 
-        return new DocxKeepBlockEstimate(height, paragraphCount, firstTableRowCount);
+        return height;
 
         double ParagraphHeight(DocxParagraph value)
         {

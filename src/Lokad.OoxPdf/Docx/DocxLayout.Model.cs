@@ -387,8 +387,3 @@ internal sealed record DocxTextEmissionSegment(
     DocxTextSegmentRole Role,
     PdfFallbackFontResource? FallbackFace = null,
     double FontScale = 1d);
-
-internal readonly record struct DocxKeepBlockEstimate(
-    double Height,
-    int ParagraphCount,
-    int FirstTableRowCount);
