@@ -401,7 +401,7 @@ internal sealed partial class DocxRenderer
 
         var paintFrame = ResolveFloatingTextBoxPaintFrame(
             drawing.Drawing, placedX, placedTop, width, height, markupContext, navigation.Viewport.Height);
-        var (contentX, contentTop, clip, mapping) = paintFrame;
+        var (_, _, clip, mapping) = paintFrame;
         var boxNavigation = (storyClip is { } viewport ? navigation.ClipTo(viewport) : navigation).EnterTextBox(clip);
         bool uniformMap = mapping.HasValue;
         var map = mapping.GetValueOrDefault();
@@ -419,15 +419,7 @@ internal sealed partial class DocxRenderer
             graphics.StrokeRectangle(frame.X, frame.Y, frame.Width, frame.Height);
         }
         graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
-        IReadOnlyList<DocxLayoutItem> items = textBoxLayout.TextLines
-            .Select(paintFrame.PlaceLine)
-            .Cast<DocxLayoutItem>()
-            .Concat(textBoxLayout.InlineImages.Select(image => uniformMap
-                ? map.PrecompensateImage(image, contentX, contentTop, drawing.AnchorPageIndex ?? image.PageIndex)
-                : image.Relocate(contentX + image.X, contentTop + image.Y, drawing.AnchorPageIndex)))
-            .Concat(textBoxLayout.TableRows.Select(paintFrame.PlaceRow))
-            .OrderByDescending(ResolveLayoutItemTop)
-            .ToArray();
+        var items = PlaceFloatingTextBoxItems(textBoxLayout, paintFrame, drawing.AnchorPageIndex);
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
@@ -440,6 +432,16 @@ internal sealed partial class DocxRenderer
 
         graphics.RestoreState();
     }
+
+    private static IReadOnlyList<DocxLayoutItem> PlaceFloatingTextBoxItems(DocxRelatedStoryLayout box,
+        FloatingTextBoxPaintFrame frame, int? pageIndex) => box.TextLines.Select(frame.PlaceLine)
+        .Cast<DocxLayoutItem>()
+        .Concat(box.InlineImages.Select(image => frame.Map is { } map
+            ? map.PrecompensateImage(image, frame.X, frame.Top, pageIndex ?? image.PageIndex)
+            : image.Relocate(frame.X + image.X, frame.Top + image.Y, pageIndex)))
+        .Concat(box.TableRows.Select(frame.PlaceRow))
+        .OrderByDescending(ResolveLayoutItemTop)
+        .ToArray();
 
     private static bool TryResolveTextBoxStroke(DocxFloatingDrawing drawing, double width, double height, out double strokeWidth, out byte strokeRed, out byte strokeGreen, out byte strokeBlue)
     {
@@ -554,14 +556,7 @@ internal sealed partial class DocxRenderer
         var clip = new PdfRectangle(clipX, clipTop - box.BoxHeight, box.BoxWidth, box.BoxHeight);
         graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
         var boxNavigation = navigation.EnterTextBox(clip);
-        IReadOnlyList<DocxLayoutItem> items = box.TextLines
-            .Cast<DocxLayoutItem>()
-            .Concat(box.InlineImages)
-            .Concat(box.TableRows)
-            .OrderByDescending(ResolveLayoutItemTop)
-            .Select(item => item.StaticStoryUsesPhysicalY
-                ? AdjustStaticLayoutItem(item, markupContext) : item)
-            .ToArray();
+        var items = GetInlineTextBoxPaintItems(box, markupContext);
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
         for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
@@ -574,6 +569,12 @@ internal sealed partial class DocxRenderer
 
         graphics.RestoreState();
     }
+
+    private static IReadOnlyList<DocxLayoutItem> GetInlineTextBoxPaintItems(DocxInlineTextBoxLayout box, DocxMarkupContext context) =>
+        box.TextLines.Cast<DocxLayoutItem>().Concat(box.InlineImages).Concat(box.TableRows)
+            .OrderByDescending(ResolveLayoutItemTop)
+            .Select(item => item.StaticStoryUsesPhysicalY ? AdjustStaticLayoutItem(item, context) : item)
+            .ToArray();
 
     private static double ResolveLayoutItemTop(DocxLayoutItem item)
     {

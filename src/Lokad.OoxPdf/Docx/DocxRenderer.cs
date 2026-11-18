@@ -1449,7 +1449,7 @@ internal sealed partial class DocxRenderer
             PdfRectangle? previousClip = null;
             var paper = new PdfRectangle(0d, 0d, page.Width, page.Height);
             foreach (var (line, _, floatingBoxClip) in EnumerateRenderedPageLineSources(page,
-                drawingPages.PageAll(pageIndex), markupContext, page.Height))
+                drawingPages.PageAll(pageIndex), markupContext, page.Height, clipCellLinks: true, token: cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 PdfRectangle? clip = floatingBoxClip is { } box ? IntersectPaintViewports(paper, box) : null;

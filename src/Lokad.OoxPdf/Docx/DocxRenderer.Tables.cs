@@ -171,9 +171,9 @@ internal sealed partial class DocxRenderer
         // same text offset (a no-op outside the Word-compatible profile, where it is 0).
         double geometryXOffset = ResolveTextEmissionXOffset(markupContext);
         double geometryYOffset = ResolveTextEmissionBaselineOffset(markupContext);
-        DocxTableRowLayout geometryRow = geometryXOffset == 0d && geometryYOffset == 0d ? row : ShiftTableRowGeometry(row, geometryXOffset, geometryYOffset);
-        DocxTableRowLayout? geometryPreviousRow = previousRow is null || (geometryXOffset == 0d && geometryYOffset == 0d) ? previousRow : ShiftTableRowGeometry(previousRow, geometryXOffset, geometryYOffset);
-        DocxTableRowLayout? geometryNextRow = nextRow is null || (geometryXOffset == 0d && geometryYOffset == 0d) ? nextRow : ShiftTableRowGeometry(nextRow, geometryXOffset, geometryYOffset);
+        DocxTableRowLayout geometryRow = ResolveTablePaintGeometry(row, geometryXOffset, geometryYOffset);
+        DocxTableRowLayout? geometryPreviousRow = previousRow is null ? null : ResolveTablePaintGeometry(previousRow, geometryXOffset, geometryYOffset);
+        DocxTableRowLayout? geometryNextRow = nextRow is null ? null : ResolveTablePaintGeometry(nextRow, geometryXOffset, geometryYOffset);
         foreach (DocxTableCellLayout cellLayout in geometryRow.Cells)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -312,6 +312,9 @@ internal sealed partial class DocxRenderer
             Cells = row.Cells.Select(cell => cell with { X = cell.X + xOffset, Y = cell.Y - yOffset }).ToArray(),
         };
     }
+
+    private static DocxTableRowLayout ResolveTablePaintGeometry(DocxTableRowLayout row, double xOffset, double yOffset) =>
+        xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
     private static void RenderTableRowMarkupIndicators(
         DocxTableRowLayout row,
         PdfGraphicsBuilder graphics,

@@ -81,7 +81,7 @@ internal sealed partial class DocxRenderer
     // story kind cannot replace the header/footer/note that owns its print frame.
     private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner, PdfRectangle? FloatingBoxClip)> EnumerateRenderedPageLineSources(
         DocxLayoutPage page, IEnumerable<DocxFloatingDrawingLayout> floatingDrawings,
-        DocxMarkupContext markupContext, double pageHeight)
+        DocxMarkupContext markupContext, double pageHeight, bool clipCellLinks = false, CancellationToken token = default)
     {
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         foreach (var source in EnumerateStaticLineSources(page, true, markupContext)) yield return (source.Line, source.Owner, null);
@@ -91,13 +91,15 @@ internal sealed partial class DocxRenderer
                 yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind), null);
         foreach (var line in EnumerateInlineTextBoxTextLines(page)) yield return (line, DocxStoryId.Body(), null);
         foreach (var drawing in floatingDrawings)
-            foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], markupContext, pageHeight))
+            foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], markupContext, pageHeight,
+                clipCellLinks: clipCellLinks, token: token))
                 yield return (line, drawing.Story ?? DocxStoryId.Body(), clip);
         foreach (var story in page.PlacedRelatedStories)
         {
             if (story.FloatingDrawings.Count == 0) continue;
             var (_, _, storyClip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
-            foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, markupContext, pageHeight, storyClip))
+            foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, markupContext,
+                pageHeight, storyClip, clipCellLinks, token))
                 yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind), clip);
         }
     }
@@ -167,7 +169,8 @@ internal sealed partial class DocxRenderer
     }
     private static IEnumerable<(DocxTextLineLayout Line, PdfRectangle Clip)> EnumerateMappedFloatingDrawingTextBoxTextLines(
         IEnumerable<DocxFloatingDrawingLayout> drawings,
-        DocxMarkupContext context, double pageHeight, PdfRectangle? storyClip = null)
+        DocxMarkupContext context, double pageHeight, PdfRectangle? storyClip = null,
+        bool clipCellLinks = false, CancellationToken token = default)
     {
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
@@ -185,10 +188,19 @@ internal sealed partial class DocxRenderer
                 ? IntersectPaintViewports(parent, frame.Clip) : frame.Clip;
             DocxTableCellClipSnapshot? clip = cellViewport is { } cell ? new(true, cell.X, cell.Y, cell.Width, cell.Height) : null;
 
-            foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
+            var paintItems = clipCellLinks && textBoxLayout.TableRows.Count != 0
+                ? PlaceFloatingTextBoxItems(textBoxLayout, frame, drawing.AnchorPageIndex) : null;
+            var lines = paintItems is null ? textBoxLayout.TextLines.Select(frame.PlaceLine) : paintItems.OfType<DocxTextLineLayout>();
+            foreach (var placed in lines)
             {
-                var placed = frame.PlaceLine(line);
                 if (InsideViewport(placed)) yield return (placed, viewport);
+            }
+
+            if (paintItems is not null)
+            {
+                foreach (var (line, tableClip) in EnumerateTableLines(paintItems, viewport))
+                    if (InsideViewport(line)) yield return (line, tableClip);
+                continue;
             }
 
             foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
@@ -208,6 +220,43 @@ internal sealed partial class DocxRenderer
                 double yOffset = frame.Map?.YOffset ?? 0d;
                 return DocxTableCellClipGeometry.ContainsHorizontalRange(clip, line.X + (frame.Map?.XOffset ?? 0d), line.Width) &&
                     DocxTableCellClipGeometry.ContainsVerticalRange(clip, bottom - yOffset, top - yOffset);
+            }
+        }
+
+        // Link sources use the same placed rows, fragment admission and cell
+        // viewports as paint. Keep every ancestor clip for nested content.
+        IEnumerable<(DocxTextLineLayout Line, PdfRectangle Clip)> EnumerateTableLines(
+            IReadOnlyList<DocxLayoutItem> items, PdfRectangle viewport)
+        {
+            double xOffset = ResolveTextEmissionXOffset(context);
+            double yOffset = ResolveTextEmissionBaselineOffset(context);
+            for (int index = 0; index < items.Count; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (items[index] is not DocxTableRowLayout row) continue;
+                var previous = index > 0 ? items[index - 1] as DocxTableRowLayout : null;
+                if (!IsAdjacentTableRow(previous, row)) previous = null;
+                var geometry = ResolveTablePaintGeometry(row, xOffset, yOffset);
+                for (int cellIndex = 0; cellIndex < row.Cells.Count; cellIndex++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var cell = row.Cells[cellIndex];
+                    if (!ShouldRenderTableCellContentFragment(cell, previous)) continue;
+                    var clip = ResolveTableCellContentClip(geometry, geometry.Cells[cellIndex]);
+                    var cellViewport = IntersectPaintViewports(viewport, new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height));
+                    foreach (var line in cell.TextLines) yield return (line, cellViewport);
+                    foreach (var nested in EnumerateTableLines(cell.NestedRows, cellViewport)) yield return nested;
+                    foreach (var box in cell.InlineTextBoxes)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var (x, top) = ResolveInlineTextBoxPaintOrigin(box, context);
+                        var boxViewport = IntersectPaintViewports(cellViewport,
+                            new PdfRectangle(x, top - box.BoxHeight, box.BoxWidth, box.BoxHeight));
+                        var boxItems = GetInlineTextBoxPaintItems(box, context);
+                        foreach (var line in boxItems.OfType<DocxTextLineLayout>()) yield return (line, boxViewport);
+                        foreach (var nested in EnumerateTableLines(boxItems, boxViewport)) yield return nested;
+                    }
+                }
             }
         }
     }

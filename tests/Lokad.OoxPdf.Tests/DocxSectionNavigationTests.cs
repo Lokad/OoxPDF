@@ -209,7 +209,15 @@ internal static class DocxSectionNavigationTests
     public static void DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame() =>
         CheckFloatingBoxTableRangeBookmarks(["footnote", "endnote"]);
 
-    public static void DocxFloatingBoxHyperlinksFollowThePrintedClip()
+    public static void DocxFloatingBoxHyperlinksFollowThePrintedClip() => CheckFloatingBoxLinkClips(tableDepth: 0);
+
+    public static void DocxFloatingBoxTableHyperlinksFollowCellAndAncestorClips()
+    {
+        CheckFloatingBoxLinkClips(tableDepth: 1);
+        CheckFloatingBoxLinkClips(tableDepth: 2);
+    }
+
+    private static void CheckFloatingBoxLinkClips(int tableDepth)
     {
         const string prose = "PUBLIC PROSE TARGET";
         const string proseUri = "https://example.invalid/box-link/prose";
@@ -221,6 +229,7 @@ internal static class DocxSectionNavigationTests
         XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
         foreach (var mode in Modes)
         {
+            string context = $"{mode}, table depth {tableDepth}";
             double scale = 1d;
             PdfPage tall = Render(100d);
             var (baseline, tallClip) = FindProseFrame(tall);
@@ -230,18 +239,18 @@ internal static class DocxSectionNavigationTests
             // Cut the source clip through the uppercase linked glyphs. The
             // positive case should keep an actionable rectangle inside it.
             double partialHeight = 100d - (baseline + 4d * scale - tallClip.Y) / scale;
-            TestAssert.True(partialHeight > 16d && partialHeight < 100d, mode.ToString());
+            TestAssert.True(partialHeight > 16d && partialHeight < 100d, context);
             PdfPage partial = Render(partialHeight);
             var (_, partialClip) = FindProseFrame(partial);
             var partialLink = partial.Annotations.Single(link => link.Uri == proseUri);
             TestAssert.True(fullLink.Y < partialClip.Y && partialLink.Height < fullLink.Height &&
                 Math.Abs(partialLink.Y - partialClip.Y) < .002d &&
-                partialLink.Y + partialLink.Height <= partialClip.Y + partialClip.Height + .002d, mode.ToString());
+                partialLink.Y + partialLink.Height <= partialClip.Y + partialClip.Height + .002d, context);
             TestAssert.Equal(0, partial.Annotations.Count(link => link.Uri == mathUri));
 
             PdfPage shortBox = Render(16d);
             var (hiddenBaseline, shortClip) = FindProseFrame(shortBox);
-            TestAssert.True(shortClip.Y > hiddenBaseline + 12d * scale, mode.ToString());
+            TestAssert.True(shortClip.Y > hiddenBaseline + 12d * scale, context);
             TestAssert.Equal(0, shortBox.Annotations.Count(link => link.Uri is proseUri or mathUri));
 
             PdfPage Render(double height)
@@ -250,15 +259,20 @@ internal static class DocxSectionNavigationTests
                 WithDocumentMutation(fixture, (parts, document) =>
                 {
                     var anchor = document.Descendants(wp + "anchor").Single();
-                    anchor.Element(wp + "extent")!.SetAttributeValue("cy", (long)Math.Round(height * 12700));
+                    anchor.Element(wp + "extent")!.SetAttributeValue("cy", (long)Math.Round((tableDepth == 0 ? height : 145d) * 12700));
                     anchor.Element(wp + "positionH")!.Element(wp + "posOffset")!.SetValue(170 * 12700);
                     var fraction = new XElement(m + "oMath", new XElement(m + "f",
                         new XElement(m + "num", Link("rIdBoxMath", new XElement(m + "r", new XElement(m + "t", "2")))),
                         new XElement(m + "den", new XElement(m + "r", new XElement(m + "t", "7")))));
-                    anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(
+                    XElement[] content =
+                    [
                         Paragraph("PUBLIC BOX CAPTION"), Paragraph("PUBLIC BOX FOLLOWING"), Paragraph("PUBLIC SPACER LINE"),
                         new XElement(W + "p", Link("rIdBoxProse", new XElement(W + "r", new XElement(W + "t", prose)))),
-                        new XElement(W + "p", fraction));
+                        new XElement(W + "p", fraction)
+                    ];
+                    if (tableDepth == 2) content = [ExactHeightTable(100d, content), new XElement(W + "p")];
+                    if (tableDepth != 0) content = [ExactHeightTable(height, content), Paragraph("PUBLIC AFTER TABLE")];
+                    anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(content);
                     const string relsName = "word/_rels/document.xml.rels";
                     var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relsName]));
                     foreach (var (id, uri) in new[] { ("rIdBoxProse", proseUri), ("rIdBoxMath", mathUri) })
@@ -281,6 +295,15 @@ internal static class DocxSectionNavigationTests
         }
 
         static XElement Link(string id, XElement run) => new(W + "hyperlink", new XAttribute(R + "id", id), run);
+
+        static XElement ExactHeightTable(double height, XElement[] content) => new(W + "tbl",
+            new XElement(W + "tblPr", new XElement(W + "tblW", new XAttribute(W + "w", 3000), new XAttribute(W + "type", "dxa"))),
+            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", 3000))),
+            new XElement(W + "tr", new XElement(W + "trPr", new XElement(W + "trHeight",
+                new XAttribute(W + "val", (long)Math.Round(height * 20)), new XAttribute(W + "hRule", "exact"))),
+                new XElement(W + "tc", new XElement(W + "tcPr", new XElement(W + "tcW", new XAttribute(W + "w", 3000),
+                    new XAttribute(W + "type", "dxa")), new XElement(W + "tcMar", new[] { "top", "bottom", "left", "right" }
+                    .Select(side => new XElement(W + side, new XAttribute(W + "w", 0), new XAttribute(W + "type", "dxa"))))), content)));
 
         static (double Baseline, PdfRectangle Clip) FindProseFrame(PdfPage page) =>
             DocxNoteClippingTests.ReadPhysicalPaintFrames(page).SelectMany(frame =>
