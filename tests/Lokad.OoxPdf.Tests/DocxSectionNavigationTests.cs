@@ -470,14 +470,16 @@ internal static class DocxSectionNavigationTests
         XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
         XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
         XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
-        foreach (var (owner, clipped) in new[]
+        foreach (var (owner, clipped, floating) in new[]
         {
-            ("header", false), ("footer", false), ("footnote", false), ("endnote", false),
-            ("header", true), ("footnote", true)
+            ("header", false, false), ("footer", false, false), ("footnote", false, false), ("endnote", false, false),
+            ("header", true, false), ("footnote", true, false),
+            ("footnote", false, true), ("endnote", false, true), ("footnote", true, true)
         })
         foreach (var mode in Modes)
         {
-            string context = $"{owner}, clipped={clipped}, {mode}";
+            int horizontalOffset = clipped ? 453 : 275;
+            string context = $"{owner}, clipped={clipped}, floating={floating}, {mode}";
             WithDocumentMutation(fixture, (parts, document) =>
             {
                 var body = document.Descendants(W + "body").Single();
@@ -487,16 +489,25 @@ internal static class DocxSectionNavigationTests
                     new XAttribute("rot", 90 * 60000),
                     new XElement(a + "off", new XAttribute("x", 0), new XAttribute("y", 0)),
                     new XElement(a + "ext", new XAttribute("cx", size), new XAttribute("cy", size)))));
-                var inline = new XElement(wp + "inline",
+                var drawing = new XElement(wp + (floating ? "anchor" : "inline"),
                     new XElement(wp + "extent", new XAttribute("cx", size), new XAttribute("cy", size)),
                     new XElement(wp + "docPr", new XAttribute("id", 1), new XAttribute("name", "Linked story picture"),
                         new XElement(a + "hlinkClick", new XAttribute(R + "id", "rIdPictureLink"))), graphic);
+                if (floating)
+                {
+                    drawing.SetAttributeValue("behindDoc", "0");
+                    drawing.AddFirst(new XElement(wp + "positionH", new XAttribute("relativeFrom", "margin"),
+                            new XElement(wp + "posOffset", horizontalOffset * 12700)),
+                        new XElement(wp + "positionV", new XAttribute("relativeFrom", "paragraph"),
+                            new XElement(wp + "posOffset", 10 * 12700)));
+                    drawing.Element(wp + "extent")!.AddAfterSelf(new XElement(wp + "wrapNone"));
+                }
                 var paragraph = Paragraph("Story picture");
                 paragraph.AddFirst(
                     new XElement(W + "pPr", new XElement(W + "spacing",
-                        new XAttribute(W + "line", clipped ? 300 : 960),
-                        new XAttribute(W + "lineRule", clipped ? "exact" : "atLeast"))),
-                    new XElement(W + "r", new XElement(W + "drawing", inline)));
+                        new XAttribute(W + "line", clipped && !floating ? 300 : 960),
+                        new XAttribute(W + "lineRule", clipped && !floating ? "exact" : "atLeast"))),
+                    new XElement(W + "r", new XElement(W + "drawing", drawing)));
                 var anchor = Paragraph("PUBLIC REVIEW ANCHOR");
                 anchor.AddFirst(new XElement(W + "commentRangeStart", new XAttribute(W + "id", 7)));
                 anchor.Add(new XElement(W + "commentRangeEnd", new XAttribute(W + "id", 7)),
@@ -544,6 +555,16 @@ internal static class DocxSectionNavigationTests
                 TestAssert.True(m.M12 < -8d && m.M21 > 8d && Math.Abs(m.M11) < .002d && Math.Abs(m.M22) < .002d,
                     "The picture paints with the authored quarter-turn: " + context);
                 var bounds = new PdfRectangle(m.M31, m.M32 + m.M12, m.M21, -m.M12);
+                if (floating)
+                {
+                    TestAssert.True(Math.Abs(bounds.X - (72d + horizontalOffset) * scale) < .003d &&
+                        Math.Abs(bounds.Width - 18d * scale) < .003d && Math.Abs(bounds.Height - 18d * scale) < .003d,
+                        "The margin-relative picture position and extent use the printed note frame: " + context);
+                    TestAssert.True(bounds.X < paint.Clip.X + paint.Clip.Width &&
+                        bounds.Y + bounds.Height > paint.Clip.Y && bounds.Y < paint.Clip.Y + paint.Clip.Height,
+                        "The note retains visible picture area, including the clipped control: " + context);
+                    TestAssert.Contains("Story picture", Text(page));
+                }
                 bool contained = paint.Clip.X <= bounds.X + .002d && paint.Clip.Y <= bounds.Y + .002d &&
                     paint.Clip.X + paint.Clip.Width >= bounds.X + bounds.Width - .002d &&
                     paint.Clip.Y + paint.Clip.Height >= bounds.Y + bounds.Height - .002d;

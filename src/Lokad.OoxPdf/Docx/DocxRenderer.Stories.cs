@@ -276,14 +276,11 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        var imageClip = ResolvePlacedStoryDesignClip(story);
-        // Floating boxes join the printed story frame. Floating pictures keep
-        // the viewport of their existing design-space placement.
-        var (_, _, textBoxClip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
+        var (mapped, map, clip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, imageClip, textBoxClip);
+            RenderFloatingDrawing(drawing, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, clip, mapped ? map : null);
         }
     }
 
@@ -306,8 +303,8 @@ internal sealed partial class DocxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int imageIndex,
         PictureNavigation navigation,
-        PdfRectangle? imageClip = null,
-        PdfRectangle? textBoxClip = null)
+        PdfRectangle? storyClip = null,
+        FloatingTextBoxEmissionMap? storyMap = null)
     {
         if (drawing.PlacedX is not { } placedX ||
             drawing.PlacedTop is not { } placedTop ||
@@ -317,33 +314,31 @@ internal sealed partial class DocxRenderer
             return;
         }
 
-        if (ResolveFloatingCellViewport(drawing) is { } cellClip)
-        {
-            imageClip = cellClip;
-            textBoxClip = cellClip;
-        }
+        PdfRectangle? drawingClip = ResolveFloatingCellViewport(drawing) ?? storyClip;
         if (drawing.Drawing.Image is { } image)
         {
-            if (imageClip is { } clip)
+            if (drawingClip is { } clip)
             {
                 graphics.SaveState();
                 graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
             }
-            var pictureFrame = drawing.StaticAnchorY is not null &&
-                FloatingTextBoxEmissionMap.TryCreate(markupContext, navigation.Viewport.Height, out var pictureMap)
+            if (storyMap is null && drawing.StaticAnchorY is not null &&
+                FloatingTextBoxEmissionMap.TryCreate(markupContext, navigation.Viewport.Height, out var staticMap))
+                storyMap = staticMap;
+            var pictureFrame = storyMap is { } pictureMap
                 ? pictureMap.MapRectangle(placedX, placedTop, width, height)
                 : (X: placedX, Y: placedTop - height, Width: width, Height: height);
             bool painted = RenderImage(image, pictureFrame.X, pictureFrame.Y, pictureFrame.Width, pictureFrame.Height, graphics, pageImages,
                 diagnosticSink, drawing.AnchorPageIndex ?? 0, cancellationToken, imageCache, ref imageIndex,
                 out PdfRectangle? axisAlignedFrame, svgTextFonts: fontResources.SvgTextFonts);
-            if (imageClip is not null) graphics.RestoreState();
+            if (drawingClip is not null) graphics.RestoreState();
             if (painted)
-                (imageClip is { } viewport ? navigation.ClipTo(viewport) : navigation).RecordUri(image, axisAlignedFrame);
+                (drawingClip is { } viewport ? navigation.ClipTo(viewport) : navigation).RecordUri(image, axisAlignedFrame);
         }
 
         if (drawing.TextBoxLayout is { } textBoxLayout)
         {
-            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, textBoxClip);
+            RenderFloatingTextBox(drawing, textBoxLayout, placedX, placedTop, width, height, graphics, pageImages, fontResources, markupContext, pageNumber, pageCount, diagnosticSink, cancellationToken, imageCache, ref imageIndex, navigation, drawingClip);
         }
     }
 
