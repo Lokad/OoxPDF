@@ -461,6 +461,107 @@ internal static class DocxSectionNavigationTests
         }
     }
 
+    public static void DocxRotatedStoryPictureLinksFollowPaintedViewports()
+    {
+        const string uri = "https://example.invalid/rotated-story-picture";
+        const int size = 18 * 12700;
+        string fixture = DocxGlyphlessAnchorTests.CreateDocument();
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
+        foreach (var (owner, clipped) in new[]
+        {
+            ("header", false), ("footer", false), ("footnote", false), ("endnote", false),
+            ("header", true), ("footnote", true)
+        })
+        foreach (var mode in Modes)
+        {
+            string context = $"{owner}, clipped={clipped}, {mode}";
+            WithDocumentMutation(fixture, (parts, document) =>
+            {
+                var body = document.Descendants(W + "body").Single();
+                var section = body.Element(W + "sectPr")!;
+                var graphic = new XElement(body.Descendants(a + "graphic").Single());
+                graphic.Descendants(pic + "pic").Single().Add(new XElement(pic + "spPr", new XElement(a + "xfrm",
+                    new XAttribute("rot", 90 * 60000),
+                    new XElement(a + "off", new XAttribute("x", 0), new XAttribute("y", 0)),
+                    new XElement(a + "ext", new XAttribute("cx", size), new XAttribute("cy", size)))));
+                var inline = new XElement(wp + "inline",
+                    new XElement(wp + "extent", new XAttribute("cx", size), new XAttribute("cy", size)),
+                    new XElement(wp + "docPr", new XAttribute("id", 1), new XAttribute("name", "Linked story picture"),
+                        new XElement(a + "hlinkClick", new XAttribute(R + "id", "rIdPictureLink"))), graphic);
+                var paragraph = Paragraph("Story picture");
+                paragraph.AddFirst(
+                    new XElement(W + "pPr", new XElement(W + "spacing",
+                        new XAttribute(W + "line", clipped ? 300 : 960),
+                        new XAttribute(W + "lineRule", clipped ? "exact" : "atLeast"))),
+                    new XElement(W + "r", new XElement(W + "drawing", inline)));
+                var anchor = Paragraph("PUBLIC REVIEW ANCHOR");
+                anchor.AddFirst(new XElement(W + "commentRangeStart", new XAttribute(W + "id", 7)));
+                anchor.Add(new XElement(W + "commentRangeEnd", new XAttribute(W + "id", 7)),
+                    new XElement(W + "r", new XElement(W + "commentReference", new XAttribute(W + "id", 7))));
+                body.Element(W + "p")!.ReplaceWith(anchor);
+                AddStoryPart(parts, "picture-review-comments", "comments", new XElement(W + "comments",
+                    new XElement(W + "comment", new XAttribute(W + "id", 7), new XAttribute(W + "author", "Public"),
+                        Paragraph("REVIEW COMMENT"))));
+
+                string name = "rotated-picture-" + owner;
+                if (owner is "header" or "footer")
+                {
+                    section.AddFirst(new XElement(W + (owner + "Reference"),
+                        new XAttribute(W + "type", "default"), new XAttribute(R + "id", name)));
+                    AddStoryPart(parts, name, owner, new XElement(W + (owner == "header" ? "hdr" : "ftr"), paragraph));
+                }
+                else
+                {
+                    anchor.Add(new XElement(W + "r", new XElement(W + (owner + "Reference"), new XAttribute(W + "id", 1))));
+                    AddStoryPart(parts, name, owner + "s", new XElement(W + (owner + "s"),
+                        new XElement(W + owner, new XAttribute(W + "id", 1), paragraph)));
+                }
+                var relationships = XDocument.Parse(Encoding.UTF8.GetString(parts["word/_rels/document.xml.rels"]));
+                XNamespace relationshipsNamespace = relationships.Root!.Name.Namespace;
+                var image = relationships.Root.Elements().Single(element => (string?)element.Attribute("Id") == "rIdImage1");
+                var storyRelationships = new XElement(relationshipsNamespace + "Relationships", new XElement(image),
+                    new XElement(relationshipsNamespace + "Relationship",
+                        new XAttribute("Id", "rIdPictureLink"), new XAttribute("Type", R.NamespaceName + "/hyperlink"),
+                        new XAttribute("Target", uri), new XAttribute("TargetMode", "External")));
+                parts[$"word/_rels/{name}.xml.rels"] = Encoding.UTF8.GetBytes(storyRelationships.ToString());
+            }, path =>
+            {
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var source = DocxTests.ReadDocx(path, mode);
+                double scale = DocxRenderer.ResolveWordCompatiblePrintScale(source, DocxMarkupContext.FromMode(mode, geometry));
+                if (mode == OoxPdfDocxMarkupMode.AllMarkup)
+                    TestAssert.True(scale < 1d, "The Review control uses the printed markup scale: " + context);
+                var page = new DocxRenderer(resolver, mode, geometry)
+                    .RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+                TestAssert.True(page.Images.Count == 1, "The selected story paints one picture: " + context);
+                string imagePaint = "/" + page.Images[0].ResourceName + " Do";
+                var paint = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).Single(frame => frame.Block == imagePaint);
+                var m = paint.Transform;
+                TestAssert.True(m.M12 < -8d && m.M21 > 8d && Math.Abs(m.M11) < .002d && Math.Abs(m.M22) < .002d,
+                    "The picture paints with the authored quarter-turn: " + context);
+                var bounds = new PdfRectangle(m.M31, m.M32 + m.M12, m.M21, -m.M12);
+                bool contained = paint.Clip.X <= bounds.X + .002d && paint.Clip.Y <= bounds.Y + .002d &&
+                    paint.Clip.X + paint.Clip.Width >= bounds.X + bounds.Width - .002d &&
+                    paint.Clip.Y + paint.Clip.Height >= bounds.Y + bounds.Height - .002d;
+                TestAssert.True(contained != clipped && paint.Clip.Width > 0d && paint.Clip.Height > 0d,
+                    "The picture is fully visible or retains partial ink as authored: " + context);
+                var links = page.Annotations.Where(link => link.Uri == uri).ToArray();
+                TestAssert.True(links.Length == (clipped ? 0 : 1), "The story picture has the expected URI count: " + context);
+                if (!clipped)
+                {
+                    var link = links[0];
+                    TestAssert.True(Math.Abs(link.X - bounds.X) < .002d && Math.Abs(link.Y - bounds.Y) < .002d &&
+                        Math.Abs(link.Width - bounds.Width) < .002d && Math.Abs(link.Height - bounds.Height) < .002d,
+                        "The URI rectangle matches the rotated painted bounds: " + context);
+                }
+            });
+        }
+    }
+
     private static void CheckFloatingBoxTableRangeBookmarks(string[] owners)
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",

@@ -110,6 +110,10 @@ internal sealed partial class DocxRenderer
         // the body-shift path. Complete fitting table subtrees join this map;
         // their unsupported ownership/overflow cases retain the legacy frame.
         var (mapStory, storyMap, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, markupContext, navigation.Viewport.Height);
+        var storyNavigation = navigation with
+        {
+            AllowsRotatedInlineUris = navigation.AllowsRotatedInlineUris && OwnsNormalNotePictures(story.StoryLayout.Story)
+        };
         if (story.SeparatorY is { } separatorY)
         {
             graphics.SetFillRgb(0, 0, 0);
@@ -152,7 +156,7 @@ internal sealed partial class DocxRenderer
                     "A note-table row exceeds its available frame; content is clipped. Row fragmentation for this content is unsupported.",
                     story.StoryLayout.Story.PartName, PageIndex: pageNumber, Feature: "note table row", Fallback: "Clipped"));
             RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
-                navigation.ClipTo(tableViewport ? tableClip : clip));
+                storyNavigation.ClipTo(tableViewport ? tableClip : clip));
             if (tableViewport) SetClip(clip);
         }
 

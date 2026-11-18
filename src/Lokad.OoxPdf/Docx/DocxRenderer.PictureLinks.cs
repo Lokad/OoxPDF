@@ -8,7 +8,7 @@ internal sealed partial class DocxRenderer
     // painting, including pictures in boxes and rotated inline pictures.
     private readonly record struct PictureNavigation(
         PdfRectangle Viewport, HashSet<DocxInlineImage> InlinePictures, List<PdfLinkAnnotation> DrawingUris,
-        bool InsideTextBox = false, bool AllowsRotatedInlineUris = false)
+        bool InsideTextBox = false, bool AllowsRotatedInlineUris = true)
     {
         public PictureNavigation ClipTo(PdfRectangle clip) => this with
         {
@@ -36,6 +36,9 @@ internal sealed partial class DocxRenderer
 
     private static bool OwnsUnmergedPictureCell(DocxTableCellLayout cell) =>
         cell.VisualOwnership == DocxTableCellVisualOwnership.OwnCell && !cell.Cell.HasVerticalMerge;
+
+    private static bool OwnsNormalNotePictures(DocxRelatedStory story) =>
+        story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
 
     private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, int pageNumber, IReadOnlyList<DocxLayoutItem> staticItems,
         IReadOnlySet<DocxInlineImage> paintedPictures,
@@ -106,8 +109,7 @@ internal sealed partial class DocxRenderer
         foreach (var story in page.PlacedRelatedStories)
         {
             token.ThrowIfCancellationRequested();
-            if (!story.StoryLayout.Story.IsNormalStoryType ||
-                story.StoryLayout.Story.Kind is not (DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)) continue;
+            if (!OwnsNormalNotePictures(story.StoryLayout.Story)) continue;
             var (mapped, map, clip, tableClip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
             foreach (var image in story.InlineImages)
             {

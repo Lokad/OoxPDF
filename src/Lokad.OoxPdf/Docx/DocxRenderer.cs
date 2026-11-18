@@ -1097,14 +1097,13 @@ internal sealed partial class DocxRenderer
             }
 
             RenderParagraphBackgrounds(layoutPage.Items, graphics, markupContext, cancellationToken);
-            var bodyNavigation = navigation with { AllowsRotatedInlineUris = true };
             for (int itemIndex = 0; itemIndex < layoutPage.Items.Count; itemIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 DocxLayoutItem item = layoutPage.Items[itemIndex];
                 DocxTableRowLayout? previousRow = itemIndex > 0 ? layoutPage.Items[itemIndex - 1] as DocxTableRowLayout : null;
                 DocxTableRowLayout? nextRow = itemIndex + 1 < layoutPage.Items.Count ? layoutPage.Items[itemIndex + 1] as DocxTableRowLayout : null;
-                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, bodyNavigation);
+                RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, layout.Pages.Count, cancellationToken, imageCache, ref imageIndex, navigation);
             }
 
             RenderWordCompatibleRevisionBar(drawingPages, layoutPage, pageIndex, graphics, markupContext, cancellationToken);

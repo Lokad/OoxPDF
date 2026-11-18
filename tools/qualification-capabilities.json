@@ -8681,6 +8681,7 @@
     "=DocxStaticCellFloatingBoxesFollowTheirParagraphAndClip",
     "=DocxBoxedPicturesLinkWithinTheirPaintedViewports",
     "=DocxRotatedInlinePictureLinksFollowPaintedViewports",
+    "=DocxRotatedStoryPictureLinksFollowPaintedViewports",
     "=DocxBodyBookmarksFollowTheirPlacedParagraph",
     "=DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries",
     "DocxComputedSimpleFieldsKeepHyperlinkSourceOwnership",
