@@ -15,7 +15,6 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$pdfInspectorPrepared = $false
 $pdfInspectorProject = Join-Path $repoRoot 'tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj'
 $pdfInspectorDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfInspect/bin/Debug/$Framework/Lokad.OoxPdf.PdfInspect.dll"
 $caseFull = (Resolve-Path -LiteralPath $Case).Path
@@ -57,12 +56,34 @@ function Invoke-RepoBuild([string] $Project, [string] $OutputDll, [string] $Desc
 
     & (Join-Path $repoRoot "tools/EnsureDotnetBuild.ps1") -Framework $Framework @params
 }
-function Invoke-PdfInspection([string] $InputPdf, [string] $OutputDirectory) {
-    if (!$script:pdfInspectorPrepared) {
-        Invoke-RepoBuild $pdfInspectorProject $pdfInspectorDll 'PDF inspect' (Join-Path $buildInfoDir 'pdf-inspect.json')
-        $script:pdfInspectorPrepared = $true
+$pdfInspections = @{}
+function Get-ComparisonPdfInspection([ValidateSet('reference','candidate')][string] $Side) {
+    if (!$pdfInspections.ContainsKey($Side)) {
+        if ($pdfInspections.Count -eq 0) {
+            Invoke-RepoBuild $pdfInspectorProject $pdfInspectorDll 'PDF inspect' (Join-Path $buildInfoDir 'pdf-inspect.json')
+        }
+        $inputPdf = if ($Side -eq 'reference') { Join-Path $referenceDir 'reference.pdf' } else { $candidatePdf }
+        $outputDirectory = Join-Path $comparisonDir "pdf-text/$Side"
+        & (Join-Path $PSScriptRoot 'InspectPdf.ps1') -Framework $Framework -InputPdf $inputPdf `
+            -OutputDirectory $outputDirectory -InspectorPath $pdfInspectorDll -SkipBuild | Out-Host
+        foreach ($reportName in 'text-operations.json', 'graphics-operations.json', 'font-resources.json') {
+            if (!(Test-Path -LiteralPath (Join-Path $outputDirectory $reportName) -PathType Leaf)) {
+                throw "PDF inspection did not produce $reportName for the $Side PDF."
+            }
+        }
+        $pdfInspections[$Side] = $outputDirectory
     }
-    & (Join-Path $PSScriptRoot 'InspectPdf.ps1') -Framework $Framework -InputPdf $InputPdf -OutputDirectory $OutputDirectory -InspectorPath $pdfInspectorDll -SkipBuild
+    return $pdfInspections[$Side]
+}
+function Get-ComparisonChartGraphics([string] $Side, [hashtable] $Options, [string] $ReportName) {
+    $inspection = Get-ComparisonPdfInspection $Side
+    $output = Join-Path $comparisonDir "pdf-graphics/$Side/$ReportName"
+    & (Join-Path $PSScriptRoot 'ClassifyPdfChartGraphics.ps1') -InputPath (Join-Path $inspection 'graphics-operations.json') `
+        -TextOperations (Join-Path $inspection 'text-operations.json') -Output $output @Options | Out-Host
+    if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $output -PathType Leaf)) {
+        throw "PDF chart graphics classification failed for the $Side PDF."
+    }
+    return $output
 }
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
 
@@ -202,23 +223,8 @@ if ($manifest.expected.minForegroundRecall -ne $null) {
 }
 
 if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
-    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
-    $referenceTextInspect = Join-Path $textInspectRoot "reference"
-    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
-    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect | Out-Null
-
-    Invoke-PdfInspection `
-        -InputPdf (Join-Path $referenceDir "reference.pdf") `
-        -OutputDirectory $referenceTextInspect
-    Invoke-PdfInspection `
-        -InputPdf $candidatePdf `
-        -OutputDirectory $candidateTextInspect
-
-    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
-    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
-    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
-        throw "PDF text operation gate failed because one inspected PDF had no text operations."
-    }
+    $referenceTextOperations = Join-Path (Get-ComparisonPdfInspection reference) 'text-operations.json'
+    $candidateTextOperations = Join-Path (Get-ComparisonPdfInspection candidate) 'text-operations.json'
 
     $positionTolerance = [double]$manifest.expected.maxTextOperationPositionDelta
     $fontSizeTolerance = if ($manifest.expected.maxTextOperationFontSizeDelta -ne $null) {
@@ -258,28 +264,8 @@ if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
 }
 
 if ($manifest.expected.maxTextLineStartDelta -ne $null) {
-    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
-    $referenceTextInspect = Join-Path $textInspectRoot "reference"
-    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
-    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect | Out-Null
-
-    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
-    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
-    if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf (Join-Path $referenceDir "reference.pdf") `
-            -OutputDirectory $referenceTextInspect
-    }
-
-    if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf $candidatePdf `
-            -OutputDirectory $candidateTextInspect
-    }
-
-    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
-        throw "PDF text line-start gate failed because one inspected PDF had no text operations."
-    }
+    $referenceTextOperations = Join-Path (Get-ComparisonPdfInspection reference) 'text-operations.json'
+    $candidateTextOperations = Join-Path (Get-ComparisonPdfInspection candidate) 'text-operations.json'
 
     $lineStartTolerance = [double]$manifest.expected.maxTextLineStartDelta
     $lineYTolerance = if ($manifest.expected.maxTextLineStartYDelta -ne $null) {
@@ -314,28 +300,8 @@ if ($manifest.expected.maxTextLineStartDelta -ne $null) {
 }
 
 if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
-    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
-    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
-    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
-    New-Item -ItemType Directory -Force -Path $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
-
-    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
-    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
-    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf (Join-Path $referenceDir "reference.pdf") `
-            -OutputDirectory $referenceGraphicsInspect
-    }
-
-    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf $candidatePdf `
-            -OutputDirectory $candidateGraphicsInspect
-    }
-
-    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        throw "PDF graphics operation gate failed because one inspected PDF had no graphics operations."
-    }
+    $referenceGraphicsOperations = Join-Path (Get-ComparisonPdfInspection reference) 'graphics-operations.json'
+    $candidateGraphicsOperations = Join-Path (Get-ComparisonPdfInspection candidate) 'graphics-operations.json'
 
     $compareGraphicsArgs = @{
         Reference = $referenceGraphicsOperations
@@ -385,71 +351,26 @@ if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
 
 $hasChartGraphicsStructureGlobalBoundsTolerance = $manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null
 $hasChartGraphicsStructureKindBoundsTolerances = $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind -ne $null
+$chartGraphicsOptions = $null
 if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructureKindBoundsTolerances) {
-    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
-    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
-    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
-    New-Item -ItemType Directory -Force -Path $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
-
-    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
-    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
-    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf (Join-Path $referenceDir "reference.pdf") `
-            -OutputDirectory $referenceGraphicsInspect
+    $chartGraphicsOptions = @{}
+    if ($null -ne $manifest.expected.compareChartGraphicsStructurePageNumber) {
+        $chartGraphicsOptions.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
     }
-
-    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf $candidatePdf `
-            -OutputDirectory $candidateGraphicsInspect
+    if ($null -ne $manifest.expected.chartGraphicsLineTolerance) {
+        $chartGraphicsOptions.LineTolerance = [double]$manifest.expected.chartGraphicsLineTolerance
     }
-
-    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        throw "PDF chart graphics structure gate failed because one inspected PDF had no graphics operations."
+    if ($null -ne $manifest.expected.chartGraphicsMinLineLength) {
+        $chartGraphicsOptions.MinLineLength = [double]$manifest.expected.chartGraphicsMinLineLength
     }
-
-    $referenceChartStructures = Join-Path $referenceGraphicsInspect "chart-structures.json"
-    $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
-    $classifyReferenceArgs = @{
-        InputPath = $referenceGraphicsOperations
-        TextOperations = Join-Path $referenceGraphicsInspect "text-operations.json"
-        Output = $referenceChartStructures
+    if ($null -ne $manifest.expected.chartGraphicsMarkerMaxSize) {
+        $chartGraphicsOptions.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
     }
-    $classifyCandidateArgs = @{
-        InputPath = $candidateGraphicsOperations
-        TextOperations = Join-Path $candidateGraphicsInspect "text-operations.json"
-        Output = $candidateChartStructures
+    if ($null -ne $manifest.expected.chartGraphicsGridlineBoundsTolerance) {
+        $chartGraphicsOptions.GridlineBoundsTolerance = [double]$manifest.expected.chartGraphicsGridlineBoundsTolerance
     }
-    if ($manifest.expected.compareChartGraphicsStructurePageNumber -ne $null) {
-        $classifyReferenceArgs.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
-        $classifyCandidateArgs.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
-    }
-    if ($manifest.expected.chartGraphicsLineTolerance -ne $null) {
-        $classifyReferenceArgs.LineTolerance = [double]$manifest.expected.chartGraphicsLineTolerance
-        $classifyCandidateArgs.LineTolerance = [double]$manifest.expected.chartGraphicsLineTolerance
-    }
-    if ($manifest.expected.chartGraphicsMinLineLength -ne $null) {
-        $classifyReferenceArgs.MinLineLength = [double]$manifest.expected.chartGraphicsMinLineLength
-        $classifyCandidateArgs.MinLineLength = [double]$manifest.expected.chartGraphicsMinLineLength
-    }
-    if ($manifest.expected.chartGraphicsMarkerMaxSize -ne $null) {
-        $classifyReferenceArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
-        $classifyCandidateArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
-    }
-    if ($manifest.expected.chartGraphicsGridlineBoundsTolerance -ne $null) {
-        $classifyReferenceArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartGraphicsGridlineBoundsTolerance
-        $classifyCandidateArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartGraphicsGridlineBoundsTolerance
-    }
-
-    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "PDF chart graphics structure gate failed while classifying the reference PDF."
-    }
-    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyCandidateArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "PDF chart graphics structure gate failed while classifying the candidate PDF."
-    }
+    $referenceChartStructures = Get-ComparisonChartGraphics reference $chartGraphicsOptions 'chart-structures.json'
+    $candidateChartStructures = Get-ComparisonChartGraphics candidate $chartGraphicsOptions 'chart-structures.json'
 
     $compareChartArgs = @{
         Reference = $referenceChartStructures
@@ -589,78 +510,25 @@ if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructu
 $hasChartTextGlobalTolerance = $manifest.expected.maxChartTextStructurePositionDelta -ne $null
 $hasChartTextKindTolerances = $manifest.expected.maxChartTextStructurePositionDeltaByKind -ne $null
 if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
-    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
-    $referenceTextInspect = Join-Path $textInspectRoot "reference"
-    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
-    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
-    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
-    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
-    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect, $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
+    $referenceTextInspect = Get-ComparisonPdfInspection reference
+    $candidateTextInspect = Get-ComparisonPdfInspection candidate
+    $referenceTextOperations = Join-Path $referenceTextInspect 'text-operations.json'
+    $candidateTextOperations = Join-Path $candidateTextInspect 'text-operations.json'
 
-    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
-    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
-    if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf (Join-Path $referenceDir "reference.pdf") `
-            -OutputDirectory $referenceTextInspect
+    $textPlotOptions = @{}
+    if ($null -ne $manifest.expected.compareChartTextStructurePageNumber) {
+        $textPlotOptions.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
     }
-
-    if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf $candidatePdf `
-            -OutputDirectory $candidateTextInspect
+    if ($null -ne $manifest.expected.chartTextGraphicsGridlineBoundsTolerance) {
+        $textPlotOptions.GridlineBoundsTolerance = [double]$manifest.expected.chartTextGraphicsGridlineBoundsTolerance
     }
-
-    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
-        throw "PDF chart text structure gate failed because one inspected PDF had no text operations."
-    }
-
-    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
-    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
-    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf (Join-Path $referenceDir "reference.pdf") `
-            -OutputDirectory $referenceGraphicsInspect
-    }
-
-    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        Invoke-PdfInspection `
-            -InputPdf $candidatePdf `
-            -OutputDirectory $candidateGraphicsInspect
-    }
-
-    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
-        throw "PDF chart text structure gate failed because one inspected PDF had no graphics operations for plot-box classification."
-    }
-
-    $referenceChartStructures = Join-Path $referenceGraphicsInspect "chart-structures.json"
-    $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
-    $classifyReferenceGraphicsArgs = @{
-        InputPath = $referenceGraphicsOperations
-        TextOperations = Join-Path $referenceGraphicsInspect "text-operations.json"
-        Output = $referenceChartStructures
-    }
-    $classifyCandidateGraphicsArgs = @{
-        InputPath = $candidateGraphicsOperations
-        TextOperations = Join-Path $candidateGraphicsInspect "text-operations.json"
-        Output = $candidateChartStructures
-    }
-    if ($manifest.expected.compareChartTextStructurePageNumber -ne $null) {
-        $classifyReferenceGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
-        $classifyCandidateGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
-    }
-    if ($manifest.expected.chartTextGraphicsGridlineBoundsTolerance -ne $null) {
-        $classifyReferenceGraphicsArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartTextGraphicsGridlineBoundsTolerance
-        $classifyCandidateGraphicsArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartTextGraphicsGridlineBoundsTolerance
-    }
-
-    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceGraphicsArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "PDF chart text structure gate failed while classifying reference graphics."
-    }
-    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyCandidateGraphicsArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "PDF chart text structure gate failed while classifying candidate graphics."
+    $matchesGraphics = $null -ne $chartGraphicsOptions -and $chartGraphicsOptions.Count -eq $textPlotOptions.Count -and
+        !@($textPlotOptions.Keys | Where-Object {
+            !$chartGraphicsOptions.ContainsKey($_) -or $chartGraphicsOptions[$_] -ne $textPlotOptions[$_]
+        }).Count
+    if (!$matchesGraphics) {
+        $referenceChartStructures = Get-ComparisonChartGraphics reference $textPlotOptions 'chart-text-plot-structures.json'
+        $candidateChartStructures = Get-ComparisonChartGraphics candidate $textPlotOptions 'chart-text-plot-structures.json'
     }
 
     $referenceChartTextStructures = Join-Path $referenceTextInspect "chart-text-structures.json"
@@ -751,16 +619,7 @@ $requiresCandidateFontInspection =
     $manifest.expected.candidateFontsMustHaveToUnicode -eq $true -or
     $manifest.expected.candidateFontsMustBeSubset -eq $true
 if ($requiresCandidateFontInspection) {
-    $fontInspectRoot = Join-Path $comparisonDir "pdf-fonts"
-    $candidateFontInspect = Join-Path $fontInspectRoot "candidate"
-    New-Item -ItemType Directory -Force -Path $candidateFontInspect | Out-Null
-
-    $candidateFontResources = Join-Path $candidateFontInspect "font-resources.json"
-    if (-not (Test-Path -LiteralPath $candidateFontResources)) {
-        Invoke-PdfInspection `
-            -InputPdf $candidatePdf `
-            -OutputDirectory $candidateFontInspect
-    }
+    $candidateFontResources = Join-Path (Get-ComparisonPdfInspection candidate) 'font-resources.json'
 
     $readFontResources = Read-JsonArray $candidateFontResources
     $fontResources = @($readFontResources)

@@ -98,7 +98,9 @@ if(@(Get-Content $buildLog).Count -ne $before+2) {throw 'A false font flag cause
 
 # Cross the real case -> inspector boundary. Only native executions and Office/
 # raster helpers are stubbed. The real scripts decide preparation and forwarding.
-foreach($name in @('CheckVisualCase.ps1','InspectPdf.ps1','JsonArray.ps1','CompareMath.ps1','ComparePdfTextLineStarts.ps1')) {
+foreach($name in @('CheckVisualCase.ps1','InspectPdf.ps1','JsonArray.ps1','CompareMath.ps1','PathHelpers.ps1',
+    'PdfTextGeometry.ps1','ComparePdfTextLineStarts.ps1','ComparePdfTextOperations.ps1',
+    'ComparePdfGraphicsOperations.ps1','ClassifyPdfChartGraphics.ps1','ClassifyPdfChartText.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $repo 'tools') -Force
 }
 @'
@@ -119,6 +121,7 @@ foreach($id in @('probe-a','probe-b')) {
 }
 $inspectionLog=Join-Path $repo 'inspection-calls.jsonl'
 $candidateBaseline = 700
+$emitGraphicsOperations = $true
 function dotnet {
     $values=@($args)
     if($values[0] -like '*Lokad.OoxPdf.Cli.dll') {
@@ -129,7 +132,14 @@ function dotnet {
     } elseif($values[0] -like '*Lokad.OoxPdf.PdfInspect.dll') {
         $output=$values[2]
         $baseline=if($values[1] -like '*output.pdf') { $candidateBaseline } else { 700 }
-        @(@{PageNumber=1;X=72;Y=$baseline;DecodedText='Visible content'}) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'text-operations.json')
+        @(@{PageNumber=1;X=72;Y=$baseline;DecodedText='Visible content'},
+            @{PageNumber=2;X=150;Y=150;DecodedText='42'}) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'text-operations.json')
+        if ($emitGraphicsOperations) {
+            @(foreach ($page in 1, 2) {
+                @{PageNumber=$page;Kind='Stroke';Operator='S';SegmentCount=1;MoveCount=1;LineCount=1;CurveCount=0;CloseCount=0;LineWidth=1;MinX=100;MinY=100;MaxX=300;MaxY=100}
+                @{PageNumber=$page;Kind='Stroke';Operator='S';SegmentCount=1;MoveCount=1;LineCount=1;CurveCount=0;CloseCount=0;LineWidth=1;MinX=100;MinY=100;MaxX=100;MaxY=300}
+            }) | ConvertTo-Json -AsArray | Set-Content (Join-Path $output 'graphics-operations.json')
+        }
         '[{"PageNumber":1,"ResourceName":"F1","Embedded":true,"HasToUnicode":true,"IsSubset":true}]' | Set-Content (Join-Path $output 'font-resources.json')
         @{Inspector=$values[0];InspectorSha256=(Get-FileHash $values[0]).Hash;Output=$output} | ConvertTo-Json -Compress |
             Add-Content $inspectionLog
@@ -173,6 +183,53 @@ try {
     try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-y-shift' | Out-Null } catch {$failure=$_.Exception.Message}
     if($failure -ne 'PDF text line-start gate failed.' -or @(Get-Content $buildLog).Count -ne $before) {throw 'The real case did not enforce its manifest Y bound without building'}
     $candidateBaseline = 700
+    $combined = Get-Content -Raw -LiteralPath $realManifest | ConvertFrom-Json -AsHashtable
+    $combined.expected.maxTextOperationPositionDelta = 0
+    $combined.expected.maxGraphicsOperationBoundsDelta = 0
+    $combined.expected.maxChartGraphicsStructureBoundsDelta = 0
+    $combined.expected.maxChartTextStructurePositionDelta = 0
+    foreach ($id in 'real-shared-inspection', 'real-filtered-chart') {
+        if ($id -eq 'real-filtered-chart') { $combined.expected.compareChartTextStructurePageNumber = 2 }
+        $combined | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $realManifest
+        $beforeInspection = @(Get-Content $inspectionLog).Count
+        & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId $id | Out-Null
+        if (@(Get-Content $inspectionLog).Count -ne $beforeInspection + 2) {
+            throw 'The combined text, graphics, chart and font gates must inspect each PDF once'
+        }
+        $layout = Join-Path $repo "artifacts/visual/probe-a/$id/comparison"
+        foreach ($side in 'reference', 'candidate') {
+            $allPages = @(Get-Content -Raw -LiteralPath (Join-Path $layout "pdf-graphics/$side/chart-structures.json") | ConvertFrom-Json)
+            $plotPath = Join-Path $layout "pdf-graphics/$side/chart-text-plot-structures.json"
+            if (@($allPages.PageNumber | Sort-Object -Unique).Count -ne 2) {
+                throw 'The chart graphics report must retain both pages'
+            }
+            if ($id -eq 'real-shared-inspection') {
+                if (Test-Path -LiteralPath $plotPath) { throw 'Matching chart classifiers must share one report' }
+            } else {
+                $plot = @(Get-Content -Raw -LiteralPath $plotPath | ConvertFrom-Json)
+                if (!$plot.Count -or @($plot | Where-Object PageNumber -ne 2).Count) {
+                    throw 'The chart text plot report must retain its own page selection'
+                }
+            }
+        }
+    }
+    $fontOnly = $combined.Clone()
+    $fontOnly.expected = @{candidateFontsMustBeEmbedded=$true}
+    $fontOnly | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $realManifest
+    $beforeInspection = @(Get-Content $inspectionLog).Count
+    & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-font-only' | Out-Null
+    $inspections = @(Get-Content $inspectionLog | Select-Object -Skip $beforeInspection | ConvertFrom-Json)
+    if ($inspections.Count -ne 1 -or (Split-Path -Leaf $inspections[0].Output) -ne 'candidate') {
+        throw 'A font-only case should inspect only its candidate'
+    }
+    $combined | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $realManifest
+    $emitGraphicsOperations = $false
+    $failure = $null
+    try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-incomplete-inspection' | Out-Null } catch {$failure=$_.Exception.Message}
+    if ($failure -ne 'PDF inspection did not produce graphics-operations.json for the reference PDF.') {
+        throw 'An incomplete inspection must fail before the comparison gates'
+    }
+    $emitGraphicsOperations = $true
     Remove-Item -LiteralPath $inspector
     $failure=$null
     try { & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-missing-tool' | Out-Null } catch {$failure=$_.Exception.Message}
@@ -189,7 +246,9 @@ foreach($inspection in $inspections) {
     'Skip all builds','Default builds once','Prebuilt default CLI','All ten inspection capabilities',
     'No unused inspector','Missing prebuilt tool preflight','Real case/inspector forwarding',
     'Real once-only preparation','Real family reuse','Real missing-tool refusal','Occupied run refusal and evidence integrity',
-    'Fresh shifted PDF fails the manifest Y bound','Inspector provenance');
+    'Fresh shifted PDF fails the manifest Y bound','Combined gates inspect each PDF once',
+    'Chart classification reuse and independent page scopes','Candidate-only font inspection',
+    'Incomplete inspection refusal','Inspector provenance');
     InspectionCapabilities=$inspectionKeys.Count;RealInspectionCalls=$inspections.Count;LibraryBuilds=0;LibraryExecutions=0;OfficeExports=0} |
     ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'evidence.json')
 Write-Output 'Visual-family and real case/inspector binding checks pass; no actual build, library execution or Office export.'

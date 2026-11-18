@@ -738,10 +738,16 @@ function Ensure-ChartTextStructures($side, $textOperations, $chartStructures, $c
 if (-not [string]::IsNullOrWhiteSpace($RunPath)) {
     $runFull = (Resolve-Path -LiteralPath $RunPath).Path
     $graphicsRoot = Join-Path $runFull "comparison/pdf-graphics"
-    $ReferenceChartStructures = if ([string]::IsNullOrWhiteSpace($ReferenceChartStructures)) { Join-Path $graphicsRoot "reference/chart-structures.json" } else { $ReferenceChartStructures }
-    $CandidateChartStructures = if ([string]::IsNullOrWhiteSpace($CandidateChartStructures)) { Join-Path $graphicsRoot "candidate/chart-structures.json" } else { $CandidateChartStructures }
-    $ReferenceTextOperations = if ([string]::IsNullOrWhiteSpace($ReferenceTextOperations)) { Join-Path $graphicsRoot "reference/text-operations.json" } else { $ReferenceTextOperations }
-    $CandidateTextOperations = if ([string]::IsNullOrWhiteSpace($CandidateTextOperations)) { Join-Path $graphicsRoot "candidate/text-operations.json" } else { $CandidateTextOperations }
+    $inspectionRoot = Join-Path $runFull 'comparison/pdf-text'
+    function Select-RunReport([string] $Explicit, [string] $Preferred, [string] $Fallback) {
+        if (![string]::IsNullOrWhiteSpace($Explicit)) { return $Explicit }
+        if (Test-Path -LiteralPath $Preferred -PathType Leaf) { return $Preferred }
+        return $Fallback
+    }
+    $ReferenceChartStructures = Select-RunReport $ReferenceChartStructures (Join-Path $graphicsRoot 'reference/chart-text-plot-structures.json') (Join-Path $graphicsRoot 'reference/chart-structures.json')
+    $CandidateChartStructures = Select-RunReport $CandidateChartStructures (Join-Path $graphicsRoot 'candidate/chart-text-plot-structures.json') (Join-Path $graphicsRoot 'candidate/chart-structures.json')
+    $ReferenceTextOperations = Select-RunReport $ReferenceTextOperations (Join-Path $inspectionRoot 'reference/text-operations.json') (Join-Path $graphicsRoot 'reference/text-operations.json')
+    $CandidateTextOperations = Select-RunReport $CandidateTextOperations (Join-Path $inspectionRoot 'candidate/text-operations.json') (Join-Path $graphicsRoot 'candidate/text-operations.json')
 }
 
 $ReferenceChartTextStructures = Ensure-ChartTextStructures "reference" $ReferenceTextOperations $ReferenceChartStructures $ReferenceChartTextStructures
