@@ -12,16 +12,6 @@ internal static class TestRunner
         nameof(FontTests.DiscoveryHeadersMatchFullLoadAcrossWindowsFonts)
     };
 
-    public static int Run(params Action[] tests)
-    {
-        return Run([], tests);
-    }
-
-    public static int Run(string[] args, params Action[] tests)
-    {
-        return Run(args, tests.Select(test => new TestCase("default", test)));
-    }
-
     public static int Run(string[] args, IEnumerable<TestCase> tests)
     {
         Dictionary<string, string?>? options = ReadOptions(args);
