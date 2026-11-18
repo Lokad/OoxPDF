@@ -1,4 +1,4 @@
-# Exercise package preflight with real managed metadata; never builds or restores.
+# Exercise real package preflight and the restore boundary without running dotnet.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)] [string] $PackagePath,
@@ -23,18 +23,29 @@ try {
 $hashes=@{}
 foreach ($framework in $payloads.Keys) { $hashes[$framework]=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([byte[]]$payloads[$framework])) }
 $tool=Join-Path $PSScriptRoot 'TestPackageSmoke.ps1'
-# An unexpected call fails inspection. The normal-mode boundary check stops at
-# restore, proving that the shared preflight still reaches the consumer path.
+$expectedFeed = Split-Path -Parent $package
+$expectedVersion = [IO.Path]::GetFileNameWithoutExtension($package).Substring('Lokad.OoxPdf.'.Length)
+# The restore mock supplies a different archive with the same selected DLL.
+# The tool must refuse those bytes before it calls dotnet run.
 $failedConsumers = [Collections.Generic.List[string]]::new()
 function dotnet {
     if ($args[0] -eq 'restore') {
         $directory = Split-Path $args[1]
+        [xml]$config = Get-Content -LiteralPath (Join-Path $directory 'NuGet.config') -Raw
+        [xml]$project = Get-Content -LiteralPath $args[1] -Raw
+        if ($config.configuration.packageSources.add.value -cne $expectedFeed -or
+            $project.Project.ItemGroup.PackageReference.Version -cne "[$expectedVersion]") {
+            throw 'Fixture: consumer restore must select the original local feed and exact version.'
+        }
         $failedConsumers.Add($directory)
         foreach ($name in @('bin', 'obj', 'packages')) {
             $cache = New-Item -ItemType Directory -Path (Join-Path $directory $name)
-            Set-Content -LiteralPath (Join-Path $cache.FullName 'failure.txt') -Value 'retain failed restore'
+            Set-Content -LiteralPath (Join-Path $cache.FullName 'failure.txt') -Value 'retain failed consumer'
         }
-        throw 'Fixture: consumer restore reached.'
+        $restored = New-Item -ItemType Directory -Path (Join-Path $directory "packages/lokad.ooxpdf/$expectedVersion") -Force
+        Copy-Item -LiteralPath $differentRestoreArchive -Destination (Join-Path $restored.FullName "lokad.ooxpdf.$expectedVersion.nupkg")
+        $global:LASTEXITCODE = 0
+        return
     }
     throw 'Fixture: unexpected dotnet invocation.'
 }
@@ -121,16 +132,18 @@ $null=Check 'missing-framework-refused' $single $hashes['net10.0'] 'net10.0' 'Pa
 $null=Check 'wrong-qualified-hash-refused' $package ('0'*64) 'net11.0' 'Packed library differs from the qualified artifact.'
 $null=Check 'missing-package-refused' '' $hashes['net11.0'] 'net11.0' 'InspectOnly requires an existing PackagePath.'
 $null=Check 'missing-qualified-hash-refused' $package '' 'net11.0' 'Reusing a package requires the qualified library hash.'
-$null=Check 'normal-mode-consumer-boundary' $package $hashes['net11.0'] 'net11.0' 'Fixture: consumer restore reached.' -ConsumerBoundary
+$differentRestoreArchive=$single
+$null=Check 'restore-from-pinned-feed-refuses-different-archive' $package $hashes['net11.0'] 'net11.0' 'Restored package bytes differ from the inspected package.' -ConsumerBoundary
 if ($failedConsumers.Count -ne 1) { throw 'Failed consumer boundary was not observed exactly once.' }
 foreach ($name in @('bin', 'obj', 'packages')) {
-    if ((Get-Content -LiteralPath (Join-Path $failedConsumers[0] "$name/failure.txt") -Raw).Trim() -cne 'retain failed restore') {
+    if ((Get-Content -LiteralPath (Join-Path $failedConsumers[0] "$name/failure.txt") -Raw).Trim() -cne 'retain failed consumer') {
         throw 'Failed consumer cache was removed or changed.'
     }
 }
 if ((Get-FileHash -LiteralPath $package).Hash -ne $originalHash) { throw 'Original package changed' }
 [ordered]@{Checks=$checks;Package=$package;PackageSha256=$originalHash;ToolSha256=(Get-FileHash -LiteralPath $tool).Hash;
     TestScriptSha256=(Get-FileHash -LiteralPath $PSCommandPath).Hash;
-    RealDotnetInvocations=0;LibraryBuilds=0;Conversions=0;OriginalPackageUnchanged=$true;FailedConsumerCachesRetained=$true} |
+    RealDotnetInvocations=0;LibraryBuilds=0;Conversions=0;OriginalPackageUnchanged=$true;
+    OriginalFeedAndExactVersionSelected=$true;DifferentRestoredArchiveRefused=$true;FailedConsumerCachesRetained=$true} |
     ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $output 'evidence.json') -Encoding utf8
 "$($checks.Count) package inspection checks passed; no builds, restores, conversions or assembly execution."

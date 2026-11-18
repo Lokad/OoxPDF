@@ -1,8 +1,8 @@
 # Package smoke test (T08): packs the library, or reuses -PackagePath, then checks
 # DOCX/PPTX conversion and failure contracts through the packed package only:
 # no project references, no tools,
-# no Office/COM, and no reference cache. Each run has its own package feed,
-# restore cache, and consumer directory so older packages cannot satisfy the test.
+# no Office/COM, and no reference cache. Reused packages stay in their original
+# local feed. Each run owns its restore cache and verifies the restored archive.
 # On hosts without Windows fonts,
 # pass an embeddable TrueType font through -FontPath to exercise a custom resolver.
 # -InspectOnly requires a pinned existing package and performs metadata/docs checks
@@ -72,31 +72,27 @@ if (-not [string]::IsNullOrWhiteSpace($FontPath)) {
 
 $libraryProject = Join-Path $repoRoot "src/Lokad.OoxPdf/Lokad.OoxPdf.csproj"
 $runId = [Guid]::NewGuid().ToString("N")
-$packDirectory = Join-Path $repoRoot "artifacts/nuget/package-smoke/$runId"
 $scratch = Join-Path $repoRoot "artifacts/package-smoke/$runId"
 New-Item -ItemType Directory -Force -Path $scratch | Out-Null
-if ($InspectOnly) {
+if ($PackagePath) {
     $packages = @(Get-Item -LiteralPath $PackagePath)
 }
 else {
+    $packDirectory = Join-Path $repoRoot "artifacts/nuget/package-smoke/$runId"
     New-Item -ItemType Directory -Force -Path $packDirectory | Out-Null
-    if ($PackagePath) {
-        Copy-Item -LiteralPath $PackagePath -Destination $packDirectory
-    }
-    else {
-        $packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
-        if ($NoBuild) { $packArguments += "--no-build" }
-        & dotnet @packArguments
-        if ($LASTEXITCODE -ne 0) {
-            throw "Library packing failed with exit code $LASTEXITCODE."
-        }
+    $packArguments = @("pack", $libraryProject, "-c", $Configuration, "--nologo", "--output", $packDirectory)
+    if ($NoBuild) { $packArguments += "--no-build" }
+    & dotnet @packArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Library packing failed with exit code $LASTEXITCODE."
     }
     $packages = @(Get-ChildItem -LiteralPath $packDirectory -Filter "Lokad.OoxPdf.*.nupkg")
 }
-if ($packages.Count -ne 1) {
-    throw "Expected exactly one freshly packed Lokad.OoxPdf package, found $($packages.Count)."
+if ($packages.Count -ne 1 -or $packages[0] -isnot [IO.FileInfo] -or $packages[0].Name -notlike 'Lokad.OoxPdf.?*.nupkg') {
+    throw "Expected exactly one Lokad.OoxPdf package, found $($packages.Count) candidates."
 }
 $package = $packages[0]
+$packageSha256 = (Get-FileHash -LiteralPath $package.FullName).Hash
 $version = $package.BaseName.Substring("Lokad.OoxPdf.".Length)
 Write-Host ("Smoking package {0}." -f $package.Name)
 
@@ -179,11 +175,14 @@ finally { $archive.Dispose() }
 if ($ExpectedLibrarySha256 -and $librarySha256 -ne $ExpectedLibrarySha256) {
     throw "Packed library differs from the qualified artifact."
 }
+if ((Get-FileHash -LiteralPath $package.FullName).Hash -ne $packageSha256) {
+    throw 'Package changed during inspection.'
+}
 
 if ($InspectOnly) {
     [ordered]@{InspectionOnly=$true;LibraryRebuilt=$false;ConsumerRan=$false;
         Framework=$Framework;ExpectedLibrarySha256=$ExpectedLibrarySha256;LibrarySha256=$librarySha256;
-        Package=$package.FullName;PackageSha256=(Get-FileHash -LiteralPath $package.FullName).Hash;
+        Package=$package.FullName;PackageSha256=$packageSha256;
         FrameworkIdentities=$libraryIdentities;LocalDocumentationLinksChecked=$localDocumentationLinks} |
         ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $scratch 'summary.json') -Encoding utf8
     Write-Host 'Package metadata and documentation inspection passed; no build, restore or consumer.'
@@ -194,7 +193,7 @@ if ($InspectOnly) {
 Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-plain-paragraph.docx") -Destination (Join-Path $scratch "input.docx")
 Copy-Item -LiteralPath (Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-composite-table-port.pptx") -Destination (Join-Path $scratch "input.pptx")
 
-$escapedFeedPath = [Security.SecurityElement]::Escape($packDirectory)
+$escapedFeedPath = [Security.SecurityElement]::Escape($package.DirectoryName)
 Set-Content -LiteralPath (Join-Path $scratch "NuGet.config") -Encoding UTF8 -Value @"
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -213,7 +212,7 @@ $csproj = @"
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Lokad.OoxPdf" Version="$version" />
+    <PackageReference Include="Lokad.OoxPdf" Version="[$version]" />
   </ItemGroup>
 </Project>
 "@
@@ -442,9 +441,18 @@ $input = Join-Path $scratch "input.docx"
 $output = Join-Path $scratch "output.pdf"
 $smokeArguments = @($input, $output, $librarySha256, $version, $FontPath, (Join-Path $scratch 'input.pptx'))
 $smokeProject = Join-Path $scratch "smoke.csproj"
-& dotnet restore $smokeProject --packages (Join-Path $scratch "packages") --configfile (Join-Path $scratch "NuGet.config") --nologo
+$restorePackages = Join-Path $scratch 'packages'
+& dotnet restore $smokeProject --packages $restorePackages --configfile (Join-Path $scratch "NuGet.config") --nologo
 if ($LASTEXITCODE -ne 0) {
     throw "Isolated package restore failed with exit code $LASTEXITCODE."
+}
+$restoredPackages = @(Get-ChildItem -LiteralPath (Join-Path $restorePackages 'lokad.ooxpdf') -Recurse -File -Filter 'lokad.ooxpdf.*.nupkg')
+if ($restoredPackages.Count -ne 1) {
+    throw 'Expected one restored Lokad.OoxPdf archive.'
+}
+$restoredPackageSha256 = (Get-FileHash -LiteralPath $restoredPackages[0].FullName).Hash
+if ($restoredPackageSha256 -ne $packageSha256) {
+    throw 'Restored package bytes differ from the inspected package.'
 }
 & dotnet run --no-restore --project $smokeProject -c $Configuration -- @smokeArguments
 if ($LASTEXITCODE -ne 0) {
@@ -454,6 +462,9 @@ if ($LASTEXITCODE -ne 0) {
 $pdfHeader = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($output)[0..4])
 if ($pdfHeader -ne "%PDF-") {
     throw "Smoke output does not start with the PDF header: $pdfHeader."
+}
+if ((Get-FileHash -LiteralPath $package.FullName).Hash -ne $packageSha256) {
+    throw 'Package changed during consumer qualification.'
 }
 Write-Host "Package smoke test passed through the packed library."
 [ordered]@{
@@ -478,12 +489,13 @@ Write-Host "Package smoke test passed through the packed library."
     LocalDocumentationLinksChecked = $localDocumentationLinks
     Package = $package.FullName
     PackageVersion = $version
-    PackageSha256 = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash
+    PackageSha256 = $packageSha256
+    RestoredPackageSha256 = $restoredPackageSha256
     LibrarySha256 = $librarySha256
     OutputSha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash
     OutputBytes = (Get-Item -LiteralPath $output).Length
     PptxOutputSha256 = (Get-FileHash -LiteralPath ([IO.Path]::ChangeExtension($output, '.pptx.pdf')) -Algorithm SHA256).Hash
-    RestorePackages = Join-Path $scratch "packages" # Historical restore location; disposable on success.
+    RestorePackages = $restorePackages # Historical restore location; disposable on success.
 } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $scratch "summary.json") -Encoding UTF8
 Write-Host ("Evidence: {0}" -f (Join-Path $scratch "summary.json"))
 if (Remove-CompletedPackageConsumerCaches $scratch (Join-Path $repoRoot 'artifacts/package-smoke')) {
