@@ -678,8 +678,12 @@ internal sealed partial class DocxLayoutEngine
             sliceLines[lineIndex] = storyLayout.TextLines[startLineIndex + lineIndex];
         }
 
-        return storyLayout with { TextLines = sliceLines,
-            InlineImages = SliceSourceOwnedInlineImages(storyLayout.InlineImages, storyLayout.TextLines, sliceLines) };
+        return storyLayout with
+        {
+            TextLines = sliceLines,
+            InlineImages = SliceSourceOwnedInlineImages(storyLayout.InlineImages, storyLayout.TextLines, sliceLines),
+            FloatingDrawings = SliceSourceOwnedFloatingDrawings(storyLayout.FloatingDrawings, sliceLines)
+        };
     }
 
     private static bool TryGetSourceLineOwner(int? block, int? paragraph, int? line,
@@ -717,6 +721,22 @@ internal sealed partial class DocxLayoutEngine
         // that restart in the next source paragraph.
         return images.Where(image => !TryGetSourceLineOwner(image.SourceBlockIndex, image.SourceParagraphIndex,
             image.SourceLineIndex, out var key) || !recorded.Contains(key) || owners.Contains(key)).ToArray();
+    }
+
+    private static IReadOnlyList<DocxFloatingDrawingLayout> SliceSourceOwnedFloatingDrawings(
+        IReadOnlyList<DocxFloatingDrawingLayout> drawings, IReadOnlyList<DocxTextLineLayout> lines)
+    {
+        if (drawings.Count == 0) return drawings;
+        var owners = new HashSet<(int, int, int)>();
+        foreach (var line in lines)
+            if (TryGetSourceLineOwner(line.SourceBlockIndex, line.SourceParagraphIndex, line.SourceLineIndex, out var owner))
+                owners.Add(owner);
+
+        // Measured anchors follow their source line even when the continuation
+        // normalizes its origin. Keep the fallback for an unmeasured anchor.
+        return drawings.Where(drawing => drawing.AnchorTextLine is not { } anchor ||
+            !TryGetSourceLineOwner(anchor.SourceBlockIndex, anchor.SourceParagraphIndex, anchor.SourceLineIndex, out var owner) ||
+            owners.Contains(owner)).ToArray();
     }
 
     // RV06 interleaving: exact in-flight remainder for the drain-aware body reserve.
@@ -1853,11 +1873,7 @@ internal sealed partial class DocxLayoutEngine
             return storyLayout;
         }
 
-        DocxTextLineLayout[] sliceLines = new DocxTextLineLayout[storyLayout.TextLines.Count - startLineIndex];
-        for (int lineIndex = 0; lineIndex < sliceLines.Length; lineIndex++)
-        {
-            sliceLines[lineIndex] = storyLayout.TextLines[startLineIndex + lineIndex];
-        }
+        var tail = NarrowStoryTextLines(storyLayout, startLineIndex, storyLayout.TextLines.Count - startLineIndex);
 
         double[] lineBoxes = GetStoryTextLineBoxHeights(storyLayout);
         double consumedHeight = 0d;
@@ -1874,11 +1890,12 @@ internal sealed partial class DocxLayoutEngine
             }
         }
 
-        return storyLayout with
+        return tail with
         {
-            TextLines = ShiftTextLines(sliceLines, consumedHeight, 0d),
-            InlineImages = ShiftInlineImages(SliceSourceOwnedInlineImages(storyLayout.InlineImages, storyLayout.TextLines, sliceLines), consumedHeight, 0d),
-            TableRows = ShiftTableRows(storyLayout.TableRows, consumedHeight, 0d),
+            TextLines = ShiftTextLines(tail.TextLines, consumedHeight, 0d),
+            InlineImages = ShiftInlineImages(tail.InlineImages, consumedHeight, 0d),
+            FloatingDrawings = ShiftFloatingDrawings(tail.FloatingDrawings, pageIndex: null, consumedHeight, 0d),
+            TableRows = ShiftTableRows(tail.TableRows, consumedHeight, 0d),
             ContentHeight = Math.Max(0d, remainingHeight)
         };
     }

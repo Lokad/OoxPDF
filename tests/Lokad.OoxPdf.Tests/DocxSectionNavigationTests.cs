@@ -209,6 +209,67 @@ internal static class DocxSectionNavigationTests
     public static void DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame() =>
         CheckFloatingBoxTableRangeBookmarks(["footnote", "endnote"]);
 
+    public static void DocxSplitNotesKeepFloatingBoxesWithTheirSourceLines()
+    {
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        int[] anchors = [4, 51, 84];
+        foreach (string owner in new[] { "footnote", "endnote" })
+        WithDocumentMutation(fixture, (parts, document) =>
+        {
+            var sourceDrawing = document.Descendants(wp + "anchor").Single().Parent!;
+            var sourceParagraph = sourceDrawing.Ancestors(W + "p").First();
+            sourceParagraph.ReplaceWith(new XElement(W + "p", new XElement(W + "r",
+                new XElement(W + (owner + "Reference"), new XAttribute(W + "id", 1)))));
+            var paragraphs = Enumerable.Range(0, 115).Select(index =>
+            {
+                var paragraph = Paragraph($"Note source line {index:000}.");
+                if (!anchors.Contains(index)) return paragraph;
+                var drawing = new XElement(sourceDrawing);
+                var anchor = drawing.Element(wp + "anchor")!;
+                anchor.Element(wp + "docPr")!.SetAttributeValue("id", 200 + index);
+                anchor.Element(wp + "extent")!.SetAttributeValue("cy", 40 * 12700);
+                anchor.Element(wp + "positionH")!.Element(wp + "posOffset")!.SetValue(170 * 12700);
+                anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.SetValue(0);
+                anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(Paragraph($"Box for line {index:000}."));
+                paragraph.Add(new XElement(W + "r", drawing));
+                return paragraph;
+            });
+            AddStoryPart(parts, "split-note-" + owner, owner + "s", new XElement(W + (owner + "s"),
+                new XElement(W + owner, new XAttribute(W + "id", 1), paragraphs)));
+        }, path =>
+        {
+            foreach (var mode in Modes)
+            {
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var pages = new DocxRenderer(resolver, mode, geometry)
+                    .RenderPagesAsync(DocxTests.ReadDocx(path, mode), null, default).ToBlockingEnumerable().ToArray();
+                var shows = pages.SelectMany((page, index) => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)
+                    .Select(show => (Page: index, show.Text, show.X, show.Y))).ToArray();
+                var lines = shows.Where(show => show.Text.TrimStart().StartsWith("Note source line ", StringComparison.Ordinal)).ToArray();
+                TestAssert.True(lines.Select(line => line.Text.Trim()).SequenceEqual(
+                    Enumerable.Range(0, 115).Select(index => $"Note source line {index:000}.")),
+                    $"The {owner} lines retain their authored order in {mode}.");
+                int previousPage = -1;
+                foreach (int anchor in anchors)
+                {
+                    var line = lines[anchor];
+                    var boxes = shows.Where(show => show.Text.Trim() == $"Box for line {anchor:000}.").ToArray();
+                    TestAssert.Equal(1, boxes.Length);
+                    var box = boxes[0];
+                    TestAssert.True(line.Page > previousPage && box.Page == line.Page,
+                        $"The {owner} box for line {anchor} belongs to its continued source page in {mode}.");
+                    TestAssert.True(box.X > line.X + 100d && Math.Abs(box.Y - line.Y) < 7d,
+                        $"The {owner} box for line {anchor} retains its horizontal offset and paragraph top in {mode}.");
+                    previousPage = line.Page;
+                }
+            }
+        });
+    }
+
     public static void DocxFloatingBoxMathSurvivesBodyAndStoryPlacement()
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",

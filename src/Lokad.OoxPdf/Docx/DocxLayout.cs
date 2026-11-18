@@ -2536,16 +2536,16 @@ internal sealed partial class DocxLayoutEngine
 
     private static IReadOnlyList<DocxFloatingDrawingLayout> ShiftFloatingDrawings(
         IReadOnlyList<DocxFloatingDrawingLayout> drawings,
-        int pageIndex,
+        int? pageIndex,
         double deltaY,
         double deltaX)
     {
         return drawings
             .Select(drawing => drawing with
             {
-                PageStartIndex = pageIndex,
-                PageEndIndex = pageIndex,
-                AnchorPageIndex = pageIndex,
+                PageStartIndex = pageIndex ?? drawing.PageStartIndex,
+                PageEndIndex = pageIndex ?? drawing.PageEndIndex,
+                AnchorPageIndex = pageIndex ?? drawing.AnchorPageIndex,
                 HorizontalReferenceX = ShiftNullable(drawing.HorizontalReferenceX, deltaX),
                 AnchorBlockVerticalTop = ShiftNullable(drawing.AnchorBlockVerticalTop, deltaY),
                 AnchorBlockVerticalBottom = ShiftNullable(drawing.AnchorBlockVerticalBottom, deltaY),
