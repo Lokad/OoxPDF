@@ -46,10 +46,12 @@ foreach ($project in @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.
     $projectName=Split-Path $project -Leaf
     New-Item -ItemType Directory -Path (Join-Path $repo $project) -Force | Out-Null
     '<Project />' | Set-Content -LiteralPath (Join-Path $repo ($project+'/'+$projectName+'.csproj'))
-    $directory = Join-Path $repo ($project + "/bin/Release/$Framework")
-    New-Item -ItemType Directory -Path $directory -Force | Out-Null
-    'same fake library; no executable code' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.dll')
-    'fake test assembly' | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.Tests.dll')
+    foreach ($targetFramework in 'net10.0','net11.0') {
+        $directory = Join-Path $repo ($project + "/bin/Release/$targetFramework")
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+        "fake library for $targetFramework; no executable code" | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.dll')
+        "fake test assembly for $targetFramework" | Set-Content -LiteralPath (Join-Path $directory 'Lokad.OoxPdf.Tests.dll')
+    }
 }
 foreach ($name in @('Lokad.OoxPdf.Tests.pdb','Lokad.OoxPdf.Tests.deps.json','Lokad.OoxPdf.Tests.runtimeconfig.json')) {
     'fake runner support; no executable code' | Set-Content -LiteralPath (Join-Path $repo ("tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/" + $name))
@@ -102,6 +104,62 @@ if ([IO.File]::ReadAllText((Join-Path $first.InputSnapshot 'tests/Lokad.OoxPdf.T
 Reject-Noncanonical 'noncanonical-reuse' "first fixture`r`n"
 Reject-Noncanonical 'same-length-noncanonical' "other fixture`n"
 $second = Freeze 'second'
+$batch = @{
+    'net11.0' = Join-Path $repo 'artifacts/batch-net11'
+    'net10.0' = Join-Path $repo 'artifacts/batch-net10'
+}
+$hashReads = [Collections.Generic.List[string]]::new()
+& {
+    function Get-FileHash([string] $LiteralPath) {
+        $hashReads.Add($LiteralPath)
+        Microsoft.PowerShell.Utility\Get-FileHash -LiteralPath $LiteralPath
+    }
+    & $script -OutputDirectories $batch | Out-Null
+}
+$batchPins = @{}
+foreach ($targetFramework in $batch.Keys) {
+    $identity = Get-Content -LiteralPath (Join-Path $batch[$targetFramework] 'identity.json') -Raw | ConvertFrom-Json
+    $runtime = "src/Lokad.OoxPdf/bin/Release/$targetFramework/Lokad.OoxPdf.dll"
+    if ($identity.Framework -cne $targetFramework -or $identity.Revision -ne $first.Revision -or
+        $identity.InputSnapshot -ne $first.InputSnapshot -or $identity.InputTree -ne $first.InputTree -or
+        $identity.InputSnapshotIdentitySha256 -ne $first.InputSnapshotIdentitySha256 -or
+        $identity.LibrarySha256 -ne (Get-FileHash -LiteralPath (Join-Path $batch[$targetFramework] $runtime)).Hash -or
+        !$identity.ReusedInputSnapshot) {
+        throw 'Dual-framework freeze lost runtime or common input identity'
+    }
+    $batchPins[$targetFramework] = $identity
+}
+if ($batchPins['net10.0'].LibrarySha256 -eq $batchPins['net11.0'].LibrarySha256) {
+    throw 'Dual-framework freeze conflated two distinct builds'
+}
+foreach ($fixture in $first.Inputs.PSObject.Properties.Name) {
+    $checkout = Join-Path $repo $fixture
+    $frozen = Join-Path $first.InputSnapshot $fixture
+    if (@($hashReads | Where-Object { $_ -eq $checkout }).Count -ne 1 -or
+        @($hashReads | Where-Object { $_ -eq $frozen }).Count -ne 1) {
+        throw 'A dual-framework freeze must verify each public input only once'
+    }
+}
+$brokenBatch = @{
+    'net11.0' = Join-Path $repo 'artifacts/preflight-net11'
+    'net10.0' = Join-Path $repo 'artifacts/preflight-net10'
+}
+$staleLibrary = Join-Path $repo 'src/Lokad.OoxPdf.Cli/bin/Release/net10.0/Lokad.OoxPdf.dll'
+$originalLibrary = [IO.File]::ReadAllBytes($staleLibrary)
+try {
+    [IO.File]::WriteAllText($staleLibrary, 'different fake build')
+    try {
+        & $script -OutputDirectories $brokenBatch | Out-Null
+        throw 'Expected refusal of mismatched net10 runtime in a batch'
+    }
+    catch {
+        if (!$_.Exception.Message.Contains('Release library copies differ')) { throw }
+    }
+}
+finally { [IO.File]::WriteAllBytes($staleLibrary, $originalLibrary) }
+if (@($brokenBatch.Values | Where-Object { Test-Path -LiteralPath $_ }).Count) {
+    throw 'Batch preflight created a partial artifact'
+}
 $expectedSharedAssets = @($first.Assets.psobject.Properties).Count - @($first.Assets.psobject.Properties.Value | Sort-Object -Unique).Count
 if ($expectedSharedAssets -lt 1 -or $first.SharedAssetFiles -ne $expectedSharedAssets -or $first.SharedAssetBytes -lt 1) {
     throw 'Frozen duplicate assets were not shared'
@@ -383,8 +441,10 @@ Reject 'mixed' 'Release library copies differ'
         'Independent transfer copies', 'Dirty root build-setting refusal', 'Committed root build-setting refusal', 'New root targets refusal',
         'Dirty inspector source refusal', 'Committed inspector source refusal',
         'New tools targets refusal', 'Committed tools targets refusal', 'Harness-only repair transfer',
-        'Harness-only runtime reuse', 'Runtime rewrite refusal', 'Reused framework refusal', 'Reused production-change refusal')
+        'Harness-only runtime reuse', 'Runtime rewrite refusal', 'Reused framework refusal', 'Reused production-change refusal',
+        'Dual-framework fixture verification once', 'All framework libraries checked before batch publication')
     LibraryBuilds=0;LibraryTestRuns=0;First=$first;Second=$second;Changed=$changed
+    Batch=$batchPins;CheckoutAndSnapshotHashesPerFixture=2
     SharedInputPathLength=$changedNested.Length
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'evidence.json') -Encoding utf8
 Write-Output 'Fixture-freeze/asset/parent/harness-ownership checks passed; no library build or test-suite replay.'

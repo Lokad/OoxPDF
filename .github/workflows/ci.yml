@@ -47,9 +47,10 @@ jobs:
         run: dotnet build Lokad.OoxPdf.slnx -c Release --nologo
       - name: Pin candidate runtime identity
         run: |
-          pwsh -NoProfile -File tools/FreezeQualificationArtifact.ps1 -OutputDirectory artifacts/ci-candidate -Framework net11.0
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pwsh -NoProfile -File tools/FreezeQualificationArtifact.ps1 -OutputDirectory artifacts/ci-candidate-net10 -Framework net10.0
+          & ./tools/FreezeQualificationArtifact.ps1 -OutputDirectories @{
+            'net11.0' = 'artifacts/ci-candidate'
+            'net10.0' = 'artifacts/ci-candidate-net10'
+          }
       - name: Full console suite (Windows, skip slow)
         if: runner.os == 'Windows'
         run: |

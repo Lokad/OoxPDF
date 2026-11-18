@@ -1,7 +1,10 @@
 # Snapshot existing Release outputs and public fixtures. Does not build or test.
-[CmdletBinding()]
-param([Parameter(Mandatory=$true)] [string] $OutputDirectory,
-    [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0')
+[CmdletBinding(DefaultParameterSetName='Single')]
+param(
+    [Parameter(Mandatory=$true, ParameterSetName='Single')] [string] $OutputDirectory,
+    [Parameter(ParameterSetName='Single')] [ValidateSet('net10.0','net11.0')] [string] $Framework = 'net11.0',
+    [Parameter(Mandatory=$true, ParameterSetName='Batch')] [hashtable] $OutputDirectories
+)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 function New-FrozenHardLink([string] $Path, [string] $Target) {
@@ -12,15 +15,40 @@ function New-FrozenHardLink([string] $Path, [string] $Target) {
     }
     New-Item -ItemType HardLink -Path $Path -Target $Target | Out-Null
 }
-if (Test-Path -LiteralPath $OutputDirectory) { throw 'An immutable artifact requires a fresh directory' }
+if ($PSCmdlet.ParameterSetName -eq 'Single') {
+    $OutputDirectories = @{ $Framework = $OutputDirectory }
+}
+if (!$OutputDirectories.Count) { throw 'Select at least one framework to freeze' }
+$outputs = [ordered]@{}
+$pathComparer = if ($IsWindows) { [StringComparer]::OrdinalIgnoreCase } else { [StringComparer]::Ordinal }
+$paths = [Collections.Generic.HashSet[string]]::new($pathComparer)
+foreach ($targetFramework in @($OutputDirectories.Keys | Sort-Object -Descending)) {
+    $path = $OutputDirectories[$targetFramework]
+    if ($targetFramework -notin @('net10.0','net11.0') -or $path -isnot [string] -or [string]::IsNullOrWhiteSpace($path)) {
+        throw 'Each frozen output requires a supported framework and a directory'
+    }
+    $targetFramework = $targetFramework.ToLowerInvariant()
+    $fullPath = [IO.Path]::TrimEndingDirectorySeparator($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path))
+    if ($outputs.Contains($targetFramework) -or !$paths.Add($fullPath) -or (Test-Path -LiteralPath $fullPath)) {
+        throw 'Each immutable artifact requires a distinct fresh directory'
+    }
+    $outputs[$targetFramework] = $fullPath
+}
 $status = @(git -C $repo status --porcelain --untracked-files=normal)
 if ($LASTEXITCODE -ne 0 -or $status.Count) { throw 'Commit source and public inputs before freezing' }
 # A test-only rebuild can update the library while leaving the CLI copy stale.
 # Reject mixed runtime copies before creating an immutable snapshot.
-$libraryCopies = @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect') |
-    ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $repo ($_ + "/bin/Release/$Framework/Lokad.OoxPdf.dll"))).Hash }
-if (@($libraryCopies | Sort-Object -Unique).Count -ne 1) {
-    throw 'Release library copies differ; refresh the dependent outputs before freezing'
+$projects = @('src/Lokad.OoxPdf', 'src/Lokad.OoxPdf.Cli', 'tests/Lokad.OoxPdf.Tests', 'tools/Lokad.OoxPdf.DocxInspect')
+$buildLibraryHashes = @{}
+foreach ($targetFramework in $outputs.Keys) {
+    $libraryCopies = $projects |
+        ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $repo ($_ + "/bin/Release/$targetFramework/Lokad.OoxPdf.dll"))).Hash }
+    if (@($libraryCopies | Sort-Object -Unique).Count -ne 1) {
+        throw 'Release library copies differ; refresh the dependent outputs before freezing'
+    }
+    $buildLibraryHashes[$targetFramework] = $libraryCopies[0]
+    $testAssembly = Join-Path $repo "tests/Lokad.OoxPdf.Tests/bin/Release/$targetFramework/Lokad.OoxPdf.Tests.dll"
+    if (!(Test-Path -LiteralPath $testAssembly -PathType Leaf)) { throw 'Missing Release test assembly' }
 }
 $revision = git -C $repo rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot pin source revision' }
@@ -102,48 +130,55 @@ foreach ($name in $inputs.Keys) {
         throw 'Shared public input differs'
     }
 }
-New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
-$output = (Resolve-Path -LiteralPath $OutputDirectory).Path
-$assets = [ordered]@{}
-$assetCopies = @{}
-$sharedAssetFiles = 0
-$sharedAssetBytes = 0L
-foreach ($project in @('src/Lokad.OoxPdf','src/Lokad.OoxPdf.Cli','tests/Lokad.OoxPdf.Tests','tools/Lokad.OoxPdf.DocxInspect')) {
-    $relative = $project + "/bin/Release/$Framework"
-    $source = Join-Path $repo $relative
-    if (!(Test-Path -LiteralPath $source)) { throw ('Missing Release output: ' + $project) }
-    $target = Join-Path $output $relative
-    New-Item -ItemType Directory -Force -Path $target | Out-Null
-    foreach ($file in Get-ChildItem -LiteralPath $source -File) {
-        $name = $relative + '/' + $file.Name
-        $hash = (Get-FileHash -LiteralPath $file.FullName).Hash
-        $destination = Join-Path $output $name
-        if ($assetCopies.ContainsKey($hash)) {
-            # Share only inside this fresh immutable output. Linking a writable
-            # build or a prior artifact would give it ownership of these bytes.
-            New-FrozenHardLink -Path $destination -Target $assetCopies[$hash]
-            $sharedAssetFiles++
-            $sharedAssetBytes += $file.Length
-        }
-        else {
-            Copy-Item -LiteralPath $file.FullName -Destination $destination
-            $assetCopies[$hash] = $destination
-        }
-        if ((Get-FileHash -LiteralPath $destination).Hash -ne $hash) { throw 'Frozen asset differs' }
-        $assets[$name] = $hash
-    }
-}
-$inputLink = Join-Path $output $inputRoot
-New-Item -ItemType Directory -Path (Split-Path $inputLink) -Force | Out-Null
+$inputIdentityHash = (Get-FileHash -LiteralPath $inputIdentity).Hash
 $linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
-New-Item -ItemType $linkType -Path $inputLink -Target (Join-Path $snapshot $inputRoot) | Out-Null
-[ordered]@{
-    Revision=$revision;Framework=$Framework;Rebuilt=$false;Assets=$assets;Inputs=$inputs
-    InputTree=$inputTree;InputSnapshot=$snapshot;ReusedInputSnapshot=$reusedInputs
-    SharedInputFiles=$inputPin.SharedInputFiles
-    SharedAssetFiles=$sharedAssetFiles;SharedAssetBytes=$sharedAssetBytes
-    InputSnapshotIdentitySha256=(Get-FileHash -LiteralPath $inputIdentity).Hash
-    LibrarySha256=(Get-FileHash -LiteralPath (Join-Path $output "src/Lokad.OoxPdf/bin/Release/$Framework/Lokad.OoxPdf.dll")).Hash
-    TestAssemblySha256=(Get-FileHash -LiteralPath (Join-Path $output "tests/Lokad.OoxPdf.Tests/bin/Release/$Framework/Lokad.OoxPdf.Tests.dll")).Hash
-} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'identity.json') -Encoding utf8
-Write-Output "Frozen $($assets.Count) assets at $revision; $($inputs.Count) public inputs verified in shared snapshot (reused: $reusedInputs)."
+foreach ($targetFramework in $outputs.Keys) {
+    $output = $outputs[$targetFramework]
+    New-Item -ItemType Directory -Path $output | Out-Null
+    $assets = [ordered]@{}
+    $assetCopies = @{}
+    $sharedAssetFiles = 0
+    $sharedAssetBytes = 0L
+    foreach ($project in $projects) {
+        $relative = $project + "/bin/Release/$targetFramework"
+        $source = Join-Path $repo $relative
+        if (!(Test-Path -LiteralPath $source)) { throw ('Missing Release output: ' + $project) }
+        $target = Join-Path $output $relative
+        New-Item -ItemType Directory -Force -Path $target | Out-Null
+        foreach ($file in Get-ChildItem -LiteralPath $source -File) {
+            $name = $relative + '/' + $file.Name
+            $hash = (Get-FileHash -LiteralPath $file.FullName).Hash
+            $destination = Join-Path $output $name
+            if ($assetCopies.ContainsKey($hash)) {
+                # Share only inside this fresh immutable output. Linking a writable
+                # build or a prior artifact would give it ownership of these bytes.
+                New-FrozenHardLink -Path $destination -Target $assetCopies[$hash]
+                $sharedAssetFiles++
+                $sharedAssetBytes += $file.Length
+            }
+            else {
+                Copy-Item -LiteralPath $file.FullName -Destination $destination
+                $assetCopies[$hash] = $destination
+            }
+            if ((Get-FileHash -LiteralPath $destination).Hash -ne $hash) { throw 'Frozen asset differs' }
+            $assets[$name] = $hash
+        }
+        if ($assets["$relative/Lokad.OoxPdf.dll"] -ne $buildLibraryHashes[$targetFramework]) {
+            throw 'Release library changed during freeze'
+        }
+    }
+    $testAssemblyHash = $assets["tests/Lokad.OoxPdf.Tests/bin/Release/$targetFramework/Lokad.OoxPdf.Tests.dll"]
+    if (!$testAssemblyHash) { throw 'Release test assembly disappeared during freeze' }
+    $inputLink = Join-Path $output $inputRoot
+    New-Item -ItemType Directory -Path (Split-Path $inputLink) -Force | Out-Null
+    New-Item -ItemType $linkType -Path $inputLink -Target (Join-Path $snapshot $inputRoot) | Out-Null
+    [ordered]@{
+        Revision=$revision;Framework=$targetFramework;Rebuilt=$false;Assets=$assets;Inputs=$inputs
+        InputTree=$inputTree;InputSnapshot=$snapshot;ReusedInputSnapshot=$reusedInputs
+        SharedInputFiles=$inputPin.SharedInputFiles
+        SharedAssetFiles=$sharedAssetFiles;SharedAssetBytes=$sharedAssetBytes
+        InputSnapshotIdentitySha256=$inputIdentityHash
+        LibrarySha256=$buildLibraryHashes[$targetFramework];TestAssemblySha256=$testAssemblyHash
+    } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'identity.json') -Encoding utf8
+}
+Write-Output "Froze $($outputs.Count) framework artifact(s) at $revision with one verification of $($inputs.Count) public inputs (reused snapshot: $reusedInputs)."
