@@ -49,23 +49,6 @@ internal static class TestRunner
                     return 1;
                 }
                 exactNames = new HashSet<string>(requested, StringComparer.Ordinal);
-                var registrations = new Dictionary<string, int>(exactNames.Count, StringComparer.Ordinal);
-                foreach (TestCase testCase in testCases)
-                {
-                    string methodName = testCase.Action.Method.Name;
-                    if (exactNames.Contains(methodName))
-                    {
-                        registrations[methodName] = registrations.GetValueOrDefault(methodName) + 1;
-                    }
-                }
-                foreach (string requestedName in exactNames)
-                {
-                    if (registrations.GetValueOrDefault(requestedName) != 1)
-                    {
-                        Console.WriteLine($"Unknown or ambiguous exact test name '{requestedName}'.");
-                        return 1;
-                    }
-                }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
             {
@@ -84,7 +67,7 @@ internal static class TestRunner
             Console.WriteLine($"Unknown test group '{group}'. Available groups: {availableGroups}");
             return 1;
         }
-        IReadOnlyList<string> catalogProblems = TestCatalogValidator.Validate(testCases);
+        IReadOnlyList<string> catalogProblems = TestCatalogValidator.Validate(testCases, exactNames);
         if (catalogProblems.Count != 0)
         {
             foreach (string problem in catalogProblems)

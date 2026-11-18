@@ -84,16 +84,30 @@ internal static class TestRunnerTests
 
             var ambiguous = RunCaptured(["--test-set", set], [.. catalog, new TestCase("runner-probe", second)]);
             TestAssert.Equal(1, ambiguous.ExitCode);
-            TestAssert.Contains("Unknown or ambiguous exact test name", ambiguous.Output);
+            TestAssert.Contains("Duplicate test registration", ambiguous.Output);
             TestAssert.Equal(0, calls.Count);
 
             File.WriteAllText(set, JsonSerializer.Serialize(new[] { first.Method.Name, "NotARegisteredExactMethod" }));
             var unknown = RunCaptured(["--test-set", set], catalog);
             TestAssert.Equal(1, unknown.ExitCode);
-            TestAssert.Contains("Unknown or ambiguous exact test name 'NotARegisteredExactMethod'", unknown.Output);
+            TestAssert.Contains("Unknown exact test name 'NotARegisteredExactMethod'", unknown.Output);
             TestAssert.Equal(0, calls.Count);
         }
         finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    public static void TestRunnerRejectsDuplicateRegistrationsBeforeListingOrExecutingGroups()
+    {
+        int calls = 0;
+        Action probe = () => calls++;
+        TestCase[] catalog = [.. TestCatalog.All, new("runner-probe", probe), new("other-probe", probe)];
+        foreach (string[] args in new string[][] { ["--list"], ["--group", "runner-probe"] })
+        {
+            var result = RunCaptured(args, catalog);
+            TestAssert.Equal(1, result.ExitCode);
+            TestAssert.Contains($"Duplicate test registration '{probe.Method.Name}'", result.Output);
+            TestAssert.Equal(0, calls);
+        }
     }
 
     private static IEnumerable<TestCase> UnexpectedEnumeration() => Enumerable.Range(0, 1)
