@@ -1446,9 +1446,13 @@ internal sealed partial class DocxRenderer
             double previousPaintedInlineBottom = double.PositiveInfinity;
             double? previousDelta = null;
             bool previousUsesBodyLineBox = false;
-            foreach (DocxTextLineLayout line in EnumerateRenderedPageTextLines(drawingPages, page, pageIndex, markupContext, page.Height))
+            PdfRectangle? previousClip = null;
+            var paper = new PdfRectangle(0d, 0d, page.Width, page.Height);
+            foreach (var (line, _, floatingBoxClip) in EnumerateRenderedPageLineSources(page,
+                drawingPages.PageAll(pageIndex), markupContext, page.Height))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                PdfRectangle? clip = floatingBoxClip is { } box ? IntersectPaintViewports(paper, box) : null;
                 // Break-spill glyph rows do not consume a paragraph line slot.
                 // They must not shorten the preceding body's clickable line box.
                 if (previousUsesBodyLineBox && line.Segments.Count > 0 &&
@@ -1474,13 +1478,13 @@ internal sealed partial class DocxRenderer
                         : flushNextTop < previousLineTop
                             ? Math.Max(flushNextTop, previousLineBottomFallback)
                             : previousLineBottomFallback;
-                    EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(flushBottom, previousPaintedInlineBottom));
+                    EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(flushBottom, previousPaintedInlineBottom), previousClip);
                     previousLineLinks = null;
                 }
 
                 if (line.SourceParagraph is not { } paragraph || paragraph.Hyperlinks.Count == 0)
                 {
-                    EmitLineMathLinks(line);
+                    EmitLineMathLinks(line, clip);
                     continue;
                 }
                 bool usesBodyLineBox = line.BodyLineBoxBaselineInsetPoints is not null && line.BodyLineBoxHeightPoints is not null;
@@ -1496,7 +1500,7 @@ internal sealed partial class DocxRenderer
 
                 // Root-row links share the placed line and its source target.
                 // Nested argument links keep their independently measured paint.
-                EmitLineMathLinks(line, rootMathLink);
+                EmitLineMathLinks(line, clip, rootMathLink);
 
                 IReadOnlyList<DocxHyperlinkSpan> links = paragraph.Hyperlinks;
                 // RV06: Office emits one padded link rectangle per hyperlink per line and
@@ -1525,6 +1529,16 @@ internal sealed partial class DocxRenderer
                     double annotationWidth = ResolveHyperlinkAnnotationWidth(segment, useWordCompatibleTextProfile);
                     double fragmentMinX = segment.X;
                     double fragmentMaxX = segment.X + annotationWidth;
+                    if (clip is { } viewport)
+                    {
+                        var font = segment.Resource?.Embedded.Font;
+                        double ascent = font is null ? segment.FontSize * PdfFallbackFont.AscentEm :
+                            DocxLineMetrics.MeasureWindowsAscender(font, segment.FontSize);
+                        double descent = font is null ? segment.FontSize * PdfFallbackFont.DescentEm :
+                            DocxLineMetrics.MeasureWindowsDescender(font, segment.FontSize);
+                        if (!OverlapsLinkPaint(viewport, fragmentMinX, fragmentMaxX,
+                            segment.BaselineY - descent, segment.BaselineY + ascent)) continue;
+                    }
                     double fragmentTop = usesBodyLineBox
                         ? line.BaselineY - textEmissionBaselineOffset + line.BodyLineBoxBaselineInsetPoints!.Value
                         : segment.BaselineY + HyperlinkRectTopEm * segment.FontSize;
@@ -1541,11 +1555,14 @@ internal sealed partial class DocxRenderer
                     var link = FindInlineLink(paragraph, extent.ItemIndex);
                     if (link is null) continue;
                     double baseline = line.BaselineY - textEmissionBaselineOffset;
+                    double left = line.X + extent.StartOffset + textEmissionXOffset;
+                    double right = line.X + extent.EndOffset + textEmissionXOffset;
+                    if (clip is { } viewport && !OverlapsLinkPaint(viewport, left, right,
+                        baseline - extent.BelowBaseline, baseline + extent.AboveBaseline)) continue;
                     // A text line slot can be shallower than a fraction's final
                     // painted extent, especially after printed table placement.
                     paintedInlineBottom = Math.Min(paintedInlineBottom, baseline - extent.BelowBaseline);
-                    AddLinkFragment(link, line.X + extent.StartOffset + textEmissionXOffset,
-                        line.X + extent.EndOffset + textEmissionXOffset,
+                    AddLinkFragment(link, left, right,
                         baseline + Math.Max(extent.AboveBaseline, line.InlineFrame?.BaselineInset ?? 0d),
                         baseline, line.FontSize * textEmissionFontScale);
                 }
@@ -1620,7 +1637,7 @@ internal sealed partial class DocxRenderer
                     if (root.Link.IsMathRootContent)
                         EmitLinkRect(root.Link, root.MinX - lineLinkPad, root.MaxX + lineLinkPad,
                             mathLineTop - textEmissionBaselineOffset,
-                            mathLineBottom - textEmissionBaselineOffset - (line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d));
+                            mathLineBottom - textEmissionBaselineOffset - (line.ParagraphAfterSpacing ?? line.PendingAfterSpacing ?? 0d), clip);
                 mergedLinkRects.RemoveAll(static item => item.Link.IsMathRootContent);
 
                 if (mergedLinkRects.Count > 0)
@@ -1652,12 +1669,13 @@ internal sealed partial class DocxRenderer
                     previousLineBottomFallback = heldTop - heldSlotHeight - heldAfterSpacing;
                     previousDelta = heldBl - line.BaselineY;
                     previousUsesBodyLineBox = usesBodyLineBox;
+                    previousClip = clip;
                 }
             }
 
             if (previousLineLinks is not null)
             {
-                EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedInlineBottom));
+                EmitLineLinkRects(previousLineLinks, previousLineTop, Math.Min(previousLineBottomFallback, previousPaintedInlineBottom), previousClip);
             }
 
             foreach (var equation in page.Items.OfType<DocxEquationLayout>())
@@ -1678,39 +1696,40 @@ internal sealed partial class DocxRenderer
                 markupContext, noteDestinations, noteSpacingParagraphs, cancellationToken));
             return annotations;
 
-        void EmitLineMathLinks(DocxTextLineLayout line, Action<DocxHyperlinkSpan, double, double, double>? rootMathLink = null)
+        void EmitLineMathLinks(DocxTextLineLayout line, PdfRectangle? clip, Action<DocxHyperlinkSpan, double, double, double>? rootMathLink = null)
         {
             if (line.Math is { } math && !line.IsInlineMath)
-                EmitMathLinks(math, line.X, line.BaselineY, line.MathScale, rootMathLink);
+                EmitMathLinks(math, line.X, line.BaselineY, line.MathScale, rootMathLink, clip);
             else
             {
                 if (line.IsInlineMath && line.Math is { } inlineMath)
-                    EmitMathLinks(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale, rootMathLink);
+                    EmitMathLinks(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale, rootMathLink, clip);
                 foreach (var placement in line.InlineMath)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    EmitMathLinks(placement.Math, line.X + placement.OffsetX, line.BaselineY, line.MathScale, rootMathLink);
+                    EmitMathLinks(placement.Math, line.X + placement.OffsetX, line.BaselineY, line.MathScale, rootMathLink, clip);
                 }
             }
         }
 
         void EmitMathLinks(DocxPreparedMathParagraph math, double x, double baseline, double scale,
-            Action<DocxHyperlinkSpan, double, double, double>? rootMathLink = null)
+            Action<DocxHyperlinkSpan, double, double, double>? rootMathLink = null, PdfRectangle? clip = null)
         {
             foreach (var (link, rectangle) in ReadMathHyperlinkBounds(math.Box, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 double left = x + rectangle.X * scale + textEmissionXOffset;
                 double right = x + (rectangle.X + rectangle.Width) * scale + textEmissionXOffset;
+                double bottom = baseline + rectangle.Y * scale - textEmissionBaselineOffset;
+                double top = baseline + (rectangle.Y + rectangle.Height) * scale - textEmissionBaselineOffset;
+                if (clip is { } viewport && !OverlapsLinkPaint(viewport, left, right, bottom, top)) continue;
                 if (link.IsMathRootContent && rootMathLink is not null)
                 {
                     rootMathLink(link, left, right, scale);
                     continue;
                 }
                 double pad = BodyHyperlinkRectHorizontalPadPoints * scale;
-                EmitLinkRect(link, left - pad, right + pad,
-                    baseline + (rectangle.Y + rectangle.Height) * scale - textEmissionBaselineOffset,
-                    baseline + rectangle.Y * scale - textEmissionBaselineOffset);
+                EmitLinkRect(link, left - pad, right + pad, top, bottom, clip);
             }
         }
 
@@ -1749,7 +1768,8 @@ internal sealed partial class DocxRenderer
         void EmitLineLinkRects(
             List<(DocxHyperlinkSpan Link, double MinX, double MaxX)> emissions,
             double top,
-            double bottom)
+            double bottom,
+            PdfRectangle? clip)
         {
             if (top - bottom <= 0d)
             {
@@ -1758,12 +1778,19 @@ internal sealed partial class DocxRenderer
 
             foreach ((DocxHyperlinkSpan mergedLink, double mergedMinX, double mergedMaxX) in emissions)
             {
-                EmitLinkRect(mergedLink, mergedMinX, mergedMaxX, top, bottom);
+                EmitLinkRect(mergedLink, mergedMinX, mergedMaxX, top, bottom, clip);
             }
         }
 
-        void EmitLinkRect(DocxHyperlinkSpan link, double left, double right, double top, double bottom)
+        void EmitLinkRect(DocxHyperlinkSpan link, double left, double right, double top, double bottom, PdfRectangle? clip = null)
         {
+            if (clip is { } viewport)
+            {
+                left = Math.Max(left, viewport.X);
+                right = Math.Min(right, viewport.X + viewport.Width);
+                bottom = Math.Max(bottom, viewport.Y);
+                top = Math.Min(top, viewport.Y + viewport.Height);
+            }
             if (!(right > left) || !(top > bottom)) return;
             if (IsExternalHyperlink(link))
                 annotations.Add(PdfLinkAnnotation.ToUri(left, bottom, right - left, top - bottom, link.Target ?? string.Empty));
@@ -1771,6 +1798,10 @@ internal sealed partial class DocxRenderer
                 bookmarkDestinations.TryGetValue(link.Anchor, out PdfLinkDestination mergedDestination))
                 annotations.Add(PdfLinkAnnotation.ToDestination(left, bottom, right - left, top - bottom, mergedDestination));
         }
+
+        static bool OverlapsLinkPaint(PdfRectangle viewport, double left, double right, double bottom, double top) =>
+            Math.Max(left, viewport.X) < Math.Min(right, viewport.X + viewport.Width) &&
+            Math.Max(bottom, viewport.Y) < Math.Min(top, viewport.Y + viewport.Height);
 
         bool IsHyperlinkSegment(DocxHyperlinkSpan link, int sourceTextRunIndex)
         {

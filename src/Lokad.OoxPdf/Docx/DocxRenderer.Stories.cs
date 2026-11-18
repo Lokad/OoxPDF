@@ -344,6 +344,10 @@ internal sealed partial class DocxRenderer
 
     private readonly record struct FloatingTextBoxPaintFrame(double X, double Top, PdfRectangle Clip, FloatingTextBoxEmissionMap? Map)
     {
+        public DocxTextLineLayout PlaceLine(DocxTextLineLayout line) => Map is { } map
+            ? map.PrecompensateLine(line, X, Top)
+            : TranslateTextLine(line, X, Top);
+
         public DocxTableRowLayout PlaceRow(DocxTableRowLayout row)
         {
             var translated = DocxLayoutEngine.ShiftTableRow(row, Top, X);
@@ -416,9 +420,7 @@ internal sealed partial class DocxRenderer
         }
         graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
         IReadOnlyList<DocxLayoutItem> items = textBoxLayout.TextLines
-            .Select(line => uniformMap
-                ? map.PrecompensateLine(line, contentX, contentTop)
-                : TranslateTextLine(line, contentX, contentTop))
+            .Select(paintFrame.PlaceLine)
             .Cast<DocxLayoutItem>()
             .Concat(textBoxLayout.InlineImages.Select(image => uniformMap
                 ? map.PrecompensateImage(image, contentX, contentTop, drawing.AnchorPageIndex ?? image.PageIndex)

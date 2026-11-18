@@ -79,23 +79,27 @@ internal sealed partial class DocxRenderer
 
     // Every mapped line retains its placement container. A cell/textbox's local
     // story kind cannot replace the header/footer/note that owns its print frame.
-    private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner)> EnumerateRenderedPageLineSources(
+    private static IEnumerable<(DocxTextLineLayout Line, DocxStoryId Owner, PdfRectangle? FloatingBoxClip)> EnumerateRenderedPageLineSources(
         DocxLayoutPage page, IEnumerable<DocxFloatingDrawingLayout> floatingDrawings,
         DocxMarkupContext markupContext, double pageHeight)
     {
         FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
-        foreach (var source in EnumerateStaticLineSources(page, true, markupContext)) yield return source;
-        foreach (var line in EnumerateBodyTextLines(page)) yield return (line, DocxStoryId.Body());
+        foreach (var source in EnumerateStaticLineSources(page, true, markupContext)) yield return (source.Line, source.Owner, null);
+        foreach (var line in EnumerateBodyTextLines(page)) yield return (line, DocxStoryId.Body(), null);
         foreach (var story in page.PlacedRelatedStories)
             foreach (var line in EnumerateMappedPlacedNoteStoryTextLines(story, map))
-                yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind));
-        foreach (var line in EnumerateInlineTextBoxTextLines(page)) yield return (line, DocxStoryId.Body());
+                yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind), null);
+        foreach (var line in EnumerateInlineTextBoxTextLines(page)) yield return (line, DocxStoryId.Body(), null);
         foreach (var drawing in floatingDrawings)
-            foreach (var line in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], map))
-                yield return (line, drawing.Story ?? DocxStoryId.Body());
+            foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], markupContext, pageHeight))
+                yield return (line, drawing.Story ?? DocxStoryId.Body(), clip);
         foreach (var story in page.PlacedRelatedStories)
-            foreach (var line in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map))
-                yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind));
+        {
+            if (story.FloatingDrawings.Count == 0) continue;
+            var (_, _, storyClip, _) = ResolvePlacedStoryPaintFrame(story, markupContext, pageHeight);
+            foreach (var (line, clip) in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, markupContext, pageHeight, storyClip))
+                yield return (line, DocxStoryId.Related(story.StoryLayout.Story.Kind), clip);
+        }
     }
 
     private static FloatingTextBoxEmissionMap? TryCreateFloatingTextBoxEmissionMap(DocxMarkupContext markupContext, double pageHeight)
@@ -161,40 +165,38 @@ internal sealed partial class DocxRenderer
             }
         }
     }
-    private static IEnumerable<DocxTextLineLayout> EnumerateMappedFloatingDrawingTextBoxTextLines(
+    private static IEnumerable<(DocxTextLineLayout Line, PdfRectangle Clip)> EnumerateMappedFloatingDrawingTextBoxTextLines(
         IEnumerable<DocxFloatingDrawingLayout> drawings,
-        FloatingTextBoxEmissionMap? map)
+        DocxMarkupContext context, double pageHeight, PdfRectangle? storyClip = null)
     {
         foreach (DocxFloatingDrawingLayout drawing in drawings)
         {
             if (drawing.PlacedX is not { } placedX ||
                 drawing.PlacedTop is not { } placedTop ||
+                drawing.ExtentWidthPoints is not { } width || drawing.ExtentHeightPoints is not { } height ||
                 drawing.TextBoxLayout is not { } textBoxLayout)
             {
                 continue;
             }
 
-            DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out _, out _);
-            double contentX = placedX + insetLeft;
-            double contentTop = placedTop - insetTop;
-            DocxTableCellClipSnapshot? clip = ResolveFloatingCellViewport(drawing) is { } cell
-                ? new(true, cell.X, cell.Y, cell.Width, cell.Height) : null;
+            var frame = ResolveFloatingTextBoxPaintFrame(drawing.Drawing, placedX, placedTop, width, height, context, pageHeight);
+            var cellViewport = ResolveFloatingCellViewport(drawing);
+            var viewport = (cellViewport ?? storyClip) is { } parent
+                ? IntersectPaintViewports(parent, frame.Clip) : frame.Clip;
+            DocxTableCellClipSnapshot? clip = cellViewport is { } cell ? new(true, cell.X, cell.Y, cell.Width, cell.Height) : null;
 
             foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
             {
-                var placed = map is { } emissionMap
-                    ? emissionMap.PrecompensateLine(line, contentX, contentTop)
-                    : TranslateTextLine(line, contentX, contentTop);
-                if (InsideViewport(placed)) yield return placed;
+                var placed = frame.PlaceLine(line);
+                if (InsideViewport(placed)) yield return (placed, viewport);
             }
 
             foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
             {
                 foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
                 {
-                    var translated = TranslateTextLine(cellLine, contentX, contentTop);
-                    var placed = map is { } emissionMap ? emissionMap.PrecompensateLine(translated, 0d, 0d) : translated;
-                    if (InsideViewport(placed)) yield return placed;
+                    var placed = frame.PlaceLine(cellLine);
+                    if (InsideViewport(placed)) yield return (placed, viewport);
                 }
             }
 
@@ -203,8 +205,8 @@ internal sealed partial class DocxRenderer
                 if (clip is null) return true;
                 if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top))
                     bottom = top = line.BaselineY;
-                double yOffset = map?.YOffset ?? 0d;
-                return DocxTableCellClipGeometry.ContainsHorizontalRange(clip, line.X + (map?.XOffset ?? 0d), line.Width) &&
+                double yOffset = frame.Map?.YOffset ?? 0d;
+                return DocxTableCellClipGeometry.ContainsHorizontalRange(clip, line.X + (frame.Map?.XOffset ?? 0d), line.Width) &&
                     DocxTableCellClipGeometry.ContainsVerticalRange(clip, bottom - yOffset, top - yOffset);
             }
         }
@@ -288,11 +290,10 @@ internal sealed partial class DocxRenderer
         DocxMarkupContext markupContext,
         double pageHeight)
     {
-        FloatingTextBoxEmissionMap? map = TryCreateFloatingTextBoxEmissionMap(markupContext, pageHeight);
         foreach (DocxFloatingDrawingLayout drawing in drawingPages.PageAll(pageIndex))
         {
             bool isStaticStory = IsStaticStoryFloatingDrawing(drawing);
-            foreach (DocxTextLineLayout line in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], map))
+            foreach (var (line, _) in EnumerateMappedFloatingDrawingTextBoxTextLines([drawing], markupContext, pageHeight))
             {
                 yield return new DocxTextEmissionLineSource(
                     line,
@@ -306,7 +307,7 @@ internal sealed partial class DocxRenderer
 
         foreach (DocxPlacedRelatedStoryLayout story in page.PlacedRelatedStories)
         {
-            foreach (DocxTextLineLayout line in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, map))
+            foreach (var (line, _) in EnumerateMappedFloatingDrawingTextBoxTextLines(story.FloatingDrawings, markupContext, pageHeight))
             {
                 yield return new DocxTextEmissionLineSource(
                     line,

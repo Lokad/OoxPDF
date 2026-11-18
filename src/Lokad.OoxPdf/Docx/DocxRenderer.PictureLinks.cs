@@ -12,7 +12,7 @@ internal sealed partial class DocxRenderer
     {
         public PictureNavigation ClipTo(PdfRectangle clip) => this with
         {
-            Viewport = IntersectPictureViewports(Viewport, clip)
+            Viewport = IntersectPaintViewports(Viewport, clip)
         };
 
         public PictureNavigation EnterTextBox(PdfRectangle clip) => ClipTo(clip) with { InsideTextBox = true };
@@ -77,7 +77,7 @@ internal sealed partial class DocxRenderer
         (image.LineFrame is not { } line ||
             frame.Y >= line.Bottom - 1e-6 && frame.Y + frame.Height <= line.Bottom + line.Height + 1e-6);
 
-    private static PdfRectangle IntersectPictureViewports(PdfRectangle parent, PdfRectangle viewport)
+    private static PdfRectangle IntersectPaintViewports(PdfRectangle parent, PdfRectangle viewport)
     {
         double x = Math.Max(parent.X, viewport.X), y = Math.Max(parent.Y, viewport.Y);
         return new PdfRectangle(x, y, Math.Min(parent.X + parent.Width, viewport.X + viewport.Width) - x,
@@ -139,7 +139,7 @@ internal sealed partial class DocxRenderer
                 if (!cell.InlineImages.Any(image => select(image.Image)) && cell.NestedRows.Count == 0) continue;
                 geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
                 var cellClip = ResolveTableCellContentClip(geometryRow, geometryRow.Cells[index]);
-                var clip = IntersectPictureViewports(parent, new PdfRectangle(cellClip.X, cellClip.Y, cellClip.Width, cellClip.Height));
+                var clip = IntersectPaintViewports(parent, new PdfRectangle(cellClip.X, cellClip.Y, cellClip.Width, cellClip.Height));
                 foreach (var image in cell.InlineImages)
                 {
                     token.ThrowIfCancellationRequested();

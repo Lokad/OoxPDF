@@ -209,6 +209,86 @@ internal static class DocxSectionNavigationTests
     public static void DocxFloatingNoteBoxesKeepInkAndRangeDestinationsInPrintedFrame() =>
         CheckFloatingBoxTableRangeBookmarks(["footnote", "endnote"]);
 
+    public static void DocxFloatingBoxHyperlinksFollowThePrintedClip()
+    {
+        const string prose = "PUBLIC PROSE TARGET";
+        const string proseUri = "https://example.invalid/box-link/prose";
+        const string mathUri = "https://example.invalid/box-link/math";
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver(mathFont: true);
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        XNamespace m = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+        foreach (var mode in Modes)
+        {
+            double scale = 1d;
+            PdfPage tall = Render(100d);
+            var (baseline, tallClip) = FindProseFrame(tall);
+            var fullLink = tall.Annotations.Single(link => link.Uri == proseUri);
+            TestAssert.Equal(1, tall.Annotations.Count(link => link.Uri == mathUri));
+
+            // Cut the source clip through the uppercase linked glyphs. The
+            // positive case should keep an actionable rectangle inside it.
+            double partialHeight = 100d - (baseline + 4d * scale - tallClip.Y) / scale;
+            TestAssert.True(partialHeight > 16d && partialHeight < 100d, mode.ToString());
+            PdfPage partial = Render(partialHeight);
+            var (_, partialClip) = FindProseFrame(partial);
+            var partialLink = partial.Annotations.Single(link => link.Uri == proseUri);
+            TestAssert.True(fullLink.Y < partialClip.Y && partialLink.Height < fullLink.Height &&
+                Math.Abs(partialLink.Y - partialClip.Y) < .002d &&
+                partialLink.Y + partialLink.Height <= partialClip.Y + partialClip.Height + .002d, mode.ToString());
+            TestAssert.Equal(0, partial.Annotations.Count(link => link.Uri == mathUri));
+
+            PdfPage shortBox = Render(16d);
+            var (hiddenBaseline, shortClip) = FindProseFrame(shortBox);
+            TestAssert.True(shortClip.Y > hiddenBaseline + 12d * scale, mode.ToString());
+            TestAssert.Equal(0, shortBox.Annotations.Count(link => link.Uri is proseUri or mathUri));
+
+            PdfPage Render(double height)
+            {
+                PdfPage? result = null;
+                WithDocumentMutation(fixture, (parts, document) =>
+                {
+                    var anchor = document.Descendants(wp + "anchor").Single();
+                    anchor.Element(wp + "extent")!.SetAttributeValue("cy", (long)Math.Round(height * 12700));
+                    anchor.Element(wp + "positionH")!.Element(wp + "posOffset")!.SetValue(170 * 12700);
+                    var fraction = new XElement(m + "oMath", new XElement(m + "f",
+                        new XElement(m + "num", Link("rIdBoxMath", new XElement(m + "r", new XElement(m + "t", "2")))),
+                        new XElement(m + "den", new XElement(m + "r", new XElement(m + "t", "7")))));
+                    anchor.Descendants(W + "txbxContent").Single().ReplaceNodes(
+                        Paragraph("PUBLIC BOX CAPTION"), Paragraph("PUBLIC BOX FOLLOWING"), Paragraph("PUBLIC SPACER LINE"),
+                        new XElement(W + "p", Link("rIdBoxProse", new XElement(W + "r", new XElement(W + "t", prose)))),
+                        new XElement(W + "p", fraction));
+                    const string relsName = "word/_rels/document.xml.rels";
+                    var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relsName]));
+                    foreach (var (id, uri) in new[] { ("rIdBoxProse", proseUri), ("rIdBoxMath", mathUri) })
+                        rels.Root!.Add(new XElement(rels.Root.Name.Namespace + "Relationship", new XAttribute("Id", id),
+                            new XAttribute("Type", R.NamespaceName + "/hyperlink"), new XAttribute("Target", uri),
+                            new XAttribute("TargetMode", "External")));
+                    parts[relsName] = Encoding.UTF8.GetBytes(rels.ToString());
+                }, path =>
+                {
+                    var story = DocxTests.ReadDocx(path, mode);
+                    var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                        : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                    scale = DocxRenderer.ResolveWordCompatiblePrintScale(story, DocxMarkupContext.FromMode(mode, geometry));
+                    if (mode == OoxPdfDocxMarkupMode.AllMarkup) TestAssert.True(scale < 1d, "Review uses its scaled printed frame.");
+                    result = new DocxRenderer(resolver, mode, geometry)
+                        .RenderPagesAsync(story, null, default).ToBlockingEnumerable().Single();
+                });
+                return result ?? throw new InvalidOperationException("The mutated document was not rendered.");
+            }
+        }
+
+        static XElement Link(string id, XElement run) => new(W + "hyperlink", new XAttribute(R + "id", id), run);
+
+        static (double Baseline, PdfRectangle Clip) FindProseFrame(PdfPage page) =>
+            DocxNoteClippingTests.ReadPhysicalPaintFrames(page).SelectMany(frame =>
+                DocxCommentsTests.ReadEmbeddedGlyphTextShows(new PdfPage(page.Width, page.Height, frame.Block, page.Fonts))
+                    .Where(show => show.Text.Trim() == prose).Select(show =>
+                        (show.Y * frame.Transform.M22 + frame.Transform.M32, frame.Clip))).Single();
+    }
+
     public static void DocxSplitNotesKeepFloatingBoxesWithTheirSourceLines()
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
