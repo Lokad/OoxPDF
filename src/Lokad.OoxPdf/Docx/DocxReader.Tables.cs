@@ -393,6 +393,7 @@ internal sealed partial class DocxReader
 
             if (child.Name == WordprocessingNamespace + "p")
             {
+                var leadingBookmarks = scopedChild.LeadingBookmarks;
                 bool VisibleBreak(XElement source) => IsPageOrColumnBreak(source) &&
                     !IsHiddenRunBreak(source, styles, tableCellStyle);
                 bool VisiblePageBreak(XElement source) => IsPageBreak(source) && VisibleBreak(source);
@@ -435,7 +436,9 @@ internal sealed partial class DocxReader
                             inheritedRevision: childRevision,
                             markupMode: markupMode,
                             cancellationToken: cancellationToken,
-                            isContinuationFragment: !part.IsFirstFragment);
+                            isContinuationFragment: !part.IsFirstFragment,
+                            leadingBookmarks: leadingBookmarks);
+                        leadingBookmarks = null;
                         if (splitParagraph is not null)
                         {
                             elements.Add(DocxBodyElementFactory.CreateParagraph(AdjustBreakParagraphFragment(splitParagraph, part, sourceNumbering?.Definition.Indent)));
@@ -457,7 +460,8 @@ internal sealed partial class DocxReader
                     documentSettings: documentSettings,
                     inheritedRevision: childRevision,
                     markupMode: markupMode,
-                    cancellationToken: cancellationToken);
+                    cancellationToken: cancellationToken,
+                    leadingBookmarks: leadingBookmarks);
                 if (parsed is not null)
                 {
                     elements.Add(DocxBodyElementFactory.CreateParagraph(parsed));

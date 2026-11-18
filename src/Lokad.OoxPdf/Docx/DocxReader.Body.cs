@@ -50,7 +50,7 @@ internal sealed partial class DocxReader
         IReadOnlyDictionary<XElement, DocxNoteReferenceSection> noteSections = ResolveSectionNoteReferenceSettings(document, authoredSettings, documentSettings);
         IEnumerable<XElement> bodyChildren = document.Descendants(WordprocessingNamespace + "body").Elements();
         foreach (var (scopedElement, tableFragments) in EnumerateLogicalTableBlocks(
-            bodyChildren, styles, markupMode, cancellationToken, readBlockBookmarks: true))
+            bodyChildren, styles, markupMode, cancellationToken, bindTableBookmarks: true))
         {
             cancellationToken.ThrowIfCancellationRequested();
             XElement element = scopedElement.Element;

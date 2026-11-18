@@ -162,6 +162,70 @@ internal static class DocxSectionNavigationTests
         }
     }
 
+    public static void DocxBlockBookmarksFollowPlacedCellAndStoryParagraphs()
+    {
+        foreach (var mode in Modes)
+        foreach (string container in new[] { "nested-cell", "header", "footnote" })
+        {
+            PdfPage[] inline = RenderTarget(container, blockMarkers: false, mode);
+            PdfPage[] block = RenderTarget(container, blockMarkers: true, mode);
+            TestAssert.True(inline.Select(Text).SequenceEqual(block.Select(Text)),
+                "The same paragraph content stays on the same pages.");
+            var destination = block[0].Annotations.Single().Destination!.Value;
+            TestAssert.Equal(inline[0].Annotations.Single().Destination, block[0].Annotations.Single().Destination);
+            TestAssert.Contains("TARGET PARAGRAPH", Text(block[destination.PageIndex]));
+        }
+
+        static PdfPage[] RenderTarget(string container, bool blockMarkers, OoxPdfDocxMarkupMode mode)
+        {
+            PdfPage[] pages = [];
+            WithMutation("bookmark-before", (parts, xml) =>
+            {
+                (XElement start, XElement end, XElement target) = BookmarkSource(xml);
+                XElement section = target.ElementsAfterSelf(W + "sectPr").Single();
+                switch (container)
+                {
+                    case "nested-cell":
+                    {
+                        target.Remove();
+                        section.AddBeforeSelf(Table(Table(target), Paragraph(string.Empty)));
+                        break;
+                    }
+                    case "header":
+                    {
+                        target.Remove();
+                        var header = new XElement(W + "hdr", target);
+                        if (blockMarkers) MoveBookmarkOutside(start, end, target);
+                        section.Elements(W + "headerReference").Remove();
+                        section.Element(W + "titlePg")?.Remove();
+                        section.AddFirst(new XElement(W + "headerReference",
+                            new XAttribute(W + "type", "default"), new XAttribute(R + "id", "bookmark-header")));
+                        section.AddBeforeSelf(Paragraph("SECOND PAGE"));
+                        AddStoryPart(parts, "bookmark-header", "header", header);
+                        return;
+                    }
+                    case "footnote":
+                    {
+                        target.ReplaceWith(new XElement(W + "p", new XElement(W + "r",
+                            new XElement(W + "footnoteReference", new XAttribute(W + "id", "1")))));
+                        var note = new XElement(W + "footnote", new XAttribute(W + "id", "1"), target);
+                        if (blockMarkers) MoveBookmarkOutside(start, end, target);
+                        AddStoryPart(parts, "bookmark-footnote", "footnotes", new XElement(W + "footnotes", note));
+                        return;
+                    }
+                }
+
+                if (blockMarkers) MoveBookmarkOutside(start, end, target);
+            }, path => pages = Render(path, mode));
+            return pages;
+        }
+
+        static XElement Table(params XElement[] content) => new(W + "tbl",
+            new XElement(W + "tblPr"),
+            new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "4800"))),
+            new XElement(W + "tr", new XElement(W + "tc", content)));
+    }
+
     public static void DocxBodyBookmarksRespectClosedRevisionAndTableBoundaries()
     {
         WithMutation("bookmark-before", (_, xml) => {
@@ -281,12 +345,17 @@ internal static class DocxSectionNavigationTests
     {
         string name = "footer-"+type;
         section.AddFirst(new XElement(W+"footerReference", new XAttribute(W+"type", type), new XAttribute(R+"id", name)));
-        parts["word/"+name+".xml"] = Encoding.UTF8.GetBytes(new XElement(W+"ftr", Paragraph(text)).ToString());
+        AddStoryPart(parts, name, "footer", new XElement(W+"ftr", Paragraph(text)));
+    }
+
+    private static void AddStoryPart(Dictionary<string, byte[]> parts, string name, string kind, XElement story)
+    {
+        parts["word/"+name+".xml"] = Encoding.UTF8.GetBytes(story.ToString());
         var rels = XDocument.Parse(Encoding.UTF8.GetString(parts["word/_rels/document.xml.rels"]));
-        rels.Root!.Add(new XElement(rels.Root.Name.Namespace+"Relationship", new XAttribute("Id", name), new XAttribute("Target", name+".xml"), new XAttribute("Type", R.NamespaceName+"/footer")));
+        rels.Root!.Add(new XElement(rels.Root.Name.Namespace+"Relationship", new XAttribute("Id", name), new XAttribute("Target", name+".xml"), new XAttribute("Type", R.NamespaceName+"/"+kind)));
         parts["word/_rels/document.xml.rels"] = Encoding.UTF8.GetBytes(rels.ToString());
         var types = XDocument.Parse(Encoding.UTF8.GetString(parts["[Content_Types].xml"]));
-        types.Root!.Add(new XElement(types.Root.Name.Namespace+"Override", new XAttribute("PartName", "/word/"+name+".xml"), new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml")));
+        types.Root!.Add(new XElement(types.Root.Name.Namespace+"Override", new XAttribute("PartName", "/word/"+name+".xml"), new XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.wordprocessingml."+kind+"+xml")));
         parts["[Content_Types].xml"] = Encoding.UTF8.GetBytes(types.ToString());
     }
 

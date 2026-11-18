@@ -11,14 +11,13 @@ internal sealed partial class DocxReader
     private static IEnumerable<(DocxRevisionScopedElement Scope, IReadOnlyList<DocxRevisionScopedElement>? Tables)>
         EnumerateLogicalTableBlocks(IEnumerable<XElement> elements, DocxStyleSet styles,
             OoxPdfDocxMarkupMode mode, CancellationToken token, DocxRevisionInfo? inheritedRevision = null,
-            bool readBlockBookmarks = false)
+            bool bindTableBookmarks = false)
     {
         XName paragraphName = WordprocessingNamespace + "p";
         XName tableName = WordprocessingNamespace + "tbl";
         XName bookmarkStartName = WordprocessingNamespace + "bookmarkStart";
         XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
-        XName[] includedNames = [paragraphName, tableName, WordprocessingNamespace + "altChunk"];
-        if (readBlockBookmarks) includedNames = [.. includedNames, bookmarkStartName, bookmarkEndName];
+        XName[] includedNames = [paragraphName, tableName, WordprocessingNamespace + "altChunk", bookmarkStartName, bookmarkEndName];
         DocxRevisionScopedElement? pending = null;
         List<DocxRevisionScopedElement>? tables = null;
         Dictionary<string, DocxBookmarkAnchor>? bookmarkStarts = null;
@@ -39,10 +38,10 @@ internal sealed partial class DocxReader
                 continue;
             }
 
-            // Attach the bookmark to its authored block before joining tables.
-            // Each table fragment keeps its own boundary in the joined result.
+            // Paragraphs own their placed source lines across stories. Body
+            // table bookmarks also bind before joining authored fragments.
             var block = bookmarkStarts is { Count: > 0 } &&
-                (scope.Element.Name == paragraphName || scope.Element.Name == tableName)
+                (scope.Element.Name == paragraphName || bindTableBookmarks && scope.Element.Name == tableName)
                 ? scope with { LeadingBookmarks = bookmarkStarts.Values.ToArray() }
                 : scope;
             bookmarkStarts = null;
