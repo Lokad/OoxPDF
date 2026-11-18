@@ -42,7 +42,10 @@ internal sealed record DocxFloatingDrawing(
     // SourceBlockIndex identifies the authored source. Layout uses the block
     // published after filtering, splitting and joining.
     public int? LayoutBlockIndex { get; init; }
+    public DocxStaticDrawingOwner? StaticOwner { get; init; }
 }
+
+internal sealed class DocxStaticDrawingOwner { }
 
 // One block-level w:body child in document order. Implementors wrap a single
 // source construct (paragraph, table, section break, page/manual break, or an

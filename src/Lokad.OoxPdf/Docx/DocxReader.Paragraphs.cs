@@ -351,6 +351,7 @@ internal sealed partial class DocxReader
             ContextualSpacingDefaultStyleId = paragraphProperties?.Element(WordprocessingNamespace + "pStyle") is null
                 ? styles.ContextualSpacingDefaultStyleId : null,
             InlineTextBoxes = inlineTextBoxes,
+            StaticDrawingOwners = paragraph.Annotation<DocxStaticDrawingOwner>() is { } drawingOwner ? [drawingOwner] : [],
             HiddenDrawingEquationSourceCount = hiddenDrawingEquationSourceCount,
             Equations = equations,
             // Page fields retain their canonical source placeholders. Layout

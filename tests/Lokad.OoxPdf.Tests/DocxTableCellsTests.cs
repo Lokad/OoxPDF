@@ -3796,17 +3796,16 @@ internal static class DocxTableCellsTests
         DocxParagraph[] paragraphs = Enumerable.Range(1, 8)
             .Select(index => DocxTests.CreateDocxLayoutParagraph("Line " + index.ToString(CultureInfo.InvariantCulture), 10d, 10d))
             .ToArray();
+        var owner = new DocxStaticDrawingOwner();
+        paragraphs[2] = paragraphs[2] with { StaticDrawingOwners = [owner] };
         var cell = new DocxTableCell("Second", paragraphs, null, null, null, null, [], DocxTableCellMargins.Empty);
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
         var measurer = new DocxTests.FamilyWidthTextMeasurer();
-        var method = typeof(DocxLayoutEngine).GetMethod("LayoutTableCellContent",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected live cell-layout method.");
-
-        (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images, IReadOnlyList<DocxInlineTextBoxLayout> Boxes, IReadOnlyList<DocxTableRowLayout> Rows, double Height)
+        (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images,
+            IReadOnlyList<DocxInlineTextBoxLayout> Boxes, IReadOnlyList<DocxTableRowLayout> Rows, double Height,
+            IReadOnlyList<DocxPlacedDrawingAnchor> Anchors)
             Place(double y, double height, DocxLayoutEngine.DocxTableCellTextLinesMemo? cache) =>
-            ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, IReadOnlyList<DocxInlineTextBoxLayout>, IReadOnlyList<DocxTableRowLayout>, double))method.Invoke(null,
-                [cell, 10d, y, 60d, height, 0d, measurer, 36d, 1, 2, 1d, cache, 0, null, CancellationToken.None])!;
+            DocxLayoutEngine.LayoutTableCellContent(cell, 10d, y, 60d, height, 0d, measurer, 36d, 1, 2, 1d, cache);
 
         var first = Place(70d, 20d, memo);
         var replay = Place(10d, 60d, memo);
@@ -3815,6 +3814,10 @@ internal static class DocxTableCellsTests
         TestAssert.Equal(1, memo.Misses);
         TestAssert.Equal(8, first.Lines.Count);
         TestAssert.Equal(fresh.Height, replay.Height);
+        var anchor = replay.Anchors.Single();
+        TestAssert.True(ReferenceEquals(owner, anchor.Owner), "Memo replay keeps the paragraph's drawing owner.");
+        TestAssert.Equal(first.Anchors.Single().TranslateY(-20d), anchor);
+        TestAssert.Equal(fresh.Anchors.Single(), anchor);
         TestAssert.Equal(fresh.Lines.Count, replay.Lines.Count);
         for (int index = 0; index < fresh.Lines.Count; index++)
         {

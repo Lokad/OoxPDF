@@ -125,31 +125,35 @@ internal sealed partial class DocxReader
             {
                 IReadOnlyDictionary<string, OoxRelationship> partRelationships =
                     package.GetRelationshipDictionary(part.Name, cancellationToken);
-                var floatingBlocks = CreateFloatingBlockMap(parsed.Xml);
-                parsed.BodyElements = ReadRelatedStoryBodyElements(
-                    parsed.Xml.Root?.Elements() ?? [],
-                    styles,
-                    numbering,
-                    new DocxNumberingCounters(),
-                    package,
-                    partRelationships,
-                    storyCache.DocumentSettings,
-                    markupMode,
-                    cancellationToken,
-                    floatingBlocks: floatingBlocks);
-                if (floatingBlocks is not null)
+                var tagged = new List<XElement>();
+                try
                 {
-                    // An anchor inside a box belongs to that box's flow, even
-                    // when the enclosing static paragraph owns the outer drawing.
-                    foreach (var anchor in floatingBlocks.Keys.ToArray())
+                    foreach (var anchor in parsed.Xml.Descendants(WordprocessingDrawingNamespace + "anchor"))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any())
-                            floatingBlocks.Remove(anchor);
+                        if (!string.Equals((string?)anchor.Element(WordprocessingDrawingNamespace + "positionV")?.Attribute("relativeFrom"),
+                                "paragraph", StringComparison.OrdinalIgnoreCase) ||
+                            anchor.Ancestors(WordprocessingNamespace + "txbxContent").Any() ||
+                            anchor.Ancestors(WordprocessingNamespace + "p").FirstOrDefault() is not { } paragraph)
+                            continue;
+                        if (paragraph.Annotation<DocxStaticDrawingOwner>() is not { } owner)
+                        {
+                            owner = new DocxStaticDrawingOwner();
+                            paragraph.AddAnnotation(owner);
+                            tagged.Add(paragraph);
+                        }
+                        anchor.AddAnnotation(owner);
+                        tagged.Add(anchor);
                     }
+                    parsed.BodyElements = ReadRelatedStoryBodyElements(parsed.Xml.Root?.Elements() ?? [], styles, numbering,
+                        new DocxNumberingCounters(), package, partRelationships, storyCache.DocumentSettings, markupMode, cancellationToken);
+                    parsed.Drawings = ReadFloatingDrawings(parsed.Xml, package, partRelationships, styles, numbering,
+                        storyCache.DocumentSettings, markupMode, cancellationToken);
                 }
-                parsed.Drawings = floatingBlocks is null ? [] : ReadFloatingDrawings(parsed.Xml, package, partRelationships, styles, numbering,
-                    storyCache.DocumentSettings, markupMode, cancellationToken, floatingBlocks);
+                finally
+                {
+                    foreach (var element in tagged) element.RemoveAnnotations<DocxStaticDrawingOwner>();
+                }
             }
 
             string type = (string?)reference.Attribute(WordprocessingNamespace + "type") ?? "default";

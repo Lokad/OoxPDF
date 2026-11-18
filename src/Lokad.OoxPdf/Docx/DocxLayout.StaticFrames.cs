@@ -85,7 +85,7 @@ internal sealed partial class DocxLayoutEngine
         IDocxStaticTextMetricsProvider staticMetrics, double defaultTabStopPoints, double scale,
         IDocxLineMetricsProvider? unscaledLineMetrics, CancellationToken token,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
-        IDocxTextMeasurer? unscaledTextMeasurer, IReadOnlySet<int>? anchoredParagraphs = null)
+        IDocxTextMeasurer? unscaledTextMeasurer)
     {
         bool canMap = scale is > 0d and < 1d && double.IsFinite(width / scale) &&
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
@@ -97,7 +97,7 @@ internal sealed partial class DocxLayoutEngine
         if (!canMap)
         {
             var layout = CreateStaticStoryLayout(story, x, width, startY, isHeader, pageNumber, pageCount,
-                textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathEquations, anchoredParagraphs);
+                textMeasurer, staticMetrics, defaultTabStopPoints, scale, unscaledLineMetrics, token, mathEquations);
             if (!isHeader && scale == 1d && CanUseStaticStoryFrame(story, width, mathEquations, token))
             {
                 double top = ResolveStaticFooterContentTop(layout, unscaledLineMetrics);
@@ -112,7 +112,7 @@ internal sealed partial class DocxLayoutEngine
         // in the same coordinate system, including prepared mathematical boxes.
         var source = CreateStaticStoryLayout(story, x, width / scale, startY, isHeader, pageNumber, pageCount,
             unscaledTextMeasurer!, (IDocxStaticTextMetricsProvider)unscaledTextMeasurer!,
-            defaultTabStopPoints, 1d, unscaledLineMetrics, token, mathEquations, anchoredParagraphs);
+            defaultTabStopPoints, 1d, unscaledLineMetrics, token, mathEquations);
         if (!HasVisibleStaticContent(source)) { return source with { DrawingAnchorsUseDesignY = true }; }
         double center = page.Height / 2d;
         double frameAnchor = isHeader ? page.Height - page.MarginTop : page.MarginBottom;
@@ -202,6 +202,11 @@ internal sealed partial class DocxLayoutEngine
                         ContentPaddingLeft = cell.ContentPaddingLeft * scale, ContentPaddingRight = cell.ContentPaddingRight * scale,
                         ContentPaddingTop = cell.ContentPaddingTop * scale, ContentPaddingBottom = cell.ContentPaddingBottom * scale,
                         TextLines = cell.TextLines.Select(MapLine).ToArray(), InlineImages = cell.InlineImages.Select(MapImage).ToArray(),
+                        DrawingAnchors = cell.DrawingAnchors.Count == 0 ? cell.DrawingAnchors : cell.DrawingAnchors.Select(anchor => anchor with
+                        {
+                            Top = center + (anchor.Top - center) * scale,
+                            Bottom = center + (anchor.Bottom - center) * scale
+                        }).ToArray(),
                         NestedTableRows = cell.NestedRows.Select(MapRow).ToArray(),
                         InlineTextBoxes = cell.InlineTextBoxes.Select(MapBox).ToArray()
                     };

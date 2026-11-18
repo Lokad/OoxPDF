@@ -29,6 +29,7 @@ internal sealed record DocxParagraph(
     public IReadOnlyList<DocxCommentRange> CommentRanges { get; init; } = [];
     public IReadOnlyList<DocxRevisionRange> RevisionRanges { get; init; } = [];
     public IReadOnlyList<DocxInlineTextBox> InlineTextBoxes { get; init; } = [];
+    public IReadOnlyList<DocxStaticDrawingOwner> StaticDrawingOwners { get; init; } = [];
     // Known hidden drawing payloads do not represent a visible math omission.
     // Keep this source count when paragraph marks are consumed or stories move.
     public int HiddenDrawingEquationSourceCount { get; init; }

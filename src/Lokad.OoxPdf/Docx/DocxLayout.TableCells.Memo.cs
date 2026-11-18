@@ -42,7 +42,8 @@ internal sealed partial class DocxLayoutEngine
             out IReadOnlyList<DocxInlineTextBoxLayout> relativePlacedBoxes,
             out double usedHeight,
             out IReadOnlyList<DocxTableRowLayout> relativeNestedRows,
-            double nestedPageHeight = 0d)
+            double nestedPageHeight = 0d,
+            List<DocxPlacedDrawingAnchor>? relativeAnchors = null)
         {
             if (entries.TryGetValue(
                 new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, nestedPageHeight),
@@ -55,6 +56,7 @@ internal sealed partial class DocxLayoutEngine
                 relativePlacedBoxes = stored.PlacedBoxes;
                 usedHeight = stored.UsedHeight;
                 relativeNestedRows = stored.NestedRows;
+                relativeAnchors?.AddRange(stored.DrawingAnchors);
                 return true;
             }
 
@@ -84,7 +86,8 @@ internal sealed partial class DocxLayoutEngine
             double originY,
             double usedHeight,
             IReadOnlyList<DocxTableRowLayout> absoluteNestedRows,
-            double nestedPageHeight = 0d)
+            double nestedPageHeight = 0d,
+            IReadOnlyList<DocxPlacedDrawingAnchor>? absoluteAnchors = null)
         {
             IReadOnlyList<DocxTextLineLayout> relative = ToRelativeLines(absoluteLines, originX, originY);
             IReadOnlyList<DocxInlineImageLayout> relativePlaced = ToRelativeImages(absolutePlacedImages, originX, originY);
@@ -92,7 +95,8 @@ internal sealed partial class DocxLayoutEngine
             var relativeRows = ShiftTableRows(absoluteNestedRows, -originY, -originX);
             entries[new MemoKey(cell, cellWidth, measurer, defaultTabStopPoints, rowTopPadding, paragraphSpacingScale, nestedPageHeight)] =
                 new StoredLines(relative, relativePlaced, relativeBoxes, relativeRows, usedHeight,
-                    ResolveCounterInputs(pageNumber, pageCount, dependencies));
+                    ResolveCounterInputs(pageNumber, pageCount, dependencies),
+                    DocxPlacedDrawingAnchor.TranslateY(absoluteAnchors ?? [], -originY));
         }
 
         private static (int? PageNumber, int? PageCount) ResolveCounterInputs(
@@ -219,7 +223,7 @@ internal sealed partial class DocxLayoutEngine
 
         private sealed class StoredLines(IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxInlineImageLayout> placedImages,
             IReadOnlyList<DocxInlineTextBoxLayout> placedBoxes, IReadOnlyList<DocxTableRowLayout> nestedRows, double usedHeight,
-            (int? PageNumber, int? PageCount) counterInputs)
+            (int? PageNumber, int? PageCount) counterInputs, IReadOnlyList<DocxPlacedDrawingAnchor> drawingAnchors)
         {
             public (int? PageNumber, int? PageCount) CounterInputs { get; } = counterInputs;
 
@@ -230,6 +234,7 @@ internal sealed partial class DocxLayoutEngine
 
             public double UsedHeight { get; } = usedHeight;
             public IReadOnlyList<DocxTableRowLayout> NestedRows { get; } = nestedRows;
+            public IReadOnlyList<DocxPlacedDrawingAnchor> DrawingAnchors { get; } = drawingAnchors;
         }
 
         // RV05: placed mid-line images relativize exactly like lines so memo hits

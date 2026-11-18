@@ -2292,8 +2292,8 @@ internal sealed partial class DocxLayoutEngine
             double contentPaddingTop = rowTopPadding;
             double contentPaddingRight = ResolveTableCellHorizontalEdgeInset(contentCell, "right", contentCell.Margins.RightPoints, paragraphSpacingScale);
             double contentPaddingBottom = ResolveTableCellVerticalPadding(contentCell.Margins.BottomPoints, paragraphSpacingScale);
-            var (cellTextLines, cellPlacedImages, cellPlacedBoxes, cellNestedRows, cellUsedHeight) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
-                ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), Array.Empty<DocxTableRowLayout>(), 0d)
+            var (cellTextLines, cellPlacedImages, cellPlacedBoxes, cellNestedRows, cellUsedHeight, drawingAnchors) = visualOwnership == DocxTableCellVisualOwnership.MissingVerticalMergeOwner
+                ? (Array.Empty<DocxTextLineLayout>(), Array.Empty<DocxInlineImageLayout>(), Array.Empty<DocxInlineTextBoxLayout>(), Array.Empty<DocxTableRowLayout>(), 0d, Array.Empty<DocxPlacedDrawingAnchor>())
                 : LayoutTableCellContent(contentCell, cellX, contentY, cellWidth, contentHeight, rowTopPadding, textMeasurer, defaultTabStopPoints, counterPageNumber, pageCount, paragraphSpacingScale, cellMemo, currentPageIndex, tableContext.MathEquations, tableContext.CancellationToken);
             if (adjustAtLeastBodySpacing && FragmentCount == 1 && paragraphSpacingScale == 1d)
                 (cellTextLines, cellPlacedImages) = AdjustTableMinimumLinePlacement(table, row, contentCell, cellTextLines, cellPlacedImages, textMeasurer,
@@ -2367,7 +2367,7 @@ internal sealed partial class DocxLayoutEngine
                 verticalMergeOwnerCell,
                 verticalMergeOwner,
                 visualOwnership,
-                nestedTableRows) with { InlineTextBoxes = inlineTextBoxes });
+                nestedTableRows) with { InlineTextBoxes = inlineTextBoxes, DrawingAnchors = drawingAnchors });
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d) * paragraphSpacingScale;
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }

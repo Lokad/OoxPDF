@@ -97,9 +97,10 @@ internal sealed record DocxFloatingDrawingLayout(
     public DocxTextLineLayout? AnchorTextLine { get; init; }
     // Paragraph-relative static drawings can come from either static text path.
     public DocxStaticAnchorY? StaticAnchorY { get; init; }
+    public PdfRectangle? StaticCellClip { get; init; }
 }
 
-internal enum DocxStaticAnchorY { Design, Text }
+internal enum DocxStaticAnchorY { Design, Text, Physical }
 
 internal sealed record DocxWrapExclusionFrame(
     double X,
@@ -2600,6 +2601,7 @@ internal sealed partial class DocxLayoutEngine
             X = cell.X + deltaX,
             Y = cell.Y + deltaY,
             TextLines = ShiftTextLines(cell.TextLines, deltaY, deltaX),
+            DrawingAnchors = DocxPlacedDrawingAnchor.TranslateY(cell.DrawingAnchors, deltaY),
             InlineImages = ShiftInlineImages(cell.InlineImages, deltaY, deltaX, pageIndex),
             InlineTextBoxes = cell.InlineTextBoxes.Select(box => ShiftInlineTextBox(box, deltaY, deltaX, pageIndex)).ToArray(),
             NestedTableRows = ShiftTableRows(cell.NestedRows, deltaY, deltaX, pageIndex)

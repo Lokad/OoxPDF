@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -221,18 +220,9 @@ internal static class DocxCellMemoTests
         int number, int count, double x = 10d, double y = 20d, double height = 240d, double width = 160d,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? math = null, CancellationToken token = default)
     {
-        var method = typeof(DocxLayoutEngine).GetMethod("LayoutTableCellContent", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Expected live cell-layout method.");
-        try
-        {
-            return ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, IReadOnlyList<DocxInlineTextBoxLayout>, IReadOnlyList<DocxTableRowLayout>, double))
-                method.Invoke(null, [cell, x, y, width, height, 0d, measurer, 36d, number, count, 1d, memo, number - 1, math, token])!;
-        }
-        catch (TargetInvocationException exception) when (exception.InnerException is not null)
-        {
-            ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
-            throw;
-        }
+        var (lines, images, boxes, rows, usedHeight, _) = DocxLayoutEngine.LayoutTableCellContent(
+            cell, x, y, width, height, 0d, measurer, 36d, number, count, 1d, memo, number - 1, math, token);
+        return (lines, images, boxes, rows, usedHeight);
     }
 
     public static void MemoKeyIncludesMeasurerReference()

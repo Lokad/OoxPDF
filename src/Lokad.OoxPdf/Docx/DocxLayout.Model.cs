@@ -331,12 +331,21 @@ internal sealed record DocxTableCellLayout(
     IReadOnlyList<DocxTableRowLayout>? NestedTableRows)
 {
     public IReadOnlyList<DocxInlineTextBoxLayout> InlineTextBoxes { get; init; } = [];
+    public IReadOnlyList<DocxPlacedDrawingAnchor> DrawingAnchors { get; init; } = [];
     public IReadOnlyList<DocxTableRowLayout> NestedRows => NestedTableRows ?? [];
 
     public DocxTableCell VisualCell =>
         VisualOwnership == DocxTableCellVisualOwnership.VerticalMergeOwner && VerticalMergeOwner is not null
             ? VerticalMergeOwner.Cell
             : Cell;
+}
+
+internal readonly record struct DocxPlacedDrawingAnchor(DocxStaticDrawingOwner Owner, double Top, double Bottom)
+{
+    public DocxPlacedDrawingAnchor TranslateY(double delta) => new(Owner, Top + delta, Bottom + delta);
+
+    public static IReadOnlyList<DocxPlacedDrawingAnchor> TranslateY(IReadOnlyList<DocxPlacedDrawingAnchor> anchors, double delta) =>
+        anchors.Count == 0 || delta == 0d ? anchors : anchors.Select(anchor => anchor.TranslateY(delta)).ToArray();
 }
 
 internal sealed record DocxVerticalMergeOwner(DocxTableCell Cell, int RowIndex, int GridColumnIndex);

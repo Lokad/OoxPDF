@@ -494,6 +494,7 @@ internal sealed partial class DocxReader
             TextBoxStrokeColorHex: textBoxStrokeColorHex)
         {
             LayoutBlockIndex = layoutBlockIndex,
+            StaticOwner = anchor.Annotation<DocxStaticDrawingOwner>(),
             Revisions = RevisionList(revision),
             TextBoxBodyElements = textBoxBodyElements
         };

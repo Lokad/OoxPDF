@@ -43,18 +43,28 @@ internal sealed partial class DocxRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             var drawing = layout.StaticFloatingDrawings[index];
-            if (drawing.StaticAnchorY != DocxStaticAnchorY.Text || drawing.AnchorPageIndex is not int pageIndex ||
+            if (drawing.StaticAnchorY is not (DocxStaticAnchorY.Text or DocxStaticAnchorY.Physical) ||
+                drawing.AnchorPageIndex is not int pageIndex ||
                 drawing.VerticalReferenceTop is not double textTop || drawing.VerticalReferenceBottom is not double textBottom)
                 continue;
 
-            // Legacy static text already has scaled pitch. Convert its painted
-            // frame to design Y before the common floating painter maps the box.
+            // Undo the print map for the placed paragraph so the drawing can
+            // apply its authored offset in design points. A cell viewport
+            // stays in physical coordinates for clipping.
             var offsets = PageContext(pageIndex);
-            double staticOffset = offsets.WordCompatibleStaticTextYAdjustmentPoints - ResolveTextEmissionBaselineOffset(offsets);
+            double staticOffset = drawing.StaticAnchorY == DocxStaticAnchorY.Physical ? 0d :
+                (drawing.StaticCellClip is null ? offsets.WordCompatibleStaticTextYAdjustmentPoints : 0d) -
+                ResolveTextEmissionBaselineOffset(offsets);
             var frame = new DocxPrintedPageFrame(layout.Pages[pageIndex].Height, offsets.WordCompatiblePrintScale);
             staticChanged ??= layout.StaticFloatingDrawings.ToArray();
-            staticChanged[index] = DocxLayoutEngine.PlaceStaticAnchorInDesignFrame(drawing,
+            var adjusted = DocxLayoutEngine.PlaceStaticAnchorInDesignFrame(drawing,
                 frame.UnmapY(textTop + staticOffset), frame.UnmapY(textBottom + staticOffset));
+            if (drawing.StaticCellClip is { } clip)
+                adjusted = adjusted with { StaticCellClip = clip with
+                {
+                    X = clip.X + ResolveTextEmissionXOffset(offsets), Y = clip.Y + staticOffset
+                } };
+            staticChanged[index] = adjusted;
         }
         return changed is null && staticChanged is null ? layout : layout with
         {

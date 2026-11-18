@@ -192,7 +192,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathEquations, unscaledTextMeasurer, SelectAnchoredParagraphs(headerDrawings));
+                    cancellationToken, mathEquations, unscaledTextMeasurer);
             DocxStaticStoryLayoutResult footerLayout = CreatePageStaticStoryLayout(
                     page, selectedFooter,
                     page.MarginLeft,
@@ -206,7 +206,7 @@ internal sealed partial class DocxLayoutEngine
                     defaultTabStopPoints,
                     paragraphSpacingScale,
                     unscaledLineMetrics,
-                    cancellationToken, mathEquations, unscaledTextMeasurer, SelectAnchoredParagraphs(footerDrawings));
+                    cancellationToken, mathEquations, unscaledTextMeasurer);
             // Stories that laid out no visible content (absent headers, empty selections)
             // displace nothing: their untouched start cursor sits inside the header zone,
             // which would otherwise read as overflow whenever the header distance is
@@ -251,18 +251,6 @@ internal sealed partial class DocxLayoutEngine
                 isHeader ? page.PageSettings.HeaderFloatingDrawingsByType : page.PageSettings.FooterFloatingDrawingsByType,
                 page.PageSettings, pageIndex + 1, page.SectionFirstPageNumber);
 
-        IReadOnlySet<int>? SelectAnchoredParagraphs(DocxSelectedStaticDrawings selected)
-        {
-            HashSet<int>? anchors = null;
-            foreach (var drawing in selected.Drawings)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (drawing.LayoutBlockIndex is int index && IsParagraphRelative(drawing))
-                    (anchors ??= []).Add(index);
-            }
-            return anchors;
-        }
-
         void AddDrawings(DocxLayoutPage page, int pageIndex, bool isHeader, DocxSelectedStaticDrawings selected,
             DocxStaticStoryLayoutResult? placedStory) => drawings.AddRange(CreateStaticFloatingDrawingLayouts(
                 selected, DocxStoryId.HeaderOrFooter(isHeader, selected.VariantType), page, pageIndex, pages.Count,
@@ -283,14 +271,13 @@ internal sealed partial class DocxLayoutEngine
         double paragraphSpacingScale,
         IDocxLineMetricsProvider? unscaledLineMetrics,
         CancellationToken cancellationToken,
-        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
-        IReadOnlySet<int>? anchoredParagraphs = null)
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         var lines = new List<DocxTextLineLayout>();
         var images = new List<DocxInlineImageLayout>();
         var tableRows = new List<DocxTableRowLayout>();
         var boxes = new List<DocxInlineTextBoxLayout>();
-        Dictionary<int, DocxStaticParagraphAnchor>? drawingAnchors = anchoredParagraphs is null ? null : new();
+        Dictionary<DocxStaticDrawingOwner, DocxPlacedDrawingAnchor>? drawingAnchors = null;
         double cursorY = startY;
         double pendingSpacingAfter = 0d;
         DocxParagraph? previousParagraph = null;
@@ -743,8 +730,8 @@ internal sealed partial class DocxLayoutEngine
 
             void RecordDrawingAnchor()
             {
-                if (anchoredParagraphs?.Contains(elementIndex) == true)
-                    drawingAnchors!.Add(elementIndex, new(paragraphTop, cursorY));
+                foreach (var owner in paragraph.StaticDrawingOwners)
+                    (drawingAnchors ??= new()).Add(owner, new(owner, paragraphTop, cursorY));
             }
         }
 
@@ -769,11 +756,10 @@ internal sealed partial class DocxLayoutEngine
             // text without resolved metrics retain their separate placement.
             double footerShift = startY - (cursorY - pendingSpacingAfter);
             if (drawingAnchors is not null)
-                foreach (int owner in drawingAnchors.Keys.ToArray())
+                foreach (var owner in drawingAnchors.Keys.ToArray())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var frame = drawingAnchors[owner];
-                    drawingAnchors[owner] = new(frame.Top + footerShift, frame.Bottom + footerShift);
+                    drawingAnchors[owner] = drawingAnchors[owner].TranslateY(footerShift);
                 }
             for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
             {

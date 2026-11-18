@@ -177,35 +177,35 @@ internal sealed partial class DocxRenderer
             DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out _, out _);
             double contentX = placedX + insetLeft;
             double contentTop = placedTop - insetTop;
-            if (map is not { } emissionMap)
-            {
-                foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
-                {
-                    yield return TranslateTextLine(line, contentX, contentTop);
-                }
-
-                foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
-                {
-                    foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
-                    {
-                        yield return TranslateTextLine(cellLine, contentX, contentTop);
-                    }
-                }
-
-                continue;
-            }
+            DocxTableCellClipSnapshot? clip = ResolveFloatingCellViewport(drawing) is { } cell
+                ? new(true, cell.X, cell.Y, cell.Width, cell.Height) : null;
 
             foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
             {
-                yield return emissionMap.PrecompensateLine(line, contentX, contentTop);
+                var placed = map is { } emissionMap
+                    ? emissionMap.PrecompensateLine(line, contentX, contentTop)
+                    : TranslateTextLine(line, contentX, contentTop);
+                if (InsideViewport(placed)) yield return placed;
             }
 
             foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
             {
                 foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
                 {
-                    yield return emissionMap.PrecompensateLine(TranslateTextLine(cellLine, contentX, contentTop), 0d, 0d);
+                    var translated = TranslateTextLine(cellLine, contentX, contentTop);
+                    var placed = map is { } emissionMap ? emissionMap.PrecompensateLine(translated, 0d, 0d) : translated;
+                    if (InsideViewport(placed)) yield return placed;
                 }
+            }
+
+            bool InsideViewport(DocxTextLineLayout line)
+            {
+                if (clip is null) return true;
+                if (!DocxInlineLineGeometry.TryGetOccupiedBounds(line, out double bottom, out double top))
+                    bottom = top = line.BaselineY;
+                double yOffset = map?.YOffset ?? 0d;
+                return DocxTableCellClipGeometry.ContainsHorizontalRange(clip, line.X + (map?.XOffset ?? 0d), line.Width) &&
+                    DocxTableCellClipGeometry.ContainsVerticalRange(clip, bottom - yOffset, top - yOffset);
             }
         }
     }

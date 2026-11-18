@@ -364,6 +364,8 @@ internal sealed partial class DocxReader
             Images = first.Images.Concat(second.Images.Select(ShiftImage)).ToArray(),
             Equations = first.Equations.Concat(second.Equations.Select(ShiftEquation)).ToArray(),
             InlineTextBoxes = first.InlineTextBoxes.Concat(second.InlineTextBoxes.Select(ShiftBox)).ToArray(),
+            StaticDrawingOwners = first.StaticDrawingOwners.Count == 0 ? second.StaticDrawingOwners :
+                second.StaticDrawingOwners.Count == 0 ? first.StaticDrawingOwners : [.. first.StaticDrawingOwners, .. second.StaticDrawingOwners],
             HiddenDrawingEquationSourceCount = first.HiddenDrawingEquationSourceCount + second.HiddenDrawingEquationSourceCount,
             InlineContent = hasItems ? firstItems!.Concat(secondItems!.Select(ShiftItem)).ToArray() : null,
             SpacingAfterPoints = second.SpacingAfterPoints,

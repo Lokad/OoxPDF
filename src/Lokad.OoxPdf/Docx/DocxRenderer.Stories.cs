@@ -285,6 +285,12 @@ internal sealed partial class DocxRenderer
         }
     }
 
+    // Word's in-cell layout flag applies to wrapped shapes. A wrap-none
+    // drawing still uses its paragraph's anchor and overlays the page.
+    private static PdfRectangle? ResolveFloatingCellViewport(DocxFloatingDrawingLayout drawing) =>
+        drawing.Drawing.WrapKind is not (null or DocxFloatingWrapKind.None) &&
+        OoxBoolean.IsTrue(drawing.Drawing.LayoutInCellValue) ? drawing.StaticCellClip : null;
+
     private static void RenderFloatingDrawing(
         DocxFloatingDrawingLayout drawing,
         PdfGraphicsBuilder graphics,
@@ -310,6 +316,11 @@ internal sealed partial class DocxRenderer
             return;
         }
 
+        if (ResolveFloatingCellViewport(drawing) is { } cellClip)
+        {
+            imageClip = cellClip;
+            textBoxClip = cellClip;
+        }
         if (drawing.Drawing.Image is { } image)
         {
             if (imageClip is { } clip)

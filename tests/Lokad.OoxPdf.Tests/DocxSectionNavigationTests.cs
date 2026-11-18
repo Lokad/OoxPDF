@@ -282,6 +282,82 @@ internal static class DocxSectionNavigationTests
         }
     }
 
+    public static void DocxStaticCellFloatingBoxesFollowTheirParagraphAndClip()
+    {
+        string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",
+            "TableGridOrigins", "Containers", "floating-table-ordered.docx"));
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        foreach (var (story, height, exact, wrap) in new[]
+        {
+            ("header", 0, false, false), ("footer", 0, false, false),
+            ("header", 2400, false, true), ("header", 300, true, true)
+        })
+        foreach (var mode in Modes)
+        {
+            int offset = story == "footer" ? -62 : 30;
+            string context = $"{story}/{height}/{mode}";
+            WithDocumentMutation(fixture, (parts, xml) =>
+            {
+                var body = xml.Descendants(W + "body").Single();
+                var anchor = body.Descendants(wp + "anchor").Single();
+                anchor.Element(wp + "positionV")!.Element(wp + "posOffset")!.SetValue(offset * 12700);
+                if (wrap) anchor.Element(wp + "wrapNone")!.ReplaceWith(new XElement(wp + "wrapSquare", new XAttribute("wrapText", "bothSides")));
+                var box = anchor.Descendants(W + "txbxContent").Single();
+                var boxTable = box.Element(W + "tbl")!;
+                MoveBookmarkOutside(box.Descendants(W + "bookmarkStart").Single(),
+                    box.Descendants(W + "bookmarkEnd").Single(), boxTable);
+                var target = boxTable.Element(W + "tr")!.Element(W + "tc")!;
+                var targetProperties = target.Element(W + "tcPr");
+                if (targetProperties is null) target.AddFirst(targetProperties = new XElement(W + "tcPr"));
+                targetProperties.Element(W + "shd")?.Remove();
+                targetProperties.Add(new XElement(W + "shd", new XAttribute(W + "fill", "CC9944")));
+
+                var paragraph = Paragraph("STATIC CELL OWNER");
+                paragraph.AddFirst(new XElement(W + "pPr",
+                    new XElement(W + "spacing", new XAttribute(W + "before", "0"), new XAttribute(W + "after", "0"))));
+                paragraph.Add(new XElement(anchor.Ancestors(W + "r").First()));
+                anchor.Ancestors(W + "p").First().Remove();
+                var cell = new XElement(W + "tc", new XElement(W + "tcPr",
+                    new XElement(W + "tcW", new XAttribute(W + "w", "6000"), new XAttribute(W + "type", "dxa"))), paragraph);
+                if (!exact) paragraph.AddBeforeSelf(Paragraph("EARLIER CELL PARAGRAPH"));
+                var row = new XElement(W + "tr", cell);
+                if (height != 0) row.AddFirst(new XElement(W + "trPr", new XElement(W + "trHeight",
+                    new XAttribute(W + "val", height), new XAttribute(W + "hRule", exact ? "exact" : "atLeast"))));
+                var table = new XElement(W + "tbl", new XElement(W + "tblPr"),
+                    new XElement(W + "tblGrid", new XElement(W + "gridCol", new XAttribute(W + "w", "6000"))), row);
+                string name = "cell-anchor-" + story;
+                body.Element(W + "sectPr")!.AddFirst(new XElement(W + (story + "Reference"),
+                    new XAttribute(W + "type", "default"), new XAttribute(R + "id", name)));
+                AddStoryPart(parts, name, story, new XElement(W + (story == "header" ? "hdr" : "ftr"), table));
+            }, path =>
+            {
+                var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+                var document = DocxTests.ReadDocx(path, mode);
+                var page = new DocxRenderer(resolver, mode, geometry)
+                    .RenderPagesAsync(document, null, default).ToBlockingEnumerable().Single();
+                if (!exact)
+                {
+                    DocxInlineCompositionTests.AssertSourceLabelsPaint(page, mode,
+                        ["BOX TABLE NORTH", "BOX TABLE SOUTH", "STATIC CELL OWNER"], context);
+                    var target = DocxParagraphShadingTests.ReadRectangles(page.Content).Single(rect => rect.Color == "CC9944");
+                    TestAssert.True(page.Annotations.Any(link => link.Destination is { PageIndex: 0, Left: double x, Top: double y } &&
+                        Math.Abs(x - target.X) < .002d && Math.Abs(y - target.Y - target.Height) < .002d),
+                        "The link reaches the painted row of the cell-owned box: " + context);
+                }
+                else
+                {
+                    TestAssert.Equal(0, page.Annotations.Count(link => link.Destination is not null));
+                    double scale = DocxRenderer.ResolveWordCompatiblePrintScale(document, DocxMarkupContext.FromMode(mode, geometry));
+                    var (bounds, clip) = DocxInlineCompositionTests.ReadFloatingOutline(page, 60d * scale, 216d * scale, .02d).Single();
+                    TestAssert.True(clip.Height <= 15d * scale + .01d && bounds[1] + bounds[3] < clip.Y,
+                        "The exact-height cell clips the entire drawing below its viewport: " + context);
+                }
+            });
+        }
+    }
+
     private static void CheckFloatingBoxTableRangeBookmarks(string[] owners)
     {
         string fixture = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases",

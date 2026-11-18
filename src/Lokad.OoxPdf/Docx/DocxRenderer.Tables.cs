@@ -91,6 +91,9 @@ internal sealed partial class DocxRenderer
 
             FloatingTextBoxPaintFrame? frame = null;
             DocxTableCellClipSnapshot? clip = null;
+            if (ResolveFloatingCellViewport(drawing) is { } cell)
+                parentClip = DocxTableCellClipGeometry.Intersect(
+                    new(true, cell.X, cell.Y, cell.Width, cell.Height), parentClip);
             foreach (var row in textBox.TableRows)
             {
                 if (!HasTarget(row)) continue;

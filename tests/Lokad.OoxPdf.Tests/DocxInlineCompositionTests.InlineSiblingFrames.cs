@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Docx;
 
@@ -144,12 +143,11 @@ internal static partial class DocxInlineCompositionTests
         var cell = new DocxTableCell(string.Empty, [source], null, null, null, null, [], DocxTableCellMargins.Empty);
         var measurer = new SiblingFrameMeasurer();
         var memo = new DocxLayoutEngine.DocxTableCellTextLinesMemo();
-        var method = typeof(DocxLayoutEngine).GetMethod("LayoutTableCellContent", BindingFlags.NonPublic | BindingFlags.Static)!;
         (IReadOnlyList<DocxTextLineLayout> Lines, IReadOnlyList<DocxInlineImageLayout> Images,
-            IReadOnlyList<DocxInlineTextBoxLayout> Boxes, IReadOnlyList<DocxTableRowLayout> Rows, double Height) Place(double x, double y, double height, int page,
+            IReadOnlyList<DocxInlineTextBoxLayout> Boxes, IReadOnlyList<DocxTableRowLayout> Rows, double Height,
+            IReadOnlyList<DocxPlacedDrawingAnchor> Anchors) Place(double x, double y, double height, int page,
                 DocxLayoutEngine.DocxTableCellTextLinesMemo? cache) =>
-            ((IReadOnlyList<DocxTextLineLayout>, IReadOnlyList<DocxInlineImageLayout>, IReadOnlyList<DocxInlineTextBoxLayout>, IReadOnlyList<DocxTableRowLayout>, double))
-                method.Invoke(null, [cell, x, y, 450d, height, 0d, measurer, 36d, page, 2, 1d, cache, page, prepared, CancellationToken.None])!;
+            DocxLayoutEngine.LayoutTableCellContent(cell, x, y, 450d, height, 0d, measurer, 36d, page, 2, 1d, cache, page, prepared);
         var first = Place(10d, 20d, 200d, 1, memo);
         int childCalls = measurer.Calls;
         var replay = Place(40d, 80d, 260d, 2, memo);
