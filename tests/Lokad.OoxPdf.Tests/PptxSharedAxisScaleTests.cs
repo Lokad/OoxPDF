@@ -34,7 +34,7 @@ internal static class PptxSharedAxisScaleTests
         }
     }
 
-    internal static void Check(bool geometry)
+    internal static void Check()
     {
         string cases = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", "SharedCartesianAxes"));
         using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(cases, "office.json")));
@@ -46,14 +46,10 @@ internal static class PptxSharedAxisScaleTests
             var page = new PptxRenderer(new PortableRenderingTests.PinnedResolver()).RenderPagesAsync(
                 new PptxReader().Read(package, default), package, null, default).ToBlockingEnumerable().Single();
             string id = row.GetProperty("Id").GetString()!;
-            if (!geometry)
-            {
-                var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
-                    fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal)).Select(show => show.Text).ToArray();
-                var expected = row.GetProperty("OfficeNumericLabels").EnumerateArray().Select(value => value.GetString()!).ToArray();
-                TestAssert.True(expected.SequenceEqual(actual), "Shared source range/intervals: " + id + "; actual " + string.Join(",", actual));
-                continue;
-            }
+            var actual = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: false,
+                fontResourceFilter: name => name.StartsWith("CVA", StringComparison.Ordinal)).Select(show => show.Text).ToArray();
+            var expected = row.GetProperty("OfficeNumericLabels").EnumerateArray().Select(value => value.GetString()!).ToArray();
+            TestAssert.True(expected.SequenceEqual(actual), "Shared source range/intervals: " + id + "; actual " + string.Join(",", actual));
             var axis = PptxColumnIntervalTests.Lines(page).Single(line => line.Color == new RgbColor(255, 0, 0) &&
                 Math.Abs(line.V[0] - line.V[2]) < .001d && Math.Abs(line.V[1] - line.V[3]) > 100d).V;
             double bottom = Math.Min(axis[1], axis[3]), height = Math.Abs(axis[3] - axis[1]);

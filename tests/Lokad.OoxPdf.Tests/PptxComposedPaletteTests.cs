@@ -15,30 +15,34 @@ internal static class PptxComposedPaletteTests
     private static string Cases => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
         "..", "..", "..", "Cases", "ComposedBarPalettes"));
 
-    internal static void CheckColors(bool keys)
+    internal static void CheckColors()
     {
         using var oracle = JsonDocument.Parse(File.ReadAllText(Path.Combine(Cases, "office.json")));
         foreach (var row in oracle.RootElement.GetProperty("Rows").EnumerateArray())
         {
-            var expected = row.GetProperty(keys ? "KeyColors" : "BarColors").EnumerateArray().ToArray();
-            if (expected.Length == 0) continue;
             byte[] bytes = File.ReadAllBytes(Path.Combine(Cases, row.GetProperty("Input").GetString()!));
             TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(bytes)));
             bool horizontal = row.GetProperty("Horizontal").GetBoolean();
-            var actual = Rectangles(Render(bytes)).Where(r => keys
-                ? r.Width is > 1d and < 25d && r.Height is > 1d and < 25d
-                : horizontal ? r.Width > 50d && r.Height is > 1d and < 80d
-                    : r.Width is > 1d and < 80d && r.Height > 50d)
-                .GroupBy(r => r.Color).ToDictionary(group => group.Key, group => group.Count());
-            string id = row.GetProperty("Id").GetString()!;
-            TestAssert.True(expected.Length == actual.Count, id + ": distinct native colors");
-            foreach (var color in expected)
+            var rectangles = Rectangles(Render(bytes)).ToArray();
+            foreach (bool keys in new[] { false, true })
             {
-                int[] rgb = color.GetProperty("Rgb").EnumerateArray().Select(v => v.GetInt32()).ToArray();
-                var matches = actual.Where(pair => Math.Abs(pair.Key.Red - rgb[0]) <= 1 &&
-                    Math.Abs(pair.Key.Green - rgb[1]) <= 1 && Math.Abs(pair.Key.Blue - rgb[2]) <= 1).ToArray();
-                TestAssert.True(matches.Length == 1, id + ": native color " + string.Join(',', rgb));
-                TestAssert.True(color.GetProperty("Count").GetInt32() == matches[0].Value, id + ": native paint count");
+                var expected = row.GetProperty(keys ? "KeyColors" : "BarColors").EnumerateArray().ToArray();
+                if (expected.Length == 0) continue;
+                var actual = rectangles.Where(r => keys
+                    ? r.Width is > 1d and < 25d && r.Height is > 1d and < 25d
+                    : horizontal ? r.Width > 50d && r.Height is > 1d and < 80d
+                        : r.Width is > 1d and < 80d && r.Height > 50d)
+                    .GroupBy(r => r.Color).ToDictionary(group => group.Key, group => group.Count());
+                string id = row.GetProperty("Id").GetString()! + (keys ? "/keys" : "/bars");
+                TestAssert.True(expected.Length == actual.Count, id + ": distinct native colors");
+                foreach (var color in expected)
+                {
+                    int[] rgb = color.GetProperty("Rgb").EnumerateArray().Select(v => v.GetInt32()).ToArray();
+                    var matches = actual.Where(pair => Math.Abs(pair.Key.Red - rgb[0]) <= 1 &&
+                        Math.Abs(pair.Key.Green - rgb[1]) <= 1 && Math.Abs(pair.Key.Blue - rgb[2]) <= 1).ToArray();
+                    TestAssert.True(matches.Length == 1, id + ": native color " + string.Join(',', rgb));
+                    TestAssert.True(color.GetProperty("Count").GetInt32() == matches[0].Value, id + ": native paint count");
+                }
             }
         }
     }

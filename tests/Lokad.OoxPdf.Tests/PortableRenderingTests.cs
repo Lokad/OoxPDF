@@ -29,10 +29,7 @@ internal static partial class PortableRenderingTests
         PptxComposedPaletteTests.CheckSingleSeriesKeys();
 
     public static void PortableRenderingBarPalettesFollowIndependentOfficeSourceIndices() =>
-        PptxComposedPaletteTests.CheckColors(keys: false);
-
-    public static void PortableRenderingBarKeysRetainIndependentOfficePaint() =>
-        PptxComposedPaletteTests.CheckColors(keys: true);
+        PptxComposedPaletteTests.CheckColors();
 
     public static void PortableRenderingBarPaletteIndicesKeepBoundsAndFallbacks() =>
         PptxComposedPaletteTests.CheckIndexBoundsAndFallbacks();
@@ -40,11 +37,8 @@ internal static partial class PortableRenderingTests
     public static void PortableRenderingSharedAxisFramesMatchIndependentOfficePairs() =>
         PptxSharedAxisScaleTests.CheckFrames();
 
-    public static void PortableRenderingSharedAxisRangesMatchIndependentOfficeLabels() =>
-        PptxSharedAxisScaleTests.Check(geometry: false);
-
     public static void PortableRenderingSharedAxisPlacesEveryPlotOnItsResolvedScale() =>
-        PptxSharedAxisScaleTests.Check(geometry: true);
+        PptxSharedAxisScaleTests.Check();
 
     public static void PortableRenderingComposedPlotsShareOnePrimaryAxisLabelStrip() =>
         PptxComposedAxisTests.CheckLabels(hidePrimary: false);
