@@ -98,11 +98,12 @@ jobs:
           $package = "artifacts/nuget/Lokad.OoxPdf.$($project.Project.PropertyGroup.Version).nupkg"
           $fontArguments = @{}
           if ($IsLinux) { $fontArguments.FontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf' }
-          foreach ($framework in @('net11.0','net10.0')) {
-            $hash = (Get-FileHash "src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll").Hash
-            & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $framework -ExpectedLibrarySha256 $hash @fontArguments
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+          $frameworks = @('net11.0','net10.0')
+          $hashes = @(foreach ($framework in $frameworks) {
+            (Get-FileHash "src/Lokad.OoxPdf/bin/Release/$framework/Lokad.OoxPdf.dll").Hash
+          })
+          & ./tools/TestPackageSmoke.ps1 -PackagePath $package -Framework $frameworks -ExpectedLibrarySha256 $hashes @fontArguments
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & ./tools/TestPackageInspection.ps1 -PackagePath $package -OutputDirectory artifacts/ci-tests/package-inspection
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoProfile -File tools/TestPackageConsumerCleanup.ps1

@@ -65,7 +65,9 @@ to check imported MSBuild properties, output provenance and stale DLL refusal.
 `TestPackageSmoke.ps1 -PackagePath <nupkg> -Framework <tfm>
 -ExpectedLibrarySha256 <hash>` consumes existing package bytes without rebuilding.
 Use the same package on both hosts/frameworks. `-InspectOnly` checks metadata and
-packaged documentation without restoring or executing a consumer.
+packaged documentation without restoring or executing a consumer. In PowerShell,
+pass matching framework and hash arrays in the same order to inspect the archive
+once and run both consumers.
 
 ## Visible content and visual comparisons
 

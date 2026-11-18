@@ -50,33 +50,37 @@ function dotnet {
     throw 'Fixture: unexpected dotnet invocation.'
 }
 $checks=@()
-function Check([string]$Name,[string]$InputPackage,[string]$Hash,[string]$Framework,
+function Check([string]$Name,[string]$InputPackage,[string[]]$Hash,[string[]]$Framework,
     [string]$Failure='', [switch]$ConsumerBoundary) {
     $arguments=@{Framework=$Framework}
     if ($InputPackage) { $arguments.PackagePath=$InputPackage }
-    if ($Hash) { $arguments.ExpectedLibrarySha256=$Hash }
+    if ($Hash.Count -and $Hash[0]) { $arguments.ExpectedLibrarySha256=$Hash }
     if (!$ConsumerBoundary) { $arguments.InspectOnly=$true }
     $log=Join-Path $output ($Name+'.log')
     $caught=$null
     try { & $tool @arguments *> $log } catch { $caught=$_.Exception.Message }
     if ($Failure) {
         if (!$caught -or !$caught.Contains($Failure,[StringComparison]::Ordinal)) { throw ($Name+': wrong refusal: '+$caught) }
-        $report=$null
+        $reports=@()
     } else {
         if ($caught) { throw ($Name+': '+$caught) }
-        $line=Get-Content -LiteralPath $log | Where-Object { $_ -like 'Evidence: *' } | Select-Object -Last 1
-        if (!$line) { throw ($Name+': missing evidence') }
-        $reportPath=$line.Substring('Evidence: '.Length)
-        $report=Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
-        if (!$report.InspectionOnly -or $report.LibraryRebuilt -or $report.ConsumerRan -or $report.LibrarySha256 -ne $Hash) {
-            throw ($Name+': incorrect inspection result')
-        }
+        $lines=@(Get-Content -LiteralPath $log | Where-Object { $_ -like 'Evidence: *' })
+        if ($lines.Count -ne $Framework.Count) { throw ($Name+': missing or duplicate evidence') }
+        $reports=@(for ($index=0; $index -lt $lines.Count; $index++) {
+            $reportPath=$lines[$index].Substring('Evidence: '.Length)
+            $report=Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+            if (!$report.InspectionOnly -or $report.LibraryRebuilt -or $report.ConsumerRan -or
+                $report.Framework -cne $Framework[$index] -or $report.LibrarySha256 -ne $Hash[$index]) {
+                throw ($Name+': incorrect inspection result')
+            }
+            $report
+        })
     }
     $script:checks += [ordered]@{Name=$Name;InputPackage=$InputPackage;
         InputPackageSha256=$(if($InputPackage){(Get-FileHash -LiteralPath $InputPackage).Hash}else{$null});
         Framework=$Framework;ExpectedLibrarySha256=$Hash;ConsumerBoundary=[bool]$ConsumerBoundary;
-        ExpectedRefusal=$Failure;ObservedRefusal=$caught;Passed=$true;Log=$log;Report=$report}
-    return $report
+        ExpectedRefusal=$Failure;ObservedRefusal=$caught;Passed=$true;Log=$log;Reports=$reports}
+    return $reports
 }
 function Write-Variant([string]$Name,[byte[]]$Net10Bytes,[string]$Omit='') {
     $folder=(New-Item -ItemType Directory -Path (Join-Path $output $Name)).FullName
@@ -116,8 +120,14 @@ function Replace-UniqueUtf8([byte[]]$Bytes,[string]$Before,[string]$After) {
     return ,$changed
 }
 $net11=Check 'coherent-net11' $package $hashes['net11.0'] 'net11.0'
-$net10=Check 'coherent-net10' $package $hashes['net10.0'] 'net10.0'
-if ($net11.FrameworkIdentities.Count -ne 2 -or $net10.FrameworkIdentities.Count -ne 2) { throw 'Expected both framework identities' }
+$frameworks=@('net11.0','net10.0')
+$pins=@($hashes['net11.0'],$hashes['net10.0'])
+$dual=@(Check 'coherent-dual' $package $pins $frameworks)
+if ($net11.FrameworkIdentities.Count -ne 2 -or
+    @($dual | Where-Object { $_.FrameworkIdentities.Count -ne 2 -or $_.PackageSha256 -ne $originalHash -or
+        $_.LocalDocumentationLinksChecked -ne $net11.LocalDocumentationLinksChecked }).Count) {
+    throw 'Expected shared archive, framework identities and documentation checks'
+}
 $version=$net11.FrameworkIdentities[0].InformationalVersion
 $last=$version.Substring($version.Length-1)
 $replacement=$version.Substring(0,$version.Length-1)+$(if($last -ceq '0') {'1'} else {'0'})
@@ -132,8 +142,11 @@ $null=Check 'missing-framework-refused' $single $hashes['net10.0'] 'net10.0' 'Pa
 $null=Check 'wrong-qualified-hash-refused' $package ('0'*64) 'net11.0' 'Packed library differs from the qualified artifact.'
 $null=Check 'missing-package-refused' '' $hashes['net11.0'] 'net11.0' 'InspectOnly requires an existing PackagePath.'
 $null=Check 'missing-qualified-hash-refused' $package '' 'net11.0' 'Reusing a package requires the qualified library hash.'
+$null=Check 'missing-batch-hash-refused' $package $pins[0] $frameworks 'Supply one expected library hash per framework, in the same order.'
+$null=Check 'duplicate-consumer-refused' $package $pins @('net11.0','net11.0') 'Each consumer framework must be selected once.'
+$null=Check 'second-hash-refused-before-restore' $package @($pins[0],('0'*64)) $frameworks 'Packed library differs from the qualified artifact. Framework: net10.0.' -ConsumerBoundary
 $differentRestoreArchive=$single
-$null=Check 'restore-from-pinned-feed-refuses-different-archive' $package $hashes['net11.0'] 'net11.0' 'Restored package bytes differ from the inspected package.' -ConsumerBoundary
+$null=Check 'restore-from-pinned-feed-refuses-different-archive' $package $pins $frameworks 'Restored package bytes differ from the inspected package.' -ConsumerBoundary
 if ($failedConsumers.Count -ne 1) { throw 'Failed consumer boundary was not observed exactly once.' }
 foreach ($name in @('bin', 'obj', 'packages')) {
     if ((Get-Content -LiteralPath (Join-Path $failedConsumers[0] "$name/failure.txt") -Raw).Trim() -cne 'retain failed consumer') {
