@@ -26,8 +26,9 @@ internal sealed partial class PptxRenderer
         bool compatibleLineSpacing,
         double compatibleDefaultLineSpacingFactor)
     {
-        XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
-            defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
+        // The caller supplies the complete cascade. A partial authored defRPr
+        // must not replace inherited size/typeface with renderer defaults.
+        XElement? defaultRunProperties = defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
         double fontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties) * fontScale;
         string? alignmentValue = ReadAlignmentValue(paragraph, defaultParagraphProperties);
         return new ResolvedParagraphTextStyle(

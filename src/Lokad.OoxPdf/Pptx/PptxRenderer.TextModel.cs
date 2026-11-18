@@ -662,9 +662,10 @@ internal sealed partial class PptxRenderer
             string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(levelName);
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
-            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing, compatibleDefaultLineSpacingFactor);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
+            XElement? effectiveParagraphProperties = resolvedStyleCascade.ResolveDefaultProperties();
+            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, effectiveParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing, compatibleDefaultLineSpacingFactor);
+            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(effectiveParagraphProperties, theme, colorMap);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade,
                 shapeFontPaint, theme, colorMap, fontScale, slideNumber, tableStyleTextStyle,
                 disableZeroKerning && paragraphStyle.Alignment == TextAlignment.Left && bullet.Kind == PptxParagraphBulletKind.None);
@@ -760,15 +761,14 @@ internal sealed partial class PptxRenderer
             XElement paragraph = sceneParagraph.Source;
             XElement? paragraphProperties = sceneParagraph.Properties;
             string levelName = "lvl" + Math.Clamp(sceneParagraph.Level + 1, 1, 9).ToString(CultureInfo.InvariantCulture) + "pPr";
-            XElement? defaultParagraphProperties = PptxParagraphPropertyMerger.MergeRendererDefaultProperties(
-                DrawingNamespace + "defRPr",
-                sceneParagraph.CascadeLayers.Select(layer => layer.Source).ToArray());
             var cascade = new PptxParagraphStyleCascade(
                 levelName,
                 sceneParagraph.CascadeLayers.Select(layer => new PptxParagraphStyleLayer(layer.Name, SceneCascadeLayerKind(layer.Kind), layer.Source)).ToList());
-            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, frameModel.FontScale, frameModel.LineSpacingScale, frameModel.BodyProperties.CompatibleLineSpacing, ResolveCompatibleDefaultLineSpacingFactor(frameModel.BodyProperties));
+            XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
+            XElement? effectiveParagraphProperties = resolvedStyleCascade.ResolveDefaultProperties();
+            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, effectiveParagraphProperties, frameModel.FontScale, frameModel.LineSpacingScale, frameModel.BodyProperties.CompatibleLineSpacing, ResolveCompatibleDefaultLineSpacingFactor(frameModel.BodyProperties));
+            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(effectiveParagraphProperties, theme, colorMap);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontPaint, theme, colorMap, frameModel.FontScale, slideNumber, tableStyleTextStyle,
                 disableZeroKerning: frameModel.TableRowIndex is null && paragraphStyle.Alignment == TextAlignment.Left &&
                     bullet.Kind == PptxParagraphBulletKind.None && UsesNoWrapZeroKerning(frameModel.BodyProperties, frameModel.TextRotationDegrees));

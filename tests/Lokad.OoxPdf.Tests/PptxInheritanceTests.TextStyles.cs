@@ -9,6 +9,30 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxInheritanceTests
 {
+    public static void PptxInheritancePartialParagraphDefaultsKeepInheritedTextMetrics()
+    {
+        const string font = "<a:defRPr sz=\"2400\"><a:latin typeface=\"DejaVu Sans\"/></a:defRPr>";
+        foreach (string paint in new[] { "", "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>" })
+        {
+            var parts = TextDefaultParts(font, "", "");
+            (string Text, double Size, double X, double Y)[] baseline = [];
+            WithDeck(parts, (document, package) => baseline = DocxCommentsTests.ReadEmbeddedGlyphTextShows(Render(document, package).Single())
+                .Select(show => (show.Text, show.Size, show.X, show.Y)).ToArray());
+            Edit(parts, "ppt/slides/slide1.xml", xml => {
+                foreach (var paragraph in xml.Descendants(A + "p"))
+                    paragraph.AddFirst(XElement.Parse($"<a:pPr xmlns:a='{A}'><a:defRPr>{paint}</a:defRPr></a:pPr>"));
+            });
+            WithDeck(parts, (document, package) => {
+                PdfPage page = Render(document, package).Single();
+                var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page).ToArray();
+                TestAssert.Contains("Shape default", string.Concat(shows.Select(show => show.Text)));
+                TestAssert.Contains("Cell default", string.Concat(shows.Select(show => show.Text)));
+                TestAssert.True(shows.All(show => show.Size == 24d), "Partial paragraph defaults retain the independently authored 24pt size in shapes and cells.");
+                TestAssert.True(baseline.SequenceEqual(shows.Select(show => (show.Text, show.Size, show.X, show.Y))), "Empty/default-paint declarations preserve text size and placement.");
+            });
+        }
+    }
+
     public static void PptxInheritanceParagraphPaintOutranksShapeFontReference()
     {
         const string blue = "<a:solidFill><a:srgbClr val=\"0000FF\"/></a:solidFill>";

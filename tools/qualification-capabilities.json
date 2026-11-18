@@ -612,6 +612,7 @@
     "XrefTablePointsAtObjectHeaders"
   ],
   "pptx-run-effect-inheritance": [
+    "PptxInheritancePartialParagraphDefaultsKeepInheritedTextMetrics",
     "PptxInheritanceParagraphPaintOutranksShapeFontReference",
     "PptxInheritanceShapeFontReferenceKeepsOpacityAndOverrides",
     "PptxInheritanceChartTextFillChoicesReachTitlesAndLabels",
