@@ -630,11 +630,20 @@ internal sealed partial class PptxRenderer
                 : PptxChartMetricRules.LegendLineHeightFactor);
     }
 
-    private static double ComputeHorizontalLegendTextGap(double fontSize, bool bottomLegend)
+    internal static double ComputeHorizontalLegendTextGap(double fontSize, bool bottomLegend)
     {
         return bottomLegend
             ? PptxChartMetricRules.LegendHorizontalTextGapFactor * fontSize + PptxChartMetricRules.LegendHorizontalTextGapIntercept
             : PptxChartMetricRules.LegendTextGap;
+    }
+
+    internal static double ComputeHorizontalLegendInterEntryGap(double fontSize, double advanceRange, bool bottomLegend)
+    {
+        return bottomLegend
+            ? PptxChartMetricRules.LegendHorizontalInterEntryGapFactor * fontSize
+                - PptxChartMetricRules.LegendHorizontalInterEntryGapRangeFactor * advanceRange
+                + PptxChartMetricRules.LegendHorizontalInterEntryGapBase
+            : PptxChartMetricRules.LegendHorizontalEntryPadding;
     }
 
     // Per-series bottom inter answers to mean measured advance (five Office knots
@@ -642,16 +651,17 @@ internal sealed partial class PptxRenderer
     // and stroke-key entries keep the range law untouched.
     private static double ResolveHorizontalLegendInterEntryGap(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, ChartTextMeasurer textMeasurer, bool bottomLegend)
     {
-        if (!bottomLegend) return PptxChartMetricRules.LegendHorizontalEntryPadding;
+        if (!bottomLegend)
+        {
+            return ComputeHorizontalLegendInterEntryGap(style.FontSize, advanceRange: 0d, bottomLegend: false);
+        }
         if (entries.Count > 0 && entries.All(entry => entry.SeriesName is not null && entry.Fill is not null && entry.Stroke is null))
         {
             return ComputePerSeriesHorizontalLegendInterEntryGap(style.FontSize, ComputeHorizontalLegendAdvanceMean(entries, style, textMeasurer));
         }
 
         double advanceRange = ComputeHorizontalLegendAdvanceRange(entries, style, textMeasurer);
-        return PptxChartMetricRules.LegendHorizontalInterEntryGapFactor * style.FontSize
-            - PptxChartMetricRules.LegendHorizontalInterEntryGapRangeFactor * advanceRange
-            + PptxChartMetricRules.LegendHorizontalInterEntryGapBase;
+        return ComputeHorizontalLegendInterEntryGap(style.FontSize, advanceRange, bottomLegend: true);
     }
 
     // Pure per-series bottom-inter law for the reflection pin (five Office knots

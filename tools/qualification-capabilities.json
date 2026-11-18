@@ -2296,6 +2296,7 @@
     "DocxContainerTableGridsPreservePortableContentAndPaintedLinks"
   ],
   "pptx-horizontal-polar-frame": [
+      "PptxSyntheticHorizontalLegendPackingGaps",
       "PptxPieSideFramesRetainIndependentOfficeExtentsAndPairedOffsets",
       "PptxPieSideSlotsFollowContentAndRetainCompleteLabels",
       "PptxUnfitPieSideSlotsRetainDiagnosedPlacementFallback",
