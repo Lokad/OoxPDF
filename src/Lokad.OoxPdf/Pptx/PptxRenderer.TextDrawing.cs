@@ -705,7 +705,7 @@ internal sealed partial class PptxRenderer
         {
             foreach (TextRun run in CoalesceHighlightRuns())
             {
-                if (run.HighlightColor is not { } highlight || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
+                if (run.HighlightPaint is not { } highlight || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }
@@ -728,7 +728,7 @@ internal sealed partial class PptxRenderer
                 var coalesced = new List<TextRun>(textRuns.Count);
                 foreach (TextRun run in textRuns)
                 {
-                    if (run.Text.Length == 0 || run.HighlightColor is null)
+                    if (run.Text.Length == 0 || run.HighlightPaint is null)
                     {
                         continue;
                     }
@@ -753,7 +753,7 @@ internal sealed partial class PptxRenderer
 
             void DrawHighlightRun(PdfEmbeddedFont embedded, TextRun run)
             {
-                if (run.HighlightColor is not { } highlight)
+                if (run.HighlightPaint is not { } highlight)
                 {
                     return;
                 }
@@ -881,7 +881,7 @@ internal sealed partial class PptxRenderer
             foreach (PptxPositionedTextSpan span in CoalesceHighlightSpans())
             {
                 TextRun run = span.Run;
-                if (run.HighlightColor is not { } highlight || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
+                if (run.HighlightPaint is not { } highlight || !fonts.TryGetValue(FontRequestForRun(run), out RenderedFont rendered))
                 {
                     continue;
                 }
@@ -905,7 +905,7 @@ internal sealed partial class PptxRenderer
                 foreach (PptxPositionedTextSpan span in textSpans)
                 {
                     TextRun run = span.Run;
-                    if (run.Text.Length == 0 || run.HighlightColor is null)
+                    if (run.Text.Length == 0 || run.HighlightPaint is null)
                     {
                         continue;
                     }
@@ -938,7 +938,7 @@ internal sealed partial class PptxRenderer
             void DrawHighlightSpan(PdfEmbeddedFont embedded, PptxPositionedTextSpan span)
             {
                 TextRun run = span.Run;
-                if (run.HighlightColor is not { } highlight)
+                if (run.HighlightPaint is not { } highlight)
                 {
                     return;
                 }

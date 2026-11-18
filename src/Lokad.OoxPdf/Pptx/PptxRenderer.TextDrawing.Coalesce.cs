@@ -110,7 +110,7 @@ internal sealed partial class PptxRenderer
             left.Color.Equals(right.Color) &&
             Math.Abs(left.Alpha - right.Alpha) < PptxTextMetricRules.TextStateTolerance &&
             TextOutlinesEqual(left.Outline, right.Outline) &&
-            (!compareHighlight || !preserveHighlightBoundary || left.HighlightColor.Equals(right.HighlightColor)) &&
+            (!compareHighlight || !preserveHighlightBoundary || left.HighlightPaint.Equals(right.HighlightPaint)) &&
             !left.PreventCoalesce &&
             !right.PreventCoalesce &&
             left.Bold == right.Bold &&
@@ -272,7 +272,7 @@ internal sealed partial class PptxRenderer
             left.Color.Equals(right.Color) &&
             NearlyEqual(left.Alpha, right.Alpha) &&
             TextOutlinesEqual(left.Outline, right.Outline) &&
-            left.HighlightColor.Equals(right.HighlightColor) &&
+            left.HighlightPaint.Equals(right.HighlightPaint) &&
             !left.PreventCoalesce &&
             !right.PreventCoalesce &&
             NearlyEqual(left.Y, right.Y) &&

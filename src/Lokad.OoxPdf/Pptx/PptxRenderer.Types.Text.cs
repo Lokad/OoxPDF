@@ -24,7 +24,7 @@ internal sealed partial class PptxRenderer
         double BaselineOffset,
         RgbColor Color,
         double Alpha,
-        RgbColor? HighlightColor,
+        (RgbColor Color, double Alpha)? HighlightPaint,
         bool Bold,
         bool Italic,
         bool Underline,
@@ -165,7 +165,7 @@ internal sealed partial class PptxRenderer
         PptxRunTextColorSource ColorSource,
         double Alpha,
         TextOutline? Outline,
-        RgbColor? Highlight,
+        (RgbColor Color, double Alpha)? Highlight,
         bool HasHyperlinkClick,
         string? HyperlinkClickId,
         string? HyperlinkClickAction,
@@ -355,7 +355,7 @@ internal sealed partial class PptxRenderer
         string? FontCharset,
         string? ResolvedFontTypeface,
         PptxThemeTypefaceSource FontTypefaceSource,
-        RgbColor? Color,
+        (RgbColor Color, double Alpha)? Paint,
         PptxParagraphBulletSizeKind SizeKind,
         string? SizeValue);
 

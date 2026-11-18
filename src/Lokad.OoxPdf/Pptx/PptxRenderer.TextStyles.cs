@@ -149,7 +149,7 @@ internal sealed partial class PptxRenderer
             colorSource,
             alpha,
             TryReadTextOutline(runProperties, defaultRunProperties, theme, colorMap, out TextOutline outline) ? outline : null,
-            TryReadHighlightColor(runProperties, defaultRunProperties, out RgbColor highlightColor) ? highlightColor : null,
+            ReadHighlightPaint(runProperties, defaultRunProperties, theme, colorMap),
             hasHyperlinkClick,
             ReadHyperlinkClickId(runProperties),
             ReadHyperlinkClickAction(runProperties),

@@ -10,7 +10,8 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void DrawHighlightRectangle(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run, RgbColor highlight, double baselineY, double lineWidth)
+    private static void DrawHighlightRectangle(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run,
+        (RgbColor Color, double Alpha) highlight, double baselineY, double lineWidth)
     {
         if (!TryGetHighlightRectangle(embedded, run, baselineY, lineWidth, out TextHighlightRectangle rectangle))
         {
@@ -19,7 +20,7 @@ internal sealed partial class PptxRenderer
 
         graphics.SaveState();
         PrepareTextPaint(graphics, run);
-        graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+        SetHighlightPaint(graphics, highlight);
         graphics.FillRectangleEvenOdd(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
         graphics.RestoreState();
     }
@@ -84,7 +85,8 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void FillFallbackHighlight(PdfGraphicsBuilder graphics, TextRun run, RgbColor highlight, double baselineY, double lineWidth)
+    private static void FillFallbackHighlight(PdfGraphicsBuilder graphics, TextRun run,
+        (RgbColor Color, double Alpha) highlight, double baselineY, double lineWidth)
     {
         if (!BaselineIntersectsClip(run, baselineY))
         {
@@ -95,9 +97,15 @@ internal sealed partial class PptxRenderer
         double height = run.FontSize * (PdfFallbackFont.AscentEm + PdfFallbackFont.DescentEm);
         graphics.SaveState();
         PrepareTextPaint(graphics, run);
-        graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+        SetHighlightPaint(graphics, highlight);
         graphics.FillRectangleEvenOdd(run.X, baselineY - descent, lineWidth, height);
         graphics.RestoreState();
+    }
+
+    private static void SetHighlightPaint(PdfGraphicsBuilder graphics, (RgbColor Color, double Alpha) paint)
+    {
+        if (paint.Alpha < 1d) graphics.SetAlpha(paint.Alpha, 1d);
+        graphics.SetFillRgb(paint.Color.Red, paint.Color.Green, paint.Color.Blue);
     }
 
     private static void FillTextDecorationRectangleEvenOdd(PdfGraphicsBuilder graphics, TextDecorationRectangle rectangle)

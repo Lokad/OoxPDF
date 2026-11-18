@@ -490,7 +490,8 @@ internal static class PptxSceneTextAgreementTests
         TestAssert.True(spanRuns[2].Style.Strike, "C retains double strike.");
         TestAssert.Equal("dblStrike", spanRuns[2].Style.StrikeValue);
         TestAssert.Equal("Arial", spanRuns[2].Style.Typeface);
-        TestAssert.Equal(new RgbColor(255,255,0), spanRuns[3].Style.Highlight ?? default);
+        TestAssert.Equal(new RgbColor(255,255,0), spanRuns[3].Style.Highlight?.Color ?? default);
+        TestAssert.Equal(1d, spanRuns[3].Style.Highlight?.Alpha ?? 0d);
         TestAssert.Equal(0.5d, spanRuns[4].Style.Alpha);
     }
 

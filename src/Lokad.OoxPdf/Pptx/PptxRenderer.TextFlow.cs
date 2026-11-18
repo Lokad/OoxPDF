@@ -805,7 +805,7 @@ internal sealed partial class PptxRenderer
                     X = anchor.EndX,
                     Width = width,
                     PreventCoalesce = true,
-                    HighlightColor = null,
+                    HighlightPaint = null,
                     Underline = false,
                     Strike = false,
                     Outline = null

@@ -52,6 +52,9 @@ usable stored results rather than executing arbitrary instructions.
 - Uses authored slide dimensions and absolute shape/group transforms, supported
   slide/layout/master inheritance, themes, text, bullets, tables, pictures,
   fills, strokes, transparency and external/internal hyperlinks.
+- Highlights and explicit bullet colors retain supported DrawingML colors and
+  opacity transforms. Follow-text bullet opacity retains the current opaque
+  fallback; its Office behavior is uncalibrated.
 - Renders cached-data bar/column, line, area, pie/doughnut, scatter, bubble and radar
   charts, including supported axes, labels, legends and explicit styles. Numeric
   chart-side caches are required. Embedded workbooks provide source provenance and

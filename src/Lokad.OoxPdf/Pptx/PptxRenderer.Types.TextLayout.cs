@@ -228,7 +228,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct RenderedFonts(IReadOnlyDictionary<FontRequest, RenderedFont> Fonts, IReadOnlyList<PdfFontResource> Resources);
 
-    private readonly record struct BulletStyle(double FontSize, RgbColor Color, string? Typeface);
+    private readonly record struct BulletStyle(double FontSize, RgbColor Color, double Alpha, string? Typeface);
 
     internal readonly record struct LineSpacing(double Value, bool IsAbsolute, bool IsExplicit, bool UseNormalLineAdvance)
     {

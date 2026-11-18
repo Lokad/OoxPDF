@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool StartsOfficeHighlightContinuationTextState(PptxPositionedTextSpan span) =>
-        span.Run.HighlightColor is not null &&
+        span.Run.HighlightPaint is not null &&
         span.FrameAutofitMode != PptxTextAutofitMode.None &&
         span.ParagraphIndex > 0;
 
@@ -112,7 +112,7 @@ internal sealed partial class PptxRenderer
                 leadingSpaceCount == 0 ||
                 leadingSpaceCount >= span.Run.Text.Length ||
                 !PreservesHighlightTextOperationBoundaries(split[^1], span) ||
-                split[^1].Run.HighlightColor.Equals(span.Run.HighlightColor))
+                split[^1].Run.HighlightPaint.Equals(span.Run.HighlightPaint))
             {
                 split.Add(span);
                 continue;

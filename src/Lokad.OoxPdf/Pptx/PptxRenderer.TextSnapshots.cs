@@ -323,7 +323,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 TextHighlightRectangle? highlightRectangle = null;
-                if (run.HighlightColor is not null)
+                if (run.HighlightPaint is not null)
                 {
                     double highlightBaselineY = emissionSpan.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
                     if (TryGetHighlightRectangle(snapshotEmbedded, run, highlightBaselineY, emissionSpan.GlyphSpan.NaturalWidth, out TextHighlightRectangle rectangle))
@@ -376,7 +376,7 @@ internal sealed partial class PptxRenderer
                     run.Strike,
                     glyphRun.SyntheticBold,
                     glyphRun.SyntheticItalic,
-                    run.HighlightColor,
+                    run.HighlightPaint?.Color,
                     highlightRectangle?.X,
                     highlightRectangle?.Y,
                     highlightRectangle?.Width,

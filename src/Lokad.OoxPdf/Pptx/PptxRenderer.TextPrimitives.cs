@@ -534,7 +534,9 @@ internal sealed partial class PptxRenderer
 
     private static BulletStyle ReadBulletStyle(PptxParagraphBulletModel bullet, double textFontSize, RgbColor textColor, string? textTypeface)
     {
-        RgbColor color = bullet.Color ?? textColor;
+        // Explicit buClr owns both components. Follow-text opacity retains its
+        // current opaque behavior pending independent Office calibration.
+        (RgbColor color, double alpha) = bullet.Paint ?? (textColor, 1d);
         double fontSize = textFontSize;
         if (bullet.SizeKind == PptxParagraphBulletSizeKind.Percent &&
             OoxXml.TryParsePercentage(bullet.SizeValue, out double sizePercent))
@@ -547,15 +549,16 @@ internal sealed partial class PptxRenderer
             fontSize = Math.Max(0.1d, sizePoints / 100d);
         }
 
-        return new BulletStyle(fontSize, color, bullet.ResolvedFontTypeface ?? textTypeface);
+        return new BulletStyle(fontSize, color, alpha, bullet.ResolvedFontTypeface ?? textTypeface);
     }
 
-    private static bool TryReadHighlightColor(XElement? runProperties, XElement? defaultRunProperties, out RgbColor color)
+    private static (RgbColor Color, double Alpha)? ReadHighlightPaint(XElement? runProperties, XElement? defaultRunProperties,
+        PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? highlight = runProperties?.Element(DrawingNamespace + "highlight") ??
             defaultRunProperties?.Element(DrawingNamespace + "highlight");
-        string? hex = (string?)highlight?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
-        return RgbColor.TryParse(hex, out color);
+        return PptxColorResolver.TryReadSolidColorWithAlpha(highlight, theme, colorMap, out RgbColor color, out double alpha)
+            ? (color, alpha) : null;
     }
 
     private static TextVerticalAnchor ParseTextVerticalAnchor(string? anchor)
