@@ -221,7 +221,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartRectangle(double X, double Y, double Width, double Height);
 
-    private readonly record struct ChartStackedBarSegment(int SeriesIndex, int CategoryIndex, double X, double Y, double Width, double Height, double Value);
+    private readonly record struct ChartStackedBarSegment(int SeriesIndex, int CategoryIndex, ChartRectangle Rectangle, double Value);
 
     private readonly record struct ChartStackedBarFillRun(ChartSeriesFill Fill, List<ChartRectangle> Rectangles);
 
