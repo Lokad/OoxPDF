@@ -357,11 +357,17 @@ internal static class DocxHyperlinksTests
                 new DocxHyperlinkSpan("rIdStaticTextBoxLink", null, null, null, "https://example.invalid/static-textbox-word-compatible", "External", null, 1, 1, 1, 1, linkText.Length)
             ]
         };
+        // The oracle compares one emitted segment with its annotation. Leave room
+        // for both runs after the static textbox insets.
+        var drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)]) with
+        {
+            ExtentCxValue = "2032000" // 160 pt
+        };
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
             HeaderFloatingDrawingsByType = new Dictionary<string, IReadOnlyList<DocxFloatingDrawing>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = [DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(textBoxParagraph)])]
+                ["default"] = [drawing]
             }
         };
         DocxDocument document = new(
@@ -382,17 +388,20 @@ internal static class DocxHyperlinksTests
             MarkupMode = OoxPdfDocxMarkupMode.AllMarkup
         };
         var renderer = new DocxRenderer(
-            fontResolver: null,
+            fontResolver: new PortableRenderingTests.PinnedResolver(),
             markupMode: OoxPdfDocxMarkupMode.AllMarkup,
             markupGeometryMode: OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup);
 
-        DocxTextEmissionSegmentSnapshot linkSegment = renderer
+        var headerLines = renderer
             .InspectTextEmission(document)
             .Lines
-            .Single(line => line.IsStaticStory && line.StoryKind == "TextBox" && line.ContainerStoryKind == "Header")
-            .Segments
+            .Where(line => line.IsStaticStory && line.StoryKind == "TextBox" && line.ContainerStoryKind == "Header")
+            .ToArray();
+        TestAssert.True(headerLines.Length == 1, $"The fixture emits one header textbox line, found {headerLines.Length}.");
+        DocxTextEmissionSegmentSnapshot linkSegment = headerLines[0].Segments
             .Single(segment => !segment.IsTerminalLineSpace && segment.TextLength == linkText.Length);
-        PdfLinkAnnotation annotation = renderer.RenderPagesAsync(document, null, CancellationToken.None).ToBlockingEnumerable().Single().Annotations.Single();
+        PdfLinkAnnotation annotation = renderer.RenderPagesAsync(document, null, CancellationToken.None)
+            .ToBlockingEnumerable().Single().Annotations.Single();
 
         TestAssert.True(
             Math.Abs(annotation.X - (linkSegment.X - (2.2d * 10d / 11d))) < 0.001d,
