@@ -10,24 +10,22 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    private static IEnumerable<DocxInlineReferenceLocation> ResolveReferencedRelatedStoryLocations(
-        DocxDocument document,
-        DocxRelatedStoryKind kind,
-        HashSet<(DocxRelatedStoryKind Kind, string Id)> placedStoryKeys)
+    private static IEnumerable<DocxInlineReferenceLocation> EnumerateFirstEndnoteReferences(
+        IReadOnlyDictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock,
+        HashSet<(DocxRelatedStoryKind Kind, string Id)> placedStoryKeys,
+        CancellationToken cancellationToken)
     {
-        for (int sourceBlockIndex = 0; sourceBlockIndex < document.BodyElements.Count; sourceBlockIndex++)
+        // The first source reference owns a repeated note ID. Dictionary
+        // storage order is independent of that document-order contract.
+        foreach (int sourceBlockIndex in locationsByBlock.Keys.Order())
         {
-            foreach (DocxInlineReferenceLocation location in EnumerateInlineReferenceLocations(document.BodyElements, sourceBlockIndex))
+            foreach (DocxInlineReferenceLocation location in locationsByBlock[sourceBlockIndex])
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 DocxInlineReference reference = location.Reference;
-                if (reference.Kind != kind ||
-                    reference.Id is null ||
-                    !placedStoryKeys.Add((reference.Kind, reference.Id)))
-                {
-                    continue;
-                }
-
-                yield return location;
+                if (reference.Kind == DocxRelatedStoryKind.Endnote && reference.Id is { } id &&
+                    placedStoryKeys.Add((reference.Kind, id)))
+                    yield return location;
             }
         }
     }

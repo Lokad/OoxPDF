@@ -13,6 +13,7 @@ internal sealed partial class DocxLayoutEngine
     private static IReadOnlyList<DocxLayoutPage> AddPlacedRelatedStories(
         DocxDocument document,
         IReadOnlyList<DocxLayoutPage> pages,
+        IReadOnlyDictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock,
         Func<double, IReadOnlyList<DocxRelatedStoryLayout>> resolveRelatedStoryLayouts,
         Func<DocxRelatedStoryLayout, double, int, DocxRelatedStoryLayout> bindRelatedStoryPage,
         Func<DocxLayoutPage, int, int, bool> hasCompleteEndnoteFrame,
@@ -42,10 +43,6 @@ internal sealed partial class DocxLayoutEngine
             return pages;
         }
 
-        // R12: document-derived reference locations are memoized by source block (table
-        // paragraphs no longer re-walk on every fragment page), story layouts and lookups
-        // are memoized by page body width, and page owners/blocks come from one index.
-        Dictionary<int, List<DocxInlineReferenceLocation>> locationsByBlock = BuildInlineReferenceLocationsByBlock(document, cancellationToken);
         var outputPages = pages.ToList();
         var placedStoryKeys = new HashSet<(DocxRelatedStoryKind Kind, string Id)>();
         // Endnote placement needs its own final frame, not a measurement for
@@ -53,7 +50,7 @@ internal sealed partial class DocxLayoutEngine
         if (!locationsByBlock.Values.Any(locations => locations.Any(location =>
             location.Reference.Kind == DocxRelatedStoryKind.Footnote && location.Reference.Id is { } id &&
             alreadyPlacedStoryKeys?.Contains((DocxRelatedStoryKind.Footnote, id)) != true)))
-            return AddPlacedEndnoteStories(outputPages);
+            return AddPlacedEndnoteStories();
 
         var storyLayoutsByWidth = new Dictionary<double, IReadOnlyList<DocxRelatedStoryLayout>>();
         var storyLookupByWidth = new Dictionary<double, Dictionary<(DocxRelatedStoryKind Kind, string Id), DocxRelatedStoryLayout>>();
@@ -150,39 +147,26 @@ internal sealed partial class DocxLayoutEngine
             outputShift += outputPages.Count - countBefore;
         }
 
-        return AddPlacedEndnoteStories(outputPages);
+        return AddPlacedEndnoteStories(outputShift == 0 ? referenceIndex : null);
 
-        IReadOnlyList<DocxLayoutPage> AddPlacedEndnoteStories(IReadOnlyList<DocxLayoutPage> pages)
+        IReadOnlyList<DocxLayoutPage> AddPlacedEndnoteStories(RelatedStoryPageIndex? endnoteIndex = null)
         {
-            List<DocxInlineReferenceLocation> endnoteLocations = ResolveReferencedRelatedStoryLocations(document, DocxRelatedStoryKind.Endnote, placedStoryKeys).ToList();
-            if (endnoteLocations.Count == 0)
-            {
-                return pages;
-            }
-
-            var outputPages = pages.ToList();
-            // R12: classify with the reference scan only (the section-end page cannot
-            // change the outcome: a found sectEnd reference always resolves); the page
-            // itself is resolved once per section group below, after earlier groups may
-            // have grown the page list.
-            RelatedStoryPageIndex endnoteIndex = RelatedStoryPageIndex.Build(outputPages, cancellationToken);
+            // Word chooses placement from settings.xml. Section numbering and
+            // authored section position metadata are independent.
+            bool placeAtSectionEnd = string.Equals(document.Settings.EndnoteReferenceSettings.PositionValue,
+                "sectEnd", StringComparison.OrdinalIgnoreCase);
             var documentEndLocations = new List<DocxInlineReferenceLocation>();
             var sectionEndLocations = new List<DocxInlineReferenceLocation>();
-            foreach (DocxInlineReferenceLocation endnoteLocation in endnoteLocations)
+            foreach (DocxInlineReferenceLocation endnoteLocation in EnumerateFirstEndnoteReferences(
+                locationsByBlock, placedStoryKeys, cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                int referencePageIndex = endnoteIndex.FindFirstPageWithReference(endnoteLocation);
-                if (referencePageIndex < 0 ||
-                    // Word takes endnote placement from settings.xml. Section
-                    // numbering and authored position metadata remain independent.
-                    !string.Equals(document.Settings.EndnoteReferenceSettings.PositionValue, "sectEnd", StringComparison.OrdinalIgnoreCase))
-                {
+                if (placeAtSectionEnd && GetEndnoteIndex().FindFirstPageWithReference(endnoteLocation) >= 0)
+                    sectionEndLocations.Add(endnoteLocation);
+                else
                     documentEndLocations.Add(endnoteLocation);
-                    continue;
-                }
-
-                sectionEndLocations.Add(endnoteLocation);
             }
+            if (sectionEndLocations.Count == 0 && documentEndLocations.Count == 0)
+                return outputPages;
 
             var sectionRangeByBlock = new Dictionary<int, (int StartBlockIndex, int EndBlockIndex)>();
             foreach (IGrouping<(int StartBlockIndex, int EndBlockIndex), DocxInlineReferenceLocation> sectionGroup in sectionEndLocations
@@ -190,11 +174,11 @@ internal sealed partial class DocxLayoutEngine
                          .OrderBy(group => group.Key.StartBlockIndex))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                endnoteIndex = RelatedStoryPageIndex.Build(outputPages, cancellationToken);
-                int sectionEndPageIndex = endnoteIndex.FindLastPageWithBlockInRange(
+                var sectionIndex = GetEndnoteIndex();
+                int sectionEndPageIndex = sectionIndex.FindLastPageWithBlockInRange(
                     sectionGroup.Key.StartBlockIndex, sectionGroup.Key.EndBlockIndex);
                 if (sectionEndPageIndex < 0)
-                    sectionEndPageIndex = endnoteIndex.FindFirstPageWithReference(sectionGroup.First());
+                    sectionEndPageIndex = sectionIndex.FindFirstPageWithReference(sectionGroup.First());
                 if (sectionEndPageIndex < 0)
                 {
                     documentEndLocations.AddRange(sectionGroup);
@@ -231,7 +215,11 @@ internal sealed partial class DocxLayoutEngine
                             sectionEndStories[index] = sectionEndStories[index] with { StoryLayout = boundStories[index] };
                     }
                     DocxRelatedStoryLayout? endnoteContinuationLayout = FindSpecialRelatedStoryLayout(groupLayouts, DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? endnoteSeparatorLayout;
+                    int pageCountBeforePlacement = outputPages.Count;
                     PlaceSectionEndEndnoteStories(document, outputPages, sectionEndPageIndex, sectionEndStories, endnoteSeparatorLayout, endnoteContinuationLayout, cancellationToken, printScale, separatorMeasurer, completeStaticFrame, headerKeepOut, footerKeepOut, bodyBoundaryToNoteDesign);
+                    // Placement only updates notes on existing pages. New
+                    // continuation pages can shift the indexed body pages.
+                    if (outputPages.Count != pageCountBeforePlacement) endnoteIndex = null;
                 }
             }
 
@@ -249,7 +237,11 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            return ReindexPageOwnedLayouts(AddDocumentEndnoteStories());
+            PlaceDocumentEndnoteStories();
+            return ReindexPageOwnedLayouts(outputPages);
+
+            RelatedStoryPageIndex GetEndnoteIndex() =>
+                endnoteIndex ??= RelatedStoryPageIndex.Build(outputPages, cancellationToken);
 
             (int StartBlockIndex, int EndBlockIndex) ResolveMemoizedSectionBlockRange(int sourceBlockIndex)
             {
@@ -269,7 +261,7 @@ internal sealed partial class DocxLayoutEngine
                 // to the rendered body reference, independently of the section or
                 // continuation page carrying its note. Measure before admission;
                 // the width-only memo must remain unbound.
-                RelatedStoryPageIndex referenceIndex = RelatedStoryPageIndex.Build(outputPages, cancellationToken);
+                RelatedStoryPageIndex referenceIndex = GetEndnoteIndex();
                 double width = ResolvePageNoteTextWidth(page);
                 return stories.Select(story =>
                 {
@@ -280,21 +272,20 @@ internal sealed partial class DocxLayoutEngine
                 }).ToList();
             }
 
-            IReadOnlyList<DocxLayoutPage> AddDocumentEndnoteStories()
+            void PlaceDocumentEndnoteStories()
             {
                 if (documentEndReferences.Count == 0)
                 {
-                    return outputPages;
+                    return;
                 }
 
-                var documentEndPages = outputPages.ToList();
-                DocxLayoutPage activePage = documentEndPages[^1];
+                DocxLayoutPage activePage = outputPages[^1];
                 List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-                int activePageIndex = documentEndPages.Count - 1;
+                int activePageIndex = outputPages.Count - 1;
                 var documentEndStories = documentEndReferences.Select(story => story.StoryLayout).ToList();
                 DocxRelatedStoryLayout? documentEndSeparatorLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.Separator);
                 DocxRelatedStoryLayout? documentEndContinuationLayout = FindSpecialRelatedStoryLayout(resolveRelatedStoryLayouts(ResolvePageNoteTextWidth(activePage)), DocxRelatedStoryKind.Endnote, DocxRelatedStoryType.ContinuationSeparator) ?? documentEndSeparatorLayout;
-                bool completeStaticFrame = hasCompleteEndnoteFrame(activePage, activePageIndex + 1, documentEndPages.Count);
+                bool completeStaticFrame = hasCompleteEndnoteFrame(activePage, activePageIndex + 1, outputPages.Count);
                 if (DocxPlainBodyFrame.HasKnownBodyFrame(document) &&
                     documentEndStories.Any(story => !story.HasResolvedCounterInputs))
                 {
@@ -302,7 +293,7 @@ internal sealed partial class DocxLayoutEngine
                     // A counter is measured before admission, not patched after
                     // wrapping. The actual available frame owns admission;
                     // optional typography corrections do not own its value.
-                    double bottom = footerKeepOut?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom;
+                    double bottom = footerKeepOut?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom;
                     int boundCount = CountReferenceBoundEndnotes(activePage, activePlacedStories,
                         documentEndSeparatorLayout, printScale, boundStories, cancellationToken, bottom);
                     for (int index = 0; index < boundCount; index++) documentEndStories[index] = boundStories[index];
@@ -326,13 +317,13 @@ internal sealed partial class DocxLayoutEngine
                 else if (HasPlainStaticNoteStories(document, activePage, separatorMeasurer, printScale, cancellationToken) &&
                     CanUsePlainDocumentEndnoteFlow(activePage, documentEndSeparatorLayout, printScale,
                         documentEndStories, cancellationToken, out _)) endnoteFrameBottom = footerKeepOut;
-                double FrameBottom() => endnoteFrameBottom?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom;
+                double FrameBottom() => endnoteFrameBottom?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom;
                 // A trailing paragraph owns this start boundary independently
                 // of earlier tables or print scaling. Complete note-flow and
                 // mixed-footnote admission retain their existing qualification.
                 bool fittingEndnoteBoundaries = CanUseFittingEndnoteBoundaries(document, activePage, activePlacedStories,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken, completeStaticFrame,
-                    footerKeepOut?.Invoke(activePage, activePageIndex + 1, documentEndPages.Count) ?? activePage.MarginBottom);
+                    footerKeepOut?.Invoke(activePage, activePageIndex + 1, outputPages.Count) ?? activePage.MarginBottom);
                 if (fittingEndnoteBoundaries) endnoteFrameBottom = footerKeepOut;
                 bool measuredEndnoteStart = CanUseMeasuredEndnoteStart(document, activePage, activePlacedStories,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken, completeStaticFrame);
@@ -356,7 +347,7 @@ internal sealed partial class DocxLayoutEngine
                     HasPlainNoteFlowSources(document, DocxRelatedStoryKind.Footnote, cancellationToken,
                         out _, requirePlainParagraph: true) &&
                     CanUsePlainDocumentEndnoteFrame(document, activePage, activePageIndex + 1,
-                        documentEndPages.Count, separatorMeasurer, printScale, cancellationToken) ? activePage : null;
+                        outputPages.Count, separatorMeasurer, printScale, cancellationToken) ? activePage : null;
                 int endnoteSourcePageIndex = activePageIndex;
                 bool deferredMixedEndnoteSource = false;
                 cursorTop = ResolveDocumentEndnoteStartAboveFootnotes(activePage, activePlacedStories, cursorTop,
@@ -390,7 +381,7 @@ internal sealed partial class DocxLayoutEngine
                     // turn first, mirroring overflowing-item placement everywhere else.
                     if (ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) > cursorTop - FrameBottom())
                     {
-                        MoveToRelatedStoryContinuationPage(documentEndPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
+                        MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
                     }
                     deferredMixedEndnoteSource = mixedEndnoteSourceFrame is not null && activePageIndex != endnoteSourcePageIndex;
                     double? nominalSeparatorHeight = deferredMixedEndnoteSource
@@ -450,13 +441,13 @@ internal sealed partial class DocxLayoutEngine
                     }
                     (DocxPlacedRelatedStoryLayout placedSeparator, double separatorBottom) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, documentEndSeparatorLayout, sourceBlockIndex: -1, separatorTop, separatorMeasurer, useSizeDrivenPlacementHeight: true, contentStoriesForHhea: documentEndStories, placementHeightOverride: nominalSeparatorHeight, ruleFirstBearingPoints: separatorRuleFirstBearing);
                     activePlacedStories.Add(placedSeparator);
-                    documentEndPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+                    outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                     cursorTop = separatorBottom - ResolveEndnoteContentGap(documentEndStories,
                         endnoteMarkRun, endnoteMarkSize, separatorMeasurer, ownsSeparatorFirstBearing);
                 }
                 double completeEndnoteHeight = 0d;
                 bool plainEndnoteTypography = CanUsePlainDocumentEndnoteFrame(document, activePage,
-                    activePageIndex + 1, documentEndPages.Count, separatorMeasurer, printScale, cancellationToken) &&
+                    activePageIndex + 1, outputPages.Count, separatorMeasurer, printScale, cancellationToken) &&
                     CanUsePlainDocumentEndnoteFlow(activePage,
                     documentEndSeparatorLayout, printScale, documentEndStories, cancellationToken,
                     out completeEndnoteHeight);
@@ -487,7 +478,7 @@ internal sealed partial class DocxLayoutEngine
                         cursorTop, FrameBottom(), collapseEndnoteBoundaries, plainEndnoteFlow, localEndnoteBoundaries, cancellationToken);
                     cursorTop += boundaryGap + boundaryOverlap;
                     PlaceRelatedStorySlices(
-                        documentEndPages,
+                        outputPages,
                         ref activePageIndex,
                         ref activePage,
                         ref activePlacedStories,
@@ -511,7 +502,7 @@ internal sealed partial class DocxLayoutEngine
                         {
                             UsesCompleteDocumentEndnoteFlow = true,
                         };
-                        documentEndPages[activePageIndex] = activePage with
+                        outputPages[activePageIndex] = activePage with
                         {
                             PlacedRelatedStories = activePlacedStories.ToArray(),
                         };
@@ -524,8 +515,6 @@ internal sealed partial class DocxLayoutEngine
                     }
                     previousEndnote = endnoteStoryLayout;
                 }
-
-                return documentEndPages;
             }
         }
     }

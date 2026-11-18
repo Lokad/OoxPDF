@@ -34,6 +34,34 @@ internal static partial class DocxInlineCompositionTests
 
         }
     }
+
+    public static void DocxLaterSectionEndnoteUsesReferencePageAfterEarlierContinuation()
+    {
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var source = ReadSectionCounter(mode, 900, "PAGE");
+            DocxParagraph firstReference = source.Paragraphs.Single(paragraph =>
+                paragraph.InlineReferences.Any(reference => reference.Kind == DocxRelatedStoryKind.Endnote));
+            var secondReference = firstReference with
+            {
+                InlineReferences = firstReference.InlineReferences.Select(reference => reference with { Id = "38" }).ToArray()
+            };
+            var secondNote = ReadSectionCounter(mode, 6, "PAGE").RelatedStories.Single(story => story.Id == "37") with { Id = "38" };
+            source = source with
+            {
+                BodyElements = [.. source.BodyElements, new DocxParagraphElement(secondReference)],
+                RelatedStories = [.. source.RelatedStories, secondNote]
+            };
+
+            var pages = PictureRangeRenderer(mode).RenderPagesAsync(source, null, default).ToBlockingEnumerable()
+                .Select(DocxPageFootnoteNumberingTests.DecodeText).ToArray();
+            int laterSection = Array.FindIndex(pages, text => text.Contains("Public following section", StringComparison.Ordinal));
+            TestAssert.True(laterSection >= 4, "The earlier note must insert a continuation before the later reference.");
+            TestAssert.Contains("Count 2", string.Concat(pages.Take(laterSection)));
+            TestAssert.Contains("Count " + (laterSection + 1).ToString(CultureInfo.InvariantCulture), pages[laterSection]);
+        }
+    }
+
     public static void DocxEndnotePlacementUsesDocumentPositionAndPreservesSectionMetadata()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

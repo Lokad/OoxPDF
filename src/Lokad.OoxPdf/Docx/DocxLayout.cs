@@ -2488,7 +2488,10 @@ internal sealed partial class DocxLayoutEngine
             double result = new DocxPrintedPageFrame(targetPage.Height, paragraphSpacingScale).UnmapY(bodyY - offset);
             return double.IsFinite(result) ? result : null;
         }
-        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, GetRelatedStoryLayouts, BindRelatedStoryPage, HasCompleteEndnoteFrame, cancellationToken, paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys, ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
+        DocxLayoutPage[] pagesWithRelatedStories = AddPlacedRelatedStories(document, pages, locationsByBlock,
+            GetRelatedStoryLayouts, BindRelatedStoryPage, HasCompleteEndnoteFrame, cancellationToken,
+            paragraphSpacingScale, unscaledTextMeasurer ?? textMeasurer, ResolveHeaderKeepOut, placedStoryKeys,
+            ResolveFooterKeepOut, ResolveNoteFooterKeepOut, MapBodyBoundaryToNoteDesign).ToArray();
         OoxConversionBudget.Current?.AdmitDocxLayoutPages(pagesWithRelatedStories.Length);
         cancellationToken.ThrowIfCancellationRequested();
         var staticContent = AddStaticContent(pagesWithRelatedStories, textMeasurer, defaultTabStopPoints, paragraphSpacingScale, unscaledTextMeasurer, cancellationToken, mathEquations);

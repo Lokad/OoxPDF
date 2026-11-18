@@ -21039,6 +21039,7 @@
   ],
   "docx-counter-spacing": [
     "DocxEndnoteCounterPrefix",
+    "=DocxLaterSectionEndnoteUsesReferencePageAfterEarlierContinuation",
     "DocxNoteMathFieldsReferenceBindingIsIndependentOfStaticTypography",
     "DocxNoteMathFieldsCounterAdmissionUsesTheSelectedFooterEdge",
     "DocxSectionEndnotePageCountersPreserveReferenceAndFollowingSection",

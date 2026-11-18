@@ -2,15 +2,9 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxLayoutEngine
 {
-    // R12: reference-to-rendered-page index built once per placement pass. Matching
-    // used to re-walk every page item tree for each (page, reference) check (and the
-    // per-check "anywhere" helpers re-scanned all pages on top), and the section-end
-    // search rebuilt sorted block sets per page per endnote. The index materializes
-    // per-block segment match records plus sorted source-block sets a single time;
-    // queries scan one block record list with the exact legacy predicates instead of
-    // every page owner list. Callers rebuild the index whenever the page list changes
-    // (endnote placement mutates pages between section groups), so no stale
-    // repagination data applies.
+    // Index body items by source block and page. Placing notes on an existing
+    // page leaves the body items intact. Inserting continuation pages changes
+    // page indexes and requires a rebuild.
     internal sealed class RelatedStoryPageIndex
     {
         private readonly Dictionary<int, List<BlockMatchRecord>> recordsByBlock;
@@ -30,8 +24,6 @@ internal sealed partial class DocxLayoutEngine
             this.recordsByBlock = recordsByBlock;
             this.sortedBlocksByPage = sortedBlocksByPage;
         }
-
-        public int PageCount => sortedBlocksByPage.Length;
 
         public static RelatedStoryPageIndex Build(IReadOnlyList<DocxLayoutPage> pages, CancellationToken cancellationToken)
         {
