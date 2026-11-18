@@ -100,6 +100,8 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           & ./tools/TestPackageInspection.ps1 -PackagePath $package -OutputDirectory artifacts/ci-tests/package-inspection
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File tools/TestPackageConsumerCleanup.ps1
       - name: Text comparison adversarial checks
         run: |
           pwsh -NoProfile -File tools/TestTextOperationComparison.ps1

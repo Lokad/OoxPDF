@@ -118,6 +118,8 @@ Its `-InspectOnly -PackagePath <nupkg> -ExpectedLibrarySha256 <hash>` mode check
 all declared framework build identities and package docs without build/restore or
 consumer execution. `tools/TestPackageInspection.ps1` covers coherent, mixed and
 single-framework packages with an existing dual-framework package; never builds.
+Package consumers discard build/restore caches on success. Keep inputs, PDFs and
+summaries; retain caches on failure or cleanup refusal.
 Use `-PackagePath <nupkg>` with that hash to consume the same package on another
 platform without rebuilding or repacking the library.
 Unit tests can also be filtered by capability group with `--group`, for example:

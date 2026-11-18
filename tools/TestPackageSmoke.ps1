@@ -19,6 +19,47 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+function Remove-CompletedPackageConsumerCaches([string]$ConsumerDirectory, [string]$ConsumerRoot) {
+    try {
+        $directory = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($ConsumerDirectory))
+        $root = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($ConsumerRoot))
+        $comparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+        if (![IO.Path]::GetDirectoryName($directory).Equals($root, $comparison) -or
+            [IO.Path]::GetFileName($directory) -cnotmatch '^[0-9a-f]{32}$' -or
+            !(Test-Path -LiteralPath (Join-Path $directory 'summary.json') -PathType Leaf)) {
+            throw 'A completed invocation-owned consumer directory is required.'
+        }
+        $ancestor = Get-Item -LiteralPath $directory -Force
+        while ($null -ne $ancestor) {
+            if ($ancestor -isnot [IO.DirectoryInfo] -or ($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw 'Consumer storage has a linked ancestor.'
+            }
+            $ancestor = $ancestor.Parent
+        }
+        $caches = @(foreach ($name in @('bin', 'obj', 'packages')) {
+            try { $cache = Get-Item -LiteralPath (Join-Path $directory $name) -Force -ErrorAction Stop }
+            catch [System.Management.Automation.ItemNotFoundException] { continue }
+            if ($cache -isnot [IO.DirectoryInfo] -or ($cache.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw 'Consumer cache is linked or is not a directory.'
+            }
+            foreach ($child in Get-ChildItem -LiteralPath $cache.FullName -Recurse -Force) {
+                if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $child.LinkType -eq 'HardLink') {
+                    throw 'Consumer cache contains a linked entry.'
+                }
+            }
+            $cache.FullName
+        })
+        foreach ($cache in $caches) {
+            # Every target is a physical, immediate child of the owned invocation.
+            Remove-Item -LiteralPath $cache -Recurse -Force -ErrorAction Stop
+        }
+        return $true
+    }
+    catch {
+        Write-Warning ("Package consumer caches could not be fully removed at {0}: {1}" -f $ConsumerDirectory, $_.Exception.Message)
+        return $false
+    }
+}
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ($InspectOnly -and -not $PackagePath) { throw 'InspectOnly requires an existing PackagePath.' }
 if ($PackagePath) {
@@ -442,6 +483,9 @@ Write-Host "Package smoke test passed through the packed library."
     OutputSha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash
     OutputBytes = (Get-Item -LiteralPath $output).Length
     PptxOutputSha256 = (Get-FileHash -LiteralPath ([IO.Path]::ChangeExtension($output, '.pptx.pdf')) -Algorithm SHA256).Hash
-    RestorePackages = Join-Path $scratch "packages"
+    RestorePackages = Join-Path $scratch "packages" # Historical restore location; disposable on success.
 } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $scratch "summary.json") -Encoding UTF8
 Write-Host ("Evidence: {0}" -f (Join-Path $scratch "summary.json"))
+if (Remove-CompletedPackageConsumerCaches $scratch (Join-Path $repoRoot 'artifacts/package-smoke')) {
+    Write-Host 'Removed disposable consumer build/restore caches; inputs, packages, PDFs and summary retained.'
+}

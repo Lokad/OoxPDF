@@ -25,8 +25,17 @@ foreach ($framework in $payloads.Keys) { $hashes[$framework]=[Convert]::ToHexStr
 $tool=Join-Path $PSScriptRoot 'TestPackageSmoke.ps1'
 # An unexpected call fails inspection. The normal-mode boundary check stops at
 # restore, proving that the shared preflight still reaches the consumer path.
+$failedConsumers = [Collections.Generic.List[string]]::new()
 function dotnet {
-    if ($args[0] -eq 'restore') { throw 'Fixture: consumer restore reached.' }
+    if ($args[0] -eq 'restore') {
+        $directory = Split-Path $args[1]
+        $failedConsumers.Add($directory)
+        foreach ($name in @('bin', 'obj', 'packages')) {
+            $cache = New-Item -ItemType Directory -Path (Join-Path $directory $name)
+            Set-Content -LiteralPath (Join-Path $cache.FullName 'failure.txt') -Value 'retain failed restore'
+        }
+        throw 'Fixture: consumer restore reached.'
+    }
     throw 'Fixture: unexpected dotnet invocation.'
 }
 $checks=@()
@@ -113,9 +122,15 @@ $null=Check 'wrong-qualified-hash-refused' $package ('0'*64) 'net11.0' 'Packed l
 $null=Check 'missing-package-refused' '' $hashes['net11.0'] 'net11.0' 'InspectOnly requires an existing PackagePath.'
 $null=Check 'missing-qualified-hash-refused' $package '' 'net11.0' 'Reusing a package requires the qualified library hash.'
 $null=Check 'normal-mode-consumer-boundary' $package $hashes['net11.0'] 'net11.0' 'Fixture: consumer restore reached.' -ConsumerBoundary
+if ($failedConsumers.Count -ne 1) { throw 'Failed consumer boundary was not observed exactly once.' }
+foreach ($name in @('bin', 'obj', 'packages')) {
+    if ((Get-Content -LiteralPath (Join-Path $failedConsumers[0] "$name/failure.txt") -Raw).Trim() -cne 'retain failed restore') {
+        throw 'Failed consumer cache was removed or changed.'
+    }
+}
 if ((Get-FileHash -LiteralPath $package).Hash -ne $originalHash) { throw 'Original package changed' }
 [ordered]@{Checks=$checks;Package=$package;PackageSha256=$originalHash;ToolSha256=(Get-FileHash -LiteralPath $tool).Hash;
     TestScriptSha256=(Get-FileHash -LiteralPath $PSCommandPath).Hash;
-    RealDotnetInvocations=0;LibraryBuilds=0;Conversions=0;OriginalPackageUnchanged=$true} |
+    RealDotnetInvocations=0;LibraryBuilds=0;Conversions=0;OriginalPackageUnchanged=$true;FailedConsumerCachesRetained=$true} |
     ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $output 'evidence.json') -Encoding utf8
 "$($checks.Count) package inspection checks passed; no builds, restores, conversions or assembly execution."
