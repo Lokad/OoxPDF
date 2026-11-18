@@ -243,7 +243,11 @@ internal sealed partial class DocxRenderer
                 graphics.SaveState();
                 DocxTableCellClipSnapshot clip = ResolveTableCellContentClip(geometryRow, geometryCell);
                 graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
-                var cellNavigation = navigation.ClipTo(new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height));
+                bool ownsCompleteCell = row.FragmentCount == 1 && OwnsUnmergedPictureCell(cellLayout);
+                var cellNavigation = navigation.ClipTo(new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height)) with
+                {
+                    AllowsRotatedInlineUris = navigation.AllowsRotatedInlineUris && ownsCompleteCell
+                };
                 RenderParagraphBackgrounds(cellLayout.TextLines.Cast<DocxLayoutItem>().Concat(cellLayout.InlineImages), graphics, markupContext, cancellationToken);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)
                 {
@@ -262,8 +266,7 @@ internal sealed partial class DocxRenderer
                 // Only complete, unmerged cells can give an admitted outline its
                 // own envelope. Each box restores the exact child content clip;
                 // ancestor, fragmented and merged-cell clips remain in force.
-                bool separateBoxClip = cellLayout.InlineTextBoxes.Count != 0 && row.FragmentCount == 1 &&
-                    cellLayout.VisualOwnership == DocxTableCellVisualOwnership.OwnCell && !cellLayout.Cell.HasVerticalMerge;
+                bool separateBoxClip = cellLayout.InlineTextBoxes.Count != 0 && ownsCompleteCell;
                 if (separateBoxClip) graphics.RestoreState();
                 foreach (DocxInlineTextBoxLayout textBox in cellLayout.InlineTextBoxes)
                 {

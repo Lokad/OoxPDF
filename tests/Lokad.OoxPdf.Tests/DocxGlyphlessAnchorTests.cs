@@ -150,6 +150,117 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
+    public static void DocxRotatedInlinePictureLinksFollowPaintedViewports()
+    {
+        const string uri = "https://example.invalid/inline-picture";
+        var parts = ReadParts(CreateDocument());
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
+        XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        XDocument relationships = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts["word/_rels/document.xml.rels"]));
+        relationships.Root!.Add(new XElement(relationships.Root.Name.Namespace + "Relationship",
+            new XAttribute("Id", "rIdPictureLink"), new XAttribute("Type", r.NamespaceName + "/hyperlink"),
+            new XAttribute("Target", uri), new XAttribute("TargetMode", "External")));
+        parts["word/_rels/document.xml.rels"] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
+        XDocument source = XDocument.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
+        XElement graphic = source.Descendants(a + "graphic").Single();
+        var resolver = new PortableRenderingTests.PinnedResolver();
+
+        foreach (var (rotation, cell, exactHeight, merged, expected) in new[]
+        {
+            (0, false, 0, false, true),
+            (90, false, 0, false, true),
+            (180, false, 0, false, true),
+            (90, true, 0, false, true),
+            (180, true, 0, false, true),
+            (90, false, 420, false, false),
+            (90, true, 780, false, false),
+            (90, true, 0, true, false),
+            (30, false, 0, false, false)
+        })
+        {
+            const string width = "304800"; // 24 pt
+            const string height = "228600"; // 18 pt
+            bool clipped = exactHeight > 0;
+            bool exactLine = clipped && !cell;
+            var transform = new XElement(a + "xfrm", new XAttribute("rot", rotation * 60000),
+                new XElement(a + "off", new XAttribute("x", "0"), new XAttribute("y", "0")),
+                new XElement(a + "ext", new XAttribute("cx", width), new XAttribute("cy", height)));
+            var inline = new XElement(wp + "inline",
+                new XElement(wp + "extent", new XAttribute("cx", width), new XAttribute("cy", height)),
+                new XElement(wp + "docPr", new XAttribute("id", "1"), new XAttribute("name", "Linked inline picture"),
+                    new XElement(a + "hlinkClick", new XAttribute(r + "id", "rIdPictureLink"))),
+                new XElement(graphic));
+            inline.Descendants(pic + "pic").Single().Add(new XElement(pic + "spPr", transform));
+            var paragraph = new XElement(w + "p",
+                new XElement(w + "pPr", new XElement(w + "spacing",
+                    new XAttribute(w + "line", exactLine ? exactHeight : 960),
+                    new XAttribute(w + "lineRule", exactLine ? "exact" : "atLeast"))),
+                new XElement(w + "r", new XElement(w + "drawing", inline)),
+                new XElement(w + "r", new XElement(w + "t", "Inline picture")));
+            var document = new XDocument(source);
+            XElement body = document.Descendants(w + "body").Single();
+            if (cell)
+            {
+                var row = new XElement(w + "tr",
+                    clipped ? new XElement(w + "trPr", new XElement(w + "trHeight",
+                        new XAttribute(w + "val", exactHeight), new XAttribute(w + "hRule", "exact"))) : null,
+                    new XElement(w + "tc", merged ? new XElement(w + "tcPr",
+                        new XElement(w + "vMerge", new XAttribute(w + "val", "restart"))) : null, paragraph));
+                var table = new XElement(w + "tbl",
+                    new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", "7200"))), row);
+                if (merged)
+                    table.Add(new XElement(w + "tr", new XElement(w + "tc",
+                        new XElement(w + "tcPr", new XElement(w + "vMerge")), new XElement(w + "p"))));
+                body.Element(w + "p")!.ReplaceWith(table);
+            }
+            else
+                body.Element(w + "p")!.ReplaceWith(paragraph);
+            parts["word/document.xml"] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
+            PdfPage page = Render(TestFixtures.WriteTempPackage(".docx", parts), resolver,
+                OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).Single();
+            string context = $"rotation={rotation}, cell={cell}, exactHeight={exactHeight}, merged={merged}";
+            TestAssert.True(page.Images.Count == 1, "The fixture paints one image: " + context);
+            string imagePaint = "/" + page.Images.Single().ResourceName + " Do";
+            var links = page.Annotations.Where(link => link.Uri == uri).ToArray();
+            if (rotation == 30)
+            {
+                TestAssert.Contains(imagePaint, page.Content);
+                TestAssert.Equal(0, links.Length);
+                continue;
+            }
+
+            var paint = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).Single(frame => frame.Block == imagePaint);
+            var matrix = paint.Transform;
+            var frame = new PdfRectangle(
+                matrix.M31 + Math.Min(0f, matrix.M11) + Math.Min(0f, matrix.M21),
+                matrix.M32 + Math.Min(0f, matrix.M12) + Math.Min(0f, matrix.M22),
+                Math.Abs(matrix.M11) + Math.Abs(matrix.M21), Math.Abs(matrix.M12) + Math.Abs(matrix.M22));
+            TestAssert.True(rotation switch
+            {
+                90 => matrix.M12 < -23d && matrix.M21 > 17d,
+                180 => matrix.M11 < -23d && matrix.M22 < -17d,
+                _ => matrix.M11 > 23d && matrix.M22 > 17d
+            }, "The picture paints with the authored orientation: " + context);
+            bool containsFrame = paint.Clip.X <= frame.X + .002d && paint.Clip.Y <= frame.Y + .002d &&
+                paint.Clip.X + paint.Clip.Width >= frame.X + frame.Width - .002d &&
+                paint.Clip.Y + paint.Clip.Height >= frame.Y + frame.Height - .002d;
+            TestAssert.True(containsFrame != clipped, "The PDF clip distinguishes fitting and clipped pictures: " + context);
+            if (clipped)
+                TestAssert.True(paint.Clip.Height > 0d && paint.Clip.Width > 0d, "The clipped control retains partial paint.");
+            TestAssert.True(links.Length == (expected ? 1 : 0), "The inline picture has the expected URI count: " + context);
+            if (expected)
+            {
+                var link = links[0];
+                TestAssert.True(Math.Abs(link.X - frame.X) < .002d && Math.Abs(link.Y - frame.Y) < .002d &&
+                    Math.Abs(link.Width - frame.Width) < .002d && Math.Abs(link.Height - frame.Height) < .002d,
+                    "The link rectangle matches the emitted rotation: " + context);
+            }
+        }
+    }
+
     public static void DocxGlyphlessPictureFilePublishesAndRefundsWithoutFonts()
     {
         string output = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".pdf");

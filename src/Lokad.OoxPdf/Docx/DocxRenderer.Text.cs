@@ -120,7 +120,7 @@ internal sealed partial class DocxRenderer
             if (RenderImage(image.Image, image.X, image.Y, image.Width, image.Height, graphics, pageImages,
                 diagnosticSink, image.PageIndex, cancellationToken, imageCache, ref imageIndex, out var paintedFrame,
                 image.LineFrame, requireLineFrame: true, svgTextFonts: fontResources.SvgTextFonts))
-                navigation.RecordInline(image, paintedFrame, clipped);
+                navigation.RecordInline(image, paintedFrame, clipped, usesRotatedLineFrame);
         }
         finally { if (clipped) graphics.RestoreState(); }
         // Review ink sits outside the picture clip, within its container's clip.

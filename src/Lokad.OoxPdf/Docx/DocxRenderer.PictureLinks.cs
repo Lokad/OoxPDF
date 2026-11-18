@@ -4,12 +4,11 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed partial class DocxRenderer
 {
-    // The box painter already knows the placed image and every active clip.
-    // Share that viewport with child paint calls so URI annotations can use
-    // successful image emission directly.
+    // Carry the active paint viewport to links whose geometry depends on
+    // painting, including pictures in boxes and rotated inline pictures.
     private readonly record struct PictureNavigation(
         PdfRectangle Viewport, HashSet<DocxInlineImage> InlinePictures, List<PdfLinkAnnotation> DrawingUris,
-        bool InsideTextBox = false)
+        bool InsideTextBox = false, bool AllowsRotatedInlineUris = false)
     {
         public PictureNavigation ClipTo(PdfRectangle clip) => this with
         {
@@ -18,16 +17,14 @@ internal sealed partial class DocxRenderer
 
         public PictureNavigation EnterTextBox(PdfRectangle clip) => ClipTo(clip) with { InsideTextBox = true };
 
-        public void RecordInline(DocxInlineImageLayout image, PdfRectangle? frame, bool usesImageClip)
+        public void RecordInline(DocxInlineImageLayout image, PdfRectangle? frame, bool usesImageClip, bool usesRotatedLineFrame)
         {
             if (!InsideTextBox)
-            {
                 InlinePictures.Add(image.Image);
-            }
-            else if (frame is { } painted && ContainsInlinePictureFrame(image, painted, usesImageClip))
-            {
+
+            if ((InsideTextBox || AllowsRotatedInlineUris && usesRotatedLineFrame) &&
+                frame is { } painted && ContainsInlinePictureFrame(image, painted, usesImageClip))
                 RecordUri(image.Image, painted);
-            }
         }
 
         public void RecordUri(DocxInlineImage image, PdfRectangle? frame)
@@ -36,6 +33,9 @@ internal sealed partial class DocxRenderer
                 DrawingUris.Add(PdfLinkAnnotation.ToUri(painted.X, painted.Y, painted.Width, painted.Height, uri));
         }
     }
+
+    private static bool OwnsUnmergedPictureCell(DocxTableCellLayout cell) =>
+        cell.VisualOwnership == DocxTableCellVisualOwnership.OwnCell && !cell.Cell.HasVerticalMerge;
 
     private static IEnumerable<PdfLinkAnnotation> CreateInlinePictureAnnotations(DocxLayoutPage page, int pageNumber, IReadOnlyList<DocxLayoutItem> staticItems,
         IReadOnlySet<DocxInlineImage> paintedPictures,
@@ -46,9 +46,8 @@ internal sealed partial class DocxRenderer
             yield return PdfLinkAnnotation.ToUri(image.X, image.Y, image.Width, image.Height, image.Image.ClickTarget!);
     }
 
-    // Navigation consumes the same physical frames as painting. Both drawing URI
-    // links and mixed source ranges require successful paint, source ownership
-    // and complete clips, independently of the selected image representation.
+    // Ordinary placement also provides bounds for mixed source ranges.
+    // Rotated drawing URIs use the actual paint frame instead.
     private static IEnumerable<DocxInlineImageLayout> EnumerateLinkedPictureFrames(DocxLayoutPage page, int pageNumber,
         IReadOnlyList<DocxLayoutItem> staticItems, IReadOnlySet<DocxInlineImage> paintedPictures,
         DocxMarkupContext context,
@@ -134,7 +133,7 @@ internal sealed partial class DocxRenderer
             {
                 token.ThrowIfCancellationRequested();
                 var cell = row.Cells[index];
-                if (cell.VisualOwnership != DocxTableCellVisualOwnership.OwnCell || cell.Cell.HasVerticalMerge) continue;
+                if (!OwnsUnmergedPictureCell(cell)) continue;
                 if (!cell.InlineImages.Any(image => select(image.Image)) && cell.NestedRows.Count == 0) continue;
                 geometryRow ??= xOffset == 0d && yOffset == 0d ? row : ShiftTableRowGeometry(row, xOffset, yOffset);
                 var cellClip = ResolveTableCellContentClip(geometryRow, geometryRow.Cells[index]);
