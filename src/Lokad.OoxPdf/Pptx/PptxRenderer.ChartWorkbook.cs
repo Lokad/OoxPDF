@@ -1,5 +1,3 @@
-using System.Xml.Linq;
-
 namespace Lokad.OoxPdf.Pptx;
 
 // SpreadsheetML workbook data model backing chart series resolution.
@@ -59,8 +57,7 @@ internal sealed partial class PptxRenderer
 
     internal readonly record struct ChartWorkbookSheet(
         string Name,
-        string RelationshipId,
-        int Index);
+        string RelationshipId);
 
     internal sealed class ChartWorkbookStyles
     {
@@ -126,23 +123,23 @@ internal sealed partial class PptxRenderer
         // accumulates across frames.
         private readonly Dictionary<string, ChartWorkbookRangeCell[]> rangeMemo = new(StringComparer.Ordinal);
 
-        // R15: per-frame shared dense category labels. Keyed by the originating plot
-        // (or chart element when sceneless) plus visibility, so reserve, emission, and
+        // Per-frame shared dense category labels. Keyed by the originating plot
+        // plus visibility, so reserve, emission, and
         // legend passes within one frame densify once; literal-only charts without a
         // workbook keep the direct path. Cleared with the range memo per frame, so
         // nothing accumulates across frames or charts.
-        private readonly Dictionary<(object? Source, XElement? ChartElement, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedTextPoint?>> labelMemo = new();
+        private readonly Dictionary<(PptxSceneChartPlot Plot, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedTextPoint?>> labelMemo = new();
 
-        private readonly Dictionary<(object? Source, XElement? ChartElement), IReadOnlyList<ChartSeriesNameRecord>> seriesNameMemo = new();
+        private readonly Dictionary<PptxSceneChartPlot, IReadOnlyList<ChartSeriesNameRecord>> seriesNameMemo = new();
 
-        private readonly Dictionary<(object? Source, XElement? ChartElement, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedNumberVector>> seriesVectorsMemo = new();
+        private readonly Dictionary<(PptxSceneChartPlot Plot, bool PlotVisibleOnly), IReadOnlyList<ChartIndexedNumberVector>> seriesVectorsMemo = new();
 
-        // R15: per-frame shared bar value extents. Keyed by the originating plot
-        // (or chart element when sceneless) plus grouping and visibility, so the
+        // Per-frame shared bar value extents. Keyed by the originating plot
+        // plus grouping and visibility, so the
         // reserve, emission, and crossing passes within one frame densify once.
         // Cleared with the range memo per frame.
-        private readonly Dictionary<(object? Source, XElement? ChartElement, PptxSceneChartGrouping Grouping, bool PlotVisibleOnly), ChartValueExtents> valueExtentsMemo = new();
-        private readonly Dictionary<(object? Source, XElement? ChartElement, bool Stacked, bool PercentStacked, bool PlotVisibleOnly), ChartValueExtents> lineValueExtentsMemo = new();
+        private readonly Dictionary<(PptxSceneChartPlot Plot, PptxSceneChartGrouping Grouping, bool PlotVisibleOnly), ChartValueExtents> valueExtentsMemo = new();
+        private readonly Dictionary<(PptxSceneChartPlot Plot, bool Stacked, bool PercentStacked, bool PlotVisibleOnly), ChartValueExtents> lineValueExtentsMemo = new();
 
         internal void ClearRangeMemo()
         {
@@ -155,28 +152,25 @@ internal sealed partial class PptxRenderer
         }
 
         internal IReadOnlyList<ChartSeriesNameRecord> GetOrAddSeriesNames(
-            object? source,
-            XElement? chartElement,
+            PptxSceneChartPlot plot,
             Func<IReadOnlyList<ChartSeriesNameRecord>> factory)
         {
-            var key = (source, chartElement);
-            if (seriesNameMemo.TryGetValue(key, out IReadOnlyList<ChartSeriesNameRecord>? cached))
+            if (seriesNameMemo.TryGetValue(plot, out IReadOnlyList<ChartSeriesNameRecord>? cached))
             {
                 return cached;
             }
 
             IReadOnlyList<ChartSeriesNameRecord> names = factory();
-            seriesNameMemo[key] = names;
+            seriesNameMemo[plot] = names;
             return names;
         }
 
         internal IReadOnlyList<ChartIndexedNumberVector> GetOrAddSeriesVectors(
-            object? source,
-            XElement? chartElement,
+            PptxSceneChartPlot plot,
             bool plotVisibleOnly,
             Func<IReadOnlyList<ChartIndexedNumberVector>> factory)
         {
-            var key = (source, chartElement, plotVisibleOnly);
+            var key = (plot, plotVisibleOnly);
             if (seriesVectorsMemo.TryGetValue(key, out IReadOnlyList<ChartIndexedNumberVector>? cached))
             {
                 return cached;
@@ -188,13 +182,12 @@ internal sealed partial class PptxRenderer
         }
 
         internal ChartValueExtents GetOrAddValueExtents(
-            object? source,
-            XElement? chartElement,
+            PptxSceneChartPlot plot,
             PptxSceneChartGrouping grouping,
             bool plotVisibleOnly,
             Func<ChartValueExtents> factory)
         {
-            var key = (source, chartElement, grouping, plotVisibleOnly);
+            var key = (plot, grouping, plotVisibleOnly);
             if (valueExtentsMemo.TryGetValue(key, out ChartValueExtents cached))
             {
                 return cached;
@@ -206,14 +199,13 @@ internal sealed partial class PptxRenderer
         }
 
         internal ChartValueExtents GetOrAddLineValueExtents(
-            object? source,
-            XElement? chartElement,
+            PptxSceneChartPlot plot,
             bool stacked,
             bool percentStacked,
             bool plotVisibleOnly,
             Func<ChartValueExtents> factory)
         {
-            var key = (source, chartElement, stacked, percentStacked, plotVisibleOnly);
+            var key = (plot, stacked, percentStacked, plotVisibleOnly);
             if (lineValueExtentsMemo.TryGetValue(key, out ChartValueExtents cached))
             {
                 return cached;
@@ -225,12 +217,11 @@ internal sealed partial class PptxRenderer
         }
 
         internal IReadOnlyList<ChartIndexedTextPoint?> GetOrAddCategoryLabels(
-            object? source,
-            XElement? chartElement,
+            PptxSceneChartPlot plot,
             bool plotVisibleOnly,
             Func<IReadOnlyList<ChartIndexedTextPoint?>> factory)
         {
-            var key = (source, chartElement, plotVisibleOnly);
+            var key = (plot, plotVisibleOnly);
             if (labelMemo.TryGetValue(key, out IReadOnlyList<ChartIndexedTextPoint?>? cached))
             {
                 return cached;

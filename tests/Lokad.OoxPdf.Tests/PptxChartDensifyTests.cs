@@ -1,8 +1,8 @@
-using System.Linq.Expressions;
 using System.Reflection;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
+using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -210,269 +210,122 @@ internal static class PptxChartDensifyTests
 
     public static void CategoryLabelMemoSharesDenseResultsWithinFrame()
     {
-        // R15: one dense array per (source, visibility) per frame; clearing the
-        // frame memo recomputes on next access.
-        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected workbook type.");
-        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
-        };
-        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        MethodInfo memo = workbookType.GetMethod("GetOrAddCategoryLabels", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Expected label memo.");
-        Type factoryType = memo.GetParameters()[3].ParameterType;
-
-        Type vectorType = typeof(PptxRenderer).GetNestedType("ChartIndexedTextVector", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected text vector type.");
-        object vector = BuildTextVector(vectorType, [(0, "a", true)], null);
-        MethodInfo dense = vectorType.GetMethod("DensePoints")
-            ?? throw new InvalidOperationException("Expected densify method.");
-        object denseA = dense.Invoke(vector, null) ?? throw new InvalidOperationException("Expected dense array.");
-        object denseB = dense.Invoke(vector, null) ?? throw new InvalidOperationException("Expected dense array.");
-        TestAssert.True(!ReferenceEquals(denseA, denseB), "DensePoints must allocate per call (precondition).");
-
-        object first = InvokeMemo(memo, workbook, "k", null, false, ConstantFactory(factoryType, denseA));
-        object second = InvokeMemo(memo, workbook, "k", null, false, ConstantFactory(factoryType, denseB));
-        TestAssert.True(ReferenceEquals(first, second), "Same key must share one dense array.");
-        TestAssert.True(ReferenceEquals(first, denseA), "First computation must win.");
-
-        try
-        {
-            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-        object third = InvokeMemo(memo, workbook, "k", null, false, ConstantFactory(factoryType, denseB));
-        TestAssert.True(ReferenceEquals(third, denseB), "Cleared memo must recompute on next access.");
+        var (workbook, plot, otherPlot) = CreateMemoContext();
+        IReadOnlyList<PptxRenderer.ChartIndexedTextPoint?> firstResult =
+            [new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, "First", true, default)];
+        IReadOnlyList<PptxRenderer.ChartIndexedTextPoint?> otherResult =
+            [new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, "Other", true, default)];
+        TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
+        int computations = 0;
+        Func<IReadOnlyList<PptxRenderer.ChartIndexedTextPoint?>> firstFactory = () => { computations++; return firstResult; };
+        Func<IReadOnlyList<PptxRenderer.ChartIndexedTextPoint?>> otherFactory = () => { computations++; return otherResult; };
+        var first = workbook.GetOrAddCategoryLabels(plot, false, firstFactory);
+        var repeat = workbook.GetOrAddCategoryLabels(plot, false, otherFactory);
+        TestAssert.True(ReferenceEquals(first, repeat) && ReferenceEquals(first, firstResult), "The same plot and visibility share one result.");
+        TestAssert.Equal("First", repeat.Single()!.Text);
+        TestAssert.Equal(1, computations);
+        TestAssert.True(ReferenceEquals(otherResult, workbook.GetOrAddCategoryLabels(plot, true, otherFactory)), "Visibility owns a distinct result.");
+        TestAssert.True(ReferenceEquals(otherResult, workbook.GetOrAddCategoryLabels(otherPlot, false, otherFactory)), "Another plot owns a distinct result.");
+        workbook.ClearRangeMemo();
+        TestAssert.True(ReferenceEquals(otherResult, workbook.GetOrAddCategoryLabels(plot, false, otherFactory)), "Clearing recomputes the original key.");
+        TestAssert.Equal(4, computations);
     }
 
     public static void SeriesNameMemoSharesResultsWithinFrame()
     {
-        // R15: one series-name list per (source, element) per frame; clearing the
-        // frame memo recomputes on next access.
-        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected workbook type.");
-        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
-        };
-        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        MethodInfo memo = workbookType.GetMethod("GetOrAddSeriesNames", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Expected series-name memo.");
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayA = [new("First", "First", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
-        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> arrayB = [new("Second", "Second", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
-        TestAssert.True(!ReferenceEquals(arrayA, arrayB), "Different factory results must be independently distinguishable.");
+        var (workbook, plot, otherPlot) = CreateMemoContext();
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> firstResult = [new("First", "First", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
+        IReadOnlyList<PptxRenderer.ChartSeriesNameRecord> otherResult = [new("Other", "Other", PptxRenderer.ChartSeriesNameSource.Cache, default, [])];
+        TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
         int computations = 0;
-        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryA = () => { computations++; return arrayA; };
-        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> factoryB = () => { computations++; return arrayB; };
-        object first = InvokeUntyped(memo, workbook, "k", null, factoryA);
-        object second = InvokeUntyped(memo, workbook, "k", null, factoryB);
-        TestAssert.True(ReferenceEquals(first, second), "Same key must share one name list.");
-        TestAssert.True(ReferenceEquals(first, arrayA), "First computation must win.");
-        TestAssert.Equal("First", ((IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>)second).Single().ActiveName);
+        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> firstFactory = () => { computations++; return firstResult; };
+        Func<IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>> otherFactory = () => { computations++; return otherResult; };
+        var first = workbook.GetOrAddSeriesNames(plot, firstFactory);
+        var repeat = workbook.GetOrAddSeriesNames(plot, otherFactory);
+        TestAssert.True(ReferenceEquals(first, repeat) && ReferenceEquals(first, firstResult), "The same plot shares its names.");
+        TestAssert.Equal("First", repeat.Single().ActiveName);
         TestAssert.Equal(1, computations);
-        try
-        {
-            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-        object third = InvokeUntyped(memo, workbook, "k", null, factoryB);
-        TestAssert.True(ReferenceEquals(third, arrayB), "Cleared memo must recompute on next access.");
-        TestAssert.Equal("Second", ((IReadOnlyList<PptxRenderer.ChartSeriesNameRecord>)third).Single().ActiveName);
-        TestAssert.Equal(2, computations);
-    }
-
-    private static object InvokeUntyped(MethodInfo memo, object workbook, object? first, object? second, object factory)
-    {
-        try
-        {
-            return memo.Invoke(workbook, [first, second, factory])
-                ?? throw new InvalidOperationException("Expected shared list.");
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
+        TestAssert.True(ReferenceEquals(otherResult, workbook.GetOrAddSeriesNames(otherPlot, otherFactory)), "Another plot owns its names.");
+        workbook.ClearRangeMemo();
+        var next = workbook.GetOrAddSeriesNames(plot, otherFactory);
+        TestAssert.True(ReferenceEquals(next, otherResult), "Clearing recomputes the original key.");
+        TestAssert.Equal("Other", next.Single().ActiveName);
+        TestAssert.Equal(3, computations);
     }
 
     public static void SeriesVectorsMemoSharesResultsWithinFrame()
     {
-        // R15: one series-vector list per (source, element, visibility) per frame;
-        // clearing the frame memo recomputes on next access.
-        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected workbook type.");
-        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
-        };
-        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        MethodInfo memo = workbookType.GetMethod("GetOrAddSeriesVectors", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Expected series-vectors memo.");
-        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> arrayA =
-            [(PptxRenderer.ChartIndexedNumberVector)BuildNumberVector(NumberVectorType(), NumberPointType(), [(0, 5d)], 1)];
-        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> arrayB =
-            [(PptxRenderer.ChartIndexedNumberVector)BuildNumberVector(NumberVectorType(), NumberPointType(), [(0, 9d)], 1)];
-        TestAssert.True(!ReferenceEquals(arrayA, arrayB), "Different factory results must be independently distinguishable.");
+        var (workbook, plot, otherPlot) = CreateMemoContext();
+        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> firstResult =
+            [new([new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, 5d, "5", true, default)], 1, null, "0", default, [], false)];
+        IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> otherResult =
+            [new([new(0, PptxRenderer.ChartPointIndexSource.OoxmlIndex, 9d, "9", true, default)], 1, null, "0", default, [], false)];
+        TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
         int computations = 0;
-        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> factoryA = () => { computations++; return arrayA; };
-        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> factoryB = () => { computations++; return arrayB; };
-        object first = InvokeUntyped4(memo, workbook, "k", null, false, factoryA);
-        object second = InvokeUntyped4(memo, workbook, "k", null, false, factoryB);
-        TestAssert.True(ReferenceEquals(first, second), "Same key must share one vector list.");
-        TestAssert.True(ReferenceEquals(first, arrayA), "First computation must win.");
-        TestAssert.Equal<double?>(5d, ((IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>)second).Single().DenseValues().Single());
+        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> firstFactory = () => { computations++; return firstResult; };
+        Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> otherFactory = () => { computations++; return otherResult; };
+        var first = workbook.GetOrAddSeriesVectors(plot, false, firstFactory);
+        var repeat = workbook.GetOrAddSeriesVectors(plot, false, otherFactory);
+        TestAssert.True(ReferenceEquals(first, repeat) && ReferenceEquals(first, firstResult), "The same plot and visibility share one vector list.");
+        TestAssert.Equal<double?>(5d, repeat.Single().DenseValues().Single());
         TestAssert.Equal(1, computations);
-        try
-        {
-            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-        object third = InvokeUntyped4(memo, workbook, "k", null, false, factoryB);
-        TestAssert.True(ReferenceEquals(third, arrayB), "Cleared memo must recompute on next access.");
-        TestAssert.Equal<double?>(9d, ((IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>)third).Single().DenseValues().Single());
-        TestAssert.Equal(2, computations);
+        TestAssert.True(ReferenceEquals(otherResult, workbook.GetOrAddSeriesVectors(plot, true, otherFactory)), "Visibility owns a distinct vector list.");
+        TestAssert.True(ReferenceEquals(otherResult, workbook.GetOrAddSeriesVectors(otherPlot, false, otherFactory)), "Another plot owns a distinct vector list.");
+        workbook.ClearRangeMemo();
+        var next = workbook.GetOrAddSeriesVectors(plot, false, otherFactory);
+        TestAssert.True(ReferenceEquals(next, otherResult), "Clearing recomputes the original key.");
+        TestAssert.Equal<double?>(9d, next.Single().DenseValues().Single());
+        TestAssert.Equal(4, computations);
     }
 
     public static void ValueExtentsMemoSharesResultsWithinFrame()
     {
-        // R15: one extent result per (source, element, grouping, visibility) per
-        // frame; clearing the frame memo recomputes on next access.
-        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected workbook type.");
-        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
-        };
-        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        MethodInfo memo = workbookType.GetMethod("GetOrAddValueExtents", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Expected extent memo.");
-        PptxRenderer.ChartValueExtents extentsA = new(0d, 10d);
-        PptxRenderer.ChartValueExtents extentsB = new(0d, 99d);
-        Func<PptxRenderer.ChartValueExtents> factoryA = () => extentsA;
-        Func<PptxRenderer.ChartValueExtents> factoryB = () => extentsB;
-        object first = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Clustered, false, factoryA);
-        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)first);
-        object second = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Clustered, false, factoryB);
-        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)second);
-        object other = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Stacked, false, factoryB);
-        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)other);
-        try
-        {
-            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-        object third = InvokeUntyped5(memo, workbook, "k", null, PptxSceneChartGrouping.Clustered, false, factoryB);
-        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)third);
+        var (workbook, plot, otherPlot) = CreateMemoContext();
+        PptxRenderer.ChartValueExtents firstResult = new(0d, 10d), otherResult = new(0d, 99d);
+        TestAssert.Equal(firstResult, workbook.GetOrAddValueExtents(plot, PptxSceneChartGrouping.Clustered, false, () => firstResult));
+        TestAssert.Equal(firstResult, workbook.GetOrAddValueExtents(plot, PptxSceneChartGrouping.Clustered, false, () => otherResult));
+        TestAssert.Equal(otherResult, workbook.GetOrAddValueExtents(otherPlot, PptxSceneChartGrouping.Clustered, false, () => otherResult));
+        TestAssert.Equal(otherResult, workbook.GetOrAddValueExtents(plot, PptxSceneChartGrouping.Stacked, false, () => otherResult));
+        TestAssert.Equal(otherResult, workbook.GetOrAddValueExtents(plot, PptxSceneChartGrouping.Clustered, true, () => otherResult));
+        workbook.ClearRangeMemo();
+        TestAssert.Equal(otherResult, workbook.GetOrAddValueExtents(plot, PptxSceneChartGrouping.Clustered, false, () => otherResult));
     }
 
     public static void LineValueExtentsMemoSharesResultsWithinFrame()
     {
-        // R15: one line extent result per (source, element, flags, visibility) per
-        // frame; clearing the frame memo recomputes on next access.
-        Type workbookType = typeof(PptxRenderer).GetNestedType("ChartWorkbookData", BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Expected workbook type.");
-        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["A1"] = "5" },
-        };
-        object workbook = PptxChartRangeTests.ReadWorkbookCells(sheets);
-        MethodInfo memo = workbookType.GetMethod("GetOrAddLineValueExtents", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Expected line extent memo.");
-        PptxRenderer.ChartValueExtents extentsA = new(0d, 10d);
-        PptxRenderer.ChartValueExtents extentsB = new(0d, 99d);
-        Func<PptxRenderer.ChartValueExtents> factoryA = () => extentsA;
-        Func<PptxRenderer.ChartValueExtents> factoryB = () => extentsB;
-        object first = InvokeUntyped6(memo, workbook, "k", null, false, false, false, factoryA);
-        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)first);
-        object second = InvokeUntyped6(memo, workbook, "k", null, false, false, false, factoryB);
-        TestAssert.Equal(extentsA, (PptxRenderer.ChartValueExtents)second);
-        object other = InvokeUntyped6(memo, workbook, "k", null, true, false, false, factoryB);
-        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)other);
-        try
-        {
-            workbookType.GetMethod("ClearRangeMemo", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(workbook, null);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-
-        object third = InvokeUntyped6(memo, workbook, "k", null, false, false, false, factoryB);
-        TestAssert.Equal(extentsB, (PptxRenderer.ChartValueExtents)third);
+        var (workbook, plot, otherPlot) = CreateMemoContext();
+        PptxRenderer.ChartValueExtents firstResult = new(0d, 10d), otherResult = new(0d, 99d), percentResult = new(0d, 1d);
+        TestAssert.Equal(firstResult, workbook.GetOrAddLineValueExtents(plot, false, false, false, () => firstResult));
+        TestAssert.Equal(firstResult, workbook.GetOrAddLineValueExtents(plot, false, false, false, () => otherResult));
+        TestAssert.Equal(otherResult, workbook.GetOrAddLineValueExtents(otherPlot, false, false, false, () => otherResult));
+        TestAssert.Equal(otherResult, workbook.GetOrAddLineValueExtents(plot, true, false, false, () => otherResult));
+        TestAssert.Equal(percentResult, workbook.GetOrAddLineValueExtents(plot, true, true, false, () => percentResult));
+        TestAssert.Equal(otherResult, workbook.GetOrAddLineValueExtents(plot, false, false, true, () => otherResult));
+        workbook.ClearRangeMemo();
+        TestAssert.Equal(otherResult, workbook.GetOrAddLineValueExtents(plot, false, false, false, () => otherResult));
     }
 
-    private static object InvokeUntyped4(MethodInfo memo, object workbook, object? first, object? second, bool visibleOnly, object factory)
+    private static (PptxRenderer.ChartWorkbookData Workbook, PptxSceneChartPlot Plot, PptxSceneChartPlot OtherPlot) CreateMemoContext()
     {
-        try
-        {
-            return memo.Invoke(workbook, [first, second, visibleOnly, factory])
-                ?? throw new InvalidOperationException("Expected shared list.");
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
+        // These contracts concern frame-local memo ownership. Workbook ZIP/range
+        // parsing has separate tests; no workbook package is needed here.
+        var workbook = new PptxRenderer.ChartWorkbookData(
+            new Dictionary<string, PptxRenderer.ChartWorksheetData>(), PptxRenderer.ChartWorkbookStyles.Empty,
+            new Dictionary<string, string>(), new Dictionary<string, PptxRenderer.ChartWorkbookTable>(), [], default);
+        var first = ReadPlot();
+        var other = ReadPlot();
+        TestAssert.True(!ReferenceEquals(first.Source, other.Source), "Independently parsed plots must retain distinct source owners.");
+        return (workbook, first, other);
 
-    private static object InvokeUntyped5(MethodInfo memo, object workbook, object? source, object? chartElement, object grouping, bool visibleOnly, object factory)
-    {
-        try
+        static PptxSceneChartPlot ReadPlot()
         {
-            return memo.Invoke(workbook, [source, chartElement, grouping, visibleOnly, factory])
-                ?? throw new InvalidOperationException("Expected shared extents.");
+            const string chart = "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart><c:plotArea><c:barChart/></c:plotArea></c:chart></c:chartSpace>";
+            using var input = PptxTests.CreateSingleChartPackageStream(chart);
+            using var package = OoxPackage.Open(input, default);
+            var document = new PptxReader().Read(package, default);
+            var scene = new PptxSceneBuilder().Build(document, package, default);
+            return TestAssert.NotNull(scene.Slides[0].SlideNodes[0].Chart).Plots.Single();
         }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static object InvokeUntyped6(MethodInfo memo, object workbook, object? source, object? chartElement, object stacked, object percentStacked, bool visibleOnly, object factory)
-    {
-        try
-        {
-            return memo.Invoke(workbook, [source, chartElement, stacked, percentStacked, visibleOnly, factory])
-                ?? throw new InvalidOperationException("Expected shared line extents.");
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static object InvokeMemo(MethodInfo memo, object workbook, object? source, object? chartElement, bool visibleOnly, object factory)
-    {
-        try
-        {
-            return memo.Invoke(workbook, [source, chartElement, visibleOnly, factory])
-                ?? throw new InvalidOperationException("Expected shared dense array.");
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
-    }
-
-    private static object ConstantFactory(Type factoryType, object value)
-    {
-        Type returnType = factoryType.GetGenericArguments()[0];
-        return Expression.Lambda(factoryType, Expression.Constant(value, returnType)).Compile();
     }
 
     private static Type NumberVectorType()

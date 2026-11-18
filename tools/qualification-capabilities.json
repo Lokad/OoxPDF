@@ -509,7 +509,13 @@
     "PptxChartParsedVectorsPreserveWorkbookSidecarPoints",
     "PptxChartIndexedVectorsPreserveWorkbookSidecarPoints",
     "PptxChartSeriesNamesPreserveWorkbookSidecarPoints",
-    "PptxChartWorkbookRangesPreserveValuesVisibilityAndFormats"
+    "PptxChartWorkbookRangesPreserveValuesVisibilityAndFormats",
+    "CategoryLabelMemoSharesDenseResultsWithinFrame",
+    "SeriesNameMemoSharesResultsWithinFrame",
+    "SeriesVectorsMemoSharesResultsWithinFrame",
+    "ValueExtentsMemoSharesResultsWithinFrame",
+    "LineValueExtentsMemoSharesResultsWithinFrame",
+    "WorkbookScopedNamesUseDeclaredSheetOrder"
   ],
   "docx-source-default-composition": [
     "DocxMathDocumentDefaultsReachStoryAndTextboxSources",

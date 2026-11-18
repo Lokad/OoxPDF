@@ -389,7 +389,6 @@ internal sealed partial class PptxRenderer
 
         return workbook.GetOrAddCategoryLabels(
             plot,
-            plot.Source,
             plotVisibleOnly,
             () => ReadSceneCategoryLabelVector(plot, workbook, plotVisibleOnly).DensePoints());
     }
@@ -407,7 +406,6 @@ internal sealed partial class PptxRenderer
 
         return workbook.GetOrAddSeriesNames(
             plot,
-            plot.Source,
             () => ReadSceneChartSeriesNameRecords(plot, workbook));
     }
 
@@ -425,7 +423,6 @@ internal sealed partial class PptxRenderer
 
         return workbook.GetOrAddSeriesVectors(
             plot,
-            plot.Source,
             plotVisibleOnly,
             () => ReadSceneChartSeriesVectors(plot, workbook, plotVisibleOnly));
     }
@@ -447,7 +444,6 @@ internal sealed partial class PptxRenderer
 
         return workbook.GetOrAddValueExtents(
             plot,
-            plot.Source,
             grouping,
             plotVisibleOnly,
             () => GetBarChartValueExtents(ReadSharedChartSeriesVectors(plot, workbook, plotVisibleOnly), grouping));
@@ -469,7 +465,6 @@ internal sealed partial class PptxRenderer
 
         return workbook.GetOrAddLineValueExtents(
             plot,
-            plot.Source,
             stacked,
             percentStacked,
             plotVisibleOnly,

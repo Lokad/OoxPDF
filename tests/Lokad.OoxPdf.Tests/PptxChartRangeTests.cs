@@ -49,6 +49,31 @@ internal static class PptxChartRangeTests
         TestAssert.Equal(1, ReadCellCount(workbook, "Sheet1!$A$1"));
     }
 
+    public static void WorkbookScopedNamesUseDeclaredSheetOrder()
+    {
+        var workbook = (PptxRenderer.ChartWorkbookData)ReadWorkbookPackage(
+            """
+            <sheets><sheet name="First" sheetId="91" r:id="first"/><sheet name="Second" sheetId="7" r:id="second"/></sheets>
+            <definedNames>
+              <definedName name="Global">First!$A$1</definedName>
+              <definedName name="Scoped" localSheetId="0">First!$A$1</definedName>
+              <definedName name="Scoped" localSheetId="1">Second!$A$1</definedName>
+            </definedNames>
+            """,
+            """
+            <Relationship Id="first" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/first.xml"/>
+            <Relationship Id="second" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/second.xml"/>
+            """,
+            new Dictionary<string, string>
+            {
+                ["xl/worksheets/first.xml"] = "<sheetData><row r=\"1\"><c r=\"A1\"><v>5</v></c></row></sheetData>",
+                ["xl/worksheets/second.xml"] = "<sheetData><row r=\"1\"><c r=\"A1\"><v>9</v></c></row></sheetData>"
+            }, null);
+        TestAssert.Equal("5", workbook.ReadRangeCells("Global").Single().Text);
+        TestAssert.Equal("5", workbook.ReadRangeCells("First!Scoped").Single().Text);
+        TestAssert.Equal("9", workbook.ReadRangeCells("Second!Scoped").Single().Text);
+    }
+
     public static void RangeAtCellBudgetBoundaryPasses()
     {
         object workbook = CreateWorkbook();

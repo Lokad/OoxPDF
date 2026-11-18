@@ -159,13 +159,12 @@ internal sealed partial class PptxRenderer
         return workbookXml.Root?
             .Element(SpreadsheetNamespace + "sheets")
             ?.Elements(SpreadsheetNamespace + "sheet")
-            .Select((sheet, index) =>
+            .Select(sheet =>
             {
                 string relationshipId = ((string?)sheet.Attribute(RelationshipsNamespace + "id") ?? string.Empty).Trim();
                 return new ChartWorkbookSheet(
                     ((string?)sheet.Attribute("name") ?? string.Empty).Trim(),
-                    relationshipId,
-                    index);
+                    relationshipId);
             })
             .ToArray() ?? [];
     }
