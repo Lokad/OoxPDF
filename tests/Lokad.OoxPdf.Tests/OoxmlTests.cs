@@ -25,20 +25,26 @@ internal static partial class OoxmlTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="officeDocument" Target="ppt/presentation.xml"/>
+                  <Relationship Id="rID1" Type="hyperlink" Target="https://example.invalid/" TargetMode="External"/>
                 </Relationships>
                 """,
             ["ppt/presentation.xml"] = "<p:presentation xmlns:p=\"p\"/>",
             ["ppt/slides/slide1.xml"] = "<p:sld xmlns:p=\"p\"/>"
         });
 
-        OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
+        using OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
 
         OoxPart presentation = TestAssert.NotNull(package.GetPart("/ppt/presentation.xml"));
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml", presentation.ContentType);
 
         IReadOnlyList<OoxRelationship> relationships = package.GetRelationships("/", CancellationToken.None);
-        TestAssert.Equal(1, relationships.Count);
+        TestAssert.Equal(2, relationships.Count);
+        TestAssert.Equal("rId1", relationships[0].Id);
         TestAssert.Equal("/ppt/presentation.xml", relationships[0].ResolvedTarget);
+        TestAssert.Equal("rID1", relationships[1].Id);
+        TestAssert.Equal("https://example.invalid/", relationships[1].Target);
+        TestAssert.True(relationships[1].IsExternal && relationships[1].ResolvedTarget is null,
+            "Case-distinct IDs preserve their separate targets.");
     }
 
     public static void RejectsPackagePartPathTraversal()

@@ -90,12 +90,13 @@ internal static class OoxmlBoundsTests
                 "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"),
             ["_rels/.rels"] = TestRelationships(
                 "<Relationship Id=\"rId1\" Type=\"officeDocument\" Target=\"word/document.xml\"/>",
-                "<Relationship Id=\"rId1\" Type=\"officeDocument\" Target=\"word/other.xml\"/>"),
+                "<Relationship Id=\"rId1\"/>"),
             ["word/document.xml"] = "<w:document/>",
         });
 
-        OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
-        TestAssert.Throws<InvalidDataException>(() => package.GetRelationships("/", CancellationToken.None));
+        using OoxPackage package = OoxPackage.Open(packageStream, CancellationToken.None);
+        var error = TestAssert.Throws<InvalidDataException>(() => package.GetRelationships("/", CancellationToken.None));
+        TestAssert.Contains("duplicate relationship id", error.Message);
     }
 
     public static void RejectsDeeplyNestedXml()

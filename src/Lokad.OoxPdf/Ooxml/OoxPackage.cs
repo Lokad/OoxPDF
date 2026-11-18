@@ -564,13 +564,12 @@ internal sealed class OoxPackage : IDisposable
     private static Dictionary<string, OoxRelationship> ParseRelationshipDocument(XDocument document, string sourcePartName, CancellationToken cancellationToken)
     {
         var relationships = new Dictionary<string, OoxRelationship>(StringComparer.Ordinal);
-        var seenIds = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (XElement element in document.Root?.Elements(OoxNamespaces.PackageRelationshipsNamespace + "Relationship") ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
             string id = RequiredAttribute(element, "Id");
-            if (!seenIds.Add(id))
+            if (relationships.ContainsKey(id))
             {
                 throw new InvalidDataException("OOXML package contains a duplicate relationship id.");
             }
